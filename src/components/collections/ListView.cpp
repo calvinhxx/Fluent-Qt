@@ -48,6 +48,23 @@ namespace {
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 constexpr int kScrollBarEdgeInset = ::Spacing::XSmall / 2;
 
+QColor surroundingSurfaceColor(const QWidget* widget, const QColor& fallback)
+{
+    // Plain layout containers do not paint their inherited system palette.
+    // zh_CN: 普通布局容器不会绘制其继承的系统调色板，继续寻找实际背景。
+    for (const QWidget* parent = widget->parentWidget(); parent; parent = parent->parentWidget()) {
+        const QColor surface = parent->property("fluentSurfaceColor").value<QColor>();
+        if (surface.isValid() && surface.alpha() > 0)
+            return surface;
+        if (parent->autoFillBackground()) {
+            const QColor fill = parent->palette().color(parent->backgroundRole());
+            if (fill.alpha() > 0)
+                return fill;
+        }
+    }
+    return fallback;
+}
+
 qreal lerp(qreal from, qreal to, qreal progress)
 {
     return from + (to - from) * progress;
@@ -140,17 +157,38 @@ public:
         painter->setPen(visual.foreground);
 
         QFont font = option.font;
-        if (selected)
+        if (selected) {
+            // An explicit Regular face would otherwise override the selected weight.
+            // zh_CN: 清除精确 Regular 字体名，避免它覆盖选中行的字重。
+            font.setStyleName(QString());
             font.setWeight(QFont::DemiBold);
+        }
         painter->setFont(font);
 
         const QString text = index.data(Qt::DisplayRole).toString();
-        const QRectF textSlot(cursorX, background.top(), qMax<qreal>(0.0, background.right() - cursorX - 8.0),
+        const QString trailing =
+            m_listView->trailingTextRole() < 0 ? QString() : index.data(m_listView->trailingTextRole()).toString();
+        const QFont caption = m_listView->themeFont(Typography::FontRole::Caption).toQFont();
+        const QFontMetricsF captionMetrics(caption);
+        const qreal availableWidth = qMax<qreal>(0.0, background.right() - cursorX - 8.0);
+        const qreal trailingWidth = trailing.isEmpty()
+            ? 0.0
+            : qMin(qCeil(captionMetrics.horizontalAdvance(trailing)) + 2.0, availableWidth / 3.0);
+        const qreal trailingSpace = trailingWidth > 0 ? trailingWidth + ::Spacing::Medium : 0.0;
+        const QRectF textSlot(cursorX, background.top(), qMax<qreal>(0.0, availableWidth - trailingSpace),
             background.height());
         const QFontMetricsF metrics(font);
         const QString elided = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
         const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elided);
         painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
+        if (trailingWidth > 0) {
+            const QRectF slot(background.right() - 8.0 - trailingWidth, background.top(), trailingWidth,
+                background.height());
+            painter->setFont(caption);
+            painter->setPen(option.state & QStyle::State_Enabled ? colors.textSecondary : colors.textDisabled);
+            painter->drawText(slot, Qt::AlignRight | Qt::AlignVCenter,
+                captionMetrics.elidedText(trailing, Qt::ElideRight, qRound(trailingWidth)));
+        }
         painter->restore();
     }
 
@@ -467,6 +505,16 @@ void ListView::setFontRole(Typography::FontRole role)
     m_fontRole = role;
     applyThemeStyle();
     emit fontRoleChanged();
+}
+
+void ListView::setTrailingTextRole(int role)
+{
+    role = qMax(-1, role);
+    if (m_trailingTextRole == role)
+        return;
+    m_trailingTextRole = role;
+    viewport()->update();
+    emit trailingTextRoleChanged();
 }
 
 void ListView::setBorderVisible(bool visible)
@@ -895,25 +943,7 @@ QPixmap ListView::renderItemPixmap(int row) const
     const qreal dpr = devicePixelRatioF();
     QPixmap pix(QSize(w, h) * dpr);
     pix.setDevicePixelRatio(dpr);
-    // Fill with the real surface the list sits on, not a hardcoded bgLayer: the app installs no global
-    // dark QPalette (it themes via paint), and the list is frequently hosted on a different surface
-    // (e.g. the gallery sample card's bgLayerAlt), so a fixed bgLayer fill renders as a mismatched box
-    // behind the dragged row. Walk up to the nearest ancestor advertising its painted background via
-    // the "fluentSurfaceColor" property and fall back to bgLayer — the same approach FlipView uses for
-    // its corner mask. zh_CN: 用列表真正所在的表面色填充，而非写死 bgLayer：本应用不装全局暗色 QPalette（靠绘制上主题），
-    // 且列表常被托管在别的表面上（如画廊示例卡的 bgLayerAlt），写死 bgLayer 会在拖拽行后面显示成不匹配的色块。
-    // 向上查找通过 "fluentSurfaceColor" 公布背景的祖先并回退到 bgLayer——与 FlipView 圆角遮罩的做法一致。
-    QColor containerBg = themeColorsRef().bgLayer;
-    for (const QWidget* anc = parentWidget(); anc; anc = anc->parentWidget()) {
-        const QVariant surfaceColor = anc->property("fluentSurfaceColor");
-        if (!surfaceColor.isValid())
-            continue;
-        const QColor sc = surfaceColor.value<QColor>();
-        if (sc.isValid() && sc.alpha() > 0)
-            containerBg = sc;
-        break;
-    }
-    pix.fill(containerBg);
+    pix.fill(surroundingSurfaceColor(this, themeColorsRef().bgLayer));
 
     QPainter p(&pix);
     p.setRenderHint(QPainter::Antialiasing);
@@ -1070,14 +1100,7 @@ void ListView::paintEvent(QPaintEvent* event)
         roundedArea.addRoundedRect(QRectF(viewport()->rect()), r, r);
         QPainterPath corners = fullRect - roundedArea;
 
-        // Take the parent's background, falling back to bgCanvas. zh_CN: 从父控件取背景色，回退到 bgCanvas。
-        QColor parentBg = c.bgCanvas;
-        if (parentWidget()) {
-            const QPalette& pp = parentWidget()->palette();
-            if (pp.color(QPalette::Window).alpha() > 0)
-                parentBg = pp.color(QPalette::Window);
-        }
-        cp.fillPath(corners, parentBg);
+        cp.fillPath(corners, surroundingSurfaceColor(this, c.bgCanvas));
         cp.end();
     }
 
@@ -1118,12 +1141,12 @@ void ListView::showEvent(QShowEvent* event)
     syncFluentHScrollBar();
     layoutHeader();
     layoutFooter();
-    // On first show, re-anchor to the current selection with the proper
-    // viewport size.
-    // zh_CN: 初次显示时用正确的 viewport 尺寸重新定位到当前选中项。
-    if (currentIndex().isValid()) {
+    // Re-anchor only initially or after a selection change while hidden.
+    // zh_CN: 仅首次显示或隐藏期间选中项变化时定位，普通显隐保留浏览位置。
+    if (m_revealSelectionOnShow && currentIndex().isValid()) {
         scrollTo(currentIndex(), QAbstractItemView::EnsureVisible);
     }
+    m_revealSelectionOnShow = false;
     if (usesMovingSelectedIndicator()) {
         updateSelectedIndicatorFromSelection();
         refreshSelectedIndicatorGeometry(true);
@@ -1344,6 +1367,8 @@ void ListView::wheelEvent(QWheelEvent* event)
 
 void ListView::currentChanged(const QModelIndex& current, const QModelIndex& previous)
 {
+    if (!isVisible() && current != previous)
+        m_revealSelectionOnShow = true;
     QListView::currentChanged(current, previous);
     Q_UNUSED(current)
     if (usesMovingSelectedIndicator())
@@ -1674,7 +1699,8 @@ void ListView::startSelectedIndicatorAnimation(bool animated)
 
 void ListView::syncMultiSelectedIndicators(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    if (!usesRevealSelectedIndicators() || !selectionModel()) {
+    if (!m_selectionIndicatorVisible || !m_selectedIndicatorAnimationEnabled || !usesRevealSelectedIndicators()
+        || !selectionModel()) {
         clearMultiSelectedIndicatorState();
         return;
     }
@@ -1705,7 +1731,7 @@ void ListView::syncMultiSelectedIndicators(const QItemSelection& selected, const
             startMultiSelectedIndicatorReveal(index);
     }
 
-    if (selectionModel()->selectedIndexes().isEmpty())
+    if (!selectionModel()->hasSelection())
         clearMultiSelectedIndicatorState();
 
     if (viewport())
@@ -1742,6 +1768,8 @@ void ListView::startMultiSelectedIndicatorReveal(const QModelIndex& index)
 
 qreal ListView::multiSelectedIndicatorProgress(const QModelIndex& index) const
 {
+    if (m_multiIndicatorAnimations.isEmpty())
+        return 1.0;
     const auto it = m_multiIndicatorAnimations.find(QPersistentModelIndex(index));
     return it == m_multiIndicatorAnimations.end() ? 1.0 : it.value()->currentValue().toReal();
 }

@@ -21,6 +21,7 @@
 #include "components/collections/ListView.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/layout/Card.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -226,6 +227,31 @@ protected:
 };
 
 // ── 业务层：QStringListModel + Fluent delegate + 数据操作 ─────────────────────
+
+TEST_F(ListViewTest, Contract_ReshowPreservesScrollUnlessSelectionChangedWhileHidden)
+{
+    auto* list = new ListView(window);
+    list->setGeometry(0, 0, 320, 240);
+    QStringList names;
+    for (int index = 0; index < 100; ++index)
+        names.append(QStringLiteral("File %1").arg(index));
+    attachStringListModel(list, names);
+    list->setSelectedIndex(70);
+    window->show();
+    QApplication::processEvents();
+    EXPECT_GT(list->verticalScrollBar()->value(), 0);
+    list->verticalScrollBar()->setValue(200);
+    list->hide();
+    list->show();
+    QApplication::processEvents();
+    EXPECT_EQ(list->verticalScrollBar()->value(), 200);
+    list->hide();
+    list->setSelectedIndex(90);
+    list->show();
+    QApplication::processEvents();
+    EXPECT_TRUE(list->viewport()->rect().intersects(
+        static_cast<QAbstractItemView*>(list)->visualRect(list->model()->index(90, 0))));
+}
 
 TEST_F(ListViewTest, AddAndRemoveItems)
 {
@@ -859,6 +885,47 @@ TEST_F(ListViewTest, BackgroundVisibleProperty)
     EXPECT_EQ(spy.count(), 1);
     lv->setBackgroundVisible(false);
     EXPECT_EQ(spy.count(), 1);
+}
+
+TEST_F(ListViewTest, CornersUsePaintedSurfaceThroughTransparentLayoutContainers)
+{
+    const auto previousTheme = FluentElement::currentTheme();
+    for (const auto theme : {FluentElement::Light, FluentElement::Dark}) {
+        FluentElement::setTheme(theme);
+        // This case owns its surfaces; the fixture's blanket stylesheet would
+        // replace the explicitly supplied Qt parent palette during polish.
+        window->setStyleSheet(QString());
+        fluent::layout::Card surface(window);
+        surface.setGeometry(10, 10, 300, 200);
+        QWidget pane(&surface);
+        pane.setGeometry(surface.rect());
+        QPalette stale = pane.palette();
+        stale.setColor(QPalette::Window, QColor("#ececec"));
+        pane.setPalette(stale);
+        ListView list(&pane);
+        list.setGeometry(10, 10, 280, 180);
+        list.setBorderVisible(false);
+        showWindowAndProcess(window);
+        const auto checkCorners = [&](const QColor& expected) {
+            const QImage image = renderViewport(list.viewport());
+            SCOPED_TRACE(QStringLiteral("theme=%1 fill=%2 expected=%3 actual=%4")
+                    .arg(theme)
+                    .arg(pane.autoFillBackground())
+                    .arg(expected.name())
+                    .arg(image.pixelColor(0, 0).name())
+                    .toStdString());
+            for (const QPoint corner : {QPoint(0, 0), QPoint(image.width() - 1, 0), QPoint(0, image.height() - 1),
+                     QPoint(image.width() - 1, image.height() - 1)})
+                EXPECT_TRUE(isNearColor(image.pixelColor(corner), expected));
+        };
+        checkCorners(surface.themeColors().bgLayer);
+        surface.setAppearance(fluent::layout::Card::LayerAlt);
+        checkCorners(surface.themeColors().bgLayerAlt);
+        // Explicitly painted Qt parents still own their fill.
+        pane.setAutoFillBackground(true);
+        checkCorners(stale.color(QPalette::Window));
+    }
+    FluentElement::setTheme(previousTheme);
 }
 
 TEST_F(ListViewTest, CompositedClearHonorsPreserveParentSurface)
@@ -2019,4 +2086,63 @@ TEST_F(ListViewTest, KeyboardSelectionWorksAfterNoPhaseDiscreteWheel)
     EXPECT_EQ(lv->selectedIndex(), 1)
         << "Keyboard navigation and selection should remain governed by the "
            "selection model";
+}
+
+TEST_F(ListViewTest, Contract_DefaultDelegateTrailingMetadataIsOptInAndUpdates)
+{
+    ListView view;
+    QStandardItemModel model;
+    auto* item = new QStandardItem(QStringLiteral("layout-notes.md"));
+    item->setData(QStringLiteral("Yesterday"), Qt::UserRole + 12);
+    item->setSizeHint(QSize(0, 40));
+    model.appendRow(item);
+    view.setModel(&model);
+    view.resize(320, 100);
+    view.show();
+    QApplication::processEvents();
+    EXPECT_EQ(view.trailingTextRole(), -1);
+    const QImage before = view.viewport()->grab().toImage();
+    QSignalSpy changed(&view, &ListView::trailingTextRoleChanged);
+    view.setTrailingTextRole(Qt::UserRole + 12);
+    view.setTrailingTextRole(Qt::UserRole + 12);
+    EXPECT_EQ(changed.count(), 1);
+    const QImage after = view.viewport()->grab().toImage();
+    const QRect trailing(235, 2, 70, 34);
+    EXPECT_NE(before.copy(trailing), after.copy(trailing));
+    item->setData(QStringLiteral("Today"), Qt::UserRole + 12);
+    EXPECT_NE(after.copy(trailing), view.viewport()->grab().toImage().copy(trailing));
+    EXPECT_EQ(item->text(), QStringLiteral("layout-notes.md"));
+    view.setTrailingTextRole(-5);
+    EXPECT_EQ(view.trailingTextRole(), -1);
+    EXPECT_EQ(changed.count(), 2);
+}
+
+TEST_F(ListViewTest, Contract_InactiveSelectionIndicatorsDoNotExpandLargeSelections)
+{
+    class Model : public QAbstractListModel {
+    public:
+        mutable int requests = 0;
+        int rowCount(const QModelIndex& parent = {}) const override { return parent.isValid() ? 0 : 10000; }
+        QVariant data(const QModelIndex&, int role) const override
+        {
+            return role == Qt::DisplayRole ? QVariant("Row") : QVariant();
+        }
+        Qt::ItemFlags flags(const QModelIndex& index) const override
+        {
+            ++requests;
+            return QAbstractListModel::flags(index);
+        }
+    } model;
+    for (bool visible : {false, true}) {
+        fluent::collections::ListView view;
+        view.setModel(&model);
+        view.setSelectionMode(fluent::collections::SelectionMode::Multiple);
+        view.setSelectionIndicatorVisible(visible);
+        view.setSelectedIndicatorAnimationEnabled(false);
+        model.requests = 0;
+        view.selectionModel()->select(QItemSelection(model.index(0, 0), model.index(9999, 0)),
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        EXPECT_LT(model.requests, 100);
+        EXPECT_TRUE(view.selectionModel()->hasSelection());
+    }
 }
