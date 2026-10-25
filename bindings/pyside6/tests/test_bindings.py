@@ -4536,6 +4536,88 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(box_ref())
             self.assertIsNone(popup_ref())
 
+    def test_auto_suggest_box_async_requests_paging_retry_and_cancel(self):
+        box = fluentqt.AutoSuggestBox()
+        box.setAsyncSuggestionsEnabled(True)
+        requests = []
+        box.suggestionsRequested.connect(lambda *args: requests.append(args))
+        box.setText("Aurora")
+        box.requestSuggestions()
+        first = requests[-1][1]
+        box.setText("Canvas")
+        self.assertFalse(box.setSuggestionsForRequest(first, ["Stale"]))
+        box.requestSuggestions()
+        current = requests[-1][1]
+        self.assertTrue(box.setSuggestionsForRequest(current, ["Canvas"], True))
+        self.assertEqual(box.suggestionCount(), 1)
+        box.loadMoreSuggestions()
+        self.assertTrue(requests[-1][2])
+        failed = requests[-1][1]
+        self.assertTrue(box.failSuggestionRequest(failed, "Service unavailable", "Try again."))
+        self.assertEqual(box.suggestions(), ["Canvas"])
+        self.assertEqual(box.loadState(), fluentqt.AutoSuggestBox.LoadState.Failed)
+        box.retrySuggestions()
+        retried = requests[-1][1]
+        self.assertTrue(requests[-1][2])
+        self.assertTrue(box.setSuggestionsForRequest(retried, ["Canvas Studio"]))
+        self.assertEqual(box.suggestions(), ["Canvas", "Canvas Studio"])
+        self.assertFalse(box.hasMoreSuggestions())
+        box.requestSuggestions()
+        canceled = requests[-1][1]
+        box.cancelSuggestions()
+        self.assertFalse(box.completeSuggestionRequest(canceled))
+
+    def test_auto_suggest_box_borrowed_model_reference_and_string_mode(self):
+        box = fluentqt.AutoSuggestBox()
+        model = QStandardItemModel()
+        item = QStandardItem("Aurora")
+        item.setData("project-1", Qt.UserRole)
+        model.appendRow(item)
+        model_ref = weakref.ref(model)
+        box.setSuggestionModel(model)
+        self.assertIsNone(model.parent())
+        del model
+        gc.collect()
+        self.assertIsNotNone(model_ref())
+        self.assertIs(box.suggestionModel(), model_ref())
+        self.assertEqual(box.suggestionCount(), 1)
+        box.setSuggestions(["Local"])
+        gc.collect()
+        self.assertIsNone(model_ref())
+        self.assertIsNone(box.suggestionModel())
+        self.assertEqual(box.suggestions(), ["Local"])
+        for clear in (box.clearSuggestions, lambda: box.setSuggestionModel(None)):
+            model = QStandardItemModel()
+            reference = weakref.ref(model)
+            box.setSuggestionModel(model)
+            del model
+            clear()
+            gc.collect()
+            self.assertIsNone(reference())
+
+    def test_auto_suggest_box_async_properties_are_repeat_safe(self):
+        box = fluentqt.AutoSuggestBox()
+        for setter, signal, getter, value in (
+            (box.setAsyncSuggestionsEnabled, box.asyncSuggestionsEnabledChanged,
+             box.isAsyncSuggestionsEnabled, True),
+            (box.setDebounceInterval, box.debounceIntervalChanged, box.debounceInterval, 25),
+            (box.setLoadingText, box.loadingTextChanged, box.loadingText, "Searching…"),
+            (box.setRetryText, box.retryTextChanged, box.retryText, "重试"),
+            (box.setLoadMoreText, box.loadMoreTextChanged, box.loadMoreText, "下一页"),
+            (box.setLoadingMoreText, box.loadingMoreTextChanged, box.loadingMoreText, "正在加载"),
+            (box.setMoreResultsText, box.moreResultsTextChanged, box.moreResultsText, "更多结果"),
+            (box.setEmptyText, box.emptyTextChanged, box.emptyText, "No projects"),
+            (box.setEmptyDescription, box.emptyDescriptionChanged,
+             box.emptyDescription, "Try another query."),
+        ):
+            changes = QSignalSpy(signal)
+            setter(value)
+            setter(value)
+            self.assertEqual(getter(), value)
+            self.assertEqual(changes.count(), 1)
+        box.setDebounceInterval(-1)
+        self.assertEqual(box.debounceInterval(), 0)
+
     def test_combo_box_properties_items_and_signals(self):
         combo = fluentqt.ComboBox()
         self.assertEqual(combo.fontRole(), fluentqt.FontRole.Body)
@@ -10377,6 +10459,28 @@ class FluentQtBindingTest(unittest.TestCase):
         delete_qobject(panel)
         self.assertFalse(shiboken6.isValid(flyout))
         delete_qobject(host)
+
+    def test_review_sync_suggestions_respect_dismissal_and_frame_visibility(self):
+        box = fluentqt.AutoSuggestBox()
+        model = QStringListModel(["Alpha", "Alpine"])
+        box.setSuggestionModel(model)
+        box.show()
+        box.activateWindow()
+        box.setFocus()
+        QApplication.processEvents()
+        QTest.keyClicks(box, "Al")
+        self.assertTrue(box.isSuggestionListOpen())
+        QTest.keyClick(box, Qt.Key_Escape)
+        model.setData(model.index(0), "Alphabet")
+        QApplication.processEvents()
+        self.assertFalse(box.isSuggestionListOpen())
+        QTest.keyClicks(box, "p")
+        self.assertTrue(box.isSuggestionListOpen())
+        self.assertTrue(box.isFrameVisible())
+        box.setFrameVisible(False)
+        self.assertFalse(box.isFrameVisible())
+        delete_qobject(box)
+        delete_qobject(model)
 
     def test_review_number_changes_notify_at_tiny_and_large_scales(self):
         box = fluentqt.NumberBox()

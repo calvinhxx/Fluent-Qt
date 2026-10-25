@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <QApplication>
+#include <QAccessible>
+#include <QStandardItemModel>
 #include <QImage>
 #include <QListView>
 #include <QPointer>
@@ -15,6 +17,8 @@
 #include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/FieldPopupGeometry_p.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/scrolling/ScrollBar.h"
@@ -116,10 +120,18 @@ TEST_F(AutoSuggestBoxTest, DefaultsAndButtons)
     auto* popup = box.findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
     ASSERT_NE(queryButton, nullptr);
     ASSERT_NE(clearButton, nullptr);
-    ASSERT_NE(popup, nullptr);
+    EXPECT_EQ(popup, nullptr);
     EXPECT_FALSE(queryButton->isHidden());
     EXPECT_TRUE(clearButton->isHidden());
-    EXPECT_EQ(popup->anchorOffset(), Spacing::XSmall);
+    box.setSuggestions({"Alpha"});
+    ASSERT_TRUE(showAndFocus(&box));
+    QTest::keyClick(&box, Qt::Key_Down);
+    popup = window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
+    ASSERT_NE(popup, nullptr);
+    EXPECT_EQ(popup->anchorOffset(), Spacing::Gap::Normal);
+    box.cancelSuggestions();
+    QTest::keyClick(&box, Qt::Key_Down);
+    EXPECT_EQ(window->findChildren<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup").size(), 1);
 }
 
 TEST_F(AutoSuggestBoxTest, PropertySettersEmitSignals)
@@ -215,7 +227,9 @@ TEST_F(AutoSuggestBoxTest, CompactInputAndButtonSizes)
     EXPECT_EQ(queryButton->size(), QSize(18, 18));
 
     box.setSuggestions({"Alpha", "Beta"});
-    auto* listView = box.findChild<QListView*>("AutoSuggestBoxSuggestionList");
+    ASSERT_TRUE(showAndFocus(&box));
+    QTest::keyClick(&box, Qt::Key_Down);
+    auto* listView = window->findChild<QListView*>("AutoSuggestBoxSuggestionList");
     ASSERT_NE(listView, nullptr);
     EXPECT_EQ(listView->sizeHintForRow(0), 24);
 
@@ -298,6 +312,41 @@ TEST_F(AutoSuggestBoxTest, ProgrammaticAndUserTextReasons)
     ASSERT_GE(textSpy.count(), 1);
     EXPECT_EQ(textSpy.last().at(1).value<AutoSuggestBox::TextChangeReason>(),
         AutoSuggestBox::TextChangeReason::UserInput);
+}
+
+TEST_F(AutoSuggestBoxTest, FieldPopupStaysBoundedAndReflowsWithItsHost)
+{
+    QWidget host;
+    host.resize(360, 260);
+    AutoSuggestBox box(&host);
+    box.setGeometry(60, 120, 200, 32);
+    box.setSuggestions({"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"});
+    host.show();
+    box.setFocus();
+    QTest::keyClick(&box, Qt::Key_Down);
+    QApplication::processEvents();
+    auto* popup = host.findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
+    ASSERT_NE(popup, nullptr);
+    auto* list = popup->findChild<ListView*>("AutoSuggestBoxSuggestionList");
+    ASSERT_NE(list, nullptr);
+    QEvent wheel(QEvent::Wheel);
+    EXPECT_FALSE(fluent::overlay::fieldPopupAnchorGeometryMayChange(list->viewport(), &wheel, &box, popup));
+    EXPECT_TRUE(fluent::overlay::fieldPopupAnchorGeometryMayChange(&host, &wheel, &box, popup));
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        box.setLayoutDirection(direction);
+        host.resize(direction == Qt::LeftToRight ? 360 : 300, 240);
+        QApplication::processEvents();
+        QApplication::processEvents();
+        const QRect card = fluent::overlay::visibleCardGeometry(popup->geometry());
+        EXPECT_TRUE(host.rect().adjusted(4, 4, -4, -4).contains(card));
+        if (direction == Qt::LeftToRight)
+            EXPECT_EQ(card.left(), box.geometry().left());
+        else
+            EXPECT_EQ(card.right(), box.geometry().right());
+        const bool above = popup->placement() == fluent::dialogs_flyouts::Flyout::Top;
+        EXPECT_EQ(above ? box.y() - card.bottom() - 1 : card.top() - box.geometry().bottom() - 1, Spacing::Gap::Normal);
+        EXPECT_EQ(QApplication::focusWidget(), &box);
+    }
 }
 
 TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions)
@@ -617,6 +666,369 @@ TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions)
     EXPECT_FALSE(box->isSuggestionListOpen());
 }
 
+TEST_F(AutoSuggestBoxTest, Contract_AccessibilityAsyncDebounceAndStaleResults)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 360, 32);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setDebounceInterval(15);
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    QSignalSpy canceled(box, &AutoSuggestBox::suggestionRequestCanceled);
+    ASSERT_TRUE(showAndFocus(box));
+    QTest::keyClicks(box, "Aur");
+    ASSERT_TRUE(QTest::qWaitFor([&] { return requests.count() == 1; }));
+    const quint64 first = requests.at(0).at(1).toULongLong();
+    EXPECT_EQ(requests.at(0).at(0).toString(), QStringLiteral("Aur"));
+    EXPECT_TRUE(box->isSuggestionRequestCurrent(first));
+    EXPECT_EQ(box->loadState(), AutoSuggestBox::LoadState::Loading);
+    EXPECT_TRUE(box->isSuggestionListOpen());
+#if QT_CONFIG(accessibility)
+    auto* accessible = QAccessible::queryAccessibleInterface(box);
+    ASSERT_NE(accessible, nullptr);
+    EXPECT_TRUE(accessible->state().busy);
+    EXPECT_TRUE(accessible->state().expanded);
+    EXPECT_FALSE(accessible->relations(QAccessible::Controller).isEmpty());
+#endif
+    QTest::keyClicks(box, "ora");
+    EXPECT_FALSE(box->setSuggestionsForRequest(first, {QStringLiteral("Old result")}));
+    EXPECT_TRUE(box->suggestions().isEmpty());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return requests.count() == 2; }));
+    const quint64 current = requests.at(1).at(1).toULongLong();
+    EXPECT_NE(first, current);
+    EXPECT_EQ(canceled.count(), 1);
+    EXPECT_TRUE(box->setSuggestionsForRequest(current, {QStringLiteral("Aurora Workspace")}, true));
+    EXPECT_EQ(box->loadState(), AutoSuggestBox::LoadState::Ready);
+    EXPECT_EQ(box->suggestionCount(), 1);
+    EXPECT_TRUE(box->hasMoreSuggestions());
+#if QT_CONFIG(accessibility)
+    EXPECT_FALSE(accessible->state().busy);
+#endif
+    QTest::keyClick(box, Qt::Key_Down);
+    QTest::qWait(25);
+    EXPECT_EQ(requests.count(), 2) << "Keyboard previews must not start a new query";
+    EXPECT_EQ(box->text(), QStringLiteral("Aurora Workspace"));
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_AsyncPaginationRetainsRowsSelectionAndScroll)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 360, 32);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setText(QStringLiteral("Aurora"));
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    ASSERT_TRUE(showAndFocus(box));
+    box->requestSuggestions();
+    QStringList rows;
+    for (int i = 0; i < 40; ++i)
+        rows.append(QStringLiteral("Aurora %1").arg(i));
+    ASSERT_TRUE(box->setSuggestionsForRequest(requests.last().at(1).toULongLong(), rows, true));
+    auto* list = window->findChild<QListView*>(QStringLiteral("AutoSuggestBoxSuggestionList"));
+    ASSERT_NE(list, nullptr);
+    list->setCurrentIndex(list->model()->index(25, 0));
+    list->scrollTo(list->currentIndex(), QAbstractItemView::PositionAtCenter);
+    QApplication::processEvents();
+    const int scroll = list->verticalScrollBar()->value();
+    ASSERT_GT(scroll, 0);
+    box->loadMoreSuggestions();
+    EXPECT_TRUE(requests.last().at(2).toBool());
+    EXPECT_EQ(box->suggestionCount(), 40);
+    const quint64 failed = requests.last().at(1).toULongLong();
+    ASSERT_TRUE(box->failSuggestionRequest(failed, QStringLiteral("Could not load more")));
+    EXPECT_EQ(box->suggestionCount(), 40);
+    EXPECT_EQ(list->currentIndex().row(), 25);
+    EXPECT_EQ(list->verticalScrollBar()->value(), scroll);
+    box->retrySuggestions();
+    const quint64 retried = requests.last().at(1).toULongLong();
+    EXPECT_NE(failed, retried);
+    EXPECT_TRUE(requests.last().at(2).toBool());
+    EXPECT_FALSE(box->setSuggestionsForRequest(failed, {QStringLiteral("Late page")}, false));
+    ASSERT_TRUE(box->setSuggestionsForRequest(retried, {QStringLiteral("Aurora 40")}, false));
+    QApplication::processEvents();
+    EXPECT_EQ(box->suggestionCount(), 41);
+    EXPECT_EQ(list->currentIndex().row(), 25);
+    EXPECT_EQ(list->verticalScrollBar()->value(), scroll);
+    EXPECT_FALSE(box->hasMoreSuggestions());
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_BorrowedModelPayloadDisabledRowsAndDestruction)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 360, 32);
+    auto* model = new QStandardItemModel(window);
+    auto* unavailable = new QStandardItem(QStringLiteral("Unavailable"));
+    unavailable->setEnabled(false);
+    model->appendRow(unavailable);
+    auto* available = new QStandardItem(QStringLiteral("Aurora"));
+    available->setData(42, Qt::UserRole);
+    model->appendRow(available);
+    box->setSuggestionModel(model);
+    EXPECT_EQ(model->parent(), window);
+    EXPECT_TRUE(box->suggestions().isEmpty());
+    EXPECT_EQ(box->suggestionCount(), 2);
+    ASSERT_TRUE(showAndFocus(box));
+    QSignalSpy submit(box, &AutoSuggestBox::querySubmitted);
+    QTest::keyClick(box, Qt::Key_Down);
+    EXPECT_EQ(box->text(), QStringLiteral("Aurora"));
+    QTest::keyClick(box, Qt::Key_Return);
+    ASSERT_EQ(submit.count(), 1);
+    EXPECT_EQ(submit.last().at(1).toInt(), 42);
+    QTest::keyClick(box, Qt::Key_Down);
+    delete model;
+    QApplication::processEvents();
+    EXPECT_EQ(box->suggestionModel(), nullptr);
+    EXPECT_EQ(box->suggestionCount(), 0);
+    EXPECT_FALSE(box->isSuggestionListOpen());
+    box->setSuggestions({QStringLiteral("Local")});
+    EXPECT_EQ(box->suggestionCount(), 1);
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_AsyncEmptyRetryAndKeyboardAction)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 360, 32);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setText(QStringLiteral("project"));
+    box->setEmptyText(QStringLiteral("No projects found"));
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    ASSERT_TRUE(showAndFocus(box));
+    box->requestSuggestions();
+    ASSERT_TRUE(box->setSuggestionsForRequest(requests.last().at(1).toULongLong(), {}));
+    EXPECT_TRUE(box->isSuggestionListOpen());
+    auto* status = window->findChild<Label*>(QStringLiteral("AutoSuggestBoxStatusTitle"));
+    ASSERT_NE(status, nullptr);
+    EXPECT_EQ(status->text(), QStringLiteral("No projects found"));
+    box->requestSuggestions();
+    ASSERT_TRUE(box->failSuggestionRequest(requests.last().at(1).toULongLong(), QStringLiteral("Service unavailable"),
+        QStringLiteral("Try again.")));
+    auto* retry = window->findChild<Button*>(QStringLiteral("AutoSuggestBoxStatusAction"));
+    ASSERT_NE(retry, nullptr);
+    EXPECT_TRUE(retry->isVisible());
+    QTest::keyClick(box, Qt::Key_Tab);
+    EXPECT_TRUE(retry->hasFocus());
+    QTest::keyClick(retry, Qt::Key_Space);
+    ASSERT_EQ(requests.count(), 3);
+    EXPECT_FALSE(requests.last().at(2).toBool());
+    ASSERT_TRUE(box->setSuggestionsForRequest(requests.last().at(1).toULongLong(), {QStringLiteral("Recovered")}));
+    EXPECT_TRUE(box->hasFocus());
+    EXPECT_EQ(box->suggestionCount(), 1);
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_AsyncCopyIsCallerOwnedAcrossPagingAndRetry)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 360, 32);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setLoadingText(QStringLiteral("正在搜索"));
+    box->setLoadingMoreText(QStringLiteral("正在加载下一页"));
+    box->setMoreResultsText(QStringLiteral("还有更多结果"));
+    box->setLoadMoreText(QStringLiteral("下一页"));
+    box->setRetryText(QStringLiteral("重新尝试"));
+    box->setText(QStringLiteral("project"));
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    ASSERT_TRUE(showAndFocus(box));
+    box->requestSuggestions();
+    auto* status = window->findChild<Label*>(QStringLiteral("AutoSuggestBoxStatusTitle"));
+    auto* action = window->findChild<Button*>(QStringLiteral("AutoSuggestBoxStatusAction"));
+    ASSERT_TRUE(status && action);
+    EXPECT_EQ(status->text(), box->loadingText());
+    ASSERT_TRUE(box->setSuggestionsForRequest(requests.last().at(1).toULongLong(), {QStringLiteral("项目")}, true));
+    EXPECT_EQ(status->text(), box->moreResultsText());
+    EXPECT_EQ(action->text(), box->loadMoreText());
+    action->click();
+    EXPECT_TRUE(requests.last().at(2).toBool());
+    EXPECT_EQ(status->text(), box->loadingMoreText());
+    ASSERT_TRUE(box->failSuggestionRequest(requests.last().at(1).toULongLong(), QStringLiteral("暂时无法加载")));
+    EXPECT_EQ(status->text(), QStringLiteral("暂时无法加载"));
+    EXPECT_EQ(action->text(), box->retryText());
+    QSignalSpy changed(box, &AutoSuggestBox::retryTextChanged);
+    const int requestCount = requests.count();
+    box->setRetryText(QStringLiteral("再试一次"));
+    box->setRetryText(QStringLiteral("再试一次"));
+    EXPECT_EQ(changed.count(), 1);
+    EXPECT_EQ(requests.count(), requestCount);
+    EXPECT_EQ(action->text(), QStringLiteral("再试一次"));
+    action->click();
+    EXPECT_EQ(requests.count(), requestCount + 1);
+    EXPECT_TRUE(requests.last().at(2).toBool());
+    EXPECT_EQ(status->text(), box->loadingMoreText());
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_AsyncStatusFitsContentAndKeepsRetryReachable)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 320, 32);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setText(QStringLiteral("project"));
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    ASSERT_TRUE(showAndFocus(box));
+    box->requestSuggestions();
+    auto* popup = window->findChild<QWidget*>(QStringLiteral("AutoSuggestBoxSuggestionPopup"));
+    ASSERT_NE(popup, nullptr);
+    EXPECT_LE(fluent::overlay::visibleCardSize(popup->size()).height(), 44);
+    EXPECT_EQ(fluent::overlay::visibleCardSize(popup->size()).width(), box->width());
+
+    box->setEmptyDescription(QStringLiteral("Try a different name."));
+    ASSERT_TRUE(box->setSuggestionsForRequest(requests.last().at(1).toULongLong(), {}));
+    QApplication::processEvents();
+    EXPECT_LE(fluent::overlay::visibleCardSize(popup->size()).height(), 60);
+    box->requestSuggestions();
+    ASSERT_TRUE(box->failSuggestionRequest(requests.last().at(1).toULongLong(),
+        QStringLiteral("Couldn’t load projects"), QStringLiteral("Try again in a moment.")));
+    QApplication::processEvents();
+    auto* retry = popup->findChild<Button*>(QStringLiteral("AutoSuggestBoxStatusAction"));
+    auto* details = popup->findChild<Label*>(QStringLiteral("AutoSuggestBoxStatusDetails"));
+    ASSERT_TRUE(retry && details);
+    EXPECT_LE(fluent::overlay::visibleCardSize(popup->size()).height(), 60);
+    const int shortHeight = popup->height();
+    box->setGeometry(20, 20, 180, 32);
+    box->requestSuggestions();
+    ASSERT_TRUE(box->failSuggestionRequest(requests.last().at(1).toULongLong(), QStringLiteral("Search failed"),
+        QStringLiteral("The service is unavailable. Please try again after checking your connection.")));
+    QApplication::processEvents();
+    EXPECT_GT(popup->height(), shortHeight);
+    EXPECT_GE(details->height(), details->heightForWidth(details->width()));
+    const QRect detailsRect(details->mapTo(popup, QPoint()), details->size());
+    const QRect retryRect(retry->mapTo(popup, QPoint()), retry->size());
+    EXPECT_FALSE(detailsRect.intersects(retryRect));
+    EXPECT_TRUE(fluent::overlay::visibleCardRect(popup->rect()).contains(retryRect));
+    QTest::keyClick(box, Qt::Key_Tab);
+    EXPECT_TRUE(retry->hasFocus());
+    QTest::keyClick(retry, Qt::Key_Escape);
+    EXPECT_FALSE(box->isSuggestionListOpen());
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_AsyncDismissalCancelsPendingAndLateWork)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 360, 32);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setDebounceInterval(30);
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    ASSERT_TRUE(showAndFocus(box));
+    QTest::keyClicks(box, "query");
+    QTest::keyClick(box, Qt::Key_Escape);
+    QTest::qWait(50);
+    EXPECT_EQ(requests.count(), 0);
+    EXPECT_FALSE(box->isSuggestionListOpen());
+    box->requestSuggestions();
+    const quint64 escaped = requests.last().at(1).toULongLong();
+    QTest::keyClick(box, Qt::Key_Escape);
+    EXPECT_FALSE(box->setSuggestionsForRequest(escaped, {QStringLiteral("Late")}));
+    EXPECT_FALSE(box->isSuggestionListOpen());
+    box->requestSuggestions();
+    const quint64 outside = requests.last().at(1).toULongLong();
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, QPoint(500, 320));
+    EXPECT_FALSE(box->isSuggestionRequestCurrent(outside));
+    box->requestSuggestions();
+    const quint64 disabled = requests.last().at(1).toULongLong();
+    box->setEnabled(false);
+    EXPECT_FALSE(box->completeSuggestionRequest(disabled));
+    box->setEnabled(true);
+    box->requestSuggestions();
+    const quint64 hidden = requests.last().at(1).toULongLong();
+    window->hide();
+    EXPECT_FALSE(box->failSuggestionRequest(hidden, QStringLiteral("Late failure")));
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_DenseBorrowedSuggestionsStayVirtualized)
+{
+    class DenseModel final : public QAbstractListModel {
+    public:
+        mutable int reads = 0;
+        int rowCount(const QModelIndex& parent = {}) const override { return parent.isValid() ? 0 : 10000; }
+        QVariant data(const QModelIndex& index, int role) const override
+        {
+            ++reads;
+            return role == Qt::DisplayRole ? QVariant(QStringLiteral("Project %1").arg(index.row())) : QVariant();
+        }
+    } model;
+    auto* box = new AutoSuggestBox(window);
+    box->setGeometry(20, 20, 360, 32);
+    box->setSuggestionModel(&model);
+    ASSERT_TRUE(showAndFocus(box));
+    QTest::keyClick(box, Qt::Key_Down);
+    QApplication::processEvents();
+    auto* list = window->findChild<QListView*>(QStringLiteral("AutoSuggestBoxSuggestionList"));
+    ASSERT_NE(list, nullptr);
+    EXPECT_EQ(list->model(), &model);
+    EXPECT_FALSE(list->accessibleName().isEmpty());
+    EXPECT_EQ(list->visualRect(model.index(1, 0)).top() - list->visualRect(model.index(0, 0)).top(),
+        box->suggestionItemHeight());
+    EXPECT_LT(list->findChildren<QWidget*>().size(), 20);
+    EXPECT_LT(model.reads, 1000);
+    EXPECT_EQ(box->suggestionCount(), 10000);
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_AsyncCallbacksMayDeleteTheControl)
+{
+    QPointer<AutoSuggestBox> requesting = new AutoSuggestBox(window);
+    requesting->setAsyncSuggestionsEnabled(true);
+    requesting->setText(QStringLiteral("query"));
+    QObject::connect(requesting, &AutoSuggestBox::suggestionsRequested, requesting, [requesting] {
+        delete requesting;
+    });
+    requesting->requestSuggestions();
+    EXPECT_TRUE(requesting.isNull());
+    QPointer<AutoSuggestBox> completing = new AutoSuggestBox(window);
+    completing->setAsyncSuggestionsEnabled(true);
+    completing->setText(QStringLiteral("query"));
+    QSignalSpy requests(completing, &AutoSuggestBox::suggestionsRequested);
+    completing->requestSuggestions();
+    QObject::connect(completing, &AutoSuggestBox::loadStateChanged, completing,
+        [completing](AutoSuggestBox::LoadState state) {
+            if (state == AutoSuggestBox::LoadState::Ready)
+                delete completing;
+        });
+    EXPECT_TRUE(completing->completeSuggestionRequest(requests.last().at(1).toULongLong()));
+    EXPECT_TRUE(completing.isNull());
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_AsyncBlankInputAndExplicitClearStopLoading)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setDebounceInterval(0);
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    ASSERT_TRUE(showAndFocus(box));
+    QTest::keyClicks(box, "   ");
+    QApplication::processEvents();
+    EXPECT_EQ(requests.count(), 0);
+    EXPECT_EQ(box->loadState(), AutoSuggestBox::LoadState::Idle);
+    EXPECT_FALSE(box->isSuggestionListOpen());
+    QTest::keyClicks(box, "query");
+    ASSERT_TRUE(QTest::qWaitFor([&] { return requests.count() == 1; }));
+    const quint64 token = requests.last().at(1).toULongLong();
+    box->clearSuggestions();
+    EXPECT_FALSE(box->isSuggestionRequestCurrent(token));
+    EXPECT_EQ(box->suggestionCount(), 0);
+    EXPECT_EQ(box->loadState(), AutoSuggestBox::LoadState::Ready);
+    EXPECT_FALSE(box->setSuggestionsForRequest(token, {QStringLiteral("Late")}));
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_LoadingObserverCancellationDoesNotRestartDebounce)
+{
+    auto* box = new AutoSuggestBox(window);
+    box->setAsyncSuggestionsEnabled(true);
+    box->setDebounceInterval(15);
+    QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+    bool cancelOnce = true;
+    QObject::connect(box, &AutoSuggestBox::loadStateChanged, box, [&](AutoSuggestBox::LoadState state) {
+        if (state == AutoSuggestBox::LoadState::Loading && cancelOnce) {
+            cancelOnce = false;
+            box->cancelSuggestions();
+        }
+    });
+    ASSERT_TRUE(showAndFocus(box));
+    QTest::keyClicks(box, "q");
+    QTest::qWait(50);
+    EXPECT_EQ(requests.count(), 0);
+    EXPECT_EQ(box->loadState(), AutoSuggestBox::LoadState::Idle);
+    EXPECT_FALSE(box->isSuggestionListOpen());
+    QTest::keyClicks(box, "u");
+    ASSERT_TRUE(QTest::qWaitFor([&] { return requests.count() == 1; }));
+    EXPECT_EQ(requests.last().at(0).toString(), QStringLiteral("qu"));
+}
+
 TEST_F(AutoSuggestBoxTest, VisualCheck)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
@@ -693,4 +1105,68 @@ TEST_F(AutoSuggestBoxTest, VisualCheck)
         QTest::keyClicks(typingFlyout, "c");
     });
     qApp->exec();
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_SynchronousDismissalSurvivesPassiveModelUpdates)
+{
+    AutoSuggestBox box;
+    QStandardItemModel model;
+    model.appendRow(new QStandardItem("Alpha"));
+    box.setSuggestionModel(&model);
+    box.resize(320, 32);
+    box.show();
+    box.activateWindow();
+    box.setFocus();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return box.hasFocus(); }));
+    QTest::keyClicks(&box, "Al");
+    ASSERT_TRUE(box.isSuggestionListOpen());
+    QTest::keyClick(&box, Qt::Key_Escape);
+    model.setData(model.index(0, 0), "Alpine");
+    QApplication::processEvents();
+    EXPECT_FALSE(box.isSuggestionListOpen());
+    box.setSuggestions({"Alpha", "Alpine"});
+    QApplication::processEvents();
+    EXPECT_FALSE(box.isSuggestionListOpen());
+    QTest::keyClicks(&box, "p");
+    EXPECT_TRUE(box.isSuggestionListOpen());
+    box.setSuggestions({});
+    EXPECT_FALSE(box.isSuggestionListOpen());
+    box.setSuggestions({"Alpine"});
+    QApplication::processEvents();
+    EXPECT_TRUE(box.isSuggestionListOpen());
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_SynchronousPopupClosesAfterFocusLeavesOwner)
+{
+    QWidget host;
+    AutoSuggestBox box(&host);
+    LineEdit other(&host);
+    box.setGeometry(20, 20, 280, 32);
+    other.setGeometry(20, 100, 280, 32);
+    host.resize(400, 240);
+    box.setSuggestions({"Alpha"});
+    host.show();
+    host.activateWindow();
+    box.setFocus();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return box.hasFocus(); }));
+    QTest::keyClicks(&box, "Al");
+    ASSERT_TRUE(box.isSuggestionListOpen());
+    other.setFocus();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return other.hasFocus() && !box.isSuggestionListOpen(); }));
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_FrameVisibilityControlsCustomSuggestionFrame)
+{
+    AutoSuggestBox box;
+    box.setText("Value");
+    box.resize(300, 32);
+    box.show();
+    QApplication::processEvents();
+    ASSERT_TRUE(box.isFrameVisible());
+    const auto framed = box.grab().toImage();
+    box.setFrameVisible(false);
+    const auto plain = box.grab().toImage();
+    EXPECT_NE(framed, plain);
+    box.setFrameVisible(true);
+    EXPECT_EQ(framed, box.grab().toImage());
 }
