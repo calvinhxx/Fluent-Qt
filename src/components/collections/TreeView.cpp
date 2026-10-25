@@ -1750,8 +1750,8 @@ void TreeView::syncFluentScrollBar()
     if (!::fluent::scrolling::mirrorNativeScrollBar(m_vScrollBar, verticalScrollBar()))
         return;
 
-    constexpr int kScrollBarRightInset = 4;
-    constexpr int kScrollBarVerticalInset = 4;
+    constexpr int kScrollBarRightInset = ::Spacing::XSmall / 2;
+    constexpr int kScrollBarVerticalInset = ::Spacing::XSmall / 2;
     const QRect r = rect();
     const int top = (m_headerLabel && m_headerLabel->isVisible())
         ? m_headerLabel->geometry().bottom() + 1 + kScrollBarVerticalInset
