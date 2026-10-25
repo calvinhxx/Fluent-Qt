@@ -1558,8 +1558,32 @@ Shiboken::Object::keepReference(
                  dispatch the inherited Expander implementation instead. -->
             <object-type name="CodeBlock"/>
             <object-type name="AutoSuggestBox">
+                <modify-function signature="setQueryIconDecorative(bool)" remove="all"/>
                 <enum-type name="TextChangeReason"/>
                 <enum-type name="QueryButtonPlacement"/>
+                <enum-type name="LoadState"/>
+                <modify-function signature="setSuggestionModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set" variable-name="AutoSuggestBox.model"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="setSuggestions(const QStringList&amp;)">
+                    <inject-code class="target" position="end">
+Shiboken::Object::keepReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF), "AutoSuggestBox.model", Py_None);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="clearSuggestions()">
+                    <inject-code class="target" position="end">
+Shiboken::Object::keepReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF), "AutoSuggestBox.model", Py_None);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="suggestionModel()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
                 <modify-function signature="onThemeUpdated()"
                                  remove="all"/>
             </object-type>

@@ -21,6 +21,8 @@ class AutoSuggestBoxAccessible final
 public:
     explicit AutoSuggestBoxAccessible(AutoSuggestBox* box) : QAccessibleWidget(box, QAccessible::EditableText) {}
 
+    static QWidget* suggestionList(AutoSuggestBox* box) { return box ? box->suggestionListWidget() : nullptr; }
+
     void* interface_cast(QAccessible::InterfaceType type) override
     {
         if (type == QAccessible::TextInterface)
@@ -38,7 +40,7 @@ public:
         AutoSuggestBox* box = view();
         if (!box)
             return result;
-        const bool hasSuggestions = !box->suggestions().isEmpty();
+        const bool hasSuggestions = box->suggestionCount() > 0 || box->isAsyncSuggestionsEnabled();
         result.focusable = true;
         result.selectableText = true;
         result.readOnly = box->isReadOnly();
@@ -48,6 +50,7 @@ public:
         result.expandable = hasSuggestions;
         result.expanded = hasSuggestions && box->isSuggestionListOpen();
         result.collapsed = hasSuggestions && !box->isSuggestionListOpen();
+        result.busy = box->loadState() == AutoSuggestBox::LoadState::Loading;
         return result;
     }
 
@@ -75,7 +78,7 @@ public:
         auto result = QAccessibleWidget::relations(match);
         if (!(match & QAccessible::Controller) || !view())
             return result;
-        QWidget* list = view()->findChild<QWidget*>(QStringLiteral("AutoSuggestBoxSuggestionList"));
+        QWidget* list = suggestionList(view());
         QAccessibleInterface* target = list ? QAccessible::queryAccessibleInterface(list) : nullptr;
         if (target)
             result.append({target, QAccessible::Controller});
@@ -85,7 +88,7 @@ public:
     QStringList actionNames() const override
     {
         QStringList result = QAccessibleWidget::actionNames();
-        if (view() && view()->isEnabled() && !view()->suggestions().isEmpty()) {
+        if (view() && view()->isEnabled() && (view()->suggestionCount() > 0 || view()->isAsyncSuggestionsEnabled())) {
             const QString action = QAccessibleActionInterface::showMenuAction();
             if (!result.contains(action))
                 result.append(action);
@@ -95,8 +98,13 @@ public:
 
     void doAction(const QString& actionName) override
     {
-        if (view() && view()->isEnabled() && !view()->suggestions().isEmpty()
+        if (view() && view()->isEnabled() && (view()->suggestionCount() > 0 || view()->isAsyncSuggestionsEnabled())
             && actionName == QAccessibleActionInterface::showMenuAction()) {
+            view()->m_dismissed = false;
+            if (view()->isAsyncSuggestionsEnabled() && view()->loadState() == AutoSuggestBox::LoadState::Idle) {
+                view()->requestSuggestions();
+                return;
+            }
             view()->openSuggestionList();
             return;
         }
@@ -271,11 +279,12 @@ void notifyAutoSuggestSuggestionsChanged(AutoSuggestBox* box)
     changed.supportsAutoCompletion = true;
     changed.hasPopup = true;
     changed.expandable = true;
+    changed.busy = true;
     QAccessibleStateChangeEvent stateEvent(box, changed);
     QAccessible::updateAccessibility(&stateEvent);
     QAccessibleEvent actionEvent(box, QAccessible::ActionChanged);
     QAccessible::updateAccessibility(&actionEvent);
-    if (QWidget* list = box->findChild<QWidget*>(QStringLiteral("AutoSuggestBoxSuggestionList"))) {
+    if (QWidget* list = AutoSuggestBoxAccessible::suggestionList(box)) {
         QAccessibleEvent structureEvent(list, QAccessible::ObjectReorder);
         QAccessible::updateAccessibility(&structureEvent);
     }
