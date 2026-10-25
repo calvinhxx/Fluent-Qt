@@ -1554,6 +1554,9 @@ Shiboken::Object::keepReference(
         </namespace-type>
 
         <namespace-type name="textfields" visible="no">
+            <object-type name="TagInput">
+                <modify-function signature="onThemeUpdated()" remove="all"/>
+            </object-type>
             <!-- Keep the native theme override: removing it makes Shiboken
                  dispatch the inherited Expander implementation instead. -->
             <object-type name="CodeBlock"/>

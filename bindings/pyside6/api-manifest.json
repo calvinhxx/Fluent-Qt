@@ -109,6 +109,7 @@
     "StepperItem",
     "TabView",
     "TabViewItem",
+    "TagInput",
     "TeachingTip",
     "TextEdit",
     "ThemeTokens",
@@ -1790,6 +1791,17 @@
       "setMaxVisibleLines",
       "copy",
       "copyFinished"
+    ],
+    "TagInput": [
+      "addItem",
+      "clearSelection",
+      "containsKey",
+      "removeItem",
+      "selectedCount",
+      "selectedItems",
+      "selectedKeys",
+      "selectedTexts",
+      "setSelectedItems"
     ],
     "PropertyPanel": [
       "setProperties",

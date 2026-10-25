@@ -164,6 +164,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/status_info/ToolTip.h
 
     src/components/textfields/AutoSuggestBox.h
+    src/components/textfields/TagInput.h
     src/components/textfields/CodeBlock.h
     src/components/textfields/EditingCommandRouter.h
     src/components/textfields/Label.h

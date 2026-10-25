@@ -176,6 +176,7 @@ from .status_info import (
 )
 from .textfields import (
     AutoSuggestBox,
+    TagInput,
     CodeBlock,
     EditingCommandRouter,
     Label,
@@ -298,6 +299,7 @@ __all__ = [
     "AnnotatedScrollBar",
     "AnnotatedScrollBarLabel",
     "AutoSuggestBox",
+    "TagInput",
     "CodeBlock",
     "Avatar",
     "Breadcrumb",

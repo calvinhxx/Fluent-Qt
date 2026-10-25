@@ -69,6 +69,7 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_combo_box
     test_multi_select_combo_box
     test_auto_suggest_box
+    test_tag_input
     test_list_view
     test_flip_view
     test_calendar_date_picker
