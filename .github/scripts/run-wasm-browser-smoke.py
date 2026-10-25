@@ -19,6 +19,12 @@ from wasm_plugin_contract import run_plugin_extension_contract
 from wasm_command_submenus import run_command_submenus_contract
 from wasm_command_palette import run_command_palette_contract
 from wasm_form import run_form_contract
+from wasm_list_detail import run_list_detail_contract
+from wasm_data_grid import run_data_grid_contract
+from wasm_auto_suggest import run_auto_suggest_contract
+from wasm_tag_input import run_tag_input_contract
+from wasm_tree_select import run_tree_select_contract
+from wasm_chart_workbench import run_chart_workbench_contract
 
 
 DEFAULT_RENDER_PIXEL_BUDGET = 1_600_000
@@ -1121,6 +1127,12 @@ def run_smoke(
                 run_command_submenus_contract(browser, base_url, root / "command-menu-validation")
                 run_command_palette_contract(browser, base_url, root / "command-palette-validation")
                 run_form_contract(browser, base_url, root / "form-validation")
+                run_list_detail_contract(browser, base_url, root / "list-detail-validation")
+                run_data_grid_contract(browser, base_url, root / "data-grid-validation")
+                run_auto_suggest_contract(browser, base_url, root / "auto-suggest-validation")
+                run_tag_input_contract(browser, base_url, root / "tag-input-validation")
+                run_tree_select_contract(browser, base_url, root / "tree-select-validation")
+                run_chart_workbench_contract(browser, base_url, root / "chart-workbench-validation")
 
             run_hello_world_spatial_contract(browser, base_url, root / "hello-world-validation")
             run_embedded_theme_contract(browser, base_url)

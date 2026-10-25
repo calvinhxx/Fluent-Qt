@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from wasm_gallery_ready import wait_for_gallery_ready
+
 
 def run_command_palette_contract(browser: object, base_url: str, artifact_dir: Path) -> None:
     from playwright.sync_api import expect, TimeoutError as PlaywrightTimeoutError
@@ -75,13 +77,13 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         page.wait_for_function(
             "document.documentElement.dataset.fluentQtLoaded === 'true'", timeout=120_000
         )
+        wait_for_gallery_ready(page)
         activation = page.locator(
             "#qt-shadow-container .qt-window-a11y-container:visible "
             "> button.hidden-visually-read-by-screen-reader"
         ).first
         activation.wait_for(state="attached")
         activation.evaluate("button => button.click()")
-        expect(page.locator('[id$=".gallerySplashScreen"][aria-hidden="false"]')).to_have_count(0, timeout=15_000)
 
     try:
         open_route("command-palette")
@@ -162,9 +164,8 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         text_is(" the release notes")
         click(page.get_by_role("button", name="Reset text", exact=True))
         # A modal outside press dismisses without activating the sidebar.
-        sidebar = page.locator(
-            '[id$=".galleryFooterNavigationTreeView"][aria-hidden="false"]'
-        )
+        # The runtime now exposes visible navigation rows as named tree items.
+        sidebar = page.get_by_role("treeitem", name="Settings", exact=True)
         click(open_button)
         expect_visible(search)
         click(sidebar)
