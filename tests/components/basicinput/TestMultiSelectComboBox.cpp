@@ -391,7 +391,7 @@ TEST_F(MultiSelectComboBoxTest, PopupUsesRoomierSideBeforeClipping)
     const QRect card = visiblePopupGeometry(*popup, *window);
     const QRect surface = fluent::overlay::overlaySurfaceRect(window);
     EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Top);
-    EXPECT_EQ(card.bottom() + 1, box.geometry().top());
+    EXPECT_EQ(card.bottom() + 1 + Spacing::Gap::Normal, box.geometry().top());
     EXPECT_GE(card.top(), surface.top() + 4);
     EXPECT_EQ(list->height(), box.maximumVisibleItems() * (Spacing::ControlHeight::Standard + Spacing::XSmall));
 }
@@ -429,6 +429,21 @@ TEST_F(MultiSelectComboBoxTest, ConstrainedPopupAcceptsWheelAndTrackpadScroll)
     EXPECT_GT(scrollBar->value(), scrollBar->minimum());
 }
 
+TEST_F(MultiSelectComboBoxTest, PopupFitsWhenLessThanOneFullOptionRowRemains)
+{
+    window->resize(420, 240);
+    QStringListModel model({"One", "Two", "Three", "Four", "Five", "Six", "Seven"});
+    MultiSelectComboBox box(window);
+    box.setGeometry(40, 110, 180, 32);
+    box.setSearchEnabled(true);
+    box.setModel(&model);
+    auto* popup = openPopup(box, *window);
+    ASSERT_NE(popup, nullptr);
+    const QRect card = visiblePopupGeometry(*popup, *window);
+    EXPECT_TRUE(window->rect().adjusted(4, 4, -4, -4).contains(card));
+    EXPECT_FALSE(card.intersects(box.geometry()));
+}
+
 TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard)
 {
     QStringListModel model({QStringLiteral("North America"), QStringLiteral("Europe"), QStringLiteral("Asia Pacific"),
@@ -452,7 +467,7 @@ TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard)
     EXPECT_EQ(selectAll->boxMargin(), Spacing::Medium);
     EXPECT_EQ(selectAll->textGap(), Spacing::Small);
     EXPECT_EQ(selectAll->height(), Spacing::ControlHeight::Standard + Spacing::XSmall);
-    EXPECT_EQ(popup->anchorOffset(), 0);
+    EXPECT_EQ(popup->anchorOffset(), Spacing::Gap::Normal);
     EXPECT_EQ(list->geometry().top(), selectAll->geometry().bottom() + 1);
     EXPECT_FALSE(list->backgroundVisible());
     EXPECT_TRUE(list->property("fluentPreserveParentSurface").toBool());
@@ -510,8 +525,62 @@ TEST_F(MultiSelectComboBoxTest, OpenPopupReflowsAfterHostResize)
     const QRect surface = fluent::overlay::overlaySurfaceRect(window);
     EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Top);
     EXPECT_LT(list->height(), initialListHeight);
-    EXPECT_EQ(card.bottom() + 1, box.geometry().top());
+    EXPECT_EQ(card.bottom() + 1 + Spacing::Gap::Normal, box.geometry().top());
     EXPECT_GE(card.top(), surface.top() + 4);
+}
+
+TEST_F(MultiSelectComboBoxTest, PopupAlignsVisibleCardToLeadingEdgeWithConsistentGap)
+{
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
+    MultiSelectComboBox box(window);
+    box.setModel(&model);
+    box.setSearchEnabled(true);
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        box.setLayoutDirection(direction);
+        for (int y : {40, 340}) {
+            box.setGeometry(260, y, 180, Spacing::ControlHeight::Standard);
+            auto* popup = openPopup(box, *window);
+            ASSERT_NE(popup, nullptr);
+            const QRect card = visiblePopupGeometry(*popup, *window);
+            EXPECT_GT(card.width(), box.width());
+            if (direction == Qt::LeftToRight)
+                EXPECT_EQ(card.left(), box.geometry().left());
+            else
+                EXPECT_EQ(card.right(), box.geometry().right());
+            if (y == 40) {
+                EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Bottom);
+                EXPECT_EQ(card.top() - box.geometry().bottom() - 1, Spacing::Gap::Normal);
+            } else {
+                EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Top);
+                EXPECT_EQ(box.geometry().top() - card.bottom() - 1, Spacing::Gap::Normal);
+            }
+            box.close();
+            QApplication::processEvents();
+        }
+    }
+}
+
+TEST_F(MultiSelectComboBoxTest, LeadingAlignedPopupStillClampsAtWindowEdges)
+{
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta")});
+    MultiSelectComboBox box(window);
+    box.setModel(&model);
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        box.setLayoutDirection(direction);
+        box.setGeometry(direction == Qt::LeftToRight ? 500 : 10, 40, 120, Spacing::ControlHeight::Standard);
+        auto* popup = openPopup(box, *window);
+        ASSERT_NE(popup, nullptr);
+        const QRect card = visiblePopupGeometry(*popup, *window);
+        const QRect bounds = fluent::overlay::overlaySurfaceRect(window).adjusted(4, 4, -4, -4);
+        EXPECT_TRUE(bounds.contains(card));
+        EXPECT_EQ(card.top() - box.geometry().bottom() - 1, Spacing::Gap::Normal);
+        if (direction == Qt::LeftToRight)
+            EXPECT_EQ(card.right(), bounds.right());
+        else
+            EXPECT_EQ(card.left(), bounds.left());
+        box.close();
+        QApplication::processEvents();
+    }
 }
 
 TEST_F(MultiSelectComboBoxTest, SearchAndKeyboardToggleKeepPopupOpen)
@@ -648,6 +717,43 @@ TEST_F(MultiSelectComboBoxTest, PopupFocusVisualTracksInputModality)
     EXPECT_TRUE(list->property("fluentKeyboardFocusVisible").toBool());
 }
 
+TEST_F(MultiSelectComboBoxTest, TriggerOutlineDistinguishesMouseAndKeyboardFocus)
+{
+    MultiSelectComboBox box(window);
+    box.setGeometry(40, 40, 260, Spacing::ControlHeight::Standard);
+    window->show();
+    window->activateWindow();
+    QApplication::processEvents();
+    auto* trigger = box.findChild<fluent::basicinput::Button*>(QStringLiteral("MultiSelectComboBox.Trigger"));
+    ASSERT_NE(trigger, nullptr);
+    const auto stroke = [trigger] {
+        QApplication::processEvents();
+        QImage image(trigger->size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        trigger->render(&image);
+        return image.pixelColor(image.width() / 2, 1);
+    };
+    box.clearFocus();
+    const QColor unfocused = stroke();
+    box.setFocus(Qt::MouseFocusReason);
+    ASSERT_TRUE(box.hasFocus());
+    EXPECT_EQ(stroke(), unfocused);
+    box.clearFocus();
+    box.setFocus(Qt::TabFocusReason);
+    ASSERT_TRUE(box.hasFocus());
+    EXPECT_NE(stroke(), unfocused);
+    // The trigger press must clear the cue even when the owner already has focus.
+    QTest::mousePress(trigger, Qt::LeftButton);
+    ASSERT_TRUE(box.hasFocus());
+    const QColor pressed = stroke();
+    box.clearFocus();
+    EXPECT_EQ(stroke(), pressed);
+    QTest::mouseRelease(trigger, Qt::LeftButton, Qt::NoModifier, QPoint(-10, -10));
+    QTest::qWait(180);
+    box.setFocus(Qt::MouseFocusReason);
+    EXPECT_EQ(stroke(), unfocused);
+}
+
 TEST_F(MultiSelectComboBoxTest, ClosedKeyboardContractOpensAndCloses)
 {
     QStringListModel model({QStringLiteral("Alpha")});
@@ -695,7 +801,7 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction)
     ASSERT_NE(interface, nullptr);
     EXPECT_EQ(interface->role(), QAccessible::ButtonMenu);
     EXPECT_EQ(interface->text(QAccessible::Name), QStringLiteral("Included regions"));
-    EXPECT_EQ(interface->text(QAccessible::Value), QString::fromUtf8("Alpha、Gamma"));
+    EXPECT_EQ(interface->text(QAccessible::Value), QStringLiteral("Alpha, Gamma"));
     EXPECT_TRUE(interface->state().hasPopup);
     EXPECT_TRUE(interface->state().collapsed);
     EXPECT_EQ(interface->childCount(), 0);
@@ -745,7 +851,7 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction)
     betaActions->doAction(QAccessibleActionInterface::pressAction());
     QApplication::processEvents();
     EXPECT_TRUE(beta->state().selected);
-    EXPECT_EQ(interface->text(QAccessible::Value), QString::fromUtf8("Alpha、Beta、Gamma"));
+    EXPECT_EQ(interface->text(QAccessible::Value), QStringLiteral("Alpha, Beta, Gamma"));
     EXPECT_TRUE(box.isOpen());
 
     QAccessibleInterface* otherInterface = QAccessible::queryAccessibleInterface(&other);
@@ -906,4 +1012,73 @@ TEST_F(MultiSelectComboBoxTest, VisualCheck)
     }
     QTimer::singleShot(0, basic, [basic]() { basic->open(); });
     qApp->exec();
+}
+
+TEST_F(MultiSelectComboBoxTest, Contract_ModelDataUpdatesKeepSearchCursorAndSelectionIdentity)
+{
+    QStringListModel model({"Alpha", "Beta", "Gamma", "Delta"});
+    MultiSelectComboBox box(window);
+    box.setGeometry(40, 40, 280, 32);
+    box.setModel(&model);
+    box.setSearchEnabled(true);
+    box.setSelectedRows({0});
+    auto* popup = openPopup(box, *window);
+    ASSERT_TRUE(popup);
+    auto* list = popup->findChild<fluent::collections::ListView*>("MultiSelectComboBox.ListView");
+    ASSERT_TRUE(list);
+    QPointer<QItemSelectionModel> selection = list->selectionModel();
+    const QPersistentModelIndex cursor = list->model()->index(2, 0);
+    selection->setCurrentIndex(cursor, QItemSelectionModel::NoUpdate);
+    list->setFocus();
+    for (int i = 0; i < 3; ++i) {
+        model.setData(model.index(0, 0), QString("Alpha %1").arg(i));
+        QApplication::processEvents();
+        EXPECT_EQ(list->selectionModel(), selection.data());
+        EXPECT_EQ(list->currentIndex(), QModelIndex(cursor));
+        EXPECT_EQ(list->currentIndex().data().toString(), "Gamma");
+        EXPECT_EQ(box.selectedRows(), QList<int>{0});
+    }
+}
+
+TEST_F(MultiSelectComboBoxTest, Contract_LastRowAndWholeRangeSelectionKeepOpenWorkBounded)
+{
+    for (bool all : {false, true}) {
+        CountingListModel model(10000);
+        MultiSelectComboBox box(window);
+        box.setGeometry(40, 40, 280, 32);
+        box.setModel(&model);
+        QList<int> rows;
+        if (all)
+            for (int row = 0; row < 10000; ++row)
+                rows.append(row);
+        else
+            rows.append(9999);
+        box.setSelectedRows(rows);
+        model.flagRequests = model.displayRequests = 0;
+        auto* popup = openPopup(box, *window);
+        ASSERT_TRUE(popup);
+        auto* selectAll = popup->findChild<CheckBox*>("MultiSelectComboBox.SelectAll");
+        ASSERT_TRUE(selectAll);
+        EXPECT_EQ(selectAll->checkState(), all ? Qt::Checked : Qt::PartiallyChecked);
+        EXPECT_LT(model.flagRequests, 150);
+        EXPECT_LT(model.displayRequests, 150);
+        box.close();
+    }
+}
+
+TEST_F(MultiSelectComboBoxTest, Contract_ExplicitFontSurvivesThemeRefreshAndSummaryUsesTranslatedSeparator)
+{
+    MultiSelectComboBox box;
+    QStringListModel model({"Alpha", "Beta"});
+    box.setModel(&model);
+    box.setSelectedRows({0, 1});
+    QFont font = box.font();
+    font.setPixelSize(25);
+    box.setFont(font);
+    box.onThemeUpdated();
+    EXPECT_EQ(box.font(), font);
+    EXPECT_GE(box.sizeHint().height(), box.fontMetrics().height() + 8);
+    auto* accessible = QAccessible::queryAccessibleInterface(&box);
+    ASSERT_TRUE(accessible);
+    EXPECT_EQ(accessible->text(QAccessible::Value), QString("Alpha, Beta"));
 }
