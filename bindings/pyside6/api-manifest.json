@@ -1548,7 +1548,12 @@
       "maximumY",
       "setYRange",
       "resetYRange",
-      "legendRect"
+      "legendRect",
+      "exportImage",
+      "exportPng",
+      "exportCsv",
+      "copyImage",
+      "copyData"
     ],
     "LineChart": [
       "setModel",

@@ -1,3 +1,5 @@
+#include <QClipboard>
+#include <QThread>
 #include <gtest/gtest.h>
 #include <QAccessible>
 #include <QApplication>
@@ -11,6 +13,7 @@
 #include <QTest>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <vector>
 #include <FluentQt/BasicInput.h>
 #include <FluentQt/Charts.h>
@@ -52,6 +55,113 @@ void movePointer(QWidget& target, const QPoint& position)
     QApplication::sendEvent(&target, &event);
 }
 } // namespace
+
+TEST(ChartViewTest, Contract_ExportKeepsRawRowsQuotesAndVisibleRange)
+{
+    ChartModel model;
+    model.setName("Primary, \"quoted\"");
+    model.setPoints({{0, 10}, {1, std::numeric_limits<double>::quiet_NaN()}, {2, 30}, {3, 40}},
+        {"first", "gap\nlabel", "last", "outside"});
+    ChartView chart;
+    chart.setModel(&model);
+    chart.setValueSuffix(" ms");
+    chart.setXRange(1, 2);
+    const auto all = chart.exportCsv();
+    EXPECT_TRUE(all.contains("0,\"Primary, \"\"quoted\"\"\",0,10,\"first\",\" ms\"\r\n"));
+    const auto visible = chart.exportCsv(true);
+    EXPECT_FALSE(visible.contains("outside"));
+    EXPECT_FALSE(visible.contains("first"));
+    EXPECT_TRUE(visible.contains(",1,,\"gap\nlabel\",\" ms\"\r\n"));
+    EXPECT_TRUE(visible.contains(",2,30,\"last\",\" ms\"\r\n"));
+    chart.setChartType(ChartView::Pie);
+    EXPECT_EQ(chart.exportCsv(true), all);
+    EXPECT_EQ(model.rowCount(), 4);
+}
+
+TEST(ChartViewTest, Contract_ImageExportOmitsInteractionAndPreservesGeometry)
+{
+    ChartModel model;
+    model.setPoints(wave(100));
+    ChartView chart;
+    chart.resize(600, 360);
+    chart.setModel(&model);
+    const QImage plain = chart.exportImage(2);
+    EXPECT_EQ(plain.size(), QSize(1200, 720));
+    chart.setCurrentPoint(0, 25);
+    EXPECT_EQ(chart.exportImage(2), plain);
+    EXPECT_EQ(chart.currentRow(), 25);
+    EXPECT_EQ(chart.size(), QSize(600, 360));
+    const auto png = chart.exportPng(2);
+    EXPECT_EQ(QImage::fromData(png, "PNG").size(), plain.size());
+    EXPECT_TRUE(chart.exportImage(-1).isNull());
+    EXPECT_TRUE(chart.exportImage(1000).isNull());
+    model.setPoints({{0, 2}, {1, 3}});
+    EXPECT_NE(chart.exportImage(2), plain);
+}
+
+TEST(ChartViewTest, Contract_AllDedicatedChartsExportImagesAndOriginalData)
+{
+    ChartModel model;
+    model.setName("Primary");
+    model.setPoints({{0, 10}, {1, 20}, {2, 30}}, {"First", "Second", "Third"});
+    std::vector<std::unique_ptr<ChartView>> charts;
+    charts.emplace_back(new LineChart);
+    charts.emplace_back(new AreaChart);
+    charts.emplace_back(new BarChart);
+    charts.emplace_back(new HorizontalBarChart);
+    charts.emplace_back(new PieChart);
+    charts.emplace_back(new DonutChart);
+    charts.emplace_back(new ScatterChart);
+    charts.emplace_back(new Sparkline);
+    for (const auto& chart : charts) {
+        SCOPED_TRACE(chart->metaObject()->className());
+        chart->resize(360, 240);
+        chart->setModel(&model);
+        chart->setXRange(0.5, 1.5);
+        const QByteArray all = chart->exportCsv();
+        EXPECT_TRUE(all.startsWith("series,name,x,y,label,unit\r\n"));
+        EXPECT_EQ(all.count('\n'), 4);
+        EXPECT_TRUE(all.contains("0,\"Primary\",0,10,\"First\",\"\"\r\n"));
+        const bool radial = chart->chartType() == ChartView::Pie || chart->chartType() == ChartView::Donut;
+        const QByteArray visible = chart->exportCsv(true);
+        EXPECT_EQ(visible.count('\n'), radial ? 4 : 2);
+        EXPECT_TRUE(visible.contains("\"Second\""));
+        EXPECT_EQ(chart->exportImage(1.5).size(), QSize(540, 360));
+        EXPECT_EQ(QImage::fromData(chart->exportPng(), "PNG").size(), QSize(360, 240));
+        EXPECT_EQ(chart->model(), &model);
+        EXPECT_EQ(model.rowCount(), 3);
+    }
+}
+
+TEST(ChartViewTest, Contract_RangedExportPlacesEachCategoryAtItsDataPoint)
+{
+    ChartModel model;
+    model.setPoints({{1, 10}, {2, 20}, {3, 30}, {4, 40}}, {"A", "B", "C", "D"});
+    ChartView chart;
+    chart.setProperty("fluentThemeOverride", int(fluent::FluentElement::Light));
+    chart.onThemeUpdated();
+    chart.resize(800, 400);
+    chart.setModel(&model);
+    chart.setXRange(1, 4);
+    const QImage image = chart.exportImage();
+    const QRectF plot = chart.plotRect();
+    QVector<double> centers;
+    int start = -1;
+    for (int x = int(plot.left()) - 16; x <= int(plot.right()) + 16; ++x) {
+        bool ink = false;
+        for (int y = int(plot.bottom()) + 10; y < int(plot.bottom()) + 30; ++y)
+            ink |= qGray(image.pixel(x, y)) < 150;
+        if (ink && start < 0)
+            start = x;
+        if (!ink && start >= 0) {
+            centers.append((start + x - 1) / 2.0);
+            start = -1;
+        }
+    }
+    ASSERT_EQ(centers.size(), 4);
+    for (int i = 0; i < centers.size(); ++i)
+        EXPECT_NEAR(centers.at(i), plot.left() + i * plot.width() / 3, 2.0);
+}
 
 TEST(ChartViewTest, Contract_BorrowedModelsShareDataAndSurviveDestruction)
 {
@@ -843,4 +953,18 @@ TEST(ChartViewTest, Contract_PercentageTracksAndResponsiveRadialLegend)
     donut.setLoading(false);
     donut.grab();
     EXPECT_EQ(donut.renderedPointCount(), 4);
+}
+
+TEST(ChartViewTest, Contract_CopyDataRejectsWrongThreadWithoutTouchingClipboard)
+{
+    ChartView chart;
+    QSignalSpy copied(&chart, &ChartView::dataCopied);
+    QSignalSpy clipboardChanges(QApplication::clipboard(), &QClipboard::dataChanged);
+    std::unique_ptr<QThread> worker(QThread::create([&] { chart.copyData(); }));
+    worker->start();
+    ASSERT_TRUE(worker->wait(2000));
+    QApplication::processEvents();
+    ASSERT_EQ(copied.count(), 1);
+    EXPECT_FALSE(copied.first().first().toBool());
+    EXPECT_EQ(clipboardChanges.count(), 0);
 }

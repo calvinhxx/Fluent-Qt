@@ -61,6 +61,7 @@ from PySide6.QtGui import (
     QAction,
     QColor,
     QIcon,
+    QImage,
     QKeySequence,
     QPalette,
     QStandardItem,
@@ -105,6 +106,59 @@ def wait_for_events(duration_ms):
 
 
 class FluentQtBindingTest(unittest.TestCase):
+    def test_all_dedicated_charts_export_images_and_original_data(self):
+        model = fluentqt.ChartModel()
+        model.setName("Primary")
+        model.setPoints([QPointF(0, 10), QPointF(1, 20), QPointF(2, 30)], ["First", "Second", "Third"])
+        for chart_type in (fluentqt.LineChart, fluentqt.AreaChart, fluentqt.BarChart,
+                           fluentqt.HorizontalBarChart, fluentqt.PieChart, fluentqt.DonutChart,
+                           fluentqt.ScatterChart, fluentqt.Sparkline):
+            with self.subTest(chart=chart_type.__name__):
+                chart = chart_type()
+                chart.resize(360, 240)
+                chart.setModel(model)
+                chart.setXRange(0.5, 1.5)
+                data = bytes(chart.exportCsv())
+                self.assertEqual(data.count(b"\n"), 4)
+                self.assertIn(b'0,"Primary",0,10,"First",""\r\n', data)
+                radial = chart_type in (fluentqt.PieChart, fluentqt.DonutChart)
+                self.assertEqual(bytes(chart.exportCsv(True)).count(b"\n"), 4 if radial else 2)
+                self.assertEqual(chart.exportImage(1.5).size(), QSize(540, 360))
+                self.assertEqual(QImage.fromData(chart.exportPng(), "PNG").size(), QSize(360, 240))
+                self.assertEqual(model.rowCount(), 3)
+                delete_qobject(chart)
+
+    def test_chart_export_and_numeric_scrub_binding(self):
+        box = fluentqt.NumberBox()
+        box.resize(260, 32)
+        box.setValue(20)
+        box.setScrubbingEnabled(True)
+        box.setScrubSensitivity(0.5)
+        box.show()
+        QApplication.processEvents()
+        handle = box.scrubHandleRect().center()
+        finished = QSignalSpy(box.scrubFinished)
+        QTest.mousePress(box, Qt.LeftButton, Qt.NoModifier, handle)
+        QTest.mouseMove(box, handle + QPoint(40, 0))
+        self.assertEqual(box.value(), 40)
+        QTest.keyClick(box, Qt.Key_Escape)
+        QTest.mouseRelease(box, Qt.LeftButton, Qt.NoModifier, handle)
+        self.assertEqual(box.value(), 20)
+        self.assertEqual(finished.count(), 1)
+        model = fluentqt.ChartModel()
+        model.setPoints([QPointF(0, 18), QPointF(1, 32), QPointF(2, 24)])
+        chart = fluentqt.ChartView()
+        chart.resize(400, 240)
+        chart.setModel(model)
+        chart.setXRange(1, 2)
+        self.assertEqual(bytes(chart.exportCsv(True)).count(b"\n"), 3)
+        self.assertEqual(chart.exportImage(2).size(), QSize(800, 480))
+        self.assertTrue(bytes(chart.exportPng()).startswith(b"\x89PNG"))
+        self.assertIsNone(model.parent())
+        delete_qobject(chart)
+        delete_qobject(model)
+        delete_qobject(box)
+
     def test_code_block_native_api_selection_and_parent_lifetime(self):
         self.assertIs(textfields.CodeBlock, fluentqt.CodeBlock)
         self.assertIs(native.fluent.CodeBlock, fluentqt.CodeBlock)
@@ -10241,6 +10295,23 @@ class FluentQtBindingTest(unittest.TestCase):
         box.setValue(1e18 + 128)
         self.assertEqual(changes, [1e18 + 128])
         delete_qobject(box)
+
+    def test_review_chart_copy_from_worker_reports_failure(self):
+        from PySide6.QtCore import QThread
+        chart = fluentqt.ChartView()
+        completed = []
+        chart.dataCopied.connect(completed.append, Qt.DirectConnection)
+        class Worker(QThread):
+            def run(self):
+                chart.copyData()
+        worker = Worker()
+        worker.start()
+        self.assertTrue(worker.wait(2000))
+        self.assertEqual(completed, [False])
+        delete_qobject(chart)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

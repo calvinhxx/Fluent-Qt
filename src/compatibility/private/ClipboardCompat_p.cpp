@@ -1,5 +1,7 @@
 #include "ClipboardCompat_p.h"
 #include <QClipboard>
+#include <QBuffer>
+#include <QImage>
 #include <QGuiApplication>
 #include <QHash>
 #include <QPointer>
@@ -32,6 +34,21 @@ EM_JS(void, fluentQtCopyTextToClipboard, (unsigned int request, const char* utf8
         }
         // Invoke in the original input turn, before awaiting browser permission.
         navigator.clipboard.writeText(text).then(() => complete(true), () => complete(false));
+    } catch (_) {
+        complete(false);
+    }
+});
+
+EM_JS(void, fluentQtCopyImageToClipboard, (unsigned int request, const unsigned char* data, int size), {
+    const complete = success => Module['_fluentQtClipboardCopyCompleted'](request, success ? 1 : 0);
+    try {
+        if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === 'undefined') {
+            complete(false);
+            return;
+        }
+        const blob = new Blob([HEAPU8.slice(data, data + size)], {type: 'image/png'});
+        navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
+            .then(() => complete(true), () => complete(false));
     } catch (_) {
         complete(false);
     }
@@ -70,7 +87,51 @@ void copyText(QObject* context, const QString& text, std::function<void(bool)> c
     fluentQtCopyTextToClipboard(request, text.toUtf8().constData());
 }
 
+void copyImage(QObject* context, const QImage& image, std::function<void(bool)> completed)
+{
+    if (!context || !completed)
+        return;
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    if (image.isNull() || !buffer.open(QIODevice::WriteOnly) || !image.save(&buffer, "PNG")) {
+        completed(false);
+        return;
+    }
+    do {
+        ++nextClipboardRequest;
+    } while (nextClipboardRequest == 0 || clipboardRequests.contains(nextClipboardRequest));
+    const quint32 request = nextClipboardRequest;
+    ClipboardRequest pending{context, std::move(completed), {}};
+    pending.destroyedConnection = QObject::connect(context, &QObject::destroyed, [request] {
+        clipboardRequests.remove(request);
+    });
+    clipboardRequests.insert(request, std::move(pending));
+    fluentQtCopyImageToClipboard(request, reinterpret_cast<const unsigned char*>(bytes.constData()), bytes.size());
+}
+
 #else
+void copyImage(QObject* context, const QImage& image, std::function<void(bool)> completed)
+{
+    if (!context || !completed)
+        return;
+    if (image.isNull()) {
+        completed(false);
+        return;
+    }
+    const QPointer<QObject> guard(context);
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (clipboard)
+        clipboard->setImage(image);
+    if (!guard)
+        return;
+    bool copied = clipboard != nullptr;
+#if defined(Q_OS_WIN)
+    if (copied && QGuiApplication::platformName() == QStringLiteral("windows"))
+        copied = clipboard->ownsClipboard();
+#endif
+    completed(copied);
+}
+
 void copyText(QObject* context, const QString& text, std::function<void(bool)> completed)
 {
     if (!context || !completed)

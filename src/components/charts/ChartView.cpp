@@ -2,6 +2,7 @@
 
 #include <QAccessibleWidget>
 #include <QApplication>
+#include <QBuffer>
 #include <QFocusEvent>
 #include <QHideEvent>
 #include <QKeyEvent>
@@ -19,6 +20,7 @@
 
 #include "ChartRenderer_p.h"
 #include "ChartReadout_p.h"
+#include "compatibility/private/ClipboardCompat_p.h"
 #include "design/ChartTokens_p.h"
 #include "design/ThemeColors.h"
 #include "design/Typography.h"
@@ -904,16 +906,26 @@ void ChartViewPrivate::paintAxes(QPainter& p) const
         return;
     }
     const int ticks = plot.width() >= 480 ? 6 : std::max(1, std::min(3, int(plot.width() / 80)));
+    int lastLabelRow = -1;
     for (int i = 0; i <= ticks; ++i) {
         const double t = double(i) / ticks, value = mix(xMin, xMax, t);
+        double position = t;
         QString text = number(q, value);
         if (const auto* model = q->model()) {
             const int row = std::min(model->rowCount() - 1, model->lowerBound(value));
             const auto label = model->labelAt(row);
-            if (!label.isEmpty())
+            if (!label.isEmpty()) {
+                if (row == lastLabelRow)
+                    continue;
+                const double x = model->pointAt(row).x();
+                if (x < xMin || x > xMax)
+                    continue;
+                lastLabelRow = row;
+                position = normalized(x, xMin, xMax);
                 text = label;
+            }
         }
-        p.drawText(QRectF(plot.left() + t * plot.width() - 32, plot.bottom() + 10, 64, 20), Qt::AlignCenter,
+        p.drawText(QRectF(plot.left() + position * plot.width() - 32, plot.bottom() + 10, 64, 20), Qt::AlignCenter,
             p.fontMetrics().elidedText(text, Qt::ElideRight, 64));
     }
 }
@@ -1110,6 +1122,90 @@ void ChartView::paintEvent(QPaintEvent*)
     if ((d->dirty && d->ready) || d->dpr != devicePixelRatioF())
         d->project();
     QPainter painter(this);
+    paintChart(painter, true);
+}
+
+QImage ChartView::exportImage(double scale)
+{
+    if (QThread::currentThread() != thread() || !std::isfinite(scale) || scale <= 0 || width() <= 0 || height() <= 0)
+        return {};
+    const double w = std::ceil(width() * scale), h = std::ceil(height() * scale);
+    if (!std::isfinite(w * h) || w < 1 || h < 1 || w * h > 16000000)
+        return {};
+    ensurePolished();
+    if (d->dirty || d->dpr != devicePixelRatioF())
+        d->project();
+    QImage image(int(w), int(h), QImage::Format_ARGB32_Premultiplied);
+    if (image.isNull())
+        return {};
+    image.fill(themeColorsRef().bgCanvas);
+    QPainter painter(&image);
+    painter.scale(scale, scale);
+    paintChart(painter, false);
+    return image;
+}
+
+QByteArray ChartView::exportPng(double scale)
+{
+    const QImage image = exportImage(scale);
+    if (image.isNull())
+        return {};
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    if (!buffer.open(QIODevice::WriteOnly) || !image.save(&buffer, "PNG"))
+        return {};
+    return bytes;
+}
+
+QByteArray ChartView::exportCsv(bool visibleRangeOnly) const
+{
+    if (QThread::currentThread() != thread())
+        return {};
+    const auto quoted = [](QString text) {
+        text.replace(QLatin1Char('"'), QStringLiteral("\"\""));
+        return '"' + text.toUtf8() + '"';
+    };
+    QByteArray bytes("series,name,x,y,label,unit\r\n");
+    const bool radial = d->circular();
+    const int count = radial ? qMin(1, seriesCount()) : seriesCount();
+    for (int s = 0; s < count; ++s) {
+        const ChartModel* source = seriesModel(s);
+        if (!source)
+            continue;
+        const bool ranged = visibleRangeOnly && !radial && !isAutoRange();
+        const int first = ranged ? source->lowerBound(minimumX()) : 0;
+        const int last = ranged ? source->upperBound(maximumX()) : source->rowCount();
+        const QByteArray prefix = QByteArray::number(s) + ',' + quoted(source->name()) + ',';
+        const QByteArray unit = quoted(valueSuffix());
+        for (int row = first; row < last; ++row) {
+            const QPointF point = source->pointAt(row);
+            bytes += prefix + QByteArray::number(point.x(), 'g', 17) + ',';
+            if (std::isfinite(point.y()))
+                bytes += QByteArray::number(point.y(), 'g', 17);
+            bytes += ',' + quoted(source->labelAt(row)) + ',' + unit + "\r\n";
+        }
+    }
+    return bytes;
+}
+
+void ChartView::copyImage(double scale)
+{
+    ::compatibility::detail::copyImage(this, exportImage(scale), [this](bool success) { emit imageCopied(success); });
+}
+
+void ChartView::copyData(bool visibleRangeOnly)
+{
+    if (QThread::currentThread() != thread()) {
+        emit dataCopied(false);
+        return;
+    }
+    ::compatibility::detail::copyText(this, QString::fromUtf8(exportCsv(visibleRangeOnly)), [this](bool success) {
+        emit dataCopied(success);
+    });
+}
+
+void ChartView::paintChart(QPainter& painter, bool interactive)
+{
     painter.setRenderHint(QPainter::Antialiasing);
     const auto& colors = themeColorsRef();
     const bool dark = effectiveTheme() == Dark, high = effectiveTheme() == HighContrast;
@@ -1166,8 +1262,9 @@ void ChartView::paintEvent(QPaintEvent*)
         painter.drawText(d->plot.adjusted(0, 14, 0, 14), Qt::AlignCenter,
             d->loading ? tr("The chart will appear when ready.") : tr("Add a series to see it here."));
     }
-    d->paintCursor(painter);
-    if (hasFocus() && isEnabled() && d->keyboardFocusVisible) {
+    if (interactive)
+        d->paintCursor(painter);
+    if (interactive && hasFocus() && isEnabled() && d->keyboardFocusVisible) {
         painter.setOpacity(1);
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(colors.accentDefault, 2));
