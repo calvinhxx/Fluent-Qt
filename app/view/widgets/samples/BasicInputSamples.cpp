@@ -86,8 +86,7 @@ QString checkStateText(Qt::CheckState state)
     return QStringLiteral("Unchecked");
 }
 
-template <typename Func>
-void connectCheckBoxState(CheckBox* checkBox, QObject* context, Func callback)
+template <typename Func> void connectCheckBoxState(CheckBox* checkBox, QObject* context, Func callback)
 {
     fluentConnectCheckStateChanged(checkBox, context, callback);
 }
@@ -116,9 +115,9 @@ FluentMenu* makeMenu(QWidget* owner, const QString& title, const QStringList& ac
 
 void setSwatchColor(QWidget* swatch, const QColor& color)
 {
-    swatch->setStyleSheet(
-        QStringLiteral("background-color: %1; border: 1px solid rgba(0, 0, 0, 48); "
-                       "border-radius: 6px;")
+    swatch->setStyleSheet(QStringLiteral(
+        "background-color: %1; border: 1px solid rgba(0, 0, 0, 48); "
+        "border-radius: 6px;")
             .arg(color.name(QColor::HexArgb)));
 }
 
@@ -139,60 +138,57 @@ QVector<GallerySample> buttonSamples()
 {
     return {
         makeSample(QStringLiteral("button-styles"), QStringLiteral("Button styles"),
-                   QStringLiteral("Standard, accent, and subtle styles cover neutral, primary, and "
-                                  "lightweight commands."),
-                   QStringLiteral("auto* standard = new Button(\"Standard\", this);\n"
-                                  "standard->setFluentStyle(Button::Standard);\n\n"
-                                  "auto* accent = new Button(\"Accent\", this);\n"
-                                  "accent->setFluentStyle(Button::Accent);\n\n"
-                                  "auto* subtle = new Button(\"Subtle\", this);\n"
-                                  "subtle->setFluentStyle(Button::Subtle);"),
-                   [](QWidget* parent) {
-                       QWidget* group = horizontalGroup(parent, 10);
-                       group->layout()->addWidget(
-                           makeButton(group, QStringLiteral("Standard"), Button::Standard));
-                       group->layout()->addWidget(
-                           makeButton(group, QStringLiteral("Accent"), Button::Accent));
-                       group->layout()->addWidget(
-                           makeButton(group, QStringLiteral("Subtle"), Button::Subtle));
-                       return group;
-                   }),
-        makeSample(QStringLiteral("button-sizes"), QStringLiteral("Button sizes"),
-                   QStringLiteral("Size presets change button height and padding without changing "
-                                  "the command semantics."),
-                   QStringLiteral("auto* small = new Button(\"Small\", this);\n"
-                                  "small->setFluentSize(Button::Small);\n\n"
-                                  "auto* standard = new Button(\"Standard\", this);\n"
-                                  "standard->setFluentSize(Button::StandardSize);\n\n"
-                                  "auto* large = new Button(\"Large\", this);\n"
-                                  "large->setFluentSize(Button::Large);"),
-                   [](QWidget* parent) {
-                       QWidget* group = horizontalGroup(parent, 10);
-                       auto* small = makeButton(group, QStringLiteral("Small"), Button::Standard);
-                       small->setFluentSize(Button::Small);
-                       auto* standard =
-                           makeButton(group, QStringLiteral("Standard"), Button::Standard);
-                       standard->setFluentSize(Button::StandardSize);
-                       auto* large = makeButton(group, QStringLiteral("Large"), Button::Standard);
-                       large->setFluentSize(Button::Large);
-                       group->layout()->addWidget(small);
-                       group->layout()->addWidget(standard);
-                       group->layout()->addWidget(large);
-                       return group;
-                   }),
-        makeSample(
-            QStringLiteral("button-icon-layouts"), QStringLiteral("Icon layouts"),
+            QStringLiteral("Standard, accent, and subtle styles cover neutral, primary, and "
+                           "lightweight commands."),
             QStringLiteral(
-                "Icon glyphs can sit before text, after text, or become the whole button content."),
-            QStringLiteral("auto* before = new Button(\"Icon before\", this);\n"
-                           "before->setFluentLayout(Button::IconBefore);\n"
-                           "before->setIconGlyph(Typography::Icons::Add);\n\n"
-                           "auto* iconOnly = new Button(QString(), this);\n"
-                           "iconOnly->setFluentLayout(Button::IconOnly);\n"
-                           "iconOnly->setIconGlyph(Typography::Icons::More);\n\n"
-                           "auto* after = new Button(\"Next\", this);\n"
-                           "after->setFluentLayout(Button::IconAfter);\n"
-                           "after->setIconGlyph(Typography::Icons::ChevronRight);"),
+                "auto* standard = new Button(\"Standard\", this);\n"
+                "standard->setFluentStyle(Button::Standard);\n\n"
+                "auto* accent = new Button(\"Accent\", this);\n"
+                "accent->setFluentStyle(Button::Accent);\n\n"
+                "auto* subtle = new Button(\"Subtle\", this);\n"
+                "subtle->setFluentStyle(Button::Subtle);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 10);
+                group->layout()->addWidget(makeButton(group, QStringLiteral("Standard"), Button::Standard));
+                group->layout()->addWidget(makeButton(group, QStringLiteral("Accent"), Button::Accent));
+                group->layout()->addWidget(makeButton(group, QStringLiteral("Subtle"), Button::Subtle));
+                return group;
+            }),
+        makeSample(QStringLiteral("button-sizes"), QStringLiteral("Button sizes"),
+            QStringLiteral("Size presets change button height and padding without changing "
+                           "the command semantics."),
+            QStringLiteral(
+                "auto* small = new Button(\"Small\", this);\n"
+                "small->setFluentSize(Button::Small);\n\n"
+                "auto* standard = new Button(\"Standard\", this);\n"
+                "standard->setFluentSize(Button::StandardSize);\n\n"
+                "auto* large = new Button(\"Large\", this);\n"
+                "large->setFluentSize(Button::Large);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 10);
+                auto* small = makeButton(group, QStringLiteral("Small"), Button::Standard);
+                small->setFluentSize(Button::Small);
+                auto* standard = makeButton(group, QStringLiteral("Standard"), Button::Standard);
+                standard->setFluentSize(Button::StandardSize);
+                auto* large = makeButton(group, QStringLiteral("Large"), Button::Standard);
+                large->setFluentSize(Button::Large);
+                group->layout()->addWidget(small);
+                group->layout()->addWidget(standard);
+                group->layout()->addWidget(large);
+                return group;
+            }),
+        makeSample(QStringLiteral("button-icon-layouts"), QStringLiteral("Icon layouts"),
+            QStringLiteral("Icon glyphs can sit before text, after text, or become the whole button content."),
+            QStringLiteral(
+                "auto* before = new Button(\"Icon before\", this);\n"
+                "before->setFluentLayout(Button::IconBefore);\n"
+                "before->setIconGlyph(Typography::Icons::Add);\n\n"
+                "auto* iconOnly = new Button(QString(), this);\n"
+                "iconOnly->setFluentLayout(Button::IconOnly);\n"
+                "iconOnly->setIconGlyph(Typography::Icons::More);\n\n"
+                "auto* after = new Button(\"Next\", this);\n"
+                "after->setFluentLayout(Button::IconAfter);\n"
+                "after->setIconGlyph(Typography::Icons::ChevronRight);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 10);
                 auto* before = makeButton(group, QStringLiteral("Icon before"), Button::Standard);
@@ -206,27 +202,26 @@ QVector<GallerySample> buttonSamples()
 
                 auto* after = makeButton(group, QStringLiteral("Next"), Button::Standard);
                 after->setFluentLayout(Button::IconAfter);
-                after->setIconGlyph(Typography::Icons::ChevronRight,
-                                    Typography::IconSize::Standard);
+                after->setIconGlyph(Typography::Icons::ChevronRight, Typography::IconSize::Standard);
 
                 group->layout()->addWidget(before);
                 group->layout()->addWidget(iconOnly);
                 group->layout()->addWidget(after);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("button-interaction-state"), QStringLiteral("Interaction state preview"),
+        makeSample(QStringLiteral("button-interaction-state"), QStringLiteral("Interaction state preview"),
             QStringLiteral("Forced pointer, keyboard-focus, and disabled states are shown side by "
                            "side for review."),
-            QStringLiteral("auto* rest = new Button(\"Rest\", this);\n\n"
-                           "auto* hover = new Button(\"Hover\", this);\n"
-                           "hover->setInteractionState(Button::Hover);\n\n"
-                           "auto* pressed = new Button(\"Pressed\", this);\n"
-                           "pressed->setInteractionState(Button::Pressed);\n\n"
-                           "auto* focused = new Button(\"Focus\", this);\n"
-                           "focused->setFocusVisual(true);\n\n"
-                           "auto* disabled = new Button(\"Disabled\", this);\n"
-                           "disabled->setInteractionState(Button::Disabled);"),
+            QStringLiteral(
+                "auto* rest = new Button(\"Rest\", this);\n\n"
+                "auto* hover = new Button(\"Hover\", this);\n"
+                "hover->setInteractionState(Button::Hover);\n\n"
+                "auto* pressed = new Button(\"Pressed\", this);\n"
+                "pressed->setInteractionState(Button::Pressed);\n\n"
+                "auto* focused = new Button(\"Focus\", this);\n"
+                "focused->setFocusVisual(true);\n\n"
+                "auto* disabled = new Button(\"Disabled\", this);\n"
+                "disabled->setInteractionState(Button::Disabled);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 10);
                 auto* rest = makeButton(group, QStringLiteral("Rest"), Button::Standard);
@@ -246,94 +241,87 @@ QVector<GallerySample> buttonSamples()
                 return group;
             }),
         makeSample(QStringLiteral("button-critical-hover"), QStringLiteral("Critical hover action"),
-                   QStringLiteral("Critical hover uses the danger color for destructive commands "
-                                  "while keeping the button neutral at rest."),
-                   QStringLiteral("auto* deleteButton = new Button(\"Delete\", this);\n"
-                                  "deleteButton->setFluentLayout(Button::IconBefore);\n"
-                                  "deleteButton->setIconGlyph(Typography::Icons::Delete);\n"
-                                  "deleteButton->setCriticalOnHover(true);\n"
-                                  "deleteButton->setInteractionState(Button::Hover);"),
-                   [](QWidget* parent) {
-                       auto* button =
-                           makeButton(parent, QStringLiteral("Delete"), Button::Standard);
-                       button->setFluentLayout(Button::IconBefore);
-                       button->setIconGlyph(Typography::Icons::Delete,
-                                            Typography::IconSize::Standard);
-                       button->setCriticalOnHover(true);
-                       button->setInteractionState(Button::Hover);
-                       return button;
-                   })};
+            QStringLiteral("Critical hover uses the danger color for destructive commands "
+                           "while keeping the button neutral at rest."),
+            QStringLiteral(
+                "auto* deleteButton = new Button(\"Delete\", this);\n"
+                "deleteButton->setFluentLayout(Button::IconBefore);\n"
+                "deleteButton->setIconGlyph(Typography::Icons::Delete);\n"
+                "deleteButton->setCriticalOnHover(true);\n"
+                "deleteButton->setInteractionState(Button::Hover);"),
+            [](QWidget* parent) {
+                auto* button = makeButton(parent, QStringLiteral("Delete"), Button::Standard);
+                button->setFluentLayout(Button::IconBefore);
+                button->setIconGlyph(Typography::Icons::Delete, Typography::IconSize::Standard);
+                button->setCriticalOnHover(true);
+                button->setInteractionState(Button::Hover);
+                return button;
+            })};
 }
 
 QVector<GallerySample> compoundButtonSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("compound-button-content"),
-            QStringLiteral("Primary and secondary content"),
+        makeSample(QStringLiteral("compound-button-content"), QStringLiteral("Primary and secondary content"),
+            QStringLiteral("A secondary line adds context without creating another interactive target."),
             QStringLiteral(
-                "A secondary line adds context without creating another interactive target."),
-            QStringLiteral("auto* standard = new CompoundButton(\n"
-                           "    \"Install update\",\n"
-                           "    \"Download and restart the app\",\n"
-                           "    this);\n"
-                           "standard->setFixedWidth(220);\n"
-                           "\n"
-                           "auto* accent = new CompoundButton(\n"
-                           "    \"Start trial\",\n"
-                           "    \"No payment method required\",\n"
-                           "    this);\n"
-                           "accent->setFluentStyle(Button::Accent);\n"
-                           "accent->setFixedWidth(220);"),
+                "auto* standard = new CompoundButton(\n"
+                "    \"Install update\",\n"
+                "    \"Download and restart the app\",\n"
+                "    this);\n"
+                "standard->setFixedWidth(220);\n"
+                "\n"
+                "auto* accent = new CompoundButton(\n"
+                "    \"Start trial\",\n"
+                "    \"No payment method required\",\n"
+                "    this);\n"
+                "accent->setFluentStyle(Button::Accent);\n"
+                "accent->setFixedWidth(220);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 12);
-                auto* standard =
-                    new CompoundButton(QStringLiteral("Install update"),
-                                       QStringLiteral("Download and restart the app"), group);
+                auto* standard = new CompoundButton(QStringLiteral("Install update"),
+                    QStringLiteral("Download and restart the app"), group);
                 standard->setFixedWidth(220);
-                auto* accent =
-                    new CompoundButton(QStringLiteral("Start trial"),
-                                       QStringLiteral("No payment method required"), group);
+                auto* accent = new CompoundButton(QStringLiteral("Start trial"),
+                    QStringLiteral("No payment method required"), group);
                 accent->setFluentStyle(Button::Accent);
                 accent->setFixedWidth(220);
                 group->layout()->addWidget(standard);
                 group->layout()->addWidget(accent);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("compound-button-icon"), QStringLiteral("Icon and interaction state"),
+        makeSample(QStringLiteral("compound-button-icon"), QStringLiteral("Icon and interaction state"),
             QStringLiteral("CompoundButton inherits Button icon layout, focus, disabled, and "
                            "pointer-state behavior."),
-            QStringLiteral("auto* share = new CompoundButton(\n"
-                           "    \"Share project\",\n"
-                           "    \"Invite people with a link\",\n"
-                           "    this);\n"
-                           "share->setFluentLayout(Button::IconBefore);\n"
-                           "share->setIconGlyph(\n"
-                           "    Typography::Icons::Share,\n"
-                           "    Typography::IconSize::Standard);\n"
-                           "share->setFocusVisual(true);\n"
-                           "share->setFixedWidth(240);\n"
-                           "\n"
-                           "auto* disabled = new CompoundButton(\n"
-                           "    \"Publish\",\n"
-                           "    \"Resolve validation errors first\",\n"
-                           "    this);\n"
-                           "disabled->setEnabled(false);\n"
-                           "disabled->setFixedWidth(240);"),
+            QStringLiteral(
+                "auto* share = new CompoundButton(\n"
+                "    \"Share project\",\n"
+                "    \"Invite people with a link\",\n"
+                "    this);\n"
+                "share->setFluentLayout(Button::IconBefore);\n"
+                "share->setIconGlyph(\n"
+                "    Typography::Icons::Share,\n"
+                "    Typography::IconSize::Standard);\n"
+                "share->setFocusVisual(true);\n"
+                "share->setFixedWidth(240);\n"
+                "\n"
+                "auto* disabled = new CompoundButton(\n"
+                "    \"Publish\",\n"
+                "    \"Resolve validation errors first\",\n"
+                "    this);\n"
+                "disabled->setEnabled(false);\n"
+                "disabled->setFixedWidth(240);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 12);
-                auto* share =
-                    new CompoundButton(QStringLiteral("Share project"),
-                                       QStringLiteral("Invite people with a link"), group);
+                auto* share = new CompoundButton(QStringLiteral("Share project"),
+                    QStringLiteral("Invite people with a link"), group);
                 share->setFluentLayout(Button::IconBefore);
                 share->setIconGlyph(Typography::Icons::Share, Typography::IconSize::Standard);
                 share->setFocusVisual(true);
                 share->setFixedWidth(240);
 
-                auto* disabled =
-                    new CompoundButton(QStringLiteral("Publish"),
-                                       QStringLiteral("Resolve validation errors first"), group);
+                auto* disabled = new CompoundButton(QStringLiteral("Publish"),
+                    QStringLiteral("Resolve validation errors first"), group);
                 disabled->setEnabled(false);
                 disabled->setFixedWidth(240);
                 group->layout()->addWidget(share);
@@ -346,39 +334,39 @@ QVector<GallerySample> checkBoxSamples()
 {
     return {
         makeSample(QStringLiteral("checkbox-two-state"), QStringLiteral("Two-state CheckBox"),
-                   QStringLiteral("A two-state checkbox represents a simple on/off choice and "
-                                  "reports the current state."),
-                   QStringLiteral("auto* checkBox = new CheckBox(\"Accept terms\", this);\n"
-                                  "auto* status = new Label(\"State: Unchecked\", this);\n"
-                                  "connect(checkBox, &CheckBox::checkStateChanged,\n"
-                                  "        status, [status](Qt::CheckState state) {\n"
-                                  "            status->setText(state == Qt::Checked\n"
-                                  "                ? \"State: Checked\"\n"
-                                  "                : \"State: Unchecked\");\n"
-                                  "        });"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* checkBox = new CheckBox(QStringLiteral("Accept terms"), group);
-                       auto* status = makeValueLabel(group, QStringLiteral("State: Unchecked"));
-                       setStableStatusWidth(status, QStringLiteral("State: Unchecked"));
-                       connectCheckBoxState(checkBox, status, [status](Qt::CheckState state) {
-                           status->setText(state == Qt::Checked
-                                               ? QStringLiteral("State: Checked")
-                                               : QStringLiteral("State: Unchecked"));
-                       });
-                       group->layout()->addWidget(checkBox);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(
-            QStringLiteral("checkbox-three-state"), QStringLiteral("Three-state CheckBox"),
+            QStringLiteral("A two-state checkbox represents a simple on/off choice and "
+                           "reports the current state."),
+            QStringLiteral(
+                "auto* checkBox = new CheckBox(\"Accept terms\", this);\n"
+                "auto* status = new Label(\"State: Unchecked\", this);\n"
+                "connect(checkBox, &CheckBox::checkStateChanged,\n"
+                "        status, [status](Qt::CheckState state) {\n"
+                "            status->setText(state == Qt::Checked\n"
+                "                ? \"State: Checked\"\n"
+                "                : \"State: Unchecked\");\n"
+                "        });"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* checkBox = new CheckBox(QStringLiteral("Accept terms"), group);
+                auto* status = makeValueLabel(group, QStringLiteral("State: Unchecked"));
+                setStableStatusWidth(status, QStringLiteral("State: Unchecked"));
+                connectCheckBoxState(checkBox, status, [status](Qt::CheckState state) {
+                    status->setText(
+                        state == Qt::Checked ? QStringLiteral("State: Checked") : QStringLiteral("State: Unchecked"));
+                });
+                group->layout()->addWidget(checkBox);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("checkbox-three-state"), QStringLiteral("Three-state CheckBox"),
             QStringLiteral("Tri-state adds a mixed state for partially selected sets."),
-            QStringLiteral("auto* checkBox = new CheckBox(\"Enable selected items\", this);\n"
-                           "checkBox->setTristate(true);\n"
-                           "checkBox->setCheckState(Qt::PartiallyChecked);\n"
-                           "connect(checkBox, &CheckBox::checkStateChanged,\n"
-                           "        status, [status](Qt::CheckState state) { /* show "
-                           "Checked/Mixed/Unchecked */ });"),
+            QStringLiteral(
+                "auto* checkBox = new CheckBox(\"Enable selected items\", this);\n"
+                "checkBox->setTristate(true);\n"
+                "checkBox->setCheckState(Qt::PartiallyChecked);\n"
+                "connect(checkBox, &CheckBox::checkStateChanged,\n"
+                "        status, [status](Qt::CheckState state) { /* show "
+                "Checked/Mixed/Unchecked */ });"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* checkBox = new CheckBox(QStringLiteral("Enable selected items"), group);
@@ -393,30 +381,29 @@ QVector<GallerySample> checkBoxSamples()
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("checkbox-select-all"), QStringLiteral("Select all pattern"),
+        makeSample(QStringLiteral("checkbox-select-all"), QStringLiteral("Select all pattern"),
+            QStringLiteral("A parent three-state checkbox can summarize and control child selections."),
             QStringLiteral(
-                "A parent three-state checkbox can summarize and control child selections."),
-            QStringLiteral("auto* selectAll = new CheckBox(\"Select all\", this);\n"
-                           "selectAll->setTristate(true);\n"
-                           "auto* mail = new CheckBox(\"Mail\", this);\n"
-                           "auto* calendar = new CheckBox(\"Calendar\", this);\n"
-                           "auto* people = new CheckBox(\"People\", this);\n\n"
-                           "auto updateSelectAll = [=]() {\n"
-                           "    const int checked = int(mail->isChecked())\n"
-                           "        + int(calendar->isChecked()) + int(people->isChecked());\n"
-                           "    selectAll->setCheckState(checked == 0 ? Qt::Unchecked\n"
-                           "        : checked == 3 ? Qt::Checked : Qt::PartiallyChecked);\n"
-                           "};\n"
-                           "connect(selectAll, &CheckBox::clicked, this, [=]() {\n"
-                           "    const bool checked = selectAll->checkState() == Qt::Checked;\n"
-                           "    mail->setChecked(checked);\n"
-                           "    calendar->setChecked(checked);\n"
-                           "    people->setChecked(checked);\n"
-                           "});\n"
-                           "connect(mail, &CheckBox::clicked, this, updateSelectAll);\n"
-                           "connect(calendar, &CheckBox::clicked, this, updateSelectAll);\n"
-                           "connect(people, &CheckBox::clicked, this, updateSelectAll);"),
+                "auto* selectAll = new CheckBox(\"Select all\", this);\n"
+                "selectAll->setTristate(true);\n"
+                "auto* mail = new CheckBox(\"Mail\", this);\n"
+                "auto* calendar = new CheckBox(\"Calendar\", this);\n"
+                "auto* people = new CheckBox(\"People\", this);\n\n"
+                "auto updateSelectAll = [=]() {\n"
+                "    const int checked = int(mail->isChecked())\n"
+                "        + int(calendar->isChecked()) + int(people->isChecked());\n"
+                "    selectAll->setCheckState(checked == 0 ? Qt::Unchecked\n"
+                "        : checked == 3 ? Qt::Checked : Qt::PartiallyChecked);\n"
+                "};\n"
+                "connect(selectAll, &CheckBox::clicked, this, [=]() {\n"
+                "    const bool checked = selectAll->checkState() == Qt::Checked;\n"
+                "    mail->setChecked(checked);\n"
+                "    calendar->setChecked(checked);\n"
+                "    people->setChecked(checked);\n"
+                "});\n"
+                "connect(mail, &CheckBox::clicked, this, updateSelectAll);\n"
+                "connect(calendar, &CheckBox::clicked, this, updateSelectAll);\n"
+                "connect(people, &CheckBox::clicked, this, updateSelectAll);"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* selectAll = new CheckBox(QStringLiteral("Select all"), group);
@@ -434,22 +421,21 @@ QVector<GallerySample> checkBoxSamples()
                 children->layout()->addWidget(people);
 
                 auto updateSelectAll = [selectAll, mail, calendar, people]() {
-                    const int checked = int(mail->isChecked()) + int(calendar->isChecked()) +
-                                        int(people->isChecked());
+                    const int checked = int(mail->isChecked()) + int(calendar->isChecked()) + int(people->isChecked());
                     const QSignalBlocker blocker(selectAll);
-                    selectAll->setCheckState(checked == 0   ? Qt::Unchecked
-                                             : checked == 3 ? Qt::Checked
-                                                            : Qt::PartiallyChecked);
+                    selectAll->setCheckState(checked == 0 ? Qt::Unchecked
+                            : checked == 3
+                            ? Qt::Checked
+                            : Qt::PartiallyChecked);
                 };
                 updateSelectAll();
 
-                QObject::connect(selectAll, &CheckBox::clicked, group,
-                                 [selectAll, mail, calendar, people]() {
-                                     const bool checked = selectAll->checkState() == Qt::Checked;
-                                     mail->setChecked(checked);
-                                     calendar->setChecked(checked);
-                                     people->setChecked(checked);
-                                 });
+                QObject::connect(selectAll, &CheckBox::clicked, group, [selectAll, mail, calendar, people]() {
+                    const bool checked = selectAll->checkState() == Qt::Checked;
+                    mail->setChecked(checked);
+                    calendar->setChecked(checked);
+                    people->setChecked(checked);
+                });
                 QObject::connect(mail, &CheckBox::clicked, group, updateSelectAll);
                 QObject::connect(calendar, &CheckBox::clicked, group, updateSelectAll);
                 QObject::connect(people, &CheckBox::clicked, group, updateSelectAll);
@@ -459,45 +445,45 @@ QVector<GallerySample> checkBoxSamples()
                 return group;
             }),
         makeSample(QStringLiteral("checkbox-metrics"), QStringLiteral("CheckBox metrics"),
-                   QStringLiteral("Box size, leading margin, text gap, and hover background can be "
-                                  "tuned for dense layouts."),
-                   QStringLiteral("auto* large = new CheckBox(\"Larger box\", this);\n"
-                                  "large->setBoxSize(24);\n\n"
-                                  "auto* compact = new CheckBox(\"Compact spacing\", this);\n"
-                                  "compact->setBoxSize(16);\n"
-                                  "compact->setBoxMargin(4);\n"
-                                  "compact->setTextGap(6);\n\n"
-                                  "auto* hoverRow = new CheckBox(\"Hover row background\", this);\n"
-                                  "hoverRow->setHoverBackgroundEnabled(true);"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* large = new CheckBox(QStringLiteral("Larger box"), group);
-                       large->setBoxSize(24);
-                       auto* compact = new CheckBox(QStringLiteral("Compact spacing"), group);
-                       compact->setBoxSize(16);
-                       compact->setBoxMargin(4);
-                       compact->setTextGap(6);
-                       auto* hoverRow = new CheckBox(QStringLiteral("Hover row background"), group);
-                       hoverRow->setHoverBackgroundEnabled(true);
-                       hoverRow->setCheckState(Qt::Checked);
-                       group->layout()->addWidget(large);
-                       group->layout()->addWidget(compact);
-                       group->layout()->addWidget(hoverRow);
-                       return group;
-                   })};
+            QStringLiteral("Box size, leading margin, text gap, and hover background can be "
+                           "tuned for dense layouts."),
+            QStringLiteral(
+                "auto* large = new CheckBox(\"Larger box\", this);\n"
+                "large->setBoxSize(24);\n\n"
+                "auto* compact = new CheckBox(\"Compact spacing\", this);\n"
+                "compact->setBoxSize(16);\n"
+                "compact->setBoxMargin(4);\n"
+                "compact->setTextGap(6);\n\n"
+                "auto* hoverRow = new CheckBox(\"Hover row background\", this);\n"
+                "hoverRow->setHoverBackgroundEnabled(true);"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* large = new CheckBox(QStringLiteral("Larger box"), group);
+                large->setBoxSize(24);
+                auto* compact = new CheckBox(QStringLiteral("Compact spacing"), group);
+                compact->setBoxSize(16);
+                compact->setBoxMargin(4);
+                compact->setTextGap(6);
+                auto* hoverRow = new CheckBox(QStringLiteral("Hover row background"), group);
+                hoverRow->setHoverBackgroundEnabled(true);
+                hoverRow->setCheckState(Qt::Checked);
+                group->layout()->addWidget(large);
+                group->layout()->addWidget(compact);
+                group->layout()->addWidget(hoverRow);
+                return group;
+            })};
 }
 
 QVector<GallerySample> colorPickerSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("color-picker-rgba"), QStringLiteral("RGBA color value"),
+        makeSample(QStringLiteral("color-picker-rgba"), QStringLiteral("RGBA color value"),
+            QStringLiteral("The picker synchronizes spectrum, channel inputs, alpha, and the QColor value."),
             QStringLiteral(
-                "The picker synchronizes spectrum, channel inputs, alpha, and the QColor value."),
-            QStringLiteral("auto* picker = new ColorPicker(this);\n"
-                           "picker->setColor(QColor(0, 120, 212, 180));\n"
-                           "connect(picker, &ColorPicker::colorChanged,\n"
-                           "        this, [](const QColor& color) { /* apply color */ });"),
+                "auto* picker = new ColorPicker(this);\n"
+                "picker->setColor(QColor(0, 120, 212, 180));\n"
+                "connect(picker, &ColorPicker::colorChanged,\n"
+                "        this, [](const QColor& color) { /* apply color */ });"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 12);
                 const QColor initial(0, 120, 212, 180);
@@ -507,16 +493,12 @@ QVector<GallerySample> colorPickerSamples()
 
                 QWidget* statusRow = horizontalGroup(group, 10);
                 auto* swatch = makeColorSwatch(statusRow, initial);
-                auto* status = makeValueLabel(
-                    statusRow,
+                auto* status = makeValueLabel(statusRow,
                     QStringLiteral("Color: %1").arg(initial.name(QColor::HexArgb).toUpper()));
-                QObject::connect(
-                    picker, &ColorPicker::colorChanged, statusRow,
-                    [swatch, status](const QColor& color) {
-                        setSwatchColor(swatch, color);
-                        status->setText(
-                            QStringLiteral("Color: %1").arg(color.name(QColor::HexArgb).toUpper()));
-                    });
+                QObject::connect(picker, &ColorPicker::colorChanged, statusRow, [swatch, status](const QColor& color) {
+                    setSwatchColor(swatch, color);
+                    status->setText(QStringLiteral("Color: %1").arg(color.name(QColor::HexArgb).toUpper()));
+                });
                 statusRow->layout()->addWidget(swatch);
                 statusRow->layout()->addWidget(status);
 
@@ -525,53 +507,50 @@ QVector<GallerySample> colorPickerSamples()
                 return group;
             }),
         makeSample(QStringLiteral("color-picker-opaque"), QStringLiteral("Opaque color picker"),
-                   QStringLiteral("Disabling alpha hides the transparency channel while keeping "
-                                  "RGB and hex editing."),
-                   QStringLiteral("auto* picker = new ColorPicker(this);\n"
-                                  "picker->setAlphaEnabled(false);\n"
-                                  "picker->setColor(QColor(16, 124, 16));"),
-                   [](QWidget* parent) {
-                       auto* picker = new ColorPicker(parent);
-                       picker->setAlphaEnabled(false);
-                       picker->setColor(QColor(16, 124, 16));
-                       picker->setMinimumSize(420, 420);
-                       return picker;
-                   })};
+            QStringLiteral("Disabling alpha hides the transparency channel while keeping "
+                           "RGB and hex editing."),
+            QStringLiteral(
+                "auto* picker = new ColorPicker(this);\n"
+                "picker->setAlphaEnabled(false);\n"
+                "picker->setColor(QColor(16, 124, 16));"),
+            [](QWidget* parent) {
+                auto* picker = new ColorPicker(parent);
+                picker->setAlphaEnabled(false);
+                picker->setColor(QColor(16, 124, 16));
+                picker->setMinimumSize(420, 420);
+                return picker;
+            })};
 }
 
 QVector<GallerySample> comboBoxSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("combobox-selection"), QStringLiteral("ComboBox selection"),
+        makeSample(QStringLiteral("combobox-selection"), QStringLiteral("ComboBox selection"),
             QStringLiteral("Selecting an item updates the current index and current text."),
-            QStringLiteral("auto* comboBox = new ComboBox(this);\n"
-                           "comboBox->addItems({\"Blue\", \"Green\", \"Red\", \"Yellow\"});\n"
-                           "comboBox->setCurrentIndex(0);\n"
-                           "connect(comboBox, qOverload<int>(&ComboBox::currentIndexChanged),\n"
-                           "        this, [=](int index) {\n"
-                           "            status->setText(comboBox->currentText());\n"
-                           "        });"),
+            QStringLiteral(
+                "auto* comboBox = new ComboBox(this);\n"
+                "comboBox->addItems({\"Blue\", \"Green\", \"Red\", \"Yellow\"});\n"
+                "comboBox->setCurrentIndex(0);\n"
+                "connect(comboBox, qOverload<int>(&ComboBox::currentIndexChanged),\n"
+                "        this, [=](int index) {\n"
+                "            status->setText(comboBox->currentText());\n"
+                "        });"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 12);
                 auto* comboBox = makeComboBox(group,
-                                              {QStringLiteral("Blue"), QStringLiteral("Green"),
-                                               QStringLiteral("Red"), QStringLiteral("Yellow")},
-                                              0);
+                    {QStringLiteral("Blue"), QStringLiteral("Green"), QStringLiteral("Red"), QStringLiteral("Yellow")},
+                    0);
                 auto* status = makeValueLabel(group, QStringLiteral("Selected: Blue"));
                 setStableStatusWidth(status, QStringLiteral("Selected: Yellow"));
-                QObject::connect(
-                    comboBox, qOverload<int>(&ComboBox::currentIndexChanged), status,
+                QObject::connect(comboBox, qOverload<int>(&ComboBox::currentIndexChanged), status,
                     [comboBox, status](int) {
-                        status->setText(
-                            QStringLiteral("Selected: %1").arg(comboBox->currentText()));
+                        status->setText(QStringLiteral("Selected: %1").arg(comboBox->currentText()));
                     });
                 group->layout()->addWidget(comboBox);
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("combobox-editable"), QStringLiteral("Custom value with suggestions"),
+        makeSample(QStringLiteral("combobox-editable"), QStringLiteral("Custom value with suggestions"),
             QStringLiteral("Type any value or choose a suggested size. Custom text stays valid "
                            "without being added to the suggestion list."),
             QStringLiteral(
@@ -604,12 +583,10 @@ QVector<GallerySample> comboBoxSamples()
                 "layout->addWidget(status);"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
-                auto* comboBox =
-                    makeComboBox(group,
-                                 {QStringLiteral("8"), QStringLiteral("9"), QStringLiteral("10"),
-                                  QStringLiteral("11"), QStringLiteral("12"), QStringLiteral("14"),
-                                  QStringLiteral("16")},
-                                 4);
+                auto* comboBox = makeComboBox(group,
+                    {QStringLiteral("8"), QStringLiteral("9"), QStringLiteral("10"), QStringLiteral("11"),
+                        QStringLiteral("12"), QStringLiteral("14"), QStringLiteral("16")},
+                    4);
                 comboBox->setObjectName(QStringLiteral("galleryEditableComboBox"));
                 comboBox->setAccessibleName(QStringLiteral("Editable size value"));
                 comboBox->setEditable(true);
@@ -622,13 +599,10 @@ QVector<GallerySample> comboBoxSamples()
                 status->setTextElideMode(Qt::ElideRight);
 
                 auto updateStatus = [comboBox, status](const QString& text) {
-                    const bool suggested =
-                        comboBox->findText(text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >=
-                        0;
-                    status->setText(
-                        QStringLiteral("%1 value: %2")
+                    const bool suggested = comboBox->findText(text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;
+                    status->setText(QStringLiteral("%1 value: %2")
                             .arg(suggested ? QStringLiteral("Suggested") : QStringLiteral("Custom"),
-                                 text.isEmpty() ? QStringLiteral("(empty)") : text));
+                                text.isEmpty() ? QStringLiteral("(empty)") : text));
                 };
                 QObject::connect(comboBox, &QComboBox::editTextChanged, status, updateStatus);
                 updateStatus(comboBox->currentText());
@@ -638,36 +612,34 @@ QVector<GallerySample> comboBoxSamples()
                 return group;
             }),
         makeSample(QStringLiteral("combobox-many-items"), QStringLiteral("Popup with many items"),
-                   QStringLiteral("Long option lists use the ComboBox popup ListView and keep the "
-                                  "selected item visible."),
-                   QStringLiteral("auto* comboBox = new ComboBox(this);\n"
-                                  "QStringList items;\n"
-                                  "for (int i = 1; i <= 20; ++i)\n"
-                                  "    items << QString(\"Item %1\").arg(i);\n"
-                                  "comboBox->addItems(items);\n"
-                                  "comboBox->setCurrentIndex(5);"),
-                   [](QWidget* parent) {
-                       QStringList items;
-                       for (int i = 1; i <= 20; ++i)
-                           items << QStringLiteral("Item %1").arg(i);
-                       return makeComboBox(parent, items, 5);
-                   }),
-        makeSample(
-            QStringLiteral("combobox-appearance"), QStringLiteral("Typography and chevron"),
+            QStringLiteral("Long option lists use the ComboBox popup ListView and keep the "
+                           "selected item visible."),
+            QStringLiteral(
+                "auto* comboBox = new ComboBox(this);\n"
+                "QStringList items;\n"
+                "for (int i = 1; i <= 20; ++i)\n"
+                "    items << QString(\"Item %1\").arg(i);\n"
+                "comboBox->addItems(items);\n"
+                "comboBox->setCurrentIndex(5);"),
+            [](QWidget* parent) {
+                QStringList items;
+                for (int i = 1; i <= 20; ++i)
+                    items << QStringLiteral("Item %1").arg(i);
+                return makeComboBox(parent, items, 5);
+            }),
+        makeSample(QStringLiteral("combobox-appearance"), QStringLiteral("Typography and chevron"),
             QStringLiteral("Font role, padding, chevron glyph, and popup offset are exposed for "
                            "compact field layouts."),
-            QStringLiteral("auto* comboBox = new ComboBox(this);\n"
-                           "comboBox->addItems({\"Compact\", \"Comfortable\", \"Spacious\"});\n"
-                           "comboBox->setFontRole(Typography::FontRole::Caption);\n"
-                           "comboBox->setContentPaddingH(12);\n"
-                           "comboBox->setChevronGlyph(Typography::Icons::ChevronDown);\n"
-                           "comboBox->setPopupOffset(8);"),
+            QStringLiteral(
+                "auto* comboBox = new ComboBox(this);\n"
+                "comboBox->addItems({\"Compact\", \"Comfortable\", \"Spacious\"});\n"
+                "comboBox->setFontRole(Typography::FontRole::Caption);\n"
+                "comboBox->setContentPaddingH(12);\n"
+                "comboBox->setChevronGlyph(Typography::Icons::ChevronDown);\n"
+                "comboBox->setPopupOffset(8);"),
             [](QWidget* parent) {
-                auto* comboBox =
-                    makeComboBox(parent,
-                                 {QStringLiteral("Compact"), QStringLiteral("Comfortable"),
-                                  QStringLiteral("Spacious")},
-                                 1, 180);
+                auto* comboBox = makeComboBox(parent,
+                    {QStringLiteral("Compact"), QStringLiteral("Comfortable"), QStringLiteral("Spacious")}, 1, 180);
                 comboBox->setFontRole(Typography::FontRole::Caption);
                 comboBox->setContentPaddingH(12);
                 comboBox->setChevronGlyph(Typography::Icons::ChevronDown);
@@ -679,39 +651,38 @@ QVector<GallerySample> comboBoxSamples()
 QVector<GallerySample> multiSelectComboBoxSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("multi-select-combobox-selection"),
-            QStringLiteral("Select several model rows"),
+        makeSample(QStringLiteral("multi-select-combobox-selection"), QStringLiteral("Select several model rows"),
             QStringLiteral("The selected rows are the value; toggling an item "
                            "keeps the dropdown open."),
-            QStringLiteral("auto* model = new QStringListModel(\n"
-                           "    {\"Design\", \"Engineering\", \"Research\", \"Support\"}, "
-                           "this);\n"
-                           "auto* box = new MultiSelectComboBox(this);\n"
-                           "box->setModel(model);\n"
-                           "box->setPlaceholderText(\"Choose teams\");\n"
-                           "box->setAccessibleName(\"Teams\");\n"
-                           "box->setSelectedRows({0, 2});\n"
-                           "box->setFixedWidth(280);\n\n"
-                           "auto* status = new Label(this);\n"
-                           "status->setFixedWidth(280);\n"
-                           "status->setWordWrap(true);\n\n"
-                           "auto updateStatus = [box, status] {\n"
-                           "    QStringList labels;\n"
-                           "    for (const QModelIndex& index : box->selectedIndexes())\n"
-                           "        labels << index.data().toString();\n"
-                           "    status->setText(QStringLiteral(\"Selected: %1\")\n"
-                           "                        .arg(labels.join(\", \")));\n"
-                           "};\n"
-                           "connect(box, &MultiSelectComboBox::selectionChanged,\n"
-                           "        this, [=] { updateStatus(); });\n"
-                           "updateStatus();"),
+            QStringLiteral(
+                "auto* model = new QStringListModel(\n"
+                "    {\"Design\", \"Engineering\", \"Research\", \"Support\"}, "
+                "this);\n"
+                "auto* box = new MultiSelectComboBox(this);\n"
+                "box->setModel(model);\n"
+                "box->setPlaceholderText(\"Choose teams\");\n"
+                "box->setAccessibleName(\"Teams\");\n"
+                "box->setSelectedRows({0, 2});\n"
+                "box->setFixedWidth(280);\n\n"
+                "auto* status = new Label(this);\n"
+                "status->setFixedWidth(280);\n"
+                "status->setWordWrap(true);\n\n"
+                "auto updateStatus = [box, status] {\n"
+                "    QStringList labels;\n"
+                "    for (const QModelIndex& index : box->selectedIndexes())\n"
+                "        labels << index.data().toString();\n"
+                "    status->setText(QStringLiteral(\"Selected: %1\")\n"
+                "                        .arg(labels.join(\", \")));\n"
+                "};\n"
+                "connect(box, &MultiSelectComboBox::selectionChanged,\n"
+                "        this, [=] { updateStatus(); });\n"
+                "updateStatus();"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
-                auto* model =
-                    new QStringListModel({QStringLiteral("Design"), QStringLiteral("Engineering"),
-                                          QStringLiteral("Research"), QStringLiteral("Support")},
-                                         group);
+                auto* model = new QStringListModel(
+                    {QStringLiteral("Design"), QStringLiteral("Engineering"), QStringLiteral("Research"),
+                        QStringLiteral("Support")},
+                    group);
                 auto* box = new MultiSelectComboBox(group);
                 box->setModel(model);
                 box->setPlaceholderText(QStringLiteral("Choose teams"));
@@ -726,44 +697,40 @@ QVector<GallerySample> multiSelectComboBoxSamples()
                     QStringList labels;
                     for (const QModelIndex& index : box->selectedIndexes())
                         labels << index.data().toString();
-                    status->setText(
-                        QStringLiteral("Selected: %1").arg(labels.join(QStringLiteral(", "))));
+                    status->setText(QStringLiteral("Selected: %1").arg(labels.join(QStringLiteral(", "))));
                 };
                 QObject::connect(box, &MultiSelectComboBox::selectionChanged, status,
-                                 [updateStatus](const QItemSelection&, const QItemSelection&) {
-                                     updateStatus();
-                                 });
+                    [updateStatus](const QItemSelection&, const QItemSelection&) { updateStatus(); });
                 updateStatus();
 
                 group->layout()->addWidget(box);
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("multi-select-combobox-search"),
-            QStringLiteral("Search and filtered select all"),
+        makeSample(QStringLiteral("multi-select-combobox-search"), QStringLiteral("Search and filtered select all"),
             QStringLiteral("Local search narrows the popup, and Select all "
                            "affects only the filtered selectable rows."),
-            QStringLiteral("auto* model = new QStringListModel(\n"
-                           "    {\"Amsterdam\", \"Athens\", \"Berlin\", \"Boston\",\n"
-                           "     \"Lisbon\", \"London\", \"Paris\", \"Prague\"}, this);\n"
-                           "auto* box = new MultiSelectComboBox(this);\n"
-                           "box->setModel(model);\n"
-                           "box->setSearchEnabled(true);\n"
-                           "box->setSearchPlaceholderText(\"Filter cities\");\n"
-                           "box->setAccessibleName(\"Cities\");\n"
-                           "box->setSelectedRows({0, 2});\n"
-                           "connect(box, &MultiSelectComboBox::selectedCountChanged,\n"
-                           "        this, [=](int count) {\n"
-                           "            status->setText(QString(\"%1 "
-                           "selected\").arg(count));\n"
-                           "        });"),
+            QStringLiteral(
+                "auto* model = new QStringListModel(\n"
+                "    {\"Amsterdam\", \"Athens\", \"Berlin\", \"Boston\",\n"
+                "     \"Lisbon\", \"London\", \"Paris\", \"Prague\"}, this);\n"
+                "auto* box = new MultiSelectComboBox(this);\n"
+                "box->setModel(model);\n"
+                "box->setSearchEnabled(true);\n"
+                "box->setSearchPlaceholderText(\"Filter cities\");\n"
+                "box->setAccessibleName(\"Cities\");\n"
+                "box->setSelectedRows({0, 2});\n"
+                "connect(box, &MultiSelectComboBox::selectedCountChanged,\n"
+                "        this, [=](int count) {\n"
+                "            status->setText(QString(\"%1 "
+                "selected\").arg(count));\n"
+                "        });"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* model = new QStringListModel(
-                    {QStringLiteral("Amsterdam"), QStringLiteral("Athens"),
-                     QStringLiteral("Berlin"), QStringLiteral("Boston"), QStringLiteral("Lisbon"),
-                     QStringLiteral("London"), QStringLiteral("Paris"), QStringLiteral("Prague")},
+                    {QStringLiteral("Amsterdam"), QStringLiteral("Athens"), QStringLiteral("Berlin"),
+                        QStringLiteral("Boston"), QStringLiteral("Lisbon"), QStringLiteral("London"),
+                        QStringLiteral("Paris"), QStringLiteral("Prague")},
                     group);
                 auto* box = new MultiSelectComboBox(group);
                 box->setModel(model);
@@ -774,131 +741,127 @@ QVector<GallerySample> multiSelectComboBoxSamples()
                 box->setFixedWidth(280);
 
                 auto* status = makeValueLabel(group, QStringLiteral("2 selected"));
-                QObject::connect(box, &MultiSelectComboBox::selectedCountChanged, status,
-                                 [status](int count) {
-                                     status->setText(QStringLiteral("%1 selected").arg(count));
-                                 });
+                QObject::connect(box, &MultiSelectComboBox::selectedCountChanged, status, [status](int count) {
+                    status->setText(QStringLiteral("%1 selected").arg(count));
+                });
 
                 group->layout()->addWidget(box);
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(QStringLiteral("multi-select-combobox-model"),
-                   QStringLiteral("Caller-owned model updates"),
-                   QStringLiteral("Applications keep ownership of the source model and "
-                                  "can update its rows while the control is in use."),
-                   QStringLiteral("auto* model = new QStringListModel(\n"
-                                  "    {\"New York\", \"Paris\", \"Tokyo\"}, this);\n"
-                                  "auto* box = new MultiSelectComboBox(this);\n"
-                                  "box->setModel(model);\n"
-                                  "box->setAccessibleName(\"Locations\");\n"
-                                  "box->setSelectedRows({1});\n\n"
-                                  "auto* add = new Button(\"Add Berlin\", this);\n"
-                                  "connect(add, &Button::clicked, this, [=] {\n"
-                                  "    model->setStringList(model->stringList() << \"Berlin\");\n"
-                                  "    box->setSelectedRows({1, model->rowCount() - 1});\n"
-                                  "    add->setEnabled(false);\n"
-                                  "});"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* model =
-                           new QStringListModel({QStringLiteral("New York"),
-                                                 QStringLiteral("Paris"), QStringLiteral("Tokyo")},
-                                                group);
-                       auto* box = new MultiSelectComboBox(group);
-                       box->setModel(model);
-                       box->setAccessibleName(QStringLiteral("Locations"));
-                       box->setSelectedRows({1});
-                       box->setFixedWidth(280);
+        makeSample(QStringLiteral("multi-select-combobox-model"), QStringLiteral("Caller-owned model updates"),
+            QStringLiteral("Applications keep ownership of the source model and "
+                           "can update its rows while the control is in use."),
+            QStringLiteral(
+                "auto* model = new QStringListModel(\n"
+                "    {\"New York\", \"Paris\", \"Tokyo\"}, this);\n"
+                "auto* box = new MultiSelectComboBox(this);\n"
+                "box->setModel(model);\n"
+                "box->setAccessibleName(\"Locations\");\n"
+                "box->setSelectedRows({1});\n\n"
+                "auto* add = new Button(\"Add Berlin\", this);\n"
+                "connect(add, &Button::clicked, this, [=] {\n"
+                "    model->setStringList(model->stringList() << \"Berlin\");\n"
+                "    box->setSelectedRows({1, model->rowCount() - 1});\n"
+                "    add->setEnabled(false);\n"
+                "});"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* model = new QStringListModel(
+                    {QStringLiteral("New York"), QStringLiteral("Paris"), QStringLiteral("Tokyo")}, group);
+                auto* box = new MultiSelectComboBox(group);
+                box->setModel(model);
+                box->setAccessibleName(QStringLiteral("Locations"));
+                box->setSelectedRows({1});
+                box->setFixedWidth(280);
 
-                       auto* add = new Button(QStringLiteral("Add Berlin"), group);
-                       QObject::connect(add, &Button::clicked, group, [model, box, add] {
-                           QStringList values = model->stringList();
-                           values << QStringLiteral("Berlin");
-                           model->setStringList(values);
-                           box->setSelectedRows({1, model->rowCount() - 1});
-                           add->setEnabled(false);
-                       });
+                auto* add = new Button(QStringLiteral("Add Berlin"), group);
+                QObject::connect(add, &Button::clicked, group, [model, box, add] {
+                    QStringList values = model->stringList();
+                    values << QStringLiteral("Berlin");
+                    model->setStringList(values);
+                    box->setSelectedRows({1, model->rowCount() - 1});
+                    add->setEnabled(false);
+                });
 
-                       group->layout()->addWidget(box);
-                       group->layout()->addWidget(add);
-                       return group;
-                   })};
+                group->layout()->addWidget(box);
+                group->layout()->addWidget(add);
+                return group;
+            })};
 }
 
 QVector<GallerySample> dropDownButtonSamples()
 {
     return {
         makeSample(QStringLiteral("dropdown-button-menu"), QStringLiteral("DropDownButton menu"),
-                   QStringLiteral("A drop-down button opens a menu of related commands without "
-                                  "invoking a primary action."),
-                   QStringLiteral("auto* button = new DropDownButton(\"Options\", this);\n"
-                                  "auto* menu = new FluentMenu(\"Options\", button);\n"
-                                  "menu->addAction(\"Edit profile\");\n"
-                                  "menu->addAction(\"Account settings\");\n"
-                                  "menu->addAction(\"Sign out\");\n"
-                                  "button->setMenu(menu);"),
-                   [](QWidget* parent) {
-                       auto* button = new DropDownButton(QStringLiteral("Options"), parent);
-                       button->setMinimumWidth(140);
-                       button->setMenu(makeMenu(button, QStringLiteral("Options"),
-                                                {QStringLiteral("Edit profile"),
-                                                 QStringLiteral("Account settings"),
-                                                 QStringLiteral("Sign out")}));
-                       return button;
-                   }),
-        makeSample(
-            QStringLiteral("dropdown-button-accent"), QStringLiteral("Accent DropDownButton"),
+            QStringLiteral("A drop-down button opens a menu of related commands without "
+                           "invoking a primary action."),
+            QStringLiteral(
+                "auto* button = new DropDownButton(\"Options\", this);\n"
+                "auto* menu = new FluentMenu(\"Options\", button);\n"
+                "menu->addAction(\"Edit profile\");\n"
+                "menu->addAction(\"Account settings\");\n"
+                "menu->addAction(\"Sign out\");\n"
+                "button->setMenu(menu);"),
+            [](QWidget* parent) {
+                auto* button = new DropDownButton(QStringLiteral("Options"), parent);
+                button->setMinimumWidth(140);
+                button->setMenu(makeMenu(button, QStringLiteral("Options"),
+                    {QStringLiteral("Edit profile"), QStringLiteral("Account settings"), QStringLiteral("Sign out")}));
+                return button;
+            }),
+        makeSample(QStringLiteral("dropdown-button-accent"), QStringLiteral("Accent DropDownButton"),
             QStringLiteral("Accent style marks the menu entry as the primary command group."),
-            QStringLiteral("auto* button = new DropDownButton(\"Primary action\", this);\n"
-                           "button->setFluentStyle(Button::Accent);\n"
-                           "auto* menu = new FluentMenu(\"Primary action\", button);\n"
-                           "menu->addAction(\"Confirm selection\");\n"
-                           "menu->addAction(\"Review changes\");\n"
-                           "button->setMenu(menu);"),
+            QStringLiteral(
+                "auto* button = new DropDownButton(\"Primary action\", this);\n"
+                "button->setFluentStyle(Button::Accent);\n"
+                "auto* menu = new FluentMenu(\"Primary action\", button);\n"
+                "menu->addAction(\"Confirm selection\");\n"
+                "menu->addAction(\"Review changes\");\n"
+                "button->setMenu(menu);"),
             [](QWidget* parent) {
                 auto* button = new DropDownButton(QStringLiteral("Primary action"), parent);
                 button->setFluentStyle(Button::Accent);
                 button->setMinimumWidth(168);
-                button->setMenu(makeMenu(
-                    button, QStringLiteral("Primary action"),
+                button->setMenu(makeMenu(button, QStringLiteral("Primary action"),
                     {QStringLiteral("Confirm selection"), QStringLiteral("Review changes")}));
                 return button;
             }),
         makeSample(QStringLiteral("dropdown-button-chevron"), QStringLiteral("Chevron glyphs"),
-                   QStringLiteral("Chevron glyph, size, and offset can adapt the affordance to "
-                                  "different command shapes."),
-                   QStringLiteral("auto* up = new DropDownButton(\"Chevron up\", this);\n"
-                                  "up->setChevronGlyph(Typography::Icons::ChevronUp);\n"
-                                  "up->setChevronSize(16);\n\n"
-                                  "auto* more = new DropDownButton(\"More actions\", this);\n"
-                                  "more->setChevronGlyph(Typography::Icons::More);\n"
-                                  "more->setChevronOffset(QPoint(16, 3));"),
-                   [](QWidget* parent) {
-                       QWidget* group = horizontalGroup(parent, 10);
-                       auto* up = new DropDownButton(QStringLiteral("Chevron up"), group);
-                       up->setChevronGlyph(Typography::Icons::ChevronUp);
-                       up->setChevronSize(16);
-                       up->setMinimumWidth(150);
-                       auto* more = new DropDownButton(QStringLiteral("More actions"), group);
-                       more->setChevronGlyph(Typography::Icons::More);
-                       more->setChevronOffset(QPoint(16, 3));
-                       more->setMinimumWidth(160);
-                       group->layout()->addWidget(up);
-                       group->layout()->addWidget(more);
-                       return group;
-                   }),
-        makeSample(
-            QStringLiteral("dropdown-button-icon-layout"), QStringLiteral("Icon DropDownButton"),
+            QStringLiteral("Chevron glyph, size, and offset can adapt the affordance to "
+                           "different command shapes."),
+            QStringLiteral(
+                "auto* up = new DropDownButton(\"Chevron up\", this);\n"
+                "up->setChevronGlyph(Typography::Icons::ChevronUp);\n"
+                "up->setChevronSize(16);\n\n"
+                "auto* more = new DropDownButton(\"More actions\", this);\n"
+                "more->setChevronGlyph(Typography::Icons::More);\n"
+                "more->setChevronOffset(QPoint(16, 3));"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 10);
+                auto* up = new DropDownButton(QStringLiteral("Chevron up"), group);
+                up->setChevronGlyph(Typography::Icons::ChevronUp);
+                up->setChevronSize(16);
+                up->setMinimumWidth(150);
+                auto* more = new DropDownButton(QStringLiteral("More actions"), group);
+                more->setChevronGlyph(Typography::Icons::More);
+                more->setChevronOffset(QPoint(16, 3));
+                more->setMinimumWidth(160);
+                group->layout()->addWidget(up);
+                group->layout()->addWidget(more);
+                return group;
+            }),
+        makeSample(QStringLiteral("dropdown-button-icon-layout"), QStringLiteral("Icon DropDownButton"),
             QStringLiteral("The inherited Button layout controls text/icon placement while the "
                            "chevron stays reserved on the right."),
-            QStringLiteral("auto* iconOnly = new DropDownButton(QString(), this);\n"
-                           "iconOnly->setFluentLayout(Button::IconOnly);\n"
-                           "iconOnly->setIconGlyph(Typography::Icons::Send);\n"
-                           "iconOnly->setChevronOffset(QPoint(10, 0));\n\n"
-                           "auto* iconText = new DropDownButton(\"More actions\", this);\n"
-                           "iconText->setFluentLayout(Button::IconBefore);\n"
-                           "iconText->setIconGlyph(Typography::Icons::More);"),
+            QStringLiteral(
+                "auto* iconOnly = new DropDownButton(QString(), this);\n"
+                "iconOnly->setFluentLayout(Button::IconOnly);\n"
+                "iconOnly->setIconGlyph(Typography::Icons::Send);\n"
+                "iconOnly->setChevronOffset(QPoint(10, 0));\n\n"
+                "auto* iconText = new DropDownButton(\"More actions\", this);\n"
+                "iconText->setFluentLayout(Button::IconBefore);\n"
+                "iconText->setIconGlyph(Typography::Icons::More);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 10);
                 auto* iconOnly = new DropDownButton(QString(), group);
@@ -919,8 +882,7 @@ QVector<GallerySample> dropDownButtonSamples()
 QVector<GallerySample> hyperlinkButtonSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("hyperlink-button-url"), QStringLiteral("HyperlinkButton with URL"),
+        makeSample(QStringLiteral("hyperlink-button-url"), QStringLiteral("HyperlinkButton with URL"),
             QStringLiteral("A URL-backed hyperlink opens its target when invoked."),
             QStringLiteral("auto* link = new HyperlinkButton(\"calvinhxx/Fluent-Qt\", this);\n"
                            "link->setUrl(QUrl(\"https://github.com/calvinhxx/Fluent-Qt\"));"),
@@ -929,8 +891,7 @@ QVector<GallerySample> hyperlinkButtonSamples()
                 link->setUrl(QUrl(QStringLiteral("https://github.com/calvinhxx/Fluent-Qt")));
                 return link;
             }),
-        makeSample(
-            QStringLiteral("hyperlink-button-underline"), QStringLiteral("Underline feedback"),
+        makeSample(QStringLiteral("hyperlink-button-underline"), QStringLiteral("Underline feedback"),
             QStringLiteral("Underline can stay enabled for links that need stronger affordance."),
             QStringLiteral("auto* link = new HyperlinkButton(\"Show underline\", this);\n"
                            "link->setShowUnderline(true);"),
@@ -944,16 +905,15 @@ QVector<GallerySample> hyperlinkButtonSamples()
 QVector<GallerySample> radioButtonSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("radio-button-group"), QStringLiteral("RadioButton group"),
+        makeSample(QStringLiteral("radio-button-group"), QStringLiteral("RadioButton group"),
+            QStringLiteral("Sibling radio buttons are mutually exclusive and update the selected option."),
             QStringLiteral(
-                "Sibling radio buttons are mutually exclusive and update the selected option."),
-            QStringLiteral("auto* low = new RadioButton(\"Low\", this);\n"
-                           "auto* medium = new RadioButton(\"Medium\", this);\n"
-                           "auto* high = new RadioButton(\"High\", this);\n"
-                           "medium->setChecked(true);\n"
-                           "connect(high, &RadioButton::toggled,\n"
-                           "        this, [=](bool checked) { /* update selected option */ });"),
+                "auto* low = new RadioButton(\"Low\", this);\n"
+                "auto* medium = new RadioButton(\"Medium\", this);\n"
+                "auto* high = new RadioButton(\"High\", this);\n"
+                "medium->setChecked(true);\n"
+                "connect(high, &RadioButton::toggled,\n"
+                "        this, [=](bool checked) { /* update selected option */ });"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* low = new RadioButton(QStringLiteral("Low"), group);
@@ -962,11 +922,10 @@ QVector<GallerySample> radioButtonSamples()
                 medium->setChecked(true);
                 auto* status = makeValueLabel(group, QStringLiteral("Selected: Medium"));
                 auto connectStatus = [status](RadioButton* radio) {
-                    QObject::connect(
-                        radio, &RadioButton::toggled, status, [radio, status](bool checked) {
-                            if (checked)
-                                status->setText(QStringLiteral("Selected: %1").arg(radio->text()));
-                        });
+                    QObject::connect(radio, &RadioButton::toggled, status, [radio, status](bool checked) {
+                        if (checked)
+                            status->setText(QStringLiteral("Selected: %1").arg(radio->text()));
+                    });
                 };
                 connectStatus(low);
                 connectStatus(medium);
@@ -977,16 +936,15 @@ QVector<GallerySample> radioButtonSamples()
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("radio-button-metrics"), QStringLiteral("RadioButton metrics"),
+        makeSample(QStringLiteral("radio-button-metrics"), QStringLiteral("RadioButton metrics"),
+            QStringLiteral("Circle size, text gap, and font can be tuned for dense or emphasized choices."),
             QStringLiteral(
-                "Circle size, text gap, and font can be tuned for dense or emphasized choices."),
-            QStringLiteral("auto* compact = new RadioButton(\"Compact\", this);\n"
-                           "compact->setCircleSize(16);\n"
-                           "compact->setTextGap(6);\n\n"
-                           "auto* large = new RadioButton(\"Large\", this);\n"
-                           "large->setCircleSize(24);\n"
-                           "large->setTextGap(12);"),
+                "auto* compact = new RadioButton(\"Compact\", this);\n"
+                "compact->setCircleSize(16);\n"
+                "compact->setTextGap(6);\n\n"
+                "auto* large = new RadioButton(\"Large\", this);\n"
+                "large->setCircleSize(24);\n"
+                "large->setTextGap(12);"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* compact = new RadioButton(QStringLiteral("Compact"), group);
@@ -1000,15 +958,14 @@ QVector<GallerySample> radioButtonSamples()
                 group->layout()->addWidget(large);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("radio-button-disabled"), QStringLiteral("Disabled states"),
+        makeSample(QStringLiteral("radio-button-disabled"), QStringLiteral("Disabled states"),
+            QStringLiteral("Disabled radios preserve checked and unchecked state while blocking interaction."),
             QStringLiteral(
-                "Disabled radios preserve checked and unchecked state while blocking interaction."),
-            QStringLiteral("auto* disabledOff = new RadioButton(\"Disabled off\", this);\n"
-                           "disabledOff->setEnabled(false);\n\n"
-                           "auto* disabledOn = new RadioButton(\"Disabled on\", this);\n"
-                           "disabledOn->setChecked(true);\n"
-                           "disabledOn->setEnabled(false);"),
+                "auto* disabledOff = new RadioButton(\"Disabled off\", this);\n"
+                "disabledOff->setEnabled(false);\n\n"
+                "auto* disabledOn = new RadioButton(\"Disabled on\", this);\n"
+                "disabledOn->setChecked(true);\n"
+                "disabledOn->setEnabled(false);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 16);
                 auto* disabledOff = new RadioButton(QStringLiteral("Disabled off"), group);
@@ -1024,97 +981,94 @@ QVector<GallerySample> radioButtonSamples()
 
 QVector<GallerySample> ratingControlSamples()
 {
-    return {makeSample(
-                QStringLiteral("rating-control-value"), QStringLiteral("Rating value"),
-                QStringLiteral(
-                    "The value signal can update both a caption and an external status label."),
-                QStringLiteral("auto* rating = new RatingControl(this);\n"
-                               "rating->setCaption(\"312 ratings\");\n"
-                               "connect(rating, &RatingControl::valueChanged,\n"
-                               "        this, [=](double value) {\n"
-                               "            rating->setCaption(\"Your rating\");\n"
-                               "            status->setText(QString(\"Value: %1\").arg(value));\n"
-                               "        });"),
-                [](QWidget* parent) {
-                    QWidget* group = verticalGroup(parent, 8);
-                    auto* rating = new RatingControl(group);
-                    rating->setCaption(QStringLiteral("312 ratings"));
-                    auto* status = makeValueLabel(group, QStringLiteral("Value: Unset"));
-                    QObject::connect(rating, &RatingControl::valueChanged, status,
-                                     [rating, status](double value) {
-                                         rating->setCaption(QStringLiteral("Your rating"));
-                                         status->setText(
-                                             QStringLiteral("Value: %1").arg(ratingText(value)));
-                                     });
-                    group->layout()->addWidget(rating);
-                    group->layout()->addWidget(status);
-                    return group;
-                }),
-            makeSample(
-                QStringLiteral("rating-control-placeholder"), QStringLiteral("Placeholder value"),
-                QStringLiteral(
-                    "A placeholder previews a suggested rating before the user commits a value."),
-                QStringLiteral("auto* rating = new RatingControl(this);\n"
-                               "rating->setPlaceholderValue(3.5);\n"
-                               "rating->setCaption(\"Suggested rating\");"),
-                [](QWidget* parent) {
-                    auto* rating = new RatingControl(parent);
-                    rating->setPlaceholderValue(3.5);
-                    rating->setCaption(QStringLiteral("Suggested rating"));
-                    return rating;
-                }),
-            makeSample(QStringLiteral("rating-control-readonly"),
-                       QStringLiteral("Read-only and disabled"),
-                       QStringLiteral("Read-only keeps the value visible without allowing edits; "
-                                      "disabled also changes the visual state."),
-                       QStringLiteral("auto* readOnly = new RatingControl(this);\n"
-                                      "readOnly->setValue(4.0);\n"
-                                      "readOnly->setIsReadOnly(true);\n\n"
-                                      "auto* disabled = new RatingControl(this);\n"
-                                      "disabled->setValue(2.5);\n"
-                                      "disabled->setEnabled(false);"),
-                       [](QWidget* parent) {
-                           QWidget* group = verticalGroup(parent, 10);
-                           auto* readOnly = new RatingControl(group);
-                           readOnly->setValue(4.0);
-                           readOnly->setIsReadOnly(true);
-                           readOnly->setCaption(QStringLiteral("Read-only"));
-                           auto* disabled = new RatingControl(group);
-                           disabled->setValue(2.5);
-                           disabled->setEnabled(false);
-                           disabled->setCaption(QStringLiteral("Disabled"));
-                           group->layout()->addWidget(readOnly);
-                           group->layout()->addWidget(disabled);
-                           return group;
-                       }),
-            makeSample(QStringLiteral("rating-control-max-size"),
-                       QStringLiteral("Max rating and star size"),
-                       QStringLiteral("Max rating and star size change the visible scale while "
-                                      "preserving the same value API."),
-                       QStringLiteral("auto* rating = new RatingControl(this);\n"
-                                      "rating->setMaxRating(10);\n"
-                                      "rating->setStarSize(20);\n"
-                                      "rating->setPlaceholderValue(7.0);"),
-                       [](QWidget* parent) {
-                           auto* rating = new RatingControl(parent);
-                           rating->setMaxRating(10);
-                           rating->setStarSize(20);
-                           rating->setPlaceholderValue(7.0);
-                           rating->setCaption(QStringLiteral("10 point scale"));
-                           return rating;
-                       })};
+    return {
+        makeSample(QStringLiteral("rating-control-value"), QStringLiteral("Rating value"),
+            QStringLiteral("The value signal can update both a caption and an external status label."),
+            QStringLiteral(
+                "auto* rating = new RatingControl(this);\n"
+                "rating->setCaption(\"312 ratings\");\n"
+                "connect(rating, &RatingControl::valueChanged,\n"
+                "        this, [=](double value) {\n"
+                "            rating->setCaption(\"Your rating\");\n"
+                "            status->setText(QString(\"Value: %1\").arg(value));\n"
+                "        });"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* rating = new RatingControl(group);
+                rating->setCaption(QStringLiteral("312 ratings"));
+                auto* status = makeValueLabel(group, QStringLiteral("Value: Unset"));
+                QObject::connect(rating, &RatingControl::valueChanged, status, [rating, status](double value) {
+                    rating->setCaption(QStringLiteral("Your rating"));
+                    status->setText(QStringLiteral("Value: %1").arg(ratingText(value)));
+                });
+                group->layout()->addWidget(rating);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("rating-control-placeholder"), QStringLiteral("Placeholder value"),
+            QStringLiteral("A placeholder previews a suggested rating before the user commits a value."),
+            QStringLiteral(
+                "auto* rating = new RatingControl(this);\n"
+                "rating->setPlaceholderValue(3.5);\n"
+                "rating->setCaption(\"Suggested rating\");"),
+            [](QWidget* parent) {
+                auto* rating = new RatingControl(parent);
+                rating->setPlaceholderValue(3.5);
+                rating->setCaption(QStringLiteral("Suggested rating"));
+                return rating;
+            }),
+        makeSample(QStringLiteral("rating-control-readonly"), QStringLiteral("Read-only and disabled"),
+            QStringLiteral("Read-only keeps the value visible without allowing edits; "
+                           "disabled also changes the visual state."),
+            QStringLiteral(
+                "auto* readOnly = new RatingControl(this);\n"
+                "readOnly->setValue(4.0);\n"
+                "readOnly->setIsReadOnly(true);\n\n"
+                "auto* disabled = new RatingControl(this);\n"
+                "disabled->setValue(2.5);\n"
+                "disabled->setEnabled(false);"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 10);
+                auto* readOnly = new RatingControl(group);
+                readOnly->setValue(4.0);
+                readOnly->setIsReadOnly(true);
+                readOnly->setCaption(QStringLiteral("Read-only"));
+                auto* disabled = new RatingControl(group);
+                disabled->setValue(2.5);
+                disabled->setEnabled(false);
+                disabled->setCaption(QStringLiteral("Disabled"));
+                group->layout()->addWidget(readOnly);
+                group->layout()->addWidget(disabled);
+                return group;
+            }),
+        makeSample(QStringLiteral("rating-control-max-size"), QStringLiteral("Max rating and star size"),
+            QStringLiteral("Max rating and star size change the visible scale while "
+                           "preserving the same value API."),
+            QStringLiteral(
+                "auto* rating = new RatingControl(this);\n"
+                "rating->setMaxRating(10);\n"
+                "rating->setStarSize(20);\n"
+                "rating->setPlaceholderValue(7.0);"),
+            [](QWidget* parent) {
+                auto* rating = new RatingControl(parent);
+                rating->setMaxRating(10);
+                rating->setStarSize(20);
+                rating->setPlaceholderValue(7.0);
+                rating->setCaption(QStringLiteral("10 point scale"));
+                return rating;
+            })};
 }
 
 QVector<GallerySample> repeatButtonSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("repeat-button-counter"), QStringLiteral("RepeatButton counter"),
+        makeSample(QStringLiteral("repeat-button-counter"), QStringLiteral("RepeatButton counter"),
             QStringLiteral("Press and hold: the click signal repeats after the initial delay."),
-            QStringLiteral("auto* button = new RepeatButton(\"Click and hold\", this);\n"
-                           "auto* counter = new Label(\"Clicks: 0\", this);\n"
-                           "connect(button, &RepeatButton::clicked,\n"
-                           "        counter, [counter]() { ++count; });"),
+            QStringLiteral(
+                "auto* button = new RepeatButton(\"Click and hold\", this);\n"
+                "auto* counter = new Label(\"Clicks: 0\", this);\n"
+                "connect(button, &RepeatButton::clicked,\n"
+                "        counter, [counter]() { ++count; });"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 12);
                 auto* button = new RepeatButton(QStringLiteral("Click and hold"), group);
@@ -1129,17 +1083,16 @@ QVector<GallerySample> repeatButtonSamples()
                 group->layout()->addWidget(counter);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("repeat-button-timing"), QStringLiteral("Repeat timing"),
+        makeSample(QStringLiteral("repeat-button-timing"), QStringLiteral("Repeat timing"),
+            QStringLiteral("Delay and interval tune when repeated clicks start and how quickly they fire."),
             QStringLiteral(
-                "Delay and interval tune when repeated clicks start and how quickly they fire."),
-            QStringLiteral("auto* normal = new RepeatButton(\"Normal\", this);\n"
-                           "normal->setDelay(300);\n"
-                           "normal->setInterval(100);\n\n"
-                           "auto* fast = new RepeatButton(\"Fast\", this);\n"
-                           "fast->setDelay(150);\n"
-                           "fast->setInterval(30);\n"
-                           "fast->setFluentStyle(Button::Accent);"),
+                "auto* normal = new RepeatButton(\"Normal\", this);\n"
+                "normal->setDelay(300);\n"
+                "normal->setInterval(100);\n\n"
+                "auto* fast = new RepeatButton(\"Fast\", this);\n"
+                "fast->setDelay(150);\n"
+                "fast->setInterval(30);\n"
+                "fast->setFluentStyle(Button::Accent);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 10);
                 auto* normal = new RepeatButton(QStringLiteral("Normal"), group);
@@ -1158,17 +1111,17 @@ QVector<GallerySample> repeatButtonSamples()
 QVector<GallerySample> sliderSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("slider-live-value"), QStringLiteral("Slider live value"),
+        makeSample(QStringLiteral("slider-live-value"), QStringLiteral("Slider live value"),
             QStringLiteral("Drag the handle to select a value and mirror it in external UI."),
-            QStringLiteral("auto* slider = new Slider(Qt::Horizontal, this);\n"
-                           "slider->setAccessibleName(\"Value\");\n"
-                           "slider->setRange(0, 100);\n"
-                           "slider->setValue(32);\n"
-                           "connect(slider, &Slider::valueChanged,\n"
-                           "        status, [status](int value) {\n"
-                           "            status->setText(QString(\"Value: %1\").arg(value));\n"
-                           "        });"),
+            QStringLiteral(
+                "auto* slider = new Slider(Qt::Horizontal, this);\n"
+                "slider->setAccessibleName(\"Value\");\n"
+                "slider->setRange(0, 100);\n"
+                "slider->setValue(32);\n"
+                "connect(slider, &Slider::valueChanged,\n"
+                "        status, [status](int value) {\n"
+                "            status->setText(QString(\"Value: %1\").arg(value));\n"
+                "        });"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 16);
                 auto* slider = new Slider(Qt::Horizontal, group);
@@ -1186,61 +1139,61 @@ QVector<GallerySample> sliderSamples()
                 return group;
             }),
         makeSample(QStringLiteral("slider-range-steps"), QStringLiteral("Range and steps"),
-                   QStringLiteral("Minimum, maximum, single step, and page step define the "
-                                  "slider's numeric contract."),
-                   QStringLiteral("auto* slider = new Slider(Qt::Horizontal, this);\n"
-                                  "slider->setRange(500, 1000);\n"
-                                  "slider->setSingleStep(10);\n"
-                                  "slider->setPageStep(50);\n"
-                                  "slider->setValue(800);"),
-                   [](QWidget* parent) {
-                       QWidget* group = horizontalGroup(parent, 16);
-                       auto* slider = new Slider(Qt::Horizontal, group);
-                       slider->setRange(500, 1000);
-                       slider->setSingleStep(10);
-                       slider->setPageStep(50);
-                       slider->setValue(800);
-                       slider->setFixedWidth(260);
-                       auto* status = makeValueLabel(group, QStringLiteral("Value: 800"));
-                       setStableStatusWidth(status, QStringLiteral("Value: 1000"));
-                       QObject::connect(slider, &Slider::valueChanged, status, [status](int value) {
-                           status->setText(QStringLiteral("Value: %1").arg(value));
-                       });
-                       group->layout()->addWidget(slider);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(QStringLiteral("slider-tick-marks"), QStringLiteral("Tick marks"),
-                   QStringLiteral(
-                       "Tick interval and tick position expose discrete stops along the track."),
-                   QStringLiteral("auto* slider = new Slider(Qt::Horizontal, this);\n"
-                                  "slider->setRange(0, 10);\n"
-                                  "slider->setTickInterval(1);\n"
-                                  "slider->setTickPosition(QSlider::TicksBelow);"),
-                   [](QWidget* parent) {
-                       QWidget* group = horizontalGroup(parent, 16);
-                       auto* slider = new Slider(Qt::Horizontal, group);
-                       slider->setRange(0, 10);
-                       slider->setTickInterval(1);
-                       slider->setTickPosition(QSlider::TicksBelow);
-                       slider->setValue(4);
-                       slider->setFixedWidth(260);
-                       auto* status = makeValueLabel(group, QStringLiteral("Value: 4"));
-                       QObject::connect(slider, &Slider::valueChanged, status, [status](int value) {
-                           status->setText(QStringLiteral("Value: %1").arg(value));
-                       });
-                       group->layout()->addWidget(slider);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(
-            QStringLiteral("slider-vertical"), QStringLiteral("Vertical Slider"),
+            QStringLiteral("Minimum, maximum, single step, and page step define the "
+                           "slider's numeric contract."),
             QStringLiteral(
-                "Vertical orientation uses the same range and value API with a vertical track."),
-            QStringLiteral("auto* slider = new Slider(Qt::Vertical, this);\n"
-                           "slider->setRange(0, 100);\n"
-                           "slider->setValue(25);\n"
-                           "slider->setFixedHeight(160);"),
+                "auto* slider = new Slider(Qt::Horizontal, this);\n"
+                "slider->setRange(500, 1000);\n"
+                "slider->setSingleStep(10);\n"
+                "slider->setPageStep(50);\n"
+                "slider->setValue(800);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 16);
+                auto* slider = new Slider(Qt::Horizontal, group);
+                slider->setRange(500, 1000);
+                slider->setSingleStep(10);
+                slider->setPageStep(50);
+                slider->setValue(800);
+                slider->setFixedWidth(260);
+                auto* status = makeValueLabel(group, QStringLiteral("Value: 800"));
+                setStableStatusWidth(status, QStringLiteral("Value: 1000"));
+                QObject::connect(slider, &Slider::valueChanged, status, [status](int value) {
+                    status->setText(QStringLiteral("Value: %1").arg(value));
+                });
+                group->layout()->addWidget(slider);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("slider-tick-marks"), QStringLiteral("Tick marks"),
+            QStringLiteral("Tick interval and tick position expose discrete stops along the track."),
+            QStringLiteral(
+                "auto* slider = new Slider(Qt::Horizontal, this);\n"
+                "slider->setRange(0, 10);\n"
+                "slider->setTickInterval(1);\n"
+                "slider->setTickPosition(QSlider::TicksBelow);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 16);
+                auto* slider = new Slider(Qt::Horizontal, group);
+                slider->setRange(0, 10);
+                slider->setTickInterval(1);
+                slider->setTickPosition(QSlider::TicksBelow);
+                slider->setValue(4);
+                slider->setFixedWidth(260);
+                auto* status = makeValueLabel(group, QStringLiteral("Value: 4"));
+                QObject::connect(slider, &Slider::valueChanged, status, [status](int value) {
+                    status->setText(QStringLiteral("Value: %1").arg(value));
+                });
+                group->layout()->addWidget(slider);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("slider-vertical"), QStringLiteral("Vertical Slider"),
+            QStringLiteral("Vertical orientation uses the same range and value API with a vertical track."),
+            QStringLiteral(
+                "auto* slider = new Slider(Qt::Vertical, this);\n"
+                "slider->setRange(0, 100);\n"
+                "slider->setValue(25);\n"
+                "slider->setFixedHeight(160);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 20);
                 auto* slider = new Slider(Qt::Vertical, group);
@@ -1261,60 +1214,57 @@ QVector<GallerySample> sliderSamples()
 QVector<GallerySample> splitButtonSamples()
 {
     return {
-        makeSample(QStringLiteral("split-button-primary-menu"),
-                   QStringLiteral("Primary action and menu"),
-                   QStringLiteral("The primary region invokes the default action; the secondary "
-                                  "region opens the menu."),
-                   QStringLiteral("auto* button = new SplitButton(\"Choose color\", this);\n"
-                                  "auto* menu = new FluentMenu(\"Colors\", button);\n"
-                                  "menu->addAction(\"Red\");\n"
-                                  "menu->addAction(\"Green\");\n"
-                                  "menu->addAction(\"Blue\");\n"
-                                  "button->setMenu(menu);\n"
-                                  "connect(button, &SplitButton::clicked,\n"
-                                  "        status, []() { /* primary clicked */ });"),
-                   [](QWidget* parent) {
-                       QWidget* group = horizontalGroup(parent, 12);
-                       auto* button = new SplitButton(QStringLiteral("Choose color"), group);
-                       button->setMenu(makeMenu(button, QStringLiteral("Colors"),
-                                                {QStringLiteral("Red"), QStringLiteral("Green"),
-                                                 QStringLiteral("Blue")}));
-                       auto* status = makeValueLabel(group, QStringLiteral("Status: Ready"));
-                       setStableStatusWidth(status, QStringLiteral("Status: Primary clicked"));
-                       QObject::connect(button, &SplitButton::clicked, status, [status]() {
-                           status->setText(QStringLiteral("Status: Primary clicked"));
-                       });
-                       group->layout()->addWidget(button);
-                       group->layout()->addWidget(status);
-                       return group;
-                   }),
-        makeSample(
-            QStringLiteral("split-button-accent"), QStringLiteral("Accent SplitButton"),
+        makeSample(QStringLiteral("split-button-primary-menu"), QStringLiteral("Primary action and menu"),
+            QStringLiteral("The primary region invokes the default action; the secondary "
+                           "region opens the menu."),
+            QStringLiteral(
+                "auto* button = new SplitButton(\"Choose color\", this);\n"
+                "auto* menu = new FluentMenu(\"Colors\", button);\n"
+                "menu->addAction(\"Red\");\n"
+                "menu->addAction(\"Green\");\n"
+                "menu->addAction(\"Blue\");\n"
+                "button->setMenu(menu);\n"
+                "connect(button, &SplitButton::clicked,\n"
+                "        status, []() { /* primary clicked */ });"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 12);
+                auto* button = new SplitButton(QStringLiteral("Choose color"), group);
+                button->setMenu(makeMenu(button, QStringLiteral("Colors"),
+                    {QStringLiteral("Red"), QStringLiteral("Green"), QStringLiteral("Blue")}));
+                auto* status = makeValueLabel(group, QStringLiteral("Status: Ready"));
+                setStableStatusWidth(status, QStringLiteral("Status: Primary clicked"));
+                QObject::connect(button, &SplitButton::clicked, status, [status]() {
+                    status->setText(QStringLiteral("Status: Primary clicked"));
+                });
+                group->layout()->addWidget(button);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("split-button-accent"), QStringLiteral("Accent SplitButton"),
             QStringLiteral("Accent style marks the primary split action as the recommended path."),
-            QStringLiteral("auto* button = new SplitButton(\"Submit\", this);\n"
-                           "button->setFluentStyle(Button::Accent);\n"
-                           "auto* menu = new FluentMenu(\"Actions\", button);\n"
-                           "menu->addAction(\"Submit and close\");\n"
-                           "menu->addAction(\"Submit and notify\");\n"
-                           "button->setMenu(menu);"),
+            QStringLiteral(
+                "auto* button = new SplitButton(\"Submit\", this);\n"
+                "button->setFluentStyle(Button::Accent);\n"
+                "auto* menu = new FluentMenu(\"Actions\", button);\n"
+                "menu->addAction(\"Submit and close\");\n"
+                "menu->addAction(\"Submit and notify\");\n"
+                "button->setMenu(menu);"),
             [](QWidget* parent) {
                 auto* button = new SplitButton(QStringLiteral("Submit"), parent);
                 button->setFluentStyle(Button::Accent);
-                button->setMenu(makeMenu(
-                    button, QStringLiteral("Actions"),
+                button->setMenu(makeMenu(button, QStringLiteral("Actions"),
                     {QStringLiteral("Submit and close"), QStringLiteral("Submit and notify")}));
                 return button;
             }),
-        makeSample(
-            QStringLiteral("split-button-sizes"), QStringLiteral("SplitButton sizes"),
+        makeSample(QStringLiteral("split-button-sizes"), QStringLiteral("SplitButton sizes"),
+            QStringLiteral("Split buttons inherit Button size presets and keep the secondary region stable."),
             QStringLiteral(
-                "Split buttons inherit Button size presets and keep the secondary region stable."),
-            QStringLiteral("auto* small = new SplitButton(\"Small\", this);\n"
-                           "small->setFluentSize(Button::Small);\n\n"
-                           "auto* standard = new SplitButton(\"Standard\", this);\n"
-                           "standard->setFluentSize(Button::StandardSize);\n\n"
-                           "auto* large = new SplitButton(\"Large\", this);\n"
-                           "large->setFluentSize(Button::Large);"),
+                "auto* small = new SplitButton(\"Small\", this);\n"
+                "small->setFluentSize(Button::Small);\n\n"
+                "auto* standard = new SplitButton(\"Standard\", this);\n"
+                "standard->setFluentSize(Button::StandardSize);\n\n"
+                "auto* large = new SplitButton(\"Large\", this);\n"
+                "large->setFluentSize(Button::Large);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 10);
                 auto* small = new SplitButton(QStringLiteral("Small"), group);
@@ -1333,29 +1283,27 @@ QVector<GallerySample> splitButtonSamples()
 QVector<GallerySample> toggleButtonSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("toggle-button-state"), QStringLiteral("ToggleButton state"),
+        makeSample(QStringLiteral("toggle-button-state"), QStringLiteral("ToggleButton state"),
             QStringLiteral("A toggle button keeps its checked state visible after invocation."),
-            QStringLiteral("auto* toggle = new ToggleButton(\"Bold\", this);\n"
-                           "connect(toggle, &ToggleButton::toggled,\n"
-                           "        status, [status](bool checked) {\n"
-                           "            status->setText(checked ? \"Checked\" : \"Unchecked\");\n"
-                           "        });"),
+            QStringLiteral(
+                "auto* toggle = new ToggleButton(\"Bold\", this);\n"
+                "connect(toggle, &ToggleButton::toggled,\n"
+                "        status, [status](bool checked) {\n"
+                "            status->setText(checked ? \"Checked\" : \"Unchecked\");\n"
+                "        });"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 12);
                 auto* toggle = new ToggleButton(QStringLiteral("Bold"), group);
                 auto* status = makeValueLabel(group, QStringLiteral("State: Unchecked"));
                 setStableStatusWidth(status, QStringLiteral("State: Unchecked"));
                 QObject::connect(toggle, &ToggleButton::toggled, status, [status](bool checked) {
-                    status->setText(checked ? QStringLiteral("State: Checked")
-                                            : QStringLiteral("State: Unchecked"));
+                    status->setText(checked ? QStringLiteral("State: Checked") : QStringLiteral("State: Unchecked"));
                 });
                 group->layout()->addWidget(toggle);
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("toggle-button-three-state"), QStringLiteral("Three-state ToggleButton"),
+        makeSample(QStringLiteral("toggle-button-three-state"), QStringLiteral("Three-state ToggleButton"),
             QStringLiteral("Three-state mode cycles unchecked, checked, and mixed states."),
             QStringLiteral(
                 "auto* toggle = new ToggleButton(\"Three state\", this);\n"
@@ -1372,107 +1320,101 @@ QVector<GallerySample> toggleButtonSamples()
                 toggle->setThreeState(true);
                 auto* status = makeValueLabel(group, QStringLiteral("State: Unchecked"));
                 setStableStatusWidth(status, QStringLiteral("State: Unchecked"));
-                QObject::connect(toggle, &ToggleButton::checkStateChanged, status,
-                                 [status](Qt::CheckState state) {
-                                     status->setText(
-                                         QStringLiteral("State: %1").arg(checkStateText(state)));
-                                 });
+                QObject::connect(toggle, &ToggleButton::checkStateChanged, status, [status](Qt::CheckState state) {
+                    status->setText(QStringLiteral("State: %1").arg(checkStateText(state)));
+                });
                 group->layout()->addWidget(toggle);
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(QStringLiteral("toggle-button-disabled"),
-                   QStringLiteral("Disabled ToggleButton"),
-                   QStringLiteral("Disabled toggle buttons preserve checked and unchecked visuals "
-                                  "without accepting input."),
-                   QStringLiteral("auto* off = new ToggleButton(\"Disabled off\", this);\n"
-                                  "off->setEnabled(false);\n\n"
-                                  "auto* on = new ToggleButton(\"Disabled on\", this);\n"
-                                  "on->setChecked(true);\n"
-                                  "on->setEnabled(false);"),
-                   [](QWidget* parent) {
-                       QWidget* group = horizontalGroup(parent, 10);
-                       auto* off = new ToggleButton(QStringLiteral("Disabled off"), group);
-                       off->setEnabled(false);
-                       auto* on = new ToggleButton(QStringLiteral("Disabled on"), group);
-                       on->setChecked(true);
-                       on->setEnabled(false);
-                       group->layout()->addWidget(off);
-                       group->layout()->addWidget(on);
-                       return group;
-                   })};
+        makeSample(QStringLiteral("toggle-button-disabled"), QStringLiteral("Disabled ToggleButton"),
+            QStringLiteral("Disabled toggle buttons preserve checked and unchecked visuals "
+                           "without accepting input."),
+            QStringLiteral(
+                "auto* off = new ToggleButton(\"Disabled off\", this);\n"
+                "off->setEnabled(false);\n\n"
+                "auto* on = new ToggleButton(\"Disabled on\", this);\n"
+                "on->setChecked(true);\n"
+                "on->setEnabled(false);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 10);
+                auto* off = new ToggleButton(QStringLiteral("Disabled off"), group);
+                off->setEnabled(false);
+                auto* on = new ToggleButton(QStringLiteral("Disabled on"), group);
+                on->setChecked(true);
+                on->setEnabled(false);
+                group->layout()->addWidget(off);
+                group->layout()->addWidget(on);
+                return group;
+            })};
 }
 
 QVector<GallerySample> toggleSplitButtonSamples()
 {
-    return {makeSample(
-                QStringLiteral("toggle-split-button-menu"),
-                QStringLiteral("ToggleSplitButton with menu"),
-                QStringLiteral("The primary region toggles selection; the secondary region opens "
-                               "related choices."),
-                QStringLiteral("auto* button = new ToggleSplitButton(\"List options\", this);\n"
-                               "button->setFluentLayout(Button::IconBefore);\n"
-                               "button->setIconGlyph(Typography::Icons::List);\n"
-                               "auto* menu = new FluentMenu(\"Styles\", button);\n"
-                               "menu->addAction(\"None\");\n"
-                               "menu->addAction(\"Bulleted\");\n"
-                               "menu->addAction(\"Numbered\");\n"
-                               "button->setMenu(menu);\n"
-                               "connect(button, &ToggleSplitButton::toggled,\n"
-                               "        status, [status](bool checked) { /* show state */ });"),
-                [](QWidget* parent) {
-                    QWidget* group = horizontalGroup(parent, 12);
-                    auto* button = new ToggleSplitButton(QStringLiteral("List options"), group);
-                    button->setFluentLayout(Button::IconBefore);
-                    button->setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
-                    button->setMinimumWidth(160);
-                    button->setMenu(makeMenu(button, QStringLiteral("Styles"),
-                                             {QStringLiteral("None"), QStringLiteral("Bulleted"),
-                                              QStringLiteral("Numbered")}));
-                    auto* status = makeValueLabel(group, QStringLiteral("State: Unchecked"));
-                    setStableStatusWidth(status, QStringLiteral("State: Unchecked"));
-                    QObject::connect(
-                        button, &ToggleSplitButton::toggled, status, [status](bool checked) {
-                            status->setText(checked ? QStringLiteral("State: Checked")
-                                                    : QStringLiteral("State: Unchecked"));
-                        });
-                    group->layout()->addWidget(button);
-                    group->layout()->addWidget(status);
-                    return group;
-                }),
-            makeSample(QStringLiteral("toggle-split-button-icon-only"),
-                       QStringLiteral("Icon-only ToggleSplitButton"),
-                       QStringLiteral("Icon-only layout keeps compact tool commands selectable "
-                                      "while preserving the split menu affordance."),
-                       QStringLiteral("auto* button = new ToggleSplitButton(QString(), this);\n"
-                                      "button->setFluentLayout(Button::IconOnly);\n"
-                                      "button->setIconGlyph(Typography::Icons::Settings);\n"
-                                      "button->setFixedSize(64, 34);"),
-                       [](QWidget* parent) {
-                           auto* button = new ToggleSplitButton(QString(), parent);
-                           button->setFluentLayout(Button::IconOnly);
-                           button->setIconGlyph(Typography::Icons::Settings,
-                                                Typography::IconSize::Standard);
-                           button->setFixedSize(64, 34);
-                           return button;
-                       })};
+    return {
+        makeSample(QStringLiteral("toggle-split-button-menu"), QStringLiteral("ToggleSplitButton with menu"),
+            QStringLiteral("The primary region toggles selection; the secondary region opens "
+                           "related choices."),
+            QStringLiteral(
+                "auto* button = new ToggleSplitButton(\"List options\", this);\n"
+                "button->setFluentLayout(Button::IconBefore);\n"
+                "button->setIconGlyph(Typography::Icons::List);\n"
+                "auto* menu = new FluentMenu(\"Styles\", button);\n"
+                "menu->addAction(\"None\");\n"
+                "menu->addAction(\"Bulleted\");\n"
+                "menu->addAction(\"Numbered\");\n"
+                "button->setMenu(menu);\n"
+                "connect(button, &ToggleSplitButton::toggled,\n"
+                "        status, [status](bool checked) { /* show state */ });"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 12);
+                auto* button = new ToggleSplitButton(QStringLiteral("List options"), group);
+                button->setFluentLayout(Button::IconBefore);
+                button->setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
+                button->setMinimumWidth(160);
+                button->setMenu(makeMenu(button, QStringLiteral("Styles"),
+                    {QStringLiteral("None"), QStringLiteral("Bulleted"), QStringLiteral("Numbered")}));
+                auto* status = makeValueLabel(group, QStringLiteral("State: Unchecked"));
+                setStableStatusWidth(status, QStringLiteral("State: Unchecked"));
+                QObject::connect(button, &ToggleSplitButton::toggled, status, [status](bool checked) {
+                    status->setText(checked ? QStringLiteral("State: Checked") : QStringLiteral("State: Unchecked"));
+                });
+                group->layout()->addWidget(button);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("toggle-split-button-icon-only"), QStringLiteral("Icon-only ToggleSplitButton"),
+            QStringLiteral("Icon-only layout keeps compact tool commands selectable "
+                           "while preserving the split menu affordance."),
+            QStringLiteral(
+                "auto* button = new ToggleSplitButton(QString(), this);\n"
+                "button->setFluentLayout(Button::IconOnly);\n"
+                "button->setIconGlyph(Typography::Icons::Settings);\n"
+                "button->setFixedSize(64, 34);"),
+            [](QWidget* parent) {
+                auto* button = new ToggleSplitButton(QString(), parent);
+                button->setFluentLayout(Button::IconOnly);
+                button->setIconGlyph(Typography::Icons::Settings, Typography::IconSize::Standard);
+                button->setFixedSize(64, 34);
+                return button;
+            })};
 }
 
 QVector<GallerySample> toggleSwitchSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("toggle-switch-state"), QStringLiteral("ToggleSwitch state"),
+        makeSample(QStringLiteral("toggle-switch-state"), QStringLiteral("ToggleSwitch state"),
             QStringLiteral("The toggled signal mirrors the on/off state into surrounding UI."),
-            QStringLiteral("auto* toggle = new ToggleSwitch(this);\n"
-                           "toggle->setOnContent(\"On\");\n"
-                           "toggle->setOffContent(\"Off\");\n"
-                           "toggle->setAccessibleName(\"Feature toggle\");\n"
-                           "auto* status = new Label(\"State: Off\", this);\n"
-                           "connect(toggle, &ToggleSwitch::toggled,\n"
-                           "        status, [status](bool on) {\n"
-                           "            status->setText(on ? \"State: On\" : \"State: Off\");\n"
-                           "        });"),
+            QStringLiteral(
+                "auto* toggle = new ToggleSwitch(this);\n"
+                "toggle->setOnContent(\"On\");\n"
+                "toggle->setOffContent(\"Off\");\n"
+                "toggle->setAccessibleName(\"Feature toggle\");\n"
+                "auto* status = new Label(\"State: Off\", this);\n"
+                "connect(toggle, &ToggleSwitch::toggled,\n"
+                "        status, [status](bool on) {\n"
+                "            status->setText(on ? \"State: On\" : \"State: Off\");\n"
+                "        });"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* toggle = new ToggleSwitch(group);
@@ -1482,22 +1424,20 @@ QVector<GallerySample> toggleSwitchSamples()
                 auto* status = makeValueLabel(group, QStringLiteral("State: Off"));
                 setStableStatusWidth(status, QStringLiteral("State: Off"));
                 QObject::connect(toggle, &ToggleSwitch::toggled, status, [status](bool on) {
-                    status->setText(on ? QStringLiteral("State: On")
-                                       : QStringLiteral("State: Off"));
+                    status->setText(on ? QStringLiteral("State: On") : QStringLiteral("State: Off"));
                 });
                 group->layout()->addWidget(toggle);
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(
-            QStringLiteral("toggle-switch-content"), QStringLiteral("External label and content"),
+        makeSample(QStringLiteral("toggle-switch-content"), QStringLiteral("External label and content"),
+            QStringLiteral("Applications provide the field label while the switch owns on/off content text."),
             QStringLiteral(
-                "Applications provide the field label while the switch owns on/off content text."),
-            QStringLiteral("auto* label = new Label(\"Wi-Fi\", this);\n"
-                           "auto* toggle = new ToggleSwitch(this);\n"
-                           "toggle->setOnContent(\"Connected\");\n"
-                           "toggle->setOffContent(\"Disconnected\");\n"
-                           "toggle->setIsOn(true);"),
+                "auto* label = new Label(\"Wi-Fi\", this);\n"
+                "auto* toggle = new ToggleSwitch(this);\n"
+                "toggle->setOnContent(\"Connected\");\n"
+                "toggle->setOffContent(\"Disconnected\");\n"
+                "toggle->setIsOn(true);"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 6);
                 auto* label = makeValueLabel(group, QStringLiteral("Wi-Fi"));
@@ -1510,38 +1450,38 @@ QVector<GallerySample> toggleSwitchSamples()
                 return group;
             }),
         makeSample(QStringLiteral("toggle-switch-scale"), QStringLiteral("Visual size"),
-                   QStringLiteral("visualScale enlarges the switch graphics and content gap. "
-                                  "setFixedSize controls the hit area; text keeps its font size."),
-                   QStringLiteral("auto* toggle = new ToggleSwitch(this);\n"
-                                  "toggle->setObjectName(\"scaledToggleSwitch\");\n"
-                                  "toggle->setAccessibleName(\"Scaled switch\");\n"
-                                  "toggle->setOnContent(\"On\");\n"
-                                  "toggle->setOffContent(\"Off\");\n"
-                                  "toggle->setIsOn(true);\n"
-                                  "toggle->setVisualScale(2.0); // 80 x 40 track\n"
-                                  "toggle->setFixedSize(300, 100);"),
-                   [](QWidget* parent) {
-                       auto* toggle = new ToggleSwitch(parent);
-                       toggle->setObjectName(QStringLiteral("scaledToggleSwitch"));
-                       toggle->setAccessibleName(QStringLiteral("Scaled switch"));
-                       toggle->setOnContent(QStringLiteral("On"));
-                       toggle->setOffContent(QStringLiteral("Off"));
-                       toggle->setIsOn(true);
-                       toggle->setVisualScale(2.0);
-                       toggle->setFixedSize(300, 100);
-                       return toggle;
-                   }),
-        makeSample(
-            QStringLiteral("toggle-switch-disabled"), QStringLiteral("Disabled ToggleSwitch"),
+            QStringLiteral("visualScale enlarges the switch graphics and content gap. "
+                           "setFixedSize controls the hit area; text keeps its font size."),
             QStringLiteral(
-                "Disabled switches preserve both off and on visuals while blocking interaction."),
-            QStringLiteral("auto* off = new ToggleSwitch(this);\n"
-                           "off->setOffContent(\"Off\");\n"
-                           "off->setEnabled(false);\n\n"
-                           "auto* on = new ToggleSwitch(this);\n"
-                           "on->setOnContent(\"On\");\n"
-                           "on->setIsOn(true);\n"
-                           "on->setEnabled(false);"),
+                "auto* toggle = new ToggleSwitch(this);\n"
+                "toggle->setObjectName(\"scaledToggleSwitch\");\n"
+                "toggle->setAccessibleName(\"Scaled switch\");\n"
+                "toggle->setOnContent(\"On\");\n"
+                "toggle->setOffContent(\"Off\");\n"
+                "toggle->setIsOn(true);\n"
+                "toggle->setVisualScale(2.0); // 80 x 40 track\n"
+                "toggle->setFixedSize(300, 100);"),
+            [](QWidget* parent) {
+                auto* toggle = new ToggleSwitch(parent);
+                toggle->setObjectName(QStringLiteral("scaledToggleSwitch"));
+                toggle->setAccessibleName(QStringLiteral("Scaled switch"));
+                toggle->setOnContent(QStringLiteral("On"));
+                toggle->setOffContent(QStringLiteral("Off"));
+                toggle->setIsOn(true);
+                toggle->setVisualScale(2.0);
+                toggle->setFixedSize(300, 100);
+                return toggle;
+            }),
+        makeSample(QStringLiteral("toggle-switch-disabled"), QStringLiteral("Disabled ToggleSwitch"),
+            QStringLiteral("Disabled switches preserve both off and on visuals while blocking interaction."),
+            QStringLiteral(
+                "auto* off = new ToggleSwitch(this);\n"
+                "off->setOffContent(\"Off\");\n"
+                "off->setEnabled(false);\n\n"
+                "auto* on = new ToggleSwitch(this);\n"
+                "on->setOnContent(\"On\");\n"
+                "on->setIsOn(true);\n"
+                "on->setEnabled(false);"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 24);
                 auto* off = new ToggleSwitch(group);

@@ -39,10 +39,8 @@ QRect constrainedGeometry(const QRect& requested, const QWidget* desktop)
     QSize size = requested.size().boundedTo(bounds.size());
     size.setWidth(qMax(1, size.width()));
     size.setHeight(qMax(1, size.height()));
-    const int x = qBound(bounds.left(), requested.x(),
-                         qMax(bounds.left(), bounds.right() - size.width() + 1));
-    const int y = qBound(bounds.top(), requested.y(),
-                         qMax(bounds.top(), bounds.bottom() - size.height() + 1));
+    const int x = qBound(bounds.left(), requested.x(), qMax(bounds.left(), bounds.right() - size.width() + 1));
+    const int y = qBound(bounds.top(), requested.y(), qMax(bounds.top(), bounds.bottom() - size.height() + 1));
     return QRect(QPoint(x, y), size);
 }
 
@@ -72,9 +70,8 @@ void configureAccessibleProxyPresentation()
                 continue;
             const style = container.ownerDocument.createElement('style');
             style.id = 'fluentqt-accessible-proxy-presentation';
-            style.textContent = '.qt-window-a11y-container { overflow: clip; }' +
-                                '.qt-window-a11y-container > [id]:not(' +
-                                '.hidden-visually-read-by-screen-reader) { opacity: 0; }';
+            style.textContent = '.qt-window-a11y-container { overflow: clip; }'
+                + '.qt-window-a11y-container > [id]:not(' + '.hidden-visually-read-by-screen-reader) { opacity: 0; }';
             shadow.appendChild(style);
         }
     });
@@ -269,8 +266,8 @@ void showWindow(QWidget* window, const QRect& normalGeometry, WindowPresentation
     QTimer::singleShot(100, window, [guard, surfaceGuard, normalGeometry, presentation]() {
         if (guard && surfaceGuard) {
             const QRect geometry = presentation == WindowPresentation::Maximized
-                                       ? surfaceGuard->rect()
-                                       : constrainedGeometry(normalGeometry, surfaceGuard);
+                ? surfaceGuard->rect()
+                : constrainedGeometry(normalGeometry, surfaceGuard);
             guard->setGeometry(geometry);
             guard->raise();
             publishPrimaryWindowGeometry();

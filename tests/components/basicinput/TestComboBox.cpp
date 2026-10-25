@@ -112,25 +112,22 @@ bool focusComboBoxForPopupInput(ComboBox* comboBox, ComboBoxTestWindow* window)
     }
     comboBox->setFocus(Qt::OtherFocusReason);
     return QTest::qWaitFor(
-        [comboBox] {
-            return comboBox->hasFocus() ||
-                   (comboBox->lineEdit() && comboBox->lineEdit()->hasFocus());
-        },
+        [comboBox] { return comboBox->hasFocus() || (comboBox->lineEdit() && comboBox->lineEdit()->hasFocus()); },
         1000);
 }
 
 QRect popupCardRect(QWidget* popup)
 {
-    return popup->geometry().adjusted(::Spacing::Standard, ::Spacing::Standard,
-                                      -::Spacing::Standard, -::Spacing::Standard);
+    return popup->geometry().adjusted(::Spacing::Standard, ::Spacing::Standard, -::Spacing::Standard,
+        -::Spacing::Standard);
 }
 
 bool isAccentLike(const QColor& pixel, const QColor& accent)
 {
     if (pixel.alpha() < 120)
         return false;
-    return qAbs(pixel.red() - accent.red()) <= 10 && qAbs(pixel.green() - accent.green()) <= 10 &&
-           qAbs(pixel.blue() - accent.blue()) <= 10;
+    return qAbs(pixel.red() - accent.red()) <= 10 && qAbs(pixel.green() - accent.green()) <= 10
+        && qAbs(pixel.blue() - accent.blue()) <= 10;
 }
 
 qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const QColor& accent)
@@ -156,9 +153,8 @@ qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const Q
 void sendWheel(QWidget* target, int angleDeltaY)
 {
     const QPoint local = target->rect().center();
-    QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)), QPoint(),
-                      QPoint(0, angleDeltaY), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
-                      false);
+    QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)), QPoint(), QPoint(0, angleDeltaY),
+        Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::sendEvent(target, &event);
 }
 } // namespace
@@ -175,7 +171,7 @@ TEST_F(ComboBoxTest, DefaultProperties)
     EXPECT_EQ(cb.chevronGlyph(), Typography::Icons::ChevronDownMed);
     EXPECT_EQ(cb.chevronSize(), Typography::IconSize::Compact);
     EXPECT_EQ(Typography::Icons::glyphForSize(cb.chevronGlyph(), cb.chevronSize()),
-              Typography::Icons::glyph(QStringLiteral("ic_fluent_chevron_down_12_regular")));
+        Typography::Icons::glyph(QStringLiteral("ic_fluent_chevron_down_12_regular")));
     EXPECT_EQ(cb.chevronOffset(), QPoint(Spacing::Padding::ComboBoxHorizontal, 0));
     EXPECT_EQ(cb.popupOffset(), Spacing::Small);
     EXPECT_DOUBLE_EQ(cb.pressProgress(), 0.0);
@@ -265,7 +261,7 @@ TEST_F(ComboBoxTest, Contract_EditableFontAndSameRoleRestore)
     QSignalSpy roleChanges(&cb, &ComboBox::fontRoleChanged);
     cb.setFontRole(cb.fontRole());
     EXPECT_EQ(tests::support::normalizedFontFamilies(cb.font()),
-              tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont()));
+        tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont()));
     EXPECT_EQ(cb.lineEdit()->font(), cb.font());
     EXPECT_EQ(roleChanges.count(), 0);
     EXPECT_EQ(cb.lineEdit()->text(), "Uncommitted text");
@@ -318,16 +314,15 @@ TEST_F(ComboBoxTest, Contract_ThemeFontUpdatesOpenPopupAndEditor)
     ASSERT_NE(list, nullptr);
     cb.setFontRole(Typography::FontRole::Subtitle);
     EXPECT_EQ(tests::support::normalizedFontFamilies(cb.font()),
-              tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont()));
+        tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont()));
     EXPECT_EQ(list->font(), cb.font());
     EXPECT_EQ(cb.lineEdit()->font(), cb.font());
     cb.setFontRole(Typography::FontRole::Body);
     const auto saved = ThemeRegistry::instance().snapshot();
     ThemeRegistry::instance().setFontScale(saved.fontScale * 1.5);
     QApplication::processEvents();
-    const bool ownerMatchesTheme =
-        tests::support::normalizedFontFamilies(cb.font()) ==
-        tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont());
+    const bool ownerMatchesTheme = tests::support::normalizedFontFamilies(cb.font())
+        == tests::support::normalizedFontFamilies(cb.themeFont(cb.fontRole()).toQFont());
     const bool listMatchesOwner = list->font() == cb.font();
     const bool editorMatchesOwner = cb.lineEdit()->font() == cb.font();
     ThemeRegistry::instance().applySnapshot(saved);
@@ -372,12 +367,12 @@ TEST_F(ComboBoxTest, VisualCheckCustomFont)
     if (tests::support::isVisualSnapshotMode()) {
         tests::support::VisualSnapshotOptions options;
         options.windowSize = window->size();
-        options.variant = QStringLiteral("font-%1-%2-%3")
-                              .arg(fontSize)
-                              .arg(dark ? "dark" : "light")
-                              .arg(narrow ? "narrow" : "normal");
-        options.theme = dark ? tests::support::VisualSnapshotTheme::Dark
-                             : tests::support::VisualSnapshotTheme::Light;
+        options.variant =
+            QStringLiteral("font-%1-%2-%3")
+                .arg(fontSize)
+                .arg(dark ? "dark" : "light")
+                .arg(narrow ? "narrow" : "normal");
+        options.theme = dark ? tests::support::VisualSnapshotTheme::Dark : tests::support::VisualSnapshotTheme::Light;
         EXPECT_TRUE(tests::support::captureVisualSnapshot(window, options));
         FluentElement::setTheme(savedTheme);
         return;
@@ -590,13 +585,12 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
 
     bool sawFluentMenu = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu) {
             QWidget* popup = QApplication::activePopupWidget();
-            ADD_FAILURE() << "Expected FluentMenu, active popup is "
-                          << (popup ? popup->metaObject()->className() : "<none>");
+            ADD_FAILURE()
+                << "Expected FluentMenu, active popup is " << (popup ? popup->metaObject()->className() : "<none>");
             return;
         }
 
@@ -607,8 +601,8 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
                 continue;
             }
             const QSize iconSize = action->icon().actualSize(QSize(64, 64));
-            const int maximumBackingExtent =
-                qCeil(Typography::IconSize::Standard * qMax<qreal>(1.0, menu->devicePixelRatioF()));
+            const int maximumBackingExtent = qCeil(
+                Typography::IconSize::Standard * qMax<qreal>(1.0, menu->devicePixelRatioF()));
             EXPECT_LE(iconSize.width(), maximumBackingExtent);
             EXPECT_LE(iconSize.height(), maximumBackingExtent);
         }
@@ -616,8 +610,7 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
     });
 
     const QPoint localPosition = editor->rect().center();
-    QContextMenuEvent event(QContextMenuEvent::Mouse, localPosition,
-                            editor->mapToGlobal(localPosition));
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPosition, editor->mapToGlobal(localPosition));
     QApplication::sendEvent(editor, &event);
 
     EXPECT_TRUE(event.isAccepted());
@@ -765,8 +758,7 @@ TEST_F(ComboBoxTest, PopupIsRecreatedAfterOwnerMovesToAnotherTopLevel)
 
     comboBox->showPopup();
     QApplication::processEvents();
-    auto* recreatedPopup =
-        secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(QStringLiteral("ComboBoxPopup"));
+    auto* recreatedPopup = secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(QStringLiteral("ComboBoxPopup"));
     ASSERT_NE(recreatedPopup, nullptr);
     EXPECT_TRUE(recreatedPopup->isVisible());
     EXPECT_EQ(recreatedPopup->parentWidget(), secondWindow);
@@ -816,8 +808,7 @@ TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses)
     ASSERT_NE(listView, nullptr);
     EXPECT_EQ(listView->spacing(), 0);
 
-    const QPoint rowTwoCenter(24, Spacing::ControlHeight::Large * 2 +
-                                      Spacing::ControlHeight::Large / 2);
+    const QPoint rowTwoCenter(24, Spacing::ControlHeight::Large * 2 + Spacing::ControlHeight::Large / 2);
     QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, rowTwoCenter);
     QApplication::processEvents();
 
@@ -924,10 +915,10 @@ TEST_F(ComboBoxTest, Contract_PopupKeyboardUsesConfiguredRootAndModelColumn)
 {
     QStandardItemModel model;
     auto* group = new QStandardItem(QStringLiteral("Group"));
-    group->appendRow({new QStandardItem(QStringLiteral("First key")),
-                      new QStandardItem(QStringLiteral("First label"))});
-    group->appendRow({new QStandardItem(QStringLiteral("Second key")),
-                      new QStandardItem(QStringLiteral("Second label"))});
+    group->appendRow(
+        {new QStandardItem(QStringLiteral("First key")), new QStandardItem(QStringLiteral("First label"))});
+    group->appendRow(
+        {new QStandardItem(QStringLiteral("Second key")), new QStandardItem(QStringLiteral("Second label"))});
     model.appendRow(group);
     ComboBox cb(window);
     cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
@@ -1096,12 +1087,12 @@ TEST_F(ComboBoxTest, Contract_PopupClosingReentrantInputCommitsOnce)
     QSignalSpy activated(&cb, SIGNAL(activated(int)));
     QSignalSpy textActivated(&cb, &QComboBox::textActivated);
     QObject::connect(popup, &fluent::dialogs_flyouts::Popup::closing, &cb,
-                     [listView](fluent::dialogs_flyouts::Popup::CloseReason) {
-                         // Exercise input while closing is being delivered, not
-                         // after the popup's public isOpen state has changed.
-                         QKeyEvent reentrant(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-                         QApplication::sendEvent(listView, &reentrant);
-                     });
+        [listView](fluent::dialogs_flyouts::Popup::CloseReason) {
+            // Exercise input while closing is being delivered, not
+            // after the popup's public isOpen state has changed.
+            QKeyEvent reentrant(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QApplication::sendEvent(listView, &reentrant);
+        });
 
     QTest::keyClick(listView, Qt::Key_Down);
     QTest::keyClick(listView, Qt::Key_Return);
@@ -1131,10 +1122,10 @@ TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex)
 {
     QStandardItemModel model;
     auto* group = new QStandardItem(QStringLiteral("Group"));
-    group->appendRow({new QStandardItem(QStringLiteral("First key")),
-                      new QStandardItem(QStringLiteral("First label"))});
-    group->appendRow({new QStandardItem(QStringLiteral("Second key")),
-                      new QStandardItem(QStringLiteral("Second label"))});
+    group->appendRow(
+        {new QStandardItem(QStringLiteral("First key")), new QStandardItem(QStringLiteral("First label"))});
+    group->appendRow(
+        {new QStandardItem(QStringLiteral("Second key")), new QStandardItem(QStringLiteral("Second label"))});
     model.appendRow(group);
 
     ComboBox* cb = new ComboBox(window);
@@ -1150,8 +1141,7 @@ TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex)
     ASSERT_NE(listView, nullptr);
     EXPECT_EQ(listView->rootIndex(), group->index());
     EXPECT_EQ(listView->modelColumn(), 1);
-    EXPECT_EQ(
-        listView->model()->index(0, 1, listView->rootIndex()).data(Qt::DisplayRole).toString(),
+    EXPECT_EQ(listView->model()->index(0, 1, listView->rootIndex()).data(Qt::DisplayRole).toString(),
         QStringLiteral("First label"));
     EXPECT_EQ(cb->currentText(), QStringLiteral("First label"));
 
@@ -1174,8 +1164,7 @@ TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText)
     auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
     ASSERT_NE(listView, nullptr);
 
-    const QPoint rowOneCenter(24,
-                              Spacing::ControlHeight::Large + Spacing::ControlHeight::Large / 2);
+    const QPoint rowOneCenter(24, Spacing::ControlHeight::Large + Spacing::ControlHeight::Large / 2);
     QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, rowOneCenter);
     QApplication::processEvents();
 
@@ -1207,8 +1196,7 @@ TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth)
     EXPECT_EQ(listGeometry.left(), Spacing::Standard + popupContentInset);
     EXPECT_EQ(listGeometry.right(), popup->rect().right() - Spacing::Standard - popupContentInset);
     EXPECT_EQ(listGeometry.top(), Spacing::Standard + popupContentInset);
-    EXPECT_EQ(listGeometry.bottom(),
-              popup->rect().bottom() - Spacing::Standard - popupContentInset);
+    EXPECT_EQ(listGeometry.bottom(), popup->rect().bottom() - Spacing::Standard - popupContentInset);
 
     auto* scrollBar = listView->verticalFluentScrollBar();
     ASSERT_NE(scrollBar, nullptr);
@@ -1382,13 +1370,11 @@ TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline)
     const QRectF textSlot = rowRect.adjusted(5, 3, -5, -3);
     const QFontMetricsF metrics(listView->font());
     const QString text = index.data(Qt::DisplayRole).toString();
-    const QRectF textRect =
-        fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
     const qreal textInkCenter = fluent::painting::alignedTextInkCenterY(textRect, metrics, text);
 
     constexpr qreal kOpticalCenterTolerance = 0.01;
-    EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), textInkCenter,
-                kOpticalCenterTolerance);
+    EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), textInkCenter, kOpticalCenterTolerance);
 }
 
 TEST_F(ComboBoxTest, TextInkCenteringAdaptsToRepresentativeGlyphProfiles)
@@ -1396,14 +1382,12 @@ TEST_F(ComboBoxTest, TextInkCenteringAdaptsToRepresentativeGlyphProfiles)
     const QRectF textSlot(0.0, 0.0, 180.0, Spacing::ControlHeight::Large);
     const QFontMetricsF metrics(window->font());
     const QStringList samples{QStringLiteral("Mica"), QStringLiteral("gyp"), QStringLiteral("2026"),
-                              QString::fromUtf8("中文")};
+        QString::fromUtf8("中文")};
 
     for (const QString& text : samples) {
         SCOPED_TRACE(text.toStdString());
-        const QRectF textRect =
-            fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
-        EXPECT_NEAR(textSlot.center().y(),
-                    fluent::painting::alignedTextInkCenterY(textRect, metrics, text), 0.01);
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
+        EXPECT_NEAR(textSlot.center().y(), fluent::painting::alignedTextInkCenterY(textRect, metrics, text), 0.01);
     }
 }
 
@@ -1444,8 +1428,7 @@ TEST_F(ComboBoxTest, VisualCheck)
         mainLayout->addWidget(label);
 
         auto* combo = new ComboBox(window);
-        combo->addItems({"Arial", "Comic Sans MS", "Courier New", Typography::FontFamily::UIText,
-                         "Times New Roman"});
+        combo->addItems({"Arial", "Comic Sans MS", "Courier New", Typography::FontFamily::UIText, "Times New Roman"});
         combo->setCurrentIndex(3); // Bundled FluentQt UI face
         combo->setFixedWidth(200);
         mainLayout->addWidget(combo);
@@ -1488,8 +1471,7 @@ TEST_F(ComboBoxTest, VisualCheck)
         mainLayout->addWidget(label);
 
         auto* combo = new ComboBox(window);
-        combo->addItems(
-            {"8", "9", "10", "11", "12", "14", "16", "18", "20", "24", "28", "36", "48", "72"});
+        combo->addItems({"8", "9", "10", "11", "12", "14", "16", "18", "20", "24", "28", "36", "48", "72"});
         combo->setEditable(true);
         combo->setCurrentIndex(4); // 12
         combo->setFixedWidth(200);
@@ -1506,10 +1488,9 @@ TEST_F(ComboBoxTest, VisualCheck)
     themeBtn->anchors()->right = {window, fluent::AnchorLayout::Edge::Right, -20};
     mainLayout->addWidget(themeBtn);
     QObject::connect(themeBtn, &fluent::basicinput::Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
 
     window->show();

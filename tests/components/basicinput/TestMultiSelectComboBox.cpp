@@ -46,14 +46,9 @@ public:
 
 class CountingListModel final : public QAbstractListModel {
 public:
-    explicit CountingListModel(int rows, QObject* parent = nullptr)
-        : QAbstractListModel(parent), m_rows(rows)
-    {}
+    explicit CountingListModel(int rows, QObject* parent = nullptr) : QAbstractListModel(parent), m_rows(rows) {}
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : m_rows;
-    }
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : m_rows; }
 
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
     {
@@ -86,8 +81,7 @@ fluent::dialogs_flyouts::Flyout* openPopup(MultiSelectComboBox& box, QWidget& wi
     QApplication::processEvents();
     box.open();
     QApplication::processEvents();
-    return window.findChild<fluent::dialogs_flyouts::Flyout*>(
-        QStringLiteral("MultiSelectComboBox.Popup"));
+    return window.findChild<fluent::dialogs_flyouts::Flyout*>(QStringLiteral("MultiSelectComboBox.Popup"));
 }
 
 QRect visiblePopupGeometry(const QWidget& popup, const QWidget& window)
@@ -99,8 +93,8 @@ QRect visiblePopupGeometry(const QWidget& popup, const QWidget& window)
 bool sendWheel(QWidget* target, QPoint pixelDelta, QPoint angleDelta, Qt::ScrollPhase phase)
 {
     const QPoint local = target->rect().center();
-    QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)), pixelDelta, angleDelta,
-                      Qt::NoButton, Qt::NoModifier, phase, false);
+    QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)), pixelDelta, angleDelta, Qt::NoButton,
+        Qt::NoModifier, phase, false);
     QApplication::sendEvent(target, &event);
     return event.isAccepted();
 }
@@ -160,8 +154,7 @@ TEST_F(MultiSelectComboBoxTest, EmptyModelDisablesSelectAllHeader)
 
 TEST_F(MultiSelectComboBoxTest, ReplacesClearsAndSelectsRows)
 {
-    QStringListModel model(
-        {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
     MultiSelectComboBox box(window);
     box.setModel(&model);
 
@@ -184,10 +177,9 @@ TEST_F(MultiSelectComboBoxTest, ReplacesClearsAndSelectsRows)
 
 TEST_F(MultiSelectComboBoxTest, SharedModelSelectionsStayIndependent)
 {
-    QStringListModel model({QStringLiteral("North America"), QStringLiteral("Europe"),
-                            QStringLiteral("Asia Pacific"), QStringLiteral("Latin America"),
-                            QStringLiteral("Middle East and Africa"), QString::fromUtf8("中国大陆"),
-                            QString::fromUtf8("日本")});
+    QStringListModel model({QStringLiteral("North America"), QStringLiteral("Europe"), QStringLiteral("Asia Pacific"),
+        QStringLiteral("Latin America"), QStringLiteral("Middle East and Africa"), QString::fromUtf8("中国大陆"),
+        QString::fromUtf8("日本")});
     MultiSelectComboBox first(window);
     MultiSelectComboBox second(window);
     first.setModel(&model);
@@ -214,11 +206,9 @@ TEST_F(MultiSelectComboBoxTest, PopupFollowsOwnerLayoutDirection)
 
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
-    auto* search = popup->findChild<fluent::textfields::LineEdit*>(
-        QStringLiteral("MultiSelectComboBox.Search"));
+    auto* search = popup->findChild<fluent::textfields::LineEdit*>(QStringLiteral("MultiSelectComboBox.Search"));
     auto* selectAll = popup->findChild<CheckBox*>(QStringLiteral("MultiSelectComboBox.SelectAll"));
-    auto* list = popup->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = popup->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(search, nullptr);
     ASSERT_NE(selectAll, nullptr);
     ASSERT_NE(list, nullptr);
@@ -295,7 +285,7 @@ TEST_F(MultiSelectComboBoxTest, RootSelectionPreservesOtherRoots)
     EXPECT_EQ(box.selectedRows(), (QList<int>{1}));
 
     box.selectionModel()->select(model.index(0, 0, secondRootIndex),
-                                 QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        QItemSelectionModel::Select | QItemSelectionModel::Rows);
     box.clearSelection();
     EXPECT_TRUE(box.selectedRows().isEmpty());
     EXPECT_TRUE(box.selectionModel()->isSelected(model.index(0, 0, secondRootIndex)));
@@ -319,8 +309,7 @@ TEST_F(MultiSelectComboBoxTest, DestroyingModelRestoresEmptyInternalState)
 
 TEST_F(MultiSelectComboBoxTest, OpenModelDestructionClosesAndDetachesView)
 {
-    auto* model = new QStringListModel(
-        {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
+    auto* model = new QStringListModel({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 80, 260, Spacing::ControlHeight::Standard);
     box.setModel(model);
@@ -328,8 +317,7 @@ TEST_F(MultiSelectComboBoxTest, OpenModelDestructionClosesAndDetachesView)
 
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
     ASSERT_TRUE(box.isOpen());
     ASSERT_EQ(list->model(), model);
@@ -347,8 +335,7 @@ TEST_F(MultiSelectComboBoxTest, OpenModelDestructionClosesAndDetachesView)
 
 TEST_F(MultiSelectComboBoxTest, OpenFilteredModelDestructionClosesSafely)
 {
-    auto* model = new QStringListModel(
-        {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
+    auto* model = new QStringListModel({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 80, 260, Spacing::ControlHeight::Standard);
     box.setSearchEnabled(true);
@@ -356,8 +343,7 @@ TEST_F(MultiSelectComboBoxTest, OpenFilteredModelDestructionClosesSafely)
 
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
     ASSERT_TRUE(box.isOpen());
     ASSERT_NE(list->model(), nullptr);
@@ -389,10 +375,9 @@ TEST_F(MultiSelectComboBoxTest, DestroyingHostWithPopupOpenDoesNotCrash)
 
 TEST_F(MultiSelectComboBoxTest, PopupUsesRoomierSideBeforeClipping)
 {
-    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"),
-                            QStringLiteral("Gamma"), QStringLiteral("Delta"),
-                            QStringLiteral("Epsilon"), QStringLiteral("Zeta"),
-                            QStringLiteral("Eta"), QStringLiteral("Theta")});
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma"),
+        QStringLiteral("Delta"), QStringLiteral("Epsilon"), QStringLiteral("Zeta"), QStringLiteral("Eta"),
+        QStringLiteral("Theta")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 300, 260, Spacing::ControlHeight::Standard);
     box.setModel(&model);
@@ -400,8 +385,7 @@ TEST_F(MultiSelectComboBoxTest, PopupUsesRoomierSideBeforeClipping)
 
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
 
     const QRect card = visiblePopupGeometry(*popup, *window);
@@ -409,16 +393,14 @@ TEST_F(MultiSelectComboBoxTest, PopupUsesRoomierSideBeforeClipping)
     EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Top);
     EXPECT_EQ(card.bottom() + 1, box.geometry().top());
     EXPECT_GE(card.top(), surface.top() + 4);
-    EXPECT_EQ(list->height(),
-              box.maximumVisibleItems() * (Spacing::ControlHeight::Standard + Spacing::XSmall));
+    EXPECT_EQ(list->height(), box.maximumVisibleItems() * (Spacing::ControlHeight::Standard + Spacing::XSmall));
 }
 
 TEST_F(MultiSelectComboBoxTest, ConstrainedPopupAcceptsWheelAndTrackpadScroll)
 {
-    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"),
-                            QStringLiteral("Gamma"), QStringLiteral("Delta"),
-                            QStringLiteral("Epsilon"), QStringLiteral("Zeta"),
-                            QStringLiteral("Eta"), QStringLiteral("Theta")});
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma"),
+        QStringLiteral("Delta"), QStringLiteral("Epsilon"), QStringLiteral("Zeta"), QStringLiteral("Eta"),
+        QStringLiteral("Theta")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 190, 260, Spacing::ControlHeight::Standard);
     box.setModel(&model);
@@ -426,8 +408,7 @@ TEST_F(MultiSelectComboBoxTest, ConstrainedPopupAcceptsWheelAndTrackpadScroll)
 
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
 
     QScrollBar* scrollBar = list->verticalScrollBar();
@@ -450,10 +431,9 @@ TEST_F(MultiSelectComboBoxTest, ConstrainedPopupAcceptsWheelAndTrackpadScroll)
 
 TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard)
 {
-    QStringListModel model({QStringLiteral("North America"), QStringLiteral("Europe"),
-                            QStringLiteral("Asia Pacific"), QStringLiteral("Latin America"),
-                            QStringLiteral("Middle East and Africa"), QString::fromUtf8("中国大陆"),
-                            QString::fromUtf8("日本")});
+    QStringListModel model({QStringLiteral("North America"), QStringLiteral("Europe"), QStringLiteral("Asia Pacific"),
+        QStringLiteral("Latin America"), QStringLiteral("Middle East and Africa"), QString::fromUtf8("中国大陆"),
+        QString::fromUtf8("日本")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 80, 300, Spacing::ControlHeight::Standard);
     box.setSearchEnabled(true);
@@ -462,11 +442,9 @@ TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard)
 
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
-    auto* search = window->findChild<fluent::textfields::LineEdit*>(
-        QStringLiteral("MultiSelectComboBox.Search"));
+    auto* search = window->findChild<fluent::textfields::LineEdit*>(QStringLiteral("MultiSelectComboBox.Search"));
     auto* selectAll = window->findChild<CheckBox*>(QStringLiteral("MultiSelectComboBox.SelectAll"));
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(search, nullptr);
     ASSERT_NE(selectAll, nullptr);
     ASSERT_NE(list, nullptr);
@@ -488,8 +466,7 @@ TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard)
     const QRect restingRow = static_cast<QListView*>(list)->visualRect(list->model()->index(1, 0));
     ASSERT_TRUE(restingRow.isValid());
     EXPECT_EQ(restingRow.height(), Spacing::ControlHeight::Standard + Spacing::XSmall);
-    const QPoint surfaceSample =
-        list->viewport()->mapTo(window, QPoint(restingRow.center().x(), restingRow.top() + 1));
+    const QPoint surfaceSample = list->viewport()->mapTo(window, QPoint(restingRow.center().x(), restingRow.top() + 1));
     ASSERT_TRUE(composite.rect().contains(surfaceSample));
     const QColor actualSurface = composite.pixelColor(surfaceSample).toRgb();
     const QColor expectedSurface = popup->themeColorsRef().bgLayer.toRgb();
@@ -498,25 +475,22 @@ TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard)
     EXPECT_NEAR(actualSurface.blue(), expectedSurface.blue(), 1);
 
     const QRect card = fluent::overlay::visibleCardRect(QRect(QPoint(), popup->size()));
-    const QRect contentBounds =
-        card.adjusted(Spacing::XSmall, Spacing::XSmall, -Spacing::XSmall, -Spacing::XSmall);
-    for (QWidget* child : {static_cast<QWidget*>(search), static_cast<QWidget*>(selectAll),
-                           static_cast<QWidget*>(list)}) {
+    const QRect contentBounds = card.adjusted(Spacing::XSmall, Spacing::XSmall, -Spacing::XSmall, -Spacing::XSmall);
+    for (QWidget* child :
+        {static_cast<QWidget*>(search), static_cast<QWidget*>(selectAll), static_cast<QWidget*>(list)}) {
         SCOPED_TRACE(child->objectName().toStdString());
         EXPECT_TRUE(contentBounds.contains(child->geometry()))
-            << "content=" << contentBounds.x() << ',' << contentBounds.y() << ' '
-            << contentBounds.width() << 'x' << contentBounds.height()
-            << " child=" << child->geometry().x() << ',' << child->geometry().y() << ' '
+            << "content=" << contentBounds.x() << ',' << contentBounds.y() << ' ' << contentBounds.width() << 'x'
+            << contentBounds.height() << " child=" << child->geometry().x() << ',' << child->geometry().y() << ' '
             << child->geometry().width() << 'x' << child->geometry().height();
     }
 }
 
 TEST_F(MultiSelectComboBoxTest, OpenPopupReflowsAfterHostResize)
 {
-    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"),
-                            QStringLiteral("Gamma"), QStringLiteral("Delta"),
-                            QStringLiteral("Epsilon"), QStringLiteral("Zeta"),
-                            QStringLiteral("Eta"), QStringLiteral("Theta")});
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma"),
+        QStringLiteral("Delta"), QStringLiteral("Epsilon"), QStringLiteral("Zeta"), QStringLiteral("Eta"),
+        QStringLiteral("Theta")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 150, 260, Spacing::ControlHeight::Standard);
     box.setModel(&model);
@@ -524,8 +498,7 @@ TEST_F(MultiSelectComboBoxTest, OpenPopupReflowsAfterHostResize)
 
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
     const int initialListHeight = list->height();
 
@@ -543,8 +516,7 @@ TEST_F(MultiSelectComboBoxTest, OpenPopupReflowsAfterHostResize)
 
 TEST_F(MultiSelectComboBoxTest, SearchAndKeyboardToggleKeepPopupOpen)
 {
-    QStringListModel model(
-        {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 40, 260, Spacing::ControlHeight::Standard);
     box.setModel(&model);
@@ -554,10 +526,8 @@ TEST_F(MultiSelectComboBoxTest, SearchAndKeyboardToggleKeepPopupOpen)
     auto* popup = openPopup(box, *window);
     ASSERT_NE(popup, nullptr);
     ASSERT_TRUE(box.isOpen());
-    auto* search = window->findChild<fluent::textfields::LineEdit*>(
-        QStringLiteral("MultiSelectComboBox.Search"));
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* search = window->findChild<fluent::textfields::LineEdit*>(QStringLiteral("MultiSelectComboBox.Search"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(search, nullptr);
     ASSERT_NE(list, nullptr);
 
@@ -583,16 +553,14 @@ TEST_F(MultiSelectComboBoxTest, SearchAndKeyboardToggleKeepPopupOpen)
 
 TEST_F(MultiSelectComboBoxTest, SelectAllHeaderTargetsFilteredRows)
 {
-    QStringListModel model(
-        {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 40, 260, Spacing::ControlHeight::Standard);
     box.setModel(&model);
     box.setSearchEnabled(true);
 
     ASSERT_NE(openPopup(box, *window), nullptr);
-    auto* search = window->findChild<fluent::textfields::LineEdit*>(
-        QStringLiteral("MultiSelectComboBox.Search"));
+    auto* search = window->findChild<fluent::textfields::LineEdit*>(QStringLiteral("MultiSelectComboBox.Search"));
     auto* selectAll = window->findChild<CheckBox*>(QStringLiteral("MultiSelectComboBox.SelectAll"));
     ASSERT_NE(search, nullptr);
     ASSERT_NE(selectAll, nullptr);
@@ -625,8 +593,7 @@ TEST_F(MultiSelectComboBoxTest, SelectAllHeaderTargetsFilteredRows)
     EXPECT_TRUE(selectAllInterface->state().checkStateMixed);
     QAccessibleActionInterface* selectAllActions = selectAllInterface->actionInterface();
     ASSERT_NE(selectAllActions, nullptr);
-    EXPECT_TRUE(
-        selectAllActions->actionNames().contains(QAccessibleActionInterface::pressAction()));
+    EXPECT_TRUE(selectAllActions->actionNames().contains(QAccessibleActionInterface::pressAction()));
     selectAllActions->doAction(QAccessibleActionInterface::pressAction());
     QApplication::processEvents();
     EXPECT_EQ(box.selectedRows(), (QList<int>{0, 1, 2}));
@@ -646,8 +613,7 @@ TEST_F(MultiSelectComboBoxTest, PointerCannotSelectDisabledPopupRow)
     box.setGeometry(40, 40, 260, Spacing::ControlHeight::Standard);
     box.setModel(&model);
     ASSERT_NE(openPopup(box, *window), nullptr);
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
     const QModelIndex disabledIndex = model.index(1, 0);
     const QRect target = static_cast<QListView*>(list)->visualRect(disabledIndex);
@@ -667,8 +633,7 @@ TEST_F(MultiSelectComboBoxTest, PopupFocusVisualTracksInputModality)
     box.setFocus(Qt::OtherFocusReason);
 
     ASSERT_NE(openPopup(box, *window), nullptr);
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
     EXPECT_FALSE(list->property("fluentKeyboardFocusVisible").toBool());
 
@@ -697,8 +662,7 @@ TEST_F(MultiSelectComboBoxTest, ClosedKeyboardContractOpensAndCloses)
     QTest::keyClick(&box, Qt::Key_F4);
     QApplication::processEvents();
     EXPECT_TRUE(box.isOpen());
-    auto* list = window->findChild<fluent::collections::ListView*>(
-        QStringLiteral("MultiSelectComboBox.ListView"));
+    auto* list = window->findChild<fluent::collections::ListView*>(QStringLiteral("MultiSelectComboBox.ListView"));
     ASSERT_NE(list, nullptr);
     EXPECT_TRUE(list->property("fluentKeyboardFocusVisible").toBool());
     box.close();
@@ -712,8 +676,7 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction)
 #if !QT_CONFIG(accessibility)
     GTEST_SKIP() << "Qt accessibility support is disabled";
 #else
-    QStringListModel model(
-        {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma")});
     MultiSelectComboBox box(window);
     box.setGeometry(40, 40, 260, Spacing::ControlHeight::Standard);
     box.setAccessibleName(QStringLiteral("Included regions"));
@@ -754,8 +717,7 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction)
     for (QWidget* namedWidget : {trigger, search, list}) {
         QAccessibleInterface* namedInterface = QAccessible::queryAccessibleInterface(namedWidget);
         ASSERT_NE(namedInterface, nullptr);
-        EXPECT_FALSE(namedInterface->text(QAccessible::Name).isEmpty())
-            << namedWidget->objectName().toStdString();
+        EXPECT_FALSE(namedInterface->text(QAccessible::Name).isEmpty()) << namedWidget->objectName().toStdString();
     }
     QAccessibleInterface* listInterface = QAccessible::queryAccessibleInterface(list);
     ASSERT_NE(listInterface, nullptr);
@@ -764,8 +726,8 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction)
 
     bool controlsList = false;
     for (const auto& relation : interface->relations(QAccessible::Controller)) {
-        controlsList = controlsList || (relation.first == listInterface &&
-                                        relation.second.testFlag(QAccessible::Controller));
+        controlsList = controlsList
+            || (relation.first == listInterface && relation.second.testFlag(QAccessible::Controller));
     }
     EXPECT_TRUE(controlsList);
 
@@ -834,8 +796,8 @@ TEST_F(MultiSelectComboBoxTest, VisualCheck)
 
     auto* basicModel = new QStringListModel(
         {QStringLiteral("North America"), QStringLiteral("Europe"), QStringLiteral("Asia Pacific"),
-         QStringLiteral("Latin America"), QStringLiteral("Middle East and Africa"),
-         QString::fromUtf8("中国大陆"), QString::fromUtf8("日本")},
+            QStringLiteral("Latin America"), QStringLiteral("Middle East and Africa"), QString::fromUtf8("中国大陆"),
+            QString::fromUtf8("日本")},
         window);
     auto* basic = new MultiSelectComboBox(window);
     basic->setAccessibleName(QStringLiteral("Regions"));
@@ -864,8 +826,7 @@ TEST_F(MultiSelectComboBoxTest, VisualCheck)
     narrow->anchors()->left = {narrowLabel, Edge::Left, 0};
     layout->addWidget(narrow);
 
-    auto* rtlLabel =
-        new fluent::textfields::Label(QStringLiteral("Arabic (right-to-left)"), window);
+    auto* rtlLabel = new fluent::textfields::Label(QStringLiteral("Arabic (right-to-left)"), window);
     rtlLabel->setFluentTypography(Typography::FontRole::BodyStrong);
     rtlLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
     rtlLabel->anchors()->top = {narrow, Edge::Bottom, 24};
@@ -874,10 +835,9 @@ TEST_F(MultiSelectComboBoxTest, VisualCheck)
 
     auto* rtl = new MultiSelectComboBox(window);
     rtl->setLayoutDirection(Qt::RightToLeft);
-    auto* rtlModel =
-        new QStringListModel({QString::fromUtf8("الشرق الأوسط"), QString::fromUtf8("شمال أفريقيا"),
-                              QString::fromUtf8("الخليج العربي")},
-                             window);
+    auto* rtlModel = new QStringListModel(
+        {QString::fromUtf8("الشرق الأوسط"), QString::fromUtf8("شمال أفريقيا"), QString::fromUtf8("الخليج العربي")},
+        window);
     rtl->setModel(rtlModel);
     rtl->setSelectedRows({0});
     rtl->setFixedWidth(240);
@@ -906,13 +866,12 @@ TEST_F(MultiSelectComboBoxTest, VisualCheck)
     themeButton->anchors()->left = {narrowLabel, Edge::Left, 0};
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &fluent::basicinput::Button::clicked, [themeButton]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
         themeButton->setText(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                 ? QStringLiteral("Dark theme")
-                                 : QStringLiteral("Light theme"));
+                ? QStringLiteral("Dark theme")
+                : QStringLiteral("Light theme"));
     });
 
     window->show();

@@ -86,8 +86,7 @@ TEST_F(NumberBoxTest, Contract_ExpressionDepthIsBounded)
 {
     NumberBox box;
     box.setAcceptsExpression(true);
-    const QStringList invalid = {
-        QString(box.maxLength(), '('), QString(129, '(') + "1" + QString(129, ')'),
+    const QStringList invalid = {QString(box.maxLength(), '('), QString(129, '(') + "1" + QString(129, ')'),
         QString("1^").repeated(129) + "1",
         QString("(").repeated(64) + QString("1^").repeated(65) + "1" + QString(64, ')')};
     for (const QString& input : invalid) {
@@ -177,14 +176,16 @@ TEST_F(NumberBoxTest, Contract_FormattingPreservesQtTextSelectionAndCursorSignal
     QStringList actual;
     QStringList expected;
     const auto observe = [](QLineEdit* edit, QStringList* events) {
-        QObject::connect(edit, &QLineEdit::textChanged, edit,
-                         [events]() { events->append(QStringLiteral("text")); });
-        QObject::connect(edit, &QLineEdit::selectionChanged, edit,
-                         [events]() { events->append(QStringLiteral("selection")); });
-        QObject::connect(edit, &QLineEdit::cursorPositionChanged, edit,
-                         [events]() { events->append(QStringLiteral("cursor")); });
-        QObject::connect(edit, &QLineEdit::inputRejected, edit,
-                         [events]() { events->append(QStringLiteral("rejected")); });
+        QObject::connect(edit, &QLineEdit::textChanged, edit, [events]() { events->append(QStringLiteral("text")); });
+        QObject::connect(edit, &QLineEdit::selectionChanged, edit, [events]() {
+            events->append(QStringLiteral("selection"));
+        });
+        QObject::connect(edit, &QLineEdit::cursorPositionChanged, edit, [events]() {
+            events->append(QStringLiteral("cursor"));
+        });
+        QObject::connect(edit, &QLineEdit::inputRejected, edit, [events]() {
+            events->append(QStringLiteral("rejected"));
+        });
     };
     observe(&box, &actual);
     observe(&reference, &expected);
@@ -219,10 +220,10 @@ TEST_F(NumberBoxTest, Contract_FormattingPreservesQtModifiedAndUndoState)
     QLineEdit reference;
     QList<bool> actualModified;
     QList<bool> expectedModified;
-    QObject::connect(&box, &QLineEdit::textChanged, &box,
-                     [&]() { actualModified.append(box.isModified()); });
-    QObject::connect(&reference, &QLineEdit::textChanged, &reference,
-                     [&]() { expectedModified.append(reference.isModified()); });
+    QObject::connect(&box, &QLineEdit::textChanged, &box, [&]() { actualModified.append(box.isModified()); });
+    QObject::connect(&reference, &QLineEdit::textChanged, &reference, [&]() {
+        expectedModified.append(reference.isModified());
+    });
 
     for (double value : {12.0, 12.0, 34.0}) {
         box.setModified(true);
@@ -529,10 +530,8 @@ TEST_F(NumberBoxTest, InlineSpinButtonsAreLaidOutHorizontally)
     EXPECT_EQ(upButton->x(), downButton->x() + downButton->width() + box->spinButtonSpacing());
     EXPECT_EQ(upButton->geometry().right(), box->width() - box->spinButtonRightMargin() - 1);
 
-    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal +
-                               box->spinButtonRightMargin() +
-                               box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() +
-                               box->spinButtonTextGap();
+    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin()
+        + box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() + box->spinButtonTextGap();
     EXPECT_EQ(box->contentMargins().right(), expectedMargin);
 }
 
@@ -559,9 +558,8 @@ TEST_F(NumberBoxTest, CompactSpinButtonsAreVisibleByDefault)
     EXPECT_GT(upButton->y(), 0);
     EXPECT_LT(downButton->geometry().bottom(), box->height() - 1);
 
-    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal +
-                               box->spinButtonRightMargin() + box->spinButtonSize().width() +
-                               box->spinButtonTextGap();
+    const int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin()
+        + box->spinButtonSize().width() + box->spinButtonTextGap();
     EXPECT_EQ(box->contentMargins().right(), expectedMargin);
 
     showAndFocus(box);
@@ -599,9 +597,8 @@ TEST_F(NumberBoxTest, ConfigurableSpinButtonMetrics)
     EXPECT_EQ(upButton->y(), downButton->y());
     EXPECT_EQ(upButton->x(), downButton->x() + downButton->width() + box->spinButtonSpacing());
 
-    int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin() +
-                         box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() +
-                         box->spinButtonTextGap();
+    int expectedMargin = ::Spacing::Padding::TextFieldHorizontal + box->spinButtonRightMargin()
+        + box->inlineSpinButtonSize().width() * 2 + box->spinButtonSpacing() + box->spinButtonTextGap();
     EXPECT_EQ(box->contentMargins().right(), expectedMargin);
 
     box->setSpinButtonSize(QSize(28, 12));
@@ -740,10 +737,9 @@ TEST_F(NumberBoxTest, VisualCheck)
     layout->addWidget(themeButton);
 
     QObject::connect(themeButton, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
 
     window->show();
