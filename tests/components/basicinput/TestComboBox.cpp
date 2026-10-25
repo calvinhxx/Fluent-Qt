@@ -1173,6 +1173,30 @@ TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText)
     EXPECT_FALSE(popup->isOpen());
 }
 
+TEST_F(ComboBoxTest, PopupUsesLogicalLeadingEdgeAndBoundsLongOptions)
+{
+    window->resize(420, 360);
+    auto* cb = new ComboBox(window);
+    cb->setLayoutDirection(Qt::RightToLeft);
+    cb->setGeometry(180, 40, 180, Spacing::ControlHeight::Standard);
+    cb->addItems({QStringLiteral("A moderately wide option for the menu")});
+    auto* popup = openPopupFor(cb, window);
+    ASSERT_NE(popup, nullptr);
+    QRect card = popupCardRect(popup);
+    EXPECT_GT(card.width(), cb->width());
+    EXPECT_EQ(card.right(), cb->geometry().right());
+    cb->hidePopup();
+    cb->addItem(QString(400, QLatin1Char('W')));
+    popup = openPopupFor(cb, window);
+    card = popupCardRect(popup);
+    EXPECT_LE(card.width(), window->width() - 8);
+    EXPECT_TRUE(window->rect().adjusted(4, 4, -4, -4).contains(card));
+    window->resize(300, 250);
+    QApplication::processEvents();
+    QApplication::processEvents();
+    EXPECT_TRUE(window->rect().adjusted(4, 4, -4, -4).contains(popupCardRect(popup)));
+}
+
 TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth)
 {
     window->resize(420, 360);

@@ -16,6 +16,7 @@
 #include <QScopedValueRollback>
 #include <QStringListModel>
 #include <QStyle>
+#include <QTimer>
 #include <QWheelEvent>
 #include <QtMath>
 #include "compatibility/TextPaintCompat.h"
@@ -23,10 +24,12 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
+#include "components/foundation/overlay/FieldPopupGeometry_p.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
+#include "components/foundation/private/ControlMetrics_p.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/LineEdit.h"
@@ -87,6 +90,7 @@ private:
     ComboBox* m_comboBox;
     fluent::collections::ListView* m_listView;
     ComboBoxItemDelegate* m_delegate;
+    bool m_geometryUpdatePending = false;
 };
 
 // ─── ComboBoxItemDelegate implementation. zh_CN: ComboBoxItemDelegate 实现 ──
@@ -322,8 +326,9 @@ void ComboBox::ComboBoxPopup::updateLayout()
     QWidget* top = ::fluent::overlay::presentedTopLevel(m_comboBox);
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
     const QRect anchor = ::fluent::overlay::presentedRectInTopLevel(m_comboBox);
-    const int availableHeight = qMax(surface.bottom() - anchor.bottom(), anchor.top() - surface.top());
-    rowsH = qMin(rowsH, qMax(1, availableHeight - m_comboBox->popupOffset() - kPopupWindowMargin - 2 * cardInset));
+    const auto space = ::fluent::overlay::fieldPopupSpace(anchor, surface, m_comboBox->popupOffset(),
+        kPopupWindowMargin);
+    rowsH = qMin(rowsH, qMax(1, space.capacity(rowsH + 2 * cardInset) - 2 * cardInset));
     int widestText = 0;
     const QFontMetrics popupMetrics(m_listView->font());
     for (int index = 0; index < itemCount; ++index)
@@ -337,7 +342,7 @@ void ComboBox::ComboBoxPopup::updateLayout()
     }
     const int textChrome = cardInset * 2 + kPopupItemOuterInset * 2 + kPopupItemTextLeftInset + kPopupItemTextRightInset
         + scrollClearance + ::Spacing::Standard;
-    const int cardW = qMax(qMax(m_comboBox->width(), 120), widestText + textChrome);
+    const int cardW = space.boundedWidth(qMax(qMax(m_comboBox->width(), 120), widestText + textChrome));
     const int cardH = rowsH + cardInset * 2;
     const QSize totalSize = ::fluent::overlay::outerSizeForVisibleCard(QSize(cardW, cardH), sSize);
 
@@ -404,30 +409,24 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const
     const QRect anchor = ::fluent::overlay::presentedRectInTopLevel(m_comboBox);
 
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
-    const int spaceBelow = surface.bottom() - anchor.bottom();
-    const int spaceAbove = anchor.top() - surface.top();
-    // Include the anchor gap and the surface safety margin in the fit test. If
-    // only the card height is considered, a popup that is a few pixels too tall
-    // is first placed below and then clamped upward across its owning field.
-    // zh_CN: 适配判断必须计入锚点间距与表面安全边距；只比较卡片高度会让仅差数像素的
-    // 弹层先向下打开，再被钳制回输入框上方并与其重叠。
-    const int requiredSpace = anchorOffset() + cardH + kPopupWindowMargin;
-    const bool fitsBelow = spaceBelow >= requiredSpace;
-    const bool fitsAbove = spaceAbove >= requiredSpace;
-    const bool placeAbove = !fitsBelow && (fitsAbove || spaceAbove > spaceBelow);
-
-    QPoint cardTopLeft(anchor.left(),
-        placeAbove ? anchor.top() - anchorOffset() - cardH : anchor.bottom() + 1 + anchorOffset());
-
-    if (clampToWindow()) {
-        cardTopLeft = ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, surface, kPopupWindowMargin);
-    }
+    const auto space = ::fluent::overlay::fieldPopupSpace(anchor, surface, anchorOffset(), kPopupWindowMargin);
+    const QPoint cardTopLeft = ::fluent::overlay::fieldPopupCardTopLeft(anchor, cardSize, surface,
+        m_comboBox->layoutDirection(), space.opensAbove(cardH), anchorOffset(), kPopupWindowMargin, clampToWindow());
 
     return ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft, shadow);
 }
 
 bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
 {
+    if (isOpen() && !m_geometryUpdatePending
+        && ::fluent::overlay::fieldPopupAnchorGeometryMayChange(watched, event, m_comboBox, this)) {
+        m_geometryUpdatePending = true;
+        QTimer::singleShot(0, this, [this] {
+            m_geometryUpdatePending = false;
+            if (isOpen())
+                updateLayout();
+        });
+    }
     if (watched == m_listView && event->type() == QEvent::KeyPress && isOpen()) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
@@ -631,7 +630,8 @@ QSize ComboBox::sizeHint() const
     // that nominally fits cross the elision boundary on another platform.
     // zh_CN: 为字形逻辑宽度预留少量余量，避免不同平台的整数布局和栅格化舍入触发省略号。
     const int w = m_contentPaddingH + maxTextW + kClosedFieldTextFitClearance + chevronArea;
-    const int h = qMax(sp.controlHeight.standard, fm.height() + 2 * m_contentPaddingV);
+    const int h = qMax(::fluent::detail::standardControlHeight(fm),
+        qMax(sp.controlHeight.standard, fm.height() + 2 * m_contentPaddingV));
     return QSize(w, h);
 }
 
