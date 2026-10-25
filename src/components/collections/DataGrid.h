@@ -2,6 +2,10 @@
 #define FLUENTQT_COMPONENTS_COLLECTIONS_DATAGRID_H
 
 #include <QMetaObject>
+#include <QByteArray>
+#include <QHash>
+#include <QPersistentModelIndex>
+#include <QSet>
 #include <QString>
 #include <QTableView>
 #include <QVector>
@@ -12,6 +16,7 @@
 
 class QAbstractItemModel;
 class QEvent;
+class QFocusEvent;
 class QItemSelectionModel;
 class QKeyEvent;
 class QMouseEvent;
@@ -19,6 +24,7 @@ class QPaintEvent;
 class QResizeEvent;
 class QShowEvent;
 class QWheelEvent;
+class QVariantAnimation;
 
 namespace fluent::scrolling {
 class ScrollBar;
@@ -28,7 +34,8 @@ namespace fluent::collections {
 
 namespace detail {
 class DataGridCellDelegate;
-}
+class DataGridPinnedView;
+} // namespace detail
 
 /**
  * @brief Fluent two-dimensional item view for large model-backed data sets.
@@ -54,10 +61,12 @@ class DataGrid : public QTableView, public FluentElement, public QMLPlus {
         READ isScrollChainingEnabled
         WRITE setScrollChainingEnabled
         NOTIFY scrollChainingEnabledChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
 
 public:
     using SelectionMode = ::fluent::collections::SelectionMode;
 
+    using QTableView::edit;
     explicit DataGrid(QWidget* parent = nullptr);
     ~DataGrid() override;
 
@@ -89,6 +98,41 @@ public:
     bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
     void setScrollChainingEnabled(bool enabled);
 
+    bool isAnimationEnabled() const { return m_animationEnabled; }
+    void setAnimationEnabled(bool enabled);
+
+    /**
+     * @brief Pins a logical column to the leading edge without copying its model.
+     * zh_CN: 将逻辑列固定到起始边缘，不复制模型数据。
+     */
+    void setColumnPinned(int column, bool pinned);
+    bool isColumnPinned(int column) const;
+    QList<int> pinnedColumns() const;
+
+    /**
+     * @brief Changes column visibility and emits columnLayoutChanged on a real change.
+     * zh_CN: 修改列可见性，仅在实际变化时发送 columnLayoutChanged。
+     */
+    void setColumnVisible(int column, bool visible);
+    bool isColumnVisible(int column) const;
+
+    /**
+     * @brief Serializes column order, widths, visibility, pinning and sort indicator.
+     * zh_CN: 序列化列顺序、宽度、可见性、固定状态和排序指示；存储由应用负责。
+     */
+    QByteArray saveColumnState() const;
+    /**
+     * @brief Restores a validated layout for the same model schema; invalid data is a no-op.
+     * zh_CN: 为相同模型结构恢复通过校验的布局；无效数据不修改状态。
+     */
+    bool restoreColumnState(const QByteArray& state);
+
+    void scrollTo(const QModelIndex& index, ScrollHint hint = EnsureVisible) override;
+    QRect visualRect(const QModelIndex& index) const override;
+    QModelIndex indexAt(const QPoint& point) const override;
+    void setRootIndex(const QModelIndex& index) override;
+    void setItemDelegate(QAbstractItemDelegate* delegate);
+
     /**
      * @brief Returns the Fluent overlay scrollbar mirroring the native range.
      * zh_CN: 返回镜像原生范围的 Fluent 覆盖式滚动条。
@@ -109,8 +153,14 @@ signals:
     void borderVisibleChanged();
     void backgroundVisibleChanged();
     void scrollChainingEnabledChanged();
+    void animationEnabledChanged();
+    void columnLayoutChanged();
+    void modelChanged(QAbstractItemModel* model);
 
 protected:
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
@@ -119,16 +169,25 @@ protected:
     void showEvent(QShowEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void scrollContentsBy(int dx, int dy) override;
+    void selectionChanged(const QItemSelection& selected, const QItemSelection& deselected) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    bool edit(const QModelIndex& index, EditTrigger trigger, QEvent* event) override;
 
 private:
     friend class detail::DataGridCellDelegate;
+    friend class detail::DataGridPinnedView;
 
     void applyThemePalette();
     void connectModelSignals(QAbstractItemModel* model);
     void refreshModelPresentation();
     void syncFluentScrollBars();
+    void updateSurfaceMask();
     void setHoveredRow(int row);
+    void updateFocusPresentation();
     void updateAutomaticAccessibleDescription();
+    void syncPinnedColumns();
+    void ensurePinnedView();
+    qreal selectionOpacity(const QModelIndex& index, bool selected) const;
 
     SelectionMode m_selectionMode = SelectionMode::Single;
     QString m_placeholderText;
@@ -137,6 +196,25 @@ private:
     bool m_backgroundVisible = true;
     bool m_scrollChainingEnabled = false;
     int m_hoveredRow = -1;
+    int m_previousHoveredRow = -1;
+    qreal m_hoverProgress = 1.0;
+    qreal m_previousHoverOpacity = 1.0;
+    bool m_animationEnabled = true;
+    bool m_keyboardFocusVisible = false;
+    QVariantAnimation* m_hoverAnimation = nullptr;
+    QVariantAnimation* m_selectionAnimation = nullptr;
+    qreal m_selectionProgress = 1.0;
+    QHash<QPersistentModelIndex, QPair<qreal, qreal>> m_selectionTransitions;
+    QSet<int> m_pinnedColumns;
+    QHash<int, int> m_columnWidths;
+    QHash<int, int> m_columnWidthsBeforeChange;
+    bool m_changingColumns = false;
+    QTableView* m_pinnedView = nullptr;
+    QAbstractItemDelegate* m_pinnedDefaultDelegate = nullptr;
+    bool m_syncingColumns = false;
+    bool m_pinnedStructureDirty = true;
+    int m_pinnedWidth = 0;
+    int m_pinnedHiddenCount = -1;
     QVector<QMetaObject::Connection> m_modelConnections;
     QWidget* m_borderOverlay = nullptr;
     fluent::scrolling::ScrollBar* m_verticalFluentScrollBar = nullptr;

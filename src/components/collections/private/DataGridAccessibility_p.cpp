@@ -15,6 +15,7 @@
 
 #include "components/collections/DataGrid.h"
 #include "compatibility/private/AccessibleInterfaces_p.h"
+#include "compatibility/private/AccessibleTableCompat_p.h"
 
 namespace fluent::collections::detail {
 
@@ -354,6 +355,12 @@ QHeaderView* DataGridAccessibleHeader::header() const
 {
     if (!m_view)
         return nullptr;
+    if (m_orientation == Qt::Horizontal && m_view->isColumnPinned(m_section)) {
+        auto* pinned = m_view->findChild<QTableView*>(QStringLiteral("fluentDataGridPinnedColumns"),
+            Qt::FindDirectChildrenOnly);
+        if (pinned && pinned->isVisible())
+            return pinned->horizontalHeader();
+    }
     return m_orientation == Qt::Horizontal ? m_view->horizontalHeader() : m_view->verticalHeader();
 }
 
@@ -439,6 +446,12 @@ QAccessibleInterface* DataGridAccessible::childAt(int x, int y) const
         return nullptr;
     const QPoint globalPoint(x, y);
 
+    if (auto* pinned = grid->findChild<QTableView*>(QStringLiteral("fluentDataGridPinnedColumns"),
+            Qt::FindDirectChildrenOnly)) {
+        auto* header = pinned->horizontalHeader();
+        if (pinned->isVisible() && header->isVisible() && header->rect().contains(header->mapFromGlobal(globalPoint)))
+            return headerCell(header->logicalIndexAt(header->mapFromGlobal(globalPoint)), Qt::Horizontal);
+    }
     QHeaderView* horizontal = grid->horizontalHeader();
     if (horizontal && horizontal->isVisible()
         && QRect(horizontal->mapToGlobal(QPoint(0, 0)), horizontal->size()).contains(globalPoint)) {
@@ -511,15 +524,28 @@ QVector<int> DataGridAccessible::visibleLogicalChildren() const
     QVector<int> visibleColumns;
     QHeaderView* header = grid->horizontalHeader();
     const int viewportWidth = grid->viewport() ? grid->viewport()->width() : 0;
+    auto* pinned = grid->findChild<QTableView*>(QStringLiteral("fluentDataGridPinnedColumns"),
+        Qt::FindDirectChildrenOnly);
+    if (pinned && !pinned->isVisible())
+        pinned = nullptr;
     if (header) {
         for (int visual = 0; visual < header->count(); ++visual) {
             const int logical = header->logicalIndex(visual);
             if (logical < 0 || logical >= columns || grid->isColumnHidden(logical)) {
                 continue;
             }
-            const int position = header->sectionViewportPosition(logical);
-            const int extent = header->sectionSize(logical);
-            if (viewportWidth <= 0 || (position < viewportWidth && position + extent > 0)) {
+            const bool frozen = pinned && grid->isColumnPinned(logical);
+            auto* visibleHeader = frozen ? pinned->horizontalHeader() : header;
+            const int position = visibleHeader->sectionViewportPosition(logical);
+            const int extent = visibleHeader->sectionSize(logical);
+            int first = 0, last = frozen ? pinned->viewport()->width() : viewportWidth;
+            if (pinned && !frozen) {
+                if (grid->layoutDirection() == Qt::RightToLeft)
+                    last -= pinned->width();
+                else
+                    first += pinned->width();
+            }
+            if (last <= 0 || (position < last && position + extent > first)) {
                 visibleColumns.append(logical);
             }
         }
@@ -779,6 +805,7 @@ void DataGridAccessible::modelChange(QAccessibleTableModelChangeEvent* event)
     if (!event || event->modelChangeType() != QAccessibleTableModelChangeEvent::DataChanged) {
         clearChildCache();
     }
+    compatibility::detail::refreshAccessibleTableChildren(this);
 }
 
 bool DataGridAccessible::isSelected(QAccessibleInterface* childItem) const
@@ -849,8 +876,10 @@ void DataGridAccessible::clearChildCache() const
 {
     const QList<QAccessible::Id> ids = m_childToId.values();
     m_childToId.clear();
-    for (QAccessible::Id id : ids)
+    for (QAccessible::Id id : ids) {
+        compatibility::detail::retireAccessibleTableChild(QAccessible::accessibleInterface(id));
         QAccessible::deleteAccessibleInterface(id);
+    }
 }
 
 QAccessibleInterface* dataGridAccessibilityFactory(const QString&, QObject* object)

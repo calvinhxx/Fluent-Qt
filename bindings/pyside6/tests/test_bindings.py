@@ -10637,6 +10637,52 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertEqual(box.text(), " " if composing else "")
             delete_qobject(box)
 
+    def test_review_grid_pinning_keeps_single_submit_and_tab_navigation(self):
+        class Model(QStandardItemModel):
+            def __init__(self):
+                super().__init__(5, 4)
+                self.submits = 0
+                for row in range(5):
+                    for column in range(4):
+                        self.setItem(row, column, QStandardItem("Value"))
+            def submit(self):
+                self.submits += 1
+                return True
+        model = Model()
+        grid = fluentqt.DataGrid()
+        grid.setModel(model)
+        grid.resize(500, 260)
+        grid.show()
+        grid.activateWindow()
+        grid.setFocus()
+        QApplication.processEvents()
+        for pinned in (False, True, False):
+            grid.setColumnPinned(0, pinned)
+            grid.setCurrentIndex(model.index(0, 0))
+            model.submits = 0
+            for row in range(1, 4):
+                grid.setCurrentIndex(model.index(row, 0))
+            self.assertEqual(model.submits, 3)
+        grid.setColumnPinned(0, True)
+        grid.setCurrentIndex(model.index(0, 0))
+        grid.edit(model.index(0, 0))
+        QApplication.processEvents()
+        editor = QApplication.focusWidget()
+        self.assertIsInstance(editor, QLineEdit)
+        editor.setText("Edited")
+        QTest.keyClick(editor, Qt.Key_Tab)
+        QApplication.processEvents()
+        self.assertEqual(grid.currentIndex(), model.index(0, 1))
+        self.assertEqual(model.index(0, 0).data(), "Edited")
+        QTest.keyClick(QApplication.focusWidget(), Qt.Key_Escape)
+        grid.setLayoutDirection(Qt.RightToLeft)
+        QApplication.processEvents()
+        pinned = grid.findChild(QTableView, "fluentDataGridPinnedColumns")
+        self.assertFalse(grid.verticalFluentScrollBar().geometry().intersects(pinned.geometry()))
+        delete_qobject(grid)
+        self.assertTrue(shiboken6.isValid(model))
+        delete_qobject(model)
+
     def test_review_sync_suggestions_respect_dismissal_and_frame_visibility(self):
         box = fluentqt.AutoSuggestBox()
         model = QStringListModel(["Alpha", "Alpine"])
