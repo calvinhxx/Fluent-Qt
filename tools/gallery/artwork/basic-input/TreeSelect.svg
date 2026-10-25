@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>TreeSelect</title>
+  <defs><linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse"><stop stop-color="#2db5e7"/><stop offset="1" stop-color="#0d4688"/></linearGradient></defs>
+  <rect x="3" y="3" width="66" height="66" rx="16" fill="url(#tile)"/>
+  <rect x="14" y="15" width="44" height="12" rx="3" fill="none" stroke="#fff" stroke-width="2"/>
+  <path d="M20 21h19m10-2 3 3 3-3M21 33v18h9m-9-11h9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="33" y="35" width="23" height="10" rx="3" fill="#fff"/>
+  <path d="m38 40 2 2 4-4M34 51h19" fill="none" stroke="#17609d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 51h19" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+</svg>

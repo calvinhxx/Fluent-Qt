@@ -217,6 +217,46 @@ class FluentQtBindingTest(unittest.TestCase):
         delete_qobject(model)
         delete_qobject(box)
 
+    def test_tree_select_model_retention_selection_and_input(self):
+        from fluentqt import basicinput
+        self.assertIs(basicinput.TreeSelect, fluentqt.TreeSelect)
+        model = QStandardItemModel()
+        group = QStandardItem("产品研发")
+        group.setSelectable(False)
+        for key, name in [("client", "客户端"), ("design", "设计")]:
+            team = QStandardItem(name)
+            team.setData(key, Qt.ItemDataRole.UserRole)
+            group.appendRow(team)
+        model.appendRow(group)
+        box = fluentqt.TreeSelect()
+        empty_changes = QSignalSpy(box.emptyTextChanged)
+        box.setEmptyText("没有匹配项")
+        box.setEmptyText("没有匹配项")
+        self.assertEqual(box.emptyText(), "没有匹配项")
+        self.assertEqual(empty_changes.count(), 1)
+        self.assertEqual(len(box.findChildren(fluentqt.AutoSuggestBox)), 1)
+        self.assertFalse(box.findChildren(fluentqt.Flyout))
+        box.setModel(model)
+        changes = QSignalSpy(box.selectionChanged)
+        box.setSelectionMode(fluentqt.TreeSelect.SelectionMode.Multiple)
+        self.assertEqual(len(box.findChildren(fluentqt.AutoSuggestBox)), 1)
+        self.assertIsNotNone(box.findChild(fluentqt.TagInput))
+        box.setSelectedKeys(["client", "design", "client", "unknown"])
+        self.assertEqual(box.selectedKeys(), ["client", "design"])
+        self.assertEqual(changes.count(), 1)
+        box.setSearchText("设计")
+        self.assertEqual(box.selectedCount(), 2)
+        self.assertEqual(box.selectedItems()[1]["path"], "产品研发 / 设计")
+        self.assertIsNone(model.parent())
+        del model
+        gc.collect()
+        self.assertEqual(box.model().rowCount(), 1)
+        box.setSelectionMode(fluentqt.TreeSelect.SelectionMode.Single)
+        self.assertEqual(len(box.findChildren(fluentqt.AutoSuggestBox)), 1)
+        self.assertIsNone(box.findChild(fluentqt.TagInput))
+        self.assertEqual(box.selectedKeys(), ["client"])
+        delete_qobject(box)
+
     def test_code_block_native_api_selection_and_parent_lifetime(self):
         self.assertIs(textfields.CodeBlock, fluentqt.CodeBlock)
         self.assertIs(native.fluent.CodeBlock, fluentqt.CodeBlock)
@@ -10618,6 +10658,24 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(box.isFrameVisible())
         delete_qobject(box)
         delete_qobject(model)
+
+    def test_review_font_metrics_and_auto_resize_policy(self):
+        selector = fluentqt.TreeSelect()
+        font = selector.font()
+        font.setPointSize(28)
+        selector.setFont(font)
+        editor = selector.findChild(fluentqt.AutoSuggestBox)
+        self.assertEqual(editor.font(), font)
+        self.assertGreaterEqual(selector.height(), editor.fontMetrics().height() + 8)
+        self.assertEqual(selector.sizeHint().height(), selector.minimumSizeHint().height())
+        edit = fluentqt.TextEdit()
+        policy = edit.sizePolicy()
+        edit.setAutoResizeEnabled(False)
+        edit.setAutoResizeEnabled(True)
+        self.assertEqual(edit.sizePolicy(), policy)
+        delete_qobject(selector)
+        delete_qobject(edit)
+
 
     def test_review_number_changes_notify_at_tiny_and_large_scales(self):
         box = fluentqt.NumberBox()
