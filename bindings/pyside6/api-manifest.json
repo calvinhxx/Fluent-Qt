@@ -1744,6 +1744,16 @@
       "setMaxVisibleLines",
       "copy",
       "copyFinished"
+    ],
+    "NumberBox": [
+      "setScrubbingEnabled",
+      "isScrubbingEnabled",
+      "setScrubSensitivity",
+      "scrubSensitivity",
+      "isScrubbing",
+      "scrubHandleRect",
+      "cancelScrub",
+      "commitInput"
     ]
   },
   "optional_modules": {

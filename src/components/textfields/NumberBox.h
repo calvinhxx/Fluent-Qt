@@ -132,6 +132,14 @@ class NumberBox : public LineEdit {
      * zh_CN: 数值变化后用于规范显示舍入的步长。
      */
     Q_PROPERTY(double formatStep READ formatStep WRITE setFormatStep NOTIFY formatStepChanged)
+    /** @brief Enables the separate horizontal drag handle; text selection stays unchanged.
+     * zh_CN: 启用独立的水平拖拽柄，保留原有文本选择行为。 */
+    Q_PROPERTY(bool scrubbingEnabled READ isScrubbingEnabled WRITE setScrubbingEnabled NOTIFY scrubbingEnabledChanged)
+    /** @brief Value units per logical pixel; must be finite and positive.
+     * zh_CN: 每逻辑像素对应的数值增量，必须有限且为正数。 */
+    Q_PROPERTY(double scrubSensitivity READ scrubSensitivity WRITE setScrubSensitivity NOTIFY scrubSensitivityChanged)
+    /** @brief Whether a drag transaction is active. zh_CN: 当前是否正在进行拖拽编辑。 */
+    Q_PROPERTY(bool scrubbing READ isScrubbing NOTIFY scrubbingChanged)
 
 public:
     enum class SpinButtonPlacementMode { Hidden, Compact, Inline };
@@ -191,6 +199,24 @@ public:
     double formatStep() const { return m_formatStep; }
     void setFormatStep(double step);
 
+    bool isScrubbingEnabled() const { return m_scrubbingEnabled; }
+    void setScrubbingEnabled(bool enabled);
+    double scrubSensitivity() const { return m_scrubSensitivity; }
+    void setScrubSensitivity(double sensitivity);
+    bool isScrubbing() const { return m_scrubbing; }
+    /** @brief Logical handle geometry, empty while disabled. zh_CN: 拖拽柄的逻辑坐标区域，未启用时为空。 */
+    QRect scrubHandleRect() const;
+    /** @brief Rolls back an active drag, including an initially empty value.
+     * zh_CN: 回滚当前拖拽，包括恢复开始时的空值。 */
+    Q_SLOT void cancelScrub();
+
+    /** @brief Commits current text using the numeric bounds and expression policy.
+     * Invalid input retains its text and sets value to NaN; unchanged formatted
+     * text preserves the original precision. No external model is modified.
+     * zh_CN: 按数值范围和表达式规则提交当前文本；无效输入保留文本并将值设为 NaN，
+     * 未编辑的格式化文本保留原始精度，不修改外部模型。 */
+    void commitInput();
+
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -214,8 +240,18 @@ signals:
     void spinButtonIconSizeChanged(int size);
     void displayPrecisionChanged(int precision);
     void formatStepChanged(double step);
+    void scrubbingEnabledChanged(bool enabled);
+    void scrubSensitivityChanged(double sensitivity);
+    void scrubbingChanged(bool scrubbing);
+    /** @brief One transaction starts; valueChanged still reports each live value.
+     * zh_CN: 一次编辑开始；valueChanged 仍报告每次实时值变化。 */
+    void scrubStarted(double initialValue);
+    /** @brief Ends once; cancellation restores initialValue before this signal.
+     * zh_CN: 一次编辑结束；取消时在此信号之前恢复初始值。 */
+    void scrubFinished(double initialValue, double finalValue, bool canceled);
 
 protected:
+    bool event(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
@@ -223,10 +259,12 @@ protected:
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
+    void paintFrame(QPainter& painter) override;
 
 private:
     QRect inputRect() const;
@@ -239,7 +277,6 @@ private:
     void updateSpinnerState();
     void updateTextMarginsForChrome();
     void updateHeaderTextMargins();
-    void commitInput();
     void setInvalidValueFromText();
     void stepBy(double delta);
     double normalizedStepStart() const;
@@ -254,6 +291,15 @@ private:
     bool hasSpinnerButtonsVisible() const;
     int inlineSpinnerWidth() const;
     int compactExpandedSpinnerWidth() const;
+    void finishScrub(bool canceled);
+
+    bool m_scrubbingEnabled = false;
+    bool m_scrubbing = false;
+    double m_scrubSensitivity = 1.0;
+    double m_scrubInitialValue = 0.0;
+    QString m_scrubInitialText;
+    QPoint m_scrubStart;
+    double m_scrubBase = 0.0;
 
     QString m_header;
     double m_value;
@@ -282,7 +328,6 @@ private:
     int m_spinButtonTextGap = 2;
     int m_spinButtonIconSize = 10;
 
-    static constexpr int kInputHeight = 32;
     static constexpr int kHeaderHeight = 20;
     static constexpr int kHeaderGap = 8;
     static constexpr int kMinimumWidth = 124;

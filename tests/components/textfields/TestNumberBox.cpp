@@ -82,6 +82,115 @@ protected:
     AnchorLayout* layout = nullptr;
 };
 
+TEST_F(NumberBoxTest, Contract_ExplicitCommitKeepsPrecisionUntilTextChanges)
+{
+    NumberBox box;
+    const double precise = 1.2345678901234567;
+    box.setValue(precise);
+    QSignalSpy changed(&box, &NumberBox::valueChanged);
+    box.commitInput();
+    EXPECT_DOUBLE_EQ(box.value(), precise);
+    EXPECT_EQ(changed.count(), 0);
+    box.setText(QStringLiteral("27.5"));
+    box.commitInput();
+    EXPECT_DOUBLE_EQ(box.value(), 27.5);
+    EXPECT_EQ(changed.count(), 1);
+    box.commitInput();
+    EXPECT_EQ(changed.count(), 1);
+    box.setText(QStringLiteral("invalid"));
+    box.commitInput();
+    EXPECT_TRUE(std::isnan(box.value()));
+    EXPECT_EQ(box.text(), QStringLiteral("invalid"));
+    box.setText(QStringLiteral("27.5"));
+    box.commitInput();
+    EXPECT_DOUBLE_EQ(box.value(), 27.5);
+}
+
+TEST_F(NumberBoxTest, Contract_FrameVisibilityControlsTheWholeNumericSurface)
+{
+    QWidget surface;
+    surface.resize(240, 80);
+    surface.setAutoFillBackground(true);
+    QPalette palette = surface.palette();
+    const QColor backdrop(45, 83, 110);
+    palette.setColor(QPalette::Window, backdrop);
+    surface.setPalette(palette);
+    NumberBox box(&surface);
+    box.setGeometry(20, 20, 180, 32);
+    box.setValue(12);
+    ASSERT_TRUE(box.isFrameVisible());
+    box.setFrameVisible(false);
+    surface.show();
+    QApplication::processEvents();
+    QImage image(surface.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    surface.render(&image);
+    for (const auto point : {QPoint(2, 2), QPoint(80, 3), QPoint(160, 28)})
+        EXPECT_EQ(image.pixelColor(box.mapTo(&surface, point)), backdrop);
+}
+
+TEST_F(NumberBoxTest, Contract_ScrubbingCommitCancelAndTextSelection)
+{
+    NumberBox box;
+    box.resize(260, 32);
+    box.setRange(0, 100);
+    box.setValue(20);
+    box.setScrubbingEnabled(true);
+    box.setScrubSensitivity(0.5);
+    box.show();
+    QApplication::processEvents();
+    QSignalSpy finished(&box, &NumberBox::scrubFinished);
+    const QPoint handle = box.scrubHandleRect().center();
+    QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    ASSERT_TRUE(box.isScrubbing());
+    QTest::mouseMove(&box, handle + QPoint(40, 0));
+    EXPECT_DOUBLE_EQ(box.value(), 40);
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle + QPoint(40, 0));
+    ASSERT_EQ(finished.count(), 1);
+    EXPECT_FALSE(finished.at(0).at(2).toBool());
+    QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    QTest::mouseMove(&box, handle + QPoint(30, 0));
+    QTest::keyClick(&box, Qt::Key_Escape);
+    EXPECT_DOUBLE_EQ(box.value(), 40);
+    ASSERT_EQ(finished.count(), 2);
+    EXPECT_TRUE(finished.at(1).at(2).toBool());
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    QTest::mouseClick(&box, Qt::LeftButton, Qt::NoModifier, QPoint(120, 16));
+    EXPECT_FALSE(box.isScrubbing());
+    box.selectAll();
+    EXPECT_EQ(box.selectedText(), box.text());
+    box.setReadOnly(true);
+    QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    EXPECT_FALSE(box.isScrubbing());
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);
+}
+
+TEST_F(NumberBoxTest, Contract_ScrubbingEmptyRollbackAndExternalUpdate)
+{
+    NumberBox box;
+    box.resize(240, 32);
+    box.setScrubbingEnabled(true);
+    box.show();
+    QApplication::processEvents();
+    const QPoint handle = box.scrubHandleRect().center();
+    QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    QTest::mouseMove(&box, handle + QPoint(25, 0));
+    EXPECT_DOUBLE_EQ(box.value(), 25);
+    box.cancelScrub();
+    EXPECT_TRUE(std::isnan(box.value()));
+    EXPECT_TRUE(box.text().isEmpty());
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    box.setValue(5);
+    QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    QTest::mouseMove(&box, handle + QPoint(25, 0));
+    box.setValue(75);
+    EXPECT_FALSE(box.isScrubbing());
+    EXPECT_DOUBLE_EQ(box.value(), 75);
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    box.setScrubSensitivity(-1);
+    EXPECT_DOUBLE_EQ(box.scrubSensitivity(), 1);
+}
+
 TEST_F(NumberBoxTest, Contract_ExpressionDepthIsBounded)
 {
     NumberBox box;
@@ -748,4 +857,38 @@ TEST_F(NumberBoxTest, VisualCheck)
         QTest::keyClicks(equation, "1 + 2^2");
     });
     qApp->exec();
+}
+
+TEST_F(NumberBoxTest, Contract_ScrubbingExtremeFiniteValuesCannotProduceNaN)
+{
+    NumberBox box;
+    box.resize(400, 32);
+    box.setValue(1e308);
+    box.setScrubbingEnabled(true);
+    box.setScrubSensitivity(std::numeric_limits<double>::max());
+    box.show();
+    QApplication::processEvents();
+    const QPoint handle = box.scrubHandleRect().center();
+    QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    QTest::mouseMove(&box, handle + QPoint(30, 0));
+    EXPECT_TRUE(std::isfinite(box.value()));
+    QTest::mouseMove(&box, handle - QPoint(30, 0));
+    EXPECT_TRUE(std::isfinite(box.value()));
+    QTest::keyClick(&box, Qt::Key_Escape);
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    EXPECT_EQ(box.value(), 1e308);
+}
+
+TEST_F(NumberBoxTest, Contract_TinyAndLargeRepresentableChangesNotify)
+{
+    NumberBox box;
+    box.setValue(1e-20);
+    QSignalSpy changed(&box, &NumberBox::valueChanged);
+    box.setValue(2e-20);
+    EXPECT_EQ(changed.count(), 1);
+    box.setValue(1e18);
+    changed.clear();
+    box.setValue(1e18 + 128);
+    EXPECT_EQ(box.value(), 1e18 + 128);
+    EXPECT_EQ(changed.count(), 1);
 }

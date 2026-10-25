@@ -10229,5 +10229,18 @@ class FluentQtBindingTest(unittest.TestCase):
             del child
 
 
+    def test_review_number_changes_notify_at_tiny_and_large_scales(self):
+        box = fluentqt.NumberBox()
+        box.setValue(1e-20)
+        changes = []
+        box.valueChanged.connect(changes.append)
+        box.setValue(2e-20)
+        self.assertEqual(changes, [2e-20])
+        box.setValue(1e18)
+        changes.clear()
+        box.setValue(1e18 + 128)
+        self.assertEqual(changes, [1e18 + 128])
+        delete_qobject(box)
+
 if __name__ == "__main__":
     unittest.main()

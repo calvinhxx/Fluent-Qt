@@ -1,3 +1,5 @@
+#include "components/foundation/private/TextInputFrame_p.h"
+#include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "NumberBox.h"
 
@@ -8,7 +10,6 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
-#include <QPainterPath>
 #include <QPointer>
 #include <QResizeEvent>
 #include <QSignalBlocker>
@@ -47,7 +48,10 @@ bool numbersEqual(double left, double right)
         return true;
     if (!isFiniteNumber(left) || !isFiniteNumber(right))
         return false;
-    return std::abs(left - right) <= kNumberEpsilon;
+    // Keep roundoff tolerance small even when adjacent representable values are large.
+    // zh_CN: 限制容差上限，避免大数值的相邻可表示变化漏发通知。
+    const double scale = qMin(1.0, qMax(std::abs(left), std::abs(right)));
+    return std::abs(left - right) <= 4 * std::numeric_limits<double>::epsilon() * scale;
 }
 
 class ExpressionParser {
@@ -229,7 +233,6 @@ NumberBox::NumberBox(QWidget* parent)
 {
     detail::ensureNumberBoxAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
-    setFrameVisible(false);
     setFixedHeight(totalPreferredHeight());
 
     initializeSpinnerButtons();
@@ -242,6 +245,10 @@ NumberBox::NumberBox(QWidget* parent)
 
 void NumberBox::setValue(double value)
 {
+    const QPointer<NumberBox> guard(this);
+    cancelScrub();
+    if (!guard)
+        return;
     setValueInternal(value, true, false);
 }
 
@@ -456,6 +463,80 @@ void NumberBox::setFormatStep(double step)
         emit formatStepChanged(m_formatStep);
 }
 
+void NumberBox::setScrubbingEnabled(bool enabled)
+{
+    if (m_scrubbingEnabled == enabled)
+        return;
+    m_scrubbingEnabled = enabled;
+    const QPointer<NumberBox> guard(this);
+    if (!enabled)
+        cancelScrub();
+    if (!guard)
+        return;
+    setMouseTracking(enabled);
+    if (!enabled)
+        unsetCursor();
+    updateTextMarginsForChrome();
+    update();
+    emit scrubbingEnabledChanged(enabled);
+}
+
+void NumberBox::setScrubSensitivity(double sensitivity)
+{
+    if (!std::isfinite(sensitivity) || sensitivity <= 0 || numbersEqual(m_scrubSensitivity, sensitivity))
+        return;
+    m_scrubSensitivity = sensitivity;
+    emit scrubSensitivityChanged(sensitivity);
+}
+
+QRect NumberBox::scrubHandleRect() const
+{
+    return m_scrubbingEnabled ? QRect(4, inputTop() + 4, 24, inputRect().height() - 8) : QRect();
+}
+
+void NumberBox::cancelScrub()
+{
+    finishScrub(true);
+}
+
+void NumberBox::finishScrub(bool canceled)
+{
+    if (!m_scrubbing)
+        return;
+    m_scrubbing = false;
+    const double initial = m_scrubInitialValue;
+    const QString initialText = m_scrubInitialText;
+    const QPointer<NumberBox> guard(this);
+    if (canceled) {
+        setValueInternal(initial, false, true);
+        if (!guard)
+            return;
+        if (numbersEqual(m_value, normalizeValue(initial)))
+            setFormattedText(initialText);
+        if (!guard)
+            return;
+    }
+    unsetCursor();
+    update();
+    const double finalValue = m_value;
+    emit scrubbingChanged(false);
+    if (guard)
+        emit scrubFinished(initial, finalValue, canceled);
+}
+
+bool NumberBox::event(QEvent* event)
+{
+    if (event && m_scrubbing
+        && (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate
+            || event->type() == QEvent::UngrabMouse)) {
+        const QPointer<NumberBox> guard(this);
+        cancelScrub();
+        if (!guard)
+            return true;
+    }
+    return LineEdit::event(event);
+}
+
 QSize NumberBox::sizeHint() const
 {
     QSize hint = LineEdit::sizeHint();
@@ -488,9 +569,24 @@ void NumberBox::paintEvent(QPaintEvent* event)
         painter.setRenderHint(QPainter::Antialiasing);
         if (!m_header.isEmpty())
             paintHeader(painter);
-        paintInputFrame(painter);
     }
     LineEdit::paintEvent(event);
+    if (m_scrubbingEnabled) {
+        QPainter painter(this);
+        const auto& colors = themeColorsRef();
+        painter.setPen(QPen(isEnabled() && !isReadOnly() ? colors.textSecondary : colors.textDisabled, 1.5));
+        const QPoint center = scrubHandleRect().center();
+        painter.drawLine(center + QPoint(-6, 0), center + QPoint(6, 0));
+        painter.drawLine(center + QPoint(-6, 0), center + QPoint(-3, -3));
+        painter.drawLine(center + QPoint(-6, 0), center + QPoint(-3, 3));
+        painter.drawLine(center + QPoint(6, 0), center + QPoint(3, -3));
+        painter.drawLine(center + QPoint(6, 0), center + QPoint(3, 3));
+    }
+}
+
+void NumberBox::paintFrame(QPainter& painter)
+{
+    paintInputFrame(painter);
 }
 
 void NumberBox::resizeEvent(QResizeEvent* event)
@@ -509,7 +605,12 @@ void NumberBox::focusInEvent(QFocusEvent* event)
 void NumberBox::focusOutEvent(QFocusEvent* event)
 {
     const QPointer<NumberBox> guard(this);
-    commitInput();
+    const bool canceled = m_scrubbing;
+    cancelScrub();
+    if (!guard)
+        return;
+    if (!canceled)
+        commitInput();
     if (!guard)
         return;
     m_focused = false;
@@ -534,6 +635,24 @@ void NumberBox::leaveEvent(QEvent* event)
 
 void NumberBox::mousePressEvent(QMouseEvent* event)
 {
+    if (event && event->button() == Qt::LeftButton && isEnabled() && !isReadOnly()
+        && scrubHandleRect().contains(event->pos())) {
+        const QPointer<NumberBox> guard(this);
+        setFocus(Qt::MouseFocusReason);
+        if (!guard)
+            return;
+        m_scrubInitialValue = m_value;
+        m_scrubInitialText = text();
+        m_scrubBase = std::isfinite(m_value) ? m_value : normalizedStepStart();
+        m_scrubStart = fluentMouseGlobalPos(event);
+        m_scrubbing = true;
+        setCursor(Qt::SizeHorCursor);
+        event->accept();
+        emit scrubbingChanged(true);
+        if (guard && m_scrubbing)
+            emit scrubStarted(m_scrubInitialValue);
+        return;
+    }
     if (event && event->button() == Qt::LeftButton && isEnabled() && !isReadOnly()) {
         m_pressed = inputRect().contains(event->pos());
         update();
@@ -541,8 +660,36 @@ void NumberBox::mousePressEvent(QMouseEvent* event)
     LineEdit::mousePressEvent(event);
 }
 
+void NumberBox::mouseMoveEvent(QMouseEvent* event)
+{
+    if (m_scrubbing) {
+        const QPoint position = fluentMouseGlobalPos(event);
+        double factor = event->modifiers().testFlag(Qt::ShiftModifier) ? 0.1 : 1.0;
+        if (event->modifiers().testFlag(Qt::ControlModifier))
+            factor *= 10.0;
+        const double limit = std::numeric_limits<double>::max();
+        const double lower = qMax(-limit, m_minimum), upper = qMin(limit, m_maximum);
+        const double distance = double(position.x()) - double(m_scrubStart.x());
+        m_scrubBase = qBound(lower, m_scrubBase + distance * m_scrubSensitivity * factor, upper);
+        m_scrubStart = position;
+        event->accept();
+        setValueInternal(m_scrubBase, true, false);
+        return;
+    }
+    if (m_scrubbingEnabled && isEnabled() && !isReadOnly() && scrubHandleRect().contains(event->pos()))
+        setCursor(Qt::SizeHorCursor);
+    else if (m_scrubbingEnabled)
+        unsetCursor();
+    LineEdit::mouseMoveEvent(event);
+}
+
 void NumberBox::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (m_scrubbing && event->button() == Qt::LeftButton) {
+        event->accept();
+        finishScrub(false);
+        return;
+    }
     if (m_pressed) {
         m_pressed = false;
         update();
@@ -558,6 +705,13 @@ void NumberBox::keyPressEvent(QKeyEvent* event)
     }
 
     switch (event->key()) {
+    case Qt::Key_Escape:
+        if (m_scrubbing) {
+            event->accept();
+            cancelScrub();
+            return;
+        }
+        break;
     case Qt::Key_Return:
     case Qt::Key_Enter:
         commitInput();
@@ -590,7 +744,17 @@ void NumberBox::changeEvent(QEvent* event)
     LineEdit::changeEvent(event);
     if (!event)
         return;
+    if (event->type() == QEvent::FontChange) {
+        setFixedHeight(totalPreferredHeight());
+        updateChildGeometry();
+        updateGeometry();
+    }
     if (event->type() == QEvent::EnabledChange || event->type() == QEvent::ReadOnlyChange) {
+        const QPointer<NumberBox> guard(this);
+        if (!isEnabled() || isReadOnly())
+            cancelScrub();
+        if (!guard)
+            return;
         updateSpinnerState();
         updateTextMarginsForChrome();
         update();
@@ -630,7 +794,7 @@ bool NumberBox::eventFilter(QObject* watched, QEvent* event)
 
 QRect NumberBox::inputRect() const
 {
-    return QRect(0, inputTop(), width(), kInputHeight);
+    return QRect(0, inputTop(), width(), ::fluent::detail::standardControlHeight(fontMetrics()));
 }
 
 int NumberBox::inputTop() const
@@ -640,7 +804,7 @@ int NumberBox::inputTop() const
 
 int NumberBox::totalPreferredHeight() const
 {
-    return inputTop() + kInputHeight;
+    return inputTop() + ::fluent::detail::standardControlHeight(fontMetrics());
 }
 
 void NumberBox::initializeSpinnerButtons()
@@ -663,6 +827,8 @@ void NumberBox::initializeSpinnerButtons()
 
     configureButton(m_spinUpButton, Typography::Icons::ChevronUp, QStringLiteral("NumberBoxSpinUpButton"));
     configureButton(m_spinDownButton, Typography::Icons::ChevronDown, QStringLiteral("NumberBoxSpinDownButton"));
+    m_spinUpButton->setAccessibleName(tr("Increase value"));
+    m_spinDownButton->setAccessibleName(tr("Decrease value"));
 
     connect(m_spinUpButton, &::fluent::basicinput::RepeatButton::clicked, this, [this]() {
         setFocus(Qt::MouseFocusReason);
@@ -744,7 +910,7 @@ void NumberBox::updateTextMarginsForChrome()
     }
 
     QMargins margins = contentMargins();
-    margins.setLeft(::Spacing::Padding::TextFieldHorizontal);
+    margins.setLeft(::Spacing::Padding::TextFieldHorizontal + (m_scrubbingEnabled ? 24 : 0));
     margins.setRight(rightMargin);
     margins.setTop(::Spacing::Padding::TextFieldVertical);
     margins.setBottom(::Spacing::Padding::TextFieldVertical);
@@ -758,6 +924,8 @@ void NumberBox::updateHeaderTextMargins()
 
 void NumberBox::commitInput()
 {
+    if (!isModified() && text() == formatValue(m_value))
+        return;
     const QString trimmed = text().trimmed();
     if (trimmed.isEmpty()) {
         setInvalidValueFromText();
@@ -916,61 +1084,14 @@ bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTex
 
 void NumberBox::paintInputFrame(QPainter& painter)
 {
-    const auto& colors = themeColorsRef();
-    const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
-
-    QColor bgColor;
-    QColor borderColor;
-    QColor bottomColor;
-    int bottomWidth = ::Spacing::Border::Normal;
-
-    if (!isEnabled()) {
-        bgColor = colors.controlDisabled;
-        borderColor = colors.strokeDivider;
-        bottomColor = borderColor;
-    } else if (isReadOnly()) {
-        bgColor = colors.controlAltSecondary;
-        borderColor = colors.strokeDefault;
-        bottomColor = colors.strokeDivider;
-    } else if (m_focused) {
-        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
-        borderColor = colors.strokeSecondary;
-        bottomColor = colors.accentDefault;
-        bottomWidth = ::Spacing::Border::Focused;
-    } else if (m_pressed || m_spinnerPressed) {
-        bgColor = colors.controlTertiary;
-        borderColor = colors.strokeSecondary;
-        bottomColor = colors.strokeSecondary;
-    } else if (m_hovered || m_spinnerHovered) {
-        bgColor = colors.controlSecondary;
-        borderColor = colors.strokeSecondary;
-        bottomColor = colors.strokeSecondary;
-    } else {
-        bgColor = colors.controlDefault;
-        borderColor = colors.strokeDefault;
-        bottomColor = colors.strokeDivider;
-    }
-
-    const qreal radius = themeRadius().control;
-    QPainterPath framePath;
-    framePath.addRoundedRect(frameRect, radius, radius);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(bgColor);
-    painter.drawPath(framePath);
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(borderColor, 1));
-    painter.drawPath(framePath);
-
-    if (isEnabled() && !isReadOnly()) {
-        QPen bottomPen(bottomColor, bottomWidth);
-        bottomPen.setCapStyle(Qt::RoundCap);
-        painter.setPen(bottomPen);
-        const qreal bottomY = frameRect.bottom() - (bottomWidth > 1 ? (bottomWidth - 1) / 2.0 : 0);
-        QPainterPath bottomPath;
-        bottomPath.moveTo(frameRect.left() + radius, bottomY);
-        bottomPath.lineTo(frameRect.right() - radius, bottomY);
-        painter.drawPath(bottomPath);
-    }
+    ::fluent::detail::TextInputFrameState state;
+    state.enabled = isEnabled();
+    state.readOnly = isReadOnly();
+    state.focused = m_focused;
+    state.hovered = m_hovered || m_spinnerHovered;
+    state.pressed = m_pressed || m_spinnerPressed;
+    state.dark = effectiveThemeUsesDarkAppearance();
+    ::fluent::detail::paintTextInputFrame(painter, QRectF(inputRect()), themeColorsRef(), themeRadius().control, state);
 }
 
 void NumberBox::paintHeader(QPainter& painter)
