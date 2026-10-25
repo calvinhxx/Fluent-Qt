@@ -52,6 +52,47 @@ FluentQt adds:
 New properties follow the getter/setter/changed-signal pattern and remain
 silent when their effective value does not change.
 
+## Search, facets and column layouts
+
+`fluent::layout::DataGridToolBar` composes `LineEdit`, `MultiSelectComboBox`,
+`Button`, `DropDownButton` and `FluentMenu`. It borrows its DataGrid and wraps
+controls at narrow widths without recreating them. Search text and selected
+facet values are presentation state. Connect `searchTextChanged` and
+`filtersChanged` to an application-owned proxy model; the toolbar never
+replaces the grid model. Empty facet selection means no restriction in the
+Gallery example. Values within one facet are combined with OR, and facets
+are combined with AND by the example's proxy.
+
+Column management uses logical column indexes. `setColumnVisible()` controls
+visibility; `setColumnPinned()` places a column in the leading group. Pinned
+columns preserve their order and share the model and selection model with the
+scrolling surface. The auxiliary view is created only when pinning is used;
+it paints delegates and does not create persistent cell widgets. Columns may
+be resized or moved within their pinned/unpinned group. The toolbar prevents
+hiding the final visible column, while the underlying Qt API remains available.
+
+`saveColumnState()` returns versioned bytes containing order, widths,
+visibility, pinning and sorting. `restoreColumnState()` validates the entire
+record and its column count/header labels before changing the view. An invalid
+or incompatible record is a no-op. Applications own storage and migration;
+restoring a different model schema requires an application decision. Model
+replacement/reset clears pinning; column insertion/removal shifts pinned
+logical indexes. The Gallery demonstrates saving and restoring one view in
+memory, including application-owned search and facet values.
+
+## Appearance and motion
+
+The table uses a flat header, 36-pixel default rows, 12-pixel cell padding,
+and a subtle accent tint plus Fluent selection indicator. Text editing uses
+the existing Fluent `LineEdit`; other editor types retain Qt's editor factory.
+Models and custom delegates retain control of data and validation.
+
+Hover, selection and sort-direction feedback use the shared fast transition
+duration and decelerate curve. `animationEnabled` can disable local motion;
+global `MotionPolicy` still controls Reduced/Disabled behavior. Selection
+transitions are bounded to visible cells, including bulk selection on large
+models. These APIs are exposed in C++, PySide6 and the shared WebAssembly build.
+
 ## Scale and lifetime
 
 - Initial display, resize, and scroll work must follow visible cells plus a
@@ -72,7 +113,7 @@ silent when their effective value does not change.
   distinct Qt concepts.
 - Keyboard and pointer input use the same model and selection state.
 - Header resize, reorder, hide/show, and sort requests stay in `QHeaderView`
-  and the caller model; DataGrid adds no second column store.
+  and the caller model; pinning retains only view layout metadata.
 - Persisting column layout is an application responsibility.
 - Model-provided accessible text and descriptions do not replace display or
   edit values.
