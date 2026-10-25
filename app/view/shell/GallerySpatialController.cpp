@@ -341,13 +341,7 @@ private:
     ShellScene* m_scene;
 };
 
-void requestCanvasFrame(QWidget* canvas)
-{
-    if (auto* rhi = dynamic_cast<spatial::SpatialTextureHost*>(canvas))
-        rhi->requestFrame();
-    else if (canvas)
-        canvas->update();
-}
+void requestCanvasFrame(QWidget* canvas, bool withInput = false);
 
 using spatial_render::PanelSampler;
 
@@ -423,6 +417,7 @@ public:
     int allocationRetries = 0;
     int surfaceSamples = 0;
     int paintSamples() const { return m_paintTarget ? m_paintTarget->format().samples() : 0; }
+    int paintSampleBytes() const { return m_paintSampleBytes; }
     qint64 estimatedCacheBytes() const
     {
         qint64 bytes = qMax(m_plan.estimatedBytes, backdropBytes()) + qint64(m_particles.allocatedBytes());
@@ -449,6 +444,7 @@ public:
 
     void clearFrameCaches()
     {
+        m_inputFrameRequested = false;
         m_hasPresentedFrame = false;
         makeCurrent();
         m_particles.release();
@@ -471,6 +467,14 @@ public:
     qint64 allocationNanoseconds = 0, firstPaintNanoseconds = 0;
     qint64 backdropUploads = 0;
 
+    void requestFrame(bool withInput)
+    {
+        if (!m_inputFrameRequested) {
+            m_inputFrameRequested = withInput;
+            update();
+        }
+    }
+
 protected:
     void resizeGL(int, int) override { m_hasPresentedFrame = false; }
 
@@ -489,7 +493,15 @@ protected:
         {
             QOpenGLFramebufferObject sampleProbe(QSize(1, 1), sampleFormat);
             m_paintSamples = sampleProbe.isValid() ? sampleProbe.format().samples() : 0;
+            if (sampleProbe.isValid() && sampleProbe.bind()) {
+                m_paintSampleBytes = spatial::SpatialTextureHost::currentPaintSampleBytes();
+                sampleProbe.release();
+            }
         }
+        // Retain the old conservative plan only for same-device performance comparisons.
+        // zh_CN: 旧保守估算仅用于同设备性能对照。
+        if (measuring && qEnvironmentVariableIsSet("FLUENT_QT_SPATIAL_CONSERVATIVE_CACHE"))
+            m_paintSampleBytes = 12;
         m_blitter = std::make_unique<PanelSampler>();
         const bool reference = measuring && qgetenv("FLUENT_QT_SPATIAL_SAMPLER") == "monotone";
         m_blitter->create(
@@ -507,6 +519,7 @@ protected:
 
     void paintGL() override
     {
+        m_inputFrameRequested = false;
         QElapsedTimer clock;
         if (measuring)
             clock.start();
@@ -696,10 +709,12 @@ private:
     spatial_render::CachePlan m_plan;
     int m_maxDimension = 0;
     int m_paintSamples = spatial_render::kPaintSamples;
+    int m_paintSampleBytes = 12;
     qreal m_maxExtraSampling = 2;
     bool m_cacheFailurePending = false;
     bool m_surfaceSamplesKnown = false;
     bool m_hasPresentedFrame = false;
+    bool m_inputFrameRequested = false;
 
     void bindSurfaceTarget()
     {
@@ -726,14 +741,14 @@ private:
         while (true) {
             auto plan = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension,
                 qMin(m_maxExtraSampling, extraSampling), spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop,
-                glyphScratch);
+                glyphScratch, 0, m_paintSampleBytes);
             if (!plan.valid())
                 return false;
             for (qreal extra : {2., 1.75, 1.5, 1.25, 1.}) {
                 if (devicePixelRatioF() * extra > plan.dpr)
                     continue;
                 const auto candidate = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, extra,
-                    spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch);
+                    spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch, 0, m_paintSampleBytes);
                 if (!candidate.valid() || candidate.dpr != devicePixelRatioF() * extra)
                     continue;
                 const quint64 particleBytes = m_particles.requiredBytes(m_scene->contentRoot, m_scene->contentRevision,
@@ -752,7 +767,8 @@ private:
                 if (auxiliaryBytes >= quint64(spatial_render::kCacheBudgetBytes))
                     continue;
                 const auto joint = spatial_render::planCaches(panels, devicePixelRatioF(), m_maxDimension, extra,
-                    spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch, qint64(auxiliaryBytes));
+                    spatial_render::kCacheBudgetBytes, m_paintSamples, backdrop, glyphScratch, qint64(auxiliaryBytes),
+                    m_paintSampleBytes);
                 // Choose the highest joint level, always at least native density.
                 // Re-estimate auxiliary textures at each sampling candidate.
                 if (joint.valid() && joint.dpr == candidate.dpr) {
@@ -898,11 +914,16 @@ private:
             const int paintHeight = paintBottom - paintTop;
             m_paintTarget->bind();
             auto* gl = context()->functions();
-            gl->glDisable(GL_SCISSOR_TEST);
+            // Both panels reuse a large target. Clear only this strip, including
+            // its guard pixels; unused target rows/columns are never resolved.
+            // zh_CN: 两个面板复用大画布，仅清空当前条带及保护像素，未使用的区域不会参与解析。
+            gl->glEnable(GL_SCISSOR_TEST);
+            gl->glScissor(0, 0, pixels.width(), paintHeight);
             gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
             gl->glClearColor(0, 0, 0, 0);
             gl->glStencilMask(~0u);
             gl->glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            gl->glDisable(GL_SCISSOR_TEST);
             QOpenGLPaintDevice device(QSize(pixels.width(), paintHeight));
             device.setDevicePixelRatio(dpr);
             spatial_render::GalleryGlyphPaintDevice glyphDevice(device, devicePixelRatioF(),
@@ -939,6 +960,16 @@ private:
         return true;
     }
 };
+
+void requestCanvasFrame(QWidget* canvas, bool withInput)
+{
+    if (auto* rhi = dynamic_cast<spatial::SpatialTextureHost*>(canvas))
+        rhi->requestFrame();
+    else if (auto* gl = dynamic_cast<GpuSurface*>(canvas))
+        gl->requestFrame(withInput);
+    else if (canvas)
+        canvas->update();
+}
 } // namespace
 
 struct GallerySpatialController::Private {
@@ -1269,6 +1300,11 @@ GallerySpatialController::GallerySpatialController(QWidget* window, navigation::
     d->scene.contentRoot = navigation->contentHost();
     d->scene.themeChanged = [this] {
         d->backdropDirty = true;
+        // Material tokens change immediately. Retire both widget textures in
+        // the same transaction instead of waiting for a later raster update.
+        // zh_CN: 材质 token 立即改变，同步作废两块控件纹理，避免新背景混用旧主题内容。
+        ++d->scene.navigationRevision;
+        ++d->scene.contentRevision;
         d->sync();
     };
     d->nativeNoSystemBackground = navigation->testAttribute(Qt::WA_NoSystemBackground);
@@ -1745,6 +1781,7 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     result["backdropTextureBytes"] = surface ? surface->backdropBytes() : 0;
     result["backdropUploads"] = surface ? surface->backdropUploads : 0;
     result["paintSamples"] = surface ? surface->paintSamples() : 0;
+    result["paintSampleBytes"] = surface ? surface->paintSampleBytes() : 0;
     result["paintTargetHeight"] = surface ? surface->paintTargetHeight() : 0;
     result["cacheBudgetBytes"] = spatial_render::kCacheBudgetBytes;
     result["maxCacheDimension"] = surface ? surface->maxCacheDimension() : 0;
@@ -2114,6 +2151,11 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
             d->grabbed = target;
         QMouseEvent forwarded(event->type(), local, target->mapTo(d->window, local), sourceGlobal, input->button(),
             input->buttons(), input->modifiers(), input->source());
+        // Queue composition alongside the drag's source update, before Qt starts
+        // painting. The capture then joins this frame instead of requesting another.
+        // zh_CN: 拖动时提前合并合成与源更新，捕获结果进入本帧，避免额外提交一帧旧画面。
+        if (input->buttons() != Qt::NoButton || input->button() != Qt::NoButton)
+            requestCanvasFrame(d->canvas, true);
         QApplication::sendEvent(target, &forwarded);
         if (event->type() == QEvent::MouseButtonRelease)
             d->grabbed = nullptr;

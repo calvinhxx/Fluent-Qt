@@ -44,12 +44,14 @@ inline CachePlan planCaches(const std::array<QSizeF, 2>& panels,
     int paintSamples = kPaintSamples,
     qint64 backdropBytes = 0,
     qint64 glyphScratchBytes = 0,
-    qint64 reservedBytes = 0)
+    qint64 reservedBytes = 0,
+    int paintSampleBytes = 12)
 {
     if (!qIsFinite(nativeDpr) || nativeDpr <= 0 || maxDimension <= 0 || budget <= 0 || paintSamples <= 1
         || backdropBytes < 0 || backdropBytes >= budget || glyphScratchBytes < 0
         || glyphScratchBytes >= budget - backdropBytes || reservedBytes < 0
-        || reservedBytes >= budget - backdropBytes - glyphScratchBytes)
+        || reservedBytes >= budget - backdropBytes - glyphScratchBytes
+        || (paintSampleBytes != 8 && paintSampleBytes != 12))
         return {};
     for (qreal extra : {2., 1.75, 1.5, 1.25, 1.}) {
         if (extra > maxExtraSampling)
@@ -75,7 +77,7 @@ inline CachePlan planCaches(const std::array<QSizeF, 2>& panels,
         if (!fits || plan.paintSize.isEmpty())
             continue;
         const qint64 textureBytes = plan.pixels * kCacheBytesPerPixel;
-        const qint64 paintRowBytes = qint64(plan.paintSize.width()) * (12 * paintSamples + 4);
+        const qint64 paintRowBytes = qint64(plan.paintSize.width()) * (paintSampleBytes * paintSamples + 4);
         const qint64 availableRows = (budget - backdropBytes - glyphScratchBytes - reservedBytes - textureBytes)
             / paintRowBytes;
         if (availableRows < qMin(32, plan.paintSize.height()))

@@ -27,6 +27,8 @@ public:
     static bool prepareWindow(windowing::Window* window);
     static bool isPreferred();
     static QString preflightFailure();
+    // Internal allocation probe shared with the Python compositor; not installed API.
+    static int currentPaintSampleBytes();
     bool isReady() const;
     QString rendererName() const;
     QVariantMap statistics() const;

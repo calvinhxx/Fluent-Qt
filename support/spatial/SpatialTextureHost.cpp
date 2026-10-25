@@ -1,4 +1,5 @@
 #include "SpatialTextureHost.h"
+#include "compatibility/private/spatial/SpatialFramebufferCompat_p.h"
 #include "compatibility/private/spatial/renderer/SpatialTextureBackend_p.h"
 #include "components/spatial/SpatialRuntime.h"
 #include "components/windowing/Window.h"
@@ -32,6 +33,11 @@ SpatialTextureHost::SpatialTextureHost(QWidget* parent) : QWidget(parent), d(new
 }
 
 SpatialTextureHost::~SpatialTextureHost() = default;
+
+int SpatialTextureHost::currentPaintSampleBytes()
+{
+    return ::compatibility::detail::currentPaintSampleBytes();
+}
 
 bool SpatialTextureHost::isSupported()
 {
