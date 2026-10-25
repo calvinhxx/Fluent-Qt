@@ -11,6 +11,7 @@ DropDownButton = _native.fluent.DropDownButton
 FileDropZone = _native.fluent.FileDropZone
 HyperlinkButton = _native.fluent.HyperlinkButton
 MultiSelectComboBox = _native.fluent.MultiSelectComboBox
+TreeSelect = _native.fluent.TreeSelect
 RadioButton = _native.fluent.RadioButton
 RatingControl = _native.fluent.RatingControl
 RepeatButton = _native.fluent.RepeatButton
@@ -70,6 +71,7 @@ __all__ = [
     "FileDropZone",
     "HyperlinkButton",
     "MultiSelectComboBox",
+    "TreeSelect",
     "RadioButton",
     "RatingControl",
     "RepeatButton",
