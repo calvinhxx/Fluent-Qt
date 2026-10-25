@@ -6,6 +6,7 @@ from . import _fluentqt as _native
 
 
 Card = _native.fluent.Card
+ListDetailView = _native.fluent.ListDetailView
 DataGridToolBar = _native.fluent.DataGridToolBar
 PropertyDefinition = _native.fluent.PropertyDefinition
 PropertyPanel = _native.fluent.PropertyPanel
@@ -377,4 +378,4 @@ class Field(_NativeField):
         self._fluentqt_original_parent = None
 
 
-__all__ = ["Accordion", "Card", "Divider", "Expander", "Field", "DataGridToolBar", "ParticleBackdrop", "PropertyDefinition", "PropertyPanel"]
+__all__ = ["Accordion", "Card", "Divider", "Expander", "Field", "DataGridToolBar", "ListDetailView", "ParticleBackdrop", "PropertyDefinition", "PropertyPanel"]

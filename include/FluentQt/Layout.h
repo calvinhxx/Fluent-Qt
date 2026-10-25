@@ -8,6 +8,7 @@
 #include <components/layout/Expander.h>
 #include <components/layout/Field.h>
 #include <components/layout/PropertyPanel.h>
+#include <components/layout/ListDetailView.h>
 #include <components/layout/ParticleBackdrop.h>
 
 #endif // FLUENTQT_LAYOUT_H

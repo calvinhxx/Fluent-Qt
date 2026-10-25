@@ -34,6 +34,7 @@ set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_accordion
     test_card
     test_divider
+    test_list_detail_view
     test_expander
     test_data_grid
     test_data_grid_tool_bar

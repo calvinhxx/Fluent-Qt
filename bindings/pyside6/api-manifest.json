@@ -70,6 +70,7 @@
     "Label",
     "LineChart",
     "LineEdit",
+    "ListDetailView",
     "ListView",
     "MotionPolicy",
     "MultiSelectComboBox",
@@ -1802,6 +1803,19 @@
       "setMaxVisibleLines",
       "copy",
       "copyFinished"
+    ],
+    "ListDetailView": [
+      "compactThreshold",
+      "currentPane",
+      "detailPane",
+      "isCompact",
+      "listPane",
+      "listPaneWidth",
+      "setCompactThreshold",
+      "setCurrentPane",
+      "setListPaneWidth",
+      "showDetail",
+      "showList"
     ],
     "DataGridToolBar": [
       "addFilter",

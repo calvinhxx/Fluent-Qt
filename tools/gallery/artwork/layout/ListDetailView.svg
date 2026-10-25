@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>ListDetailView</title>
+  <rect x="3" y="3" width="66" height="66" rx="16" fill="#f25c3d"/>
+  <g fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="16" y="18" width="40" height="36" rx="3"/>
+    <path d="M32 18v36M21 26h6M21 33h6M21 40h6M21 47h6M38 26h12M38 33h12M38 40h8"/>
+  </g>
+</svg>

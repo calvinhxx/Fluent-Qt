@@ -4006,6 +4006,67 @@ class FluentQtBindingTest(unittest.TestCase):
         gc.collect()
         self.assertIsNone(reference())
 
+    def test_layout_callbacks_can_destroy_hosts_after_internal_updates(self):
+        view = fluentqt.ListDetailView()
+        view.resize(800, 400)
+        view.compactChanged.connect(lambda _: delete_qobject(view))
+        view.setCompactThreshold(1000)
+        self.assertFalse(shiboken6.isValid(view))
+        for with_search in (False, True):
+            bar = fluentqt.DataGridToolBar()
+            bar.addFilter("status", "Status", ["Active"])
+            bar.setFilterValues("status", ["Active"])
+            if with_search:
+                bar.setSearchText("query")
+
+            def destroy(*_):
+                self.assertEqual(bar.searchText(), "")
+                self.assertEqual(bar.filters(), {})
+                delete_qobject(bar)
+
+            signal = bar.searchTextChanged if with_search else bar.filtersChanged
+            signal.connect(destroy)
+            bar.clearFilters()
+            self.assertFalse(shiboken6.isValid(bar))
+
+    def test_list_detail_reentrant_threshold_notifies_only_current_value(self):
+        view = fluentqt.ListDetailView()
+        view.resize(800, 400)
+        values = []
+        view.compactThresholdChanged.connect(lambda value: values.append((value, view.compactThreshold())))
+        view.compactChanged.connect(lambda compact: view.setCompactThreshold(600) if compact else None)
+        view.setCompactThreshold(1000)
+        self.assertEqual(values, [(600, 600)])
+        self.assertFalse(view.isCompact())
+        delete_qobject(view)
+
+    def test_list_detail_persistent_panes_and_native_lifetime(self):
+        view = fluentqt.ListDetailView()
+        left, right = view.listPane(), view.detailPane()
+        editor = fluentqt.LineEdit(right)
+        editor.setText("unsaved draft")
+        view.resize(800, 400)
+        view.show()
+        QApplication.processEvents()
+        self.assertFalse(view.isCompact())
+        view.showDetail()
+        view.resize(360, 400)
+        QApplication.processEvents()
+        self.assertTrue(view.isCompact())
+        self.assertTrue(left.isHidden())
+        self.assertIs(right, view.detailPane())
+        self.assertEqual(view.currentPane(), fluentqt.ListDetailView.Pane.Detail)
+        view.showList()
+        view.resize(800, 400)
+        QApplication.processEvents()
+        self.assertEqual(editor.text(), "unsaved draft")
+        self.assertIs(editor.parentWidget(), right)
+        self.assertFalse(right.isHidden())
+        delete_qobject(view)
+        self.assertFalse(shiboken6.isValid(left))
+        self.assertFalse(shiboken6.isValid(right))
+        self.assertFalse(shiboken6.isValid(editor))
+
     def test_field_constructor_and_validation_preserve_editor_value(self):
         editor = fluentqt.LineEdit()
         editor.setText("keep-me")
