@@ -1,3 +1,4 @@
+#include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "compatibility/WidgetCompat.h"
 #include "MultiSelectComboBox.h"
@@ -21,6 +22,7 @@
 #include <QPainterPath>
 #include <QScrollBar>
 #include <QSet>
+#include <QScopedValueRollback>
 #include <QSignalBlocker>
 #include <QSortFilterProxyModel>
 #include <QStyle>
@@ -35,6 +37,7 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
+#include "components/foundation/overlay/FieldPopupGeometry_p.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
@@ -77,10 +80,21 @@ bool indexIsSelectable(const QModelIndex& index)
 QItemSelection selectionForIndexes(const QModelIndexList& indexes)
 {
     QItemSelection selection;
+    QModelIndex first, last;
     for (const QModelIndex& index : indexes) {
-        if (index.isValid())
-            selection.select(index, index);
+        if (!index.isValid())
+            continue;
+        if (last.isValid() && index.model() == last.model() && index.parent() == last.parent()
+            && index.column() == last.column() && index.row() == last.row() + 1) {
+            last = index;
+            continue;
+        }
+        if (first.isValid())
+            selection.select(first, last);
+        first = last = index;
     }
+    if (first.isValid())
+        selection.select(first, last);
     return selection;
 }
 
@@ -97,11 +111,14 @@ public:
         setFluentSize(Button::StandardSize);
         setFocusPolicy(Qt::NoFocus);
         setFocusVisual(false);
-        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        setFixedHeight(::Spacing::ControlHeight::Standard);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        setMinimumHeight(::Spacing::ControlHeight::Standard);
     }
 
-    QSize sizeHint() const override { return QSize(kDefaultWidth, ::Spacing::ControlHeight::Standard); }
+    QSize sizeHint() const override
+    {
+        return QSize(kDefaultWidth, ::fluent::detail::standardControlHeight(fontMetrics()));
+    }
 
 protected:
     void paintEvent(QPaintEvent* event) override
@@ -154,7 +171,7 @@ protected:
                 elided);
         }
 
-        if (isEnabled() && m_owner->hasFocus()) {
+        if (isEnabled() && m_owner->hasFocus() && m_owner->m_keyboardFocusVisible) {
             QColor focusColor = themeColorsRef().textSecondary;
             focusColor.setAlpha(120);
             painter.setPen(QPen(focusColor, 1.0));
@@ -315,7 +332,7 @@ public:
         setObjectName(QStringLiteral("MultiSelectComboBox.Popup"));
         setAnimationEnabled(false);
         setPlacement(Flyout::Auto);
-        setAnchorOffset(0);
+        setAnchorOffset(::Spacing::Gap::Normal);
         setModal(false);
         setDim(false);
         setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
@@ -370,6 +387,7 @@ public:
                 return;
             const bool bridgeWasInProgress = m_bridgeInProgress;
             m_bridgeInProgress = true;
+            m_filterText = text;
             m_proxyModel->setFilterFixedString(text);
             updateProxyRoot();
             m_bridgeInProgress = bridgeWasInProgress;
@@ -472,9 +490,11 @@ public:
             }
             const QModelIndex sourceCurrent = m_owner->selectionModel()->currentIndex();
             const QModelIndex proxyCurrent = m_proxyModel->mapFromSource(sourceCurrent);
-            if (proxyCurrent.isValid()) {
+            if (proxyCurrent.isValid()
+                && (sourceCurrent != m_lastSourceCurrent || !m_proxySelection->currentIndex().isValid())) {
                 m_proxySelection->setCurrentIndex(proxyCurrent, QItemSelectionModel::NoUpdate);
             }
+            m_lastSourceCurrent = sourceCurrent;
         }
         m_bridgeInProgress = false;
         if (m_listView->viewport())
@@ -522,6 +542,20 @@ public:
     }
 
 protected:
+    QPoint computePosition() const override
+    {
+        QWidget* top = ::fluent::overlay::presentedTopLevel(m_owner);
+        if (!top || (placement() != Flyout::Top && placement() != Flyout::Bottom))
+            return Flyout::computePosition();
+
+        const QRect anchor = ::fluent::overlay::presentedRectInTopLevel(m_owner);
+        const QSize cardSize = ::fluent::overlay::visibleCardSize(size(), kPopupShadowMargin);
+        const QPoint card = ::fluent::overlay::fieldPopupCardTopLeft(anchor, cardSize,
+            ::fluent::overlay::overlaySurfaceRect(top), m_owner->layoutDirection(), placement() == Flyout::Top,
+            anchorOffset(), kPopupWindowMargin);
+        return ::fluent::overlay::outerTopLeftForVisibleCard(card, kPopupShadowMargin);
+    }
+
     void paintEvent(QPaintEvent*) override
     {
         QPainter painter(this);
@@ -545,11 +579,7 @@ protected:
 
     bool eventFilter(QObject* watched, QEvent* event) override
     {
-        const auto* watchedWidget = qobject_cast<QWidget*>(watched);
-        const bool wheelInsidePopup = event && event->type() == QEvent::Wheel && watchedWidget
-            && (watchedWidget == this || isAncestorOf(watchedWidget));
-        if (!wheelInsidePopup && event && m_owner
-            && ::fluent::overlay::anchorGeometryMayChange(watched, event, m_owner)) {
+        if (m_owner && ::fluent::overlay::fieldPopupAnchorGeometryMayChange(watched, event, m_owner, this)) {
             queueGeometryUpdate();
         }
 
@@ -612,42 +642,51 @@ private:
     {
         if (!m_owner)
             return;
-
-        if (m_proxySelectionConnection) {
-            QObject::disconnect(m_proxySelectionConnection);
-            m_proxySelectionConnection = {};
-        }
+        const QScopedValueRollback<bool> bridging(m_bridgeInProgress, true);
 
         if (m_owner->isSearchEnabled()) {
-            m_proxyModel->setSourceModel(m_owner->model());
-            m_proxyModel->setFilterKeyColumn(m_owner->modelColumn());
-            m_proxyModel->setFilterFixedString(m_searchEdit->text());
-
-            if (m_proxySelection) {
-                m_listView->setModel(nullptr);
-                m_proxySelection->deleteLater();
+            if (m_proxyModel->sourceModel() != m_owner->model())
+                m_proxyModel->setSourceModel(m_owner->model());
+            if (m_proxyModel->filterKeyColumn() != m_owner->modelColumn())
+                m_proxyModel->setFilterKeyColumn(m_owner->modelColumn());
+            if (m_filterText != m_searchEdit->text()) {
+                m_filterText = m_searchEdit->text();
+                m_proxyModel->setFilterFixedString(m_filterText);
             }
-            m_proxySelection = new QItemSelectionModel(m_proxyModel, this);
-            m_listView->setModel(m_proxyModel);
-            m_listView->setSelectionModel(m_proxySelection);
+            if (!m_proxySelection) {
+                m_proxySelection = new QItemSelectionModel(m_proxyModel, this);
+                m_proxySelectionConnection = connect(m_proxySelection, &QItemSelectionModel::selectionChanged, this,
+                    [this](const QItemSelection& selected, const QItemSelection& deselected) {
+                        applyProxySelectionToSource(selected, deselected);
+                    });
+            }
+            if (m_listView->model() != m_proxyModel)
+                m_listView->setModel(m_proxyModel);
+            if (m_listView->selectionModel() != m_proxySelection)
+                m_listView->setSelectionModel(m_proxySelection);
             updateProxyRoot();
-            m_listView->setModelColumn(m_owner->modelColumn());
-            m_proxySelectionConnection = connect(m_proxySelection, &QItemSelectionModel::selectionChanged, this,
-                [this](const QItemSelection& selected, const QItemSelection& deselected) {
-                    applyProxySelectionToSource(selected, deselected);
-                });
+            if (m_listView->modelColumn() != m_owner->modelColumn())
+                m_listView->setModelColumn(m_owner->modelColumn());
         } else {
-            m_proxyModel->setSourceModel(nullptr);
+            if (m_proxySelectionConnection) {
+                QObject::disconnect(m_proxySelectionConnection);
+                m_proxySelectionConnection = {};
+            }
             if (m_proxySelection) {
                 m_listView->setModel(nullptr);
                 m_proxySelection->deleteLater();
                 m_proxySelection = nullptr;
             }
-            m_listView->setModel(m_owner->model());
-            if (m_owner->selectionModel())
+            if (m_proxyModel->sourceModel())
+                m_proxyModel->setSourceModel(nullptr);
+            if (m_listView->model() != m_owner->model())
+                m_listView->setModel(m_owner->model());
+            if (m_owner->selectionModel() && m_listView->selectionModel() != m_owner->selectionModel())
                 m_listView->setSelectionModel(m_owner->selectionModel());
-            m_listView->setRootIndex(m_owner->rootModelIndex());
-            m_listView->setModelColumn(m_owner->modelColumn());
+            if (m_listView->rootIndex() != m_owner->rootModelIndex())
+                m_listView->setRootIndex(m_owner->rootModelIndex());
+            if (m_listView->modelColumn() != m_owner->modelColumn())
+                m_listView->setModelColumn(m_owner->modelColumn());
         }
 
         m_listView->setSelectionMode(fluent::collections::SelectionMode::Multiple);
@@ -660,7 +699,8 @@ private:
     {
         if (!m_owner)
             return;
-        m_listView->setRootIndex(proxyRootIndex());
+        if (m_listView->rootIndex() != proxyRootIndex())
+            m_listView->setRootIndex(proxyRootIndex());
     }
 
     QModelIndex proxyRootIndex() const
@@ -726,33 +766,40 @@ private:
             return;
         }
 
-        const bool mayHaveVisibleSelection = m_owner->isSearchEnabled()
-            ? m_proxySelection && m_proxySelection->hasSelection()
-            : m_owner->selectedCount() > 0;
-        bool hasSelectable = false;
-        bool hasSelected = false;
+        auto* selection = m_owner->isSearchEnabled() ? m_proxySelection.data() : m_owner->selectionModel();
+        bool hasSelected = m_owner->selectedCount() > 0;
+        if (m_owner->isSearchEnabled()) {
+            hasSelected = false;
+            if (selection) {
+                for (const auto& index : selection->selectedRows(m_owner->modelColumn())) {
+                    if (indexIsSelectable(index)) {
+                        hasSelected = true;
+                        break;
+                    }
+                }
+            }
+        }
+        bool hasSelectable = hasSelected;
         bool hasUnselected = false;
         if (m_listView && m_listView->model()) {
             const QModelIndex root = m_listView->rootIndex();
             const int rows = m_listView->model()->rowCount(root);
-            for (int row = 0; row < rows; ++row) {
-                const QModelIndex visible = m_listView->model()->index(row, m_owner->modelColumn(), root);
-                const QModelIndex source = m_owner->isSearchEnabled() ? m_proxyModel->mapToSource(visible) : visible;
+            const auto ranges = selection ? selection->selection() : QItemSelection();
+            const bool allSelected = hasSelected && ranges.size() == 1 && ranges.first().parent() == root
+                && ranges.first().top() == 0 && ranges.first().bottom() == rows - 1
+                && ranges.first().left() <= m_owner->modelColumn() && ranges.first().right() >= m_owner->modelColumn();
+            for (int row = 0; !allSelected && row < rows; ++row) {
+                const auto visible = m_listView->model()->index(row, m_owner->modelColumn(), root);
+                // A known selection already proves that an eligible selected row exists.
+                // Search only for the first eligible unselected row, even if selection is last.
+                // zh_CN: 已知选择已证明存在可选的选中行，只需寻找首个可选的未选中行。
+                if (hasSelected && selection && selection->isSelected(visible))
+                    continue;
+                const auto source = m_owner->isSearchEnabled() ? m_proxyModel->mapToSource(visible) : visible;
                 if (!indexIsSelectable(source))
                     continue;
-
-                hasSelectable = true;
-                if (!mayHaveVisibleSelection) {
-                    hasUnselected = true;
-                    break;
-                }
-                if (m_owner->selectionModel() && m_owner->selectionModel()->isSelected(source)) {
-                    hasSelected = true;
-                } else {
-                    hasUnselected = true;
-                }
-                if (hasSelected && hasUnselected)
-                    break;
+                hasSelectable = hasUnselected = true;
+                break;
             }
         }
 
@@ -793,7 +840,7 @@ private:
             if (available > 0)
                 cardWidth = qMin(cardWidth, available);
         }
-        cardWidth = qMax(kMinimumWidth, cardWidth);
+        cardWidth = qMax(1, cardWidth);
         const int contentWidth = qMax(1, cardWidth - kPopupContentInset * 2);
 
         const QModelIndex root = m_listView->rootIndex();
@@ -816,9 +863,10 @@ private:
             const int desiredCardHeight =
                 ::fluent::overlay::visibleCardSize(m_layout->sizeHint(), kPopupShadowMargin).height();
             const int chromeHeight = qMax(0, desiredCardHeight - desiredListHeight);
-            const int belowCapacity = surface.bottom() - kPopupWindowMargin - (anchorRect.bottom() + anchorOffset())
-                + 1;
-            const int aboveCapacity = anchorRect.top() - anchorOffset() - (surface.top() + kPopupWindowMargin);
+            const auto space = ::fluent::overlay::fieldPopupSpace(anchorRect, surface, anchorOffset(),
+                kPopupWindowMargin);
+            const int belowCapacity = space.below;
+            const int aboveCapacity = space.above;
             int cardCapacity = belowCapacity;
             placement = Flyout::Bottom;
             // Keep the preferred bottom placement only when it can show the whole
@@ -832,12 +880,9 @@ private:
             }
 
             const int availableListHeight = qMax(0, cardCapacity - chromeHeight);
-            if (rowCount > 0 && availableListHeight >= kPopupRowHeight) {
-                const int fittedRows = qMax(1, availableListHeight / kPopupRowHeight);
-                listHeight = qMin(desiredListHeight, fittedRows * kPopupRowHeight);
-            } else if (rowCount == 0 && availableListHeight > 0) {
-                listHeight = qMin(desiredListHeight, availableListHeight);
-            }
+            listHeight = qMin(desiredListHeight, qMax(1, availableListHeight));
+            if (rowCount > 0 && listHeight >= kPopupRowHeight)
+                listHeight = (listHeight / kPopupRowHeight) * kPopupRowHeight;
         }
 
         setPlacement(placement);
@@ -888,15 +933,21 @@ private:
         QModelIndex target;
         const QModelIndex root = m_listView->rootIndex();
         if (m_listView->selectionModel()) {
-            const QModelIndexList selected = m_listView->selectionModel()->selectedRows(
-                m_owner ? m_owner->modelColumn() : 0);
-            for (const QModelIndex& index : selected) {
-                if (index.parent() == root && indexIsSelectable(index)) {
-                    target = index;
-                    break;
+            const int column = m_owner ? m_owner->modelColumn() : 0;
+            for (const auto& range : m_listView->selectionModel()->selection()) {
+                if (range.parent() != root || column < range.left() || column > range.right())
+                    continue;
+                for (int row = range.top(); row <= range.bottom(); ++row) {
+                    const auto index = m_listView->model()->index(row, column, root);
+                    if (indexIsSelectable(index)) {
+                        if (!target.isValid() || row < target.row())
+                            target = index;
+                        break;
+                    }
                 }
             }
         }
+
         if (!target.isValid()) {
             const int rows = m_listView->model()->rowCount(root);
             for (int row = 0; row < rows; ++row) {
@@ -945,6 +996,8 @@ private:
     QSortFilterProxyModel* m_proxyModel = nullptr;
     QPointer<QItemSelectionModel> m_proxySelection;
     QMetaObject::Connection m_proxySelectionConnection;
+    QPersistentModelIndex m_lastSourceCurrent;
+    QString m_filterText;
     bool m_bridgeInProgress = false;
     bool m_updatingSelectAll = false;
     bool m_geometryUpdatePending = false;
@@ -966,6 +1019,8 @@ MultiSelectComboBox::MultiSelectComboBox(QWidget* parent) : QWidget(parent), m_s
 
     connect(m_trigger, &Button::pressed, this, [this]() {
         if (isEnabled()) {
+            m_keyboardFocusVisible = false;
+            m_trigger->update();
             setProperty(kKeyboardFocusOnOpenProperty, false);
             setFocus(Qt::MouseFocusReason);
         }
@@ -1240,17 +1295,20 @@ void MultiSelectComboBox::setIsOpen(bool openState)
 
 QSize MultiSelectComboBox::sizeHint() const
 {
-    return QSize(kDefaultWidth, ::Spacing::ControlHeight::Standard);
+    return QSize(kDefaultWidth, ::fluent::detail::standardControlHeight(fontMetrics()));
 }
 
 QSize MultiSelectComboBox::minimumSizeHint() const
 {
-    return QSize(kMinimumWidth, ::Spacing::ControlHeight::Standard);
+    return QSize(kMinimumWidth, ::fluent::detail::standardControlHeight(fontMetrics()));
 }
 
 void MultiSelectComboBox::onThemeUpdated()
 {
-    setFont(themeFont(Typography::FontRole::Body).toQFont());
+    if (!m_hasExplicitFont) {
+        const QScopedValueRollback<bool> applying(m_applyingThemeFont, true);
+        setFont(themeFont(Typography::FontRole::Body).toQFont());
+    }
     if (m_trigger) {
         m_trigger->setFont(font());
         m_trigger->onThemeUpdated();
@@ -1263,6 +1321,8 @@ void MultiSelectComboBox::onThemeUpdated()
 
 void MultiSelectComboBox::keyPressEvent(QKeyEvent* event)
 {
+    m_keyboardFocusVisible = true;
+    m_trigger->update();
     const bool altDown = event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier);
     const bool f4 = event->key() == Qt::Key_F4 && event->modifiers() == Qt::NoModifier;
     const bool primary =
@@ -1285,6 +1345,11 @@ void MultiSelectComboBox::keyPressEvent(QKeyEvent* event)
 void MultiSelectComboBox::focusInEvent(QFocusEvent* event)
 {
     QWidget::focusInEvent(event);
+    if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    else if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
     if (m_trigger)
         m_trigger->update();
 }
@@ -1301,7 +1366,13 @@ void MultiSelectComboBox::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
     if (!event)
         return;
-    if (event->type() == QEvent::LanguageChange) {
+    if (event->type() == QEvent::FontChange) {
+        if (!m_applyingThemeFont)
+            m_hasExplicitFont = testAttribute(Qt::WA_SetFont);
+        if (m_trigger)
+            m_trigger->setFont(font());
+        updateGeometry();
+    } else if (event->type() == QEvent::LanguageChange) {
         refreshPresentation();
         refreshPopup();
     } else if (event->type() == QEvent::LayoutDirectionChange) {
@@ -1509,7 +1580,7 @@ QString MultiSelectComboBox::displayTextForWidth(int width) const
 
 QString MultiSelectComboBox::accessibleValueText() const
 {
-    return m_selectedLabels.join(QString::fromUtf8("、"));
+    return m_selectedLabels.join(tr(", "));
 }
 
 void MultiSelectComboBox::togglePopupFromTrigger()

@@ -240,6 +240,9 @@ private:
     QStringList m_selectedLabels;
     bool m_isOpen = false;
     bool m_ignoreNextTriggerClick = false;
+    bool m_keyboardFocusVisible = false;
+    bool m_hasExplicitFont = false;
+    bool m_applyingThemeFont = false;
 
     MultiSelectComboBoxTrigger* m_trigger = nullptr;
     QPointer<MultiSelectComboBoxPopup> m_popup;
