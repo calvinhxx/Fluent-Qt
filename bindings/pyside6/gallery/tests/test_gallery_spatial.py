@@ -556,6 +556,50 @@ class GallerySpatialTest(unittest.TestCase):
                          ["target", "sourceSize", "panelSize"])
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_theme_change_refreshes_widget_textures_in_first_frame(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires actual GPU theme composition")
+        from fluentqt.spatial import SpatialRuntime
+        from fluentqt_gallery.spatial_controller import GallerySpatialController
+        window = fluentqt.Window()
+        window._splash = window._dismissal_splash = None
+        SpatialRuntime.prepareWindow(window)
+        window.resize(1000, 700)
+        navigation = fluentqt.NavigationView()
+        navigation.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)
+        window.setContentWidget(navigation)
+        card = fluentqt.Card()
+        card.setAppearance(fluentqt.Card.Appearance.Layer)
+        navigation.contentHost().insertPage(0, card)
+        navigation.contentHost().setCurrentIndex(0, 0, False)
+        controller = GallerySpatialController(window, navigation)
+        try:
+            window.show()
+            self.assertTrue(QTest.qWaitForWindowExposed(window))
+            self.settings.set_spatial_mode_enabled(True)
+            for _ in range(100):
+                if controller.canvas and controller.canvas.property("presenting"):
+                    break
+                _qwait(50)
+            self.assertTrue(controller.canvas.property("presenting"))
+            controller.settle()
+            _qwait(100)
+            surface = controller.canvas
+            point = surface.mapFrom(window, controller.projected_position(card, card.rect().center()))
+            dpr = surface.devicePixelRatioF()
+            for mode in (ThemeMode.Dark, ThemeMode.Light, ThemeMode.Dark):
+                self.settings.set_theme_mode(mode)
+                # Read the very next frame, before queued QWidget updates.
+                image = surface.grabFramebuffer()
+                brightness = qGray(image.pixel(round(point.x() * dpr), round(point.y() * dpr)))
+                if mode == ThemeMode.Dark:
+                    self.assertLess(brightness, 128)
+                else:
+                    self.assertGreater(brightness, 180)
+        finally:
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_nested_opacity_keeps_color_across_paint_strips(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
             self.skipTest("requires actual GPU effect composition")
@@ -1182,6 +1226,16 @@ class GallerySpatialTest(unittest.TestCase):
         from fluentqt_gallery.spatial_controller import (
             _cache_plan, _preferred_extra_sampling, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES,
         )
+        gallery_panels = [QSizeF(260, 808), QSizeF(980, 808)]
+        separate = _cache_plan(gallery_panels, 2, 16384, max_extra=1.5)
+        packed = _cache_plan(gallery_panels, 2, 16384, max_extra=1.5, paint_sample_bytes=8)
+        self.assertEqual(packed[:2], separate[:2])
+        self.assertEqual(packed[2].height(), packed[1][1].height())
+        self.assertLess(separate[2].height(), separate[1][1].height())
+        self.assertLessEqual(sum(s.width() * s.height() for s in packed[1]) * 4
+                             + packed[2].width() * packed[2].height() * (8 * _PAINT_SAMPLES + 4),
+                             _CACHE_BUDGET_BYTES)
+        self.assertIsNone(_cache_plan(gallery_panels, 2, 16384, paint_sample_bytes=4))
         for dpr in (1., 1.25, 1.5, 1.75):
             self.assertEqual(_preferred_extra_sampling(dpr), 2)
         for dpr in (2., 2.5, 3.):
@@ -1219,6 +1273,61 @@ class GallerySpatialTest(unittest.TestCase):
         self.assertIsNone(_cache_plan(panels, 2, 16384, reserved_bytes=_CACHE_BUDGET_BYTES))
         self.assertIsNone(_cache_plan(panels, 2, 16384, reserved_bytes=-1))
 
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_data_grid_header_drag_preserves_selection_and_scroll(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires native projected pointer input")
+        window = GalleryWindow(startup_visuals=False)
+        try:
+            window.resize(1240, 850)
+            window.show()
+            window.raise_()
+            window.activateWindow()
+            window.navigate("data-grid", animated=False)
+            _qwait(600)
+            page = window._pages["data-grid"][1]
+            grid = next(view for view in page.findChildren(fluentqt.DataGrid)
+                        if view.model().rowCount() == 100000)
+            scroll = page if isinstance(page, QScrollArea) else page.findChild(QScrollArea)
+            self.assertIsNotNone(scroll)
+            scroll.verticalScrollBar().setValue(grid.mapTo(scroll.widget(), QPoint()).y() - 100)
+            self.settings.set_spatial_mode_enabled(True)
+            _qwait(600)
+            controller = window._spatial_controller
+            self.assertTrue(controller.canvas.property("presenting"))
+            controller.settle()
+            grid.setCurrentIndex(grid.model().index(50000, 1))
+            _qwait(100)
+            selected = [(i.row(), i.column()) for i in grid.selectionModel().selectedIndexes()]
+            vertical = grid.verticalScrollBar().value()
+            header = grid.horizontalHeader()
+            width = grid.columnWidth(0)
+            handle = QPoint(header.sectionViewportPosition(0) + width - 1, header.height() // 2)
+            point = controller.projected_position(header.viewport(), handle)
+            QTest.mousePress(window, Qt.LeftButton, pos=point)
+            for offset in range(8, 121, 8):
+                point = controller.projected_position(header.viewport(), handle + QPoint(offset, 0))
+                move = QMouseEvent(QEvent.MouseMove, QPointF(point), QPointF(point),
+                                   QPointF(window.mapToGlobal(point)), Qt.NoButton, Qt.LeftButton, Qt.NoModifier)
+                QApplication.sendEvent(window, move)
+                _qwait(20)
+            QTest.mouseRelease(window, Qt.LeftButton, pos=point)
+            _qwait(100)
+            self.assertGreater(grid.columnWidth(0), width + 100)
+            self.assertEqual(grid.verticalScrollBar().value(), vertical)
+            self.assertEqual([(i.row(), i.column()) for i in grid.selectionModel().selectedIndexes()], selected)
+            self.assertEqual((grid.currentIndex().row(), grid.currentIndex().column()), (50000, 1))
+            for theme in (ThemeMode.Light, ThemeMode.Dark):
+                window._set_theme_mode(int(theme))
+                _qwait(100)
+                self.assertEqual(grid.verticalScrollBar().value(), vertical)
+                output = os.environ.get("FLUENTQT_SPATIAL_EVIDENCE_DIR")
+                if output:
+                    Path(output).mkdir(parents=True, exist_ok=True)
+                    self.assertTrue(window.grab().save(str(Path(output) / f"data-grid-drag-{theme.name}.png")))
+        finally:
+            delete(window)
+
     def test_gallery_without_spatial_does_not_load_opengl(self):
         # Model an installed base binding: optional renderers are absent.
         code = '''
@@ -1241,7 +1350,7 @@ assert {entry.route_id for entry in ENTRIES} == {
 assert {route.id for route in ROUTES} == {
     route["id"] for route in CONTRACT["routes"]
     if route["id"] not in ("plugins", "spatial", "qml-bridge") and route["parent_id"] not in ("spatial", "qml-bridge")}
-assert len(ROUTES) == 110
+assert len(ROUTES) == len({route.id for route in ROUTES})
 assert "plugins" not in window._main_navigation_pane._route_items
 assert "plugins" not in window._top_main_navigation_pane._buttons
 assert "PySide6.QtOpenGLWidgets" not in sys.modules

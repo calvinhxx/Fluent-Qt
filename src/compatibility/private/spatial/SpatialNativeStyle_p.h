@@ -30,6 +30,12 @@ public:
         // QMacStyle delegates PE_Widget to QCommonStyle, where it paints nothing.
         if (isGpu(painter) && element == PE_Widget)
             return;
+        // These item-view backgrounds already use QCommonStyle's QPainter path.
+        // zh_CN: 表格行和单元格背景本就使用 QPainter，无需经由 Cocoa 位图中转。
+        if (isGpu(painter) && (element == PE_PanelItemViewRow || element == PE_PanelItemViewItem)) {
+            QCommonStyle::drawPrimitive(element, option, painter, widget);
+            return;
+        }
         paintNative(option, painter, [=](const QStyleOption* local, QPainter* target) {
             QProxyStyle::drawPrimitive(element, local, target, widget);
         });
@@ -40,6 +46,13 @@ public:
         QPainter* painter,
         const QWidget* widget = nullptr) const override
     {
+        // Keep text and icons on the GPU. Nested native indicators still come
+        // through this proxy and retain their bounded Cocoa fallback.
+        // zh_CN: 文字和图标直接走 GPU；嵌套的原生指示器仍由代理使用有界位图绘制。
+        if (isGpu(painter) && element == CE_ItemViewItem) {
+            QCommonStyle::drawControl(element, option, painter, widget);
+            return;
+        }
         if (isGpu(painter) && element == CE_ShapedFrame) {
             const auto* frame = qstyleoption_cast<const QStyleOptionFrame*>(option);
             if (frame && frame->frameShape == QFrame::NoFrame)
@@ -72,7 +85,14 @@ private:
         // Cocoa's NSView drawing ignores painter translations. Localize the option
         // itself for common primitives, preserving the concrete option's fields.
         // Other option types retain their original origin and native behavior.
-        if (const auto* frame = qstyleoption_cast<const QStyleOptionFrame*>(option))
+        // Item-view coordinates can be far from the viewport origin. Rasterizing
+        // that empty prefix for every cell makes resizing cost grow across a row.
+        // zh_CN: 单元格坐标可能远离原点；仅绘制单元格本身，避免调整列宽时反复上传大片透明像素。
+        if (const auto* item = qstyleoption_cast<const QStyleOptionViewItem*>(option))
+            paintLocal(*item, painter, paint);
+        else if (const auto* focus = qstyleoption_cast<const QStyleOptionFocusRect*>(option))
+            paintLocal(*focus, painter, paint);
+        else if (const auto* frame = qstyleoption_cast<const QStyleOptionFrame*>(option))
             paintLocal(*frame, painter, paint);
         else if (const auto* button = qstyleoption_cast<const QStyleOptionButton*>(option))
             paintLocal(*button, painter, paint);

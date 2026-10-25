@@ -133,11 +133,12 @@ def _preferred_extra_sampling(native_dpr):
 
 def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_BUDGET_BYTES,
                 paint_samples=_PAINT_SAMPLES, backdrop_bytes=0, glyph_scratch_bytes=0,
-                reserved_bytes=0):
+                reserved_bytes=0, paint_sample_bytes=12):
     if (not math.isfinite(native_dpr) or native_dpr <= 0 or max_dimension <= 0
             or budget <= 0 or paint_samples <= 1 or backdrop_bytes < 0 or backdrop_bytes >= budget
             or glyph_scratch_bytes < 0 or glyph_scratch_bytes >= budget - backdrop_bytes
-            or reserved_bytes < 0 or reserved_bytes >= budget - backdrop_bytes - glyph_scratch_bytes):
+            or reserved_bytes < 0 or reserved_bytes >= budget - backdrop_bytes - glyph_scratch_bytes
+            or paint_sample_bytes not in (8, 12)):
         return None
     for extra in (2., 1.75, 1.5, 1.25, 1.):
         if extra > max_extra:
@@ -160,7 +161,7 @@ def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_B
         if len(sizes) != len(panels) or paint_size.isEmpty():
             continue
         texture_bytes = pixels * _CACHE_BYTES_PER_PIXEL
-        row_bytes = paint_size.width() * (12 * paint_samples + 4)
+        row_bytes = paint_size.width() * (paint_sample_bytes * paint_samples + 4)
         rows = (budget - backdrop_bytes - glyph_scratch_bytes - reserved_bytes - texture_bytes) // row_bytes
         if rows < min(32, paint_size.height()):
             continue
@@ -219,6 +220,9 @@ class _RhiSurface(_native_fluent._SpatialTextureHost):
     def update(self):
         self.requestFrame()
 
+    def request_frame(self, with_input=False):
+        self.requestFrame()
+
     def clear_frame_caches(self):
         self.clearFrameCaches()
 
@@ -263,6 +267,7 @@ class _Surface(QOpenGLWidget):
         super().__init__(parent)
         from .particle_compositor import GalleryParticleCompositor
         self.owner = owner
+        self.input_frame_requested = False
         self.particles = GalleryParticleCompositor(self, getattr(owner, "session", None))
         self.particles.frameRequested.connect(self.update)
         self.particles.staticContentInvalidated.connect(owner._capture_content)
@@ -300,6 +305,11 @@ class _Surface(QOpenGLWidget):
         fmt.setAlphaBufferSize(8)
         self.setFormat(fmt)
 
+    def request_frame(self, with_input=False):
+        if not self.input_frame_requested:
+            self.input_frame_requested = with_input
+            self.update()
+
     @Slot(str)
     def qml_rendering_failed(self, message):
         self.setProperty(_QML_FAILURE_PENDING, True)
@@ -326,6 +336,7 @@ class _Surface(QOpenGLWidget):
         self.cache_failure_pending = False
         self.max_dimension = 0
         self.paint_samples = 0
+        self.paint_sample_bytes = 12
         context.aboutToBeDestroyed.connect(self.release_context)
         # No controller/context capture: this also runs if Qt has already
         # invalidated the Python QOpenGLWidget receiver during destruction.
@@ -342,6 +353,9 @@ class _Surface(QOpenGLWidget):
         sample_format.setSamples(_PAINT_SAMPLES)
         probe = QOpenGLFramebufferObject(QSize(1, 1), sample_format)
         self.paint_samples = probe.format().samples() if probe.isValid() else 0
+        if probe.isValid() and probe.bind():
+            self.paint_sample_bytes = _native_fluent._SpatialTextureHost.currentPaintSampleBytes()
+            probe.release()
         del probe
         self.owner.renderer_initialized = True
         self.owner.queue_check()
@@ -350,6 +364,7 @@ class _Surface(QOpenGLWidget):
         self.has_presented_frame = False
 
     def clear_frame_caches(self):
+        self.input_frame_requested = False
         self.has_presented_frame = False
         self.makeCurrent()
         self.particles.release()
@@ -426,7 +441,7 @@ class _Surface(QOpenGLWidget):
             plan = _cache_plan(panels, self.devicePixelRatioF(), self.max_dimension,
                                min(self.max_extra, extra_sampling), paint_samples=self.paint_samples,
                                backdrop_bytes=backdrop_bytes,
-                               glyph_scratch_bytes=glyph_scratch)
+                               glyph_scratch_bytes=glyph_scratch, paint_sample_bytes=self.paint_sample_bytes)
             if plan is None:
                 return False
             for extra in (2., 1.75, 1.5, 1.25, 1.):
@@ -435,7 +450,7 @@ class _Surface(QOpenGLWidget):
                 candidate = _cache_plan(
                     panels, self.devicePixelRatioF(), self.max_dimension, extra,
                     paint_samples=self.paint_samples, backdrop_bytes=backdrop_bytes,
-                    glyph_scratch_bytes=glyph_scratch)
+                    glyph_scratch_bytes=glyph_scratch, paint_sample_bytes=self.paint_sample_bytes)
                 if candidate is None or candidate[0] != self.devicePixelRatioF() * extra:
                     continue
                 particle_bytes = self.particles.requiredBytes(
@@ -450,7 +465,7 @@ class _Surface(QOpenGLWidget):
                     panels, self.devicePixelRatioF(), self.max_dimension, extra,
                     paint_samples=self.paint_samples,
                     backdrop_bytes=backdrop_bytes, glyph_scratch_bytes=glyph_scratch,
-                    reserved_bytes=reserved_bytes)
+                    reserved_bytes=reserved_bytes, paint_sample_bytes=self.paint_sample_bytes)
                 # Highest joint level; output/native density never changes.
                 if joint is not None and joint[0] == candidate[0]:
                     plan = joint
@@ -506,7 +521,7 @@ class _Surface(QOpenGLWidget):
         if self.plan is None:
             return total
         total += sum(size.width() * size.height() * 4 for size in self.plan[1])
-        total += self.plan[2].width() * self.plan[2].height() * (12 * self.paint_samples + 4)
+        total += self.plan[2].width() * self.plan[2].height() * (self.paint_sample_bytes * self.paint_samples + 4)
         if needs_native_glyph_coverage(self.devicePixelRatioF()):
             total += _GLYPH_SCRATCH_BYTES
         return total
@@ -535,11 +550,14 @@ class _Surface(QOpenGLWidget):
             paint_height = paint_bottom - paint_top
             self.paint_target.bind()
             gl = self.context().functions()
-            gl.glDisable(0x0C11)
+            # Clear only the strip and its guard pixels in the shared target.
+            gl.glEnable(0x0C11)
+            gl.glScissor(0, 0, pixels.width(), paint_height)
             gl.glColorMask(True, True, True, True)
             gl.glStencilMask(0xFFFFFFFF)
             gl.glClearColor(0, 0, 0, 0)
             gl.glClear(0x4000 | 0x0400)
+            gl.glDisable(0x0C11)
             device = QOpenGLPaintDevice(QSize(pixels.width(), paint_height))
             device.setDevicePixelRatio(dpr)
             glyph_device = GlyphPaintDevice(device, self.devicePixelRatioF(),
@@ -661,6 +679,7 @@ class _Surface(QOpenGLWidget):
         painter.endNativePainting()
 
     def paintGL(self):
+        self.input_frame_requested = False
         gl = self.context().functions()
         self.invalidate_backdrop()
         if self.property("presenting"):
@@ -1066,14 +1085,14 @@ class GallerySpatialController(QObject):
     def _capture_content(self):
         self.content_revision += 1
         if _alive(self.canvas):
-            self.canvas.update()
+            self.canvas.request_frame()
 
     def _capture_navigation(self):
         self.navigation_revision += 1
         self.content_revision += 1
         self.layout()
         if _alive(self.canvas):
-            self.canvas.update()
+            self.canvas.request_frame()
 
     def render_widgets(self, painter, navigation, region):
         # Widgets paint directly into the GPU cache. Suppress the other panel's effect
@@ -1193,6 +1212,9 @@ class GallerySpatialController(QObject):
     @Slot()
     def refresh(self, *args):
         self.backdrop_dirty = True
+        # The new material and its widget textures must use the same theme.
+        self.navigation_revision += 1
+        self.content_revision += 1
         if fluentqt.current_theme() == fluentqt.Theme.HighContrast:
             self.settings.set_spatial_mode_enabled(False)
         self.apply_mode(self.settings.spatial_mode_enabled)
@@ -1406,7 +1428,7 @@ class GallerySpatialController(QObject):
                 self.window.render(painter, QPoint(), QRegion(), QWidget.RenderFlags())
                 painter.end()
         if not self.canvas.property("presenting"):
-            self.canvas.update()
+            self.canvas.request_frame()
             return
         self.layout()
         self.publish_presentation_transforms(True)
@@ -1415,7 +1437,7 @@ class GallerySpatialController(QObject):
         self.canvas.setProperty("galleryContentRotation", -(3. if self.top else 5.) * self.progress)
         self.canvas.setProperty("galleryPointerTilt", self.pointer)
         self.canvas.setProperty("galleryDepthProgress", self.progress)
-        self.canvas.update()
+        self.canvas.request_frame()
 
     def publish_presentation_transforms(self, enabled):
         if not _alive(self.navigation):
@@ -1709,6 +1731,9 @@ class GallerySpatialController(QObject):
                     self.grabbed = target
                 forwarded = QMouseEvent(kind, local, target.mapTo(self.window, local), source_global,
                                         event.button(), event.buttons(), event.modifiers(), event.source())
+                # Compose the drag's source update in this frame, not a later one.
+                if (event.buttons() != Qt.NoButton or event.button() != Qt.NoButton) and _alive(self.canvas):
+                    self.canvas.request_frame(with_input=True)
                 QApplication.sendEvent(target, forwarded)
                 if kind == QEvent.MouseButtonRelease:
                     self.grabbed = None

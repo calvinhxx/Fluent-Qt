@@ -2075,6 +2075,16 @@ TEST_F(GallerySpatialTest, MacTrafficLightsRemainCenteredAcrossSpatialNavigation
 TEST_F(GallerySpatialTest, CacheBudgetPreservesDensityAndRespectsGpuLimits)
 {
     using namespace spatial_render;
+    const std::array<QSizeF, 2> galleryPanels = {QSizeF(260, 808), QSizeF(980, 808)};
+    const auto separate = planCaches(galleryPanels, 2, 16384, 1.5);
+    const auto packed = planCaches(galleryPanels, 2, 16384, 1.5, kCacheBudgetBytes, kPaintSamples, 0, 0, 0, 8);
+    ASSERT_TRUE(packed.valid());
+    EXPECT_EQ(packed.dpr, separate.dpr);
+    EXPECT_EQ(packed.sizes, separate.sizes);
+    EXPECT_EQ(packed.paintSize.height(), packed.sizes[1].height());
+    EXPECT_LT(separate.paintSize.height(), separate.sizes[1].height());
+    EXPECT_LE(packed.estimatedBytes, kCacheBudgetBytes);
+    EXPECT_FALSE(planCaches(galleryPanels, 2, 16384, 1.5, kCacheBudgetBytes, kPaintSamples, 0, 0, 0, 4).valid());
     for (qreal dpr : {1., 1.25, 1.5, 1.75})
         EXPECT_EQ(preferredExtraSampling(dpr), 2);
     for (qreal dpr : {2., 2.5, 3.}) {
@@ -3771,6 +3781,7 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
     class NativeContent final : public QWidget {
     public:
         qint64 rasterPixels = 0;
+        QVector<qint64> itemRasterPixels;
         void paintEvent(QPaintEvent*) override
         {
             QPainter painter(this);
@@ -3782,6 +3793,28 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
             style()->drawPrimitive(QStyle::PE_PanelLineEdit, &option, &painter, this);
             if (painter.paintEngine()->type() == QPaintEngine::OpenGL2)
                 rasterPixels = style()->property("galleryLastNativeRasterPixels").toLongLong();
+            itemRasterPixels.clear();
+            for (const auto& origin : {QPoint(40, 220), QPoint(460, 290)}) {
+                QStyleOptionViewItem item;
+                item.initFrom(this);
+                item.rect = QRect(origin, QSize(180, 36));
+                item.features = QStyleOptionViewItem::HasDisplay;
+                if (origin.x() < 100)
+                    item.features |= QStyleOptionViewItem::HasCheckIndicator;
+                item.text = QStringLiteral("Project 119");
+                item.checkState = Qt::Checked;
+                item.displayAlignment = Qt::AlignVCenter | Qt::AlignLeading;
+                item.direction = origin.x() > 100 ? Qt::RightToLeft : Qt::LeftToRight;
+                item.state |= QStyle::State_Selected;
+                style()->setProperty("galleryLastNativeRasterPixels", 0);
+                style()->drawPrimitive(QStyle::PE_PanelItemViewRow, &item, &painter, this);
+                if (painter.paintEngine()->type() == QPaintEngine::OpenGL2)
+                    itemRasterPixels.append(style()->property("galleryLastNativeRasterPixels").toLongLong());
+                style()->setProperty("galleryLastNativeRasterPixels", 0);
+                style()->drawControl(QStyle::CE_ItemViewItem, &item, &painter, this);
+                if (painter.paintEngine()->type() == QPaintEngine::OpenGL2)
+                    itemRasterPixels.append(style()->property("galleryLastNativeRasterPixels").toLongLong());
+            }
         }
     };
     auto* content = new NativeContent;
@@ -3827,7 +3860,8 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
     motion->setCurrentTime(0);
     QTest::qWait(100);
     const QImage flat = surface->grabFramebuffer();
-    for (const QRect region : {QRect(452, 352, 176, 48), QRect(36, 136, 248, 44)}) {
+    for (const QRect region :
+        {QRect(452, 352, 176, 48), QRect(36, 136, 248, 44), QRect(36, 216, 188, 44), QRect(456, 286, 188, 44)}) {
         int nativeInk = 0, gpuInk = 0;
         for (int y = region.top(); y < region.bottom(); ++y)
             for (int x = region.left(); x < region.right(); ++x) {
@@ -3845,6 +3879,13 @@ TEST_F(GallerySpatialTest, MacNativeStyleControlsKeepTheirPixelsInGpuCache)
         EXPECT_GT(content->rasterPixels, 0);
         // QWidget::render retains the widget's native device density for native styles.
         EXPECT_EQ(content->rasterPixels, qCeil(168 * dpr) * qCeil(40 * dpr));
+        ASSERT_EQ(content->itemRasterPixels.size(), 4);
+        EXPECT_EQ(content->itemRasterPixels.at(0), 0) << "Row backgrounds must stay on GPU";
+        EXPECT_GT(content->itemRasterPixels.at(1), 0) << "Native check indicators keep their fallback";
+        EXPECT_LT(content->itemRasterPixels.at(1), qCeil(188 * dpr) * qCeil(44 * dpr))
+            << "The native indicator raster must be smaller than its cell";
+        EXPECT_EQ(content->itemRasterPixels.at(2), 0);
+        EXPECT_EQ(content->itemRasterPixels.at(3), 0) << "Plain item text must stay on GPU";
     }
     if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
         contentReference.save(dir + "/native-content-2d.png");

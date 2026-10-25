@@ -87,6 +87,9 @@ TEST(GallerySpatialBackdropTest, NativeBackdropIsReusedRefreshedAndReleased)
     window.resize(1200, 800);
     auto* navigation = new navigation::NavigationView(&window);
     navigation->resize(window.size());
+    auto* themedCard = new layout::Card;
+    themedCard->setAppearance(layout::Card::Layer);
+    navigation->contentHost()->insertPage(0, themedCard);
     GallerySpatialController controller(&window, navigation);
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
@@ -121,6 +124,14 @@ TEST(GallerySpatialBackdropTest, NativeBackdropIsReusedRefreshedAndReleased)
     EXPECT_EQ(controller.renderingStatistics()["backdropUploads"].toLongLong(), uploads);
     window.top = Qt::green;
     settings.setThemeMode(GallerySettings::ThemeMode::Dark);
+    const QPoint cardCenter =
+        surface->mapFrom(&window, controller.projectedPosition(themedCard, themedCard->rect().center()))
+        * surface->devicePixelRatioF();
+    // No event-loop drain: the next composed frame must not combine the new
+    // material with cached widgets from the previous theme.
+    const auto firstDarkFrame = surface->grabFramebuffer();
+    ASSERT_TRUE(firstDarkFrame.rect().contains(cardCenter));
+    EXPECT_LT(qGray(firstDarkFrame.pixel(cardCenter)), 128);
     ASSERT_TRUE(QTest::qWaitFor([&] {
         return controller.renderingStatistics()["backdropUploads"].toLongLong() > uploads;
     }));
