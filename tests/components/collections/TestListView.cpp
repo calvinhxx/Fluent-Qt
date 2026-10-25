@@ -40,8 +40,8 @@ int defaultListRowHeight()
  * fluent::FluentElement）。 */
 void attachFluentDelegate(ListView* lv, int rowHeight = defaultListRowHeight())
 {
-    lv->setItemDelegate(new listview_test::FluentListItemDelegate(
-        static_cast<fluent::FluentElement*>(lv), rowHeight, lv, lv));
+    lv->setItemDelegate(
+        new listview_test::FluentListItemDelegate(static_cast<fluent::FluentElement*>(lv), rowHeight, lv, lv));
     lv->setUniformItemSizes(true);
 }
 
@@ -138,8 +138,7 @@ public:
         return QSize(180, defaultListRowHeight());
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (index.isValid())
             m_states[index.row()] = option.state;
@@ -178,23 +177,21 @@ QImage renderViewport(QWidget* viewport)
 
 bool isNearColor(const QColor& sample, const QColor& target, int tolerance = 72)
 {
-    return sample.alpha() > 96 && qAbs(sample.red() - target.red()) <= tolerance &&
-           qAbs(sample.green() - target.green()) <= tolerance &&
-           qAbs(sample.blue() - target.blue()) <= tolerance;
+    return sample.alpha() > 96 && qAbs(sample.red() - target.red()) <= tolerance
+        && qAbs(sample.green() - target.green()) <= tolerance && qAbs(sample.blue() - target.blue()) <= tolerance;
 }
 
 IndicatorListView* createIndicatorListView(QWidget* parent,
-                                           QListView::Flow flow = QListView::TopToBottom,
-                                           const QStringList& rows = QStringList{})
+    QListView::Flow flow = QListView::TopToBottom,
+    const QStringList& rows = QStringList{})
 {
     auto* lv = new IndicatorListView(parent);
     lv->setGeometry(10, 10, 460, flow == QListView::LeftToRight ? 96 : 220);
     lv->setFlow(flow);
     lv->setWrapping(false);
     lv->setSelectedIndicatorAnimationEnabled(false);
-    attachStringListModel(
-        lv, rows.isEmpty() ? QStringList{"Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"}
-                           : rows);
+    attachStringListModel(lv,
+        rows.isEmpty() ? QStringList{"Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"} : rows);
     return lv;
 }
 
@@ -501,8 +498,8 @@ TEST_F(ListViewTest, PressedPointerMoveUpdatesHoverVisualState)
     EXPECT_TRUE(delegate->stateFor(1) & QStyle::State_Sunken);
 
     delegate->clearStates();
-    FLUENT_MAKE_MOUSE_EVENT(moveEvent, QEvent::MouseMove, lv->viewport(), row2, Qt::NoButton,
-                            Qt::LeftButton, Qt::NoModifier);
+    FLUENT_MAKE_MOUSE_EVENT(moveEvent, QEvent::MouseMove, lv->viewport(), row2, Qt::NoButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(lv->viewport(), &moveEvent);
     lv->viewport()->update();
     QApplication::processEvents();
@@ -523,18 +520,15 @@ TEST_F(ListViewTest, MultiplePointerSelectionTogglesRowsOnRelease)
     window->show();
     QTest::qWait(50);
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      lv->exposedVisualRect(1).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier, lv->exposedVisualRect(1).center());
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedRows(), QList<int>({1}));
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      lv->exposedVisualRect(3).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier, lv->exposedVisualRect(3).center());
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedRows(), QList<int>({1, 3}));
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      lv->exposedVisualRect(1).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier, lv->exposedVisualRect(1).center());
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedRows(), QList<int>({3}));
 }
@@ -555,13 +549,11 @@ TEST_F(ListViewTest, PointerSelectionIgnoresDisabledRows)
     window->show();
     QTest::qWait(50);
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      lv->exposedVisualRect(1).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier, lv->exposedVisualRect(1).center());
     QApplication::processEvents();
     EXPECT_TRUE(lv->selectedRows().isEmpty());
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      lv->exposedVisualRect(0).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier, lv->exposedVisualRect(0).center());
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedRows(), QList<int>({0}));
 }
@@ -576,18 +568,15 @@ TEST_F(ListViewTest, ExtendedPointerSelectionSupportsControlAndShift)
     window->show();
     QTest::qWait(50);
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      lv->exposedVisualRect(1).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier, lv->exposedVisualRect(1).center());
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedRows(), QList<int>({1}));
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::ShiftModifier,
-                      lv->exposedVisualRect(3).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::ShiftModifier, lv->exposedVisualRect(3).center());
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedRows(), QList<int>({1, 2, 3}));
 
-    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::ControlModifier,
-                      lv->exposedVisualRect(2).center());
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::ControlModifier, lv->exposedVisualRect(2).center());
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedRows(), QList<int>({1, 3}));
 }
@@ -842,8 +831,8 @@ TEST_F(ListViewTest, HorizontalScrollBarVisibleWhenNeeded)
     lv->setFlow(QListView::LeftToRight);
     lv->setFixedSize(100, 60);
     // Use uniform item sizes for horizontal items
-    auto* m = new QStringListModel(
-        {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ"}, lv);
+    auto* m = new QStringListModel({"AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ"},
+        lv);
     lv->setModel(m);
     layout->addWidget(lv);
     window->show();
@@ -1115,8 +1104,7 @@ TEST_F(ListViewTest, DefaultDelegateKeepsTextClearOfSelectionIndicator)
     const QRect row = lv->exposedVisualRect(0).intersected(image.rect());
     const QColor textColor = lv->themeColors().textPrimary;
     int firstTextPixelX = -1;
-    for (int x = qMax(row.left(), qCeil(indicator.right()) + 1);
-         x <= row.right() && firstTextPixelX < 0; ++x) {
+    for (int x = qMax(row.left(), qCeil(indicator.right()) + 1); x <= row.right() && firstTextPixelX < 0; ++x) {
         for (int y = row.top(); y <= row.bottom(); ++y) {
             if (isNearColor(QColor::fromRgba(image.pixel(x, y)), textColor)) {
                 firstTextPixelX = x;
@@ -1159,8 +1147,7 @@ TEST_F(ListViewTest, Contract_SelectedIndicatorPaintsAccentInLightAndDark)
         listView->setSelectedIndex(1);
         showWindowAndProcess(window);
 
-        const QRect indicatorRect =
-            listView->selectedIndicatorRect().toAlignedRect().adjusted(-1, -1, 1, 1);
+        const QRect indicatorRect = listView->selectedIndicatorRect().toAlignedRect().adjusted(-1, -1, 1, 1);
         const QImage image = renderViewport(listView->viewport());
         ASSERT_FALSE(image.isNull()) << "theme=" << theme;
 
@@ -1168,8 +1155,7 @@ TEST_F(ListViewTest, Contract_SelectedIndicatorPaintsAccentInLightAndDark)
         const QRect bounded = indicatorRect.intersected(image.rect());
         for (int y = bounded.top(); y <= bounded.bottom() && !foundAccent; ++y) {
             for (int x = bounded.left(); x <= bounded.right(); ++x) {
-                if (isNearColor(QColor::fromRgba(image.pixel(x, y)),
-                                listView->themeColors().accentDefault)) {
+                if (isNearColor(QColor::fromRgba(image.pixel(x, y)), listView->themeColors().accentDefault)) {
                     foundAccent = true;
                     break;
                 }
@@ -1296,8 +1282,7 @@ TEST_F(ListViewTest, SelectedIndicatorTracksSelectionSources)
     expectIndicatorOnRow(1);
 
     const QModelIndex directIndex = lv->model()->index(4, 0);
-    lv->selectionModel()->select(directIndex,
-                                 QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    lv->selectionModel()->select(directIndex, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     QApplication::processEvents();
     EXPECT_EQ(lv->selectedIndex(), 4);
     expectIndicatorOnRow(4);
@@ -1354,10 +1339,8 @@ TEST_F(ListViewTest, HorizontalMultiSelectionUsesBottomRevealIndicators)
     lv->setSelectionMode(SelectionMode::Multiple);
     showWindowAndProcess(window);
 
-    lv->selectionModel()->select(lv->model()->index(0, 0),
-                                 QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    lv->selectionModel()->select(lv->model()->index(2, 0),
-                                 QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    lv->selectionModel()->select(lv->model()->index(0, 0), QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    lv->selectionModel()->select(lv->model()->index(2, 0), QItemSelectionModel::Select | QItemSelectionModel::Rows);
     QApplication::processEvents();
 
     const QRectF full = lv->selectedIndicatorRectForRow(0, 1.0);
@@ -1427,9 +1410,8 @@ TEST_F(ListViewTest, SelectedIndicatorRefreshesOnLayoutAndThemeChanges)
     EXPECT_EQ(lv->selectedIndicatorMotionDirection(), ListView::IndicatorMotionDirection::None);
 
     const auto previousTheme = fluent::FluentElement::currentTheme();
-    fluent::FluentElement::setTheme(previousTheme == fluent::FluentElement::Light
-                                        ? fluent::FluentElement::Dark
-                                        : fluent::FluentElement::Light);
+    fluent::FluentElement::setTheme(
+        previousTheme == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
     QApplication::processEvents();
     EXPECT_FALSE(lv->selectedIndicatorRect().isEmpty());
     fluent::FluentElement::setTheme(previousTheme);
@@ -1444,8 +1426,8 @@ TEST_F(ListViewTest, SelectedIndicatorSettlesAfterDragReorder)
     lv->setSelectedIndicatorAnimationEnabled(false);
 
     auto* stdModel = new QStandardItemModel(lv);
-    for (const QString& text : {QStringLiteral("High"), QStringLiteral("Medium"),
-                                QStringLiteral("Low"), QStringLiteral("None")}) {
+    for (const QString& text :
+        {QStringLiteral("High"), QStringLiteral("Medium"), QStringLiteral("Low"), QStringLiteral("None")}) {
         stdModel->appendRow(new QStandardItem(text));
     }
     lv->setModel(stdModel);
@@ -1607,8 +1589,8 @@ void prepareWheelLayout(ListView* lv)
     if (QTest::qWaitFor([bar] { return bar->maximum() > bar->minimum(); }, 1000))
         return ::testing::AssertionSuccess();
     return ::testing::AssertionFailure()
-           << "Expected populated view to scroll after layout; range=" << bar->minimum() << ".."
-           << bar->maximum() << ", pageStep=" << bar->pageStep();
+        << "Expected populated view to scroll after layout; range=" << bar->minimum() << ".." << bar->maximum()
+        << ", pageStep=" << bar->pageStep();
 }
 
 ListView* makeScrollableListView(QWidget* parent, int rowCount = 100)
@@ -1666,13 +1648,11 @@ void scrollToTop(ListView* lv)
     QTest::qWait(10);
 }
 
-QWheelEvent makeWheelEvent(QWidget* target, QPoint pixelDelta, QPoint angleDelta,
-                           Qt::ScrollPhase phase)
+QWheelEvent makeWheelEvent(QWidget* target, QPoint pixelDelta, QPoint angleDelta, Qt::ScrollPhase phase)
 {
     const QPointF pos = target->rect().center();
     const QPointF globalPos = target->mapToGlobal(pos.toPoint());
-    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta, Qt::NoButton, Qt::NoModifier, phase,
-                       false);
+    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta, Qt::NoButton, Qt::NoModifier, phase, false);
 }
 
 void sendWheel(QWidget* target, QPoint pixelDelta, QPoint angleDelta, Qt::ScrollPhase phase)
@@ -1729,8 +1709,7 @@ TEST_F(ListViewTest, ScrollChainingPropertyControlsBoundaryWheel)
     lv->setScrollChainingEnabled(true);
     EXPECT_EQ(spy.count(), 1);
 
-    QWheelEvent chainedWheel =
-        makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
+    QWheelEvent chainedWheel = makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
     chainedWheel.setAccepted(false);
     QApplication::sendEvent(lv->viewport(), &chainedWheel);
     QTest::qWait(20);
@@ -1738,8 +1717,7 @@ TEST_F(ListViewTest, ScrollChainingPropertyControlsBoundaryWheel)
     EXPECT_EQ(lv->verticalScrollBar()->value(), maxValue);
 
     lv->setScrollChainingEnabled(false);
-    QWheelEvent containedWheel =
-        makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
+    QWheelEvent containedWheel = makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
     containedWheel.setAccepted(false);
     QApplication::sendEvent(lv->viewport(), &containedWheel);
     QTest::qWait(20);
@@ -1751,8 +1729,7 @@ TEST_F(ListViewTest, WheelPassesThroughWhenContentFits)
     auto* lv = makeScrollableListView(window, 2);
     ASSERT_EQ(lv->verticalScrollBar()->maximum(), lv->verticalScrollBar()->minimum());
 
-    QWheelEvent wheel =
-        makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
+    QWheelEvent wheel = makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
     wheel.setAccepted(false);
     QApplication::sendEvent(lv->viewport(), &wheel);
     QTest::qWait(20);
@@ -1773,8 +1750,7 @@ TEST_F(ListViewTest, WindowsTouchpadClusterScroll)
         QTest::qWait(20);
     }
 
-    EXPECT_GT(lv->verticalScrollBar()->value(), before)
-        << "Windows touchpad cluster should scroll smoothly";
+    EXPECT_GT(lv->verticalScrollBar()->value(), before) << "Windows touchpad cluster should scroll smoothly";
 }
 
 // 5.2 Mac RDP → Windows 单次轻拨：5 个小角度事件，30ms 间隔 → 边界不反复 flap
@@ -1795,8 +1771,7 @@ TEST_F(ListViewTest, RdpHighFreqNoBounceFlap)
     QTest::qWait(50);
 
     // 要点：bounce 不应被反复触发；滚动条保持在边界且后续反向输入仍可恢复。
-    EXPECT_EQ(lv->verticalScrollBar()->value(), sbVal)
-        << "Scrollbar should stay pinned at boundary";
+    EXPECT_EQ(lv->verticalScrollBar()->value(), sbVal) << "Scrollbar should stay pinned at boundary";
 }
 
 TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailStartsBounceAndSettles)
@@ -1828,8 +1803,9 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailDoesNotExtendActiveBounce)
 
     sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
     const int firstDelta = lv->exposedVerticalOffset() - beforeOffset;
-    ASSERT_GT(firstDelta, 0) << "Pre-condition: boundary input should create "
-                                "visible overscroll feedback";
+    ASSERT_GT(firstDelta, 0)
+        << "Pre-condition: boundary input should create "
+           "visible overscroll feedback";
 
     for (int i = 0; i < 4; ++i) {
         sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
@@ -1837,8 +1813,9 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailDoesNotExtendActiveBounce)
     }
 
     const int tailDelta = lv->exposedVerticalOffset() - beforeOffset;
-    EXPECT_LE(tailDelta, firstDelta) << "Same-direction boundary tails should "
-                                        "not extend or restart the active bounce";
+    EXPECT_LE(tailDelta, firstDelta)
+        << "Same-direction boundary tails should "
+           "not extend or restart the active bounce";
 
     QTest::qWait(400);
     EXPECT_EQ(lv->exposedVerticalOffset(), beforeOffset)
@@ -1944,8 +1921,7 @@ TEST_F(ListViewTest, PhaseBasedOverscrollSettlesWhenBackendOmitsScrollEnd)
     const int beforeOffset = lv->exposedVerticalOffset();
 
     sendWheel(lv->viewport(), QPoint(0, -40), QPoint(0, 0), Qt::ScrollUpdate);
-    ASSERT_GT(lv->exposedVerticalOffset(), beforeOffset)
-        << "A boundary gesture should expose elastic feedback";
+    ASSERT_GT(lv->exposedVerticalOffset(), beforeOffset) << "A boundary gesture should expose elastic feedback";
 
     QTest::qWait(500);
     EXPECT_EQ(lv->exposedVerticalOffset(), beforeOffset)
@@ -1979,8 +1955,7 @@ TEST_F(ListViewTest, NoPhasePixelDirectScroll)
     sendWheel(lv->viewport(), QPoint(0, -50), QPoint(0, -120), Qt::NoScrollPhase);
     QTest::qWait(20);
 
-    EXPECT_GT(lv->verticalScrollBar()->value(), before)
-        << "NoPhasePixel should scroll using pixelDelta directly";
+    EXPECT_GT(lv->verticalScrollBar()->value(), before) << "NoPhasePixel should scroll using pixelDelta directly";
 }
 
 // 5.6 PhaseBased 事件可打断 bounce

@@ -31,10 +31,8 @@ struct TargetResolution {
 
 QJsonObject rectObject(const QRect& rect)
 {
-    return {{QStringLiteral("x"), rect.x()},
-            {QStringLiteral("y"), rect.y()},
-            {QStringLiteral("width"), rect.width()},
-            {QStringLiteral("height"), rect.height()}};
+    return {{QStringLiteral("x"), rect.x()}, {QStringLiteral("y"), rect.y()}, {QStringLiteral("width"), rect.width()},
+        {QStringLiteral("height"), rect.height()}};
 }
 
 QString widgetPath(QWidget* widget, QWidget* root)
@@ -70,8 +68,7 @@ TargetResolution resolveTarget(QWidget* root, const QString& selector, bool allo
         // editor rather than only the compound control shell.
         const auto descendants = focused->findChildren<QWidget*>();
         for (QWidget* candidate : descendants) {
-            if (candidate->hasFocus() &&
-                (focused == candidate || focused->isAncestorOf(candidate))) {
+            if (candidate->hasFocus() && (focused == candidate || focused->isAncestorOf(candidate))) {
                 focused = candidate;
             }
         }
@@ -88,9 +85,8 @@ TargetResolution resolveTarget(QWidget* root, const QString& selector, bool allo
         return {nullptr, QStringLiteral("No widget has objectName '%1'.").arg(selector)};
     }
     if (matches.size() > 1) {
-        return {nullptr, QStringLiteral("objectName '%1' is ambiguous (%2 matches).")
-                             .arg(selector)
-                             .arg(matches.size())};
+        return {nullptr,
+            QStringLiteral("objectName '%1' is ambiguous (%2 matches).").arg(selector).arg(matches.size())};
     }
     return {matches.first(), QString()};
 }
@@ -203,13 +199,11 @@ QPoint localPosition(QWidget* target, const QJsonObject& step, QString& error)
         return {};
     }
     const QJsonObject position = positionValue.toObject();
-    if (!position.value(QStringLiteral("x")).isDouble() ||
-        !position.value(QStringLiteral("y")).isDouble()) {
+    if (!position.value(QStringLiteral("x")).isDouble() || !position.value(QStringLiteral("y")).isDouble()) {
         error = QStringLiteral("position.x and position.y must be numbers.");
         return {};
     }
-    const QPoint point(position.value(QStringLiteral("x")).toInt(),
-                       position.value(QStringLiteral("y")).toInt());
+    const QPoint point(position.value(QStringLiteral("x")).toInt(), position.value(QStringLiteral("y")).toInt());
     if (!target->rect().contains(point)) {
         error = QStringLiteral("position is outside the target widget.");
         return {};
@@ -217,8 +211,12 @@ QPoint localPosition(QWidget* target, const QJsonObject& step, QString& error)
     return point;
 }
 
-void sendMouse(QWidget* target, QEvent::Type type, const QPoint& position, Qt::MouseButton button,
-               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
+void sendMouse(QWidget* target,
+    QEvent::Type type,
+    const QPoint& position,
+    Qt::MouseButton button,
+    Qt::MouseButtons buttons,
+    Qt::KeyboardModifiers modifiers)
 {
     FLUENT_MAKE_MOUSE_EVENT(event, type, target, position, button, buttons, modifiers);
     QApplication::sendEvent(target, &event);
@@ -255,8 +253,11 @@ QJsonValue observedProperty(QWidget* target, const QString& name, bool& found)
     return QJsonValue::fromVariant(value);
 }
 
-QJsonObject observation(QWidget* target, QWidget* root, const QJsonObject& expectations,
-                        const QJsonArray& requestedProperties, QStringList& expectationErrors)
+QJsonObject observation(QWidget* target,
+    QWidget* root,
+    const QJsonObject& expectations,
+    const QJsonArray& requestedProperties,
+    QStringList& expectationErrors)
 {
     QJsonObject observed;
     QStringList properties;
@@ -271,25 +272,20 @@ QJsonObject observation(QWidget* target, QWidget* root, const QJsonObject& expec
         bool found = false;
         const QJsonValue actual = observedProperty(target, property, found);
         if (!found) {
-            expectationErrors.append(
-                QStringLiteral("Property '%1' is not observable.").arg(property));
+            expectationErrors.append(QStringLiteral("Property '%1' is not observable.").arg(property));
             continue;
         }
         observed.insert(property, actual);
         if (expectations.contains(property) && expectations.value(property) != actual) {
-            expectationErrors.append(
-                QStringLiteral("Property '%1' did not match the expected value.").arg(property));
+            expectationErrors.append(QStringLiteral("Property '%1' did not match the expected value.").arg(property));
         }
     }
 
     return {{QStringLiteral("path"), widgetPath(target, root)},
-            {QStringLiteral("class"), QString::fromLatin1(target->metaObject()->className())},
-            {QStringLiteral("object_name"), target->objectName()},
-            {QStringLiteral("rect"), rectObject(target->geometry())},
-            {QStringLiteral("visible"), target->isVisible()},
-            {QStringLiteral("enabled"), target->isEnabled()},
-            {QStringLiteral("has_focus"), target->hasFocus()},
-            {QStringLiteral("properties"), observed}};
+        {QStringLiteral("class"), QString::fromLatin1(target->metaObject()->className())},
+        {QStringLiteral("object_name"), target->objectName()}, {QStringLiteral("rect"), rectObject(target->geometry())},
+        {QStringLiteral("visible"), target->isVisible()}, {QStringLiteral("enabled"), target->isEnabled()},
+        {QStringLiteral("has_focus"), target->hasFocus()}, {QStringLiteral("properties"), observed}};
 }
 
 bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism, QString& error)
@@ -297,8 +293,7 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
     QPointer<QWidget> targetGuard(target);
     const QString action = step.value(QStringLiteral("action")).toString().trimmed().toLower();
     QString modifierError;
-    const Qt::KeyboardModifiers modifiers =
-        modifiersFromJson(step.value(QStringLiteral("modifiers")), modifierError);
+    const Qt::KeyboardModifiers modifiers = modifiersFromJson(step.value(QStringLiteral("modifiers")), modifierError);
     if (!modifierError.isEmpty()) {
         error = modifierError;
         return false;
@@ -307,9 +302,8 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
     if (action == QStringLiteral("wait")) {
         const QJsonValue millisecondsValue = step.value(QStringLiteral("milliseconds"));
         const int milliseconds = millisecondsValue.toInt(-1);
-        if (!millisecondsValue.isDouble() ||
-            millisecondsValue.toDouble(-1.0) != static_cast<double>(milliseconds) ||
-            milliseconds < 0 || milliseconds > 10000) {
+        if (!millisecondsValue.isDouble() || millisecondsValue.toDouble(-1.0) != static_cast<double>(milliseconds)
+            || milliseconds < 0 || milliseconds > 10000) {
             error = QStringLiteral("wait milliseconds must be from 0 to 10000.");
             return false;
         }
@@ -333,8 +327,7 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
             return false;
         }
         const QByteArray key = property.toUtf8();
-        if (!target->setProperty(key.constData(),
-                                 step.value(QStringLiteral("value")).toVariant())) {
+        if (!target->setProperty(key.constData(), step.value(QStringLiteral("value")).toVariant())) {
             error = QStringLiteral("Property '%1' is not writable.").arg(property);
             return false;
         }
@@ -373,8 +366,7 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
                 error = QStringLiteral("Target was removed while typing.");
                 return false;
             }
-            if (codePoint > 0xffff && modifiers == Qt::NoModifier &&
-                target->testAttribute(Qt::WA_InputMethodEnabled)) {
+            if (codePoint > 0xffff && modifiers == Qt::NoModifier && target->testAttribute(Qt::WA_InputMethodEnabled)) {
                 // Qt 5 QLineEdit rejects a surrogate pair in QKeyEvent text.
                 // Commit composed text through the normal input-method path,
                 // retaining selection, validation, undo and textEdited behavior.
@@ -404,8 +396,7 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
     }
 
     QString buttonError;
-    const Qt::MouseButton button =
-        mouseButtonFromJson(step.value(QStringLiteral("button")), buttonError);
+    const Qt::MouseButton button = mouseButtonFromJson(step.value(QStringLiteral("button")), buttonError);
     if (!buttonError.isEmpty()) {
         error = buttonError;
         return false;
@@ -449,52 +440,45 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
 
 QJsonObject failedReport(const QString& sourcePath, const QString& message)
 {
-    return {{QStringLiteral("schema_version"), 1},
-            {QStringLiteral("requested"), true},
-            {QStringLiteral("source"), sourcePath},
-            {QStringLiteral("status"), QStringLiteral("fail")},
-            {QStringLiteral("error"), message},
-            {QStringLiteral("summary"), QJsonObject{{QStringLiteral("total"), 0},
-                                                    {QStringLiteral("executed"), 0},
-                                                    {QStringLiteral("passed"), 0},
-                                                    {QStringLiteral("failed"), 1}}},
-            {QStringLiteral("steps"), QJsonArray{}}};
+    return {{QStringLiteral("schema_version"), 1}, {QStringLiteral("requested"), true},
+        {QStringLiteral("source"), sourcePath}, {QStringLiteral("status"), QStringLiteral("fail")},
+        {QStringLiteral("error"), message},
+        {QStringLiteral("summary"),
+            QJsonObject{{QStringLiteral("total"), 0}, {QStringLiteral("executed"), 0}, {QStringLiteral("passed"), 0},
+                {QStringLiteral("failed"), 1}}},
+        {QStringLiteral("steps"), QJsonArray{}}};
 }
 
 } // namespace
 
 QJsonObject galleryPreviewActionsNotRequested()
 {
-    return {{QStringLiteral("schema_version"), 1},
-            {QStringLiteral("requested"), false},
-            {QStringLiteral("status"), QStringLiteral("not-requested")},
-            {QStringLiteral("summary"), QJsonObject{{QStringLiteral("total"), 0},
-                                                    {QStringLiteral("executed"), 0},
-                                                    {QStringLiteral("passed"), 0},
-                                                    {QStringLiteral("failed"), 0}}},
-            {QStringLiteral("steps"), QJsonArray{}}};
+    return {{QStringLiteral("schema_version"), 1}, {QStringLiteral("requested"), false},
+        {QStringLiteral("status"), QStringLiteral("not-requested")},
+        {QStringLiteral("summary"),
+            QJsonObject{{QStringLiteral("total"), 0}, {QStringLiteral("executed"), 0}, {QStringLiteral("passed"), 0},
+                {QStringLiteral("failed"), 0}}},
+        {QStringLiteral("steps"), QJsonArray{}}};
 }
 
-GalleryPreviewActionResult
-executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QString& sourcePath,
-                             const std::function<QWidget*(const QString&)>& resolver)
+GalleryPreviewActionResult executeGalleryPreviewActions(QWidget* root,
+    const QJsonObject& script,
+    const QString& sourcePath,
+    const std::function<QWidget*(const QString&)>& resolver)
 {
     QPointer<QWidget> rootGuard(root);
     if (!root)
         return {failedReport(sourcePath, QStringLiteral("Preview root is missing.")), false};
     if (script.value(QStringLiteral("schema_version")).toInt(-1) != kActionScriptSchemaVersion) {
-        return {failedReport(sourcePath, QStringLiteral("Action script schema_version must be 1.")),
-                false};
+        return {failedReport(sourcePath, QStringLiteral("Action script schema_version must be 1.")), false};
     }
     if (!script.value(QStringLiteral("steps")).isArray()) {
-        return {failedReport(sourcePath, QStringLiteral("Action script steps must be an array.")),
-                false};
+        return {failedReport(sourcePath, QStringLiteral("Action script steps must be an array.")), false};
     }
 
     const QJsonArray steps = script.value(QStringLiteral("steps")).toArray();
     if (steps.isEmpty()) {
-        return {failedReport(sourcePath, QStringLiteral("Action script steps must not be empty.")),
-                false};
+        return {failedReport(sourcePath, QStringLiteral("Action script steps must not be empty.")), false};
     }
     const bool stopOnFailure = script.value(QStringLiteral("stop_on_failure")).toBool(true);
     QJsonArray results;
@@ -519,8 +503,7 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
 
         const QJsonObject step = stepValue.toObject();
         result.insert(QStringLiteral("request"), step);
-        const QString id =
-            step.value(QStringLiteral("id")).toString(QStringLiteral("step-%1").arg(index + 1));
+        const QString id = step.value(QStringLiteral("id")).toString(QStringLiteral("step-%1").arg(index + 1));
         const QString action = step.value(QStringLiteral("action")).toString().trimmed().toLower();
         const QString selector = step.value(QStringLiteral("target")).toString().trimmed();
         result.insert(QStringLiteral("id"), id);
@@ -539,13 +522,11 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
 
         const QJsonValue afterValue = step.value(QStringLiteral("after_ms"));
         const int afterMilliseconds = afterValue.toInt(-1);
-        if (!afterValue.isUndefined() &&
-            (!afterValue.isDouble() ||
-             afterValue.toDouble(-1.0) != static_cast<double>(afterMilliseconds) ||
-             afterMilliseconds < 0 || afterMilliseconds > 10000)) {
+        if (!afterValue.isUndefined()
+            && (!afterValue.isDouble() || afterValue.toDouble(-1.0) != static_cast<double>(afterMilliseconds)
+                || afterMilliseconds < 0 || afterMilliseconds > 10000)) {
             result.insert(QStringLiteral("status"), QStringLiteral("fail"));
-            result.insert(QStringLiteral("message"),
-                          QStringLiteral("after_ms must be from 0 to 10000."));
+            result.insert(QStringLiteral("message"), QStringLiteral("after_ms must be from 0 to 10000."));
             results.append(result);
             ++failed;
             if (stopOnFailure)
@@ -553,9 +534,8 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
             continue;
         }
 
-        const bool allowFocused =
-            action == QStringLiteral("key") || action == QStringLiteral("type_text") ||
-            (action == QStringLiteral("wait") && selector == QStringLiteral("@focus"));
+        const bool allowFocused = action == QStringLiteral("key") || action == QStringLiteral("type_text")
+            || (action == QStringLiteral("wait") && selector == QStringLiteral("@focus"));
         TargetResolution target;
         if (action == QStringLiteral("wait") && selector.isEmpty())
             target = {root, QString()};
@@ -565,8 +545,7 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
                 target.error = QStringLiteral("Unknown or stale target.");
         } else
             target = resolveTarget(root, selector, allowFocused);
-        const QString descendantClass =
-            step.value(QStringLiteral("descendant_class")).toString().trimmed();
+        const QString descendantClass = step.value(QStringLiteral("descendant_class")).toString().trimmed();
         if (target.error.isEmpty() && !descendantClass.isEmpty()) {
             QVector<QWidget*> descendants;
             const auto candidates = target.widget->findChildren<QWidget*>();
@@ -578,10 +557,11 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
             if (descendants.size() == 1) {
                 target.widget = descendants.first();
             } else {
-                target.error = QStringLiteral("Target '%1' has %2 descendants of class '%3'.")
-                                   .arg(selector)
-                                   .arg(descendants.size())
-                                   .arg(descendantClass);
+                target.error =
+                    QStringLiteral("Target '%1' has %2 descendants of class '%3'.")
+                        .arg(selector)
+                        .arg(descendants.size())
+                        .arg(descendantClass);
             }
         }
         if (!target.error.isEmpty()) {
@@ -604,12 +584,10 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
         QStringList expectationErrors;
         QJsonObject observed;
         if (rootGuard && targetGuard) {
-            observed =
-                observation(targetGuard, rootGuard, expectations,
-                            step.value(QStringLiteral("observe")).toArray(), expectationErrors);
+            observed = observation(targetGuard, rootGuard, expectations,
+                step.value(QStringLiteral("observe")).toArray(), expectationErrors);
         } else {
-            expectationErrors.append(
-                QStringLiteral("Target or preview was removed by the action."));
+            expectationErrors.append(QStringLiteral("Target or preview was removed by the action."));
         }
         if (!expectationErrors.isEmpty())
             actionPassed = false;
@@ -617,8 +595,7 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
         result.insert(QStringLiteral("mechanism"), mechanism);
         result.insert(QStringLiteral("expect"), expectations);
         result.insert(QStringLiteral("observation"), observed);
-        result.insert(QStringLiteral("status"),
-                      actionPassed ? QStringLiteral("pass") : QStringLiteral("fail"));
+        result.insert(QStringLiteral("status"), actionPassed ? QStringLiteral("pass") : QStringLiteral("fail"));
         QStringList messages;
         if (!actionError.isEmpty())
             messages.append(actionError);
@@ -634,15 +611,12 @@ executeGalleryPreviewActions(QWidget* root, const QJsonObject& script, const QSt
     }
 
     const bool allPassed = failed == 0 && results.size() == steps.size();
-    const QJsonObject report{
-        {QStringLiteral("schema_version"), 1},
-        {QStringLiteral("requested"), true},
+    const QJsonObject report{{QStringLiteral("schema_version"), 1}, {QStringLiteral("requested"), true},
         {QStringLiteral("source"), sourcePath},
         {QStringLiteral("status"), allPassed ? QStringLiteral("pass") : QStringLiteral("fail")},
-        {QStringLiteral("summary"), QJsonObject{{QStringLiteral("total"), steps.size()},
-                                                {QStringLiteral("executed"), results.size()},
-                                                {QStringLiteral("passed"), passed},
-                                                {QStringLiteral("failed"), failed}}},
+        {QStringLiteral("summary"),
+            QJsonObject{{QStringLiteral("total"), steps.size()}, {QStringLiteral("executed"), results.size()},
+                {QStringLiteral("passed"), passed}, {QStringLiteral("failed"), failed}}},
         {QStringLiteral("steps"), results}};
     return {report, allPassed};
 }
@@ -653,17 +627,13 @@ GalleryPreviewActionResult runGalleryPreviewActions(QWidget* root, const QString
         return {galleryPreviewActionsNotRequested(), true};
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        return {
-            failedReport(
-                path, QStringLiteral("Could not open action script: %1").arg(file.errorString())),
-            false};
+        return {failedReport(path, QStringLiteral("Could not open action script: %1").arg(file.errorString())), false};
     }
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        return {failedReport(path, QStringLiteral("Could not parse action script: %1")
-                                       .arg(parseError.errorString())),
-                false};
+        return {failedReport(path, QStringLiteral("Could not parse action script: %1").arg(parseError.errorString())),
+            false};
     }
     return executeGalleryPreviewActions(root, document.object(), path);
 }

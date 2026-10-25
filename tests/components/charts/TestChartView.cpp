@@ -47,8 +47,8 @@ QVector<QPointF> wave(int count)
 }
 void movePointer(QWidget& target, const QPoint& position)
 {
-    QMouseEvent event(QEvent::MouseMove, position, target.mapToGlobal(position), Qt::NoButton,
-                      Qt::NoButton, Qt::NoModifier);
+    QMouseEvent event(QEvent::MouseMove, position, target.mapToGlobal(position), Qt::NoButton, Qt::NoButton,
+        Qt::NoModifier);
     QApplication::sendEvent(&target, &event);
 }
 } // namespace
@@ -178,8 +178,8 @@ TEST(ChartViewTest, Contract_SharedCursorNeverMislabelsDifferentSampleTimes)
         primary.setName("Current");
         primary.setPoints({{0, 3}, {1, 5}, {2, 4}});
         comparison.setName(comparisonName);
-        comparison.setPoints(aligned ? QVector<QPointF>{{0, 3}, {1, 4}, {2, 2}}
-                                     : QVector<QPointF>{{.5, 3}, {1.5, 4}, {2.5, 2}});
+        comparison.setPoints(
+            aligned ? QVector<QPointF>{{0, 3}, {1, 4}, {2, 2}} : QVector<QPointF>{{.5, 3}, {1.5, 4}, {2.5, 2}});
         LineChart view;
         view.resize(640, 320);
         view.setLegendVisible(false);
@@ -209,8 +209,8 @@ TEST(ChartViewTest, Contract_TypesThemesRangesAndBudgets)
     ChartView view;
     view.setModel(&model);
     view.setTitle("Illustrative measurements");
-    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
-                       fluent::FluentElement::HighContrast}) {
+    for (auto theme :
+        {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
         fluent::FluentElement::setTheme(theme);
         for (int type = ChartView::Line; type <= ChartView::Sparkline; ++type) {
             view.setChartType(static_cast<ChartView::ChartType>(type));
@@ -332,8 +332,7 @@ TEST(ChartViewTest, Contract_ReadoutKeyboardFocusAndLifetime)
     ASSERT_TRUE(QTest::qWaitFor([&] { return view->hasFocus(); }, 1000));
     view->grab();
     movePointer(*view, view->plotRect().center().toPoint());
-    QPointer<fluent::dialogs_flyouts::Popup> readout =
-        window.findChild<fluent::dialogs_flyouts::Popup*>();
+    QPointer<fluent::dialogs_flyouts::Popup> readout = window.findChild<fluent::dialogs_flyouts::Popup*>();
     ASSERT_TRUE(readout);
     ASSERT_TRUE(readout->isOpen());
     EXPECT_TRUE(view->hasFocus());
@@ -393,9 +392,9 @@ TEST(ChartViewTest, Contract_ReadoutDetailsStayCompleteAtNarrowWidths)
     const QVector<Example> examples = {
         {640, "Sample activity", "Tue", "", false},
         {640, "North America production response time for returning customers",
-         "Tuesday, September 17, 2026, 10:00–11:00", " ms", false},
-        {260, QString::fromUtf8("华东地区生产环境平均请求响应时间"),
-         QString::fromUtf8("2026 年 9 月 17 日上午 10 点"), " milliseconds", true},
+            "Tuesday, September 17, 2026, 10:00–11:00", " ms", false},
+        {260, QString::fromUtf8("华东地区生产环境平均请求响应时间"), QString::fromUtf8("2026 年 9 月 17 日上午 10 点"),
+            " milliseconds", true},
         {260, "ProductionResponseTimeForReturningCustomers", "Tue", " ms", false},
     };
     for (const auto& example : examples) {
@@ -508,8 +507,7 @@ TEST(ChartViewTest, Contract_FocusRingFollowsKeyboardRatherThanMouse)
     const auto topEdge = [&] {
         const auto image = view.grab().toImage();
         const qreal dpr = image.devicePixelRatio();
-        return image.copy(qRound(view.width() * .25 * dpr), 0, qRound(view.width() * .5 * dpr),
-                          qRound(8 * dpr));
+        return image.copy(qRound(view.width() * .25 * dpr), 0, qRound(view.width() * .5 * dpr), qRound(8 * dpr));
     };
     const auto unfocused = topEdge();
     const auto point = view.plotRect().center().toPoint();
@@ -666,13 +664,11 @@ TEST(ChartViewTest, Contract_DataInkAndLegendKeepContrastOnNeutralSurfaces)
 {
     const auto oldTheme = fluent::FluentElement::currentTheme();
     const auto luminance = [](const QColor& c) {
-        const auto linear = [](double v) {
-            return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4);
-        };
+        const auto linear = [](double v) { return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
         return 0.2126 * linear(c.redF()) + 0.7152 * linear(c.greenF()) + 0.0722 * linear(c.blueF());
     };
-    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark,
-                       fluent::FluentElement::HighContrast}) {
+    for (auto theme :
+        {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
         fluent::FluentElement::setTheme(theme);
         ChartModel model;
         QVector<QPointF> points;
@@ -690,22 +686,17 @@ TEST(ChartViewTest, Contract_DataInkAndLegendKeepContrastOnNeutralSurfaces)
         view.setAutoFillBackground(true);
         const auto image = view.grab().toImage();
         const double dpr = image.devicePixelRatio();
-        const auto pixel = [&](QPointF p) {
-            return image.pixelColor(qRound(p.x() * dpr), qRound(p.y() * dpr));
-        };
+        const auto pixel = [&](QPointF p) { return image.pixelColor(qRound(p.x() * dpr), qRound(p.y() * dpr)); };
         const auto plot = view.plotRect();
         const double radius = std::min(plot.width(), plot.height()) * 0.43;
         const auto legendRect = view.legendRect();
         const double cell = std::min(36.0, (legendRect.height() - 28) / 12);
         for (int i = 0; i < 12; ++i) {
-            const QColor legend =
-                pixel({legendRect.left() + 4, legendRect.top() + 28 + i * cell + 9});
+            const QColor legend = pixel({legendRect.left() + 4, legendRect.top() + 28 + i * cell + 9});
             const double fg = luminance(legend) + 0.05, bg = luminance(background) + 0.05;
-            EXPECT_GE(std::max(fg, bg) / std::min(fg, bg), 3.0)
-                << "theme=" << int(theme) << " slice=" << i;
+            EXPECT_GE(std::max(fg, bg) / std::min(fg, bg), 3.0) << "theme=" << int(theme) << " slice=" << i;
             const double angle = (90 - (i + 0.5) * 30) * 3.141592653589793 / 180;
-            const auto ink =
-                pixel(plot.center() + QPointF(std::cos(angle) * radius, -std::sin(angle) * radius));
+            const auto ink = pixel(plot.center() + QPointF(std::cos(angle) * radius, -std::sin(angle) * radius));
             EXPECT_EQ(legend.rgb(), ink.rgb());
         }
     }
@@ -733,8 +724,7 @@ TEST(ChartViewTest, Contract_DenseExtremaRasterizationAtTwoX)
             view.render(&painter);
         }
         const auto elapsed = timer.elapsed();
-        ::testing::Test::RecordProperty(
-            type == ChartView::Line ? "dense_line_2x_ms" : "dense_area_2x_ms", elapsed);
+        ::testing::Test::RecordProperty(type == ChartView::Line ? "dense_line_2x_ms" : "dense_area_2x_ms", elapsed);
         EXPECT_LT(elapsed, 1000) << "Dense projection must not stall for a second";
         EXPECT_GT(view.renderedPointCount(), 0);
         EXPECT_LE(view.renderedPointCount(), view.maximumPointCount());
@@ -813,8 +803,7 @@ TEST(ChartViewTest, Contract_DedicatedComponentsKeepTypeAndBorrowOneSharedModel)
 TEST(ChartViewTest, Contract_PercentageTracksAndResponsiveRadialLegend)
 {
     ChartModel model;
-    model.setPoints({{0, 48.2}, {1, 26.8}, {2, 16.4}, {3, 8.6}},
-                    {"Direct", "Search", "Referral", "Campaign"});
+    model.setPoints({{0, 48.2}, {1, 26.8}, {2, 16.4}, {3, 8.6}}, {"Direct", "Search", "Referral", "Campaign"});
     HorizontalBarChart bar;
     bar.setModel(&model);
     bar.setYRange(0, 100);
@@ -824,8 +813,7 @@ TEST(ChartViewTest, Contract_PercentageTracksAndResponsiveRadialLegend)
     const auto plot = bar.plotRect();
     const auto pixel = [&](double fraction) {
         const QPointF p(plot.left() + plot.width() * fraction, plot.top() + plot.height() / 8);
-        return image.pixelColor(qRound(p.x() * image.devicePixelRatio()),
-                                qRound(p.y() * image.devicePixelRatio()));
+        return image.pixelColor(qRound(p.x() * image.devicePixelRatio()), qRound(p.y() * image.devicePixelRatio()));
     };
     EXPECT_EQ(pixel(.1), pixel(.45));
     EXPECT_NE(pixel(.45), pixel(.6));

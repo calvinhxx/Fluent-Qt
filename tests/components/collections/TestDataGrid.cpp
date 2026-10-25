@@ -40,8 +40,7 @@ namespace {
 struct AccessibleModelEventRecord {
     QObject* object = nullptr;
     QAccessible::Event type = QAccessible::InvalidEvent;
-    QAccessibleTableModelChangeEvent::ModelChangeType modelChangeType =
-        QAccessibleTableModelChangeEvent::ModelReset;
+    QAccessibleTableModelChangeEvent::ModelChangeType modelChangeType = QAccessibleTableModelChangeEvent::ModelReset;
 };
 
 QVector<AccessibleModelEventRecord> g_accessibleModelEvents;
@@ -83,10 +82,7 @@ public:
         : QAbstractTableModel(parent), m_rows(rows), m_columns(columns)
     {}
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : m_rows;
-    }
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : m_rows; }
 
     int columnCount(const QModelIndex& parent = QModelIndex()) const override
     {
@@ -95,8 +91,8 @@ public:
 
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
     {
-        if (!index.isValid() || index.row() < 0 || index.row() >= m_rows || index.column() < 0 ||
-            index.column() >= m_columns) {
+        if (!index.isValid() || index.row() < 0 || index.row() >= m_rows || index.column() < 0
+            || index.column() >= m_columns) {
             return {};
         }
 
@@ -111,13 +107,11 @@ public:
         return {};
     }
 
-    QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const override
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override
     {
         if (role != Qt::DisplayRole)
             return {};
-        return orientation == Qt::Horizontal ? QStringLiteral("Column %1").arg(section)
-                                             : QString::number(section + 1);
+        return orientation == Qt::Horizontal ? QStringLiteral("Column %1").arg(section) : QString::number(section + 1);
     }
 
     Qt::ItemFlags flags(const QModelIndex& index) const override
@@ -143,8 +137,7 @@ public:
 private:
     static quint64 cellKey(const QModelIndex& index)
     {
-        return (static_cast<quint64>(static_cast<quint32>(index.row())) << 32) |
-               static_cast<quint32>(index.column());
+        return (static_cast<quint64>(static_cast<quint32>(index.row())) << 32) | static_cast<quint32>(index.column());
     }
 
     int m_rows = 0;
@@ -159,15 +152,13 @@ class CountingTableDelegate final : public QStyledItemDelegate {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         ++m_paintCount;
         QStyledItemDelegate::paint(painter, option, index);
     }
 
-    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-                          const QModelIndex& index) const override
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         QWidget* editor = QStyledItemDelegate::createEditor(parent, option, index);
         if (!editor)
@@ -175,11 +166,10 @@ public:
 
         ++m_createdEditorCount;
         m_activeEditors.insert(editor);
-        QObject::connect(editor, &QObject::destroyed, const_cast<CountingTableDelegate*>(this),
-                         [this, editor]() {
-                             m_activeEditors.remove(editor);
-                             ++m_destroyedEditorCount;
-                         });
+        QObject::connect(editor, &QObject::destroyed, const_cast<CountingTableDelegate*>(this), [this, editor]() {
+            m_activeEditors.remove(editor);
+            ++m_destroyedEditorCount;
+        });
         return editor;
     }
 
@@ -262,8 +252,7 @@ class ValidationTrackingDelegate final : public QStyledItemDelegate {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         QStyledItemDelegate::paint(painter, option, index);
         if (index.data(kValidationMessageRole).toString().isEmpty())
@@ -277,8 +266,7 @@ public:
         painter->restore();
     }
 
-    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
-                          const QModelIndex& index) const override
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         QWidget* editor = QStyledItemDelegate::createEditor(parent, option, index);
         if (!editor)
@@ -286,11 +274,10 @@ public:
 
         ++m_createdEditorCount;
         m_activeEditors.insert(editor);
-        QObject::connect(editor, &QObject::destroyed, const_cast<ValidationTrackingDelegate*>(this),
-                         [this, editor] {
-                             m_activeEditors.remove(editor);
-                             ++m_destroyedEditorCount;
-                         });
+        QObject::connect(editor, &QObject::destroyed, const_cast<ValidationTrackingDelegate*>(this), [this, editor] {
+            m_activeEditors.remove(editor);
+            ++m_destroyedEditorCount;
+        });
         return editor;
     }
 
@@ -355,24 +342,20 @@ int visibleCellCount(const DataGrid& view)
         return 0;
 
     const int visibleRows = (lastRow >= firstRow ? lastRow : firstRow) - firstRow + 1;
-    const int visibleColumns =
-        (lastColumn >= firstColumn ? lastColumn : firstColumn) - firstColumn + 1;
+    const int visibleColumns = (lastColumn >= firstColumn ? lastColumn : firstColumn) - firstColumn + 1;
     return visibleRows * visibleColumns;
 }
 
-void expectViewportBounded(const DataGrid& view, const CountingTableModel& model,
-                           const CountingTableDelegate& delegate)
+void expectViewportBounded(const DataGrid& view, const CountingTableModel& model, const CountingTableDelegate& delegate)
 {
     const int visibleCells = visibleCellCount(view);
     ASSERT_GT(visibleCells, 0);
     EXPECT_GT(model.uniqueQueriedCellCount(), 0);
     EXPECT_LE(model.uniqueQueriedCellCount(), visibleCells * 4)
         << "DataGrid must not query cells proportional to total model size";
-    EXPECT_LE(model.dataCallCount(), visibleCells * 32)
-        << "Role queries must stay bounded around the viewport";
+    EXPECT_LE(model.dataCallCount(), visibleCells * 32) << "Role queries must stay bounded around the viewport";
     EXPECT_GT(delegate.paintCount(), 0);
-    EXPECT_LE(delegate.paintCount(), visibleCells * 8)
-        << "Delegate painting must stay bounded around visible cells";
+    EXPECT_LE(delegate.paintCount(), visibleCells * 8) << "Delegate painting must stay bounded around visible cells";
 }
 
 class DataGridVisualWindow final : public QWidget, public fluent::FluentElement {
@@ -426,10 +409,8 @@ void populateVisualModel(QStandardItemModel* model)
             new QStandardItem(QStringLiteral("Fluent workspace %1").arg(row + 1)),
             new QStandardItem(owners.at(row % owners.size())),
             new QStandardItem(states.at(row % states.size())),
-            new QStandardItem(
-                row % 5 == 0
-                    ? QStringLiteral(
-                          "Waiting for a long localized dependency update / 正在等待依赖同步")
+            new QStandardItem(row % 5 == 0
+                    ? QStringLiteral("Waiting for a long localized dependency update / 正在等待依赖同步")
                     : QStringLiteral("Today, %1 minutes ago").arg(row + 2)),
             new QStandardItem(QStringLiteral("%1%").arg((row * 13) % 101)),
             new QStandardItem(row % 3 == 0 ? QStringLiteral("High") : QStringLiteral("Normal")),
@@ -588,17 +569,11 @@ TEST_F(DataGridTest, Contract_CellWidgetsAndEditorsDoNotScaleWithModelSize)
     largeView.setItemDelegate(&largeDelegate);
     showOffscreen(&largeView);
 
-    EXPECT_EQ(
-        smallView.viewport()->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly).size(),
-        0);
-    EXPECT_EQ(
-        largeView.viewport()->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly).size(),
-        0);
-    EXPECT_LE(largeView.findChildren<QWidget*>().size(),
-              smallView.findChildren<QWidget*>().size() + 8)
+    EXPECT_EQ(smallView.viewport()->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly).size(), 0);
+    EXPECT_EQ(largeView.viewport()->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly).size(), 0);
+    EXPECT_LE(largeView.findChildren<QWidget*>().size(), smallView.findChildren<QWidget*>().size() + 8)
         << "Platform styles may add a constant scrollbar helper set, not item widgets";
-    EXPECT_LE(largeView.findChildren<QObject*>().size(),
-              smallView.findChildren<QObject*>().size() + 16)
+    EXPECT_LE(largeView.findChildren<QObject*>().size(), smallView.findChildren<QObject*>().size() + 16)
         << "Auxiliary QObject count must remain constant with model size";
 
     const QModelIndex editable = largeModel.index(4, 3);
@@ -608,8 +583,7 @@ TEST_F(DataGridTest, Contract_CellWidgetsAndEditorsDoNotScaleWithModelSize)
 
     ASSERT_EQ(largeDelegate.createdEditorCount(), 1);
     ASSERT_EQ(largeDelegate.activeEditorCount(), 1);
-    const auto editors =
-        largeView.viewport()->findChildren<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    const auto editors = largeView.viewport()->findChildren<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
     ASSERT_EQ(editors.size(), 1);
 
     QTest::keyClick(editors.first(), Qt::Key_Escape);
@@ -656,7 +630,7 @@ TEST_F(DataGridTest, Contract_ModelShapeHeadersAndEmptyStateStayLive)
     EXPECT_EQ(view.horizontalHeader()->count(), 3);
     EXPECT_EQ(view.verticalHeader()->count(), 0);
     EXPECT_EQ(model.headerData(2, Qt::Horizontal, Qt::DisplayRole).toString(),
-              QStringLiteral("Last updated — localized header / 最后更新时间"));
+        QStringLiteral("Last updated — localized header / 最后更新时间"));
 
     ASSERT_TRUE(model.insertRow(0));
     ASSERT_TRUE(model.setData(model.index(0, 0), QStringLiteral("Alpha")));
@@ -734,8 +708,7 @@ TEST_F(DataGridTest, Contract_SelectionModesAndKeyboardStayModelDriven)
     EXPECT_EQ(view.currentIndex(), model.index(1, 1));
 
     view.setSelectionBehavior(QAbstractItemView::SelectRows);
-    view.selectionModel()->select(model.index(2, 1),
-                                  QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    view.selectionModel()->select(model.index(2, 1), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
     const QModelIndexList selectedRows = view.selectionModel()->selectedRows();
     ASSERT_EQ(selectedRows.size(), 1);
     EXPECT_EQ(selectedRows.first().row(), 2);
@@ -774,8 +747,7 @@ TEST_F(DataGridTest, Contract_ReadOnlyDefaultsAndThemePaletteUseTokens)
     EXPECT_EQ(view.palette().color(QPalette::AlternateBase), view.themeColorsRef().bgLayer);
     EXPECT_EQ(view.palette().color(QPalette::Highlight), view.themeColorsRef().subtleSecondary);
     EXPECT_EQ(view.palette().color(QPalette::HighlightedText), view.themeColorsRef().textPrimary);
-    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text),
-              view.themeColorsRef().textDisabled);
+    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text), view.themeColorsRef().textDisabled);
 
     view.setBackgroundVisible(false);
     EXPECT_FALSE(view.isBackgroundVisible());
@@ -790,16 +762,14 @@ TEST_F(DataGridTest, Contract_ReadOnlyDefaultsAndThemePaletteUseTokens)
     EXPECT_EQ(view.palette().color(QPalette::Base), view.themeColorsRef().bgLayer);
     EXPECT_EQ(view.palette().color(QPalette::AlternateBase), view.themeColorsRef().bgLayer);
     EXPECT_EQ(view.palette().color(QPalette::Highlight), view.themeColorsRef().subtleSecondary);
-    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text),
-              view.themeColorsRef().textDisabled);
+    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text), view.themeColorsRef().textDisabled);
     EXPECT_NE(view.palette().color(QPalette::Base), lightBase);
 
     view.setEnabled(false);
     processEvents();
     renderViewport(&view);
     EXPECT_FALSE(view.isEnabled());
-    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text),
-              view.themeColorsRef().textDisabled);
+    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text), view.themeColorsRef().textDisabled);
 
     view.setBorderVisible(false);
     EXPECT_FALSE(view.isBorderVisible());
@@ -850,8 +820,7 @@ TEST_F(DataGridTest, Contract_FluentScrollBarsMirrorAndChainAtBoundaries)
     EXPECT_EQ(vertical->value(), view.verticalScrollBar()->value());
 
     view.verticalScrollBar()->setValue(view.verticalScrollBar()->maximum());
-    FLUENT_MAKE_WHEEL_EVENT(bottomChainedWheel, wheelPoint.x(), wheelPoint.y(), -120,
-                            Qt::NoModifier);
+    FLUENT_MAKE_WHEEL_EVENT(bottomChainedWheel, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
     bottomChainedWheel.setAccepted(false);
     QApplication::sendEvent(view.viewport(), &bottomChainedWheel);
     EXPECT_FALSE(bottomChainedWheel.isAccepted());
@@ -866,8 +835,7 @@ TEST_F(DataGridTest, Contract_FluentScrollBarsMirrorAndChainAtBoundaries)
     processEvents();
     ASSERT_EQ(fittedView.verticalScrollBar()->minimum(), fittedView.verticalScrollBar()->maximum());
     const QPoint fittedWheelPoint = fittedView.viewport()->rect().center();
-    FLUENT_MAKE_WHEEL_EVENT(fittedChainedWheel, fittedWheelPoint.x(), fittedWheelPoint.y(), -120,
-                            Qt::NoModifier);
+    FLUENT_MAKE_WHEEL_EVENT(fittedChainedWheel, fittedWheelPoint.x(), fittedWheelPoint.y(), -120, Qt::NoModifier);
     fittedChainedWheel.setAccepted(false);
     QApplication::sendEvent(fittedView.viewport(), &fittedChainedWheel);
     EXPECT_FALSE(fittedChainedWheel.isAccepted());
@@ -974,12 +942,10 @@ TEST_F(DataGridTest, Contract_EditingDefaultDelegateCommitsCancelsAndTabs)
     auto* lockedItem = new QStandardItem(QStringLiteral("Locked"));
     lockedItem->setEditable(false);
     model.setItem(1, 0, lockedItem);
-    EXPECT_EQ(beginKeyboardEdit(&view, model.index(1, 0)), nullptr)
-        << "Model flags remain authoritative";
+    EXPECT_EQ(beginKeyboardEdit(&view, model.index(1, 0)), nullptr) << "Model flags remain authoritative";
 
     view.setEditTriggers(QAbstractItemView::NoEditTriggers);
-    EXPECT_EQ(beginKeyboardEdit(&view, first), nullptr)
-        << "F2 must not bypass the read-only default";
+    EXPECT_EQ(beginKeyboardEdit(&view, first), nullptr) << "F2 must not bypass the read-only default";
 }
 
 TEST_F(DataGridTest, Contract_EditingModelRejectionKeepsValuesAndDelegateValidation)
@@ -987,8 +953,7 @@ TEST_F(DataGridTest, Contract_EditingModelRejectionKeepsValuesAndDelegateValidat
     EditAuthorityModel model(1, 1);
     const QModelIndex index = model.index(0, 0);
     model.setData(index, QStringLiteral("Accepted"), Qt::EditRole);
-    model.rejectValue(QStringLiteral("reject"),
-                      QStringLiteral("Value is rejected by the application model"));
+    model.rejectValue(QStringLiteral("reject"), QStringLiteral("Value is rejected by the application model"));
     const int baselineAttempts = model.editAttempts();
 
     ValidationTrackingDelegate delegate;
@@ -1009,7 +974,7 @@ TEST_F(DataGridTest, Contract_EditingModelRejectionKeepsValuesAndDelegateValidat
     EXPECT_EQ(model.data(index, Qt::DisplayRole).toString(), QStringLiteral("Accepted"));
     EXPECT_EQ(model.data(index, Qt::EditRole).toString(), QStringLiteral("Accepted"));
     EXPECT_EQ(model.data(index, kValidationMessageRole).toString(),
-              QStringLiteral("Value is rejected by the application model"));
+        QStringLiteral("Value is rejected by the application model"));
     EXPECT_TRUE(rejectedEditor.isNull());
     EXPECT_EQ(delegate.activeEditorCount(), 0);
     EXPECT_EQ(delegate.destroyedEditorCount(), 1);
@@ -1089,8 +1054,7 @@ TEST_F(DataGridTest, Contract_AccessibilityUsesNativeLogicalTableSemantics)
     });
     for (int row = 0; row < model.rowCount(); ++row) {
         for (int column = 0; column < model.columnCount(); ++column) {
-            QStandardItem* item =
-                new QStandardItem(QStringLiteral("Cell %1,%2").arg(row).arg(column));
+            QStandardItem* item = new QStandardItem(QStringLiteral("Cell %1,%2").arg(row).arg(column));
             item->setEditable(false);
             model.setItem(row, column, item);
         }
@@ -1107,8 +1071,7 @@ TEST_F(DataGridTest, Contract_AccessibilityUsesNativeLogicalTableSemantics)
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::Table);
     EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Project portfolio"));
-    EXPECT_EQ(root->text(QAccessible::Description),
-              QStringLiteral("Application-owned project summary"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Application-owned project summary"));
     EXPECT_FALSE(root->state().disabled);
 
     QAccessibleTableInterface* table = root->tableInterface();
@@ -1167,8 +1130,7 @@ TEST_F(DataGridTest, Contract_AccessibilityUsesNativeLogicalTableSemantics)
     model.setHeaderData(2, Qt::Horizontal, QStringLiteral("State"));
     processEvents();
     EXPECT_EQ(root->text(QAccessible::Name), QStringLiteral("Project portfolio"));
-    EXPECT_EQ(root->text(QAccessible::Description),
-              QStringLiteral("Application-owned project summary"));
+    EXPECT_EQ(root->text(QAccessible::Description), QStringLiteral("Application-owned project summary"));
     EXPECT_EQ(table->columnDescription(2), QStringLiteral("State"));
 
     view.setEnabled(false);
@@ -1214,8 +1176,7 @@ TEST_F(DataGridTest, Contract_AccessibilityReadOnlyStateFollowsViewAndModel)
     EXPECT_FALSE(root->state().editable);
     EXPECT_TRUE(lockedCell->state().readOnly);
     EXPECT_FALSE(lockedCell->state().editable);
-    EXPECT_TRUE(editableCell->state().readOnly)
-        << "NoEditTriggers keeps an otherwise editable model cell read-only";
+    EXPECT_TRUE(editableCell->state().readOnly) << "NoEditTriggers keeps an otherwise editable model cell read-only";
     EXPECT_FALSE(editableCell->state().editable);
 
     view.setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
@@ -1223,8 +1184,7 @@ TEST_F(DataGridTest, Contract_AccessibilityReadOnlyStateFollowsViewAndModel)
 
     EXPECT_FALSE(root->state().readOnly);
     EXPECT_TRUE(root->state().editable);
-    EXPECT_TRUE(lockedCell->state().readOnly)
-        << "Model flags remain authoritative for an individual cell";
+    EXPECT_TRUE(lockedCell->state().readOnly) << "Model flags remain authoritative for an individual cell";
     EXPECT_FALSE(lockedCell->state().editable);
     EXPECT_FALSE(editableCell->state().readOnly);
     EXPECT_TRUE(editableCell->state().editable);
@@ -1273,11 +1233,9 @@ TEST_F(DataGridTest, Contract_AccessibilityPrefersModelSemanticText)
     const QModelIndex index = model.index(0, 0);
     model.setData(index, QStringLiteral("Visible project"), Qt::DisplayRole);
     model.setData(index, QStringLiteral("Accessible project name"), Qt::AccessibleTextRole);
-    model.setData(index, QStringLiteral("Accessible project summary"),
-                  Qt::AccessibleDescriptionRole);
+    model.setData(index, QStringLiteral("Accessible project summary"), Qt::AccessibleDescriptionRole);
     model.setHeaderData(0, Qt::Horizontal, QStringLiteral("Visible project column"));
-    model.setHeaderData(0, Qt::Horizontal, QStringLiteral("Accessible project column"),
-                        Qt::AccessibleTextRole);
+    model.setHeaderData(0, Qt::Horizontal, QStringLiteral("Accessible project column"), Qt::AccessibleTextRole);
 
     DataGrid view;
     view.setModel(&model);
@@ -1298,11 +1256,9 @@ TEST_F(DataGridTest, Contract_AccessibilityPrefersModelSemanticText)
     ASSERT_NE(cellInfo, nullptr);
     const QList<QAccessibleInterface*> columnHeaders = cellInfo->columnHeaderCells();
     ASSERT_EQ(columnHeaders.size(), 1);
-    EXPECT_EQ(columnHeaders.first()->text(QAccessible::Name),
-              QStringLiteral("Accessible project column"));
+    EXPECT_EQ(columnHeaders.first()->text(QAccessible::Name), QStringLiteral("Accessible project column"));
 
-    model.setData(index, QStringLiteral("Renamed for assistive technology"),
-                  Qt::AccessibleTextRole);
+    model.setData(index, QStringLiteral("Renamed for assistive technology"), Qt::AccessibleTextRole);
     model.setData(index, QStringLiteral("Updated semantic summary"), Qt::AccessibleDescriptionRole);
     processEvents();
 
@@ -1320,8 +1276,7 @@ TEST_F(DataGridTest, Contract_AccessibilityModelChangesInvalidateCachedCells)
     });
     for (int row = 0; row < model.rowCount(); ++row) {
         for (int column = 0; column < model.columnCount(); ++column) {
-            model.setData(model.index(row, column),
-                          QStringLiteral("Original %1,%2").arg(row).arg(column));
+            model.setData(model.index(row, column), QStringLiteral("Original %1,%2").arg(row).arg(column));
         }
     }
 
@@ -1366,8 +1321,7 @@ TEST_F(DataGridTest, Contract_AccessibilityModelChangesInvalidateCachedCells)
     EXPECT_EQ(table->rowCount(), 2);
     EXPECT_EQ(table->columnCount(), 1);
     EXPECT_EQ(table->columnDescription(0), QStringLiteral("Replacement"));
-    QAccessibleInterface* staleOriginalModelCell =
-        QAccessible::accessibleInterface(originalModelCellId);
+    QAccessibleInterface* staleOriginalModelCell = QAccessible::accessibleInterface(originalModelCellId);
     EXPECT_TRUE(!staleOriginalModelCell || !staleOriginalModelCell->isValid());
     QAccessibleInterface* replacementCell = table->cellAt(1, 0);
     ASSERT_NE(replacementCell, nullptr);
@@ -1402,13 +1356,11 @@ TEST_F(DataGridTest, Contract_AccessibilityModelReplacementEmitsOneReset)
     ASSERT_EQ(g_accessibleModelEvents.size(), 1);
     EXPECT_EQ(g_accessibleModelEvents.first().object, &view);
     EXPECT_EQ(g_accessibleModelEvents.first().type, QAccessible::TableModelChanged);
-    EXPECT_EQ(g_accessibleModelEvents.first().modelChangeType,
-              QAccessibleTableModelChangeEvent::ModelReset);
+    EXPECT_EQ(g_accessibleModelEvents.first().modelChangeType, QAccessibleTableModelChangeEvent::ModelReset);
 
     view.setModel(&replacement);
     processEvents();
-    EXPECT_EQ(g_accessibleModelEvents.size(), 1)
-        << "Assigning the active model again must stay silent";
+    EXPECT_EQ(g_accessibleModelEvents.size(), 1) << "Assigning the active model again must stay silent";
 #endif
 }
 
@@ -1481,8 +1433,7 @@ TEST_F(DataGridTest, VisualCheck_ReadOnlyCore)
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
-        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -1532,8 +1483,7 @@ TEST_F(DataGridTest, VisualCheck_ReadOnlyCore)
     auto* grid = new DataGrid(window);
     grid->setObjectName(QStringLiteral("DataGridVisualCheck.Grid"));
     grid->setModel(model);
-    grid->setPlaceholderText(
-        QStringLiteral("No records yet.\nUse Show data to restore the read-only table."));
+    grid->setPlaceholderText(QStringLiteral("No records yet.\nUse Show data to restore the read-only table."));
     grid->setSelectionBehavior(QAbstractItemView::SelectRows);
     grid->setSelectionMode(fluent::collections::SelectionMode::Single);
     grid->setScrollChainingEnabled(true);
@@ -1585,16 +1535,14 @@ TEST_F(DataGridTest, VisualCheck_ReadOnlyCore)
     layout->addAnchoredWidget(grid, gridAnchors);
 
     QObject::connect(themeButton, &QPushButton::clicked, window, [] {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
     QObject::connect(directionButton, &QPushButton::clicked, window, [window, directionButton] {
         const bool rtl = window->layoutDirection() != Qt::RightToLeft;
         window->setLayoutDirection(rtl ? Qt::RightToLeft : Qt::LeftToRight);
-        directionButton->setText(rtl ? QStringLiteral("Left to right")
-                                     : QStringLiteral("Direction"));
+        directionButton->setText(rtl ? QStringLiteral("Left to right") : QStringLiteral("Direction"));
         directionButton->setFixedWidth(rtl ? 112 : 96);
     });
     QObject::connect(dataButton, &QPushButton::clicked, window, [model, dataButton, grid] {
@@ -1621,8 +1569,7 @@ TEST_F(DataGridTest, VisualCheck_ReadOnlyCore)
     grid->selectRow(2);
     window->show();
     if (tests::support::shouldCaptureVisualSnapshot()) {
-        const auto snapshot = [](const QString& variant,
-                                 tests::support::VisualSnapshotTheme theme) {
+        const auto snapshot = [](const QString& variant, tests::support::VisualSnapshotTheme theme) {
             tests::support::VisualSnapshotOptions options;
             options.windowSize = QSize(1040, 680);
             options.variant = variant;

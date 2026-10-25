@@ -63,8 +63,7 @@ bool actionMatchesStandardKey(const QAction* action, QKeySequence::StandardKey s
     if (shortcuts.isEmpty()) {
         const int tabIndex = action->text().indexOf(QLatin1Char('\t'));
         if (tabIndex >= 0) {
-            const QKeySequence embedded(action->text().mid(tabIndex + 1).trimmed(),
-                                        QKeySequence::NativeText);
+            const QKeySequence embedded(action->text().mid(tabIndex + 1).trimmed(), QKeySequence::NativeText);
             if (!embedded.isEmpty())
                 shortcuts.append(embedded);
         }
@@ -87,8 +86,7 @@ bool triggerContextAction(LineEdit* edit, QKeySequence::StandardKey standardKey)
 
     bool triggered = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         if (!menu)
             return;
 
@@ -213,8 +211,7 @@ TEST_F(LineEditTest, Contract_StandardEditingActionsUseFluentContextMenu)
     bool sawDeleteGlyph = false;
     bool sawSelectAllGlyph = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu)
             return;
@@ -225,13 +222,11 @@ TEST_F(LineEditTest, Contract_StandardEditingActionsUseFluentContextMenu)
         EXPECT_FALSE(menu->property("_fluentqt_menuQuietSeparators").toBool());
         for (QAction* action : menu->actions()) {
             if (!action->isSeparator()) {
-                EXPECT_LT(menu->actionGeometry(action).height(),
-                          ::Spacing::ControlHeight::Standard);
+                EXPECT_LT(menu->actionGeometry(action).height(), ::Spacing::ControlHeight::Standard);
             }
             const bool isCopy = actionMatchesStandardKey(action, QKeySequence::Copy);
             const bool isSelectAll = actionMatchesStandardKey(action, QKeySequence::SelectAll);
-            const bool isDelete =
-                action->text().contains(QStringLiteral("Delete"), Qt::CaseInsensitive);
+            const bool isDelete = action->text().contains(QStringLiteral("Delete"), Qt::CaseInsensitive);
             sawCopy = sawCopy || isCopy;
             sawSelectAll = sawSelectAll || isSelectAll;
             sawCopyGlyph = sawCopyGlyph || (isCopy && !action->icon().isNull());
@@ -239,8 +234,8 @@ TEST_F(LineEditTest, Contract_StandardEditingActionsUseFluentContextMenu)
             sawSelectAllGlyph = sawSelectAllGlyph || (isSelectAll && !action->icon().isNull());
             if (!action->icon().isNull()) {
                 const QSize iconSize = action->icon().actualSize(QSize(64, 64));
-                const int maximumBackingExtent = qCeil(Typography::IconSize::Standard *
-                                                       qMax<qreal>(1.0, menu->devicePixelRatioF()));
+                const int maximumBackingExtent = qCeil(
+                    Typography::IconSize::Standard * qMax<qreal>(1.0, menu->devicePixelRatioF()));
                 EXPECT_GT(iconSize.width(), 0);
                 EXPECT_LE(iconSize.width(), maximumBackingExtent);
                 EXPECT_LE(iconSize.height(), maximumBackingExtent);
@@ -437,10 +432,9 @@ TEST_F(LineEditTest, VisualCheck)
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
 
     window->show();

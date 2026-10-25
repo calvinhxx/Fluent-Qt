@@ -34,10 +34,15 @@ public:
     void requestFrame();
     void clearFrameCaches();
     void setLayerCount(int count);
-    void setLayer(int index, const QRectF& source, const QTransform& transform, quint64 revision,
-                  qreal radius = 0, const QColor& material = Qt::transparent,
-                  const QColor& reflection = Qt::transparent, qreal progress = 0,
-                  qreal shadowOpacity = 0);
+    void setLayer(int index,
+        const QRectF& source,
+        const QTransform& transform,
+        quint64 revision,
+        qreal radius = 0,
+        const QColor& material = Qt::transparent,
+        const QColor& reflection = Qt::transparent,
+        qreal progress = 0,
+        qreal shadowOpacity = 0);
     void setSceneClip(const QRectF& clip);
 
 signals:
