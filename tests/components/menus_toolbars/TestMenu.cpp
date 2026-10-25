@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <QAccessible>
 #include <QRegion>
 #include <QApplication>
 #include <QCursor>
@@ -131,6 +132,80 @@ TEST_F(MenuTest, MenuItemRetainsQActionTriggerSemantics)
     EXPECT_EQ(triggerSpy.count(), 1);
     ASSERT_EQ(menu.actions().size(), 1);
     EXPECT_EQ(menu.actions().constFirst(), item);
+}
+
+TEST_F(MenuTest, Contract_AccessibleItemsSurviveReopeningAndActionChanges)
+{
+#if QT_CONFIG(accessibility)
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
+    QWidget host;
+    host.resize(480, 320);
+    host.show();
+    host.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+    FluentMenu menu(QStringLiteral("Columns"), &host);
+    QAction* visible = menu.addAction(QStringLiteral("&Visible"));
+    visible->setCheckable(true);
+    QAction* unavailable = menu.addAction(QStringLiteral("Move earlier"));
+    unavailable->setEnabled(false);
+    QAction* hidden = menu.addAction(QStringLiteral("Hidden"));
+    hidden->setVisible(false);
+    FluentMenu nested(QStringLiteral("Order"), &menu);
+    menu.addMenu(&nested);
+    QAction* leaf = nested.addAction(QStringLiteral("Ascending"));
+    QSignalSpy triggered(leaf, &QAction::triggered);
+    QAccessible::Id originalItemId = 0;
+
+    for (int opening = 0; opening < 3; ++opening) {
+        SCOPED_TRACE(opening);
+        host.activateWindow();
+        ASSERT_TRUE(QTest::qWaitForWindowActive(&host));
+        visible->setChecked(opening % 2 == 0);
+        leaf->setText(opening == 0 ? QStringLiteral("Ascending") : QStringLiteral("Descending"));
+        menu.popup(QPoint(100, 100));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return menu.isVisible(); }));
+        QApplication::processEvents();
+        auto* root = QAccessible::queryAccessibleInterface(&menu);
+        ASSERT_NE(root, nullptr);
+        ASSERT_EQ(root->childCount(), 4);
+        auto* item = root->child(0);
+        ASSERT_NE(item, nullptr);
+        EXPECT_EQ(item->role(), QAccessible::MenuItem);
+        EXPECT_EQ(item->text(QAccessible::Name), QStringLiteral("Visible"));
+        EXPECT_FALSE(item->state().invisible);
+        EXPECT_TRUE(item->state().checkable);
+        EXPECT_EQ(bool(item->state().checked), visible->isChecked());
+        EXPECT_EQ(item->rect(),
+            QRect(menu.mapToGlobal(menu.actionGeometry(visible).topLeft()), menu.actionGeometry(visible).size()));
+        if (!originalItemId)
+            originalItemId = QAccessible::uniqueId(item);
+        EXPECT_EQ(QAccessible::uniqueId(item), originalItemId);
+        EXPECT_TRUE(root->child(1)->state().disabled);
+        EXPECT_TRUE(root->child(2)->state().invisible);
+
+        menu.setActiveAction(nested.menuAction());
+        QTest::keyClick(&menu, Qt::Key_Right);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return nested.isVisible(); }));
+        auto* branch = root->child(3)->child(0);
+        ASSERT_NE(branch, nullptr);
+        ASSERT_EQ(branch->childCount(), 1);
+        EXPECT_EQ(branch->child(0)->text(QAccessible::Name), leaf->text());
+        EXPECT_FALSE(branch->child(0)->state().invisible);
+        QTest::keyClick(&nested, Qt::Key_Escape);
+        EXPECT_TRUE(branch->child(0)->state().invisible);
+        EXPECT_TRUE(menu.isVisible());
+        QTest::keyClick(&menu, Qt::Key_Right);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return nested.isVisible(); }));
+        EXPECT_FALSE(branch->child(0)->state().invisible);
+        nested.setActiveAction(leaf);
+        QTest::keyClick(&nested, Qt::Key_Return);
+        EXPECT_EQ(triggered.count(), opening + 1);
+        EXPECT_FALSE(menu.isVisible());
+        EXPECT_TRUE(item->state().invisible);
+    }
+#else
+    GTEST_SKIP() << "Qt accessibility support is disabled";
+#endif
 }
 
 TEST_F(MenuTest, MotionPolicyDisabledSettlesEntranceTransition)

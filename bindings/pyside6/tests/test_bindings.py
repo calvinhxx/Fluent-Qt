@@ -58,6 +58,7 @@ from PySide6.QtCore import (
     qVersion,
 )
 from PySide6.QtGui import (
+    QAccessible,
     QAction,
     QColor,
     QIcon,
@@ -5173,6 +5174,67 @@ class FluentQtBindingTest(unittest.TestCase):
 
         item.trigger()
         self.assertEqual(triggered, [True])
+
+    def test_menu_accessible_items_survive_reopening(self):
+        host = QWidget()
+        host.resize(480, 320)
+        host.show()
+        host.activateWindow()
+        self.assertTrue(QTest.qWaitForWindowExposed(host))
+        menu = fluentqt.FluentMenu("Columns", host)
+        visible = menu.addAction("&Visible")
+        visible.setCheckable(True)
+        disabled = menu.addAction("Move earlier")
+        disabled.setEnabled(False)
+        hidden = menu.addAction("Hidden")
+        hidden.setVisible(False)
+        nested = fluentqt.FluentMenu("Order", menu)
+        menu.addMenu(nested)
+        leaf = nested.addAction("Ascending")
+        triggered = []
+        leaf.triggered.connect(lambda: triggered.append(True))
+        original_item_id = None
+        try:
+            for opening in range(3):
+                host.activateWindow()
+                self.assertTrue(QTest.qWaitForWindowActive(host))
+                visible.setChecked(opening % 2 == 0)
+                leaf.setText("Ascending" if opening == 0 else "Descending")
+                menu.popup(QPoint(100, 100))
+                wait_for_events(20)
+                root = QAccessible.queryAccessibleInterface(menu)
+                self.assertEqual(root.childCount(), 4)
+                item = root.child(0)
+                self.assertEqual(item.role(), QAccessible.MenuItem)
+                self.assertEqual(item.text(QAccessible.Name), "Visible")
+                self.assertFalse(item.state().invisible)
+                self.assertTrue(item.state().checkable)
+                self.assertEqual(bool(item.state().checked), visible.isChecked())
+                self.assertFalse(item.rect().isEmpty())
+                if original_item_id is None:
+                    original_item_id = QAccessible.uniqueId(item)
+                self.assertEqual(QAccessible.uniqueId(item), original_item_id)
+                self.assertTrue(root.child(1).state().disabled)
+                self.assertTrue(root.child(2).state().invisible)
+                menu.setActiveAction(nested.menuAction())
+                QTest.keyClick(menu, Qt.Key_Right)
+                wait_for_events(20)
+                branch = root.child(3).child(0)
+                self.assertEqual(branch.child(0).text(QAccessible.Name), leaf.text())
+                self.assertFalse(branch.child(0).state().invisible)
+                QTest.keyClick(nested, Qt.Key_Escape)
+                self.assertTrue(branch.child(0).state().invisible)
+                QTest.keyClick(menu, Qt.Key_Right)
+                wait_for_events(20)
+                self.assertFalse(branch.child(0).state().invisible)
+                nested.setActiveAction(leaf)
+                QTest.keyClick(nested, Qt.Key_Return)
+                self.assertEqual(len(triggered), opening + 1)
+                self.assertFalse(menu.isVisible())
+                self.assertTrue(item.state().invisible)
+        finally:
+            menu.close()
+            host.close()
 
     def test_editing_command_router_default_owner_matches_window(self):
         host = QWidget()
