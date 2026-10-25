@@ -241,6 +241,15 @@ def main() -> int:
         raise AssertionError("native category order and plugin bool must drive the contract")
 
     generated = generate_contract(project_root)
+    for route_id, sample_id, filename in (
+        ("tag-input", "tag-input-project-members", "MemberSelectionSample.h"),
+        ("auto-suggest-box", "auto-suggest-box-async", "AsyncSearchSample.h"),
+    ):
+        component = next(c for c in generated["components"] if c["id"] == route_id)
+        sample = next(s for s in component["samples"] if s["id"] == sample_id)
+        expected = (project_root / "app/view/widgets/samples" / filename).read_text(encoding="utf-8")
+        if sample["cpp_snippet"] != expected:
+            raise AssertionError("Function-local resource source crossed sample boundaries: " + sample_id)
     packaged = json.loads(args.contract.resolve().read_text(encoding="utf-8"))
     if generated != packaged:
         raise AssertionError(
@@ -260,9 +269,9 @@ def main() -> int:
         raise AssertionError("Spatial composition samples are missing")
     summary = generated["summary"]
     if summary != {
-        "route_count": 116,
-        "component_count": 91,
-        "sample_count": 264,
+        "route_count": 121,
+        "component_count": 96,
+        "sample_count": 277,
     }:
         raise AssertionError("unexpected Gallery contract summary: {0!r}".format(summary))
     routes = {route["id"]: route for route in generated["routes"]}

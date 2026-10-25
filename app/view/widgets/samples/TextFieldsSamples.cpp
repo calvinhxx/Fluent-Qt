@@ -1,8 +1,11 @@
 #include "TextFieldsSamples.h"
+#include "MemberSelectionSample.h"
+#include "AsyncSearchSample.h"
 
 #include <cmath>
 
 #include <QHBoxLayout>
+#include <QFile>
 #include <QIntValidator>
 #include <QPainter>
 #include <QPoint>
@@ -189,9 +192,54 @@ void addElideRow(QWidget* parent,
     layout->addWidget(row);
 }
 
+QVector<GallerySample> tagInputSamples()
+{
+    auto basic = makeSample(
+        QStringLiteral("tag-input-basic"), QStringLiteral("Select and remove tags"),
+        QStringLiteral("Choose a suggestion, then remove its tag with the mouse or keyboard."),
+        QStringLiteral(
+            "auto* input = new fluent::textfields::TagInput(this);\n"
+            "input->setAccessibleName(\"Technologies\");\n"
+            "input->setPlaceholderText(\"Choose a technology\");\n"
+            "input->setSuggestions({\"Qt\", \"C++\", \"Python\"});\n"
+            "input->addItem(\"Qt\", \"Qt\");\n"
+            "input->setMaximumWidth(360);"),
+        [](QWidget* parent) {
+            auto* input = new fluent::textfields::TagInput(parent);
+            input->setAccessibleName(QStringLiteral("Technologies"));
+            input->setObjectName(QStringLiteral("basicTagInput"));
+            input->setPlaceholderText(QStringLiteral("Choose a technology"));
+            input->setSuggestions({QStringLiteral("Qt"), QStringLiteral("C++"), QStringLiteral("Python")});
+            input->addItem(QStringLiteral("Qt"), QStringLiteral("Qt"));
+            input->setMaximumWidth(360);
+            return input;
+        },
+        true);
+    QFile source(QStringLiteral(":/app/samples/MemberSelectionSample.h"));
+    source.open(QIODevice::ReadOnly);
+    auto sample = makeSample(
+        QStringLiteral("tag-input-project-members"), QStringLiteral("Select project members"),
+        QStringLiteral(
+            "Choose members by name or email. Selected tags survive searches and failures; Chinese composition and keyboard navigation stay in the native editor."),
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new MemberSelectionSample(parent); }, true);
+    sample.usageSnippet = QStringLiteral(
+        "auto* input = new fluent::textfields::TagInput(this);\n"
+        "input->setSuggestionModel(memberModel);\n"
+        "input->setAsyncSuggestionsEnabled(true);\n"
+        "input->addItem(\"chen-design\", \"Chen Chen · Design team\");\n"
+        "input->addItem(\"lin\", \"Lin Xiao\");\n"
+        "// Suggestions carry a stable key and a label in Qt::UserRole.\n"
+        "connect(input, &AutoSuggestBox::suggestionsRequested, this, searchMembers);\n"
+        "connect(input, &fluent::textfields::TagInput::tokensSubmitted, this, resolveEmails);\n"
+        "// Full example includes the directory, retry and read-only controls.");
+    sample.sourceFiles = {
+        {QStringLiteral("MemberSelectionSample.h"), QStringLiteral("cpp"), sample.codeSnippet, sample.usageSnippet}};
+    return {basic, sample};
+}
+
 QVector<GallerySample> autoSuggestBoxSamples()
 {
-    return {
+    QVector<GallerySample> samples{
         makeSample(QStringLiteral("auto-suggest-box-suggestions"), QStringLiteral("Suggestions and query submit"),
             QStringLiteral("Suggestions, selection, and query submission are surfaced as separate signals."),
             QStringLiteral(
@@ -290,6 +338,33 @@ QVector<GallerySample> autoSuggestBoxSamples()
                 layout->addWidget(status);
                 return surface;
             })};
+    QFile source(QStringLiteral(":/app/samples/AsyncSearchSample.h"));
+    source.open(QIODevice::ReadOnly);
+    auto async = makeSample(
+        QStringLiteral("auto-suggest-box-async"), QStringLiteral("Search a project directory"),
+        QStringLiteral(
+            "A simulated service demonstrates loading, paged results, empty results and retry. "
+            "Quickly changing the query discards older replies."),
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new AsyncSearchSample(parent); }, true);
+    async.usageSnippet = QStringLiteral(
+        "auto* box = new AutoSuggestBox(this);\n"
+        "box->setSuggestionModel(projectModel);\n"
+        "box->setAsyncSuggestionsEnabled(true);\n"
+        "box->setDebounceInterval(200);\n"
+        "box->setLoadingText(\"Searching projects…\");\n"
+        "box->setEmptyText(\"No projects found\");\n"
+        "connect(box, &AutoSuggestBox::suggestionsRequested, this, searchProjects);\n"
+        "// In the asynchronous result callback, before changing projectModel:\n"
+        "if (!box->isSuggestionRequestCurrent(requestId))\n"
+        "    return;\n"
+        "// Update projectModel, then expose the results and pagination state.\n"
+        "box->completeSuggestionRequest(requestId, hasMore);\n"
+        "// On failure: box->failSuggestionRequest(requestId, \"Couldn’t load projects\");\n"
+        "// Full example includes the simulated service and retry controls.");
+    async.sourceFiles = {
+        {QStringLiteral("AsyncSearchSample.h"), QStringLiteral("cpp"), async.codeSnippet, async.usageSnippet}};
+    samples.append(async);
+    return samples;
 }
 
 QVector<GallerySample> labelSamples()
@@ -545,6 +620,33 @@ QVector<GallerySample> lineEditSamples()
 QVector<GallerySample> numberBoxSamples()
 {
     return {
+        makeSample(QStringLiteral("number-box-scrubbing"), QStringLiteral("Drag to adjust a value"),
+            QStringLiteral(
+                "Drag the handle for a live preview. Shift makes fine changes; Escape restores the starting value."),
+            QStringLiteral(
+                "auto* number = new NumberBox(this);\n"
+                "number->setObjectName(\"scrubNumber\");\n"
+                "number->setAccessibleName(\"Rotation angle\");\n"
+                "number->setHeader(\"Rotation angle\");\n"
+                "number->setRange(-180, 180);\n"
+                "number->setValue(30);\n"
+                "number->setScrubbingEnabled(true);\n"
+                "number->setScrubSensitivity(0.5);\n"
+                "number->setDisplayPrecision(1);\n"
+                "number->setFixedWidth(260);"),
+            [](QWidget* parent) {
+                auto* number = new NumberBox(parent);
+                number->setObjectName(QStringLiteral("scrubNumber"));
+                number->setAccessibleName(QStringLiteral("Rotation angle"));
+                number->setHeader(QStringLiteral("Rotation angle"));
+                number->setRange(-180, 180);
+                number->setValue(30);
+                number->setScrubbingEnabled(true);
+                number->setScrubSensitivity(0.5);
+                number->setDisplayPrecision(1);
+                number->setFixedWidth(260);
+                return number;
+            }),
         makeSample(QStringLiteral("number-box-expression"), QStringLiteral("Expression input"),
             QStringLiteral("Typed arithmetic can be evaluated on commit when expression support is enabled."),
             QStringLiteral(
@@ -934,6 +1036,8 @@ QVector<GallerySample> codeBlockSamples()
 
 QVector<GallerySample> textFieldsSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("tag-input"))
+        return tagInputSamples();
     if (routeId == QStringLiteral("code-block"))
         return codeBlockSamples();
     if (routeId == QStringLiteral("auto-suggest-box"))

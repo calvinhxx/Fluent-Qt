@@ -1,4 +1,7 @@
+#include "view/support/GalleryToast.h"
 #include "BasicInputSamples.h"
+#include "TeamSelectionSample.h"
+#include <QFile>
 #include "FilesSamples.h"
 
 #include <QLayout>
@@ -1224,20 +1227,30 @@ QVector<GallerySample> splitButtonSamples()
                 "menu->addAction(\"Green\");\n"
                 "menu->addAction(\"Blue\");\n"
                 "button->setMenu(menu);\n"
-                "connect(button, &SplitButton::clicked,\n"
-                "        status, []() { /* primary clicked */ });"),
+                "connect(button, &SplitButton::clicked, button, [button] {\n"
+                "    Toast::showOrUpdateToast(button, \"gallery.action-feedback\",\n"
+                "        \"Primary action selected\", Toast::Informational, 2200,\n"
+                "        Toast::Top, QMargins(16, 50, 16, 16));\n"
+                "});\n"
+                "connect(menu, &QMenu::triggered, button, [button](QAction* action) {\n"
+                "    Toast::showOrUpdateToast(button, \"gallery.action-feedback\",\n"
+                "        action->text() + \" selected\", Toast::Informational, 2200,\n"
+                "        Toast::Top, QMargins(16, 50, 16, 16));\n"
+                "});"),
             [](QWidget* parent) {
                 QWidget* group = horizontalGroup(parent, 12);
                 auto* button = new SplitButton(QStringLiteral("Choose color"), group);
                 button->setMenu(makeMenu(button, QStringLiteral("Colors"),
                     {QStringLiteral("Red"), QStringLiteral("Green"), QStringLiteral("Blue")}));
-                auto* status = makeValueLabel(group, QStringLiteral("Status: Ready"));
-                setStableStatusWidth(status, QStringLiteral("Status: Primary clicked"));
-                QObject::connect(button, &SplitButton::clicked, status, [status]() {
-                    status->setText(QStringLiteral("Status: Primary clicked"));
+                QObject::connect(button, &SplitButton::clicked, button, [button]() {
+                    showGalleryToast(button, QStringLiteral("Primary action selected"),
+                        status_info::Toast::Informational);
+                });
+                QObject::connect(button->menu(), &QMenu::triggered, button, [button](QAction* action) {
+                    showGalleryToast(button, QStringLiteral("%1 selected").arg(action->text()),
+                        status_info::Toast::Informational);
                 });
                 group->layout()->addWidget(button);
-                group->layout()->addWidget(status);
                 return group;
             }),
         makeSample(QStringLiteral("split-button-accent"), QStringLiteral("Accent SplitButton"),
@@ -1499,8 +1512,77 @@ QVector<GallerySample> toggleSwitchSamples()
 
 } // namespace
 
+QVector<GallerySample> treeSelectSamples()
+{
+    auto basic = makeSample(QStringLiteral("tree-select-basic"), QStringLiteral("Select from a hierarchy"),
+        QStringLiteral("Search a small tree and choose one item. A group can remain browse-only."),
+        QStringLiteral(
+            "auto* select = new fluent::basicinput::TreeSelect(this);\n"
+            "select->setAccessibleName(\"Team\");\n"
+            "select->setPlaceholderText(\"Choose a team\");\n"
+            "auto* model = new QStandardItemModel(select);\n"
+            "auto* product = new QStandardItem(\"Product\");\n"
+            "product->setSelectable(false);\n"
+            "auto* client = new QStandardItem(\"Client\");\n"
+            "client->setData(\"client\", Qt::UserRole);\n"
+            "auto* platform = new QStandardItem(\"Platform\");\n"
+            "platform->setData(\"platform\", Qt::UserRole);\n"
+            "product->appendRow(client);\n"
+            "product->appendRow(platform);\n"
+            "model->appendRow(product);\n"
+            "select->setModel(model);\n"
+            "select->setSelectedKeys({\"client\"});\n"
+            "select->setMaximumWidth(360);"),
+        [](QWidget* parent) {
+            auto* select = new fluent::basicinput::TreeSelect(parent);
+            select->setAccessibleName(QStringLiteral("Team"));
+            select->setObjectName(QStringLiteral("basicTreeSelect"));
+            select->setPlaceholderText(QStringLiteral("Choose a team"));
+            auto* model = new QStandardItemModel(select);
+            auto* product = new QStandardItem(QStringLiteral("Product"));
+            product->setSelectable(false);
+            auto* client = new QStandardItem(QStringLiteral("Client"));
+            client->setData(QStringLiteral("client"), Qt::UserRole);
+            auto* platform = new QStandardItem(QStringLiteral("Platform"));
+            platform->setData(QStringLiteral("platform"), Qt::UserRole);
+            product->appendRow(client);
+            product->appendRow(platform);
+            model->appendRow(product);
+            select->setModel(model);
+            select->setSelectedKeys({QStringLiteral("client")});
+            select->setMaximumWidth(360);
+            return select;
+        });
+    QFile source(QStringLiteral(":/app/samples/TeamSelectionSample.h"));
+    source.open(QIODevice::ReadOnly);
+    auto sample = makeSample(
+        QStringLiteral("tree-select-project-teams"), QStringLiteral("Select project teams"),
+        QStringLiteral(
+            "Search a team hierarchy and choose one owner or several collaborating teams. Chinese input and keyboard navigation use the native editor."),
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new TeamSelectionSample(parent); }, true);
+    sample.usageSnippet = QStringLiteral(
+        "// The application owns the hierarchical team model.\n"
+        "// Column zero: DisplayRole labels and unique UserRole keys.\n"
+        "auto* owner = new fluent::basicinput::TreeSelect(this);\n"
+        "owner->setModel(teamModel);\n"
+        "owner->setPlaceholderText(\"Search teams…\");\n"
+        "owner->setSelectedKeys({\"client\"});\n\n"
+        "auto* collaborators = new fluent::basicinput::TreeSelect(this);\n"
+        "collaborators->setModel(teamModel);\n"
+        "collaborators->setSelectionMode(fluent::basicinput::TreeSelect::SelectionMode::Multiple);\n"
+        "collaborators->setPlaceholderText(\"Add teams…\");\n"
+        "collaborators->setSelectedKeys({\"brand-design\"});\n"
+        "// Read selectedItems() for key, text and full path.\n"
+        "// The runnable model and form are in Full example.");
+    sample.sourceFiles = {
+        {QStringLiteral("TeamSelectionSample.h"), QStringLiteral("cpp"), sample.codeSnippet, sample.usageSnippet}};
+    return {basic, sample};
+}
+
 QVector<GallerySample> basicInputSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("tree-select"))
+        return treeSelectSamples();
     if (routeId == QStringLiteral("file-drop-zone"))
         return fileDropZoneSamples();
     if (routeId == QStringLiteral("button"))

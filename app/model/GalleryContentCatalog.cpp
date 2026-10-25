@@ -62,6 +62,9 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("chart-view"),
             QStringLiteral("Native charts share caller-owned models, preserve extrema and keep "
                            "projections bounded by the viewport.")},
+        {QStringLiteral("property-panel"),
+            QStringLiteral(
+                "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation.")},
         {QStringLiteral("all-controls"), QStringLiteral("Browse the full set of FluentQt components in one place.")},
         {QStringLiteral("basic-input"), QStringLiteral("Controls that let people trigger actions and make choices.")},
         {QStringLiteral("collections"), QStringLiteral("Controls that present and organize sets of related items.")},
@@ -117,6 +120,8 @@ const QHash<QString, QString>& routeDescriptions()
                            "and clearing several options.")},
         {QStringLiteral("radio-button"),
             QStringLiteral("Lets people select one option from a mutually exclusive group.")},
+        {QStringLiteral("tree-select"),
+            QStringLiteral("Search a hierarchy and select one or more items while retaining their parent paths.")},
         {QStringLiteral("rating-control"), QStringLiteral("Lets people view, set, or clear star ratings.")},
         {QStringLiteral("repeat-button"),
             QStringLiteral("A button that raises its click event repeatedly while "
@@ -201,6 +206,11 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("expander"),
             QStringLiteral("A disclosure surface that reveals caller-supplied "
                            "content with an optional animation.")},
+        {QStringLiteral("data-grid-tool-bar"),
+            QStringLiteral("Search and combine filters, then show, pin or reorder DataGrid columns.")},
+        {QStringLiteral("list-detail-view"),
+            QStringLiteral("Shows a list and detail side by side, or one pane at a time in a narrow space. "
+                           "The same content widgets stay alive across layout changes.")},
         {QStringLiteral("field"),
             QStringLiteral("Adds a label, required marker, helper text, and "
                            "validation feedback to any input control.")},
@@ -259,10 +269,13 @@ const QHash<QString, QString>& routeDescriptions()
             QStringLiteral("A popup label that shows extra information about a "
                            "control on hover.")},
         // Text fields
+        {QStringLiteral("tag-input"),
+            QStringLiteral(
+                "Choose several values as compact tags with asynchronous suggestions and native text input.")},
         {QStringLiteral("code-block"),
             QStringLiteral("Read-only code with syntax colors, exact copying, folding and bounded scrolling.")},
         {QStringLiteral("auto-suggest-box"),
-            QStringLiteral("A text box that suggests matching items while people type.")},
+            QStringLiteral("A search input with local or asynchronous suggestions, loading, pagination and retry.")},
         {QStringLiteral("label"), QStringLiteral("Static text rendered with Fluent typography roles and elision.")},
         {QStringLiteral("line-edit"), QStringLiteral("A single-line text box with Fluent styling and a clear button.")},
         {QStringLiteral("number-box"),

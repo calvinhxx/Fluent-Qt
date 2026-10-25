@@ -7,6 +7,16 @@ from textwrap import dedent
 from .native_samples import register_source_samples
 
 
+def async_search_source_files(result):
+    from .native_source_files import complete_sample_source_files
+    return complete_sample_source_files(result, "async_project_search.py", root_name="root")
+
+
+def member_selection_source_files(result):
+    from .native_source_files import complete_sample_source_files
+    return complete_sample_source_files(result, "project_members.py", root_name="root")
+
+
 def _script(body: str, imports: str = "") -> str:
     prefix = "import fluentqt\n"
     if imports:
@@ -15,6 +25,165 @@ def _script(body: str, imports: str = "") -> str:
 
 
 _WIDGETS = "from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget"
+
+
+register_source_samples(
+    "tag-input",
+    ("TagInput",),
+    {
+        "tag-input-basic": (
+            "input",
+            _script(
+                """
+                input = fluentqt.TagInput()
+                input.setAccessibleName("Technologies")
+                input.setObjectName("basicTagInput")
+                input.setPlaceholderText("Choose a technology")
+                input.setSuggestions(["Qt", "C++", "Python"])
+                input.addItem("Qt", "Qt")
+                input.setMaximumWidth(360)
+                """
+            ),
+        ),
+        "tag-input-project-members": (
+            "root",
+            _script(
+                """
+                root = QWidget(globals().get("gallery_parent"))
+                root.setObjectName("tagMembersSample")
+                layout = QVBoxLayout(root)
+                layout.setContentsMargins(16, 16, 16, 16)
+                layout.setSpacing(12)
+                title = fluentqt.Label("Project members", root)
+                title.setFluentTypography(fluentqt.FontRole.BodyStrong)
+                layout.addWidget(title)
+                box = fluentqt.TagInput(root)
+                box.setObjectName("projectMemberInput")
+                box.setAccessibleName("Project members")
+                box.setPlaceholderText("Search members")
+                box.setMinimumWidth(180)
+                box.setMaximumWidth(360)
+                box.setSuggestionItemHeight(36)
+                box.setAsyncSuggestionsEnabled(True)
+                box.setLoadingText("Searching members…")
+                box.setEmptyText("No members found")
+                box.setEmptyDescription("Try a name or email address.")
+                model = QStandardItemModel(root)
+                box.setSuggestionModel(model)
+                layout.addWidget(box)
+                help_text = fluentqt.Label(
+                    "Search Chen Chen or an email. Paste several emails separated by commas or semicolons.", root
+                )
+                help_text.setWordWrap(True)
+                help_text.setFluentTypography(fluentqt.FontRole.Caption)
+                help_text.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                layout.addWidget(help_text)
+                status = fluentqt.Label(root)
+                status.setObjectName("tagSelectionStatus")
+                status.setWordWrap(True)
+                status.setFluentTypography(fluentqt.FontRole.Caption)
+                layout.addWidget(status)
+                fail_next = fluentqt.CheckBox("Fail next search", root)
+                fail_next.setObjectName("tagFailNext")
+                fail_next.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+                layout.addWidget(fail_next)
+                readonly = fluentqt.CheckBox("Read only", root)
+                readonly.setObjectName("tagReadOnly")
+                readonly.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+                layout.addWidget(readonly)
+                reset = fluentqt.Button("Reset members", root)
+                reset.setObjectName("tagResetMembers")
+                layout.addWidget(reset, 0, Qt.AlignLeft)
+                readonly.toggled.connect(box.setReadOnly)
+                members = [
+                    ("chen-design", "Chen Chen", "Design team", "chen.design@example.com"),
+                    ("chen-dev", "Chen Chen", "Engineering team", "chen.dev@example.com"),
+                    ("lin", "Lin Xiao", "Product team", "lin@example.com"),
+                    ("alex", "Alex Chen", "Platform team", "alex@example.com"),
+                    ("wang", "Ming Wang", "Engineering team", "wang@example.com"),
+                    ("li", "An Li", "Design team", "li@example.com"),
+                    ("maria", "María García", "Product team", "maria@example.com"),
+                ]
+
+                def selection_label(member):
+                    same_name = sum(other[1] == member[1] for other in members)
+                    return member[1] + " · " + member[2] if same_name > 1 else member[1]
+
+                def update_selection():
+                    status.setText(f"{box.selectedCount()} selected: {', '.join(box.selectedTexts())}")
+                    for i in range(model.rowCount()):
+                        row = model.item(i)
+                        selected = box.containsKey(row.data(Qt.UserRole)["key"])
+                        row.setEnabled(not selected)
+                        row.setSelectable(not selected)
+                        row.setText(row.data(Qt.UserRole + 1) + (" · Added" if selected else ""))
+
+                def reset_members():
+                    box.cancelSuggestions()
+                    box.clear()
+                    box.setSelectedItems([
+                        {"key": member[0], "text": selection_label(member)}
+                        for member in members if member[0] in ("chen-design", "lin")
+                    ])
+                    update_selection()
+
+                def resolve_tokens(tokens):
+                    unresolved = []
+                    selected = box.selectedItems()
+                    for token in tokens:
+                        matches = [member for member in members
+                                   if token == member[0] or token.casefold() == member[3].casefold()
+                                   or token == member[1]]
+                        if len(matches) == 1:
+                            selected.append({"key": matches[0][0], "text": selection_label(matches[0])})
+                        else:
+                            unresolved.append(token)
+                    box.setSelectedItems(selected)
+                    box.setText("; ".join(unresolved))
+                    update_selection()
+                    if unresolved:
+                        status.setText(f"No unique match: {', '.join(unresolved)}. Choose a result or use an email.")
+
+                def search(query, token, append):
+                    fail = fail_next.isChecked()
+                    fail_next.setChecked(False)
+                    timer = QTimer(root)
+                    timer.setSingleShot(True)
+
+                    def finish():
+                        timer.deleteLater()
+                        if not box.isSuggestionRequestCurrent(token):
+                            return
+                        if fail:
+                            box.failSuggestionRequest(token, "Couldn’t load members", "Your selection is kept.")
+                            return
+                        model.clear()
+                        for key, name, team, email in members:
+                            if query.casefold() not in (name + team + email).casefold():
+                                continue
+                            row = QStandardItem(name + " · " + team)
+                            row.setData({"key": key, "text": selection_label((key, name, team, email))}, Qt.UserRole)
+                            row.setData(name + " · " + team, Qt.UserRole + 1)
+                            model.appendRow(row)
+                        update_selection()
+                        box.completeSuggestionRequest(token)
+
+                    timer.timeout.connect(finish)
+                    timer.start(650 if len(query) < 2 else 250)
+
+                reset.clicked.connect(reset_members)
+                box.selectionChanged.connect(update_selection)
+                box.tokensSubmitted.connect(resolve_tokens)
+                box.suggestionsRequested.connect(search)
+                reset_members()
+                """,
+                "from PySide6.QtCore import Qt, QTimer\n"
+                "from PySide6.QtGui import QStandardItem, QStandardItemModel\n"
+                "from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget",
+            ),
+        ),
+    },
+)
 
 _TEXT_IMPORTS = (
     "from PySide6.QtCore import QRectF, Qt\n"
@@ -366,6 +535,107 @@ register_source_samples(
     "auto-suggest-box",
     ("AutoSuggestBox",),
     {
+        "auto-suggest-box-async": (
+            "root",
+            _script(
+                """
+                root = QWidget(globals().get("gallery_parent"))
+                root.setObjectName("asyncSearchSample")
+                root.setProperty("staleResponsesIgnored", 0)
+                layout = QVBoxLayout(root)
+                layout.setContentsMargins(16, 16, 16, 16)
+                layout.setSpacing(12)
+                title = fluentqt.Label("Project directory", root)
+                title.setFluentTypography(fluentqt.FontRole.BodyStrong)
+                box = fluentqt.AutoSuggestBox(root)
+                box.setObjectName("asyncProjectSearch")
+                box.setAccessibleName("Search projects")
+                box.setPlaceholderText("Search projects")
+                box.setQueryButtonPlacement(
+                    fluentqt.AutoSuggestBox.QueryButtonPlacement.Left
+                )
+                box.setSuggestionItemHeight(36)
+                box.setMaximumWidth(320)
+                box.setMinimumWidth(180)
+                box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                box.setLoadingText("Searching projects…")
+                box.setEmptyText("No projects found")
+                box.setEmptyDescription("Try a different name.")
+                model = QStandardItemModel(root)
+                box.setSuggestionModel(model)
+                box.setAsyncSuggestionsEnabled(True)
+                fail_next = fluentqt.CheckBox("Fail next search", root)
+                fail_next.setObjectName("asyncFailNext")
+                fail_next.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+                status = fluentqt.Label(
+                    "Try Aurora for paged results, or zzz for no results.", root
+                )
+                status.setObjectName("asyncSearchResult")
+                status.setWordWrap(True)
+                status.setFluentTypography(fluentqt.FontRole.Caption)
+                status.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                for widget in (title, status, box, fail_next):
+                    layout.addWidget(widget)
+
+                projects = [
+                    "Aurora Workspace", "Aurora Mobile", "Aurora API",
+                    "Aurora Docs", "Aurora Design", "Aurora Analytics",
+                    "Aurora Release", "Aurora Support", "Canvas",
+                    "Canvas Studio", "Delta", "Harbor",
+                ]
+
+                def search(query, token, append):
+                    fail = fail_next.isChecked()
+                    fail_next.setChecked(False)
+                    # Each simulated request is owned by the sample lifetime.
+                    timer = QTimer(root)
+                    timer.setSingleShot(True)
+
+                    def finish():
+                        timer.deleteLater()
+                        # Validate before changing the application-owned model.
+                        if not box.isSuggestionRequestCurrent(token):
+                            root.setProperty(
+                                "staleResponsesIgnored",
+                                root.property("staleResponsesIgnored") + 1,
+                            )
+                            return
+                        if fail:
+                            box.failSuggestionRequest(
+                                token, "Couldn’t load projects",
+                                "Try again in a moment.",
+                            )
+                            return
+                        matches = []
+                        for name in projects:
+                            if query.strip().casefold() in name.casefold():
+                                matches.append(name)
+                        if not append:
+                            model.removeRows(0, model.rowCount())
+                        end = min(model.rowCount() + 4, len(matches))
+                        for name in matches[model.rowCount():end]:
+                            item = QStandardItem(name)
+                            item.setData(
+                                f"project-{projects.index(name) + 1}", Qt.UserRole
+                            )
+                            model.appendRow(item)
+                        box.completeSuggestionRequest(token, end < len(matches))
+
+                    timer.timeout.connect(finish)
+                    timer.start(850 if len(query) < 3 else 350)
+
+                box.suggestionsRequested.connect(search)
+                box.querySubmitted.connect(
+                    lambda query, chosen: status.setText(
+                        f"Selected: {query}" if chosen else f"Search: {query}"
+                    )
+                )
+                """,
+                "from PySide6.QtCore import Qt, QTimer\n"
+                "from PySide6.QtGui import QStandardItem, QStandardItemModel\n"
+                "from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget",
+            ),
+        ),
         "auto-suggest-box-suggestions": (
             "root",
             _text_script(
@@ -621,6 +891,20 @@ register_source_samples(
     "number-box",
     ("NumberBox",),
     {
+        "number-box-scrubbing": (
+            "number",
+            "import fluentqt\n\n"
+            "number = fluentqt.NumberBox()\n"
+            "number.setObjectName(\"scrubNumber\")\n"
+            "number.setAccessibleName(\"Rotation angle\")\n"
+            "number.setHeader(\"Rotation angle\")\n"
+            "number.setRange(-180, 180)\n"
+            "number.setValue(30)\n"
+            "number.setScrubbingEnabled(True)\n"
+            "number.setScrubSensitivity(0.5)\n"
+            "number.setDisplayPrecision(1)\n"
+            "number.setFixedWidth(260)\n",
+        ),
         "number-box-expression": (
             "root",
             _text_script(

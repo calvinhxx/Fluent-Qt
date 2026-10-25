@@ -73,7 +73,9 @@ public:
         connect(m_form, &FormController::stateChanged, this, [this]() { updateStatus(); });
         connect(m_form, &FormController::submissionFinished, this, [this](bool success) {
             if (success)
-                m_status->setText(QStringLiteral("Connection saved for this demo."));
+                status_info::Toast::showOrUpdateToast(this, QStringLiteral("gallery.action-feedback"),
+                    QStringLiteral("Connection saved for this demo"), status_info::Toast::Success, 2200,
+                    status_info::Toast::Top, QMargins(16, 50, 16, 16));
         });
         connect(m_test, &basicinput::Button::clicked, m_form, &FormController::validate);
         connect(m_save, &basicinput::Button::clicked, m_form, &FormController::submit);

@@ -8,6 +8,7 @@
 #include <QAbstractTableModel>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QFontDatabase>
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QLinearGradient>
@@ -1166,7 +1167,13 @@ QStandardItemModel* makeGridPhotoModel(GridView* grid, const QSize& cell)
 
 class LargeDataGridModel final : public QAbstractTableModel {
 public:
-    explicit LargeDataGridModel(QObject* parent = nullptr) : QAbstractTableModel(parent) {}
+    explicit LargeDataGridModel(QObject* parent = nullptr)
+        : QAbstractTableModel(parent), m_numberFont(QFontDatabase::systemFont(QFontDatabase::FixedFont))
+    {
+        m_numberFont.setPixelSize(Typography::FontSize::Body);
+        m_numberFont.setStyleHint(QFont::Monospace);
+        m_numberFont.setFixedPitch(true);
+    }
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : 100000; }
 
@@ -1178,6 +1185,8 @@ public:
             return {};
         if (role == Qt::TextAlignmentRole && index.column() >= 3)
             return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+        if (role == Qt::FontRole && index.column() >= 3)
+            return m_numberFont;
         if (role != Qt::DisplayRole)
             return {};
 
@@ -1198,6 +1207,8 @@ public:
 
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override
     {
+        if (role == Qt::TextAlignmentRole && orientation == Qt::Horizontal && section >= 3)
+            return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
         if (role != Qt::DisplayRole)
             return {};
         if (orientation == Qt::Vertical)
@@ -1211,6 +1222,9 @@ public:
     {
         return index.isValid() ? Qt::ItemIsEnabled | Qt::ItemIsSelectable : Qt::NoItemFlags;
     }
+
+private:
+    QFont m_numberFont;
 };
 
 QStandardItemModel* makeProjectDataGridModel(QObject* parent, bool editable)
@@ -1218,6 +1232,7 @@ QStandardItemModel* makeProjectDataGridModel(QObject* parent, bool editable)
     auto* model = new QStandardItemModel(parent);
     model->setHorizontalHeaderLabels(
         {QStringLiteral("Project"), QStringLiteral("Owner"), QStringLiteral("Status"), QStringLiteral("Priority")});
+    model->setHeaderData(3, Qt::Horizontal, int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     const QStringList projects{QStringLiteral("Aurora"), QStringLiteral("Beacon"), QStringLiteral("Canvas"),
         QStringLiteral("Delta"), QStringLiteral("Ember"), QStringLiteral("Fjord"), QStringLiteral("Grove"),
         QStringLiteral("Harbor")};
@@ -1262,6 +1277,27 @@ public:
         : QStyledItemDelegate(grid), m_grid(grid), m_baseDelegate(grid ? grid->itemDelegate() : nullptr)
     {}
 
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        return m_baseDelegate->createEditor(parent, option, index);
+    }
+
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index)
+        const override
+    {
+        m_baseDelegate->updateEditorGeometry(editor, option, index);
+    }
+
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
+    {
+        m_baseDelegate->setEditorData(editor, index);
+    }
+
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override
+    {
+        m_baseDelegate->setModelData(editor, model, index);
+    }
+
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (m_baseDelegate)
@@ -1272,9 +1308,11 @@ public:
             return;
         }
         painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
         painter->setBrush(Qt::NoBrush);
         painter->setPen(QPen(m_grid->themeColorsRef().systemCritical, 1.5));
-        painter->drawRoundedRect(QRectF(option.rect).adjusted(1.5, 1.5, -1.5, -1.5), 3.0, 3.0);
+        const QRectF line = QRectF(option.rect).adjusted(4.5, 2.5, -4.5, -2.5);
+        painter->drawLine(line.bottomLeft(), line.bottomRight());
         painter->restore();
     }
 
@@ -1286,6 +1324,50 @@ private:
 QVector<GallerySample> dataGridSamples()
 {
     QVector<GallerySample> samples{
+        makeSample(
+            QStringLiteral("data-grid-pinned-columns"), QStringLiteral("Pinned columns and editing"),
+            QStringLiteral("Scroll horizontally while Project stays visible. Double-click a cell or press F2 to edit."),
+            QStringLiteral(
+                "auto* grid = new DataGrid(this);\n"
+                "grid->setAccessibleName(\"Pinned projects\");\n"
+                "auto* model = new QStandardItemModel(grid);\n"
+                "model->setHorizontalHeaderLabels({\"Project\", \"Owner\", \"Status\"});\n"
+                "model->appendRow({new QStandardItem(\"Aurora\"),\n"
+                "    new QStandardItem(\"Maya\"), new QStandardItem(\"Active\")});\n"
+                "model->appendRow({new QStandardItem(\"Beacon\"),\n"
+                "    new QStandardItem(\"Noah\"), new QStandardItem(\"Review\")});\n"
+                "grid->setModel(model);\n"
+                "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
+                "grid->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);\n"
+                "grid->setColumnWidth(0, 240);\n"
+                "grid->setColumnWidth(1, 220);\n"
+                "grid->setColumnWidth(2, 240);\n"
+                "grid->setColumnPinned(0, true);\n"
+                "grid->setMaximumWidth(600);\n"
+                "grid->setFixedHeight(180);"),
+            [](QWidget* parent) {
+                auto* grid = new DataGrid(parent);
+                grid->setAccessibleName(QStringLiteral("Pinned projects"));
+                grid->setObjectName(QStringLiteral("pinnedProjectsGrid"));
+                auto* model = new QStandardItemModel(grid);
+                model->setHorizontalHeaderLabels(
+                    {QStringLiteral("Project"), QStringLiteral("Owner"), QStringLiteral("Status")});
+                model->appendRow({new QStandardItem(QStringLiteral("Aurora")),
+                    new QStandardItem(QStringLiteral("Maya")), new QStandardItem(QStringLiteral("Active"))});
+                model->appendRow({new QStandardItem(QStringLiteral("Beacon")),
+                    new QStandardItem(QStringLiteral("Noah")), new QStandardItem(QStringLiteral("Review"))});
+                grid->setModel(model);
+                grid->setSelectionBehavior(QAbstractItemView::SelectRows);
+                grid->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
+                grid->setColumnWidth(0, 240);
+                grid->setColumnWidth(1, 220);
+                grid->setColumnWidth(2, 240);
+                grid->setColumnPinned(0, true);
+                grid->setMaximumWidth(600);
+                grid->setFixedHeight(180);
+                return grid;
+            },
+            true),
         makeSample(QStringLiteral("data-grid-large-read-only"), QStringLiteral("Large read-only data"),
             QStringLiteral("A model with 100,000 rows remains virtualized: DataGrid asks "
                            "only for cells needed by the viewport."),
@@ -1293,15 +1375,15 @@ QVector<GallerySample> dataGridSamples()
                 "auto* grid = new DataGrid(this);\n"
                 "grid->setAccessibleName(\"Large data\");\n"
                 "grid->setModel(new LargeDataGridModel(grid));\n"
-                "grid->setScrollChainingEnabled(true);\n"
                 "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
-                "grid->setEditTriggers(QAbstractItemView::NoEditTriggers);"),
+                "grid->setEditTriggers(QAbstractItemView::NoEditTriggers);\n"
+                "// LargeDataGridModel returns a fixed-pitch FontRole for numeric\n"
+                "// columns and AlignRight for both their cells and headers."),
             [](QWidget* parent) {
                 auto* grid = new DataGrid(parent);
                 grid->setAccessibleName(QStringLiteral("Large data"));
                 grid->setFixedSize(680, 252);
                 grid->setModel(new LargeDataGridModel(grid));
-                grid->setScrollChainingEnabled(true);
                 grid->setSelectionBehavior(QAbstractItemView::SelectRows);
                 grid->setEditTriggers(QAbstractItemView::NoEditTriggers);
                 grid->horizontalHeader()->setStretchLastSection(true);
@@ -1309,32 +1391,39 @@ QVector<GallerySample> dataGridSamples()
                 grid->setColumnWidth(1, 120);
                 return grid;
             }),
-        makeSample(QStringLiteral("data-grid-column-selection"), QStringLiteral("Columns, sorting, and selection"),
-            QStringLiteral("Resize or reorder headers, click a header to sort, and use Ctrl "
-                           "or Shift to extend row selection."),
+        makeSample(QStringLiteral("data-grid-column-selection"), QStringLiteral("Sort and arrange columns"),
+            QStringLiteral(
+                "Click a column title to sort; click again to reverse. The arrow shows the current order. "
+                "Drag a divider to resize, or a title to move the column. Ctrl/Shift extends row selection."),
             QStringLiteral(
                 "auto* grid = new DataGrid(this);\n"
                 "grid->setAccessibleName(\"Projects\");\n"
                 "grid->setModel(projectModel);\n"
-                "grid->setScrollChainingEnabled(true);\n"
                 "grid->setSelectionMode(DataGrid::SelectionMode::Extended);\n"
                 "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
                 "grid->setSortingEnabled(true);\n"
-                "grid->horizontalHeader()->setSectionsMovable(true);"),
+                "grid->sortByColumn(0, Qt::AscendingOrder);\n"
+                "grid->horizontalHeader()->setSectionsMovable(true);\n"
+                "// Match numeric header and cell alignment in the model.\n"
+                "grid->setColumnWidth(0, 240);\n"
+                "grid->setColumnWidth(1, 180);\n"
+                "grid->setColumnWidth(2, 158);\n"
+                "grid->setColumnWidth(3, 100);"),
             [](QWidget* parent) {
                 auto* grid = new DataGrid(parent);
                 grid->setAccessibleName(QStringLiteral("Projects"));
                 grid->setFixedSize(680, 252);
                 auto* model = makeProjectDataGridModel(grid, false);
                 grid->setModel(model);
-                grid->setScrollChainingEnabled(true);
                 grid->setSelectionMode(DataGrid::SelectionMode::Extended);
                 grid->setSelectionBehavior(QAbstractItemView::SelectRows);
                 grid->setSortingEnabled(true);
+                grid->sortByColumn(0, Qt::AscendingOrder);
                 grid->horizontalHeader()->setSectionsMovable(true);
-                grid->horizontalHeader()->setStretchLastSection(true);
-                grid->setColumnWidth(0, 170);
-                grid->setColumnWidth(1, 130);
+                grid->setColumnWidth(0, 240);
+                grid->setColumnWidth(1, 180);
+                grid->setColumnWidth(2, 158);
+                grid->setColumnWidth(3, 100);
                 return grid;
             }),
         makeSample(QStringLiteral("data-grid-edit-validation"), QStringLiteral("Delegate editing and validation"),
@@ -1344,7 +1433,6 @@ QVector<GallerySample> dataGridSamples()
                 "auto* grid = new DataGrid(this);\n"
                 "grid->setAccessibleName(\"Settings\");\n"
                 "grid->setModel(validationModel);\n"
-                "grid->setScrollChainingEnabled(true);\n"
                 "grid->setItemDelegate(new ValidationDelegate(grid));\n"
                 "grid->setEditTriggers(QAbstractItemView::DoubleClicked\n"
                 "                      | QAbstractItemView::EditKeyPressed);\n"
@@ -1360,23 +1448,19 @@ QVector<GallerySample> dataGridSamples()
                 const QVector<QStringList> rows{
                     {QStringLiteral("Channel"), QStringLiteral("stable"), QStringLiteral("Workspace")},
                     {QStringLiteral("Region"), QStringLiteral("eu-west"), QStringLiteral("Account")},
-                    {QStringLiteral("Mode"), QStringLiteral("No"), QStringLiteral("Session")}};
+                    {QStringLiteral("Mode"), QStringLiteral("Auto"), QStringLiteral("Session")}};
                 for (const QStringList& row : rows) {
                     QList<QStandardItem*> items;
                     for (const QString& value : row)
                         items.append(new QStandardItem(value));
                     model->appendRow(items);
                 }
-                model->QStandardItemModel::setData(model->index(2, 1), QStringLiteral("Use at least 3 characters"),
-                    kDataGridValidationMessageRole);
                 grid->setModel(model);
-                grid->setScrollChainingEnabled(true);
                 grid->setItemDelegate(new DataGridValidationDelegate(grid));
                 grid->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
                 grid->horizontalHeader()->setStretchLastSection(true);
                 grid->setColumnWidth(0, 180);
                 grid->setColumnWidth(1, 220);
-                grid->setCurrentIndex(model->index(2, 1));
                 return grid;
             })};
     return samples;

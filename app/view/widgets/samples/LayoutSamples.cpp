@@ -3,10 +3,12 @@
 #include <QBoxLayout>
 #include <QFile>
 #include <QHBoxLayout>
+#include <QSizePolicy>
 #include <QVBoxLayout>
 
 #include "components/basicinput/ComboBox.h"
 #include "components/foundation/WidgetOwnership.h"
+#include "components/foundation/FontIcon.h"
 #include "components/layout/Accordion.h"
 #include "components/layout/Card.h"
 #include "components/layout/Divider.h"
@@ -20,6 +22,9 @@
 #include "design/Typography.h"
 #include "SampleBuilders.h"
 #include "ConnectionForm.h"
+#include "FileBrowserSample.h"
+#include "DataGridWorkspaceSample.h"
+#include "ChartWorkbenchSample.h"
 
 namespace fluent::gallery {
 namespace {
@@ -767,10 +772,257 @@ QVector<GallerySample> fieldSamples()
             })};
 }
 
+QVector<GallerySample> propertyPanelSamples()
+{
+    auto basic = makeSample(
+        QStringLiteral("property-panel-basic"), QStringLiteral("Edit a document title"),
+        QStringLiteral(
+            "Change the title to update the preview. Clear it to show an untitled document, or reset the field."),
+        QStringLiteral(R"(auto* document = new Card(this);
+document->setMaximumWidth(480);
+document->setBorderVisible(false);
+auto* body = new QVBoxLayout(document);
+body->setContentsMargins(16, 16, 16, 16);
+body->setSpacing(12);
+auto* identity = new QHBoxLayout;
+identity->setSpacing(8);
+auto* icon = new FontIcon(Typography::Icons::Document, document);
+icon->setIconSize(20);
+identity->addWidget(icon);
+auto* preview = new Label("Quarterly report", document);
+preview->setFluentTypography(Typography::FontRole::Body);
+preview->setTextColorRole(Label::TextColorRole::Primary);
+preview->setTextFormat(Qt::PlainText);
+preview->setTextElideMode(Qt::ElideRight);
+preview->setMinimumWidth(0);
+preview->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+identity->addWidget(preview, 1);
+auto* panel = new fluent::layout::PropertyPanel(document);
+panel->setLayoutMode(fluent::layout::PropertyPanel::LayoutMode::Stacked);
+fluent::layout::PropertyDefinition title;
+title.key = "title";
+title.label = "Title";
+title.defaultValue = QStringLiteral("Quarterly report");
+panel->setProperties({title});
+panel->setFixedHeight(64);
+body->addWidget(panel);
+body->addLayout(identity);
+connect(panel, &fluent::layout::PropertyPanel::valueEdited, preview,
+    [preview](const QString&, const QVariant& value) {
+        const QString title = value.toString().trimmed();
+        preview->setText(title.isEmpty() ? QStringLiteral("Untitled document") : title);
+    });)"),
+        [](QWidget* parent) {
+            auto* document = new Card(parent);
+            document->setMaximumWidth(480);
+            document->setBorderVisible(false);
+            document->setObjectName(QStringLiteral("propertyDocumentSample"));
+            auto* body = new QVBoxLayout(document);
+            body->setContentsMargins(16, 16, 16, 16);
+            body->setSpacing(12);
+            auto* identity = new QHBoxLayout;
+            identity->setSpacing(8);
+            auto* icon = new FontIcon(Typography::Icons::Document, document);
+            icon->setIconSize(20);
+            identity->addWidget(icon);
+            auto* preview = new Label("Quarterly report", document);
+            preview->setObjectName(QStringLiteral("propertyDocumentTitle"));
+            preview->setFluentTypography(Typography::FontRole::Body);
+            preview->setTextColorRole(Label::TextColorRole::Primary);
+            preview->setTextFormat(Qt::PlainText);
+            preview->setTextElideMode(Qt::ElideRight);
+            preview->setMinimumWidth(0);
+            preview->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+            identity->addWidget(preview, 1);
+            auto* panel = new fluent::layout::PropertyPanel(document);
+            panel->setObjectName(QStringLiteral("documentProperties"));
+            panel->setLayoutMode(fluent::layout::PropertyPanel::LayoutMode::Stacked);
+            fluent::layout::PropertyDefinition title;
+            title.key = "title";
+            title.label = "Title";
+            title.defaultValue = QStringLiteral("Quarterly report");
+            panel->setProperties({title});
+            panel->setFixedHeight(64);
+            body->addWidget(panel);
+            body->addLayout(identity);
+            QObject::connect(panel, &fluent::layout::PropertyPanel::valueEdited, preview,
+                [preview](const QString&, const QVariant& value) {
+                    const QString title = value.toString().trimmed();
+                    preview->setText(title.isEmpty() ? QStringLiteral("Untitled document") : title);
+                });
+            return document;
+        },
+        true);
+    QFile workbenchSource(QStringLiteral(":/app/samples/ChartWorkbenchSample.h"));
+    workbenchSource.open(QIODevice::ReadOnly);
+    auto workbench = makeSample(
+        QStringLiteral("property-panel-chart-workbench"), QStringLiteral("Chart configuration workbench"),
+        QStringLiteral(
+            "Edit presentation and axes, reset a property, then save or copy the chart and its original data."),
+        QString::fromUtf8(workbenchSource.readAll()), [](QWidget* parent) { return new ChartWorkbenchSample(parent); },
+        true);
+    workbench.usageSnippet = QStringLiteral(
+        "// The complete example defines five properties and their default values.\n"
+        "properties->setProperties({title, type, legend, accent, maximum});\n"
+        "connect(properties, &fluent::layout::PropertyPanel::valueEdited,\n"
+        "    this, [this](const QString& key, const QVariant&) {\n"
+        "        applyProperties();\n"
+        "        properties->formController()->validateField(key);\n"
+        "    });\n"
+        "// Number properties support dragging, typing and keyboard steps.\n"
+        "const QByteArray png = chart->exportPng(2);\n"
+        "const QByteArray csv = chart->exportCsv(true);\n"
+        "// The application chooses when and where to save the returned bytes.");
+    workbench.sourceFiles = {{QStringLiteral("ChartWorkbenchSample.h"), QStringLiteral("cpp"), workbench.codeSnippet,
+        workbench.usageSnippet}};
+    return {basic, workbench};
+}
+
+QVector<GallerySample> dataGridToolBarSamples()
+{
+    QFile dataGridSource(QStringLiteral(":/app/samples/DataGridWorkspaceSample.h"));
+    dataGridSource.open(QIODevice::ReadOnly);
+    auto sample = makeSample(
+        QStringLiteral("data-grid-tool-bar-basic"), QStringLiteral("Filter and arrange projects"),
+        QStringLiteral(
+            "Search and combine filters. Use Columns to show, move or pin a column. "
+            "Save and restore keeps this demo view in memory."),
+        QString::fromUtf8(dataGridSource.readAll()),
+        [](QWidget* parent) { return new DataGridWorkspaceSample(parent); }, true);
+    sample.usageSnippet = QStringLiteral(
+        "auto* grid = new fluent::collections::DataGrid(this);\n"
+        "grid->setModel(projectProxy);\n"
+        "auto* toolbar = new fluent::layout::DataGridToolBar(this);\n"
+        "toolbar->setDataGrid(grid);\n"
+        "toolbar->searchField()->setPlaceholderText(\"Search projects…\");\n"
+        "toolbar->addFilter(\"status\", \"Status\", {\"Active\", \"Review\"});\n"
+        "toolbar->addFilter(\"owner\", \"Owner\", {\"Maya\", \"Noah\", \"Priya\", \"Riley\"});\n"
+        "// The application filters its own model.\n"
+        "connect(toolbar, &fluent::layout::DataGridToolBar::searchTextChanged, this, applyFilters);\n"
+        "connect(toolbar, &fluent::layout::DataGridToolBar::filtersChanged, this, applyFilters);\n"
+        "// Full example includes projectProxy and Save view / Restore wiring.");
+    sample.sourceFiles = {
+        {QStringLiteral("DataGridWorkspaceSample.h"), QStringLiteral("cpp"), sample.codeSnippet, sample.usageSnippet}};
+    return {sample};
+}
+
+QVector<GallerySample> listDetailViewSamples()
+{
+    auto basic = makeSample(
+        QStringLiteral("list-detail-basic"), QStringLiteral("One pane or two"),
+        QStringLiteral(
+            "Choose Narrow preview, open the meeting note and edit its text. Go back to the notes or "
+            "switch to Wide preview: the same note keeps your changes."),
+        QStringLiteral(
+            "auto* panel = new QWidget(this);\n"
+            "auto* body = new QVBoxLayout(panel);\n"
+            "body->setContentsMargins(0, 0, 0, 0);\n"
+            "body->setSpacing(12);\n"
+            "auto* width = new ComboBox(panel);\n"
+            "width->setAccessibleName(\"Preview width\");\n"
+            "width->addItems({\"Wide preview\", \"Narrow preview\"});\n"
+            "body->addWidget(width, 0, Qt::AlignLeft);\n"
+            "auto* view = new fluent::layout::ListDetailView(panel);\n"
+            "view->setCompactThreshold(520);\n"
+            "view->setMaximumWidth(640);\n"
+            "view->setFixedHeight(156);\n"
+            "body->addWidget(view, 0, Qt::AlignLeft);\n"
+            "auto* list = new QVBoxLayout(view->listPane());\n"
+            "list->addWidget(new Label(\"Notes\", view->listPane()));\n"
+            "auto* open = new Button(\"Open meeting note\", view->listPane());\n"
+            "list->addWidget(open);\n"
+            "list->addStretch();\n"
+            "auto* detail = new QVBoxLayout(view->detailPane());\n"
+            "auto* back = new Button(\"Back to notes\", view->detailPane());\n"
+            "back->setFluentStyle(Button::Subtle);\n"
+            "back->setVisible(view->isCompact());\n"
+            "detail->addWidget(back, 0, Qt::AlignLeft);\n"
+            "detail->addWidget(new Label(\"Meeting note\", view->detailPane()));\n"
+            "auto* editor = new LineEdit(view->detailPane());\n"
+            "editor->setAccessibleName(\"Note draft\");\n"
+            "editor->setText(\"Discuss the next release\");\n"
+            "detail->addWidget(editor);\n"
+            "detail->addStretch();\n"
+            "connect(open, &Button::clicked, view, &fluent::layout::ListDetailView::showDetail);\n"
+            "connect(back, &Button::clicked, view, &fluent::layout::ListDetailView::showList);\n"
+            "connect(view, &fluent::layout::ListDetailView::compactChanged, back, &QWidget::setVisible);\n"
+            "connect(width, qOverload<int>(&ComboBox::currentIndexChanged), view, [view](int index) {\n"
+            "    view->setMaximumWidth(index == 0 ? 640 : 360);\n"
+            "});"),
+        [](QWidget* parent) {
+            auto* panel = new QWidget(parent);
+            auto* body = new QVBoxLayout(panel);
+            body->setContentsMargins(0, 0, 0, 0);
+            body->setSpacing(12);
+            auto* width = new ComboBox(panel);
+            width->setObjectName(QStringLiteral("listDetailPreviewWidth"));
+            width->setAccessibleName(QStringLiteral("Preview width"));
+            width->addItems({QStringLiteral("Wide preview"), QStringLiteral("Narrow preview")});
+            body->addWidget(width, 0, Qt::AlignLeft);
+            auto* view = new fluent::layout::ListDetailView(panel);
+            view->setObjectName(QStringLiteral("basicListDetailView"));
+            view->setCompactThreshold(520);
+            view->setMaximumWidth(640);
+            view->setFixedHeight(156);
+            body->addWidget(view, 0, Qt::AlignLeft);
+            auto* list = new QVBoxLayout(view->listPane());
+            list->addWidget(new Label(QStringLiteral("Notes"), view->listPane()));
+            auto* open = new Button(QStringLiteral("Open meeting note"), view->listPane());
+            list->addWidget(open);
+            list->addStretch();
+            auto* detail = new QVBoxLayout(view->detailPane());
+            auto* back = new Button(QStringLiteral("Back to notes"), view->detailPane());
+            back->setFluentStyle(Button::Subtle);
+            back->setVisible(view->isCompact());
+            detail->addWidget(back, 0, Qt::AlignLeft);
+            detail->addWidget(new Label(QStringLiteral("Meeting note"), view->detailPane()));
+            auto* editor = new LineEdit(view->detailPane());
+            editor->setAccessibleName(QStringLiteral("Note draft"));
+            editor->setText(QStringLiteral("Discuss the next release"));
+            detail->addWidget(editor);
+            detail->addStretch();
+            QObject::connect(open, &Button::clicked, view, &fluent::layout::ListDetailView::showDetail);
+            QObject::connect(back, &Button::clicked, view, &fluent::layout::ListDetailView::showList);
+            QObject::connect(view, &fluent::layout::ListDetailView::compactChanged, back, &QWidget::setVisible);
+            QObject::connect(width, qOverload<int>(&ComboBox::currentIndexChanged), view, [view](int index) {
+                view->setMaximumWidth(index == 0 ? 640 : 360);
+            });
+            return panel;
+        },
+        true);
+    QFile source(QStringLiteral(":/app/samples/FileBrowserSample.h"));
+    source.open(QIODevice::ReadOnly);
+    auto sample = makeSample(
+        QStringLiteral("list-detail-file-browser"), QStringLiteral("File browser"),
+        QStringLiteral(
+            "Select a file and edit its contents. Resize the window or use Narrow preview, "
+            "then return to Files. Selection, scrolling and drafts stay in place. "
+            "These demo files are kept in memory."),
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new FileBrowserSample(parent); }, true);
+    sample.usageSnippet = QStringLiteral(
+        "auto* view = new fluent::layout::ListDetailView(this);\n"
+        "// Add your existing widgets and layouts to these persistent panes.\n"
+        "auto* listLayout = new QVBoxLayout(view->listPane());\n"
+        "auto* detailLayout = new QVBoxLayout(view->detailPane());\n"
+        "view->setCompactThreshold(640);\n"
+        "view->setListPaneWidth(320);\n"
+        "// On selection: view->showDetail();\n"
+        "// On back: view->showList();");
+    sample.sourceFiles = {
+        {QStringLiteral("FileBrowserSample.h"), QStringLiteral("cpp"), sample.codeSnippet, sample.usageSnippet}};
+    return {basic, sample};
+}
+
 } // namespace
 
 QVector<GallerySample> layoutSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("property-panel"))
+        return propertyPanelSamples();
+    if (routeId == QStringLiteral("data-grid-tool-bar"))
+        return dataGridToolBarSamples();
+    if (routeId == QStringLiteral("list-detail-view"))
+        return listDetailViewSamples();
     if (routeId == QStringLiteral("accordion"))
         return accordionSamples();
     if (routeId == QStringLiteral("card"))

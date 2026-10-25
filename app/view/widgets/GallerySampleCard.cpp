@@ -100,8 +100,10 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
             previewLayout->addWidget(m_preview, expandingPreview ? 1 : 0);
         }
     }
-    if (!expandingPreview)
-        previewLayout->addStretch(1);
+    // A capped expanding preview must stay at the leading edge once it reaches
+    // its maximum width. The zero-stretch spacer absorbs only that surplus.
+    // zh_CN: 可伸展预览达到最大宽度后仍靠前对齐，零权重弹性项仅吸收多余空间。
+    previewLayout->addStretch(expandingPreview ? 0 : 1);
 
     if (sample.createOptions) {
         m_options = sample.createOptions(m_previewSurface);

@@ -46,18 +46,32 @@ class _SourceHelper(str):
 
 
 _WIDGETS = (
-    "from PySide6.QtCore import Qt\n"
+    "from PySide6.QtCore import QMargins, Qt\n"
     "from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget"
 )
 
 _MENUS_IMPORTS = (
-    "from PySide6.QtCore import Qt\n"
+    "from PySide6.QtCore import QMargins, Qt\n"
     "from PySide6.QtGui import QAction, QActionGroup, QKeySequence, QPainter, QPen\n"
     "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
     "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
-_MENUS_HELPER = _SourceHelper(dedent(
+_FEEDBACK_HELPER = dedent(
+    """
+    def show_feedback(anchor, message, severity=fluentqt.Toast.Informational):
+        problem = severity in (fluentqt.Toast.Warning, fluentqt.Toast.Error)
+        fluentqt.Toast.showOrUpdateToast(
+            anchor, "gallery.action-feedback", message, severity,
+            4500 if problem else 2200, fluentqt.Toast.Top,
+            QMargins(16, 50, 16, 16),
+        )
+
+
+    """
+)
+
+_MENUS_HELPER = _SourceHelper(_FEEDBACK_HELPER + dedent(
     """
     class SampleSurface(QWidget):
         def __init__(self, parent=None, spacing=12):
@@ -99,13 +113,13 @@ _MENUS_HELPER = _SourceHelper(dedent(
         return text.split("\\t", 1)[0].replace("&", "")
 
 
-    def add_status_action(menu, status, text, shortcut=None):
+    def add_feedback_action(menu, anchor, text, shortcut=None):
         action = menu.addAction(text)
         if shortcut is not None:
             action.setShortcut(shortcut)
         action.triggered.connect(
-            lambda checked=False, value=text: status.setText(
-                f"Clicked: {display_action_text(value)}"
+            lambda checked=False, value=text: show_feedback(
+                anchor, f"{display_action_text(value)} selected"
             )
         )
         return action
@@ -113,14 +127,14 @@ _MENUS_HELPER = _SourceHelper(dedent(
 ))
 
 _COMMAND_FLYOUT_IMPORTS = (
-    "from PySide6.QtCore import QRect, QRectF, QTimer, Qt\n"
+    "from PySide6.QtCore import QMargins, QRect, QRectF, QTimer, Qt\n"
     "from PySide6.QtGui import QAction, QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen\n"
     "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
     "from fluentqt_gallery.visual import gallery_font_icon_pixmap\n"
     "from fluentqt_gallery.window import gallery_window_editing_command_router"
 )
 
-_COMMAND_FLYOUT_HELPER = _SourceHelper(dedent(
+_COMMAND_FLYOUT_HELPER = _SourceHelper(_FEEDBACK_HELPER + dedent(
     """
     class SampleSurface(fluentqt.FluentWidget):
         def __init__(self, parent=None, spacing=12):
@@ -415,30 +429,28 @@ register_source_samples(
             "root",
             _script(_MENUS_HELPER + """
                 root = SampleSurface(globals().get("gallery_parent"))
-                status = make_status_label(root, "Clicked: (none)")
                 button = fluentqt.DropDownButton("File", root)
                 button.setMinimumWidth(120)
 
                 menu = fluentqt.FluentMenu("", button)
-                add_status_action(
-                    menu, status, "New", QKeySequence.StandardKey.New
+                add_feedback_action(
+                    menu, root, "New", QKeySequence.StandardKey.New
                 )
-                add_status_action(
-                    menu, status, "Open...", QKeySequence.StandardKey.Open
+                add_feedback_action(
+                    menu, root, "Open...", QKeySequence.StandardKey.Open
                 )
-                add_status_action(
-                    menu, status, "Save", QKeySequence.StandardKey.Save
+                add_feedback_action(
+                    menu, root, "Save", QKeySequence.StandardKey.Save
                 )
                 menu.addSeparator()
                 publish = menu.addAction("Publish")
                 publish.setEnabled(False)
-                add_status_action(menu, status, "Close")
+                add_feedback_action(menu, root, "Close")
                 button.setMenu(menu)
 
                 root.content_layout.addWidget(
                     button, 0, Qt.AlignmentFlag.AlignLeft
                 )
-                root.content_layout.addWidget(status)
                 """, _MENUS_IMPORTS),
         ),
         "menu-cascading-selection": (
@@ -451,9 +463,9 @@ register_source_samples(
                 button.setMinimumWidth(150)
                 menu = fluentqt.FluentMenu("", button)
                 sort_menu = fluentqt.FluentMenu("Sort by", menu)
-                add_status_action(sort_menu, status, "Name")
-                add_status_action(sort_menu, status, "Date modified")
-                add_status_action(sort_menu, status, "Type")
+                add_feedback_action(sort_menu, root, "Name")
+                add_feedback_action(sort_menu, root, "Date modified")
+                add_feedback_action(sort_menu, root, "Type")
                 menu.addMenu(sort_menu)
                 menu.addSeparator()
                 view_group = QActionGroup(menu)
@@ -487,7 +499,6 @@ register_source_samples(
                 root.content_layout.addWidget(
                     button, 0, Qt.AlignmentFlag.AlignLeft
                 )
-                root.content_layout.addWidget(status)
                 """,
                 _MENUS_IMPORTS,
             ),
@@ -504,7 +515,6 @@ register_source_samples(
             "root",
             _script(_MENUS_HELPER + """
                 root = SampleSurface(globals().get("gallery_parent"))
-                status = make_status_label(root, "Clicked: (none)")
                 menu_bar = fluentqt.FluentMenuBar(root)
                 menu_bar.setSizePolicy(
                     QSizePolicy.Policy.MinimumExpanding,
@@ -514,32 +524,31 @@ register_source_samples(
                 menu_bar.setBackgroundVisible(False)
 
                 file_menu = fluentqt.FluentMenu("File", menu_bar)
-                add_status_action(file_menu, status, "New")
-                add_status_action(file_menu, status, "Open...")
-                add_status_action(file_menu, status, "Save")
+                add_feedback_action(file_menu, root, "New")
+                add_feedback_action(file_menu, root, "Open...")
+                add_feedback_action(file_menu, root, "Save")
                 menu_bar.addMenu(file_menu)
 
                 edit_menu = fluentqt.FluentMenu("Edit", menu_bar)
-                add_status_action(
-                    edit_menu, status, "Undo", QKeySequence.StandardKey.Undo
+                add_feedback_action(
+                    edit_menu, root, "Undo", QKeySequence.StandardKey.Undo
                 )
-                add_status_action(
-                    edit_menu, status, "Cut", QKeySequence.StandardKey.Cut
+                add_feedback_action(
+                    edit_menu, root, "Cut", QKeySequence.StandardKey.Cut
                 )
-                add_status_action(
-                    edit_menu, status, "Copy", QKeySequence.StandardKey.Copy
+                add_feedback_action(
+                    edit_menu, root, "Copy", QKeySequence.StandardKey.Copy
                 )
-                add_status_action(
-                    edit_menu, status, "Paste", QKeySequence.StandardKey.Paste
+                add_feedback_action(
+                    edit_menu, root, "Paste", QKeySequence.StandardKey.Paste
                 )
                 menu_bar.addMenu(edit_menu)
 
                 help_menu = fluentqt.FluentMenu("Help", menu_bar)
-                add_status_action(help_menu, status, "About")
+                add_feedback_action(help_menu, root, "About")
                 menu_bar.addMenu(help_menu)
 
                 root.content_layout.addWidget(menu_bar)
-                root.content_layout.addWidget(status)
                 """, _MENUS_IMPORTS),
         ),
         "menu-bar-access-keys": (
@@ -547,7 +556,6 @@ register_source_samples(
             _script(
                 _MENUS_HELPER + """
                 root = SampleSurface(globals().get("gallery_parent"))
-                status = make_status_label(root, "Command: (none)")
                 row = QWidget(root)
                 row_layout = QHBoxLayout(row)
                 row_layout.setContentsMargins(0, 0, 0, 0)
@@ -566,22 +574,22 @@ register_source_samples(
                 menu_bar.setMinimumWidth(390)
                 file_menu = fluentqt.FluentMenu("&File", menu_bar)
                 file_menu.menuAction().setProperty("accessKey", "F")
-                add_status_action(
-                    file_menu, status, "New", QKeySequence.StandardKey.New
+                add_feedback_action(
+                    file_menu, root, "New", QKeySequence.StandardKey.New
                 )
-                add_status_action(
-                    file_menu, status, "Save", QKeySequence.StandardKey.Save
+                add_feedback_action(
+                    file_menu, root, "Save", QKeySequence.StandardKey.Save
                 )
                 menu_bar.addMenu(file_menu)
 
                 view_menu = fluentqt.FluentMenu("&View", menu_bar)
                 view_menu.menuAction().setProperty("accessKey", "V")
-                add_status_action(view_menu, status, "Zoom in")
-                add_status_action(view_menu, status, "Zoom out")
+                add_feedback_action(view_menu, root, "Zoom in")
+                add_feedback_action(view_menu, root, "Zoom out")
                 menu_bar.addMenu(view_menu)
 
                 run = QAction("Run", menu_bar)
-                run.triggered.connect(lambda: status.setText("Command: Run"))
+                run.triggered.connect(lambda: show_feedback(root, "Run selected"))
                 menu_bar.addAction(run)
                 deploy = QAction("Deploy", menu_bar)
                 deploy.setEnabled(False)
@@ -589,7 +597,7 @@ register_source_samples(
 
                 def focus_menu_bar():
                     menu_bar.setFocus(Qt.FocusReason.OtherFocusReason)
-                    status.setText("Command: MenuBar focused")
+                    show_feedback(menu_bar, "Menu bar focused")
 
                 focus.clicked.connect(focus_menu_bar)
                 row_layout.addWidget(focus, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -597,7 +605,6 @@ register_source_samples(
                     menu_bar, 0, Qt.AlignmentFlag.AlignVCenter
                 )
                 root.content_layout.addWidget(row)
-                root.content_layout.addWidget(status)
                 """,
                 _MENUS_IMPORTS,
             ),
@@ -643,8 +650,8 @@ register_source_samples(
                     action = QAction(text, root)
                     root.set_action_glyph(action, glyph)
                     action.triggered.connect(
-                        lambda checked=False, value=text: status.setText(
-                            f"Command: {value}"
+                        lambda checked=False, value=text: show_feedback(
+                            root, f"{value} selected"
                         )
                     )
                     return action
@@ -935,8 +942,8 @@ register_source_samples(
                 for text in ("Share", "Save", "Delete"):
                     action = QAction(text, root)
                     action.triggered.connect(
-                        lambda checked=False, item=action: status.setText(
-                            "Command: {0}".format(item.text())
+                        lambda checked=False, item=action: show_feedback(
+                            root, "{0} selected".format(item.text())
                         )
                     )
                     flyout.addPrimaryAction(action)
@@ -944,8 +951,8 @@ register_source_samples(
                 for text in ("Resize", "Move"):
                     action = QAction(text, root)
                     action.triggered.connect(
-                        lambda checked=False, item=action: status.setText(
-                            "Command: {0}".format(item.text())
+                        lambda checked=False, item=action: show_feedback(
+                            root, "{0} selected".format(item.text())
                         )
                     )
                     flyout.addSecondaryAction(action)
@@ -1082,8 +1089,8 @@ register_source_samples(
                 open_button.clicked.connect(open_actions)
                 for action in (copy_link, favorite, rename, properties):
                     action.triggered.connect(
-                        lambda _checked=False, item=action: status.setText(
-                            f"Command: {item.text().split(chr(9), 1)[0].replace('&', '')}"
+                        lambda _checked=False, item=action: show_feedback(
+                            root, item.text().split(chr(9), 1)[0].replace('&', '') + " selected"
                         )
                     )
 
@@ -2747,14 +2754,26 @@ register_source_samples(
                     title = f"Document {document_number[0]}"
                     index = tabs.addTab(fluentqt.TabViewItem(title, "\ue8a5"))
                     tabs.setSelectedIndex(index)
-                    status.setText(f"Added {title}")
+                    fluentqt.Toast.showOrUpdateToast(
+                        tabs, "gallery.action-feedback", f"Added {title}",
+                        fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                        QMargins(16, 50, 16, 16),
+                    )
 
                 def close_tab(index):
                     title = tabs.tabAt(index).text
                     if tabs.closeTab(index):
-                        status.setText(f"Closed {title}")
+                        fluentqt.Toast.showOrUpdateToast(
+                            tabs, "gallery.action-feedback", f"Closed {title}",
+                            fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                            QMargins(16, 50, 16, 16),
+                        )
                     else:
-                        status.setText(f"{title} cannot be closed")
+                        fluentqt.Toast.showOrUpdateToast(
+                            tabs, "gallery.action-feedback", f"{title} cannot be closed",
+                            fluentqt.Toast.Warning, 4500, fluentqt.Toast.Top,
+                            QMargins(16, 50, 16, 16),
+                        )
 
                 tabs.addTabRequested.connect(add_tab)
                 tabs.tabCloseRequested.connect(close_tab)
@@ -3167,7 +3186,7 @@ register_source_samples(
                     model.modelReset.connect(update_count)
                     navigate.triggered.connect(lambda checked=False, model=model, name=name: navigate_to(model, name))
                 menu.addSeparator()
-                palette.addCommand(add, "Notes", ["new", "添加"])
+                palette.addCommand(add, "Notes", ["new", "create"])
                 palette.addCommand(clear, "Notes", ["delete", "remove"])
                 palette.addCommand(details, "View", ["count", "properties"])
                 root.set_action_glyph(add, fluentqt.Typography.Icons.Add)

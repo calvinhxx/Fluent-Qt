@@ -134,6 +134,12 @@ Qt::MouseButton mouseButtonFromJson(const QJsonValue& value, QString& error)
 int keyFromName(const QString& raw, QString& text, QString& error)
 {
     const QString name = raw.trimmed().toLower();
+    if (name.startsWith(QLatin1Char('f'))) {
+        bool valid = false;
+        const int function = name.mid(1).toInt(&valid);
+        if (valid && function >= 1 && function <= 35)
+            return Qt::Key_F1 + function - 1;
+    }
     if (name == QStringLiteral("enter") || name == QStringLiteral("return"))
         return Qt::Key_Return;
     if (name == QStringLiteral("space")) {

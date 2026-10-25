@@ -1062,8 +1062,7 @@ def _build_sample_card(
     result.widget.setObjectName("gallerySamplePreviewWidget")
     expanding_preview = sample.fill_available_width
     preview_layout.addWidget(result.widget, 1 if expanding_preview else 0)
-    if not expanding_preview:
-        preview_layout.addStretch(1)
+    preview_layout.addStretch(0 if expanding_preview else 1)
     preview_layout.activate()
     card_layout.addWidget(preview_surface)
 
@@ -1075,16 +1074,8 @@ def _build_sample_card(
     elif entry.category_id == "qml-bridge":
         from .native_samples_qmlbridge import example_source_files
         source_files = example_source_files(sample.id)
-    if sample.id == "command-palette-shared-actions":
-        from .native_samples_navigation import command_palette_source_files
-        source_files = command_palette_source_files(result)
-    elif sample.id == "field-connection-form":
-        from .native_samples_layout import connection_form_source_files
-        source_files = connection_form_source_files(result)
-    elif sample.id in {"popup-modal-dim", "dialog-backdrop-effects",
-                       "drawer-view-backdrop-effects"}:
-        from .native_samples_overlays import overlay_source_files
-        source_files = overlay_source_files(result)
+    from .native_source_files import source_files_for_sample
+    source_files = source_files_for_sample(sample.id, result) or source_files
     source_expander = GalleryCodeBlock(
         result.source, card,
         full_code=full_code,

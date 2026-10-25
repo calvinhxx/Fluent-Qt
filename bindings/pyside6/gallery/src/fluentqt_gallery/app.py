@@ -13,6 +13,7 @@ from PySide6.QtCore import (
     QCoreApplication,
     QElapsedTimer,
     QEvent,
+    QLocale,
     QPropertyAnimation,
     QSize,
     Qt,
@@ -343,6 +344,8 @@ def _prepare_qml_bridge_application() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    # Match the C++/WASM Gallery without changing the library's locale policy.
+    QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
     automated = bool(
         args.snapshot is not None
         or args.snapshot_dir is not None

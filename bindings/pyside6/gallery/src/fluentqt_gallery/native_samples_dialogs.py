@@ -18,7 +18,7 @@ def _script(body: str, imports: str = "") -> str:
 _WIDGETS = "from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget"
 
 _DIALOGS_IMPORTS = (
-    "from PySide6.QtCore import QPoint, QSize, Qt\n"
+    "from PySide6.QtCore import QMargins, QPoint, QSize, Qt\n"
     "from PySide6.QtGui import QPainter, QPen\n"
     "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
     "from fluentqt_gallery.foundation_pages import _theme_tokens"
@@ -106,9 +106,7 @@ register_source_samples(
                 row = horizontal_group(root, 12)
                 show = sample_button(row, "Show dialog")
                 show.setMinimumWidth(118)
-                status = make_status_label(row, "Result: not shown")
                 row.layout().addWidget(show)
-                row.layout().addWidget(status)
                 root.content_layout.addWidget(row)
 
                 def open_dialog():
@@ -128,15 +126,16 @@ register_source_samples(
                     dialog.setDefaultButton(
                         fluentqt.ContentDialog.ContentDialogButton.Primary
                     )
-                    dialog.primaryButtonClicked.connect(
-                        lambda: status.setText("Result: Save")
-                    )
-                    dialog.secondaryButtonClicked.connect(
-                        lambda: status.setText("Result: Don't save")
-                    )
-                    dialog.closeButtonClicked.connect(
-                        lambda: status.setText("Result: Cancel")
-                    )
+                    def finished(result):
+                        message = ("Save selected" if result == fluentqt.ContentDialog.Primary
+                                   else "Don't save selected" if result == fluentqt.ContentDialog.Secondary
+                                   else "Cancelled")
+                        fluentqt.Toast.showOrUpdateToast(
+                            show, "gallery.action-feedback", message,
+                            fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
+                            QMargins(16, 50, 16, 16),
+                        )
+                    dialog.finished.connect(finished)
                     dialog.finished.connect(dialog.deleteLater)
                     dialog.open()
 

@@ -76,6 +76,7 @@ target_link_libraries(test_gallery_shell_motion_policy
 if(TARGET FluentQtSpatial)
 add_qt_test_module(test_gallery_spatial
     TestGallerySpatial.cpp
+    TestGalleryThemeAndCode.cpp
     TestGallerySpatialBackdrop.cpp
     TestGalleryParticleCompositor.cpp
 )
