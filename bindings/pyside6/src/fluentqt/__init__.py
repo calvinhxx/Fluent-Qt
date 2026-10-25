@@ -131,7 +131,7 @@ from .foundation import (
     themeUsesDarkAppearance,
 )
 from .charts import ChartData, ChartModel, ChartView, LineChart, AreaChart, BarChart, HorizontalBarChart, PieChart, DonutChart, ScatterChart, Sparkline
-from .layout import Accordion, Card, DataGridToolBar, Divider, Expander, Field, ParticleBackdrop
+from .layout import Accordion, Card, DataGridToolBar, Divider, Expander, Field, ListDetailView, ParticleBackdrop
 from .layout import PropertyDefinition, PropertyPanel
 from .menus_toolbars import (
     CommandBar,
@@ -349,6 +349,7 @@ __all__ = [
     "EditingCommandRouter",
     "Expander",
     "Field",
+    "ListDetailView",
     "FontIcon",
     "FormController",
     "FontRole",

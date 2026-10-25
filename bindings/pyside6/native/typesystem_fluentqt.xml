@@ -918,6 +918,9 @@ if (!paletteGuard) {
                 </modify-function>
                 <modify-function signature="onThemeUpdated()" remove="all"/>
             </object-type>
+            <object-type name="ListDetailView">
+                <enum-type name="Pane"/>
+            </object-type>
             <object-type name="Accordion">
                 <enum-type name="ExpansionMode"/>
                 <!-- Runtime-dependent item ownership is published by the
