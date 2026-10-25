@@ -10423,6 +10423,108 @@ class FluentQtBindingTest(unittest.TestCase):
             del child
 
 
+    def test_tag_input_incremental_widget_identity_and_readonly(self):
+        box = fluentqt.TagInput()
+        box.addItem("first", "First")
+        first = box.findChild(QWidget, "TagInputTag")
+        for i in range(1, 100):
+            box.addItem(str(i), f"Member {i}")
+        self.assertEqual(len(box.findChildren(QWidget, "TagInputTag")), 100)
+        self.assertIs(box.findChildren(QWidget, "TagInputTag")[0], first)
+        box.setSelectedItems([{"key": "first", "text": "Renamed"}])
+        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.assertIs(box.findChild(QWidget, "TagInputTag"), first)
+        self.assertEqual(first.toolTip(), "Renamed")
+        for readonly in (True, False):
+            box.setReadOnly(readonly)
+            self.assertIs(box.findChild(QWidget, "TagInputTag"), first)
+        delete_qobject(box)
+
+    def test_tag_input_values_notifications_and_borrowed_model(self):
+        from PySide6.QtGui import QStandardItemModel
+        from PySide6.QtTest import QSignalSpy
+        box = fluentqt.TagInput()
+        self.assertIsInstance(box, fluentqt.AutoSuggestBox)
+        changes = QSignalSpy(box.selectionChanged)
+        items = [{"key": "design", "text": "陈晨"}, {"key": "dev", "text": "陈晨"}]
+        box.setSelectedItems(items + [items[0]])
+        self.assertEqual(box.selectedItems(), items)
+        self.assertEqual(box.selectedKeys(), ["design", "dev"])
+        self.assertEqual(box.selectedCount(), 2)
+        self.assertEqual(changes.count(), 1)
+        box.setSelectedItems(items)
+        self.assertFalse(box.addItem("dev", "Duplicate"))
+        self.assertEqual(changes.count(), 1)
+        model = QStandardItemModel()
+        reference = weakref.ref(model)
+        box.setSuggestionModel(model)
+        del model
+        gc.collect()
+        self.assertIsNotNone(reference())
+        box.setSuggestions(["One", "Two"])
+        gc.collect()
+        self.assertIsNone(reference())
+        self.assertEqual(box.selectedItems(), items)
+        box.clearSelection()
+        self.assertEqual(changes.count(), 2)
+        box.close()
+        delete_qobject(box)
+
+    def test_tag_input_ime_commit_and_keyboard_removal(self):
+        from PySide6.QtGui import QInputMethodEvent
+        from PySide6.QtTest import QSignalSpy, QTest
+        box = fluentqt.TagInput()
+        box.resize(360, 40)
+        box.addItem("alex", "Alex")
+        box.setAsyncSuggestionsEnabled(True)
+        box.setDebounceInterval(1)
+        requested = QSignalSpy(box.suggestionsRequested)
+        submitted = QSignalSpy(box.tokensSubmitted)
+        box.show()
+        box.activateWindow()
+        box.setFocus()
+        QApplication.processEvents()
+        preedit = QInputMethodEvent("chen", [])
+        QApplication.sendEvent(box, preedit)
+        for key in (Qt.Key_Down, Qt.Key_Return, Qt.Key_Backspace):
+            QTest.keyClick(box, key)
+        QTest.qWait(20)
+        self.assertEqual(box.selectedCount(), 1)
+        self.assertEqual(requested.count(), 0)
+        self.assertEqual(submitted.count(), 0)
+        committed = QInputMethodEvent()
+        committed.setCommitString("陈")
+        QApplication.sendEvent(box, committed)
+        QTest.qWait(20)
+        self.assertEqual(requested.count(), 1)
+        self.assertEqual(requested.at(0)[0], "陈")
+        box.cancelSuggestions()
+        box.clear()
+        QTest.keyClick(box, Qt.Key_Backspace)
+        self.assertEqual(box.selectedCount(), 1)
+        tag = QApplication.focusWidget()
+        self.assertIsNotNone(tag)
+        self.assertTrue(tag.testAttribute(Qt.WA_InputMethodEnabled))
+        QApplication.sendEvent(tag, QInputMethodEvent("chen", []))
+        QTest.qWait(20)
+        self.assertEqual(box.text(), "")
+        self.assertEqual(requested.count(), 1)
+        from_tag = QInputMethodEvent()
+        from_tag.setCommitString("陈")
+        QApplication.sendEvent(tag, from_tag)
+        QTest.qWait(20)
+        self.assertTrue(box.hasFocus())
+        self.assertEqual(box.text(), "陈")
+        box.cancelSuggestions()
+        box.clear()
+        QTest.keyClick(box, Qt.Key_Backspace)
+        tag = QApplication.focusWidget()
+        QTest.keyClick(tag, Qt.Key_Delete)
+        self.assertEqual(box.selectedCount(), 0)
+        box.close()
+        delete_qobject(box)
+
+
     def test_review_property_defaults_and_color_overlay_lifetime(self):
         host = QWidget()
         panel = fluentqt.PropertyPanel(host)
@@ -10459,6 +10561,41 @@ class FluentQtBindingTest(unittest.TestCase):
         delete_qobject(panel)
         self.assertFalse(shiboken6.isValid(flyout))
         delete_qobject(host)
+
+    def test_review_tag_space_and_enter_activate_remove(self):
+        for key in (Qt.Key_Space, Qt.Key_Return):
+            box = fluentqt.TagInput()
+            box.addItem("alex", "Alex")
+            box.resize(360, 80)
+            box.show()
+            box.activateWindow()
+            button = box.findChild(fluentqt.Button, "TagInputRemoveButton")
+            button.setFocus()
+            QApplication.processEvents()
+            QTest.keyClick(button, key)
+            self.assertEqual(box.selectedCount(), 0)
+            self.assertEqual(box.text(), "")
+            delete_qobject(box)
+
+    def test_review_tag_space_text_commit_respects_composition(self):
+        from PySide6.QtGui import QInputMethodEvent
+        for composing in (False, True):
+            box = fluentqt.TagInput()
+            box.addItem("alex", "Alex")
+            box.resize(360, 80)
+            box.show()
+            box.activateWindow()
+            button = box.findChild(fluentqt.Button, "TagInputRemoveButton")
+            button.setFocus()
+            QApplication.processEvents()
+            if composing:
+                QApplication.sendEvent(button, QInputMethodEvent("pinyin", []))
+            event = QInputMethodEvent()
+            event.setCommitString(" ")
+            QApplication.sendEvent(button, event)
+            self.assertEqual(box.selectedCount(), 1 if composing else 0)
+            self.assertEqual(box.text(), " " if composing else "")
+            delete_qobject(box)
 
     def test_review_sync_suggestions_respect_dismissal_and_frame_visibility(self):
         box = fluentqt.AutoSuggestBox()

@@ -99,6 +99,7 @@
 #include <components/status_info/Toast.h>
 #include <components/status_info/ToolTip.h>
 #include <components/textfields/AutoSuggestBox.h>
+#include <components/textfields/TagInput.h>
 #include <components/textfields/CodeBlock.h>
 #include <components/textfields/EditingCommandRouter.h>
 #include <components/textfields/Label.h>
