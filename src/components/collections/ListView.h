@@ -60,6 +60,9 @@ public:
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
+    /** @brief Optional model role for trailing secondary text; -1 hides it.
+     * zh_CN: 可选的行尾辅助文字角色；-1 表示不显示。 */
+    Q_PROPERTY(int trailingTextRole READ trailingTextRole WRITE setTrailingTextRole NOTIFY trailingTextRoleChanged)
     /**
      * @brief Whether the item-view viewport is currently hovered.
      * zh_CN: item-view viewport 当前是否处于悬停状态。
@@ -171,6 +174,10 @@ public:
     // --- Appearance ---
     Typography::FontRole fontRole() const { return m_fontRole; }
     void setFontRole(Typography::FontRole role);
+    int trailingTextRole() const { return m_trailingTextRole; }
+    /** @brief Sets the role used by the default delegate; custom delegates remain caller-owned.
+     * zh_CN: 设置默认 delegate 使用的角色，自定义 delegate 仍由调用方负责。 */
+    void setTrailingTextRole(int role);
 
     bool borderVisible() const { return m_borderVisible; }
     bool isBorderVisible() const { return borderVisible(); }
@@ -262,6 +269,7 @@ public:
 signals:
     void selectionModeChanged();
     void fontRoleChanged();
+    void trailingTextRoleChanged();
     void viewportHoveredChanged();
     void flowChanged();
     void borderVisibleChanged();
@@ -353,6 +361,7 @@ private:
 
     SelectionMode m_selectionMode = SelectionMode::Single;
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
+    int m_trailingTextRole = -1;
 
     // --- Container visuals ---
     bool m_borderVisible = true;
@@ -370,6 +379,7 @@ private:
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
     ::fluent::scrolling::OverscrollController* m_overscroll = nullptr;
+    bool m_revealSelectionOnShow = true;
     bool m_viewportHovered = false;
 
     // --- Drag reorder ---

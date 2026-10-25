@@ -1191,7 +1191,9 @@
       "setSectionKeyFunction",
       "setSelectedIndex",
       "setSelectionMode",
-      "setSelectionModel"
+      "setSelectionModel",
+      "setTrailingTextRole",
+      "trailingTextRole"
     ],
     "SplashScreen": [
       "dismiss",
