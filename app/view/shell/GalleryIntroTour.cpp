@@ -40,8 +40,7 @@ constexpr int kSpotlightPadding = 1; // tight breathing room around the highligh
 constexpr int kSpotlightRadius = 8;  // rounded corners of the cut-out
 } // namespace
 
-GalleryIntroTour::GalleryIntroTour(QWidget* host, QObject* parent) : QObject(parent), m_host(host)
-{}
+GalleryIntroTour::GalleryIntroTour(QWidget* host, QObject* parent) : QObject(parent), m_host(host) {}
 
 void GalleryIntroTour::build()
 {
@@ -75,8 +74,7 @@ void GalleryIntroTour::build()
     QFont glyphFont(Typography::FontFamily::FluentIcons);
     glyphFont.setPixelSize(22);
     m_glyph->setFont(glyphFont);
-    m_glyph->setStyleSheet(
-        QStringLiteral("color: %1;").arg(m_card->themeColors().textAccentPrimary.name()));
+    m_glyph->setStyleSheet(QStringLiteral("color: %1;").arg(m_card->themeColors().textAccentPrimary.name()));
     m_glyph->setFixedWidth(26);
     m_glyph->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
     header->addWidget(m_glyph, 0, Qt::AlignTop);
@@ -168,10 +166,10 @@ QRect GalleryIntroTour::presentedTargetRect(QWidget* target) const
     if (auto* spatial = win->findChild<GallerySpatialController*>()) {
         const QRect rect = target->rect();
         QPolygon corners;
-        corners << spatial->projectedPosition(target, rect.topLeft())
-                << spatial->projectedPosition(target, rect.topRight())
-                << spatial->projectedPosition(target, rect.bottomLeft())
-                << spatial->projectedPosition(target, rect.bottomRight());
+        corners
+            << spatial->projectedPosition(target, rect.topLeft()) << spatial->projectedPosition(target, rect.topRight())
+            << spatial->projectedPosition(target, rect.bottomLeft())
+            << spatial->projectedPosition(target, rect.bottomRight());
         return corners.boundingRect();
     }
     return QRect(target->mapTo(win, QPoint()), target->size());
@@ -215,9 +213,7 @@ QRect GalleryIntroTour::spotlightRectFor(QWidget* target) const
 
     const QRect inWindow = presentedTargetRect(target);
     const QRect inScrim = inWindow.translated(-surface.topLeft());
-    return inScrim
-        .marginsAdded(
-            QMargins(kSpotlightPadding, kSpotlightPadding, kSpotlightPadding, kSpotlightPadding))
+    return inScrim.marginsAdded(QMargins(kSpotlightPadding, kSpotlightPadding, kSpotlightPadding, kSpotlightPadding))
         .intersected(QRect(QPoint(0, 0), surface.size()));
 }
 
@@ -285,9 +281,8 @@ void GalleryIntroTour::syncScrimSurfaceRadius()
 
 void GalleryIntroTour::start()
 {
-    m_steps.erase(
-        std::remove_if(m_steps.begin(), m_steps.end(),
-                       [](const Step& step) { return !step.centered && step.target.isNull(); }),
+    m_steps.erase(std::remove_if(m_steps.begin(), m_steps.end(),
+                      [](const Step& step) { return !step.centered && step.target.isNull(); }),
         m_steps.end());
     if (m_steps.isEmpty()) {
         emit finished();
@@ -321,8 +316,8 @@ void GalleryIntroTour::start()
 void GalleryIntroTour::focusPrimaryActionIfActive()
 {
     QWidget* win = m_host ? m_host->window() : nullptr;
-    if (m_finished || !win || !win->isActiveWindow() || !m_card || !m_card->isOpen() || !m_next ||
-        !m_next->isVisible()) {
+    if (m_finished || !win || !win->isActiveWindow() || !m_card || !m_card->isOpen() || !m_next
+        || !m_next->isVisible()) {
         return;
     }
 
@@ -430,15 +425,14 @@ void GalleryIntroTour::finishTour()
 
 bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
 {
-    if (event && m_host && watched == m_host->window() &&
-        (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)) {
+    if (event && m_host && watched == m_host->window()
+        && (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)) {
         // Native compositors can settle first-launch activation after the tour
         // is visible. Defer until Qt has committed the new active top-level.
         QTimer::singleShot(0, this, [this]() { settleFocusForHostState(); });
     }
 
-    if (event && event->type() == QEvent::KeyPress &&
-        (watched == m_close || watched == m_prev || watched == m_next)) {
+    if (event && event->type() == QEvent::KeyPress && (watched == m_close || watched == m_prev || watched == m_next)) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) {
             QList<Button*> focusOrder;
@@ -451,12 +445,11 @@ bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
 
             const int current = focusOrder.indexOf(qobject_cast<Button*>(watched));
             if (current >= 0 && !focusOrder.isEmpty()) {
-                const bool backward = keyEvent->key() == Qt::Key_Backtab ||
-                                      keyEvent->modifiers().testFlag(Qt::ShiftModifier);
+                const bool backward = keyEvent->key() == Qt::Key_Backtab
+                    || keyEvent->modifiers().testFlag(Qt::ShiftModifier);
                 const int delta = backward ? -1 : 1;
                 const int next = (current + delta + focusOrder.size()) % focusOrder.size();
-                focusOrder.at(next)->setFocus(backward ? Qt::BacktabFocusReason
-                                                       : Qt::TabFocusReason);
+                focusOrder.at(next)->setFocus(backward ? Qt::BacktabFocusReason : Qt::TabFocusReason);
                 event->accept();
                 return true;
             }
@@ -465,8 +458,8 @@ bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
 
     // The window is locked during the tour, but keep the scrim glued to it and on top as a safety net.
     // zh_CN: 引导期间窗口已锁定,但仍把遮罩贴住窗口并置顶,作为保险。
-    if (m_scrim && m_host && watched == m_host->window() &&
-        (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+    if (m_scrim && m_host && watched == m_host->window()
+        && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
         syncScrimGeometry();
         m_scrim->raise();
         if (m_card && m_card->isOpen())

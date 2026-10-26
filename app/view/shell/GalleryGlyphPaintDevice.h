@@ -37,10 +37,7 @@ public:
         : m_target(target), m_nativeDpr(nativeDpr), m_rasterOrigin(rasterOrigin), m_engine(*this)
     {}
     QPaintEngine* paintEngine() const override { return &m_engine; }
-    qreal rasterDpr(const QFont& font) const
-    {
-        return glyphRasterDpr(font, m_nativeDpr, m_target.devicePixelRatioF());
-    }
+    qreal rasterDpr(const QFont& font) const { return glyphRasterDpr(font, m_nativeDpr, m_target.devicePixelRatioF()); }
     int glyphItems() const { return m_engine.glyphItems; }
     int glyphTiles() const { return m_engine.glyphTiles; }
     int systemClipApplications() const { return m_engine.systemClipApplications; }
@@ -108,8 +105,7 @@ private:
         friend class GalleryGlyphPaintDevice;
 
     public:
-        explicit Engine(GalleryGlyphPaintDevice& device)
-            : QPaintEngine(targetFeatures(device.m_target)), device(device)
+        explicit Engine(GalleryGlyphPaintDevice& device) : QPaintEngine(targetFeatures(device.m_target)), device(device)
         {}
         Type type() const override { return User; }
         bool begin(QPaintDevice*) override
@@ -134,8 +130,7 @@ private:
                 restoreSystemClip();
             if (dirty & DirtyTransform) {
                 const qreal inverseDpr = 1 / device.devicePixelRatioF();
-                painter.setWorldTransform(state.transform() *
-                                          QTransform::fromScale(inverseDpr, inverseDpr));
+                painter.setWorldTransform(state.transform() * QTransform::fromScale(inverseDpr, inverseDpr));
             }
             if (dirty & DirtyPen)
                 painter.setPen(state.pen());
@@ -205,13 +200,12 @@ private:
         {
             forward([&] { painter.drawPixmap(rect, pixmap, source); });
         }
-        void drawImage(const QRectF& rect, const QImage& image, const QRectF& source,
-                       Qt::ImageConversionFlags flags) override
+        void drawImage(const QRectF& rect, const QImage& image, const QRectF& source, Qt::ImageConversionFlags flags)
+            override
         {
             forward([&] { painter.drawImage(rect, image, source, flags); });
         }
-        void drawTiledPixmap(const QRectF& rect, const QPixmap& pixmap,
-                             const QPointF& offset) override
+        void drawTiledPixmap(const QRectF& rect, const QPixmap& pixmap, const QPointF& offset) override
         {
             forward([&] { painter.drawTiledPixmap(rect, pixmap, offset); });
         }
@@ -230,17 +224,17 @@ private:
                 // Transformed, patterned or opaque-background text keeps Qt's semantics.
                 // The compatibility case is ordinary translated widget text.
                 const QPainter* sourcePainter = QPaintEngine::painter();
-                if (painter.worldTransform().type() > QTransform::TxTranslate ||
-                    painter.pen().brush().style() != Qt::SolidPattern ||
-                    (sourcePainter && sourcePainter->backgroundMode() == Qt::OpaqueMode) ||
-                    painter.compositionMode() != QPainter::CompositionMode_SourceOver) {
+                if (painter.worldTransform().type() > QTransform::TxTranslate
+                    || painter.pen().brush().style() != Qt::SolidPattern
+                    || (sourcePainter && sourcePainter->backgroundMode() == Qt::OpaqueMode)
+                    || painter.compositionMode() != QPainter::CompositionMode_SourceOver) {
                     painter.paintEngine()->syncState();
                     painter.paintEngine()->drawTextItem(position, item);
                     return;
                 }
                 const qreal dpr = painting::imageRasterDpr(device.rasterDpr(item.font()));
                 const QPointF origin(painter.worldTransform().dx() + device.m_rasterOrigin.x(),
-                                     painter.worldTransform().dy() + device.m_rasterOrigin.y());
+                    painter.worldTransform().dy() + device.m_rasterOrigin.y());
                 const QPointF baseline = position + origin;
                 const QFontMetricsF metrics(item.font());
                 // A glyph crossing a tile's leading edge must retain a positive
@@ -249,8 +243,7 @@ private:
                 // Keep the guard inside the existing 512 x 128 scratch budget.
                 // zh_CN: 给分块前沿保留字形保护边，避免跨边界字形变成负坐标后
                 // 被 Qt 5 向零截断而改变相位；保护边计入既有 512 x 128 内存上限。
-                const qreal guardWidth =
-                    (metrics.maxWidth() - qMin(qreal(0), metrics.minRightBearing())) * dpr + 2;
+                const qreal guardWidth = (metrics.maxWidth() - qMin(qreal(0), metrics.minRightBearing())) * dpr + 2;
                 const qreal guardHeight = qMax(metrics.descent(), item.descent()) * dpr + 2;
                 // Rounding the guard up must leave at least one payload pixel.
                 if (guardWidth > 511 || guardHeight > 127) {
@@ -263,18 +256,15 @@ private:
                 const QSize guard(qCeil(guardWidth), qCeil(guardHeight));
                 const QSize payload(512 - guard.width(), 128 - guard.height());
                 QRectF ink = metrics.boundingRect(item.text());
-                ink = ink.united(
-                    QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()));
+                ink = ink.united(QRectF(0, -item.ascent(), item.width(), item.ascent() + item.descent()));
                 ink = ink.adjusted(-2, -2, 2, 2).translated(baseline);
                 ++glyphItems;
                 // Bound fallback-font overestimates and offscreen text to the
                 // visible paint strip before allocating or iterating glyph tiles.
                 const qreal targetDpr = device.m_target.devicePixelRatioF();
-                QRectF visible(0, 0, device.m_target.width() / targetDpr,
-                               device.m_target.height() / targetDpr);
+                QRectF visible(0, 0, device.m_target.width() / targetDpr, device.m_target.height() / targetDpr);
                 if (painter.hasClipping())
-                    visible = visible.intersected(
-                        painter.worldTransform().mapRect(painter.clipBoundingRect()));
+                    visible = visible.intersected(painter.worldTransform().mapRect(painter.clipBoundingRect()));
                 ink = ink.intersected(visible.translated(device.m_rasterOrigin));
                 if (ink.isEmpty())
                     return;
@@ -282,16 +272,13 @@ private:
                 // One 256 KiB CPU tile plus its upload is reserved by the cache plan.
                 // Tiles and their Qt texture-cache keys die immediately; no glyph LRU.
                 for (int top = pixels.top(); top <= pixels.bottom(); top += payload.height()) {
-                    for (int left = pixels.left(); left <= pixels.right();
-                         left += payload.width()) {
+                    for (int left = pixels.left(); left <= pixels.right(); left += payload.width()) {
                         const QSize size(qMin(payload.width(), pixels.right() - left + 1),
-                                         qMin(payload.height(), pixels.bottom() - top + 1));
+                            qMin(payload.height(), pixels.bottom() - top + 1));
                         // Leave the canvas origin unchanged at the outer edge.
-                        const QPoint tile(qMax(0, left - guard.width()),
-                                          qMax(0, top - guard.height()));
+                        const QPoint tile(qMax(0, left - guard.width()), qMax(0, top - guard.height()));
                         const QPoint prefix = QPoint(left, top) - tile;
-                        QImage glyph(size + QSize(prefix.x(), prefix.y()),
-                                     QImage::Format_ARGB32_Premultiplied);
+                        QImage glyph(size + QSize(prefix.x(), prefix.y()), QImage::Format_ARGB32_Premultiplied);
                         if (glyph.isNull())
                             continue;
                         ++glyphTiles;
@@ -312,9 +299,8 @@ private:
                         // Both strip and tile shifts belong in physical pixels.
                         // zh_CN: 保留原始字形位置；Qt 的轮廓路径可能先量化位置再
                         // 应用变换，因此条带和分块偏移都放在物理像素变换中。
-                        raster.setWorldTransform(QTransform(dpr, 0, 0, dpr,
-                                                            origin.x() * dpr - tile.x(),
-                                                            origin.y() * dpr - tile.y()));
+                        raster.setWorldTransform(
+                            QTransform(dpr, 0, 0, dpr, origin.x() * dpr - tile.x(), origin.y() * dpr - tile.y()));
                         // QTextItem retains the fallback font, shaping, bidi order and decorations.
                         // Never re-layout item.text() as a new drawText call.
                         // QPainter paints underline/strikeout separately on the outer
@@ -326,9 +312,8 @@ private:
                         painter.save();
                         painter.setOpacity(1);
                         painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
-                        painter.drawImage(QRectF(tileOrigin - origin,
-                                                 QSizeF(size.width() / dpr, size.height() / dpr)),
-                                          glyph, QRectF(prefix, size));
+                        painter.drawImage(QRectF(tileOrigin - origin, QSizeF(size.width() / dpr, size.height() / dpr)),
+                            glyph, QRectF(prefix, size));
                         painter.restore();
                     }
                 }
@@ -386,8 +371,8 @@ private:
                 systemClipPath = {};
                 const qreal dpr = device.devicePixelRatioF();
                 for (const QRect& rect : clip)
-                    systemClipPath.addRect(QRectF(rect.x() / dpr, rect.y() / dpr,
-                                                  rect.width() / dpr, rect.height() / dpr));
+                    systemClipPath.addRect(
+                        QRectF(rect.x() / dpr, rect.y() / dpr, rect.width() / dpr, rect.height() / dpr));
             }
             if (!systemClipApplied && !clip.isEmpty()) {
                 // A widget usually draws many primitives under the same clip.
@@ -411,8 +396,7 @@ private:
                 else if (mode == ConvexMode)
                     painter.drawConvexPolygon(points, count);
                 else
-                    painter.drawPolygon(points, count,
-                                        mode == WindingMode ? Qt::WindingFill : Qt::OddEvenFill);
+                    painter.drawPolygon(points, count, mode == WindingMode ? Qt::WindingFill : Qt::OddEvenFill);
             });
         }
     };

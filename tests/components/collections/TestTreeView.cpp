@@ -47,8 +47,8 @@ protected:
         const qreal progress = indicatorMotionProgress();
         if (progress > 0.0 && progress < 1.0) {
             observedAnimatedPaint = true;
-            observedFullViewportAnimatedPaint =
-                observedFullViewportAnimatedPaint || event->region().contains(viewport()->rect());
+            observedFullViewportAnimatedPaint = observedFullViewportAnimatedPaint
+                || event->region().contains(viewport()->rect());
         }
         TreeView::paintEvent(event);
     }
@@ -62,15 +62,15 @@ int defaultTreeRowHeight()
 /** 业务组装：为 TreeView 挂上 Fluent 行代理 */
 void attachFluentDelegate(TreeView* tv, int rowHeight = defaultTreeRowHeight())
 {
-    tv->setItemDelegate(new treeview_test::FluentTreeItemDelegate(
-        static_cast<fluent::FluentElement*>(tv), rowHeight, tv, tv));
+    tv->setItemDelegate(
+        new treeview_test::FluentTreeItemDelegate(static_cast<fluent::FluentElement*>(tv), rowHeight, tv, tv));
 }
 
 /** 挂上带 CheckBox 可见的代理 */
 treeview_test::FluentTreeItemDelegate* attachCheckableDelegate(TreeView* tv)
 {
-    auto* d = new treeview_test::FluentTreeItemDelegate(static_cast<fluent::FluentElement*>(tv),
-                                                        defaultTreeRowHeight(), tv, tv);
+    auto* d = new treeview_test::FluentTreeItemDelegate(static_cast<fluent::FluentElement*>(tv), defaultTreeRowHeight(),
+        tv, tv);
     d->setCheckBoxVisible(true);
     tv->setItemDelegate(d);
     return d;
@@ -145,9 +145,8 @@ void processEvents()
 bool isAccentLike(const QColor& color, const QColor& accent)
 {
     constexpr int kTolerance = 42;
-    return color.alpha() > 160 && qAbs(color.red() - accent.red()) <= kTolerance &&
-           qAbs(color.green() - accent.green()) <= kTolerance &&
-           qAbs(color.blue() - accent.blue()) <= kTolerance;
+    return color.alpha() > 160 && qAbs(color.red() - accent.red()) <= kTolerance
+        && qAbs(color.green() - accent.green()) <= kTolerance && qAbs(color.blue() - accent.blue()) <= kTolerance;
 }
 
 QImage renderWidget(QWidget* widget)
@@ -237,8 +236,7 @@ void selectCheckedRows(TreeView* tv, const QModelIndex& parent = QModelIndex())
         const QModelIndex index = tv->model()->index(row, 0, parent);
         const QVariant checkState = index.data(Qt::CheckStateRole);
         if (checkState.isValid() && static_cast<Qt::CheckState>(checkState.toInt()) == Qt::Checked)
-            tv->selectionModel()->select(index,
-                                         QItemSelectionModel::Select | QItemSelectionModel::Rows);
+            tv->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         selectCheckedRows(tv, index);
     }
 }
@@ -427,14 +425,12 @@ TEST_F(TreeViewTest, IndicatorMotionClassifiesInitialUpwardDownwardAndSameLevel)
     EXPECT_EQ(tv->indicatorMotionPreviousIndex(), work);
     EXPECT_EQ(tv->indicatorMotionCurrentIndex(), pictures);
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Down);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(),
-              TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
 
     tv->setSelectedItem(personal);
     processEvents();
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Up);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(),
-              TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
     EXPECT_DOUBLE_EQ(tv->selectedIndicatorProgress(personal), 1.0);
 }
 
@@ -461,8 +457,7 @@ TEST_F(TreeViewTest, IndicatorMotionClassifiesHierarchyTransitions)
     tv->setSelectedItem(workChild1);
     processEvents();
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Down);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(),
-              TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
 
     tv->setSelectedItem(work);
     processEvents();
@@ -539,7 +534,7 @@ TEST_F(TreeViewTest, IndicatorReturnsWhenCurrentRowIsSelectedAgain)
     EXPECT_EQ(tv->indicatorMotionCurrentIndex(), leaf);
     ASSERT_FALSE(tv->selectedIndicatorRect().isEmpty());
     EXPECT_TRUE(hasAccentPixelInRect(tv->viewport(), tv->selectedIndicatorRect().toAlignedRect(),
-                                     tv->themeColors().accentDefault));
+        tv->themeColors().accentDefault));
 }
 
 TEST_F(TreeViewTest, IndicatorMotionSuppressesDuplicateSelectionAndSnapsWhenAnimationDisabled)
@@ -571,8 +566,7 @@ TEST_F(TreeViewTest, IndicatorMotionSuppressesDuplicateSelectionAndSnapsWhenAnim
     tv->setSelectedItem(personal);
     processEvents();
     EXPECT_EQ(tv->indicatorMotionDirection(), TreeView::IndicatorVerticalDirection::Down);
-    EXPECT_EQ(tv->indicatorHierarchyTransition(),
-              TreeView::IndicatorHierarchyTransition::SameLevel);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::SameLevel);
     EXPECT_DOUBLE_EQ(tv->indicatorMotionProgress(), 1.0);
     const int directionAfterMove = directionSpy.count();
     const int hierarchyAfterMove = hierarchySpy.count();
@@ -852,8 +846,7 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows)
     processEvents();
     ASSERT_TRUE(tv->isExpanded(work));
 
-    const qreal subtreeHeight =
-        tv->visualRect(firstChild).height() + tv->visualRect(secondChild).height();
+    const qreal subtreeHeight = tv->visualRect(firstChild).height() + tv->visualRect(secondChild).height();
     const QRect personalRect = tv->visualRect(personal);
     ASSERT_FALSE(personalRect.isEmpty());
 
@@ -865,8 +858,7 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows)
     ASSERT_GT(progress, 0.0);
     ASSERT_LT(progress, 1.0);
 
-    const QPoint visualPersonalCenter =
-        personalRect.center() - QPoint(0, qRound(subtreeHeight * (1.0 - progress)));
+    const QPoint visualPersonalCenter = personalRect.center() - QPoint(0, qRound(subtreeHeight * (1.0 - progress)));
     EXPECT_EQ(tv->indexAt(visualPersonalCenter), personal);
 
     QTest::mouseClick(tv->viewport(), Qt::LeftButton, Qt::NoModifier, visualPersonalCenter);
@@ -1605,14 +1597,14 @@ TEST_F(TreeViewTest, DragReorderEmitsSignal)
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     // Move past drag distance
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
 
     // Move to target
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
 
@@ -1645,8 +1637,8 @@ TEST_F(TreeViewTest, DragDisabledDoesNotReorder)
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
-                          Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);
@@ -1705,12 +1697,12 @@ TEST_F(TreeViewTest, DragDropOntoFolder)
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() - QApplication::startDragDistance() - 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);
@@ -1748,12 +1740,12 @@ TEST_F(TreeViewTest, DragCrossParentBetween)
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);
@@ -1789,12 +1781,12 @@ TEST_F(TreeViewTest, DragCannotDropAncestorOntoDescendant)
 
     QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, start);
     QPoint moved(start.x(), start.y() + QApplication::startDragDistance() + 5);
-    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent1(QEvent::MouseMove, QPointF(moved), QPointF(moved), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent1);
     QApplication::processEvents();
-    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton,
-                           Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent moveEvent2(QEvent::MouseMove, QPointF(end), QPointF(end), Qt::LeftButton, Qt::LeftButton,
+        Qt::NoModifier);
     QApplication::sendEvent(tv->viewport(), &moveEvent2);
     QApplication::processEvents();
     QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, end);

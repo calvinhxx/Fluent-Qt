@@ -69,9 +69,10 @@ void processDeferredDeletes()
     QApplication::processEvents();
 }
 
-GalleryNavigationItem navigationItem(const QString& id, const QString& title,
-                                     GalleryNavigationItem::Kind kind,
-                                     const QString& parentId = QString())
+GalleryNavigationItem navigationItem(const QString& id,
+    const QString& title,
+    GalleryNavigationItem::Kind kind,
+    const QString& parentId = QString())
 {
     GalleryNavigationItem item;
     item.id = id;
@@ -83,8 +84,7 @@ GalleryNavigationItem navigationItem(const QString& id, const QString& title,
 
 QRect targetRectInScrim(QWidget* target, QWidget* window, OverlayScrim* scrim)
 {
-    return QRect(target->mapTo(window, QPoint(0, 0)), target->size())
-        .translated(-scrim->geometry().topLeft());
+    return QRect(target->mapTo(window, QPoint(0, 0)), target->size()).translated(-scrim->geometry().topLeft());
 }
 
 class GalleryShellMotionPolicyTest : public ::testing::Test {
@@ -155,8 +155,7 @@ TEST_F(GalleryShellMotionPolicyTest, StartupPrewarmCompletesHiddenPageLayoutBefo
     ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
     showAndProcess(host);
     QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
-    presenter.prewarmRoutes(
-        {QStringLiteral("button"), QStringLiteral("slider"), QStringLiteral("tab-view")});
+    presenter.prewarmRoutes({QStringLiteral("button"), QStringLiteral("slider"), QStringLiteral("tab-view")});
     ASSERT_TRUE(QTest::qWaitFor([&] { return (finished.count()) == (1); }, 4000));
     EXPECT_EQ(presenter.currentRouteId(), QStringLiteral("home"));
 
@@ -336,8 +335,7 @@ TEST_F(GalleryShellMotionPolicyTest, FastStartupPreservesPresentationFromWindowS
     ASSERT_TRUE(splash);
     EXPECT_TRUE(splash->isVisible());
     EXPECT_EQ(window.findChild<QWidget*>("splashLogoTransition"), nullptr);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return window.findChild<QWidget*>("splashLogoTransition"); }, 2000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.findChild<QWidget*>("splashLogoTransition"); }, 2000));
     EXPECT_GE(visible.elapsed(), 1400);
     // The first-run tour must also wait for the complete connected transition.
     QTest::qWait(500);
@@ -395,10 +393,8 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesIntroTourSpotlightAndC
     tour.start();
 
     auto* scrim = host.findChild<OverlayScrim*>(QStringLiteral("GalleryIntroTour.Scrim"));
-    auto* dimAnimation =
-        tour.findChild<QPropertyAnimation*>(QStringLiteral("galleryIntroTourDimAnimation"));
-    auto* spotAnimation =
-        tour.findChild<QPropertyAnimation*>(QStringLiteral("galleryIntroTourSpotlightAnimation"));
+    auto* dimAnimation = tour.findChild<QPropertyAnimation*>(QStringLiteral("galleryIntroTourDimAnimation"));
+    auto* spotAnimation = tour.findChild<QPropertyAnimation*>(QStringLiteral("galleryIntroTourSpotlightAnimation"));
     auto* nextButton = host.findChild<Button*>(QStringLiteral("GalleryIntroTour.NextButton"));
     ASSERT_NE(scrim, nullptr);
     ASSERT_NE(dimAnimation, nullptr);
@@ -427,18 +423,16 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesNavigationPaneTransiti
     QWidget host;
     host.resize(520, 520);
     const QVector<GalleryNavigationItem> items = {
-        navigationItem(QString(), QStringLiteral("Controls"),
-                       GalleryNavigationItem::Kind::SectionHeader),
+        navigationItem(QString(), QStringLiteral("Controls"), GalleryNavigationItem::Kind::SectionHeader),
         navigationItem(QStringLiteral("foundation"), QStringLiteral("Foundation"),
-                       GalleryNavigationItem::Kind::CategoryRoute),
-        navigationItem(QStringLiteral("button"), QStringLiteral("Button"),
-                       GalleryNavigationItem::Kind::ComponentRoute, QStringLiteral("foundation"))};
+            GalleryNavigationItem::Kind::CategoryRoute),
+        navigationItem(QStringLiteral("button"), QStringLiteral("Button"), GalleryNavigationItem::Kind::ComponentRoute,
+            QStringLiteral("foundation"))};
     GalleryNavigationPane pane(items, &host);
     pane.setGeometry(0, 0, 260, host.height());
 
-    const QVector<GalleryNavigationItem> footerItems = {
-        navigationItem(QStringLiteral("settings"), QStringLiteral("Settings"),
-                       GalleryNavigationItem::Kind::FooterRoute)};
+    const QVector<GalleryNavigationItem> footerItems = {navigationItem(QStringLiteral("settings"),
+        QStringLiteral("Settings"), GalleryNavigationItem::Kind::FooterRoute)};
     GalleryNavigationPane footer(footerItems, &host);
     footer.setGeometry(270, 0, 240, 64);
     showAndProcess(host);
@@ -460,16 +454,14 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesNavigationPaneTransiti
     const QModelIndex settingsIndex = footer.indexForRouteId(QStringLiteral("settings"));
     const QRect settingsRect = footerTree->visualRect(settingsIndex);
     ASSERT_FALSE(settingsRect.isEmpty());
-    QTest::mousePress(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      settingsRect.center());
+    QTest::mousePress(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier, settingsRect.center());
 
     auto* settingsAnimation = footer.findChild<QPropertyAnimation*>(
         QStringLiteral("gallerySettingsIconRotationAnimation"));
     ASSERT_NE(settingsAnimation, nullptr);
     EXPECT_EQ(settingsAnimation->state(), QAbstractAnimation::Stopped);
     EXPECT_NEAR(footer.settingsIconRotation(), 0.0, 0.001);
-    QTest::mouseRelease(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier,
-                        settingsRect.center());
+    QTest::mouseRelease(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier, settingsRect.center());
 
     auto* tree = pane.findChild<TreeView*>();
     ASSERT_NE(tree, nullptr);
@@ -490,9 +482,8 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesNavigationPaneTransiti
     const QPoint settledPosition = flyout->pos();
     processDeferredDeletes();
     EXPECT_EQ(flyout->pos(), settledPosition);
-    EXPECT_EQ(flyout->findChild<QPropertyAnimation*>(
-                  QStringLiteral("galleryCompactNavigationFlyoutEntranceAnimation")),
-              nullptr);
+    EXPECT_EQ(flyout->findChild<QPropertyAnimation*>(QStringLiteral("galleryCompactNavigationFlyoutEntranceAnimation")),
+        nullptr);
 
     pane.setCompact(false);
     EXPECT_DOUBLE_EQ(pane.compactVisualProgress(), 0.0);
@@ -505,11 +496,11 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesTopNavigationTransitio
     host.resize(760, 420);
     const QVector<GalleryNavigationItem> items = {
         navigationItem(QStringLiteral("foundation"), QStringLiteral("Foundation"),
-                       GalleryNavigationItem::Kind::CategoryRoute),
-        navigationItem(QStringLiteral("button"), QStringLiteral("Button"),
-                       GalleryNavigationItem::Kind::ComponentRoute, QStringLiteral("foundation")),
+            GalleryNavigationItem::Kind::CategoryRoute),
+        navigationItem(QStringLiteral("button"), QStringLiteral("Button"), GalleryNavigationItem::Kind::ComponentRoute,
+            QStringLiteral("foundation")),
         navigationItem(QStringLiteral("settings"), QStringLiteral("Settings"),
-                       GalleryNavigationItem::Kind::FooterRoute)};
+            GalleryNavigationItem::Kind::FooterRoute)};
     GalleryTopNavigationPane pane(items, &host);
     pane.setGeometry(0, 0, pane.sizeHint().width(), pane.sizeHint().height());
     showAndProcess(host);
@@ -517,10 +508,8 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesTopNavigationTransitio
     QApplication::processEvents();
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
 
-    auto* settingsButton =
-        pane.findChild<Button*>(QStringLiteral("galleryTopNavigationButton_settings"));
-    auto* categoryButton =
-        pane.findChild<Button*>(QStringLiteral("galleryTopNavigationButton_foundation"));
+    auto* settingsButton = pane.findChild<Button*>(QStringLiteral("galleryTopNavigationButton_settings"));
+    auto* categoryButton = pane.findChild<Button*>(QStringLiteral("galleryTopNavigationButton_foundation"));
     ASSERT_NE(settingsButton, nullptr);
     ASSERT_NE(categoryButton, nullptr);
 
@@ -544,9 +533,8 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesTopNavigationTransitio
     const QPoint settledPosition = flyout->pos();
     processDeferredDeletes();
     EXPECT_EQ(flyout->pos(), settledPosition);
-    EXPECT_EQ(flyout->findChild<QPropertyAnimation*>(
-                  QStringLiteral("galleryTopNavigationFlyoutEntranceAnimation")),
-              nullptr);
+    EXPECT_EQ(flyout->findChild<QPropertyAnimation*>(QStringLiteral("galleryTopNavigationFlyoutEntranceAnimation")),
+        nullptr);
 }
 
 TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesTitleBarTransitions)
@@ -565,8 +553,7 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesTitleBarTransitions)
     controller->setBackAvailable(true);
     auto* backButton = titleBar->findChild<Button*>(QStringLiteral("GalleryTitleBar.BackButton"));
     auto* menuButton = titleBar->findChild<Button*>(QStringLiteral("GalleryTitleBar.MenuButton"));
-    auto* backReveal = controller->findChild<QVariantAnimation*>(
-        QStringLiteral("galleryTitleBarBackRevealAnimation"));
+    auto* backReveal = controller->findChild<QVariantAnimation*>(QStringLiteral("galleryTitleBarBackRevealAnimation"));
     ASSERT_NE(backButton, nullptr);
     ASSERT_NE(menuButton, nullptr);
     ASSERT_NE(backReveal, nullptr);
@@ -591,9 +578,8 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesTitleBarTransitions)
     EXPECT_DOUBLE_EQ(menuButton->iconScale(), 1.0);
     QTest::mouseRelease(menuButton, Qt::LeftButton, Qt::NoModifier, menuButton->rect().center());
     processDeferredDeletes();
-    EXPECT_EQ(menuButton->findChild<QPropertyAnimation*>(
-                  QStringLiteral("galleryTitleBarButtonPressAnimation")),
-              nullptr);
+    EXPECT_EQ(menuButton->findChild<QPropertyAnimation*>(QStringLiteral("galleryTitleBarButtonPressAnimation")),
+        nullptr);
 }
 
 TEST_F(GalleryShellMotionPolicyTest, RunningGalleryTransitionConvergesWhenMotionIsReduced)
@@ -618,8 +604,7 @@ TEST_F(GalleryShellMotionPolicyTest, RunningGalleryTransitionConvergesWhenMotion
 
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Reduced);
     EXPECT_LE(animation.duration() - animation.currentTime(), 50);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (animation.state()) == (QAbstractAnimation::Stopped); }, 250));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (animation.state()) == (QAbstractAnimation::Stopped); }, 250));
     EXPECT_EQ(finishedSpy.count(), 1);
     EXPECT_DOUBLE_EQ(animation.currentValue().toDouble(), 1.0);
 }
@@ -632,8 +617,7 @@ TEST_F(GalleryShellMotionPolicyTest, RunningTransientGalleryTransitionDeletesWhe
     animation->setEndValue(1.0);
     QSignalSpy finishedSpy(animation, &QVariantAnimation::finished);
 
-    fluent::gallery::motion::startFiniteTransition(animation, 1000, true,
-                                                   QAbstractAnimation::DeleteWhenStopped);
+    fluent::gallery::motion::startFiniteTransition(animation, 1000, true, QAbstractAnimation::DeleteWhenStopped);
     ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
 
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
@@ -692,8 +676,7 @@ TEST_F(GalleryStartupTest, SlowPrewarmYieldsPerSampleAndNeverExpiresWhilePaused)
     ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
     QSignalSpy progress(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress);
     QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
-    presenter.prewarmRoutes(
-        {QStringLiteral("button"), QStringLiteral("combobox"), QStringLiteral("tab-view")});
+    presenter.prewarmRoutes({QStringLiteral("button"), QStringLiteral("combobox"), QStringLiteral("tab-view")});
     QPointer<fluent::gallery::GalleryComponentPage> staged;
     bool inspectedFirstTurn = false;
     QTimer::singleShot(0, &host, [&] {
@@ -707,8 +690,7 @@ TEST_F(GalleryStartupTest, SlowPrewarmYieldsPerSampleAndNeverExpiresWhilePaused)
     ASSERT_TRUE(staged);
     EXPECT_TRUE(staged->isHidden());
     EXPECT_TRUE(staged->hasPendingSamples());
-    EXPECT_EQ(staged->sampleCount(), 0)
-        << "A staged page shell must yield before constructing its first live example";
+    EXPECT_EQ(staged->sampleCount(), 0) << "A staged page shell must yield before constructing its first live example";
     ASSERT_EQ(progress.count(), 1);
     EXPECT_EQ(progress.last().at(0).toInt(), 0);
     EXPECT_EQ(progress.last().at(1).toInt(), 3);
@@ -762,25 +744,23 @@ TEST_F(GalleryStartupTest, ProgressObserversCanPauseOrCancelWithoutStartingAnoth
         ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
         QSignalSpy finished(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmFinished);
         bool stopped = false;
-        QObject::connect(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress,
-                         &host, [&](int done, int) {
-                             if (done != 1 || stopped)
-                                 return;
-                             stopped = true;
-                             if (cancel)
-                                 presenter.cancelPrewarm();
-                             else
-                                 presenter.setPrewarmPaused(true);
-                         });
+        QObject::connect(&presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress, &host,
+            [&](int done, int) {
+                if (done != 1 || stopped)
+                    return;
+                stopped = true;
+                if (cancel)
+                    presenter.cancelPrewarm();
+                else
+                    presenter.setPrewarmPaused(true);
+            });
         presenter.prewarmRoutes({QStringLiteral("button"), QStringLiteral("combobox")});
         ASSERT_TRUE(QTest::qWaitFor([&] { return stopped; }, 10000));
         QTest::qWait(80);
         const auto pages = host.findChildren<fluent::gallery::GalleryComponentPage*>();
-        ASSERT_EQ(pages.size(), 1)
-            << "A synchronous progress observer must stop this tick before the next page shell";
+        ASSERT_EQ(pages.size(), 1) << "A synchronous progress observer must stop this tick before the next page shell";
         EXPECT_EQ(pages.first()->routeId(), QStringLiteral("button"));
-        EXPECT_EQ(finished.count(), 0)
-            << "Cancellation is not successful completion of the remaining queue";
+        EXPECT_EQ(finished.count(), 0) << "Cancellation is not successful completion of the remaining queue";
         if (!cancel) {
             presenter.setPrewarmPaused(false);
             ASSERT_TRUE(QTest::qWaitFor([&] { return finished.count() == 1; }, 10000));
@@ -807,15 +787,13 @@ TEST_F(GalleryStartupTest, HiddenAndClosedWindowsStopPendingPrewarmAndReleaseOwn
     // only Home and Settings instead of eagerly constructing every component.
     presenter->prewarmRoutes({QStringLiteral("button"), QStringLiteral("tab-view")});
     bool hidAfterReadyPage = false;
-    QObject::connect(
-        presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress, window,
-        [&](int done, int) {
-            if (done > 0 && !hidAfterReadyPage &&
-                !window->findChildren<fluent::gallery::GalleryComponentPage*>().isEmpty()) {
-                hidAfterReadyPage = true;
-                window->hide();
-            }
-        });
+    QObject::connect(presenter, &fluent::gallery::GalleryContentPresenter::prewarmProgress, window, [&](int done, int) {
+        if (done > 0 && !hidAfterReadyPage
+            && !window->findChildren<fluent::gallery::GalleryComponentPage*>().isEmpty()) {
+            hidAfterReadyPage = true;
+            window->hide();
+        }
+    });
     window->show();
     ASSERT_TRUE(QTest::qWaitFor([&] { return hidAfterReadyPage; }, 15000));
     ASSERT_TRUE(windowGuard);
@@ -827,8 +805,7 @@ TEST_F(GalleryStartupTest, HiddenAndClosedWindowsStopPendingPrewarmAndReleaseOwn
     ASSERT_FALSE(ownedPages.isEmpty());
     QTest::qWait(350);
     EXPECT_EQ(progress.count(), pausedProgressCount);
-    EXPECT_EQ(window->findChildren<fluent::gallery::GalleryComponentPage*>().size(),
-              ownedPages.size());
+    EXPECT_EQ(window->findChildren<fluent::gallery::GalleryComponentPage*>().size(), ownedPages.size());
     window->show();
     ASSERT_TRUE(QTest::qWaitFor([&] { return progress.count() > pausedProgressCount; }, 15000));
     window->close();
@@ -900,8 +877,7 @@ TEST_F(GalleryStartupTest, BoundedStartupAndCancellableColdPagesPreserveWarmStat
     ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
     EXPECT_EQ(window.currentContentPage(), page);
-    qInfo("Bounded Gallery startup: handoffMs=%lld completeChecksMs=%lld", handoffMs,
-          clock.elapsed());
+    qInfo("Bounded Gallery startup: handoffMs=%lld completeChecksMs=%lld", handoffMs, clock.elapsed());
 }
 
 TEST_F(GalleryStartupTest, VisualCheck)
@@ -918,8 +894,7 @@ TEST_F(GalleryStartupTest, VisualCheck)
     window.resize(1180, 820);
     window.show();
     if (tests::support::shouldCaptureVisualSnapshot()) {
-        ASSERT_TRUE(
-            QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
         tests::support::VisualSnapshotOptions options;
         options.theme = tests::support::VisualSnapshotTheme::Dark;
         options.variant = QStringLiteral("startup-ready");

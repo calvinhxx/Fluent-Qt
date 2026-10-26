@@ -98,8 +98,8 @@ public:
 
     void expectColor(COLORREF color) const
     {
-        for (const QPoint point : {QPoint(0, 0), QPoint(m_rect.right / 2, m_rect.bottom / 2),
-                                   QPoint(m_rect.right - 1, m_rect.bottom - 1)}) {
+        for (const QPoint point :
+            {QPoint(0, 0), QPoint(m_rect.right / 2, m_rect.bottom / 2), QPoint(m_rect.right - 1, m_rect.bottom - 1)}) {
             SCOPED_TRACE(::testing::Message() << "GDI pixel=" << point.x() << ',' << point.y());
             EXPECT_EQ(GetPixel(m_dc, point.x(), point.y()), color);
         }
@@ -151,8 +151,8 @@ protected:
         return Window::event(event);
     }
 
-    bool nativeEvent(const QByteArray& eventType, void* message,
-                     compatibility::FluentNativeEventResult* result) override
+    bool nativeEvent(const QByteArray& eventType, void* message, compatibility::FluentNativeEventResult* result)
+        override
     {
         const auto* nativeMessage = static_cast<MSG*>(message);
         if (nativeMessage && nativeMessage->message == WM_NCACTIVATE) {
@@ -173,16 +173,14 @@ protected:
 #ifdef FLUENT_QT_HAS_SPATIAL
 class BackdropProbeOpenGLWidget final : public QOpenGLWidget, protected QOpenGLFunctions {
 public:
-    explicit BackdropProbeOpenGLWidget(Window* window, QWidget* parent)
-        : QOpenGLWidget(parent), m_window(window)
+    explicit BackdropProbeOpenGLWidget(Window* window, QWidget* parent) : QOpenGLWidget(parent), m_window(window)
     {
         auto alphaFormat = format();
         alphaFormat.setAlphaBufferSize(8);
         setFormat(alphaFormat);
         connect(this, &QOpenGLWidget::frameSwapped, this, [this] {
             if (m_lastFrameOpaque)
-                nativeTypesAtOpaqueSwap.append(
-                    nativeBackdropType(reinterpret_cast<HWND>(m_window->winId())));
+                nativeTypesAtOpaqueSwap.append(nativeBackdropType(reinterpret_cast<HWND>(m_window->winId())));
         });
     }
 
@@ -193,8 +191,7 @@ protected:
 
     void paintGL() override
     {
-        m_lastFrameOpaque =
-            m_window->backdropState().surfaceMode == BackdropSurfaceMode::SolidOpaque;
+        m_lastFrameOpaque = m_window->backdropState().surfaceMode == BackdropSurfaceMode::SolidOpaque;
         const float channel = m_lastFrameOpaque ? 0.2f : 0.0f;
         glClearColor(channel, channel, channel, m_lastFrameOpaque ? 1.0f : 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -216,8 +213,7 @@ TEST(WindowsWindowBackdropTest, SolidFirstShowPreparesNativeThemeBackground)
     const auto globalTheme = fluent::FluentElement::currentTheme();
     for (const bool customChrome : {false, true}) {
         for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
-            SCOPED_TRACE(::testing::Message()
-                         << "customChrome=" << customChrome << ", theme=" << theme);
+            SCOPED_TRACE(::testing::Message() << "customChrome=" << customChrome << ", theme=" << theme);
             NativeActivationProbeWindow window;
             window.setCustomWindowChromeEnabled(customChrome);
             window.setProperty("fluentThemeOverride", static_cast<int>(theme));
@@ -241,8 +237,7 @@ TEST(WindowsWindowBackdropTest, SolidFirstShowPreparesNativeThemeBackground)
             ASSERT_TRUE(surface.isValid());
             ASSERT_TRUE(surface.fill(RGB(211, 23, 173)));
             const auto eraseCount = window.backgroundEraseCount;
-            EXPECT_EQ(SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(surface.dc()), 0),
-                      1);
+            EXPECT_EQ(SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(surface.dc()), 0), 1);
             EXPECT_EQ(window.backgroundEraseCount, eraseCount + 1);
             EXPECT_TRUE(window.lastBackgroundEraseHandled);
             const QColor expected = window.themeBackdrop(false);
@@ -279,8 +274,8 @@ TEST(WindowsWindowBackdropTest, NativeErasePaintsFallbackAndPreservesCompositedP
     constexpr COLORREF sentinel = RGB(211, 23, 173);
     for (const bool customChrome : {false, true}) {
         for (const auto effect : {BackdropEffect::Mica, BackdropEffect::Acrylic}) {
-            SCOPED_TRACE(::testing::Message() << "customChrome=" << customChrome
-                                              << ", effect=" << static_cast<int>(effect));
+            SCOPED_TRACE(
+                ::testing::Message() << "customChrome=" << customChrome << ", effect=" << static_cast<int>(effect));
             NativeActivationProbeWindow window;
             window.setCustomWindowChromeEnabled(customChrome);
             window.setBackdropEffect(effect);
@@ -290,17 +285,14 @@ TEST(WindowsWindowBackdropTest, NativeErasePaintsFallbackAndPreservesCompositedP
             NativeEraseSurface pendingSurface(hwnd);
             ASSERT_TRUE(pendingSurface.isValid());
             ASSERT_TRUE(pendingSurface.fill(sentinel));
-            EXPECT_EQ(
-                SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(pendingSurface.dc()), 0),
-                1);
+            EXPECT_EQ(SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(pendingSurface.dc()), 0), 1);
             EXPECT_TRUE(window.lastBackgroundEraseHandled);
             const auto& colors = window.themeColors();
             auto material = fluent::windowing::WindowBackdropMaterialOptions::forTheme(
                 window.effectiveThemeUsesDarkAppearance(), colors.bgCanvas, colors.accentDefault);
             material.effect = effect;
             material.active = false;
-            const QColor fallback =
-                fluent::windowing::WindowBackdropMaterial::opaqueBaseColor(material);
+            const QColor fallback = fluent::windowing::WindowBackdropMaterial::opaqueBaseColor(material);
             pendingSurface.expectColor(RGB(fallback.red(), fallback.green(), fallback.blue()));
             EXPECT_TRUE(window.paintedStates.isEmpty());
 
@@ -310,9 +302,7 @@ TEST(WindowsWindowBackdropTest, NativeErasePaintsFallbackAndPreservesCompositedP
             window.render(&cache);
             EXPECT_EQ(cache.pixelColor(cache.rect().center()).alpha(), 255);
             ASSERT_TRUE(pendingSurface.fill(sentinel));
-            EXPECT_EQ(
-                SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(pendingSurface.dc()), 0),
-                1);
+            EXPECT_EQ(SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(pendingSurface.dc()), 0), 1);
             pendingSurface.expectColor(RGB(fallback.red(), fallback.green(), fallback.blue()));
             window.paintedStates.clear();
             window.nativeTypesAtPaint.clear();
@@ -326,9 +316,7 @@ TEST(WindowsWindowBackdropTest, NativeErasePaintsFallbackAndPreservesCompositedP
                 ASSERT_TRUE(exposedSurface.fill(sentinel));
                 const auto paintCount = window.paintedStates.size();
                 const auto eraseCount = window.backgroundEraseCount;
-                EXPECT_EQ(SendMessageW(hwnd, WM_ERASEBKGND,
-                                       reinterpret_cast<WPARAM>(exposedSurface.dc()), 0),
-                          1);
+                EXPECT_EQ(SendMessageW(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(exposedSurface.dc()), 0), 1);
                 EXPECT_EQ(window.backgroundEraseCount, eraseCount + 1);
                 EXPECT_TRUE(window.lastBackgroundEraseHandled);
                 exposedSurface.expectColor(sentinel);
@@ -345,8 +333,7 @@ TEST(WindowsWindowBackdropTest, NativeErasePaintsFallbackAndPreservesCompositedP
                 const auto paintCount = window.paintedStates.size();
                 window.setBackdropEffect(nextEffect);
                 expectWarmPixelsPreserved();
-                ASSERT_TRUE(QTest::qWaitFor(
-                    [&] { return window.paintedStates.size() > paintCount; }, 2000));
+                ASSERT_TRUE(QTest::qWaitFor([&] { return window.paintedStates.size() > paintCount; }, 2000));
                 expectWarmPixelsPreserved();
             }
             for (const auto theme : {fluent::FluentElement::Dark, fluent::FluentElement::Light}) {
@@ -355,8 +342,7 @@ TEST(WindowsWindowBackdropTest, NativeErasePaintsFallbackAndPreservesCompositedP
                 window.setProperty("fluentThemeOverride", static_cast<int>(theme));
                 window.onThemeUpdated();
                 expectWarmPixelsPreserved();
-                ASSERT_TRUE(QTest::qWaitFor(
-                    [&] { return window.paintedStates.size() > paintCount; }, 2000));
+                ASSERT_TRUE(QTest::qWaitFor([&] { return window.paintedStates.size() > paintCount; }, 2000));
                 expectWarmPixelsPreserved();
             }
             window.close();
@@ -376,8 +362,7 @@ TEST(WindowsWindowBackdropTest, EffectChangesPreserveNativeWindowWithoutActivati
 #endif
         SCOPED_TRACE(::testing::Message() << "withOpenGL=" << withOpenGL);
         NativeActivationProbeWindow window;
-        if (!window.backdropCapabilities().nativeMica ||
-            !window.backdropCapabilities().nativeAcrylic)
+        if (!window.backdropCapabilities().nativeMica || !window.backdropCapabilities().nativeAcrylic)
             GTEST_SKIP() << "This Windows session does not support DWM Mica and Acrylic";
         auto* content = new QWidget;
         auto* layout = new QVBoxLayout(content);
@@ -415,9 +400,8 @@ TEST(WindowsWindowBackdropTest, EffectChangesPreserveNativeWindowWithoutActivati
         QSignalSpy visibilitySpy(firstHandle, &QWindow::visibleChanged);
         window.shows = window.hides = window.nativeIdChanges = 0;
 
-        for (BackdropEffect effect :
-             {BackdropEffect::Acrylic, BackdropEffect::Mica, BackdropEffect::Solid,
-              BackdropEffect::Mica, BackdropEffect::Solid, BackdropEffect::Acrylic}) {
+        for (BackdropEffect effect : {BackdropEffect::Acrylic, BackdropEffect::Mica, BackdropEffect::Solid,
+                 BackdropEffect::Mica, BackdropEffect::Solid, BackdropEffect::Acrylic}) {
             SCOPED_TRACE(static_cast<int>(effect));
             window.resetActivationCounts();
             window.paintedStates.clear();
@@ -442,14 +426,10 @@ TEST(WindowsWindowBackdropTest, EffectChangesPreserveNativeWindowWithoutActivati
                     << "The old material must remain until a real opaque frame is submitted";
             }
             ASSERT_TRUE(QTest::qWaitFor(
-                [&] {
-                    return nativeBackdropType(hwnd) == expectedNativeType &&
-                           !window.paintedStates.isEmpty();
-                },
+                [&] { return nativeBackdropType(hwnd) == expectedNativeType && !window.paintedStates.isEmpty(); },
                 2000));
             if (solid) {
-                EXPECT_EQ(window.paintedStates.first().surfaceMode,
-                          BackdropSurfaceMode::SolidOpaque);
+                EXPECT_EQ(window.paintedStates.first().surfaceMode, BackdropSurfaceMode::SolidOpaque);
                 EXPECT_EQ(window.nativeTypesAtPaint.first(), previousNativeType)
                     << "The old material must protect the last transparent frame until the "
                        "opaque replacement is submitted";
@@ -476,15 +456,15 @@ TEST(WindowsWindowBackdropTest, EffectChangesPreserveNativeWindowWithoutActivati
             const auto state = window.backdropState();
             EXPECT_EQ(state.requestedEffect, effect);
             EXPECT_EQ(state.effectiveEffect, effect);
-            EXPECT_EQ(state.surfaceMode, solid ? BackdropSurfaceMode::SolidOpaque
-                                               : BackdropSurfaceMode::CompositedTransparent);
+            EXPECT_EQ(state.surfaceMode,
+                solid ? BackdropSurfaceMode::SolidOpaque : BackdropSurfaceMode::CompositedTransparent);
             EXPECT_EQ(state.platformApplied, !solid);
             EXPECT_EQ(nativeBackdropType(hwnd), expectedNativeType);
             for (int i = 0; i < window.paintedStates.size(); ++i) {
                 EXPECT_EQ(window.paintedStates.at(i), state);
                 if (solid) {
-                    EXPECT_TRUE(window.nativeTypesAtPaint.at(i) == previousNativeType ||
-                                window.nativeTypesAtPaint.at(i) == expectedNativeType);
+                    EXPECT_TRUE(window.nativeTypesAtPaint.at(i) == previousNativeType
+                        || window.nativeTypesAtPaint.at(i) == expectedNativeType);
                 } else {
                     EXPECT_EQ(window.nativeTypesAtPaint.at(i), expectedNativeType)
                         << "The first transparent paint must already have its native material";
@@ -532,8 +512,7 @@ TEST(WindowsWindowBackdropTest, SuspendedUpdatesKeepMaterialUntilOpaqueFrameComm
         QTest::qWait(30);
         EXPECT_EQ(window.backdropState().surfaceMode, BackdropSurfaceMode::SolidOpaque);
         EXPECT_TRUE(window.paintedStates.isEmpty());
-        EXPECT_EQ(nativeBackdropType(hwnd), materialType)
-            << "No opaque frame was submitted while painting is disabled";
+        EXPECT_EQ(nativeBackdropType(hwnd), materialType) << "No opaque frame was submitted while painting is disabled";
 
         window.setUpdatesEnabled(true);
         EXPECT_EQ(nativeBackdropType(hwnd), materialType);
@@ -541,8 +520,7 @@ TEST(WindowsWindowBackdropTest, SuspendedUpdatesKeepMaterialUntilOpaqueFrameComm
         cache.fill(Qt::transparent);
         window.render(&cache);
         EXPECT_EQ(cache.pixelColor(cache.rect().center()).alpha(), 255);
-        EXPECT_EQ(nativeBackdropType(hwnd), materialType)
-            << "A cache capture cannot release the native material";
+        EXPECT_EQ(nativeBackdropType(hwnd), materialType) << "A cache capture cannot release the native material";
         window.paintedStates.clear();
         window.nativeTypesAtPaint.clear();
         ASSERT_TRUE(QTest::qWaitFor([&] { return nativeBackdropType(hwnd) == 1; }, 1000));
@@ -579,8 +557,7 @@ TEST(WindowsWindowBackdropTest, SuspendedUpdatesKeepMaterialUntilOpaqueFrameComm
     // Synchronous observers may supersede the effect while the safe state is published.
     window.setBackdropEffect(BackdropEffect::Acrylic);
     QTest::qWait(30);
-    const auto connection = QObject::connect(
-        &window, &Window::backdropStateChanged, &window,
+    const auto connection = QObject::connect(&window, &Window::backdropStateChanged, &window,
         [&](const fluent::windowing::BackdropState& state) {
             if (state.surfaceMode == BackdropSurfaceMode::SolidOpaque) {
                 window.reapplySystemBackdrop();
@@ -640,9 +617,8 @@ TEST(WindowsWindowBackdropTest, StateChangesDoNotRepeatActivationCompensation)
         ASSERT_EQ(window.backdropState().backend, BackdropBackend::DwmSystemBackdrop);
 
         // Inject only the Qt notification, so real desktop activation cannot mask the regression.
-        for (Qt::WindowStates oldState :
-             {Qt::WindowStates(Qt::WindowNoState), Qt::WindowStates(Qt::WindowMaximized),
-              Qt::WindowStates(Qt::WindowFullScreen)}) {
+        for (Qt::WindowStates oldState : {Qt::WindowStates(Qt::WindowNoState), Qt::WindowStates(Qt::WindowMaximized),
+                 Qt::WindowStates(Qt::WindowFullScreen)}) {
             SCOPED_TRACE(static_cast<int>(oldState));
             ASSERT_EQ(GetActiveWindow(), hwnd);
             window.resetActivationCounts();

@@ -61,9 +61,10 @@ void showView(FileListView& view, const QSize& size = QSize(640, 320))
     QApplication::processEvents();
 }
 
-QStandardItem* addFile(QStandardItemModel& model, const QString& name,
-                       FileListView::Status status = FileListView::Status::Ready,
-                       const QString& metadata = QStringLiteral("2.4 MB · Ready to use"))
+QStandardItem* addFile(QStandardItemModel& model,
+    const QString& name,
+    FileListView::Status status = FileListView::Status::Ready,
+    const QString& metadata = QStringLiteral("2.4 MB · Ready to use"))
 {
     auto* item = new QStandardItem(name);
     item->setData(int(status), FileListView::StatusRole);
@@ -82,10 +83,7 @@ QPoint removePoint(const InspectableFileListView& view, const QModelIndex& index
 class CountingFileModel : public QAbstractListModel {
 public:
     explicit CountingFileModel(int count) : m_count(count) {}
-    int rowCount(const QModelIndex& parent = {}) const override
-    {
-        return parent.isValid() ? 0 : m_count;
-    }
+    int rowCount(const QModelIndex& parent = {}) const override { return parent.isValid() ? 0 : m_count; }
     QVariant data(const QModelIndex& index, int role) const override
     {
         if (!index.isValid() || index.row() < 0 || index.row() >= m_count)
@@ -96,8 +94,7 @@ public:
         case Qt::DisplayRole:
             return QStringLiteral("file-%1.pdf").arg(index.row());
         case FileListView::MetadataRole:
-            return QStringLiteral("%1 / 5.8 MB · Uploading")
-                .arg(m_metadataProgress * 5.8, 0, 'f', 1);
+            return QStringLiteral("%1 / 5.8 MB · Uploading").arg(m_metadataProgress * 5.8, 0, 'f', 1);
         case FileListView::StatusRole:
             return int(FileListView::Status::Uploading);
         case FileListView::ProgressRole:
@@ -139,8 +136,7 @@ TEST(FileListViewTest, Contract_ModelRemainsCallerOwnedAndRequestsDoNotMutate)
         EXPECT_EQ(model.parent(), nullptr);
         showView(view);
         QSignalSpy remove(&view, &FileListView::removeRequested);
-        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier,
-                          removePoint(view, model.index(0, 0)));
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, removePoint(view, model.index(0, 0)));
         ASSERT_EQ(remove.count(), 1);
         EXPECT_EQ(remove.at(0).at(0).value<QModelIndex>(), model.index(0, 0));
         EXPECT_EQ(model.rowCount(), 1);
@@ -154,7 +150,7 @@ TEST(FileListViewTest, Contract_KeyboardCommandsRespectRolesAndEnabledState)
 {
     QStandardItemModel model;
     auto* file = addFile(model, QStringLiteral("archive.zip"), FileListView::Status::Rejected,
-                         QStringLiteral("28 MB · Exceeds the 20 MB limit"));
+        QStringLiteral("28 MB · Exceeds the 20 MB limit"));
     file->setData(true, FileListView::RetryableRole);
     InspectableFileListView view;
     view.setModel(&model);
@@ -197,8 +193,7 @@ TEST(FileListViewTest, Contract_RowBodyRetainsPointerSignalsAndCommandsAreSepara
     EXPECT_EQ(clicked.count(), 1);
     EXPECT_EQ(itemClicked.count(), 1);
     EXPECT_EQ(remove.count(), 0);
-    QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier,
-                      removePoint(view, model.index(0, 0)));
+    QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, removePoint(view, model.index(0, 0)));
     EXPECT_EQ(pressed.count(), 1);
     EXPECT_EQ(clicked.count(), 1);
     EXPECT_EQ(itemClicked.count(), 1);
@@ -212,8 +207,7 @@ TEST(FileListViewTest, Contract_RowBackgroundMatchesListViewAndDisabledRowsClear
         ~RestoreTheme() { fluent::FluentElement::setTheme(previous); }
     } restoreTheme;
 
-    auto backgroundPixel = [](QAbstractItemView& view, const QModelIndex& index,
-                              QStyle::State state) {
+    auto backgroundPixel = [](QAbstractItemView& view, const QModelIndex& index, QStyle::State state) {
         QImage image(QSize(640, 100), QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::transparent);
         QPainter painter(&image);
@@ -228,9 +222,8 @@ TEST(FileListViewTest, Contract_RowBackgroundMatchesListViewAndDisabledRowsClear
         return image.pixelColor(300, 8);
     };
 
-    const fluent::FluentElement::Theme themes[]{fluent::FluentElement::Light,
-                                                fluent::FluentElement::Dark,
-                                                fluent::FluentElement::HighContrast};
+    const fluent::FluentElement::Theme themes[]{fluent::FluentElement::Light, fluent::FluentElement::Dark,
+        fluent::FluentElement::HighContrast};
     for (const auto theme : themes) {
         SCOPED_TRACE(int(theme));
         fluent::FluentElement::setTheme(theme);
@@ -244,18 +237,15 @@ TEST(FileListViewTest, Contract_RowBackgroundMatchesListViewAndDisabledRowsClear
         files.setAnimationEnabled(false);
 
         const QStyle::State selected = QStyle::State_Enabled | QStyle::State_Selected;
-        const QStyle::State pressed =
-            QStyle::State_Enabled | QStyle::State_MouseOver | QStyle::State_Sunken;
+        const QStyle::State pressed = QStyle::State_Enabled | QStyle::State_MouseOver | QStyle::State_Sunken;
         const QVector<QStyle::State> states{selected, selected | QStyle::State_MouseOver, pressed,
-                                            pressed | QStyle::State_Selected};
+            pressed | QStyle::State_Selected};
         // Compare two actual delegates, rather than reproducing the shared
         // helper's token mapping inside the test.
         // zh_CN: 比较两种实际 delegate 的结果，不在测试中复制 helper 的配色映射。
         for (const auto state : states)
-            EXPECT_EQ(backgroundPixel(files, index, state),
-                      backgroundPixel(reference, index, state));
-        EXPECT_NE(backgroundPixel(reference, index, selected),
-                  backgroundPixel(reference, index, pressed));
+            EXPECT_EQ(backgroundPixel(files, index, state), backgroundPixel(reference, index, state));
+        EXPECT_NE(backgroundPixel(reference, index, selected), backgroundPixel(reference, index, pressed));
 
         showView(files);
         QTest::mouseMove(files.viewport(), QPoint(120, 32));
@@ -264,8 +254,7 @@ TEST(FileListViewTest, Contract_RowBackgroundMatchesListViewAndDisabledRowsClear
         files.setEnabled(false);
         EXPECT_EQ(backgroundPixel(files, index, disabledHovered).alpha(), 0);
         EXPECT_EQ(backgroundPixel(files, index, disabledSelected).alpha(), 0);
-        EXPECT_EQ(backgroundPixel(files, index, disabledSelected),
-                  backgroundPixel(reference, index, disabledSelected));
+        EXPECT_EQ(backgroundPixel(files, index, disabledSelected), backgroundPixel(reference, index, disabledSelected));
 
         files.setEnabled(true);
         item->setEnabled(false);
@@ -344,8 +333,9 @@ TEST(FileListViewTest, Contract_SelectionCallbackCanReplaceModelDuringActionPres
     showView(view);
     view.setCurrentIndex(first.index(0, 0));
     QSignalSpy remove(&view, &FileListView::removeRequested);
-    QObject::connect(view.selectionModel(), &QItemSelectionModel::currentChanged, &view,
-                     [&] { view.setModel(&replacement); });
+    QObject::connect(view.selectionModel(), &QItemSelectionModel::currentChanged, &view, [&] {
+        view.setModel(&replacement);
+    });
     const QPoint point = removePoint(view, first.index(1, 0));
     QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, point);
     EXPECT_EQ(view.model(), &replacement);
@@ -363,12 +353,10 @@ TEST(FileListViewTest, Contract_SelectionCallbackCanDestroyViewDuringActionPress
     showView(*view);
     view->setCurrentIndex(model.index(0, 0));
     QPointer<QItemSelectionModel> ownedSelection(view->selectionModel());
-    QObject::connect(view->selectionModel(), &QItemSelectionModel::currentChanged, view,
-                     [view] { delete view; });
+    QObject::connect(view->selectionModel(), &QItemSelectionModel::currentChanged, view, [view] { delete view; });
     const QPoint point = removePoint(*view, model.index(1, 0));
-    QMouseEvent press(QEvent::MouseButtonPress, QPointF(point),
-                      QPointF(view->viewport()->mapToGlobal(point)), Qt::LeftButton, Qt::LeftButton,
-                      Qt::NoModifier);
+    QMouseEvent press(QEvent::MouseButtonPress, QPointF(point), QPointF(view->viewport()->mapToGlobal(point)),
+        Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(view->viewport(), &press);
     EXPECT_TRUE(guarded.isNull());
     // Qt must finish emitting its current-index notifications before its
@@ -394,12 +382,10 @@ TEST(FileListViewTest, Contract_ActionSelectionPreservesBorrowedSelectionModelLi
     showView(*view);
     view->setCurrentIndex(model.index(0, 0));
     QSignalSpy rowChanged(&borrowedSelection, &QItemSelectionModel::currentRowChanged);
-    QObject::connect(&borrowedSelection, &QItemSelectionModel::currentChanged, view,
-                     [view] { delete view; });
+    QObject::connect(&borrowedSelection, &QItemSelectionModel::currentChanged, view, [view] { delete view; });
     const QPoint point = removePoint(*view, model.index(1, 0));
-    QMouseEvent press(QEvent::MouseButtonPress, QPointF(point),
-                      QPointF(view->viewport()->mapToGlobal(point)), Qt::LeftButton, Qt::LeftButton,
-                      Qt::NoModifier);
+    QMouseEvent press(QEvent::MouseButtonPress, QPointF(point), QPointF(view->viewport()->mapToGlobal(point)),
+        Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(view->viewport(), &press);
     EXPECT_TRUE(viewGuard.isNull());
     EXPECT_FALSE(selectionGuard.isNull());
@@ -413,9 +399,7 @@ TEST(FileListViewTest, Contract_ActionSelectionPreservesBorrowedSelectionModelLi
 TEST(FileListViewTest, Contract_FullFilenameAndMetadataWrapAtNarrowWidth)
 {
     QStandardItemModel model;
-    addFile(
-        model,
-        QStringLiteral("international-brand-guidelines-2026-accessibility-and-localization.pdf"),
+    addFile(model, QStringLiteral("international-brand-guidelines-2026-accessibility-and-localization.pdf"),
         FileListView::Status::Rejected,
         QStringLiteral("此文件超过所选工作区的大小限制。Choose a smaller file and try again."));
     InspectableFileListView view;
@@ -433,8 +417,7 @@ TEST(FileListViewTest, Contract_FullFilenameAndMetadataWrapAtNarrowWidth)
     // Wrapping must add a full text line; the previous trailing status column
     // no longer determines how many lines a narrow row needs.
     // zh_CN: 换行应增加完整文字行，不再依赖旧版尾部状态列挤占宽度后的固定高度。
-    EXPECT_GE(narrowHeight,
-              wideHeight + qCeil(view.themeFont(Typography::FontRole::Body).lineHeight));
+    EXPECT_GE(narrowHeight, wideHeight + qCeil(view.themeFont(Typography::FontRole::Body).lineHeight));
     EXPECT_LE(view.visualRect(model.index(0, 0)).width(), view.viewport()->width());
 }
 
@@ -469,8 +452,7 @@ TEST(FileListViewTest, Contract_RtlLayoutPreservesEnglishNumbersAndArabicTextDir
             QTextLayout reference(test.text, caption.toQFont());
             QTextOption textOption;
             textOption.setTextDirection(test.paragraphDirection);
-            textOption.setAlignment(widgetDirection == Qt::RightToLeft ? Qt::AlignRight
-                                                                       : Qt::AlignLeft);
+            textOption.setAlignment(widgetDirection == Qt::RightToLeft ? Qt::AlignRight : Qt::AlignLeft);
             reference.setTextOption(textOption);
             reference.beginLayout();
             QTextLine line = reference.createLine();
@@ -522,9 +504,8 @@ TEST(FileListViewTest, Performance_UnchangedHoverDoesNotRepaint)
     showView(view);
 
     auto moveTo = [&view](const QPoint& point) {
-        QMouseEvent move(QEvent::MouseMove, QPointF(point),
-                         QPointF(view.viewport()->mapToGlobal(point)), Qt::NoButton, Qt::NoButton,
-                         Qt::NoModifier);
+        QMouseEvent move(QEvent::MouseMove, QPointF(point), QPointF(view.viewport()->mapToGlobal(point)), Qt::NoButton,
+            Qt::NoButton, Qt::NoModifier);
         QApplication::sendEvent(view.viewport(), &move);
         QApplication::sendPostedEvents(nullptr, QEvent::UpdateRequest);
         QApplication::processEvents();
@@ -572,9 +553,8 @@ TEST(FileListViewTest, Performance_VisibleHeightChangesCoalesceIntoOneLayout)
     const int layoutsBefore = view.layoutCount;
 
     for (int row = 0; row < model.rowCount(); ++row)
-        model.setData(model.index(row, 0),
-                      QStringLiteral("Supporting details wrap without truncation. ").repeated(6),
-                      FileListView::MetadataRole);
+        model.setData(model.index(row, 0), QStringLiteral("Supporting details wrap without truncation. ").repeated(6),
+            FileListView::MetadataRole);
     view.viewport()->grab();
     ASSERT_GT(view.sizeHintForIndex(model.index(0, 0)).height(), originalHeight);
     // Deliver the coalesced height notification and any layout calls it posts.
@@ -665,8 +645,8 @@ TEST(FileListViewTest, Contract_AccessibilityExposesCompleteDetailsAndGuardedAct
 {
 #if QT_CONFIG(accessibility)
     QStandardItemModel model;
-    auto* item = addFile(model, QStringLiteral("full-untruncated-document-name.pdf"),
-                         FileListView::Status::Rejected, QStringLiteral("28 MB · Too large"));
+    auto* item = addFile(model, QStringLiteral("full-untruncated-document-name.pdf"), FileListView::Status::Rejected,
+        QStringLiteral("28 MB · Too large"));
     item->setData(true, FileListView::RetryableRole);
     InspectableFileListView view;
     view.setModel(&model);
@@ -736,8 +716,7 @@ TEST(FileListViewTest, Contract_AccessibilityFocusCallbackCanDestroyView)
     auto* target = accessible->child(1);
     ASSERT_NE(target, nullptr);
     ASSERT_NE(target->actionInterface(), nullptr);
-    QObject::connect(view->selectionModel(), &QItemSelectionModel::currentChanged, view,
-                     [view] { delete view; });
+    QObject::connect(view->selectionModel(), &QItemSelectionModel::currentChanged, view, [view] { delete view; });
     target->actionInterface()->doAction(QAccessibleActionInterface::setFocusAction());
     EXPECT_TRUE(guarded.isNull());
 #else

@@ -119,8 +119,7 @@ TEST_F(SpatialViewTest, Contract_EmbeddedChartReadoutUsesPresentedWindow)
             readout = qobject_cast<fluent::dialogs_flyouts::Popup*>(widget);
     ASSERT_NE(readout, nullptr);
     ASSERT_TRUE(readout->isOpen());
-    EXPECT_EQ(readout->parentWidget(), &window)
-        << "A projected card is not the overlay's owning native window";
+    EXPECT_EQ(readout->parentWidget(), &window) << "A projected card is not the overlay's owning native window";
     EXPECT_TRUE(window.rect().contains(fluent::overlay::visibleCardGeometry(readout->geometry())));
     const QPoint firstPosition = readout->pos();
     item->setRotation(QVector3D(-10, 20, 0));
@@ -189,8 +188,8 @@ TEST_F(SpatialViewTest, Contract_NativeRevealRestoresTheWholeCanvasWithoutIdleRe
                 return QImage();
             QImage image(gl->size() * gl->devicePixelRatioF(), QImage::Format_RGBA8888);
             gl->makeCurrent();
-            gl->context()->functions()->glReadPixels(0, 0, image.width(), image.height(), GL_RGBA,
-                                                     GL_UNSIGNED_BYTE, image.bits());
+            gl->context()->functions()->glReadPixels(0, 0, image.width(), image.height(), GL_RGBA, GL_UNSIGNED_BYTE,
+                image.bits());
             gl->doneCurrent();
             return image.mirrored();
         };
@@ -198,12 +197,10 @@ TEST_F(SpatialViewTest, Contract_NativeRevealRestoresTheWholeCanvasWithoutIdleRe
             SCOPED_TRACE(pass);
             const bool fromAbove = pass % 2 == 0;
             scroll.verticalScrollBar()->setValue(fromAbove ? top + view->height() + 20 : 0);
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return view->activeBackend() == SpatialView::Backend::Raster; }, 1000));
+            ASSERT_TRUE(QTest::qWaitFor([&] { return view->activeBackend() == SpatialView::Backend::Raster; }, 1000));
             scroll.verticalScrollBar()->setValue(
                 fromAbove ? top + view->height() - 30 : top - scroll.viewport()->height() + 30);
-            ASSERT_TRUE(QTest::qWaitFor(
-                [&] { return view->activeBackend() == SpatialView::Backend::OpenGL; }, 2000))
+            ASSERT_TRUE(QTest::qWaitFor([&] { return view->activeBackend() == SpatialView::Backend::OpenGL; }, 2000))
                 << view->fallbackReason().toStdString();
             QTest::qWait(60);
             scroll.verticalScrollBar()->setValue(top - 40);
@@ -217,8 +214,7 @@ TEST_F(SpatialViewTest, Contract_NativeRevealRestoresTheWholeCanvasWithoutIdleRe
                     EXPECT_EQ(actual.pixelColor(x, y), background) << "x=" << x << " y=" << y;
             for (int y : {0, actual.height() - 1})
                 EXPECT_EQ(actual.pixelColor(actual.width() / 2, y), background);
-            EXPECT_EQ(actual.pixelColor(actual.width() / 2, actual.height() / 2),
-                      card->themeColors().bgLayer);
+            EXPECT_EQ(actual.pixelColor(actual.width() / 2, actual.height() / 2), card->themeColors().bgLayer);
         }
         QTest::qWait(200);
         auto* gl = view->findChild<QOpenGLWidget*>();
@@ -366,7 +362,7 @@ TEST_F(SpatialViewTest, Contract_SurfaceShadowPreservesContentAndRespondsToTheme
         const QRectF bounds = item->projectedPolygon().boundingRect();
         const auto pixel = [](const QPixmap& pixmap, const QPointF& point) {
             return pixmap.toImage().pixelColor(qRound(point.x() * pixmap.devicePixelRatioF()),
-                                               qRound(point.y() * pixmap.devicePixelRatioF()));
+                qRound(point.y() * pixmap.devicePixelRatioF()));
         };
         EXPECT_EQ(pixel(plain, bounds.center()), pixel(raised, bounds.center()));
         const QPointF below(bounds.center().x(), bounds.bottom() + 7);
@@ -404,7 +400,7 @@ TEST_F(SpatialViewTest, Contract_ProjectedShadowNeverOverpaintsCardContents)
             const QPixmap raised = view.grab();
             const QPointF center = item->projectedPolygon().boundingRect().center();
             const QPoint pixel(qRound(center.x() * plain.devicePixelRatioF()),
-                               qRound(center.y() * plain.devicePixelRatioF()));
+                qRound(center.y() * plain.devicePixelRatioF()));
             EXPECT_EQ(plain.toImage().pixelColor(pixel), raised.toImage().pixelColor(pixel));
         }
     }
@@ -440,13 +436,10 @@ TEST_F(SpatialViewTest, Contract_SurfaceHoverFreezesDuringPointerInputAndSettles
     };
     move(hit());
     ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return bool(item->projectedPolygon().boundingRect().center().y() < rest.y() - 7); },
-        1000))
-        << "restY=" << rest.y()
-        << " currentY=" << item->projectedPolygon().boundingRect().center().y()
+        [&] { return bool(item->projectedPolygon().boundingRect().center().y() < rest.y() - 7); }, 1000))
+        << "restY=" << rest.y() << " currentY=" << item->projectedPolygon().boundingRect().center().y()
         << " proxyUnderMouse=" << card->graphicsProxyWidget()->isUnderMouse()
-        << " viewportUnderMouse=" << canvas->viewport()->underMouse()
-        << " active=" << view.isActiveWindow();
+        << " viewportUnderMouse=" << canvas->viewport()->underMouse() << " active=" << view.isActiveWindow();
     QSignalSpy clicked(button, &fluent::basicinput::Button::clicked);
     const QPoint down = hit();
     QTest::mousePress(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, down);
@@ -458,11 +451,7 @@ TEST_F(SpatialViewTest, Contract_SurfaceHoverFreezesDuringPointerInputAndSettles
     EXPECT_EQ(item->position(), QVector3D());
     move(QPoint(5, 5));
     ASSERT_TRUE(QTest::qWaitFor(
-        [&] {
-            return bool(std::abs(item->projectedPolygon().boundingRect().center().y() - rest.y()) <
-                        1);
-        },
-        1000));
+        [&] { return bool(std::abs(item->projectedPolygon().boundingRect().center().y() - rest.y()) < 1); }, 1000));
     view.setSpatialEnabled(false);
     QTest::mouseClick(button, Qt::LeftButton);
     EXPECT_EQ(clicked.count(), 2);
@@ -506,8 +495,7 @@ TEST_F(SpatialViewTest, Contract_OwnershipReleaseAndTakeInBothModes)
 }
 TEST_F(SpatialViewTest, Contract_TakeAllowsCountHandlerToDestroyTheHost)
 {
-    for (const auto ownership :
-         {WidgetOwnership::Borrowed, WidgetOwnership::Owned, WidgetOwnership::Reparented}) {
+    for (const auto ownership : {WidgetOwnership::Borrowed, WidgetOwnership::Owned, WidgetOwnership::Reparented}) {
         QWidget original;
         QPointer<SpatialView> view = new SpatialView;
         QPointer<QWidget> widget = new fluent::basicinput::Button("Transferred", &original);
@@ -529,8 +517,7 @@ TEST_F(SpatialViewTest, Contract_TakeAllowsCountHandlerToDestroyTheHost)
 }
 TEST_F(SpatialViewTest, Contract_AddReturnsNullWhenTheCountHandlerDestroysTheHost)
 {
-    for (const auto ownership :
-         {WidgetOwnership::Borrowed, WidgetOwnership::Owned, WidgetOwnership::Reparented}) {
+    for (const auto ownership : {WidgetOwnership::Borrowed, WidgetOwnership::Owned, WidgetOwnership::Reparented}) {
         QWidget original;
         QPointer<SpatialView> view = new SpatialView;
         QPointer<QWidget> widget = new fluent::basicinput::Button("Added", &original);
@@ -544,8 +531,7 @@ TEST_F(SpatialViewTest, Contract_AddReturnsNullWhenTheCountHandlerDestroysTheHos
             EXPECT_TRUE(widget.isNull());
         } else {
             ASSERT_FALSE(widget.isNull());
-            EXPECT_EQ(widget->parentWidget(),
-                      ownership == WidgetOwnership::Reparented ? &original : nullptr);
+            EXPECT_EQ(widget->parentWidget(), ownership == WidgetOwnership::Reparented ? &original : nullptr);
             delete widget.data();
         }
     }
@@ -630,8 +616,7 @@ TEST_F(SpatialViewTest, Contract_DeferredModeChangeKeepsOnlyTheLatestRequest)
     auto* pending = view.findChild<QTimer*>(QStringLiteral("spatialModeChangeTimer"));
     ASSERT_NE(canvas, nullptr);
     ASSERT_NE(pending, nullptr);
-    const QPoint hit = canvas->viewport()->mapFrom(
-        &view, item->projectedPolygon().boundingRect().center().toPoint());
+    const QPoint hit = canvas->viewport()->mapFrom(&view, item->projectedPolygon().boundingRect().center().toPoint());
     QSignalSpy changed(&view, &SpatialView::spatialEnabledChanged);
     QTest::mousePress(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
     ASSERT_NE(canvas->scene()->mouseGrabberItem(), nullptr);
@@ -669,8 +654,7 @@ TEST_F(SpatialViewTest, Contract_HidingAGrabbedSceneCompletesThePendingModeChang
     auto* pending = view.findChild<QTimer*>(QStringLiteral("spatialModeChangeTimer"));
     ASSERT_NE(canvas, nullptr);
     ASSERT_NE(pending, nullptr);
-    const QPoint hit = canvas->viewport()->mapFrom(
-        &view, item->projectedPolygon().boundingRect().center().toPoint());
+    const QPoint hit = canvas->viewport()->mapFrom(&view, item->projectedPolygon().boundingRect().center().toPoint());
     QTest::mousePress(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
     ASSERT_NE(canvas->scene()->mouseGrabberItem(), nullptr);
     view.setSpatialEnabled(false);
@@ -750,8 +734,7 @@ TEST_F(SpatialViewTest, Contract_ProjectedPointerInputAndTabReturnToNative)
     QTest::qWait(50);
     auto* canvas = view.findChild<QGraphicsView*>();
     ASSERT_NE(canvas, nullptr);
-    const QPoint hit = canvas->viewport()->mapFrom(
-        &view, item->projectedPolygon().boundingRect().center().toPoint());
+    const QPoint hit = canvas->viewport()->mapFrom(&view, item->projectedPolygon().boundingRect().center().toPoint());
     QTest::mouseClick(canvas->viewport(), Qt::LeftButton, Qt::NoModifier, hit);
     EXPECT_EQ(clicks.count(), 1);
     QTest::keyClick(canvas, Qt::Key_Tab);
@@ -820,8 +803,7 @@ TEST_F(SpatialViewTest, Contract_WindowsOpenGLOrExplainedFallbackAndBackendSwitc
     view.setRenderMode(SpatialView::RenderMode::OpenGL);
     view.show();
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return view.activeBackend() == SpatialView::Backend::OpenGL ||
-               !view.fallbackReason().isEmpty();
+        return view.activeBackend() == SpatialView::Backend::OpenGL || !view.fallbackReason().isEmpty();
     }));
     if (view.activeBackend() == SpatialView::Backend::OpenGL)
         EXPECT_FALSE(view.rendererName().isEmpty());
@@ -837,8 +819,7 @@ TEST_F(SpatialViewTest, Contract_WindowsOpenGLOrExplainedFallbackAndBackendSwitc
     }
     view.setRenderMode(SpatialView::RenderMode::Raster);
     ASSERT_TRUE(QTest::qWaitFor([&] {
-        return view.activeBackend() == SpatialView::Backend::Raster &&
-               view.fallbackReason().isEmpty();
+        return view.activeBackend() == SpatialView::Backend::Raster && view.fallbackReason().isEmpty();
     }));
     EXPECT_EQ(slider->value(), 42);
     EXPECT_EQ(view.itemCount(), 1);
@@ -861,13 +842,11 @@ TEST_F(SpatialViewTest, Contract_HiddenInitializationDefersOpenGLUntilShown)
     EXPECT_EQ(view.activeBackend(), SpatialView::Backend::Raster);
 
     const auto backendReady = [&] {
-        return view.activeBackend() == SpatialView::Backend::OpenGL ||
-               !view.fallbackReason().isEmpty();
+        return view.activeBackend() == SpatialView::Backend::OpenGL || !view.fallbackReason().isEmpty();
     };
     view.show();
     ASSERT_TRUE(QTest::qWaitFor(backendReady));
-    RecordProperty("backend",
-                   view.activeBackend() == SpatialView::Backend::OpenGL ? "OpenGL" : "Raster");
+    RecordProperty("backend", view.activeBackend() == SpatialView::Backend::OpenGL ? "OpenGL" : "Raster");
     RecordProperty("renderer", view.rendererName().toStdString());
     RecordProperty("fallback", view.fallbackReason().toStdString());
     view.hide();
@@ -901,8 +880,7 @@ TEST_F(SpatialViewTest, Contract_AncestorCaptureAndClippingAdaptBackendWithoutCh
     EXPECT_TRUE(view->isSpatialEnabled());
 
     const auto backendReady = [&] {
-        return view->activeBackend() == SpatialView::Backend::OpenGL ||
-               !view->fallbackReason().isEmpty();
+        return view->activeBackend() == SpatialView::Backend::OpenGL || !view->fallbackReason().isEmpty();
     };
     effect->setEnabled(false);
     ASSERT_TRUE(QTest::qWaitFor(backendReady));
