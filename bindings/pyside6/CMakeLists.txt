@@ -712,6 +712,8 @@ add_custom_target(fluentqt_pyside6_manylinux_wheel
 endif()
 
 if(BUILD_TESTING)
+    include("${PROJECT_SOURCE_DIR}/cmake/FluentQtTestFonts.cmake")
+    fluentqt_test_font_environment(_fluentqt_test_font_environment)
     add_test(NAME test_pyside6_hello_world
         COMMAND "${Python_EXECUTABLE}" -X faulthandler
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_hello_world.py" -v)
@@ -1578,4 +1580,6 @@ if(BUILD_TESTING)
             "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
         LABELS "pyside;acceptance;ci_fast"
         TIMEOUT 30)
+    fluentqt_apply_headless_test_font_environment(
+        "${_fluentqt_test_font_environment}" "^test_pyside6_gallery($|_)")
 endif()

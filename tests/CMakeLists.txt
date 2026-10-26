@@ -1,4 +1,6 @@
 include(GoogleTest)
+include("${PROJECT_SOURCE_DIR}/cmake/FluentQtTestFonts.cmake")
+fluentqt_test_font_environment(_fluent_qt_test_font_environment)
 
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Test Network)
 find_package(GTest CONFIG REQUIRED)
@@ -272,6 +274,10 @@ macro(add_qt_test_module module_name source_file)
         set_tests_properties(${_fluent_qt_registered_tests} PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1"
         )
+        if(_fluent_qt_test_font_environment)
+            set_property(TEST ${_fluent_qt_registered_tests} APPEND PROPERTY
+                ENVIRONMENT "${_fluent_qt_test_font_environment}")
+        endif()
         foreach(_fluent_qt_test_name IN LISTS _fluent_qt_registered_tests)
             set(_fluent_qt_labels ${_test_labels})
             set(_fluent_qt_is_manual_visual FALSE)
@@ -393,6 +399,17 @@ add_dependencies(test_visual_comparison fluent_qt_visual_compare)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
 if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME TestFonts.Contract_Configuration
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/quality/test_test_font_environment.py
+            --cmake ${CMAKE_COMMAND}
+    )
+    set_tests_properties(TestFonts.Contract_Configuration PROPERTIES
+        LABELS "quality;contract;ci_fast;ci_full;local_full"
+        TIMEOUT 60
+    )
+
     add_test(
         NAME CompatibilityBoundary.Contract_Stable
         COMMAND ${Python3_EXECUTABLE}

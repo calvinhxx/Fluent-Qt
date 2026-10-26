@@ -15,6 +15,9 @@
 #include <QGuiApplication>
 #include <QFile>
 #include <QFileInfo>
+#include <QFont>
+#include <QFontDatabase>
+#include <QFontInfo>
 #include <QImage>
 #include <QPixmap>
 #include <QRegularExpression>
@@ -75,6 +78,38 @@ QString visualDiffFilePath(const QString& actualPath)
     return info.dir().filePath(info.completeBaseName() + QStringLiteral(".diff.png"));
 }
 
+// Headless Qt may expose only application fonts and leave its generic fixed
+// family unresolved. Load one configured test font without changing native UI.
+// zh_CN: 离屏 Qt 可能无法解析通用等宽字体；仅加载一个测试字体，不改变原生界面。
+// The shared policy is documented in docs/development/testing-workflow.md;
+// Python fixtures use gallery/tests/_test_font_environment.py.
+void initializeHeadlessTestFixedFont()
+{
+    const QString path = qEnvironmentVariable("FLUENT_QT_TEST_MONOSPACE_FONT");
+    if (path.isEmpty() || !isHeadlessPlatform())
+        return;
+    const int fontId = QFontDatabase::addApplicationFont(path);
+    if (fontId < 0)
+        qFatal("Cannot load test monospace font: %s", qPrintable(path));
+    QString family;
+    for (const QString& candidate : QFontDatabase::applicationFontFamilies(fontId)) {
+        if (QFontInfo(QFont(candidate)).fixedPitch()) {
+            family = candidate;
+            break;
+        }
+    }
+    if (family.isEmpty())
+        qFatal("Test font has no usable fixed-pitch family: %s", qPrintable(path));
+    const QFont fixed = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    if (QFontInfo(fixed).fixedPitch())
+        return;
+    if (fixed.family().isEmpty())
+        qFatal("The headless system FixedFont has no family");
+    QFont::insertSubstitution(fixed.family(), family);
+    if (!QFontInfo(QFontDatabase::systemFont(QFontDatabase::FixedFont)).fixedPitch())
+        qFatal("Cannot resolve the headless system FixedFont using: %s", qPrintable(family));
+}
+
 bool envFlagIsOn(const char* name)
 {
     return qEnvironmentVariableIsSet(name) && qEnvironmentVariable(name) == QStringLiteral("1");
@@ -106,6 +141,7 @@ void initializeQtTestEnvironment()
 
     fluent::initializeResources();
     qApp->setFont(Typography::Styles::Body.toQFont());
+    initializeHeadlessTestFixedFont();
 }
 
 bool canCaptureAccessibilityEvents()
