@@ -11,6 +11,7 @@
 #include <QtMath>
 #include "compatibility/TextPaintCompat.h"
 #include "components/spatial/SpatialRuntime.h"
+#include "GalleryGlyphImageCache.h"
 
 namespace fluent::gallery::spatial_render {
 
@@ -33,8 +34,12 @@ inline qreal glyphRasterDpr(const QFont& font, qreal nativeDpr, qreal cacheDpr)
 
 class GalleryGlyphPaintDevice final : public QPaintDevice {
 public:
-    GalleryGlyphPaintDevice(QPaintDevice& target, qreal nativeDpr, QPointF rasterOrigin = {})
-        : m_target(target), m_nativeDpr(nativeDpr), m_rasterOrigin(rasterOrigin), m_engine(*this)
+    GalleryGlyphPaintDevice(QPaintDevice& target,
+        qreal nativeDpr,
+        QPointF rasterOrigin = {},
+        GlyphImageCache* glyphCache = nullptr)
+        : m_target(target), m_nativeDpr(nativeDpr), m_rasterOrigin(rasterOrigin), m_glyphCache(glyphCache),
+          m_engine(*this)
     {}
     QPaintEngine* paintEngine() const override { return &m_engine; }
     qreal rasterDpr(const QFont& font) const { return glyphRasterDpr(font, m_nativeDpr, m_target.devicePixelRatioF()); }
@@ -269,8 +274,8 @@ private:
                 if (ink.isEmpty())
                     return;
                 const QRect pixels = QTransform::fromScale(dpr, dpr).mapRect(ink).toAlignedRect();
-                // One 256 KiB CPU tile plus its upload is reserved by the cache plan.
-                // Tiles and their Qt texture-cache keys die immediately; no glyph LRU.
+                // The plan reserves one scratch tile and a bounded retained-image
+                // cache. Reuse only exact pixels; never key by unshaped text/font.
                 for (int top = pixels.top(); top <= pixels.bottom(); top += payload.height()) {
                     for (int left = pixels.left(); left <= pixels.right(); left += payload.width()) {
                         const QSize size(qMin(payload.width(), pixels.right() - left + 1),
@@ -309,6 +314,8 @@ private:
                         raster.paintEngine()->drawTextItem(position, item);
                         raster.end();
                         glyph.setDevicePixelRatio(dpr);
+                        if (device.m_glyphCache)
+                            glyph = device.m_glyphCache->retain(glyph);
                         painter.save();
                         painter.setOpacity(1);
                         painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
@@ -403,6 +410,7 @@ private:
     QPaintDevice& m_target;
     qreal m_nativeDpr;
     QPointF m_rasterOrigin;
+    GlyphImageCache* m_glyphCache;
     mutable Engine m_engine;
 };
 

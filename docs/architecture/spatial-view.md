@@ -386,7 +386,12 @@ contrast do not change. This private policy uses each shaped item's font, not an
 application-wide font or a new platform branch. Shaping,
 fallback fonts and bidi ordering are not repeated. Geometry and images still
 paint through OpenGL; transformed or patterned text retains Qt's original path.
-There is no persistent glyph cache or whole-window CPU capture. Cocoa,
+The low-DPI OpenGL Gallery surface (`GpuSurface` in C++, `_Surface` in Python)
+retains exact raster tiles in a bounded image cache so Qt can reuse their texture
+keys. The RHI surface does not use this cache. The key covers raster pixels, dimensions and
+density, with an exact image comparison before reuse; Qt's existing text pipeline
+retains shaping and fallback-font selection. The cache is released when
+leaving 3D or losing the GL context. There is no whole-window CPU capture. Cocoa,
 WebAssembly, Linux fractional DPR and output DPR 2 or higher keep the original glyph path.
 The adapter reuses an unchanged device-space clip across drawing primitives;
 clip or transform changes invalidate it while retaining the caller's painter
@@ -408,7 +413,12 @@ the used width and height of each strip are resolved, including narrow navigatio
 panels and the last partial strip. This keeps the antialiasing buffer within
 budget without reducing the selected text density. The
 low-DPI native glyph adapter also reserves 512 KiB for one bounded CPU tile and
-its upload. Native-density backgrounds are uploaded only when their content,
+its upload. The OpenGL retained-image cache has a hard 2 MiB CPU limit, including
+a fixed metadata charge for each admitted image. A further 2 MiB is a conservative
+planner reservation for texture copies, not an enforced limit on Qt's texture
+cache. These reservations stay inside the same 192 MiB plan; the RHI path has no
+retained glyph-image cache.
+Native-density backgrounds are uploaded only when their content,
 size, DPR or OpenGL context changes, not on each pointer-motion frame.
 The planner also checks texture, renderbuffer and viewport limits. It selects
 the highest extra-sampling level within the display's sampling policy, in quarter

@@ -35,7 +35,9 @@ from PySide6.QtWidgets import (
 from shiboken6 import VoidPtr, invalidate, isValid
 
 from .settings import gallery_settings
-from .glyph_paint_device import GlyphPaintDevice, needs_native_glyph_coverage
+from .glyph_paint_device import (
+    GLYPH_IMAGE_CACHE_BYTES, GlyphImageCache, GlyphPaintDevice, needs_native_glyph_coverage,
+)
 from .panel_sampler import _PanelSampler
 from .qmlbridge_support import QML_BRIDGE_AVAILABLE
 
@@ -123,6 +125,7 @@ _CACHE_BUDGET_BYTES = 192 * 1024 * 1024
 _CACHE_BYTES_PER_PIXEL = 4
 _PAINT_SAMPLES = 2
 _GLYPH_SCRATCH_BYTES = 512 * 1024
+_GLYPH_WORKING_SET_BYTES = _GLYPH_SCRATCH_BYTES + 2 * GLYPH_IMAGE_CACHE_BYTES
 
 
 def _preferred_extra_sampling(native_dpr):
@@ -283,6 +286,7 @@ class _Surface(QOpenGLWidget):
         self._functions = None
         self.backdrop_cache = {}
         self.backdrop_uploads = 0
+        self.glyph_cache = GlyphImageCache()
         # A Python subclass has no C++ destructor override. Release GL resources
         # before the parent destroys its child QOpenGLWidget/context; its own
         # aboutToBeDestroyed connection is too late once the receiver is deleted.
@@ -320,6 +324,7 @@ class _Surface(QOpenGLWidget):
 
     def initializeGL(self):
         self.has_presented_frame = False
+        self.glyph_cache.clear()
         context = self.context()
         # Keep one registered wrapper for this context, including on PySide
         # versions that otherwise recreate it for each functions() query.
@@ -367,6 +372,7 @@ class _Surface(QOpenGLWidget):
         self.input_frame_requested = False
         self.has_presented_frame = False
         self.makeCurrent()
+        self.glyph_cache.clear()
         self.particles.release()
         if _alive(self.qml_layer):
             self.qml_layer.clearFrameCaches()
@@ -392,6 +398,7 @@ class _Surface(QOpenGLWidget):
     def release_context(self):
         self.has_presented_frame = False
         self.makeCurrent()
+        self.glyph_cache.clear()
         self.particles.release()
         if _alive(self.qml_layer):
             self.qml_layer.clearFrameCaches()
@@ -427,8 +434,10 @@ class _Surface(QOpenGLWidget):
         panels = [rect.size() for rect, _ in self.owner.panels]
         backdrop = self.owner.backdrop
         backdrop_bytes = backdrop.width() * backdrop.height() * 4
-        glyph_scratch = (_GLYPH_SCRATCH_BYTES
+        glyph_scratch = (_GLYPH_WORKING_SET_BYTES
                         if needs_native_glyph_coverage(self.devicePixelRatioF()) else 0)
+        if not glyph_scratch:
+            self.glyph_cache.clear()
         extra_sampling = _preferred_extra_sampling(self.devicePixelRatioF())
         if os.environ.get("FLUENT_QT_SPATIAL_BENCHMARK", "0") != "0":
             try:
@@ -523,8 +532,15 @@ class _Surface(QOpenGLWidget):
         total += sum(size.width() * size.height() * 4 for size in self.plan[1])
         total += self.plan[2].width() * self.plan[2].height() * (self.paint_sample_bytes * self.paint_samples + 4)
         if needs_native_glyph_coverage(self.devicePixelRatioF()):
-            total += _GLYPH_SCRATCH_BYTES
+            total += _GLYPH_WORKING_SET_BYTES
         return total
+
+    def statistics(self):
+        total = self.static_cache_bytes() + self.particles.allocatedBytes()
+        if _alive(self.qml_layer):
+            total += self.qml_layer.statistics().get("allocatedBytes", 0)
+        return {"glyphCacheBytes": self.glyph_cache.cost(),
+                "cacheEstimatedBytes": total}
 
     def update_texture(self, index):
         owner = self.owner
@@ -561,7 +577,7 @@ class _Surface(QOpenGLWidget):
             device = QOpenGLPaintDevice(QSize(pixels.width(), paint_height))
             device.setDevicePixelRatio(dpr)
             glyph_device = GlyphPaintDevice(device, self.devicePixelRatioF(),
-                                            QPointF(0, paint_top / dpr))
+                                            QPointF(0, paint_top / dpr), self.glyph_cache)
             painter = QPainter(glyph_device if needs_native_glyph_coverage(self.devicePixelRatioF())
                                else device)
             painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)

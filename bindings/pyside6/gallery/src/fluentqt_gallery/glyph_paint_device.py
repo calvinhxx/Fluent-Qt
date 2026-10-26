@@ -7,6 +7,8 @@ and multisampling still use the target device.
 
 import math
 import weakref
+from collections import OrderedDict
+from hashlib import sha256
 
 from fluentqt._qt_painting import (
     device_pixel_ratio_metric, forward_paint_array, forward_paint_polygon, forwarding_paint_engine_features,
@@ -31,12 +33,61 @@ def glyph_raster_dpr(font, native_dpr, cache_dpr):
     return cache_dpr if font.hintingPreference() == QFont.PreferNoHinting else native_dpr
 
 
+GLYPH_IMAGE_CACHE_BYTES = 2 * 1024 * 1024
+
+
+class GlyphImageCache:
+    """Retain exact raster values and texture keys within a bounded working set."""
+
+    _ENTRY_METADATA_BYTES = 1024
+
+    def __init__(self, budget=GLYPH_IMAGE_CACHE_BYTES):
+        self._budget = min(GLYPH_IMAGE_CACHE_BYTES, max(0, int(budget)))
+        self._images = OrderedDict()
+        self._cost = 0
+
+    def retain(self, image):
+        if image.isNull() or image.format() != QImage.Format_ARGB32_Premultiplied:
+            return QImage(image)
+        cost = image.sizeInBytes() + self._ENTRY_METADATA_BYTES
+        if cost > self._budget:
+            return QImage(image)
+        key = (sha256(memoryview(image.constBits()).cast("B")).digest(),
+               image.width(), image.height(), image.devicePixelRatioF())
+        cached = self._images.get(key)
+        if cached is not None:
+            if cached[0] == image:
+                self._images.move_to_end(key)
+                return QImage(cached[0])
+            # A digest match alone must never return different raster pixels.
+            self._cost -= cached[1]
+            del self._images[key]
+        while self._images and self._cost + cost > self._budget:
+            _, (_, retired_cost) = self._images.popitem(last=False)
+            self._cost -= retired_cost
+        retained = QImage(image)
+        self._images[key] = retained, cost
+        self._cost += cost
+        return QImage(retained)
+
+    def clear(self):
+        self._images.clear()
+        self._cost = 0
+
+    def cost(self):
+        return self._cost
+
+    def entry_count(self):
+        return len(self._images)
+
+
 class GlyphPaintDevice(QPaintDevice):
-    def __init__(self, target, native_dpr, raster_origin=QPointF()):
+    def __init__(self, target, native_dpr, raster_origin=QPointF(), glyph_cache=None):
         super().__init__()
         self.target = target
         self.native_dpr = native_dpr
         self.raster_origin = QPointF(raster_origin)
+        self.glyph_cache = glyph_cache
         self.engine = _GlyphPaintEngine(self)
 
     def raster_dpr(self, font):
@@ -253,8 +304,7 @@ class _GlyphPaintEngine(QPaintEngine):
             if ink.isEmpty():
                 return
             pixels = QTransform.fromScale(dpr, dpr).mapRect(ink).toAlignedRect()
-            # One 256 KiB image plus its upload is reserved by the panel cache plan.
-            # Release every tile immediately; no persistent or per-frame glyph cache.
+            # The plan reserves one tile/upload plus the optional bounded cache.
             for top in range(pixels.top(), pixels.bottom() + 1, payload.height()):
                 for left in range(pixels.left(), pixels.right() + 1, payload.width()):
                     size = QSize(min(payload.width(), pixels.right() - left + 1),
@@ -291,6 +341,8 @@ class _GlyphPaintEngine(QPaintEngine):
                     raster.end()
                     del raster
                     glyph.setDevicePixelRatio(dpr)
+                    if self.device.glyph_cache is not None:
+                        glyph = self.device.glyph_cache.retain(glyph)
                     painter.save()
                     painter.setOpacity(1)
                     painter.setRenderHint(QPainter.SmoothPixmapTransform, False)

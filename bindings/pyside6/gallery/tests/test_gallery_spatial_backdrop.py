@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QSizeF, Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication
 
 from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
@@ -77,26 +77,77 @@ class GallerySpatialBackdropTest(unittest.TestCase):
 
     def test_reservation_shortens_paint_strip_without_lowering_density(self):
         from fluentqt_gallery.spatial_controller import (
-            _cache_plan, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES, _GLYPH_SCRATCH_BYTES,
+            _cache_plan, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES, _GLYPH_WORKING_SET_BYTES,
         )
         panels = [QSizeF(240, 900), QSizeF(1360, 900)]
         normal = _cache_plan(panels, 2, 16384)
         backdrop_bytes = 3200 * 1800 * 4
         plan = _cache_plan(panels, 2, 16384, backdrop_bytes=backdrop_bytes,
-                           glyph_scratch_bytes=_GLYPH_SCRATCH_BYTES)
+                           glyph_scratch_bytes=_GLYPH_WORKING_SET_BYTES)
         self.assertIsNotNone(plan)
         self.assertEqual(plan[0], 4)
         self.assertEqual(plan[1], normal[1])
         self.assertLess(plan[2].height(), normal[2].height())
         panel_bytes = sum(size.width() * size.height() * 4 for size in plan[1])
         paint_bytes = plan[2].width() * plan[2].height() * (12 * _PAINT_SAMPLES + 4)
-        self.assertLessEqual(backdrop_bytes + _GLYPH_SCRATCH_BYTES + panel_bytes + paint_bytes,
+        self.assertEqual(_GLYPH_WORKING_SET_BYTES, (512 + 2 * 2048) * 1024)
+        self.assertLessEqual(backdrop_bytes + _GLYPH_WORKING_SET_BYTES + panel_bytes + paint_bytes,
                              _CACHE_BUDGET_BYTES)
         for invalid in (-1, _CACHE_BUDGET_BYTES, _CACHE_BUDGET_BYTES + 1):
             self.assertIsNone(_cache_plan(panels, 2, 16384, backdrop_bytes=invalid))
         for invalid in (-1, _CACHE_BUDGET_BYTES - 1, _CACHE_BUDGET_BYTES):
             self.assertIsNone(_cache_plan(panels, 2, 16384, backdrop_bytes=1,
                                          glyph_scratch_bytes=invalid))
+
+    def test_frame_and_context_release_drop_retained_glyph_images(self):
+        from fluentqt_gallery import spatial_controller as compositor
+        from fluentqt_gallery.glyph_paint_device import GlyphImageCache
+        image = QImage(8, 8, QImage.Format_ARGB32_Premultiplied)
+        image.fill(Qt.red)
+        for release in (compositor._Surface.clear_frame_caches, compositor._Surface.release_context):
+            with self.subTest(release=release.__name__):
+                cache = GlyphImageCache()
+                cache.retain(image)
+                surface = Mock(glyph_cache=cache, qml_layer=None)
+                surface.static_cache_bytes.return_value = 0
+                surface.particles.allocatedBytes.return_value = 0
+                self.assertGreater(compositor._Surface.statistics(surface)["glyphCacheBytes"], 0)
+                release(surface)
+                self.assertEqual(compositor._Surface.statistics(surface)["glyphCacheBytes"], 0)
+                self.assertEqual(cache.entry_count(), 0)
+
+    def test_cache_statistics_include_particle_and_live_qml_allocations(self):
+        from fluentqt_gallery import spatial_controller as compositor
+        from fluentqt_gallery.glyph_paint_device import GlyphImageCache
+        surface = Mock(glyph_cache=GlyphImageCache())
+        surface.static_cache_bytes.return_value = 8192
+        surface.particles.allocatedBytes.return_value = 4096
+        surface.qml_layer.statistics.return_value = {"allocatedBytes": 2048}
+        with patch.object(compositor, "_alive", return_value=True):
+            statistics = compositor._Surface.statistics(surface)
+        self.assertEqual(statistics["cacheEstimatedBytes"], 8192 + 4096 + 2048)
+        with patch.object(compositor, "_alive", return_value=False):
+            surface.qml_layer.statistics.reset_mock()
+            statistics = compositor._Surface.statistics(surface)
+            surface.qml_layer.statistics.assert_not_called()
+        self.assertEqual(statistics["cacheEstimatedBytes"], 8192 + 4096)
+
+    def test_direct_glyph_path_releases_previous_retained_images(self):
+        from fluentqt_gallery import spatial_controller as compositor
+        from fluentqt_gallery.glyph_paint_device import GlyphImageCache
+        cache = GlyphImageCache()
+        image = QImage(8, 8, QImage.Format_ARGB32_Premultiplied)
+        image.fill(Qt.red)
+        cache.retain(image)
+        surface = Mock(glyph_cache=cache, paint_samples=2,
+                       owner=SimpleNamespace(panels=[], backdrop=QPixmap(8, 8)))
+        surface.devicePixelRatioF.return_value = 2
+        surface.max_extra = 2
+        with patch.object(compositor, "needs_native_glyph_coverage", return_value=False), \
+                patch.object(compositor, "_cache_plan", return_value=None) as plan:
+            self.assertFalse(compositor._Surface.prepare_caches(surface))
+            self.assertEqual(plan.call_args.kwargs["glyph_scratch_bytes"], 0)
+        self.assertEqual(cache.cost(), 0)
 
     def test_upload_is_keyed_by_content_size_dpr_and_context(self):
         from fluentqt_gallery import spatial_controller as compositor

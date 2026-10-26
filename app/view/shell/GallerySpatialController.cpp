@@ -418,6 +418,7 @@ public:
     int surfaceSamples = 0;
     int paintSamples() const { return m_paintTarget ? m_paintTarget->format().samples() : 0; }
     int paintSampleBytes() const { return m_paintSampleBytes; }
+    int glyphCacheBytes() const { return m_glyphImages.cost(); }
     qint64 estimatedCacheBytes() const
     {
         qint64 bytes = qMax(m_plan.estimatedBytes, backdropBytes()) + qint64(m_particles.allocatedBytes());
@@ -447,6 +448,7 @@ public:
         m_inputFrameRequested = false;
         m_hasPresentedFrame = false;
         makeCurrent();
+        m_glyphImages.clear();
         m_particles.release();
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
         m_qml->clearFrameCaches();
@@ -480,6 +482,7 @@ protected:
 
     void initializeGL() override
     {
+        m_glyphImages.clear();
         m_hasPresentedFrame = false;
         m_surfaceSamplesKnown = false;
         auto* gl = context()->functions();
@@ -705,6 +708,7 @@ private:
     std::unique_ptr<QOpenGLFramebufferObject> m_resolveTarget;
     ShellScene* m_scene;
     spatial_render::GalleryParticleCompositor m_particles;
+    spatial_render::GlyphImageCache m_glyphImages;
     GLuint m_presentedContentTexture = 0;
     spatial_render::CachePlan m_plan;
     int m_maxDimension = 0;
@@ -730,7 +734,9 @@ private:
         const std::array<QSizeF, 2> panels = {m_scene->navigation.source.size(), m_scene->content.source.size()};
         const auto backdrop = qint64(m_scene->backdrop.width()) * m_scene->backdrop.height() * 4;
         const auto glyphScratch =
-            spatial_render::needsNativeGlyphCoverage(devicePixelRatioF()) ? spatial_render::kGlyphScratchBytes : 0;
+            spatial_render::needsNativeGlyphCoverage(devicePixelRatioF()) ? spatial_render::kGlyphWorkingSetBytes : 0;
+        if (!glyphScratch)
+            m_glyphImages.clear();
         qreal extraSampling = spatial_render::preferredExtraSampling(devicePixelRatioF());
         if (measuring) {
             bool ok = false;
@@ -839,6 +845,7 @@ private:
     void releaseTextures()
     {
         m_hasPresentedFrame = false;
+        m_glyphImages.clear();
         m_particles.release();
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
         m_qml->clearFrameCaches();
@@ -926,8 +933,8 @@ private:
             gl->glDisable(GL_SCISSOR_TEST);
             QOpenGLPaintDevice device(QSize(pixels.width(), paintHeight));
             device.setDevicePixelRatio(dpr);
-            spatial_render::GalleryGlyphPaintDevice glyphDevice(device, devicePixelRatioF(),
-                QPointF(0, paintTop / dpr));
+            spatial_render::GalleryGlyphPaintDevice glyphDevice(device, devicePixelRatioF(), QPointF(0, paintTop / dpr),
+                &m_glyphImages);
             QPainter painter(spatial_render::needsNativeGlyphCoverage(devicePixelRatioF())
                     ? static_cast<QPaintDevice*>(&glyphDevice)
                     : &device);
@@ -1788,6 +1795,7 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     result["cacheDpr"] = surface ? surface->cacheDpr() : 0;
     result["contentTextureId"] = surface ? surface->contentTextureId() : 0;
     result["cacheEstimatedBytes"] = surface ? surface->estimatedCacheBytes() : 0;
+    result["glyphCacheBytes"] = surface ? surface->glyphCacheBytes() : 0;
     result["backdropTextureBytes"] = surface ? surface->backdropBytes() : 0;
     result["backdropUploads"] = surface ? surface->backdropUploads : 0;
     result["paintSamples"] = surface ? surface->paintSamples() : 0;
