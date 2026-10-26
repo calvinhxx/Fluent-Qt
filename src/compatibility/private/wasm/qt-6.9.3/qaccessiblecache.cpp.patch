@@ -1,0 +1,15 @@
+--- a/src/gui/accessible/qaccessiblecache.cpp
++++ b/src/gui/accessible/qaccessiblecache.cpp
+@@ -12,0 +13,9 @@
++
++namespace {
++void (*fluentQtWasmInterfaceDeletionCallback)(QAccessibleInterface *) = nullptr;
++}
++
++void fluentQtSetWasmInterfaceDeletionCallback(void (*callback)(QAccessibleInterface *))
++{
++    fluentQtWasmInterfaceDeletionCallback = callback;
++}
+@@ -172,0 +182,2 @@
++    if (fluentQtWasmInterfaceDeletionCallback)
++        fluentQtWasmInterfaceDeletionCallback(iface);

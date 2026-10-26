@@ -267,6 +267,19 @@ python3 tools/site/generate_localized_site.py --check
 python3 tools/site/generate_api_reference.py --check
 ```
 
+The full [WebAssembly browser smoke](webassembly-workflow.md#browser-smoke)
+includes five Drawer recreation cycles inside the existing overlay contract.
+Its Qt-free unit checks exercise the same proxy-snapshot validator against
+duplicates, reused control types and hidden nodes retained after destruction:
+
+```bash
+python3 .github/scripts/test_wasm_browser_smoke.py
+python3 tools/wasm/test_qt_accessibility_overlay.py
+```
+
+These checks validate the harness and pinned source preparation; the real
+browser full run remains required after changing the lifecycle adaptation.
+
 ## Local integration preflight
 
 For routine edits, start with the owning tests on the current SDK:

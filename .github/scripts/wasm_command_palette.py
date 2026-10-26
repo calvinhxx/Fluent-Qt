@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from wasm_gallery_ready import wait_for_gallery_ready
+from wasm_drawer_lifecycle import run_drawer_lifecycle_contract
 
 
 def run_command_palette_contract(browser: object, base_url: str, artifact_dir: Path) -> None:
@@ -15,6 +16,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
     page = browser.new_page(viewport={"width": 1440, "height": 900}, device_scale_factor=2)
     errors = []
     current_route = "command-palette"
+    drawer_lifecycle = None
     page.on("pageerror", lambda error: errors.append(str(error)))
 
     # Native transitions and their accessibility proxies settle on separate
@@ -239,12 +241,17 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
             expect_visible(effects)
             page.keyboard.press("Escape")
             expect_absent(effects)
+            if route == "drawer-view":
+                drawer_lifecycle = run_drawer_lifecycle_contract(
+                    page, opener_button, click, artifact_dir / "drawer-lifecycle"
+                )
             click(sidebar)
             expect_absent(opener_button)
         if errors:
             raise RuntimeError(f"Command palette browser errors: {errors}")
         (artifact_dir / "result.json").write_text(json.dumps({
             "routes": ["command-palette", "popup", "dialog", "drawer-view"], "status": "pass", "input": "browser mouse and keyboard",
+            "drawer_lifecycle": drawer_lifecycle,
             "verified": ["keyword search", "shared checked state", "disabled command", "Escape", "note insertion and clearing", "editing target", "reset text", "workspace navigation", "blurred modal capture", "modal sidebar dismissal", "shared live blur and dim", "modal independent of dim", "sticky modal background blocking", "modeless background input"],
         }, indent=2) + "\n")
         print("Command palette and three overlay browser contracts passed: commands, modal navigation and backdrop controls")

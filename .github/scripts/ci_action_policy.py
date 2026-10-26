@@ -19,7 +19,7 @@ PAGES_PIPELINE_ACTIONS = {
     "ci-wasm.yml": {
         "actions/checkout": 1,
         "actions/setup-python": 1,
-        "actions/cache": 4,
+        "actions/cache": 5,
         "actions/upload-artifact": 3,
     },
 }

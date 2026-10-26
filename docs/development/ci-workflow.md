@@ -42,7 +42,14 @@ review. Real desktop tests and host-bound pixel baselines remain separate.
 | [ci-wasm.yml](../../.github/workflows/ci-wasm.yml) | Browser toolchain, Hello World, Gallery, smoke tests, Pages payload | Workflow toolchain and smoke configuration |
 
 Compiler, SDK, package-manager, and platform steps belong in the owning module,
-not the orchestrator. Modules upload artifacts into the caller's run. The
+not the orchestrator. The Wasm module explicitly fetches and verifies the
+pinned Qt accessibility sources before offline CMake configuration; its cache
+key includes the Qt revision and manifest. The same cache supports the
+installed consumer check. Overlay-only helper, manifest and patch changes
+select the Wasm lane without PySide or native CTest selection; shared core
+and package configuration changes retain their broader lanes.
+
+Modules upload artifacts into the caller's run. The
 [Pages workflow](../../.github/workflows/pages.yml) consumes the payload from
 main CI; its manual entry rebuilds for recovery.
 

@@ -8,6 +8,14 @@ if(APPLE)
     include("${CMAKE_CURRENT_LIST_DIR}/FluentQtApplePlatformDependencies.cmake")
 endif()
 
+if(@FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT@ AND EMSCRIPTEN)
+    include("${CMAKE_CURRENT_LIST_DIR}/FluentQtWasmAccessibility.cmake")
+    fluent_qt_configure_wasm_accessibility_overlay(
+        "${CMAKE_CURRENT_LIST_DIR}/wasm-accessibility/qt_accessibility_overlay.py"
+        "${CMAKE_CURRENT_LIST_DIR}/wasm-accessibility/data"
+        "${CMAKE_CURRENT_LIST_DIR}/wasm-accessibility/build-project")
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/FluentQtTargets.cmake")
 
 # Optional rendering dependencies are discovered only for requested components.

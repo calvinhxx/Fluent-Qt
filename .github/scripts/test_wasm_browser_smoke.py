@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Qt/browser-free checks for source input geometry and Pages payloads."""
 
+import ast
 import importlib.util
 from argparse import Namespace
 import copy
@@ -89,6 +90,62 @@ class MinimalExamplePresentationTest(unittest.TestCase):
                            {"x": 0, "y": 45, "width": 20, "height": 33}]):
             with self.subTest(greetings=greetings), self.assertRaises(RuntimeError):
                 validate_plugin_greeting_spacing({"greetings": greetings}, 2)
+
+
+class DrawerProxyLifetimeTest(unittest.TestCase):
+    def nodes(self):
+        from wasm_drawer_lifecycle import DRAWER_PROXY_TYPES
+        return [
+            {"id": "QApplication.Gallery.Drawer.Effects.QWidget.Gallery.Drawer." + suffix,
+             "tag": tag, "type": kind, "hidden": "false"}
+            for suffix, (tag, kind) in DRAWER_PROXY_TYPES.items()
+        ]
+
+    def test_accepts_all_named_proxy_types_and_empty_destroyed_snapshot(self):
+        from wasm_drawer_lifecycle import validate_drawer_proxy_snapshot
+        validate_drawer_proxy_snapshot(self.nodes(), opened=True)
+        validate_drawer_proxy_snapshot([], opened=False)
+
+    def test_rejects_wrong_tag_or_type_after_interface_address_reuse(self):
+        from wasm_drawer_lifecycle import validate_drawer_proxy_snapshot
+        for index in range(len(self.nodes())):
+            for field, value in (("tag", "DIV"), ("type", "text")):
+                nodes = self.nodes()
+                nodes[index][field] = value
+                with self.subTest(index=index, field=field), self.assertRaises(RuntimeError):
+                    validate_drawer_proxy_snapshot(nodes, opened=True)
+
+    def test_rejects_missing_duplicate_and_hidden_named_proxies(self):
+        from wasm_drawer_lifecycle import validate_drawer_proxy_snapshot
+        for index in range(len(self.nodes())):
+            for mutation in ("missing", "duplicate", "hidden-duplicate", "hidden"):
+                nodes = self.nodes()
+                if mutation == "missing":
+                    nodes.pop(index)
+                elif mutation == "hidden":
+                    nodes[index]["hidden"] = "true"
+                else:
+                    nodes.append(dict(nodes[index]))
+                    if mutation == "hidden-duplicate":
+                        nodes[-1]["hidden"] = "true"
+                with self.subTest(index=index, mutation=mutation), self.assertRaises(RuntimeError):
+                    validate_drawer_proxy_snapshot(nodes, opened=True)
+
+    def test_closed_drawer_rejects_even_hidden_or_unnamed_construction_proxies(self):
+        from wasm_drawer_lifecycle import validate_drawer_proxy_snapshot
+        for nodes in (self.nodes(), [{"id": "Gallery.Drawer.Effects.QWidget", "hidden": "true"}]):
+            with self.subTest(nodes=nodes), self.assertRaises(RuntimeError):
+                validate_drawer_proxy_snapshot(nodes, opened=False)
+
+    def test_full_command_palette_contract_invokes_lifetime_check(self):
+        script = Path(__file__).with_name("wasm_command_palette.py")
+        tree = ast.parse(script.read_text(encoding="utf-8"))
+        calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Name)
+                 and node.func.id == "run_drawer_lifecycle_contract"]
+        self.assertEqual(len(calls), 1)
+        from wasm_drawer_lifecycle import DRAWER_LIFECYCLE_CYCLES
+        self.assertEqual(DRAWER_LIFECYCLE_CYCLES, 5)
 
 
 class PagesSpatialPayloadTest(unittest.TestCase):
