@@ -292,7 +292,7 @@ register_source_samples(
                         label.setFluentTypography(role)
                         label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
                         if secondary:
-                            label.setTextColorRole(fluentqt.Label.Secondary)
+                            label.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
                         return label
 
                     def button(self, text, name, style=fluentqt.Button.Standard):
