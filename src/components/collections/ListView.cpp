@@ -1,6 +1,7 @@
 #include "compatibility/InputEventCompat.h"
 #include "compatibility/PaintCompat.h"
 #include "compatibility/WidgetCompat.h"
+#include "compatibility/private/ItemViewSelectionCompat_p.h"
 #include "ListView.h"
 
 #include <algorithm>
@@ -1377,7 +1378,17 @@ void ListView::currentChanged(const QModelIndex& current, const QModelIndex& pre
 
 void ListView::selectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
 {
-    QListView::selectionChanged(selected, deselected);
+    const QPointer<ListView> guard(this);
+    compatibility::detail::updateListViewSelection(
+        this, selected, deselected,
+        [this](const QItemSelection& added, const QItemSelection& removed) {
+            QListView::selectionChanged(added, removed);
+        },
+        [this](const QItemSelection& added, const QItemSelection& removed) {
+            QAbstractItemView::selectionChanged(added, removed);
+        });
+    if (!guard)
+        return;
     if (usesMovingSelectedIndicator())
         updateSelectedIndicatorFromSelection();
     else

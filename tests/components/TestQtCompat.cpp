@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include <QApplication>
+#include <QAbstractTableModel>
+#include <QHash>
 #include <QDir>
 #include <QEvent>
 #include <QFile>
@@ -18,6 +20,7 @@
 #include <QtGlobal>
 #include <QWidget>
 #include <functional>
+#include <memory>
 #include <type_traits>
 
 #ifndef interface
@@ -27,6 +30,7 @@
 #include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
 #include "compatibility/private/AccessibleInterfaces_p.h"
+#include "compatibility/private/ItemViewSelectionCompat_p.h"
 #include "compatibility/private/VariantCompat_p.h"
 #include "compatibility/private/PointerEventCompat_p.h"
 #ifdef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
@@ -104,6 +108,37 @@ protected:
 
 private:
     std::function<void(QEvent*)> m_observe;
+};
+
+class SelectionWorkModel final : public QAbstractTableModel {
+public:
+    explicit SelectionWorkModel(int rows = 10000) : m_rows(rows) {}
+
+    int rowCount(const QModelIndex& parent = {}) const override { return parent.isValid() ? 0 : m_rows; }
+    int columnCount(const QModelIndex& parent = {}) const override { return parent.isValid() ? 0 : 2; }
+    QVariant data(const QModelIndex&, int role) const override
+    {
+        return role == Qt::DisplayRole ? QVariant(QStringLiteral("Row")) : QVariant{};
+    }
+    Qt::ItemFlags flags(const QModelIndex& index) const override
+    {
+        ++flagRequests;
+        if (!index.isValid())
+            return Qt::NoItemFlags;
+        return rowFlags.value(index.row(), Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+    }
+    void resetRows(int rows)
+    {
+        beginResetModel();
+        m_rows = rows;
+        endResetModel();
+    }
+
+    QHash<int, Qt::ItemFlags> rowFlags;
+    mutable int flagRequests = 0;
+
+private:
+    int m_rows;
 };
 
 } // namespace
@@ -656,5 +691,152 @@ TEST(QtCompat, PaintDeviceDprMetricsPreserveImagePrecision)
         ForwardingDevice device(image.devicePixelRatioF());
         EXPECT_EQ(device.devicePixelRatioF(), image.devicePixelRatioF());
         EXPECT_EQ(fluent::painting::imageRasterDpr(dpr), image.devicePixelRatioF());
+    }
+}
+
+TEST(QtCompat, Contract_ListSelectionNotificationsBoundRangeWorkAndKeepFullRepaint)
+{
+    SelectionWorkModel model;
+    QListView view;
+    view.setModel(&model);
+    const QItemSelection selected(model.index(0, 1), model.index(9999, 1));
+    QStringList order;
+    QItemSelection repainted;
+    model.flagRequests = 0;
+
+    compatibility::detail::updateAccessibleListSelection(
+        &view, selected, {},
+        [&](const QItemSelection& added, const QItemSelection& removed) {
+            order.append(QStringLiteral("add"));
+            EXPECT_TRUE(removed.isEmpty());
+            // Qt's native notification obtains its item by expanding the input.
+            // zh_CN: Qt 原生通知通过展开输入选择取得首项，输入应保持有界。
+            const QModelIndexList indexes = added.indexes();
+            ASSERT_EQ(indexes.size(), 1);
+            EXPECT_EQ(indexes.first(), model.index(0, 1));
+        },
+        [&](const QItemSelection& added, const QItemSelection& removed) {
+            order.append(QStringLiteral("paint"));
+            repainted = added;
+            EXPECT_TRUE(removed.isEmpty());
+        });
+
+    EXPECT_EQ(order, (QStringList{QStringLiteral("add"), QStringLiteral("paint")}));
+    EXPECT_EQ(repainted, selected);
+    EXPECT_LT(model.flagRequests, 20);
+}
+
+TEST(QtCompat, Contract_ListSelectionRemovalObservesFlagsChangedByReentrantAdd)
+{
+    SelectionWorkModel model;
+    model.rowFlags.insert(0, Qt::ItemIsSelectable);
+    model.rowFlags.insert(1, Qt::ItemIsEnabled);
+    QListView view;
+    view.setModel(&model);
+    const QItemSelection selected(model.index(0, 0), model.index(4999, 0));
+    const QItemSelection deselected(model.index(5000, 0), model.index(9999, 0));
+    QStringList order;
+    model.flagRequests = 0;
+
+    compatibility::detail::updateAccessibleListSelection(
+        &view, selected, deselected,
+        [&](const QItemSelection& added, const QItemSelection& removed) {
+            if (!added.isEmpty()) {
+                order.append(QStringLiteral("add"));
+                const QModelIndexList indexes = added.indexes();
+                ASSERT_EQ(indexes.size(), 1);
+                EXPECT_EQ(indexes.first(), model.index(2, 0));
+                model.rowFlags.insert(5000, Qt::ItemIsSelectable);
+                model.rowFlags.insert(5001, Qt::ItemIsEnabled);
+                const QItemSelection nested(model.index(40, 1), model.index(40, 1));
+                compatibility::detail::updateAccessibleListSelection(
+                    &view, nested, {},
+                    [&](const QItemSelection& nestedAdded, const QItemSelection& nestedRemoved) {
+                        order.append(QStringLiteral("nested-add"));
+                        EXPECT_EQ(nestedAdded, nested);
+                        EXPECT_TRUE(nestedRemoved.isEmpty());
+                    },
+                    [&](const QItemSelection& nestedAdded, const QItemSelection& nestedRemoved) {
+                        order.append(QStringLiteral("nested-paint"));
+                        EXPECT_EQ(nestedAdded, nested);
+                        EXPECT_TRUE(nestedRemoved.isEmpty());
+                    });
+            } else {
+                order.append(QStringLiteral("remove"));
+                const QModelIndexList indexes = removed.indexes();
+                ASSERT_EQ(indexes.size(), 1);
+                EXPECT_EQ(indexes.first(), model.index(5002, 0));
+            }
+        },
+        [&](const QItemSelection& added, const QItemSelection& removed) {
+            order.append(QStringLiteral("paint"));
+            EXPECT_EQ(added, selected);
+            EXPECT_EQ(removed, deselected);
+        });
+
+    EXPECT_EQ(order,
+        (QStringList{QStringLiteral("add"), QStringLiteral("nested-add"), QStringLiteral("nested-paint"),
+            QStringLiteral("remove"), QStringLiteral("paint")}));
+    EXPECT_LT(model.flagRequests, 30);
+}
+
+TEST(QtCompat, Contract_ListSelectionCallbacksStopAfterOwnerDestruction)
+{
+    SelectionWorkModel model;
+    auto view = std::make_unique<QListView>();
+    view->setModel(&model);
+    const QItemSelection selected(model.index(0, 0), model.index(4999, 0));
+    const QItemSelection deselected(model.index(5000, 0), model.index(9999, 0));
+    int notifications = 0;
+    bool repainted = false;
+
+    compatibility::detail::updateAccessibleListSelection(
+        view.get(), selected, deselected,
+        [&](const QItemSelection& added, const QItemSelection& removed) {
+            ++notifications;
+            EXPECT_FALSE(added.isEmpty());
+            EXPECT_TRUE(removed.isEmpty());
+            view.reset();
+        },
+        [&](const QItemSelection&, const QItemSelection&) { repainted = true; });
+
+    EXPECT_FALSE(view);
+    EXPECT_EQ(notifications, 1);
+    EXPECT_FALSE(repainted);
+}
+
+TEST(QtCompat, Contract_ListSelectionRemovalHandlesModelResetOrDestructionDuringAdd)
+{
+    for (bool destroy : {false, true}) {
+        SCOPED_TRACE(destroy);
+        auto model = std::make_unique<SelectionWorkModel>();
+        QListView view;
+        view.setModel(model.get());
+        const QItemSelection selected(model->index(0, 0), model->index(4999, 0));
+        const QItemSelection deselected(model->index(5000, 0), model->index(9999, 0));
+        int notifications = 0;
+        bool repainted = false;
+
+        compatibility::detail::updateAccessibleListSelection(
+            &view, selected, deselected,
+            [&](const QItemSelection& added, const QItemSelection& removed) {
+                ++notifications;
+                EXPECT_FALSE(added.isEmpty());
+                EXPECT_TRUE(removed.isEmpty());
+                if (destroy)
+                    model.reset();
+                else
+                    model->resetRows(0);
+            },
+            [&](const QItemSelection& added, const QItemSelection& removed) {
+                repainted = true;
+                ASSERT_EQ(added.size(), 1);
+                ASSERT_EQ(removed.size(), 1);
+                EXPECT_FALSE(added.first().isValid());
+                EXPECT_FALSE(removed.first().isValid());
+            });
+
+        EXPECT_EQ(notifications, 1);
+        EXPECT_TRUE(repainted);
     }
 }
