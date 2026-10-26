@@ -200,6 +200,8 @@ text entry through NumberBox's existing value interface. Color properties open
 the shared ColorPicker in a Flyout; the swatch also has a readable color value.
 The panel closes its color flyout when destroyed, including after overlay
 reparenting. Modified-state comparisons respect color values and numeric roundoff.
+Value assignment preserves distinct representable floating-point edits, including
+adjacent large values on Qt 5; modified-state tolerance remains separate.
 `TestPropertyPanel.cpp` covers editor names,
 keyboard edits, read-only behavior and replacement lifetime; native screen-reader
 and popup review remain platform-specific.
