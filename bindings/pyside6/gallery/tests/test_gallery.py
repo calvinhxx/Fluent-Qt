@@ -5445,6 +5445,42 @@ with (
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_completed_intro_fade_releases_input_before_deferred_deletion(self):
+        from fluentqt_gallery.intro_tour import GalleryIntroTour, TourStep
+
+        try:
+            for mode in (fluentqt.MotionMode.Full, fluentqt.MotionMode.Reduced,
+                         fluentqt.MotionMode.Disabled):
+                with self.subTest(mode=mode):
+                    fluentqt.set_motion_mode(mode)
+                    window = fluentqt.Window()
+                    window.resize(800, 600)
+                    window.show()
+                    QApplication.processEvents()
+                    tour = GalleryIntroTour(window, window)
+                    try:
+                        tour.set_steps([TourStep(None, "", "Welcome", "", centered=True)])
+                        tour.start()
+                        scrim = tour._scrim
+                        dim = tour._dim_animation
+                        dim.setCurrentTime(dim.duration())
+                        self.assertTrue(scrim.isVisible())
+                        tour.finish_tour()
+                        dim.setCurrentTime(dim.duration())
+                        # Deferred deletion is deliberately still pending.
+                        self.assertTrue(shiboken6.isValid(scrim))
+                        self.assertEqual(scrim.progress, 0.0)
+                        self.assertFalse(scrim.isVisible())
+                        self.assertIsNot(window.childAt(QPoint(20, 20)), scrim)
+                        QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+                        self.assertFalse(shiboken6.isValid(scrim))
+                    finally:
+                        window.close()
+                        window.deleteLater()
+                        QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        finally:
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+
     def test_destroying_window_with_active_intro_tour_releases_overlays(self):
         window = GalleryWindow(startup_visuals=False)
         settings = window._settings

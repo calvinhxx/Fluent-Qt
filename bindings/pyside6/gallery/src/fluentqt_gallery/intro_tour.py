@@ -395,11 +395,20 @@ class GalleryIntroTour(QObject):
             self._dim_animation.stop()
             self._dim_animation.setStartValue(scrim.progress)
             self._dim_animation.setEndValue(0.0)
-            self._dim_animation.finished.connect(scrim.deleteLater)
+            def retire_scrim() -> None:
+                if not isValid(scrim):
+                    return
+                scrim.hide()
+                if isValid(scrim):
+                    scrim.deleteLater()
+
+            self._dim_animation.finished.connect(retire_scrim)
 
             def complete_disabled() -> None:
+                if not isValid(scrim):
+                    return
                 scrim.progress = 0.0
-                scrim.deleteLater()
+                retire_scrim()
 
             start_finite_transition(
                 self._dim_animation,
