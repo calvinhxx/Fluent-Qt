@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "compatibility/WindowChromeCompat.h"
 #include "components/basicinput/Button.h"
+#include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "components/windowing/WindowBackdropMaterial.h"
@@ -16,6 +17,7 @@
 #include <QWindow>
 #include <QWindowStateChangeEvent>
 #ifdef FLUENT_QT_HAS_SPATIAL
+#include "components/spatial/SpatialRuntime.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
 #endif
@@ -204,6 +206,58 @@ private:
 #endif
 
 } // namespace
+
+TEST(WindowsWindowBackdropTest, HiddenPreparedWindowKeepsRequestedGeometryDuringChromeConfiguration)
+{
+#ifdef FLUENT_QT_HAS_SPATIAL
+    if (QGuiApplication::platformName() != QLatin1String("windows"))
+        GTEST_SKIP() << "Prepared native window geometry requires the Windows desktop platform";
+
+    const QSize requestedSize(1180, 760);
+    const auto configure = [&](Window& window) {
+        window.resize(requestedSize);
+        window.setMinimumSize(460, 500);
+        window.setCustomWindowChromeEnabled(true);
+        window.setChromeInteractive(true);
+        window.setBackdropEffect(BackdropEffect::Mica);
+        window.titleBar()->setTitleBarHeight(42);
+    };
+
+    Window control;
+    configure(control);
+    ASSERT_EQ(control.size(), requestedSize);
+    control.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&control, 2000));
+    const QSize exposedSize = control.size();
+    control.close();
+
+    Window prepared;
+    if (!fluent::spatial::SpatialRuntime::prepareWindow(&prepared))
+        GTEST_SKIP() << "This Qt runtime does not require native surface preparation";
+    QPointer<QWindow> handle = prepared.windowHandle();
+    ASSERT_NE(handle, nullptr);
+    const bool hadNativeSurface = handle->handle() != nullptr;
+    prepared.resize(requestedSize);
+    const QRect requestedGeometry = prepared.geometry();
+    configure(prepared);
+    EXPECT_EQ(prepared.size(), requestedSize);
+    EXPECT_EQ(prepared.geometry(), requestedGeometry);
+    EXPECT_EQ(prepared.normalGeometry(), requestedGeometry);
+    ASSERT_EQ(prepared.windowHandle(), handle.data());
+    EXPECT_EQ(handle->handle() != nullptr, hadNativeSurface);
+
+    prepared.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&prepared, 2000));
+    ASSERT_NE(prepared.windowHandle(), nullptr);
+    EXPECT_NE(prepared.windowHandle()->handle(), nullptr);
+    // Native frame conversion must match the ordinary window, without fixed DPI assumptions.
+    // zh_CN: 原生边框换算应与普通窗口一致，不硬编码 DPI 或边框像素。
+    EXPECT_EQ(prepared.size(), exposedSize);
+    prepared.close();
+#else
+    GTEST_SKIP() << "Requires the Spatial target";
+#endif
+}
 
 TEST(WindowsWindowBackdropTest, SolidFirstShowPreparesNativeThemeBackground)
 {

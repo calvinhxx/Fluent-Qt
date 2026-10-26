@@ -70,6 +70,8 @@ if(WIN32)
         endif()
     endif()
     configure_native_window_desktop_test(
+        WindowsWindowBackdropTest.HiddenPreparedWindowKeepsRequestedGeometryDuringChromeConfiguration windows)
+    configure_native_window_desktop_test(
         WindowsWindowBackdropTest.EffectChangesPreserveNativeWindowWithoutActivationCompensation windows)
     configure_native_window_desktop_test(
         WindowsWindowBackdropTest.StateChangesDoNotRepeatActivationCompensation windows)

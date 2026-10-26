@@ -494,6 +494,9 @@ before the platform removes the old
 material, preserving window identity and avoiding a transparent handoff. Window
 startup prepares the effective theme background before native exposure; palette
 and native background updates retain the window, geometry, alpha format and focus.
+Hidden native-surface preparation also preserves the caller's requested geometry
+when configuring the title bar, so first-show navigation and focus targets use the
+intended window size. The Windows native window regression covers this ordering.
 The low-DPI text adapter reports only its actual backend's paint capabilities,
 so focused native editors do not request unsupported XOR caret drawing in 3D.
 Automated input checks cover text fields, editable ComboBox and collection-cell
