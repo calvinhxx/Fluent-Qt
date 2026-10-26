@@ -999,6 +999,8 @@ class GallerySpatialController(QObject):
             self.window.setMouseTracking(True)
         self.set_filtering(True)
         self.canvas.setGeometry(QRect(self.navigation.mapTo(self.window, QPoint()), self.navigation.size()))
+        # Showing the native child may paint it synchronously.
+        self._prepare_backdrop()
         self.canvas.show()
         self.sync()
         self.start_presentation()
@@ -1404,9 +1406,8 @@ class GallerySpatialController(QObject):
         self.panels = [(navigation, self.project(navigation, angle, True)),
                        (content, self.project(content, -angle, False))]
 
-    @Slot()
-    def sync(self):
-        if not _alive(self.canvas) or self.canvas.isHidden():
+    def _prepare_backdrop(self):
+        if not _alive(self.canvas):
             return
         bounds = QRect(self.navigation.mapTo(self.window, QPoint()), self.navigation.size())
         self.backdrop_dirty |= self.canvas.geometry() != bounds
@@ -1427,6 +1428,12 @@ class GallerySpatialController(QObject):
                 painter.translate(-bounds.topLeft())
                 self.window.render(painter, QPoint(), QRegion(), QWidget.RenderFlags())
                 painter.end()
+
+    @Slot()
+    def sync(self):
+        if not _alive(self.canvas) or self.canvas.isHidden():
+            return
+        self._prepare_backdrop()
         if not self.canvas.property("presenting"):
             self.canvas.request_frame()
             return

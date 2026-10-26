@@ -27,6 +27,54 @@ class GallerySpatialBackdropTest(unittest.TestCase):
         sys.excepthook = self.old_hook
         self.assertEqual(self.errors, [], "unhandled Qt callback error")
 
+    def test_first_surface_show_observes_prepared_window_backdrop(self):
+        import fluentqt
+        from fluentqt_gallery import spatial_controller as compositor
+        from fluentqt_gallery.settings import gallery_settings
+        from PySide6.QtWidgets import QWidget
+
+        class ObservedSurface(QWidget):
+            def __init__(self, controller, parent):
+                super().__init__(parent)
+                self.controller = controller
+                self.first_backdrop = None
+                self.hide()
+
+            def showEvent(self, event):
+                self.first_backdrop = self.controller.backdrop.toImage()
+                super().showEvent(event)
+
+            def request_frame(self):
+                pass
+
+        fluentqt.initialize_resources()
+        settings = gallery_settings()
+        previous = settings.spatial_mode_enabled
+        settings.set_spatial_mode_enabled(False)
+        window = fluentqt.Window()
+        window._splash = window._dismissal_splash = None
+        try:
+            window.setBackdropEffect(fluentqt.BackdropEffect.Solid)
+            window.resize(800, 600)
+            navigation = fluentqt.NavigationView(window)
+            navigation.resize(window.size())
+            with patch.object(compositor, "_session_unavailable_reason", return_value=""):
+                controller = compositor.GallerySpatialController(window, navigation)
+            surface = ObservedSurface(controller, window)
+            controller.canvas = surface
+            window.show()
+            self.assertTrue(surface.isHidden())
+            self.assertTrue(controller.backdrop.isNull())
+            controller.ensure_renderer()
+            self.assertIsNotNone(surface.first_backdrop)
+            self.assertFalse(surface.first_backdrop.isNull(),
+                             "the first synchronous surface show must already have the window material")
+            self.assertEqual(surface.first_backdrop, controller.backdrop.toImage())
+            self.assertEqual(surface.first_backdrop.devicePixelRatioF(), window.devicePixelRatioF())
+        finally:
+            delete_qobject(window)
+            settings.set_spatial_mode_enabled(previous)
+
     def test_reservation_shortens_paint_strip_without_lowering_density(self):
         from fluentqt_gallery.spatial_controller import (
             _cache_plan, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES, _GLYPH_SCRATCH_BYTES,

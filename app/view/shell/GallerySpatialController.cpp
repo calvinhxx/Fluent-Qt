@@ -1192,9 +1192,9 @@ struct GallerySpatialController::Private {
         syncNativePopups();
     }
 
-    void sync()
+    void prepareBackdrop()
     {
-        if (!navigation || !canvas || canvas->isHidden())
+        if (!navigation || !canvas)
             return;
         const QRect bounds(navigation->mapTo(window, QPoint()), navigation->size());
         backdropDirty |= canvas->geometry() != bounds;
@@ -1216,6 +1216,12 @@ struct GallerySpatialController::Private {
                 window->render(&painter, QPoint(), QRegion(), QWidget::RenderFlags());
             }
         }
+    }
+    void sync()
+    {
+        if (!navigation || !canvas || canvas->isHidden())
+            return;
+        prepareBackdrop();
         if (!canvas->property("presenting").toBool()) {
             requestCanvasFrame(canvas);
             return;
@@ -1545,6 +1551,10 @@ void GallerySpatialController::ensureRenderer()
     }
     d->setFiltering(true);
     d->canvas->setGeometry(QRect(d->navigation->mapTo(d->window, QPoint()), d->navigation->size()));
+    // Showing the native child can initialize and paint it synchronously.
+    // Prepare the existing material snapshot before that first GL frame.
+    // zh_CN: 原生子窗口显示可能同步初始化并绘制；先准备现有材质快照供首帧使用。
+    d->prepareBackdrop();
     QElapsedTimer showClock;
     const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK");
     if (measuring)
