@@ -11,16 +11,13 @@ class QWidget;
 
 namespace tests::support {
 
-enum class VisualSnapshotTheme {
-	Light,
-	Dark
-};
+enum class VisualSnapshotTheme { Light, Dark };
 
 struct VisualSnapshotOptions {
-	QSize windowSize;
-	QString variant;
-	QString focusObjectName;
-	VisualSnapshotTheme theme = VisualSnapshotTheme::Light;
+    QSize windowSize;
+    QString variant;
+    QString focusObjectName;
+    VisualSnapshotTheme theme = VisualSnapshotTheme::Light;
 };
 
 void configureOffscreenPlatformForAutomation();
@@ -52,21 +49,20 @@ QString visualSnapshotDirectory();
 QString visualSnapshotFilePath(const QString& variant = QString());
 QString visualBaselineDirectory();
 QString visualBaselineFilePath(const QString& variant = QString());
-::testing::AssertionResult compareVisualImages(const QImage& actual,
-											   const QImage& expected);
-::testing::AssertionResult compareVisualSnapshotToBaseline(
-	const QString& actualPath,
-	const QString& variant = QString());
+::testing::AssertionResult compareVisualImages(const QImage& actual, const QImage& expected);
+::testing::AssertionResult compareVisualSnapshotToBaseline(const QString& actualPath,
+    const QString& variant = QString());
 ::testing::AssertionResult captureVisualSnapshot(QWidget* window,
-												 const VisualSnapshotOptions& options = VisualSnapshotOptions());
+    const VisualSnapshotOptions& options = VisualSnapshotOptions());
 
 } // namespace tests::support
 
-#define FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE()                         \
-	do {                                                                  \
-		if (!::tests::support::canCaptureAccessibilityEvents())            \
-			GTEST_SKIP() << "Qt < 6.6 requires an active platform "        \
-			                "accessibility bridge to capture update events"; \
-	} while (false)
+#define FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE()                                                                      \
+    do {                                                                                                               \
+        if (!::tests::support::canCaptureAccessibilityEvents())                                                        \
+            GTEST_SKIP()                                                                                               \
+                << "Qt < 6.6 requires an active platform "                                                             \
+                   "accessibility bridge to capture update events";                                                    \
+    } while (false)
 
 #endif // FLUENT_QT_QT_TEST_ENVIRONMENT_H
