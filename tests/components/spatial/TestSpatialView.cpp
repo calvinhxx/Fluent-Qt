@@ -9,6 +9,7 @@
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
 #include <QPointer>
+#include <QPainter>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QTest>
@@ -16,6 +17,7 @@
 #include <QVBoxLayout>
 #include <limits>
 #include "SpatialTestEnvironment.h"
+#include "compatibility/private/spatial/GraphicsProxyCacheCompat_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 
@@ -40,6 +42,65 @@ protected:
         fluent::FluentElement::setTheme(theme);
     }
 };
+
+TEST_F(SpatialViewTest, Contract_ProxyCacheRefreshesEmbeddedPixelsAndPreservesIdleCaching)
+{
+    class PaintedContent final : public QWidget {
+    public:
+        QColor color = Qt::red;
+        int paints = 0;
+        int repaintRequests = 0;
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            ++paints;
+            QPainter painter(this);
+            painter.fillRect(rect(), color);
+        }
+        bool event(QEvent* event) override
+        {
+            if (event->type() == QEvent::UpdateRequest)
+                ++repaintRequests;
+            return QWidget::event(event);
+        }
+    };
+
+    for (const auto mode : {QGraphicsItem::NoCache, QGraphicsItem::ItemCoordinateCache}) {
+        SCOPED_TRACE(int(mode));
+        QGraphicsScene scene;
+        auto* proxy = new compatibility::detail::GraphicsProxyCacheCompat;
+        auto* content = new PaintedContent;
+        content->setFixedSize(80, 60);
+        proxy->setWidget(content);
+        proxy->setCacheMode(mode);
+        scene.addItem(proxy);
+        scene.setSceneRect(0, 0, 80, 60);
+        const auto render = [&] {
+            QImage image(80, 60, QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            scene.render(&painter);
+            return image;
+        };
+        QApplication::processEvents();
+        EXPECT_EQ(render().pixelColor(40, 30), QColor(Qt::red));
+        content->color = Qt::blue;
+        content->repaintRequests = 0;
+        QEvent request(QEvent::UpdateRequest);
+        QApplication::sendEvent(content, &request);
+        EXPECT_EQ(content->repaintRequests, 1) << "The embedded widget must still receive its repaint request";
+        EXPECT_EQ(proxy->cacheMode(), mode);
+        EXPECT_EQ(render().pixelColor(40, 30), QColor(Qt::blue));
+        if (mode == QGraphicsItem::ItemCoordinateCache) {
+            const int paints = content->paints;
+            for (int frame = 0; frame < 3; ++frame)
+                EXPECT_EQ(render().pixelColor(40, 30), QColor(Qt::blue));
+            EXPECT_EQ(content->paints, paints) << "Unchanged content must continue using the proxy cache";
+        }
+    }
+}
+
 TEST_F(SpatialViewTest, Contract_InheritsHostThemeAndRestoresCallerOverridesOnRelease)
 {
     using fluent::FluentElement;
