@@ -485,6 +485,12 @@ and translucent edges; focus and hit geometry retain the original projection.
 The low-DPI glyph adapter rasterizes unhinted text at the existing panel-cache density,
 including Home's particle foreground. Hinted text retains its native pixel grid so
 small-text contrast is preserved; the policy follows each shaped item's font.
+Each Gallery surface retains at most 2 MiB of exact raster tiles, including a
+fixed metadata charge per entry. The 192 MiB renderer plan reserves another
+2 MiB for their GPU copies in addition to scratch space. Pixel content, geometry
+and density determine reuse; text is never reshaped for a cache lookup. Leaving
+3D or losing the GL context releases these images. Cache regressions preserve
+mixed-script shaping, opacity and fractional coverage while checking eviction.
 Perspective still differs from native 2D text. At DPR 2 and above, the OpenGL
 Gallery uses up to 1.5 times native sampling density and native window output, reducing
 paint-strip repetition while retaining detail through projection. Native GPU

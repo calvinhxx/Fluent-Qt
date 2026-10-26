@@ -15,6 +15,9 @@ constexpr qint64 kCacheBytesPerPixel = 4;
 constexpr int kPaintSamples = 2;
 // One bounded glyph tile and its upload, only for the low-DPI native adapter.
 constexpr qint64 kGlyphScratchBytes = 512LL * 1024;
+// Retained raster images and their texture copies share the same overall budget.
+constexpr int kGlyphCacheBytes = 2 * 1024 * 1024;
+constexpr qint64 kGlyphWorkingSetBytes = kGlyphScratchBytes + 2LL * kGlyphCacheBytes;
 
 // Dense displays already resolve small glyphs. Keep perspective headroom without
 // spending the shared paint budget on a second full doubling of both dimensions.

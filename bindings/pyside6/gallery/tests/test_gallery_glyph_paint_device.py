@@ -23,10 +23,74 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QApplication, QGraphicsEffect, QWidget
 
 from fluentqt_gallery.glyph_paint_device import (
-    GlyphPaintDevice, glyph_raster_dpr, needs_native_glyph_coverage,
+    GLYPH_IMAGE_CACHE_BYTES, GlyphImageCache, GlyphPaintDevice, glyph_raster_dpr, needs_native_glyph_coverage,
 )
 from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
 from _test_font_environment import initialize_headless_test_fixed_font
+
+
+class GalleryGlyphImageCacheTest(unittest.TestCase):
+    @staticmethod
+    def tile(color, width=8, height=8, dpr=1):
+        image = QImage(width, height, QImage.Format_ARGB32_Premultiplied)
+        image.fill(color)
+        image.setDevicePixelRatio(dpr)
+        return image
+
+    def test_exact_pixels_reuse_keys_without_changing_color_geometry_or_density(self):
+        cache = GlyphImageCache()
+        red = cache.retain(self.tile(Qt.red))
+        self.assertEqual(cache.retain(self.tile(Qt.red)).cacheKey(), red.cacheKey())
+        for color, width, height, dpr in ((Qt.blue, 8, 8, 1), (Qt.red, 16, 4, 1),
+                                        (Qt.red, 8, 8, 1.25)):
+            with self.subTest(color=color, size=(width, height), dpr=dpr):
+                original = self.tile(color, width, height, dpr)
+                retained = cache.retain(original)
+                self.assertEqual(retained, original)
+                self.assertEqual(retained.devicePixelRatioF(), dpr)
+                self.assertNotEqual(retained.cacheKey(), red.cacheKey())
+        detached = QImage(red)
+        detached.fill(Qt.green)
+        self.assertEqual(cache.retain(self.tile(Qt.red)).pixelColor(0, 0), QColor(Qt.red))
+        self.assertEqual(cache.retain(self.tile(Qt.red)).cacheKey(), red.cacheKey())
+
+    def test_digest_collision_never_substitutes_different_pixels(self):
+        cache = GlyphImageCache()
+        with patch("fluentqt_gallery.glyph_paint_device.sha256") as digest:
+            digest.return_value.digest.return_value = b"same digest"
+            red = cache.retain(self.tile(Qt.red))
+            blue = cache.retain(self.tile(Qt.blue))
+            self.assertNotEqual(blue.cacheKey(), red.cacheKey())
+            self.assertEqual(blue.pixelColor(0, 0), QColor(Qt.blue))
+            self.assertEqual(cache.retain(self.tile(Qt.red)).pixelColor(0, 0), QColor(Qt.red))
+        self.assertLessEqual(cache.cost(), GLYPH_IMAGE_CACHE_BYTES)
+
+    def test_least_recently_used_images_fit_budget_and_clear(self):
+        cache = GlyphImageCache(2800)
+        red = cache.retain(self.tile(Qt.red))
+        blue = cache.retain(self.tile(Qt.blue))
+        self.assertEqual(cache.retain(self.tile(Qt.red)).cacheKey(), red.cacheKey())
+        cache.retain(self.tile(Qt.green))
+        self.assertLessEqual(cache.cost(), 2800)
+        self.assertEqual(cache.entry_count(), 2)
+        self.assertEqual(cache.retain(self.tile(Qt.red)).cacheKey(), red.cacheKey())
+        self.assertNotEqual(cache.retain(self.tile(Qt.blue)).cacheKey(), blue.cacheKey())
+        before = cache.cost()
+        oversized = self.tile(Qt.yellow, 64, 64)
+        self.assertEqual(cache.retain(oversized).cacheKey(), oversized.cacheKey())
+        self.assertEqual(cache.cost(), before)
+        cache.clear()
+        self.assertEqual(cache.cost(), 0)
+        self.assertEqual(cache.entry_count(), 0)
+
+    def test_tiny_images_include_metadata_in_the_working_set(self):
+        # An optional smaller test budget must not permit a larger product budget.
+        cache = GlyphImageCache(GLYPH_IMAGE_CACHE_BYTES * 2)
+        for value in range(3000):
+            cache.retain(self.tile(QColor.fromRgb(value), 1, 1))
+        self.assertGreater(cache.entry_count(), 0)
+        self.assertLessEqual(cache.cost(), GLYPH_IMAGE_CACHE_BYTES)
+        self.assertLessEqual(cache.entry_count(), GLYPH_IMAGE_CACHE_BYTES // (1024 + 4))
 
 
 class GalleryGlyphPaintDeviceTest(unittest.TestCase):
@@ -53,18 +117,60 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
             self.assertAlmostEqual(metrics.horizontalAdvance(character), metrics.horizontalAdvance("0"),
                                    msg=f"FixedFont {font.family()} fell back for {character!r}")
 
-    def render(self, draw, adapted, dpr=1, opaque=False, raster_origin=QPointF(), native_dpr=None):
+    def render(self, draw, adapted, dpr=1, opaque=False, raster_origin=QPointF(), native_dpr=None,
+               glyph_cache=None):
         image = QImage(960, 360, QImage.Format_ARGB32_Premultiplied)
         image.setDevicePixelRatio(dpr)
         image.fill(Qt.white if opaque else Qt.transparent)
         device = GlyphPaintDevice(image, dpr if native_dpr is None else native_dpr,
-                                  raster_origin) if adapted else image
+                                  raster_origin, glyph_cache) if adapted else image
         painter = QPainter(device)
         try:
             draw(painter)
         finally:
             painter.end()
         return image, device
+
+    def test_retained_rasters_preserve_shaping_phase_and_texture_keys(self):
+        class RecordingCache(GlyphImageCache):
+            def __init__(self):
+                super().__init__()
+                self.keys = []
+
+            def retain(self, image):
+                retained = super().retain(image)
+                self.keys.append(retained.cacheKey())
+                return retained
+
+        for dpr in (1, 1.25, 1.5, 2):
+            for hint in (QFont.PreferFullHinting, QFont.PreferNoHinting):
+                with self.subTest(dpr=dpr, hint=hint):
+                    def draw(painter):
+                        font = QFont("Arial")
+                        font.setPixelSize(18)
+                        font.setHintingPreference(hint)
+                        font.setBold(True)
+                        font.setUnderline(True)
+                        painter.setFont(font)
+                        painter.setPen(QColor(20, 90, 160, 210))
+                        painter.setOpacity(.65)
+                        painter.translate(.35, .65)
+                        painter.drawText(QPointF(6, 26), "office مرحبًا é 演示")
+
+                    origin = QPointF(0, 113 / dpr)
+                    expected, _ = self.render(draw, True, dpr, raster_origin=origin, native_dpr=1)
+                    cache = RecordingCache()
+                    cold, _ = self.render(draw, True, dpr, raster_origin=origin, native_dpr=1,
+                                          glyph_cache=cache)
+                    cold_keys = list(cache.keys)
+                    cache.keys.clear()
+                    warm, _ = self.render(draw, True, dpr, raster_origin=origin, native_dpr=1,
+                                          glyph_cache=cache)
+                    self.assertEqual(cold, expected)
+                    self.assertEqual(warm, expected)
+                    self.assertTrue(cold_keys)
+                    self.assertEqual(cache.keys, cold_keys)
+                    self.assertLessEqual(cache.cost(), GLYPH_IMAGE_CACHE_BYTES)
 
     def test_adapter_keeps_native_dpr_precision_and_integer_rounding(self):
         target = QImage(20, 20, QImage.Format_ARGB32_Premultiplied)

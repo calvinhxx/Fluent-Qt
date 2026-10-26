@@ -1913,6 +1913,49 @@ print("2D-only Gallery: no OpenGL imports")
             delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_gpu_mode_changes_release_retained_glyph_images(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires a native GPU surface")
+        from fluentqt_gallery.glyph_paint_device import GLYPH_IMAGE_CACHE_BYTES, needs_native_glyph_coverage
+        from fluentqt_gallery.spatial_controller import (
+            GallerySpatialController, _CACHE_BUDGET_BYTES, _RhiSurface, _Surface,
+        )
+        window = fluentqt.Window()
+        window._splash = window._dismissal_splash = None
+        try:
+            if not needs_native_glyph_coverage(window.devicePixelRatioF()):
+                self.skipTest("this display uses Qt's direct glyph path")
+            window.resize(800, 600)
+            navigation = fluentqt.NavigationView(window)
+            navigation.resize(window.size())
+            button = fluentqt.Button("Retained glyph pixels")
+            navigation.contentHost().insertPage(0, button)
+            navigation.contentHost().setCurrentIndex(0, 0, False)
+            controller = GallerySpatialController(window, navigation)
+            window.show()
+            self.assertTrue(QTest.qWaitForWindowExposed(window))
+            for cycle in range(2):
+                with self.subTest(cycle=cycle):
+                    self.settings.set_spatial_mode_enabled(True)
+                    if isinstance(controller.canvas, _RhiSurface):
+                        self.skipTest("the active RHI surface does not use the OpenGL glyph image cache")
+                    self.assertIsInstance(controller.canvas, _Surface)
+                    for _ in range(100):
+                        if controller.canvas.statistics()["glyphCacheBytes"] > 0:
+                            break
+                        _qwait(50)
+                    controller.settle()
+                    statistics = controller.canvas.statistics()
+                    self.assertGreater(statistics["glyphCacheBytes"], 0)
+                    self.assertLessEqual(statistics["glyphCacheBytes"], GLYPH_IMAGE_CACHE_BYTES)
+                    self.assertLessEqual(statistics["cacheEstimatedBytes"], _CACHE_BUDGET_BYTES)
+                    self.settings.set_spatial_mode_enabled(False)
+                    controller.settle()
+                    self.assertEqual(controller.canvas.statistics()["glyphCacheBytes"], 0)
+        finally:
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_gpu_filters_projected_high_dpi_detail(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
             self.skipTest("requires native GPU texture sampling")
