@@ -45,16 +45,19 @@ TEST(InputMetricsTest, StandardSingleLineControlsAlignWithoutPerSampleSizing)
         EXPECT_EQ(control->height(), Spacing::ControlHeight::Standard);
         EXPECT_EQ(control->y(), controls.first()->y());
     }
-    QFont large = controls.first()->font();
-    large.setPixelSize(28);
-    for (auto* control : controls)
-        control->setFont(large);
-    QApplication::processEvents();
-    for (auto* control : controls) {
-        SCOPED_TRACE(control->metaObject()->className());
-        EXPECT_EQ(control->height(), controls.first()->height());
-        EXPECT_GE(control->height(), control->fontMetrics().height() + 8);
-        EXPECT_EQ(control->y(), controls.first()->y());
+    for (int pixelSize : {18, 28, 36}) {
+        SCOPED_TRACE(pixelSize);
+        QFont large = controls.first()->font();
+        large.setPixelSize(pixelSize);
+        for (auto* control : controls)
+            control->setFont(large);
+        QApplication::processEvents();
+        for (auto* control : controls) {
+            SCOPED_TRACE(control->metaObject()->className());
+            EXPECT_EQ(control->height(), controls.first()->height());
+            EXPECT_GE(control->height(), control->fontMetrics().height() + 8);
+            EXPECT_EQ(control->y(), controls.first()->y());
+        }
     }
 }
 

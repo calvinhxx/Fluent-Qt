@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QFontMetrics>
+#include "compatibility/private/LineEditMetricsCompat_p.h"
 #include "design/Spacing.h"
 
 namespace fluent::detail {
@@ -10,7 +11,7 @@ namespace fluent::detail {
 inline int standardControlHeight(const QFontMetrics& metrics)
 {
     const int height = qMax(::Spacing::ControlHeight::Standard,
-        metrics.height() + 2 * ::Spacing::Padding::TextFieldVertical);
+        compatibility::detail::singleLineEditMinimumTextHeight(metrics) + 2 * ::Spacing::Padding::TextFieldVertical);
     return ((height + ::Spacing::BaseUnit - 1) / ::Spacing::BaseUnit) * ::Spacing::BaseUnit;
 }
 

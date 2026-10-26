@@ -55,7 +55,10 @@ on first opening. Mode changes retain selected values without exposing a hidden
 second editor. Model updates keep selection synchronous and batch tree refreshes.
 For large trees, rapid typed queries are coalesced; keyboard navigation and
 confirmation apply the latest query first. Programmatic search remains immediate.
-Custom input fonts determine the minimum control height.
+Custom input fonts determine the minimum control height. Shared single-line
+control metrics include the native editor's vertical inset and positive leading,
+so 18, 28, and 36 pixel fonts keep matching editor and selector heights without
+clipping the text.
 
 ## Tagged member input
 
