@@ -72,7 +72,10 @@ bool supportsDwmSystemBackdrop(const WindowsVersionInfo& version)
 
 HWND hwndForWindow(QWidget* window)
 {
-    if (!window || !window->windowHandle())
+    // A prepared QWindow may not have a native surface yet. Chrome queries must
+    // not create it before QWidget submits its pending geometry on show.
+    // zh_CN: 已准备的 QWindow 可能尚无原生 surface；查询 chrome 不能抢先创建并覆盖 QWidget 的待显示几何。
+    if (!window || !window->windowHandle() || !window->windowHandle()->handle())
         return nullptr;
 
     return reinterpret_cast<HWND>(window->windowHandle()->winId());
