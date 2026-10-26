@@ -566,7 +566,9 @@ The 3D shell captures navigation and content independently, so an overlapping
 compact drawer preserves complete rows, projected hit targets and light dismiss.
 Intro keeps its modal scrim and CoachMark above the compositor, with matching
 projected anchors in Left and Top layouts. Pointer following pauses during the
-tour; finishing restores window chrome and normal input. Settings update status
+tour; finishing restores window chrome and normal input. The scrim hides as soon
+as its fade completes, including Disabled motion, so deferred destruction cannot
+leave an invisible input barrier. Settings update status
 uses the description column beside the action and wraps in narrow layouts.
 Toggle tracks and labels, checkbox clicks,
 slider dragging, list/tree selection and expansion, ratings, date selection and tabs have projected-input

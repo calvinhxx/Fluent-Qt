@@ -418,6 +418,41 @@ TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesIntroTourSpotlightAndC
     EXPECT_TRUE(scrimGuard.isNull());
 }
 
+TEST_F(GalleryShellMotionPolicyTest, CompletedIntroFadeReleasesInputBeforeDeferredDeletion)
+{
+    for (const auto mode :
+        {fluent::MotionPolicy::Mode::Full, fluent::MotionPolicy::Mode::Reduced, fluent::MotionPolicy::Mode::Disabled}) {
+        SCOPED_TRACE(static_cast<int>(mode));
+        fluent::MotionPolicy::instance().setMode(mode);
+        QWidget host;
+        host.resize(800, 600);
+        showAndProcess(host);
+        GalleryIntroTour tour(&host);
+        GalleryIntroTour::Step step;
+        step.title = QStringLiteral("Welcome");
+        step.centered = true;
+        tour.setSteps({step});
+        tour.start();
+        QPointer<OverlayScrim> scrim = host.findChild<OverlayScrim*>("GalleryIntroTour.Scrim");
+        auto* dim = tour.findChild<QPropertyAnimation*>("galleryIntroTourDimAnimation");
+        auto* close = host.findChild<Button*>("GalleryIntroTour.CloseButton");
+        ASSERT_TRUE(scrim);
+        ASSERT_NE(dim, nullptr);
+        ASSERT_NE(close, nullptr);
+        dim->setCurrentTime(dim->duration());
+        ASSERT_TRUE(scrim->isVisible());
+        close->click();
+        dim->setCurrentTime(dim->duration());
+        // No event processing here: deferred deletion must not keep an invisible input barrier.
+        ASSERT_TRUE(scrim);
+        EXPECT_DOUBLE_EQ(scrim->progress(), 0.0);
+        EXPECT_FALSE(scrim->isVisible());
+        EXPECT_NE(host.childAt(QPoint(20, 20)), scrim.data());
+        processDeferredDeletes();
+        EXPECT_TRUE(scrim.isNull());
+    }
+}
+
 TEST_F(GalleryShellMotionPolicyTest, DisabledMotionSettlesNavigationPaneTransitions)
 {
     QWidget host;

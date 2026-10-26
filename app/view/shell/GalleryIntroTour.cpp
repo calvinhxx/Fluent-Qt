@@ -413,6 +413,10 @@ void GalleryIntroTour::finishTour()
         m_dimAnim->setEndValue(0.0);
         QPointer<QWidget> scrim = m_scrim;
         fluentConnectSingleShot(m_dimAnim, &QPropertyAnimation::finished, scrim.data(), [scrim]() {
+            // Release input when the fade completes, before deferred destruction.
+            // zh_CN: 淡出完成即释放输入，不等待延迟销毁。
+            if (scrim)
+                scrim->hide();
             if (scrim)
                 scrim->deleteLater();
         });
