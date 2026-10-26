@@ -570,7 +570,8 @@ The C++ and Python Gallery compositors preserve the same effect coordinates;
 full-opacity StackView and SplashScreen frames bypass unnecessary effects.
 `SpatialView` releases the OpenGL viewport while hidden or fully clipped, and
 uses Raster under an ancestor graphics effect without changing the requested
-render mode;
+render mode. Its private Qt proxy adapter refreshes cached pixels when the
+embedded widget requests a repaint, while unchanged content keeps using the cache;
 hidden construction defers GPU initialization so startup prewarm preserves the
 native window surface. Desktop Gallery checks OpenGL before creating its GPU
 child; an unavailable driver retains native 2D controls and the Settings reason.

@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include "compatibility/private/spatial/GraphicsProxyCacheCompat_p.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
@@ -134,7 +135,7 @@ private:
     QImage m_rest, m_raised;
 };
 
-class SpatialSurfaceProxy final : public QGraphicsProxyWidget {
+class SpatialSurfaceProxy final : public compatibility::detail::GraphicsProxyCacheCompat {
 public:
     SpatialSurfaceProxy() : m_decoration(new SpatialSurfaceDecoration(this))
     {
