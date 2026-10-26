@@ -17,7 +17,7 @@ import shiboken6
 
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, Qt
 from PySide6.QtGui import (
-    QColor, QFont, QFontDatabase, QFontMetricsF, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
+    QColor, QFont, QFontDatabase, QFontInfo, QFontMetricsF, QImage, QLinearGradient, QPaintDevice, QPaintEngine, QPainter, QPainterPath, QPen, QRegion,
     QTransform,
 )
 from PySide6.QtWidgets import QApplication, QGraphicsEffect, QWidget
@@ -26,6 +26,7 @@ from fluentqt_gallery.glyph_paint_device import (
     GlyphPaintDevice, glyph_raster_dpr, needs_native_glyph_coverage,
 )
 from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
+from _test_font_environment import initialize_headless_test_fixed_font
 
 
 class GalleryGlyphPaintDeviceTest(unittest.TestCase):
@@ -33,6 +34,7 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
         fluentqt.initialize_resources()
+        initialize_headless_test_fixed_font(cls.app)
 
     def setUp(self):
         self.errors = []
@@ -42,6 +44,14 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
     def tearDown(self):
         sys.excepthook = self.old_hook
         self.assertEqual(self.errors, [])
+
+    def test_fixed_font_is_monospace_for_tile_boundary_measurements(self):
+        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        self.assertTrue(QFontInfo(font).fixedPitch(), font.family())
+        metrics = QFontMetricsF(font)
+        for character in "iW019.":
+            self.assertAlmostEqual(metrics.horizontalAdvance(character), metrics.horizontalAdvance("0"),
+                                   msg=f"FixedFont {font.family()} fell back for {character!r}")
 
     def render(self, draw, adapted, dpr=1, opaque=False, raster_origin=QPointF(), native_dpr=None):
         image = QImage(960, 360, QImage.Format_ARGB32_Premultiplied)

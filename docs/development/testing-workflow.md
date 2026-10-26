@@ -34,6 +34,28 @@ standalone runner assertion macros: their failure state does not reach GTest's
 exit code/XML and can short-circuit later waits on older Qt. The shared test
 environment contracts check source usage and run a deliberately failing child
 process to verify reporting and subsequent event delivery.
+
+Headless font-metric checks need a real fixed-pitch font. CTest uses the shared
+`FLUENT_QT_TEST_MONOSPACE_FONT` cache setting for C++ and Python Gallery fixtures;
+on Windows it defaults to an available system monospace font file. Configuration
+fails if none is available and no explicit font is supplied. Override the setting
+with a font file when using a custom test host. Direct headless runs can set the
+same environment variable. All registered offscreen/minimal Python Gallery tests
+receive it, including the glyph paint-device tests.
+
+C++ test support and Python's shared `_test_font_environment.py` fixture follow
+this headless font policy. Keep their thin Qt adapters aligned with these rules:
+
+- Native desktop platforms keep their font selection and do not load this file.
+- With no configured file on other hosts, use the existing system fonts.
+- On offscreen/minimal platforms, a configured file must load and expose a
+  fixed-pitch family; invalid input fails setup.
+- Keep an already fixed-pitch system `FixedFont`. Otherwise substitute its generic
+  family and verify the resolved result is fixed-pitch. The UI `Body` font stays
+  unchanged.
+
+The Gallery and glyph Python fixtures call the shared initializer after resources
+are initialized. This support code is not installed in the Python package.
 Persistence probes should keep this test identity unless their contract
 explicitly requires another scope. The Gallery cold-load probe needs the real
 application identity to enable persistence; it uses a process lock inside Qt's

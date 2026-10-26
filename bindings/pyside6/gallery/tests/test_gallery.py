@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Callable
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -17,6 +18,7 @@ import uuid
 
 import fluentqt
 from fluentqt._qt_compat import delete_qobject
+from _test_font_environment import initialize_headless_test_fixed_font
 import fluentqt_gallery.application_controller as application_controller_module
 import fluentqt_gallery.settings as gallery_settings_module
 import fluentqt_gallery.single_instance as single_instance_module
@@ -47,6 +49,7 @@ from PySide6.QtGui import (
     QColor,
     QCloseEvent,
     QFont,
+    QFontDatabase,
     QHelpEvent,
     QIcon,
     QImage,
@@ -950,6 +953,7 @@ class PythonGalleryTest(unittest.TestCase):
         if not fluentqt.initialize_resources():
             raise RuntimeError("FluentQt resources could not be initialized")
         cls.app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+        initialize_headless_test_fixed_font(cls.app)
 
     def setUp(self):
         # These are native 2D shell checks; the Spatial suite owns GPU presentation.
