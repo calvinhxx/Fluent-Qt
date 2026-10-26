@@ -544,6 +544,22 @@ TEST(QtCompat, VariantConversionUsesTheRequestedPropertyType)
     EXPECT_FALSE(::compatibility::detail::convertVariantToType(invalid, QMetaType::QDate));
 }
 
+TEST(QtCompat, Contract_VariantEqualityPreservesRepresentableNumericChanges)
+{
+    using compatibility::detail::variantValuesEqual;
+    const QVariant large(1e18);
+    EXPECT_TRUE(variantValuesEqual(large, QVariant(1e18)));
+    EXPECT_FALSE(variantValuesEqual(large, QVariant(1e18 + 128)));
+    EXPECT_FALSE(variantValuesEqual(large, QVariant::fromValue(qlonglong(1000000000000000128LL))));
+    EXPECT_FALSE(variantValuesEqual(QVariant::fromValue(1.0f), QVariant::fromValue(1.00000011920928955078125f)));
+    EXPECT_FALSE(variantValuesEqual(QVariant::fromValue(qlonglong(9007199254740992LL)),
+        QVariant::fromValue(qlonglong(9007199254740993LL))));
+    EXPECT_TRUE(variantValuesEqual(QVariant(9007199254740992.0), QVariant::fromValue(qlonglong(9007199254740993LL))));
+    EXPECT_TRUE(variantValuesEqual(QVariant(-0.0), QVariant(0.0)));
+    EXPECT_TRUE(variantValuesEqual(QVariant(QStringLiteral("same")), QVariant(QStringLiteral("same"))));
+    EXPECT_FALSE(variantValuesEqual(QVariant(QStringLiteral("first")), QVariant(QStringLiteral("second"))));
+}
+
 TEST(QtCompat, LocalSceneMouseMappingPreservesInputIdentity)
 {
     QMouseEvent original(QEvent::MouseButtonPress, QPointF(12, 18), QPointF(40, 60), QPointF(120, 180), Qt::LeftButton,

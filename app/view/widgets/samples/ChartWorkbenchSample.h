@@ -65,7 +65,7 @@ public:
         type.label = "Chart type";
         type.group = "Presentation";
         type.type = layout::PropertyDefinition::Choice;
-        type.choices = {"Line", "Area", "Bar", "Scatter"};
+        type.choices = QStringList{"Line", "Area", "Bar", "Scatter"};
         type.defaultValue = QStringLiteral("Area");
         layout::PropertyDefinition legend;
         legend.key = "legend";

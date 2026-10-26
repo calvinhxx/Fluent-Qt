@@ -20,7 +20,7 @@ PropertyDefinition definition(QString key, PropertyDefinition::Type type, QVaria
     p.defaultValue = value;
     p.minimum = 0;
     p.maximum = 100;
-    p.choices = {QStringLiteral("Line"), QStringLiteral("Bar")};
+    p.choices = QStringList{QStringLiteral("Line"), QStringLiteral("Bar")};
     return p;
 }
 } // namespace
@@ -361,5 +361,10 @@ TEST(PropertyPanelTest, Contract_DefaultComparisonUsesColorAndNumericValues)
     number.step = 128;
     ASSERT_TRUE(panel.setProperties({number}));
     panel.setValue("number", 1e18 + 128);
+    EXPECT_EQ(panel.value("number").toDouble(), 1e18 + 128);
     EXPECT_EQ(panel.modifiedPropertyKeys(), QStringList{"number"});
+    number.defaultValue = 1e18 + 128;
+    ASSERT_TRUE(panel.setProperties({number}));
+    EXPECT_EQ(panel.properties().first().defaultValue.toDouble(), 1e18 + 128);
+    EXPECT_TRUE(panel.modifiedPropertyKeys().isEmpty());
 }

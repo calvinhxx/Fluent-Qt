@@ -10,6 +10,7 @@
 #include <QVBoxLayout>
 #include <cmath>
 #include <limits>
+#include "compatibility/private/VariantCompat_p.h"
 #include "Field.h"
 #include "Card.h"
 #include "components/basicinput/Button.h"
@@ -366,7 +367,8 @@ bool PropertyPanel::setProperties(const QVector<PropertyDefinition>& properties)
         const auto& b = d->entries[i].definition;
         identical = a.key == b.key && a.label == b.label && a.group == b.group && a.description == b.description
             && a.type == b.type && a.minimum == b.minimum && a.maximum == b.maximum && a.step == b.step
-            && a.choices == b.choices && a.defaultValue == b.defaultValue && a.readOnly == b.readOnly;
+            && a.choices == b.choices && compatibility::detail::variantValuesEqual(a.defaultValue, b.defaultValue)
+            && a.readOnly == b.readOnly;
     }
     if (identical)
         return true;
@@ -563,7 +565,7 @@ bool PropertyPanel::setValue(const QString& key, const QVariant& value)
         number->cancelScrub();
     if (!guard || revision != d->revision || !e.editor)
         return false;
-    if (this->value(key) == value)
+    if (compatibility::detail::variantValuesEqual(this->value(key), value))
         return true;
     {
         const QSignalBlocker blocked(e.editor);
