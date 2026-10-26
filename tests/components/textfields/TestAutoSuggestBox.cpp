@@ -63,24 +63,7 @@ protected:
 
     void TearDown() override { delete window; }
 
-    bool showAndFocus(AutoSuggestBox* box)
-    {
-        QWidget* host = box->window();
-        host->show();
-        if (!tests::support::isHeadlessPlatform()) {
-            if (!QTest::qWaitForWindowExposed(host))
-                return false;
-            if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland"), Qt::CaseInsensitive)) {
-                host->activateWindow();
-                if (!QTest::qWaitForWindowActive(host))
-                    return false;
-            }
-        }
-        box->setFocus(Qt::OtherFocusReason);
-        // Wayland can deliver focus after exposing a window without supporting activation requests.
-        // zh_CN: Wayland 不支持主动激活请求，窗口显示后焦点仍可能稍后才到达。
-        return QTest::qWaitFor([box] { return box->hasFocus(); });
-    }
+    ::testing::AssertionResult showAndFocus(AutoSuggestBox* box) { return tests::support::showAndFocusWidget(box); }
 
     AutoSuggestBoxTestWindow* window = nullptr;
     AnchorLayout* layout = nullptr;
@@ -321,8 +304,7 @@ TEST_F(AutoSuggestBoxTest, FieldPopupStaysBoundedAndReflowsWithItsHost)
     AutoSuggestBox box(&host);
     box.setGeometry(60, 120, 200, 32);
     box.setSuggestions({"Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"});
-    host.show();
-    box.setFocus();
+    ASSERT_TRUE(showAndFocus(&box));
     QTest::keyClick(&box, Qt::Key_Down);
     QApplication::processEvents();
     auto* popup = host.findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
@@ -518,8 +500,14 @@ TEST_F(AutoSuggestBoxTest, ClearButtonReceivesMouseInputWhileSuggestionsOpen)
     ASSERT_NE(clearButton, nullptr);
     ASSERT_TRUE(clearButton->isVisible());
 
-    const QPoint clearCenterGlobal = clearButton->mapToGlobal(clearButton->rect().center());
-    QWidget* hitWidget = QApplication::widgetAt(clearCenterGlobal);
+    QPoint clearCenterGlobal;
+    QWidget* hitWidget = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        // Native activation can precede the compositor's final window placement.
+        clearCenterGlobal = clearButton->mapToGlobal(clearButton->rect().center());
+        hitWidget = QApplication::widgetAt(clearCenterGlobal);
+        return hitWidget != nullptr;
+    }));
     ASSERT_NE(hitWidget, nullptr);
     EXPECT_TRUE(hitWidget == clearButton || clearButton->isAncestorOf(hitWidget))
         << "Popup must not be the mouse target over AutoSuggestBox clear button";

@@ -462,13 +462,19 @@ TEST(FileListViewTest, Contract_RtlLayoutPreservesEnglishNumbersAndArabicTextDir
             line.setPosition(QPointF(0.0, (lineHeight - line.height()) / 2.0));
             reference.endLayout();
 
-            QImage expected(QSize(528, qCeil(lineHeight)), QImage::Format_ARGB32_Premultiplied);
-            expected.fill(Qt::transparent);
-            QPainter referencePainter(&expected);
+            // Qt 5 changes glyph coverage at the image's left edge. Match the
+            // delegate's device origin before cropping both raster results.
+            // zh_CN: Qt 5 在画布左边界的字形覆盖不同；参考图先使用 delegate 的绘制原点，再同范围裁剪。
+            const int textLeft = widgetDirection == Qt::RightToLeft ? 52 : 60;
+            const QRect textRect(textLeft, 34, 528, qCeil(lineHeight));
+            QImage referenceCanvas(QSize(640, 100), QImage::Format_ARGB32_Premultiplied);
+            referenceCanvas.fill(Qt::transparent);
+            QPainter referencePainter(&referenceCanvas);
             referencePainter.setRenderHint(QPainter::Antialiasing);
             referencePainter.setPen(view.themeColorsRef().textSecondary);
-            reference.draw(&referencePainter, QPointF());
+            reference.draw(&referencePainter, textRect.topLeft());
             referencePainter.end();
+            const QImage expected = referenceCanvas.copy(textRect);
 
             QImage painted(QSize(640, 100), QImage::Format_ARGB32_Premultiplied);
             painted.fill(Qt::transparent);
@@ -485,8 +491,7 @@ TEST(FileListViewTest, Contract_RtlLayoutPreservesEnglishNumbersAndArabicTextDir
             // and alignment mirror; the paragraph's glyph order stays intact.
             // zh_CN: 紧凑行保留 32px 移除热区，20px 文件图标和说明旁的 12px
             // 状态图标。仅镜像几何与对齐，段落字形顺序仍跟随语言。
-            const int textLeft = widgetDirection == Qt::RightToLeft ? 52 : 60;
-            const QImage actual = painted.copy(QRect(textLeft, 34, 528, qCeil(lineHeight)));
+            const QImage actual = painted.copy(textRect);
             EXPECT_EQ(actual, expected);
         }
     }

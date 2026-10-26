@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "QtTestEnvironment.h"
 
 #include <QApplication>
 #include <QImage>
@@ -13,6 +14,7 @@
 #include <cmath>
 #include <limits>
 
+#include "compatibility/EventConstructionCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/RepeatButton.h"
 #include "components/foundation/QMLPlus.h"
@@ -25,6 +27,14 @@
 using namespace fluent;
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
+
+namespace {
+void moveScrubPointer(QWidget* target, const QPoint& position)
+{
+    FLUENT_MAKE_MOUSE_EVENT(event, QEvent::MouseMove, target, position, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(target, &event);
+}
+} // namespace
 
 class NumberBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -63,17 +73,12 @@ protected:
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     }
 
-    void showAndFocus(NumberBox* box)
-    {
-        window->show();
-        box->setFocus(Qt::OtherFocusReason);
-        QApplication::processEvents();
-    }
+    ::testing::AssertionResult showAndFocus(NumberBox* box) { return tests::support::showAndFocusWidget(box); }
 
     void commit(NumberBox* box, const QString& text)
     {
         box->setText(text);
-        showAndFocus(box);
+        ASSERT_TRUE(showAndFocus(box));
         QTest::keyClick(box, Qt::Key_Return);
         QApplication::processEvents();
     }
@@ -143,13 +148,13 @@ TEST_F(NumberBoxTest, Contract_ScrubbingCommitCancelAndTextSelection)
     const QPoint handle = box.scrubHandleRect().center();
     QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
     ASSERT_TRUE(box.isScrubbing());
-    QTest::mouseMove(&box, handle + QPoint(40, 0));
+    moveScrubPointer(&box, handle + QPoint(40, 0));
     EXPECT_DOUBLE_EQ(box.value(), 40);
     QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle + QPoint(40, 0));
     ASSERT_EQ(finished.count(), 1);
     EXPECT_FALSE(finished.at(0).at(2).toBool());
     QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
-    QTest::mouseMove(&box, handle + QPoint(30, 0));
+    moveScrubPointer(&box, handle + QPoint(30, 0));
     QTest::keyClick(&box, Qt::Key_Escape);
     EXPECT_DOUBLE_EQ(box.value(), 40);
     ASSERT_EQ(finished.count(), 2);
@@ -174,7 +179,7 @@ TEST_F(NumberBoxTest, Contract_ScrubbingEmptyRollbackAndExternalUpdate)
     QApplication::processEvents();
     const QPoint handle = box.scrubHandleRect().center();
     QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
-    QTest::mouseMove(&box, handle + QPoint(25, 0));
+    moveScrubPointer(&box, handle + QPoint(25, 0));
     EXPECT_DOUBLE_EQ(box.value(), 25);
     box.cancelScrub();
     EXPECT_TRUE(std::isnan(box.value()));
@@ -182,7 +187,7 @@ TEST_F(NumberBoxTest, Contract_ScrubbingEmptyRollbackAndExternalUpdate)
     QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);
     box.setValue(5);
     QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
-    QTest::mouseMove(&box, handle + QPoint(25, 0));
+    moveScrubPointer(&box, handle + QPoint(25, 0));
     box.setValue(75);
     EXPECT_FALSE(box.isScrubbing());
     EXPECT_DOUBLE_EQ(box.value(), 75);
@@ -490,7 +495,7 @@ TEST_F(NumberBoxTest, KeyboardAndSpinnerStep)
     box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
     box->setValue(10);
     layout->addWidget(box);
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
 
     QTest::keyClick(box, Qt::Key_Up);
     EXPECT_DOUBLE_EQ(box->value(), 11);
@@ -671,7 +676,7 @@ TEST_F(NumberBoxTest, CompactSpinButtonsAreVisibleByDefault)
         + box->spinButtonSize().width() + box->spinButtonTextGap();
     EXPECT_EQ(box->contentMargins().right(), expectedMargin);
 
-    showAndFocus(box);
+    ASSERT_TRUE(showAndFocus(box));
     box->clearFocus();
     QApplication::processEvents();
     EXPECT_FALSE(upButton->isHidden());
@@ -870,9 +875,9 @@ TEST_F(NumberBoxTest, Contract_ScrubbingExtremeFiniteValuesCannotProduceNaN)
     QApplication::processEvents();
     const QPoint handle = box.scrubHandleRect().center();
     QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, handle);
-    QTest::mouseMove(&box, handle + QPoint(30, 0));
+    moveScrubPointer(&box, handle + QPoint(30, 0));
     EXPECT_TRUE(std::isfinite(box.value()));
-    QTest::mouseMove(&box, handle - QPoint(30, 0));
+    moveScrubPointer(&box, handle - QPoint(30, 0));
     EXPECT_TRUE(std::isfinite(box.value()));
     QTest::keyClick(&box, Qt::Key_Escape);
     QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);

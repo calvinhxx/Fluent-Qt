@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+#include "QtTestEnvironment.h"
 #include <QAccessible>
+#include <QLayout>
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
@@ -30,8 +32,7 @@ TEST(PropertyPanelTest, Contract_AdaptiveLayoutKeepsEditorsAndQuietResetActions)
         definition("Color", PropertyDefinition::Color, QColor("#0078d4")),
         definition("Maximum", PropertyDefinition::Number, 80.0)}));
     panel.resize(420, 260);
-    panel.show();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(panel.editor("Title")));
     QPointer<QWidget> editor = panel.editor("Title");
     EXPECT_EQ(panel.field("Title")->labelPosition(), Field::LabelPosition::Leading);
     EXPECT_TRUE(panel.searchField()->isHidden());
@@ -47,6 +48,7 @@ TEST(PropertyPanelTest, Contract_AdaptiveLayoutKeepsEditorsAndQuietResetActions)
     EXPECT_EQ(panel.modifiedPropertyKeys(), QStringList{"Title"});
     panel.resize(240, 380);
     QApplication::processEvents();
+    ASSERT_EQ(panel.width(), 240);
     EXPECT_EQ(panel.field("Title")->labelPosition(), Field::LabelPosition::Top);
     EXPECT_EQ(panel.editor("Title"), editor);
     EXPECT_EQ(panel.value("Title").toString(), "Changed");
@@ -56,6 +58,14 @@ TEST(PropertyPanelTest, Contract_AdaptiveLayoutKeepsEditorsAndQuietResetActions)
         QApplication::processEvents();
         auto* scroll = panel.findChild<scrolling::ScrollView*>();
         ASSERT_TRUE(scroll);
+        QWidget* content = scroll->widget();
+        ASSERT_TRUE(content);
+        QList<QWidget*> layoutHosts{content};
+        for (auto* group : content->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
+            if (group->isVisible() && group->layout())
+                layoutHosts.append(group);
+        }
+        ASSERT_TRUE(tests::support::waitForStableLayouts(layoutHosts));
         EXPECT_EQ(scroll->scrollableWidth(), 0) << width;
     }
     panel.setLayoutMode(PropertyPanel::LayoutMode::Stacked);

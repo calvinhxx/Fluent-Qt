@@ -1,5 +1,6 @@
 #include <QLineEdit>
 #include <gtest/gtest.h>
+#include "QtTestEnvironment.h"
 
 #include <QApplication>
 #include <QPointer>
@@ -57,10 +58,7 @@ TEST(ListDetailViewTest, Contract_FocusCallbackCanReplaceTheRequestedPane)
     auto* first = new fluent::textfields::LineEdit(view.listPane());
     auto* second = new fluent::textfields::LineEdit(view.detailPane());
     view.resize(360, 300);
-    view.show();
-    view.activateWindow();
-    QApplication::processEvents();
-    first->setFocus();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(first));
     QSignalSpy panes(&view, &ListDetailView::currentPaneChanged);
     QObject::connect(qApp, &QApplication::focusChanged, &view, [&](QWidget*, QWidget* now) {
         if (now == second)
@@ -201,10 +199,7 @@ TEST(ListDetailViewTest, Contract_FocusReturnsToPreviouslyFocusedControl)
     auto* third = new fluent::textfields::LineEdit(view.detailPane());
     third->move(0, 50);
     view.resize(360, 300);
-    view.show();
-    view.activateWindow();
-    QApplication::processEvents();
-    first->setFocus();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(first));
     view.showDetail();
     EXPECT_TRUE(second->hasFocus());
     third->setFocus();

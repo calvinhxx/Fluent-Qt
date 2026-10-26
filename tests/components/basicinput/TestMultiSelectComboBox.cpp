@@ -1043,6 +1043,7 @@ TEST_F(MultiSelectComboBoxTest, Contract_ModelDataUpdatesKeepSearchCursorAndSele
 TEST_F(MultiSelectComboBoxTest, Contract_LastRowAndWholeRangeSelectionKeepOpenWorkBounded)
 {
     for (bool all : {false, true}) {
+        SCOPED_TRACE(all);
         CountingListModel model(10000);
         MultiSelectComboBox box(window);
         box.setGeometry(40, 40, 280, 32);

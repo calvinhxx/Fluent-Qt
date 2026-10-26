@@ -1,3 +1,4 @@
+#include "QtTestEnvironment.h"
 #include <gtest/gtest.h>
 #include <QAccessible>
 #include <QApplication>
@@ -140,8 +141,7 @@ TEST(DataGridToolBarTest, Contract_ControlEdgesAndWrapGapsStayAligned)
     ASSERT_NE(clear, nullptr);
     const QList<QWidget*> controls{bar.searchField(), status, owner, clear, bar.columnsButton()};
     bar.resize(960, bar.heightForWidth(960));
-    bar.show();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(bar.searchField()));
     bar.searchField()->setText("unfinished search");
     bar.searchField()->setSelection(2, 6);
     bar.setFilterValues("status", {"Review"});

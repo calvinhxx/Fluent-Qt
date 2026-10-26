@@ -19,7 +19,11 @@
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QImage>
+#include <QLayout>
+#include <QVector>
 #include <QPixmap>
+#include <QPointer>
+#include <QtTest/QTest>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QStringLiteral>
@@ -142,6 +146,72 @@ void initializeQtTestEnvironment()
     fluent::initializeResources();
     qApp->setFont(Typography::Styles::Body.toQFont());
     initializeHeadlessTestFixedFont();
+}
+
+::testing::AssertionResult showAndFocusWidget(QWidget* target)
+{
+    if (!target)
+        return ::testing::AssertionFailure() << "Cannot focus a null test widget";
+    QPointer<QWidget> focus(target);
+    QPointer<QWidget> host(target->window());
+    host->show();
+    if (!focus || !host)
+        return ::testing::AssertionFailure() << "Test widget was destroyed while showing its window";
+    if (!isHeadlessPlatform()) {
+        if (!QTest::qWaitForWindowExposed(host.data()))
+            return ::testing::AssertionFailure() << "Test window did not become exposed";
+        if (!focus || !host)
+            return ::testing::AssertionFailure() << "Test widget was destroyed before native activation";
+        // Wayland delivers activation through the compositor instead of an application request.
+        if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland"), Qt::CaseInsensitive)) {
+            host->activateWindow();
+            if (!QTest::qWaitForWindowActive(host.data()))
+                return ::testing::AssertionFailure() << "Test window did not become active";
+        }
+    }
+    if (!focus)
+        return ::testing::AssertionFailure() << "Test focus target was destroyed";
+    focus->setFocus(Qt::OtherFocusReason);
+    if (!QTest::qWaitFor([focus] { return focus && focus->hasFocus(); }))
+        return ::testing::AssertionFailure() << "Test widget did not receive initial focus";
+    return ::testing::AssertionSuccess();
+}
+
+::testing::AssertionResult waitForStableLayouts(const QList<QWidget*>& widgets)
+{
+    if (widgets.isEmpty())
+        return ::testing::AssertionFailure() << "No test layouts were selected";
+    QList<QPointer<QWidget>> watched;
+    for (QWidget* widget : widgets) {
+        if (!widget || !widget->layout())
+            return ::testing::AssertionFailure() << "A selected test widget has no layout";
+        watched.append(widget);
+    }
+    QVector<QRect> previousGeometry;
+    const bool settled = QTest::qWaitFor([&] {
+        QVector<QRect> geometry;
+        geometry.reserve(watched.size() * 2);
+        for (const auto& widget : watched) {
+            if (!widget || !widget->layout()) {
+                previousGeometry.clear();
+                return false;
+            }
+            const QRect widgetRect = widget->geometry();
+            const QRect layoutRect = widget->layout()->geometry();
+            if (!widgetRect.isValid() || !layoutRect.isValid()) {
+                previousGeometry.clear();
+                return false;
+            }
+            geometry.append(widgetRect);
+            geometry.append(layoutRect);
+        }
+        const bool stable = geometry == previousGeometry;
+        previousGeometry = geometry;
+        return stable;
+    });
+    if (!settled)
+        return ::testing::AssertionFailure() << "Selected test layouts did not reach valid stable geometry";
+    return ::testing::AssertionSuccess();
 }
 
 bool canCaptureAccessibilityEvents()
