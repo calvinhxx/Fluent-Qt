@@ -193,6 +193,28 @@ checks. The tested Ubuntu 22.04 environment can crash while rendering multiple
 without FluentQt. Track that environment limitation separately from XCB results;
 a passing XCB run does not validate Wayland.
 
+WSLg can report a physical D3D12 GPU while CPU-to-GPU uploads are slow. The
+[WSL upload regression report](https://github.com/microsoft/WSL/issues/41784)
+includes WSL 3.0.3. A local x64/glibc comparison reproduced the slow upload in
+a standalone Qt program without FluentQt. For that environment, the following
+process-only workaround selects a different small-copy path without changing
+rendering density or multisampling:
+
+```bash
+env GLIBC_TUNABLES=glibc.cpu.x86_rep_movsb_threshold=1048576 \
+  ./build/vcpkg-linux/app/fluent_qt_gallery
+
+env GLIBC_TUNABLES=glibc.cpu.x86_rep_movsb_threshold=1048576 \
+  python3 -m fluentqt_gallery
+```
+
+Use the matching built/installed executable or Python environment. If
+`GLIBC_TUNABLES` already contains settings, preserve its other keys and replace
+only `glibc.cpu.x86_rep_movsb_threshold`. glibc reads this setting at process
+startup. Keep it out of application defaults and global shell configuration;
+record default and workaround runs separately. Improved upload timing does not
+by itself establish that Gallery interaction or native visual checks pass.
+
 VisualCheck tests remain manual and use the same direct-binary pattern with
 `--gtest_filter="*VisualCheck*"`.
 
