@@ -487,6 +487,8 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Cache Emscripten SDK",
         "      - name: Install and activate Emscripten",
         "      - name: Cache Emscripten system libraries",
+        "      - name: Cache pinned Qt accessibility sources",
+        "      - name: Fetch and verify pinned Qt accessibility sources",
         "      - name: Configure and build WebAssembly targets",
         "      - name: Verify installed FluentQt WebAssembly consumer",
         "      - name: Cache Chromium",
@@ -542,6 +544,33 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         errors.append(
             "ci-wasm.yml must exactly install and activate the audited emsdk revision"
         )
+
+    source_paths = named_step_section(build, "Configure runner paths")
+    source_cache_env = '          echo "FLUENT_QT_WASM_SOURCE_CACHE=$RUNNER_TEMP/fluentqt-qt-source-cache" >> "$GITHUB_ENV"'
+    if uncommented_workflow_lines(source_paths).count(source_cache_env) != 1:
+        errors.append("ci-wasm.yml must share its pinned Qt source cache with build and installed consumer")
+
+    source_cache = named_step_section(build, "Cache pinned Qt accessibility sources")
+    expected_source_cache = [
+        "      - name: Cache pinned Qt accessibility sources",
+        "        uses: actions/cache@<commit>",
+        "        with:",
+        "          path: ${{ env.FLUENT_QT_WASM_SOURCE_CACHE }}",
+        "          key: fluentqt-qt-wasm-source-6.9.3-be09b211-${{ hashFiles('src/compatibility/private/wasm/qt-6.9.3/manifest.json') }}",
+    ]
+    if uncommented_workflow_lines(source_cache) != expected_source_cache:
+        errors.append("ci-wasm.yml must key the pinned Qt source cache by version, revision and manifest")
+
+    source_fetch = named_step_section(build, "Fetch and verify pinned Qt accessibility sources")
+    expected_source_fetch = [
+        "      - name: Fetch and verify pinned Qt accessibility sources",
+        "        shell: bash",
+        "        run: |",
+        "          python tools/wasm/test_qt_accessibility_overlay.py",
+        '          python tools/wasm/qt_accessibility_overlay.py fetch --cache "$FLUENT_QT_WASM_SOURCE_CACHE"',
+    ]
+    if uncommented_workflow_lines(source_fetch) != expected_source_fetch:
+        errors.append("ci-wasm.yml must explicitly verify and fetch pinned Qt sources before offline configure")
 
     configure_step = named_step_section(
         build, "Configure and build WebAssembly targets"

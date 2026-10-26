@@ -73,6 +73,14 @@ FluentQt's own source remains MIT licensed. The Pages payload includes the full
 Qt license notice, a link to the exact Qt 6.9.3 corresponding source archive,
 the Emscripten license, this notice, and the complete FluentQt source link.
 
+The browser adapter applies two local accessibility lifecycle patches to
+fixed official Qt 6.9.3 sources. The source manifest and patches are under
+`src/compatibility/private/wasm/qt-6.9.3/`; the build helper fetches and checks
+the corresponding files in an external source cache. Upstream copyright and
+SPDX declarations remain intact. These Qt-derived objects retain their
+upstream licensing and are not relicensed by FluentQt or copied into its
+component implementations.
+
 ## Emscripten compiler runtime
 
 The C++ Web Gallery is compiled with Emscripten 3.1.70. Emscripten is offered

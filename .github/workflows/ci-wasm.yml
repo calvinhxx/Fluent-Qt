@@ -32,6 +32,7 @@ jobs:
           echo "QT_WASM_ROOT=$RUNNER_TEMP/Qt/$QT_VERSION/wasm_singlethread" >> "$GITHUB_ENV"
           echo "EMSDK_ROOT=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
           echo "EM_CACHE=$RUNNER_TEMP/emscripten-cache" >> "$GITHUB_ENV"
+          echo "FLUENT_QT_WASM_SOURCE_CACHE=$RUNNER_TEMP/fluentqt-qt-source-cache" >> "$GITHUB_ENV"
 
       - name: Validate browser tier
         shell: bash
@@ -127,6 +128,18 @@ jobs:
         with:
           path: ${{ runner.temp }}/emscripten-cache
           key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5
+
+      - name: Cache pinned Qt accessibility sources
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.FLUENT_QT_WASM_SOURCE_CACHE }}
+          key: fluentqt-qt-wasm-source-6.9.3-be09b211-${{ hashFiles('src/compatibility/private/wasm/qt-6.9.3/manifest.json') }}
+
+      - name: Fetch and verify pinned Qt accessibility sources
+        shell: bash
+        run: |
+          python tools/wasm/test_qt_accessibility_overlay.py
+          python tools/wasm/qt_accessibility_overlay.py fetch --cache "$FLUENT_QT_WASM_SOURCE_CACHE"
 
       - name: Configure and build WebAssembly targets
         shell: bash

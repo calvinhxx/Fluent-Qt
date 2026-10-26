@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "qt_version": "6.9.3",
+  "emscripten_version": "3.1.70",
+  "qtbase_commit": "be09b211db70e1b0155d05c18668ad76e7e3df51",
+  "description": "Qt Wasm DOM elements retire before cached accessible interfaces are deleted; original Qt class layouts and source licenses are retained.",
+  "files": {
+    "src/plugins/platforms/wasm/qwasmaccessibility.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmaccessibility.h",
+      "sha256": "bca54ccc7dbf7f8eebf34384fffce45d4ec20b52baf592c340fe25cc11eb8603",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmaccessibility.cpp": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmaccessibility.cpp",
+      "sha256": "34a0f8d8dd78a5ce6dd75600a87f35b907e98cafdb64f15e50ba2b65e58de5d2",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmintegration.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmintegration.h",
+      "sha256": "01a6daa9738bad93b6433aefc7e1f3da0a3e2cc219459eee8f03959ff98af512",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasminputcontext.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasminputcontext.h",
+      "sha256": "f84d93508d344eb2f6b9ea6cb706129f61bafe677662810c5bd17c69003b5fa4",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmwindow.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmwindow.h",
+      "sha256": "1a63f0124f7836046ccd3327e8d12ed3304566c996fd1aec55558d085eaad994",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmwindowtreenode.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmwindowtreenode.h",
+      "sha256": "476a5506573a7ecc40d2fedbf61783cdc3cce7b1c0758cf8894a7b758cf86737",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmwindowstack.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmwindowstack.h",
+      "sha256": "a60ef67cb8756d0c271749033d429f0091be8a97d9dcab3a7ca856fffc9e7041",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmwindownonclientarea.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmwindownonclientarea.h",
+      "sha256": "183fdf99a8740320d9f8290226d2ff4fd0bca379dbf34297eb0eae767d05e965",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmcompositor.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmcompositor.h",
+      "sha256": "365f6696d61e7dbd908b6bccd93d845f1762243d1ef2c8366ef8bae2a73e392e",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmscreen.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmscreen.h",
+      "sha256": "b88cc01df297336359ebc3c2b6cff1f83a430da640b0c72f3e528c95bc0d94d9",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmcursor.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmcursor.h",
+      "sha256": "8bb859266a21f8626834a8a9ba05c2956e8ee1725ea9a04f19e4f9ef4a013ce1",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/plugins/platforms/wasm/qwasmbackingstore.h": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmbackingstore.h",
+      "sha256": "f18f5ba66746ce81ae84971daa8d6bf0972ce542992edde9285c95a990c40e52",
+      "license": "LicenseRef-Qt-Commercial OR GPL-3.0-only"
+    },
+    "src/gui/accessible/qaccessiblecache.cpp": {
+      "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/gui/accessible/qaccessiblecache.cpp",
+      "sha256": "f653fb849446dd3777258e03946c14c3889c9279e09038ea8ca659630862b03a",
+      "license": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only"
+    }
+  },
+  "sdk_archives": {
+    "lib/libQt6Gui.a": {
+      "sha256": "d271e9e7082e7dcfc9d53d2f09679e374ecb3e468cedffb1cb94bf545c92718e",
+      "member": "qaccessiblecache.cpp.o"
+    },
+    "plugins/platforms/libqwasm.a": {
+      "sha256": "a1128576f95178579b9f127f02e89d2f61393a46a2acbdf6293efff039bdf849",
+      "member": "qwasmaccessibility.cpp.o"
+    }
+  },
+  "sdk_headers": {
+    "include/QtGui/6.9.3/QtGui/private/qaccessiblecache_p.h": {
+      "sha256": "9fd6d46d90ab2cd2a15f4fe58dd85a62d9b40514f12870dbdf65ae4a95ee71a8",
+      "license": "LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only"
+    }
+  },
+  "patches": {
+    "src/gui/accessible/qaccessiblecache.cpp": {
+      "file": "qaccessiblecache.cpp.patch",
+      "sha256": "02c28555de1eab4e49647f03d90cc0a5e9ed1543ac28f082b5807b370c9f3e88"
+    },
+    "src/plugins/platforms/wasm/qwasmaccessibility.cpp": {
+      "file": "qwasmaccessibility.cpp.patch",
+      "sha256": "8a1ebfd888a0d682a614237556a9758ac2afff7dc2c4e533560cd2a430ca7f2b"
+    }
+  }
+}

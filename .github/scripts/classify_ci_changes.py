@@ -107,8 +107,10 @@ WASM_CI_FILES = {
     ".github/scripts/test_wasm_browser_smoke.py",
     ".github/scripts/test_wasm_spatial_smoke.py",
     ".github/scripts/wasm_command_palette.py",
+    ".github/scripts/wasm_drawer_lifecycle.py",
     ".github/scripts/wasm_command_submenus.py",
     ".github/scripts/wasm_form.py",
+    ".github/scripts/wasm_gallery_ready.py",
     ".github/scripts/wasm_chart_workbench.py",
     ".github/scripts/wasm_data_grid.py",
     ".github/scripts/wasm_auto_suggest.py",
@@ -123,6 +125,17 @@ WASM_CI_FILES = {
     ".github/workflows/ci-wasm.yml",
     ".github/workflows/pages.yml",
 }
+
+# These paths build only the opt-in browser adapter, even when they live under
+# the shared CMake or private compatibility trees. Keep one routing inventory.
+WASM_ONLY_FILES = {
+    "cmake/FluentQtWasmAccessibility.cmake",
+}
+WASM_ONLY_PREFIXES = (
+    "cmake/wasm-accessibility/",
+    "src/compatibility/private/wasm/",
+    "tools/wasm/",
+)
 
 GITHUB_PULL_FILES_LIMIT = 3000
 
@@ -226,8 +239,15 @@ def is_documentation_path(path: str) -> bool:
     )
 
 
+def is_wasm_only_path(path: str) -> bool:
+    """Return whether a path belongs exclusively to the browser adapter build."""
+    return path in WASM_ONLY_FILES or path.startswith(WASM_ONLY_PREFIXES)
+
+
 def affects_pyside(path: str) -> bool:
     """Return whether a non-documentation path can affect PySide6 artifacts."""
+    if is_wasm_only_path(path):
+        return False
     return (
         path in PYSIDE_ROOT_FILES
         or path in PYSIDE_CI_FILES
@@ -241,7 +261,8 @@ def affects_pyside(path: str) -> bool:
 def affects_wasm(path: str) -> bool:
     """Return whether a non-documentation path can affect browser artifacts."""
     return (
-        path in WASM_ROOT_FILES
+        is_wasm_only_path(path)
+        or path in WASM_ROOT_FILES
         or path in WASM_CI_FILES
         or path.startswith(WASM_PREFIXES)
         or path.endswith(".qrc")
@@ -307,7 +328,7 @@ def select_cpp_tests(paths: list[str]) -> CppTestSelection:
     for path in normalized:
         if not isinstance(path, str) or _has_unsafe_path_syntax(path):
             return _all_cpp_tests()
-        if is_documentation_path(path):
+        if is_documentation_path(path) or is_wasm_only_path(path):
             continue
         if path.startswith(("app/", "tests/gallery/")):
             groups.add("gallery")

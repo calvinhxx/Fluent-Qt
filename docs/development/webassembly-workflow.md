@@ -32,11 +32,28 @@ example paths match a default macOS Qt installation; adjust them for the host:
 source "$HOME/Qt/Tools/emsdk/emsdk_env.sh"
 export QT_WASM_ROOT="$HOME/Qt/6.9.3/wasm_singlethread"
 export QT_HOST_ROOT="$HOME/Qt/6.9.3/macos"
+export FLUENT_QT_WASM_SOURCE_CACHE="$PWD/build/qt-wasm-source-cache"
 ```
 
 Confirm that `em++ --version` reports 3.1.70 before configuring. Qt minor
 versions and Emscripten versions are coupled; do not silently substitute a
 different SDK version.
+
+The Qt 6.9.3 browser adapter uses two small, pinned Qt accessibility patches.
+Fetch their exact upstream sources explicitly before configuration:
+
+```bash
+python3 tools/wasm/qt_accessibility_overlay.py fetch \
+  --cache "$FLUENT_QT_WASM_SOURCE_CACHE"
+```
+
+The manifest under `src/compatibility/private/wasm/qt-6.9.3/` owns source
+revision, hashes, licenses and SDK identity. `fetch --offline` verifies an
+existing cache and fails on missing or mismatched files. CMake reads only that
+cache, builds the two replacement objects in a separate adapter build, and
+keeps the Qt SDK unchanged. Native builds do not load this helper or require
+Python or Qt private headers. Keep the same cache available for the installed
+WebAssembly consumer below.
 
 ## Configure and build
 
@@ -236,7 +253,13 @@ Use `--viewport-width 1920 --viewport-height 1080` to exercise the large-screen
 adaptive profile.
 
 Use `--mode full` before changing route construction, settings persistence,
-dialogs, menus, the Web shell, or Pages packaging.
+dialogs, menus, the Web shell, or Pages packaging. The existing full command
+palette/overlay contract also recreates the Drawer five times. Each opening
+requires one correctly typed proxy for Modal, DimEnabled, CloseOutside, Blur,
+Dim and Close; closure must retire every Drawer proxy, including hidden and
+construction-time nodes, before the next opening. It waits for that lifecycle
+condition without a fixed delay or selecting the first duplicate. Results and
+snapshots are under `command-palette-validation/drawer-lifecycle/`.
 
 ### Spatial WebGL validation
 
@@ -299,7 +322,10 @@ Reusable C++ code stays platform-neutral:
   construction is identical on native and browser targets.
 
 Browser-only C++ is confined to `platforms/webassembly/`,
-`app/platform/wasm/`, and `examples/hello_world/platform/wasm/`. Build-system
+`app/platform/wasm/`, and `examples/hello_world/platform/wasm/`. Pinned Qt
+accessibility source manifests and patches live in the private compatibility
+owner `src/compatibility/private/wasm/`; fetched sources remain in the external
+cache, rather than components. Build-system
 and deployment policy stay in the WebAssembly CMake/CI modules.
 
 ## Consumer contract

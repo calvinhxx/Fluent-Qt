@@ -193,6 +193,14 @@ if(FLUENT_QT_INSTALL)
         DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt/third_party/inter"
         COMPONENT Development)
     if(EMSCRIPTEN AND FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FluentQtWasmAccessibility.cmake"
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}" COMPONENT Development)
+        install(PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/tools/wasm/qt_accessibility_overlay.py"
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}/wasm-accessibility" COMPONENT Development)
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/wasm-accessibility/CMakeLists.txt"
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}/wasm-accessibility/build-project" COMPONENT Development)
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/compatibility/private/wasm/qt-6.9.3/"
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}/wasm-accessibility/data" COMPONENT Development)
         install(FILES
             "${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/noto-sans-sc/LICENSE.txt"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt/third_party/noto-sans-sc"

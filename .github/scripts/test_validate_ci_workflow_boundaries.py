@@ -615,6 +615,28 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
                 self.assertTrue(any("bounded browser failure diagnostics" in error for error in errors))
 
+    def test_wasm_source_fetch_and_unit_checks_cannot_be_disabled_or_fail_open(self):
+        commands = (
+            "python tools/wasm/test_qt_accessibility_overlay.py",
+            'python tools/wasm/qt_accessibility_overlay.py fetch --cache "$FLUENT_QT_WASM_SOURCE_CACHE"',
+        )
+        for command in commands:
+            for replacement in ("# " + command, "echo " + command, command + " || true", ""):
+                with self.subTest(command=command, replacement=replacement):
+                    errors = self.workflow_errors_with_replacement("ci-wasm.yml", command, replacement)
+                    self.assertTrue(any("explicitly verify and fetch pinned Qt sources" in error for error in errors))
+
+    def test_wasm_source_cache_requires_manifest_identity_and_shared_path(self):
+        for original, replacement, expected in (
+            ("be09b211-${{ hashFiles('src/compatibility/private/wasm/qt-6.9.3/manifest.json') }}",
+             "be09b211", "key the pinned Qt source cache"),
+            ('FLUENT_QT_WASM_SOURCE_CACHE=$RUNNER_TEMP/fluentqt-qt-source-cache',
+             'FLUENT_QT_WASM_SOURCE_CACHE=/tmp/other', "share its pinned Qt source cache"),
+        ):
+            with self.subTest(original=original):
+                errors = self.workflow_errors_with_replacement("ci-wasm.yml", original, replacement)
+                self.assertTrue(any(expected in error for error in errors))
+
     def test_wasm_emsdk_revision_cannot_drift(self):
         errors = self.workflow_errors_with_replacement(
             "ci-wasm.yml",

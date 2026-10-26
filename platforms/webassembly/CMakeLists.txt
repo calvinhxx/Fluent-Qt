@@ -2,10 +2,16 @@ if(NOT EMSCRIPTEN)
     message(FATAL_ERROR
         "FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT requires an Emscripten toolchain")
 endif()
-if(NOT QT_VERSION_MAJOR EQUAL 6 OR Qt6_VERSION VERSION_LESS 6.9.3)
+if(NOT QT_VERSION_MAJOR EQUAL 6 OR NOT Qt6_VERSION VERSION_EQUAL 6.9.3)
     message(FATAL_ERROR
-        "WebAssembly support requires Qt 6.9.3 or newer (found Qt ${QT_VERSION_MAJOR} ${Qt${QT_VERSION_MAJOR}_VERSION})")
+        "WebAssembly support requires the reviewed Qt 6.9.3 SDK (found Qt ${QT_VERSION_MAJOR} ${Qt${QT_VERSION_MAJOR}_VERSION})")
 endif()
+
+include("${PROJECT_SOURCE_DIR}/cmake/FluentQtWasmAccessibility.cmake")
+fluent_qt_configure_wasm_accessibility_overlay(
+    "${PROJECT_SOURCE_DIR}/tools/wasm/qt_accessibility_overlay.py"
+    "${PROJECT_SOURCE_DIR}/src/compatibility/private/wasm/qt-6.9.3"
+    "${PROJECT_SOURCE_DIR}/cmake/wasm-accessibility")
 
 add_library(FluentQtWasmRuntime STATIC
     "${PROJECT_SOURCE_DIR}/include/FluentQt/WebAssembly.h"

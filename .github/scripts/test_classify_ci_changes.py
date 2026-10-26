@@ -392,6 +392,39 @@ class ClassifyCiChangesTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assert_classification([path], native=True, pyside=False, wasm=True)
 
+    def test_wasm_overlay_inputs_do_not_enable_pyside_or_native_ctest(self):
+        paths = (
+            "tools/wasm/qt_accessibility_overlay.py",
+            "tools/wasm/test_qt_accessibility_overlay.py",
+            "src/compatibility/private/wasm/qt-6.9.3/manifest.json",
+            "src/compatibility/private/wasm/qt-6.9.3/qaccessiblecache.cpp.patch",
+            "src/compatibility/private/wasm/qt-6.9.3/qwasmaccessibility.cpp.patch",
+            "cmake/wasm-accessibility/CMakeLists.txt",
+            "cmake/FluentQtWasmAccessibility.cmake",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assert_classification([path], native=True, pyside=False, wasm=True)
+                self.assert_cpp_selection([path], scope="none", labels="", targets=[])
+
+    def test_wasm_overlay_routing_does_not_hide_shared_or_mixed_core_changes(self):
+        browser = "src/compatibility/private/wasm/qt-6.9.3/manifest.json"
+        for path in (
+            "src/compatibility/private/ItemViewSelectionCompat_p.h",
+            "cmake/FluentQtConfig.cmake.in", "CMakeLists.txt",
+            "src/compatibility/private/wasm_common.h",
+        ):
+            for paths in ([path], [browser, path]):
+                with self.subTest(paths=paths):
+                    self.assert_classification(paths, native=True, pyside=True, wasm=True)
+                    self.assert_cpp_selection(paths, scope="all", labels="^qt$",
+                                              targets=["fluent_qt_all_tests"])
+        self.assert_cpp_selection(
+            [browser, "src/components/collections/ListView.cpp"],
+            scope="selected", labels="^(collections)$",
+            targets=["fluent_qt_collections_tests"],
+        )
+
     def test_shared_plugin_example_change_runs_native_and_wasm(self):
         for path in (
             "examples/plugin_extension/PluginExtensionWindow.cpp",

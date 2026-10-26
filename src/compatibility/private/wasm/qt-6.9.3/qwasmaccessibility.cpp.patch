@@ -1,0 +1,30 @@
+--- a/src/plugins/platforms/wasm/qwasmaccessibility.cpp
++++ b/src/plugins/platforms/wasm/qwasmaccessibility.cpp
+@@ -14,0 +15,4 @@
++
++QT_BEGIN_NAMESPACE
++void fluentQtSetWasmInterfaceDeletionCallback(void (*callback)(QAccessibleInterface *));
++QT_END_NAMESPACE
+@@ -29,0 +34,4 @@
++    QT_PREPEND_NAMESPACE(fluentQtSetWasmInterfaceDeletionCallback)([](QAccessibleInterface *iface) {
++        if (QWasmAccessibility *accessibility = QWasmAccessibility::get())
++            accessibility->destroyHtmlElement(iface);
++    });
+@@ -33,0 +42,2 @@
++    QT_PREPEND_NAMESPACE(fluentQtSetWasmInterfaceDeletionCallback)(nullptr);
++    cleanup();
+@@ -305,2 +315,8 @@
+-    Q_UNUSED(iface);
+-    qCDebug(lcQpaAccessibility) << "TODO destroyHtmlElement";
++    auto it = m_elements.find(iface);
++    if (it == m_elements.end())
++        return;
++    emscripten::val element = it.value();
++    m_elements.erase(it);
++    emscripten::val parent = element["parentNode"];
++    if (!parent.isNull() && !parent.isUndefined())
++        parent.call<void>("removeChild", element);
+@@ -781 +797,2 @@
+-
++    while (!m_elements.isEmpty())
++        destroyHtmlElement(m_elements.constBegin().key());
