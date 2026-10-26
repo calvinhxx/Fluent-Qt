@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "QtTestEnvironment.h"
 #include <QAccessible>
 #include <QApplication>
 #include <QClipboard>
@@ -82,8 +83,7 @@ TEST(TagInputTest, RtlTagsMirrorWithoutLosingQueryAndUseVisualArrowDirection)
     input.resize(420, 40);
     input.setQueryIconVisible(false);
     input.setSelectedItems({member("1", "Alpha"), member("2", "Beta")});
-    input.show();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(&input));
     const auto buttons = tags(input);
     ASSERT_EQ(buttons.size(), 2);
     const QRect first = tagBounds(buttons.first(), input);
@@ -172,9 +172,7 @@ TEST(TagInputTest, Contract_ReorderingRenamingAndReadonlyKeepTagFocusAndIdentity
     TagInput input;
     input.resize(420, 40);
     input.setSelectedItems({member("a", "Alex"), member("b", "Bao")});
-    input.show();
-    input.activateWindow();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(&input));
     auto* alex = tags(input).first();
     auto* bao = tags(input).last();
     bao->setFocus();
@@ -202,9 +200,7 @@ TEST(TagInputTest, PointerRemovalIsConfinedToCloseButton)
     TagInput input;
     input.resize(400, 40);
     input.addItem("member", "A long member name with a team description");
-    input.show();
-    input.activateWindow();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(&input));
     QPointer<Button> close = tags(input).first();
     auto* chip = close->parentWidget();
     EXPECT_EQ(close->size(), QSize(24, 24));
@@ -214,9 +210,11 @@ TEST(TagInputTest, PointerRemovalIsConfinedToCloseButton)
     EXPECT_FALSE(label->isTextElided());
     input.resize(160, input.height());
     QApplication::processEvents();
+    ASSERT_TRUE(tests::support::waitForStableLayouts({chip}));
     EXPECT_TRUE(label->isTextElided());
     input.resize(400, input.height());
     QApplication::processEvents();
+    ASSERT_TRUE(tests::support::waitForStableLayouts({chip}));
     EXPECT_FALSE(label->isTextElided());
     QSignalSpy selection(&input, &TagInput::selectionChanged);
     QTest::mouseClick(chip, Qt::LeftButton, Qt::NoModifier, QPoint(12, chip->height() / 2));
@@ -244,10 +242,7 @@ TEST(TagInputTest, KeyboardFocusRemovalAndTabExit)
     layout.addWidget(&input);
     layout.addWidget(&after);
     input.setSelectedItems({member("a", "Alex"), member("b", QStringLiteral("林晓"))});
-    window.show();
-    window.activateWindow();
-    input.setFocus();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(&input));
     QTest::keyClick(&input, Qt::Key_Backspace);
     EXPECT_EQ(input.selectedCount(), 2);
     ASSERT_EQ(QApplication::focusWidget(), tags(input).last());
@@ -297,10 +292,7 @@ TEST(TagInputTest, InputMethodFromFocusedTagKeepsTheFirstSyllableInComposition)
     input.resize(360, 40);
     input.setAsyncSuggestionsEnabled(true);
     input.setDebounceInterval(1);
-    input.show();
-    input.activateWindow();
-    input.setFocus();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(&input));
     QSignalSpy requests(&input, &TagInput::suggestionsRequested);
     QTest::keyClick(&input, Qt::Key_Backspace);
     auto* tag = tags(input).first();
@@ -334,10 +326,7 @@ TEST(TagInputTest, InputMethodCommitDoesNotStealFocusFromApplicationCallbacks)
     layout.addWidget(&input);
     layout.addWidget(&after);
     input.addItem("alex", "Alex");
-    window.show();
-    window.activateWindow();
-    input.setFocus();
-    QApplication::processEvents();
+    ASSERT_TRUE(tests::support::showAndFocusWidget(&input));
     QTest::keyClick(&input, Qt::Key_Backspace);
     auto* tag = tags(input).first();
     QInputMethodEvent preedit(QStringLiteral("chen"), {});

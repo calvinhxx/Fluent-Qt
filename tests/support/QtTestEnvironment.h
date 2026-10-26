@@ -2,6 +2,7 @@
 #define FLUENT_QT_QT_TEST_ENVIRONMENT_H
 
 #include <QImage>
+#include <QList>
 #include <QSize>
 #include <QString>
 
@@ -22,6 +23,11 @@ struct VisualSnapshotOptions {
 
 void configureOffscreenPlatformForAutomation();
 void initializeQtTestEnvironment();
+// Establish native exposure, activation and initial focus before test input.
+// Call with ASSERT_TRUE so a missing prerequisite fails the owning test.
+::testing::AssertionResult showAndFocusWidget(QWidget* target);
+// Wait for caller-selected widget and layout rectangles to become valid and stable.
+::testing::AssertionResult waitForStableLayouts(const QList<QWidget*>& widgets);
 // Qt 5.15 through 6.5 dispatch an installed QAccessible update handler only
 // while the platform accessibility bridge is active. Qt 6.6+ dispatches the
 // in-process handler independently, which makes event contracts observable on

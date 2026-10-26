@@ -842,8 +842,7 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows)
     const QModelIndex personal = model->index(1, 0);
 
     tv->toggleExpanded(work);
-    QTest::qWait(320);
-    processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return tv->chevronRotation(work) == 1.0; }, 1000));
     ASSERT_TRUE(tv->isExpanded(work));
 
     const qreal subtreeHeight = tv->visualRect(firstChild).height() + tv->visualRect(secondChild).height();
@@ -851,8 +850,12 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows)
     ASSERT_FALSE(personalRect.isEmpty());
 
     tv->toggleExpanded(work);
-    QTest::qWait(80);
-    processEvents();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const qreal progress = tv->chevronRotation(work);
+            return progress > 0.0 && progress < 1.0;
+        },
+        1000));
 
     const qreal progress = tv->chevronRotation(work);
     ASSERT_GT(progress, 0.0);

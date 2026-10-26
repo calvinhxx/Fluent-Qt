@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "QtTestEnvironment.h"
 #include <QAccessible>
 #include <QApplication>
 #include <QInputMethodEvent>
@@ -53,13 +54,10 @@ TreeView* tree(TreeSelect& box)
 {
     return box.window()->findChild<TreeView*>(QStringLiteral("TreeSelectTree"));
 }
-void show(QWidget& window, TreeSelect& box)
+::testing::AssertionResult show(QWidget& window, TreeSelect& box)
 {
     window.resize(520, 580);
-    window.show();
-    window.activateWindow();
-    box.setFocus();
-    QApplication::processEvents();
+    return tests::support::showAndFocusWidget(&box);
 }
 } // namespace
 
@@ -74,7 +72,7 @@ TEST(TreeSelectTest, EmptyCopyIsCallerOwnedBeforeAndAfterPopupCreation)
     box->setModel(&model);
     box->setEmptyText(QStringLiteral("没有匹配的团队"));
     box->setSearchText(QStringLiteral("missing"));
-    show(window, *box);
+    ASSERT_TRUE(show(window, *box));
     box->open();
     auto* label = window.findChild<fluent::textfields::Label*>(QStringLiteral("TreeSelectEmpty"));
     ASSERT_NE(label, nullptr);
@@ -106,7 +104,7 @@ TEST(TreeSelectTest, CompactRowsFitWithoutPhantomScrollAndChevronIsDecorative)
     for (int row = 0; row < 8; ++row)
         model.appendRow(item(QString::number(row), QStringLiteral("Team %1").arg(row)));
     box->setModel(&model);
-    show(window, *box);
+    ASSERT_TRUE(show(window, *box));
     auto* edit = input(*box);
     auto* decoration = edit->findChild<fluent::FontIcon*>(QStringLiteral("AutoSuggestBoxQueryDecoration"));
     auto* action = edit->findChild<fluent::basicinput::Button*>(QStringLiteral("AutoSuggestBoxQueryButton"));
@@ -145,7 +143,7 @@ TEST(TreeSelectTest, MultipleSelectionKeepsBranchExpansionAndCheckTargetsSeparat
     model.appendRow(branch);
     box->setSelectionMode(TreeSelect::SelectionMode::Multiple);
     box->setModel(&model);
-    show(window, *box);
+    ASSERT_TRUE(show(window, *box));
     box->open();
     QApplication::processEvents();
     auto* view = tree(*box);
@@ -219,7 +217,7 @@ TEST(TreeSelectTest, SearchPreservesAncestorsAndKeyboardSelectsThenCloses)
     QStandardItemModel model;
     populate(model);
     box.setModel(&model);
-    show(window, box);
+    ASSERT_TRUE(show(window, box));
     box.open();
     ASSERT_TRUE(box.isOpen());
     ASSERT_NE(tree(box), nullptr);
@@ -255,7 +253,7 @@ TEST(TreeSelectTest, MultipleCheckStateDoesNotModifySourceAndTabExits)
     populate(model);
     box.setModel(&model);
     box.setSelectionMode(TreeSelect::SelectionMode::Multiple);
-    show(window, box);
+    ASSERT_TRUE(show(window, box));
     box.open();
     auto* view = tree(box);
     ASSERT_NE(view, nullptr);
@@ -280,7 +278,7 @@ TEST(TreeSelectTest, InputMethodPreeditDoesNotFilterChooseOrDismiss)
     QStandardItemModel model;
     populate(model);
     box.setModel(&model);
-    show(window, box);
+    ASSERT_TRUE(show(window, box));
     box.open();
     QInputMethodEvent preedit(QStringLiteral("she ji"), {});
     QApplication::sendEvent(input(box), &preedit);
@@ -336,7 +334,7 @@ TEST(TreeSelectTest, OpeningCallbackCanDeleteTheControlAndItsReparentedPopup)
     auto* box = new TreeSelect(&window);
     box->setGeometry(30, 30, 320, 40);
     box->setModel(&model);
-    show(window, *box);
+    ASSERT_TRUE(show(window, *box));
     QPointer<TreeSelect> guard(box);
     QObject::connect(box, &TreeSelect::isOpenChanged, box, [box](bool open) {
         if (open)
@@ -358,7 +356,7 @@ TEST(TreeSelectTest, ClosedSelectionIsReplacedByInputMethodQueryWithoutChangingV
     populate(model);
     box.setModel(&model);
     box.setSelectedKeys({"client"});
-    show(window, box);
+    ASSERT_TRUE(show(window, box));
     QInputMethodEvent preedit(QStringLiteral("she ji"), {});
     QApplication::sendEvent(input(box), &preedit);
     EXPECT_TRUE(box.searchText().isEmpty());
@@ -397,7 +395,7 @@ TEST(TreeSelectTest, LazilyCreatesOnlyTheActiveInputAndOneTreePopup)
         EXPECT_EQ(box.findChild<TagInput*>(), nullptr);
         EXPECT_EQ(box.selectedKeys(), QStringList{"client"});
     }
-    show(window, box);
+    ASSERT_TRUE(show(window, box));
     box.open();
     auto* view = tree(box);
     ASSERT_NE(view, nullptr);
@@ -482,7 +480,7 @@ TEST(TreeSelectTest, BatchedModelRefreshPreservesCollapsedBranchesAndScroll)
         model.appendRow(branch);
     }
     box.setModel(&model);
-    show(window, box);
+    ASSERT_TRUE(show(window, box));
     box.open();
     auto* view = tree(box);
     QApplication::processEvents();

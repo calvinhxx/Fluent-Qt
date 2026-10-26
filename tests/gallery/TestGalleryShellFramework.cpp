@@ -55,6 +55,7 @@
 #include "components/navigation/StackContentHost.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/scrolling/ScrollView.h"
+#include "design/Spacing.h"
 #include "components/status_info/Shimmer.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/AutoSuggestBox.h"
@@ -1466,9 +1467,10 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationScrollbarUsesInsetOverlay)
     const QRect barGeometry = scrollBar->geometry();
     EXPECT_GE(barGeometry.left(), tree->rect().left());
     EXPECT_LT(barGeometry.right(), tree->rect().right());
-    EXPECT_GE(tree->rect().right() - barGeometry.right(), 4);
-    EXPECT_GE(barGeometry.top() - tree->rect().top(), 4);
-    EXPECT_GE(tree->rect().bottom() - barGeometry.bottom(), 4);
+    const int edgeInset = ::Spacing::XSmall / 2;
+    EXPECT_EQ(tree->rect().right() - barGeometry.right(), edgeInset);
+    EXPECT_EQ(barGeometry.top() - tree->rect().top(), edgeInset);
+    EXPECT_EQ(tree->rect().bottom() - barGeometry.bottom(), edgeInset);
 }
 
 TEST_F(GalleryShellFrameworkTest, NavigationAutoScrollDoesNotRevealPaneScrollbar)

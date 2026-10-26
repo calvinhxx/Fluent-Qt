@@ -64,6 +64,7 @@ from PySide6.QtGui import (
     QIcon,
     QImage,
     QKeySequence,
+    QMouseEvent,
     QPalette,
     QStandardItem,
     QStandardItemModel,
@@ -198,7 +199,11 @@ class FluentQtBindingTest(unittest.TestCase):
         handle = box.scrubHandleRect().center()
         finished = QSignalSpy(box.scrubFinished)
         QTest.mousePress(box, Qt.LeftButton, Qt.NoModifier, handle)
-        QTest.mouseMove(box, handle + QPoint(40, 0))
+        position = handle + QPoint(40, 0)
+        QApplication.sendEvent(box, QMouseEvent(
+            QEvent.MouseMove, QPointF(position), QPointF(box.mapToGlobal(position)),
+            Qt.NoButton, Qt.LeftButton, Qt.NoModifier,
+        ))
         self.assertEqual(box.value(), 40)
         QTest.keyClick(box, Qt.Key_Escape)
         QTest.mouseRelease(box, Qt.LeftButton, Qt.NoModifier, handle)
@@ -10678,14 +10683,14 @@ class FluentQtBindingTest(unittest.TestCase):
         QApplication.sendEvent(box, preedit)
         for key in (Qt.Key_Down, Qt.Key_Return, Qt.Key_Backspace):
             QTest.keyClick(box, key)
-        QTest.qWait(20)
+        wait_for_events(20)
         self.assertEqual(box.selectedCount(), 1)
         self.assertEqual(requested.count(), 0)
         self.assertEqual(submitted.count(), 0)
         committed = QInputMethodEvent()
         committed.setCommitString("陈")
         QApplication.sendEvent(box, committed)
-        QTest.qWait(20)
+        wait_for_events(20)
         self.assertEqual(requested.count(), 1)
         self.assertEqual(requested.at(0)[0], "陈")
         box.cancelSuggestions()
@@ -10696,13 +10701,13 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIsNotNone(tag)
         self.assertTrue(tag.testAttribute(Qt.WA_InputMethodEnabled))
         QApplication.sendEvent(tag, QInputMethodEvent("chen", []))
-        QTest.qWait(20)
+        wait_for_events(20)
         self.assertEqual(box.text(), "")
         self.assertEqual(requested.count(), 1)
         from_tag = QInputMethodEvent()
         from_tag.setCommitString("陈")
         QApplication.sendEvent(tag, from_tag)
-        QTest.qWait(20)
+        wait_for_events(20)
         self.assertTrue(box.hasFocus())
         self.assertEqual(box.text(), "陈")
         box.cancelSuggestions()

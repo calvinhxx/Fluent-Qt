@@ -5130,28 +5130,30 @@ with (
         self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
         self.addCleanup(fluentqt.set_theme, fluentqt.current_theme())
         fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
-        host = QWidget()
-        host.resize(640, 420)
+        window = fluentqt.Window()
+        host = window.contentHost()
+        window.resize(640, 420)
         content = PaintCounter("Live Gallery content", host)
         content.setGeometry(10, 10, 300, 180)
         cover_host = QWidget(host)
         cover_host.setGeometry(320, 10, 300, 180)
         splash = GallerySplashScreen(cover_host)
-        host.show()
+        window.show()
         splash.show()
         QApplication.processEvents()
         try:
-            before = host.grab(content.geometry()).toImage()
+            # Capture through the Gallery's real top-level paint device, including transparent content.
+            before = window.grab(QRect(content.mapTo(window, QPoint()), content.size())).toImage()
             splash.cache_dismissal_content(content)
             self.assertIsNotNone(content.graphicsEffect())
-            self.assertEqual(host.grab(content.geometry()).toImage(), before)
+            self.assertEqual(window.grab(QRect(content.mapTo(window, QPoint()), content.size())).toImage(), before)
             paints = content.paints
             for _ in range(3):
                 content.update()
-                host.grab()
+                window.grab()
             self.assertEqual(content.paints, paints)
             content.resize(330, 185)
-            host.grab()
+            window.grab()
             self.assertGreater(content.paints, paints)
             paints = content.paints
             next_theme = (
@@ -5160,16 +5162,16 @@ with (
                 else fluentqt.Theme.Light
             )
             fluentqt.set_theme(next_theme)
-            host.grab()
+            window.grab()
             self.assertGreater(content.paints, paints)
             splash.hide()
             self.assertIsNone(content.graphicsEffect())
             paints = content.paints
-            host.grab()
+            window.grab()
             self.assertGreater(content.paints, paints)
         finally:
-            host.close()
-            host.deleteLater()
+            window.close()
+            window.deleteLater()
             QApplication.processEvents()
 
     def test_splash_cache_preserves_effects_motion_and_particle_lifetime(self):
