@@ -161,6 +161,7 @@ def integration_checks(output_dir: Path) -> list[tuple[str, list[str]]]:
         ("Gallery wheel builder", [python, "bindings/pyside6/gallery/tests/test_wheel_builder.py"]),
         ("Gallery smoke contracts", [python, "bindings/pyside6/gallery/tests/test_gallery_wheel_smoke_contracts.py"]),
         ("homepage asset versions", [python, "tools/site/test_generate_localized_site.py"]),
+        ("WASM Gallery asset versions", [python, "tools/wasm/test_gallery_assets.py"]),
         ("Gallery artwork validator", [python, "tools/gallery/test_validate_control_artwork.py"]),
         ("Gallery artwork source contracts", [python, "tools/gallery/test_export_control_images.py", "SourceContract"]),
         ("Gallery artwork inventory", [python, "tools/gallery/validate_control_artwork.py"]),

@@ -22,6 +22,11 @@ class SiteHandler(SimpleHTTPRequestHandler):
             return str(self.wasm_root.joinpath(*relative.parts[1:]))
         return str(translated)
 
+    def end_headers(self):
+        # A local rebuild must be visible on reload, including nested WASM frames.
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
 
 class SiteServer(ThreadingHTTPServer):
     # In particular, do not silently share an occupied listener on Windows.
