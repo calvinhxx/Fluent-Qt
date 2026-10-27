@@ -13,11 +13,24 @@ namespace fluent::gallery::platform {
 namespace {
 QPointer<QWidget> showcaseContent;
 
+class SpatialModeSwitch final : public basicinput::ToggleSwitch {
+public:
+    using ToggleSwitch::ToggleSwitch;
+    std::function<void()> refresh;
+    void onThemeUpdated() override
+    {
+        ToggleSwitch::onThemeUpdated();
+        if (refresh)
+            refresh();
+    }
+};
+
 void applyShowcaseTheme(QWidget* window, HostTheme host)
 {
     const auto theme = host == HostTheme::HighContrast ? FluentElement::HighContrast
-                       : host == HostTheme::Dark       ? FluentElement::Dark
-                                                       : FluentElement::Light;
+        : host == HostTheme::Dark
+        ? FluentElement::Dark
+        : FluentElement::Light;
     FluentElement::setTheme(theme);
     auto palette = window->palette();
     palette.setColor(QPalette::Window, ThemeRegistry::instance().colors(theme).bgCanvas);
@@ -34,8 +47,69 @@ extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryShowcaseActive(int active)
 extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryShowcaseMotion(int reduced)
 {
     if (showcaseContent)
-        MotionPolicy::instance().setMode(reduced ? MotionPolicy::Mode::Reduced
-                                                 : MotionPolicy::Mode::Full);
+        MotionPolicy::instance().setMode(reduced ? MotionPolicy::Mode::Reduced : MotionPolicy::Mode::Full);
+}
+
+QWidget* createSpatialPreviewControls(QWidget* preview, QWidget* parent, const std::function<void()>& stateChanged)
+{
+#if defined(FLUENT_QT_HAS_SPATIAL)
+    const QPointer<spatial::SpatialView> view(preview->findChild<spatial::SpatialView*>("spatialPreviewView"));
+    const QPointer<spatial::SpatialSession> session(preview->findChild<spatial::SpatialSession*>());
+    if (!view)
+        return nullptr;
+    auto* controls = new QWidget(parent);
+    auto* row = new QHBoxLayout(controls);
+    row->setContentsMargins(0, 0, 0, 0);
+    auto* mode = new SpatialModeSwitch(controls);
+    mode->setObjectName(QStringLiteral("showcaseSpatialMode"));
+    mode->setAccessibleName(QStringLiteral("3D scene"));
+    mode->setOnContent(QStringLiteral("3D scene"));
+    mode->setOffContent(QStringLiteral("3D scene"));
+    row->addWidget(mode);
+    row->addStretch();
+    auto* status = new textfields::Label(controls);
+    status->setTextColorRole(textfields::Label::TextColorRole::Secondary);
+    row->addWidget(status);
+    const auto synchronize = [view, session, mode, status, stateChanged] {
+        if (!view)
+            return;
+        const QSignalBlocker blocker(mode);
+        mode->setIsOn(view->isSpatialEnabled());
+        mode->setEnabled(session && session->isActive() && MotionPolicy::instance().mode() == MotionPolicy::Mode::Full
+            && FluentElement::currentTheme() != FluentElement::HighContrast);
+        const bool gpu = view->activeBackend() == spatial::SpatialView::Backend::OpenGL;
+        status->setText(!view->isSpatialEnabled() ? QStringLiteral("2D · Qt Widgets")
+                : gpu                             ? QStringLiteral("3D · WebGL")
+                                                  : QStringLiteral("3D · Raster fallback"));
+        status->setToolTip(view->fallbackReason());
+        if (stateChanged)
+            stateChanged();
+    };
+    QObject::connect(mode, &basicinput::ToggleSwitch::toggled, controls, [view, session](bool enabled) {
+        if (view)
+            view->setSpatialEnabled(enabled && session && session->isActive());
+    });
+    if (session) {
+        QObject::connect(session, &spatial::SpatialSession::activeChanged, controls, synchronize);
+        QObject::connect(session, &QObject::destroyed, controls, synchronize);
+    }
+    QObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, controls, synchronize);
+    QObject::connect(view, &spatial::SpatialView::rendererChanged, controls, synchronize);
+    QObject::connect(view, &spatial::SpatialView::cameraDistanceChanged, controls, synchronize);
+    QObject::connect(view, &spatial::SpatialView::zoomChanged, controls, synchronize);
+    QObject::connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, controls, synchronize);
+    mode->refresh = synchronize;
+    // Isolated hosts own this mode; the sample binding must not load Gallery preferences.
+    // zh_CN: 独立宿主管理当前模式，示例绑定不读取 Gallery 偏好。
+    view->setSpatialEnabled(session && session->isActive());
+    synchronize();
+    return controls;
+#else
+    Q_UNUSED(preview);
+    Q_UNUSED(parent);
+    Q_UNUSED(stateChanged);
+    return nullptr;
+#endif
 }
 
 QWidget* createSpatialShowcase()
@@ -63,44 +137,19 @@ QWidget* createSpatialShowcase()
     applyShowcaseTheme(window, hostTheme());
     fluentQtGalleryShowcaseMotion(
         emscripten_run_script_int("window.matchMedia('(prefers-reduced-motion: reduce)').matches"));
-    setHostThemeChangedHandler(window,
-                               [window](HostTheme theme) { applyShowcaseTheme(window, theme); });
+    setHostThemeChangedHandler(window, [window](HostTheme theme) { applyShowcaseTheme(window, theme); });
 
 #if defined(FLUENT_QT_HAS_SPATIAL)
-    auto* toolbar = new QHBoxLayout;
-    auto* mode = new basicinput::ToggleSwitch(content);
-    mode->setObjectName(QStringLiteral("showcaseSpatialMode"));
-    mode->setAccessibleName(QStringLiteral("3D scene"));
-    mode->setOnContent(QStringLiteral("3D scene"));
-    mode->setOffContent(QStringLiteral("3D scene"));
-    toolbar->addWidget(mode);
-    toolbar->addStretch();
-    auto* status = new textfields::Label(content);
-    status->setTextColorRole(textfields::Label::TextColorRole::Secondary);
-    toolbar->addWidget(status);
-    column->addLayout(toolbar);
-
     for (const auto& sample : gallerySamplesForRoute(QStringLiteral("spatial-view"))) {
         if (sample.id != QStringLiteral("spatial-view-scene") || !sample.createPreview)
             continue;
         auto* preview = sample.createPreview(content);
         column->addWidget(preview);
         auto* view = preview->findChild<spatial::SpatialView*>("spatialPreviewView");
-        const QPointer<spatial::SpatialSession> session(
-            preview->findChild<spatial::SpatialSession*>());
-        if (!view || !session || !session->isActive())
+        if (!view)
             break;
-        const auto publish = [view, session, mode, status] {
-            const QSignalBlocker blocker(mode);
-            mode->setIsOn(view->isSpatialEnabled());
-            mode->setEnabled(session && session->isActive() &&
-                             MotionPolicy::instance().mode() == MotionPolicy::Mode::Full &&
-                             FluentElement::currentTheme() != FluentElement::HighContrast);
+        const auto publish = [view] {
             const bool gpu = view->activeBackend() == spatial::SpatialView::Backend::OpenGL;
-            status->setText(!view->isSpatialEnabled() ? QStringLiteral("2D · Qt Widgets")
-                            : gpu                     ? QStringLiteral("3D · WebGL")
-                                                      : QStringLiteral("3D · Raster fallback"));
-            status->setToolTip(view->fallbackReason());
             // Publish observable component state, not a second implementation of the demo.
             // zh_CN: 仅发布组件的真实状态，不在浏览器层模拟示例行为。
             // clang-format off
@@ -114,28 +163,12 @@ QWidget* createSpatialShowcase()
             }, gpu, view->isSpatialEnabled(), view->cameraDistance(), view->zoom());
             // clang-format on
         };
-        QObject::connect(mode, &basicinput::ToggleSwitch::toggled, view,
-                         [view, session](bool enabled) {
-                             view->setSpatialEnabled(enabled && session && session->isActive());
-                         });
-        QObject::connect(session, &spatial::SpatialSession::activeChanged, status, publish);
-        QObject::connect(session, &QObject::destroyed, status, publish);
-        QObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, status, publish);
-        QObject::connect(view, &spatial::SpatialView::rendererChanged, status, publish);
-        QObject::connect(view, &spatial::SpatialView::cameraDistanceChanged, status, publish);
-        QObject::connect(view, &spatial::SpatialView::zoomChanged, status, publish);
-        QObject::connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, status, publish);
-        setHostThemeChangedHandler(window, [window, publish](HostTheme theme) {
-            applyShowcaseTheme(window, theme);
-            publish();
-        });
-        view->setSpatialEnabled(true);
-        publish();
+        if (auto* controls = createSpatialPreviewControls(preview, content, publish))
+            column->insertWidget(0, controls);
         break;
     }
 #else
-    column->addWidget(
-        new textfields::Label(QStringLiteral("This build does not include Spatial."), content));
+    column->addWidget(new textfields::Label(QStringLiteral("This build does not include Spatial."), content));
 #endif
     column->addStretch();
     return window;

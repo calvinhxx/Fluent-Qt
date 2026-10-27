@@ -1,4 +1,5 @@
 #include "GalleryComponentPreview.h"
+#include "GallerySpatialShowcase.h"
 #include "platform/GalleryPlatform.h"
 #include "view/widgets/GallerySampleCatalog.h"
 
@@ -69,6 +70,13 @@ void publishState()
             {"width", dialog->width()}, {"height", dialog->height()}, {"title", dialog->property("title").toString()}});
     }
     state["dialogs"] = dialogs;
+#if defined(FLUENT_QT_HAS_SPATIAL)
+    if (auto* view = sampleContent->findChild<spatial::SpatialView*>("spatialPreviewView")) {
+        state["spatial"] = QJsonObject{{"enabled", view->isSpatialEnabled()},
+            {"backend", view->activeBackend() == spatial::SpatialView::Backend::OpenGL ? "webgl" : "raster"},
+            {"distance", view->cameraDistance()}, {"zoom", view->zoom()}};
+    }
+#endif
     const QByteArray json = QJsonDocument(state).toJson(QJsonDocument::Compact);
     // clang-format off
     EM_ASM({ document.documentElement.dataset.fluentQtComponentState = UTF8ToString($0); }, json.constData());
@@ -115,6 +123,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int fluentQtGalleryComponentSelect()
             return 0;
         sampleContent->setVisible(active);
         sampleLayout->addWidget(sampleContent, 0, sample.fillAvailableWidth ? Qt::AlignVCenter : Qt::AlignCenter);
+        if (auto* column = qobject_cast<QVBoxLayout*>(sampleContent->layout())) {
+            if (auto* controls = createSpatialPreviewControls(sampleContent, sampleContent, publishState))
+                column->insertWidget(0, controls);
+        }
         if (auto* check = route == QStringLiteral("checkbox")
                 ? sampleContent->findChild<basicinput::CheckBox*>(QStringLiteral("checkboxOption"))
                 : nullptr) {

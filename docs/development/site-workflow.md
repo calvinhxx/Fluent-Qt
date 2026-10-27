@@ -210,6 +210,11 @@ The showcase starts when visible. Its controller pauses the Qt content when
 offscreen or in a hidden tab; Stop unloads the iframe. Ready/error messages must
 match the origin, frame, and current session. Keep explicit error and retry
 states; never hide a failed runtime behind a simulated scene.
+SpatialView and SpatialItem documents use the same local 3D controls as the
+homepage. They enable perspective after the sample session activates, without
+reading or writing Gallery settings. Reduced motion and High Contrast still
+use the component's native 2D policy. Check both documents and mode changes with
+`python3 tools/site/test_spatial_docs_browser.py` against the local site server.
 
 The hero retains a small desktop perspective tilt and returns to a flat image
 on hover or keyboard focus. Mobile, reduced motion and High Contrast use a flat
