@@ -10,7 +10,8 @@ from string import Template
 
 from generate_component_previews import ROOT, config, validated_manifest
 from public_api import inventory, resolve_type
-from api_sections import component_api, render_type, reference_headers, reference_path, type_url, slug
+from api_sections import (component_api, localized_description, primary_type, render_type,
+                          reference_headers, reference_path, type_url, slug)
 from documentation_guides import guides, guide_path
 from documentation_navigation import navigation as site_navigation, breadcrumb, relative as relative_url
 
@@ -261,7 +262,7 @@ def render_guide(guide, documents, catalog, language):
     for source in guide['headers']:
         records = [r for r in inventory() if r['source'] == source and r['members']]
         if records:
-            record = next((r for r in records if r['name'] == source.rsplit('/', 1)[-1].removesuffix('.h')), records[0])
+            record = primary_type(records, source) or records[0]
             label = source.rsplit('/', 1)[-1].removesuffix('.h')
             references.append(f'<li><a href="{escape(type_url(record, catalog, page, language))}"><code>{escape(label)}</code></a></li>')
     title = 'API 参考' if language == 'zh' else 'API reference'
@@ -275,10 +276,16 @@ def render_guide(guide, documents, catalog, language):
 def render_reference(reference, documents, catalog, language):
     page = reference_path(reference['source'], language)
     context = {'id': reference['id'], 'catalog': catalog, 'component': {'category_id': 'reference'}}
+    # Lead with the header's namesake type; a helper struct's brief would misdescribe the page.
+    primary = primary_type(reference['types'], reference['source'])
+    lead = localized_description(primary, language) if primary else ''
+    fallback = '该头文件公开的类型、函数与常量参考。' if language == 'zh' else 'Public types, functions, and constants declared in this header.'
+    description = lead or fallback
     body = '<section id="api" class="reference-body">' + api_search(language)
-    body += ''.join(render_type(record, catalog, page, language, include_inherited=True) for record in reference['types']) + '</section>'
+    body += ''.join(render_type(record, catalog, page, language, include_inherited=True,
+                                show_description=not (lead and record is primary))
+                    for record in reference['types']) + '</section>'
     toc = [('type-' + slug(record['qualified_name']), record['name']) for record in reference['types']]
-    description = '公开类型、函数与常量。' if language == 'zh' else 'Public types, functions and constants.'
     return render_shell(context, documents, page, language, reference['title'], description, body, toc)
 
 

@@ -7,6 +7,7 @@ silently disappearing. Source locations let readers inspect the original API.
 
 from dataclasses import dataclass
 import ast
+import bisect
 from functools import lru_cache
 from pathlib import Path
 import re
@@ -24,6 +25,7 @@ SKIP_MACROS = {'Q_OBJECT', 'Q_GADGET', 'Q_DISABLE_COPY', 'Q_DISABLE_COPY_MOVE',
                'Q_INTERFACES', 'Q_DECLARE_INTERFACE', 'Q_ENUM_NS', 'Q_FLAG_NS', 'Q_NAMESPACE',
                'Q_DECLARE_PRIVATE', 'Q_DECLARE_PUBLIC'}
 ACCESS = {'public', 'protected', 'private', 'signals', 'Q_SIGNALS'}
+CJK = re.compile(r'[一-鿿]')
 
 
 @dataclass
@@ -37,15 +39,21 @@ class Token:
 def documentation(comments):
     lines = []
     for comment in comments:
-        value = re.sub(r'^/\*+|\*/$|^///?', '', comment.strip())
+        value = re.sub(r'^/\*+<?|\*/$|^///?<?', '', comment.strip())
         lines.extend(re.sub(r'^\s*\*\s?', '', line).strip() for line in value.splitlines())
     text = '\n'.join(lines).strip()
     en, marker, zh = text.partition('zh_CN:')
     en = re.sub(r'^@brief\s*', '', en)
     en = re.split(r'\n\s*\n|@(?:param|return|returns|note|see|warning|code|endcode)\b', en)[0]
     zh = re.split(r'\n\s*\n|@(?:param|return|returns|note|see|warning|code|endcode)\b', zh)[0]
+    # A later zh_CN: starts another pair. English details written straight after the
+    # Chinese line form a trailing run without CJK; ASCII lines between CJK lines stay.
+    zh_lines = zh.split('zh_CN:', 1)[0].splitlines()
+    while len(zh_lines) > 1 and not CJK.search(zh_lines[-1]):
+        zh_lines.pop()
+    zh = '\n'.join(zh_lines)
     en, zh = (' '.join(value.split()).strip() for value in (en, zh))
-    if not marker and re.search(r'[\u4e00-\u9fff]', en):
+    if not marker and CJK.search(en):
         return {'en': '', 'zh': en}
     return {'en': en, 'zh': zh}
 
@@ -55,6 +63,7 @@ class Scanner:
         self.source, self.path = source, path
         self.tokens = [Token(m.group(), m.start(), m.end(), m.lastgroup)
                        for m in LEXER.finditer(source)]
+        self.newlines = [m.start() for m in re.finditer('\n', source)]
         self.types = []
         self.namespaces = {}
 
@@ -71,7 +80,26 @@ class Scanner:
         return ''.join(pieces).strip()
 
     def line(self, token):
-        return self.source.count('\n', 0, token.start) + 1
+        return bisect.bisect_left(self.newlines, token.start) + 1
+
+    def trailing_doc(self, anchor, limit, leading):
+        """Return the docs and last consumed index for the declaration ending at anchor.
+
+        `///<` and `/**<` always document that declaration. A plain comment on the
+        same line does too, unless only the leading comment carries the bilingual
+        zh_CN: contract; that keeps a real brief over a terse note such as `// 0-255`
+        while a plain heading above still yields to the trailing description. The
+        comment is consumed either way so it cannot leak into the next declaration.
+        """
+        following = anchor + 1
+        if following >= limit or self.tokens[following].kind != 'comment':
+            return leading, anchor
+        comment = self.tokens[following].text
+        explicit = re.match(r'^(?:///+|/\*+)<', comment)
+        if not explicit and self.line(self.tokens[following]) != self.line(self.tokens[anchor]):
+            return leading, anchor
+        keep_leading = not explicit and 'zh_CN:' not in comment and any('zh_CN:' in c for c in leading)
+        return (leading if keep_leading else [comment]), following
 
     def matching(self, index, opening='{', closing='}'):
         depth = 0
@@ -122,6 +150,8 @@ class Scanner:
                     j += 1
                 if j < end and self.tokens[j].text == ':':
                     access = 'signals' if value in ('signals', 'Q_SIGNALS') else value
+                    # A comment on the label's line describes the section, not its first member.
+                    _, j = self.trailing_doc(j, end, [])
                     comment = []; i = j + 1; continue
             if value in SKIP_MACROS:
                 i += 1
@@ -183,6 +213,8 @@ class Scanner:
             words = [t.text for t in prefix]
             opening = self.tokens[j].text == '{'
             close = self.matching(j) if opening else j
+            if not opening:
+                comment, close = self.trailing_doc(close, end, comment)
             target = owner or self.namespace(scope)
             class_match = re.search(r'(?:^|>)\s*(class|struct)\s+(?:[A-Z_][A-Z0-9_]*\s+)?(\w+)(?:\s+final)?\s*(?::(.*))?$', self.text(prefix)) if opening else None
 
@@ -212,8 +244,8 @@ class Scanner:
                     self.parse(j + 1, close, (*scope, name), record, 'public' if kind == 'struct' else 'private')
             elif value == 'enum' and opening:
                 name = next((t.text for t in prefix[1:] if t.kind == 'word' and t.text not in ('class', 'struct')), '')
-                values, begin, nested, docs = [], j + 1, 0, []
-                for n in range(j + 1, close + 1):
+                values, begin, nested, docs, n = [], j + 1, 0, [], j + 1
+                while n <= close:
                     t = self.tokens[n]
                     if t.kind == 'comment':
                         docs.append(t.text)
@@ -223,9 +255,12 @@ class Scanner:
                         nested -= 1
                     if n == close or t.text == ',' and nested == 0:
                         entry = [e for e in self.tokens[begin:n] if e.kind not in ('comment', 'directive')]
+                        if t.text == ',':
+                            docs, n = self.trailing_doc(n, close, docs)
                         if entry:
                             values.append({'name': entry[0].text, 'signature': self.text(entry), 'description': documentation(docs)})
                         begin, docs = n + 1, []
+                    n += 1
                 self.member(target, 'enums', name or '(anonymous)', prefix, comment, access, values=values)
             elif words and words[0] not in ('friend', 'class', 'struct', 'namespace'):
                 if words[0] in ('using', 'typedef'):

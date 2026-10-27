@@ -25,6 +25,16 @@ def reference_path(source, language='en'):
     return ('zh-CN/' if language == 'zh' else '') + 'api/reference/' + slug(Path(source).stem) + '/index.html'
 
 
+def localized_description(record, language):
+    description = record.get('description', {})
+    return description.get(language) or description.get('en') or ''
+
+
+def primary_type(records, source):
+    """Return the record named after its header: the type a header page is about."""
+    return next((r for r in records if r['name'] == Path(source).stem), None)
+
+
 def reference_headers(catalog):
     component_sources = {resolve_type(c['cpp']['qualified_type'])['source'] for c in catalog['components']}
     by_source = defaultdict(list)
@@ -95,12 +105,14 @@ def render_members(members, language, prefix):
     return ''.join(sections)
 
 
-def render_type(record, catalog, page, language, include_inherited=False, python=None):
+def render_type(record, catalog, page, language, include_inherited=False, python=None, show_description=True):
     prefix = 'type-' + slug(record['qualified_name'])
     public = [m for m in record['members'] if m['access'] == 'public']
     protected = [m for m in record['members'] if m['access'] == 'protected']
+    summary = localized_description(record, language) if show_description else ''
+    summary_html = f'<p class="api-type-description">{html.escape(summary)}</p>' if summary else ''
     parts = [f'<section class="api-type" id="{prefix}"><h3><code>{html.escape(record["qualified_name"])}</code></h3>',
-             base_links(record, catalog, page, language), render_members(public, language, prefix)]
+             base_links(record, catalog, page, language), summary_html, render_members(public, language, prefix)]
     if python:
         known = {m['name'] for b in [record, *inherited_types(record)] for m in b['members']}
         additions = [m for m in python_extensions(python['module'], python['type']) if m['name'] not in known]
