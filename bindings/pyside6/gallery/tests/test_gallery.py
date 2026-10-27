@@ -5176,7 +5176,17 @@ with (
             before = window.grab(QRect(content.mapTo(window, QPoint()), content.size())).toImage()
             splash.cache_dismissal_content(content)
             self.assertIsNotNone(content.graphicsEffect())
-            self.assertEqual(window.grab(QRect(content.mapTo(window, QPoint()), content.size())).toImage(), before)
+            after = window.grab(QRect(content.mapTo(window, QPoint()), content.size())).toImage()
+            self.assertEqual(after.size(), before.size())
+            self.assertEqual(after.devicePixelRatio(), before.devicePixelRatio())
+            before_rgba = before.convertToFormat(QImage.Format_RGBA8888)
+            after_rgba = after.convertToFormat(QImage.Format_RGBA8888)
+            # The transparent sourcePixmap adds one 8-bit premultiplied-alpha
+            # composition. Its rounding can differ by one channel level from
+            # drawing text directly onto the window, even when geometry matches.
+            before_bytes, after_bytes = bytes(before_rgba.constBits()), bytes(after_rgba.constBits())
+            self.assertEqual(after_bytes[3::4], before_bytes[3::4])
+            self.assertLessEqual(max(abs(a - b) for a, b in zip(after_bytes, before_bytes)), 1)
             paints = content.paints
             for _ in range(3):
                 content.update()
