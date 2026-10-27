@@ -96,6 +96,7 @@
 #include "components/status_info/Toast.h"
 #include "components/textfields/EditingCommandRouter.h"
 #include "components/textfields/Label.h"
+#include "components/basicinput/RadioButton.h"
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/TagInput.h"
 #include "components/textfields/TextEdit.h"
@@ -471,6 +472,47 @@ TEST_F(GalleryContentPagesTest, DataGridExamplesKeepTableBehaviorIndependentOfTo
     std::unique_ptr<QWidget> workspace(toolbar.createPreview(nullptr));
     ASSERT_NE(workspace->findChild<fluent::layout::DataGridToolBar*>(), nullptr);
     ASSERT_NE(workspace->findChild<fluent::collections::DataGrid*>(), nullptr);
+}
+
+TEST_F(GalleryContentPagesTest, RadioSelectionKeepsCenteredPreviewGeometryStable)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("radio-button"), QStringLiteral("radio-button-group"), &sample));
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        QWidget host;
+        QVBoxLayout layout(&host);
+        auto* group = sample.createPreview(&host);
+        group->setLayoutDirection(direction);
+        layout.addWidget(group, 0, Qt::AlignCenter);
+        host.resize(560, 360);
+        host.show();
+        QApplication::processEvents();
+        const auto radios = group->findChildren<fluent::basicinput::RadioButton*>();
+        ASSERT_EQ(radios.size(), 3);
+        const auto geometry = [&] {
+            QList<QRect> result;
+            for (auto* radio : radios)
+                result.append(QRect(radio->mapTo(&host, QPoint()), radio->size()));
+            return result;
+        };
+        const auto initial = geometry();
+        const QSize groupSize = group->size();
+        for (const QString text : {QStringLiteral("High"), QStringLiteral("Low"), QStringLiteral("Medium"),
+                 QStringLiteral("Medium"), QStringLiteral("High")}) {
+            for (auto* radio : radios)
+                if (radio->text() == text)
+                    radio->click();
+            QApplication::processEvents();
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            layout.activate();
+            EXPECT_EQ(geometry(), initial) << text.toStdString();
+            EXPECT_EQ(group->size(), groupSize);
+            int checked = 0;
+            for (auto* radio : radios)
+                checked += radio->isChecked();
+            EXPECT_EQ(checked, 1);
+        }
+    }
 }
 
 TEST_F(GalleryContentPagesTest, DataGridCappedPreviewAndValidationEditorStayConsistent)

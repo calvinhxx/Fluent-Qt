@@ -3970,6 +3970,25 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             """,
             imports="from PySide6.QtCore import Qt",
         )
+    if key == ("checkbox", "checkbox-three-state"):
+        return focused(
+            """
+            check_box = fluentqt.CheckBox("Enable selected items")
+            check_box.setTristate(True)
+            check_box.setCheckState(Qt.CheckState.PartiallyChecked)
+            status = fluentqt.Label("State: Mixed")
+            check_box.stateChanged.connect(
+                lambda state: status.setText(
+                    "State: Checked"
+                    if Qt.CheckState(state) == Qt.CheckState.Checked
+                    else "State: Mixed"
+                    if Qt.CheckState(state) == Qt.CheckState.PartiallyChecked
+                    else "State: Unchecked"
+                )
+            )
+            """,
+            imports="from PySide6.QtCore import Qt",
+        )
     if key == ("toggle-switch", "toggle-switch-state"):
         return focused(
             """
