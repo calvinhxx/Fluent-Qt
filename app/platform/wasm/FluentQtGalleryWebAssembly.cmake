@@ -31,7 +31,16 @@ function(fluent_qt_configure_gallery_webassembly target source_dir)
     configure_file("${source_dir}/assets/app-icon.png"
         "${CMAKE_CURRENT_BINARY_DIR}/app-icon.png" COPYONLY)
     configure_file("${_adapter_dir}/index.html.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/index.html" @ONLY)
+        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gallery-index.html" @ONLY)
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS
+        "${_adapter_dir}/index.html.in" "${_adapter_dir}/VersionGalleryAssets.cmake")
+    add_custom_command(TARGET ${target} POST_BUILD
+        BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/index.html"
+        COMMAND "${CMAKE_COMMAND}"
+            "-DWEB_DIR=$<TARGET_FILE_DIR:${target}>"
+            "-DTEMPLATE=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/gallery-index.html"
+            -P "${_adapter_dir}/VersionGalleryAssets.cmake"
+        VERBATIM)
     configure_file("${_adapter_dir}/licenses.html.in"
         "${CMAKE_CURRENT_BINARY_DIR}/licenses.html" @ONLY)
     configure_file("${PROJECT_SOURCE_DIR}/LICENSE"

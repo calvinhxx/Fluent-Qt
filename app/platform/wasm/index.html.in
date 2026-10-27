@@ -182,7 +182,7 @@
     </nav>
   </footer>
   <script src="qtloader.js"></script>
-  <script src="fluent_qt_gallery.js"></script>
+  <script src="fluent_qt_gallery.js?v=__FLUENT_QT_GALLERY_RUNTIME_VERSION__"></script>
   <script>
     const container = document.getElementById('qt-container');
     const loading = document.getElementById('loading');
@@ -337,6 +337,8 @@
     (async () => {
       try {
         wasmInstance = await qtLoad({
+          locateFile: filename => filename === 'fluent_qt_gallery.wasm'
+            ? `${filename}?v=__FLUENT_QT_GALLERY_RUNTIME_VERSION__` : filename,
           qt: {
             entryFunction: window.fluent_qt_gallery_entry,
             containerElements: [container],

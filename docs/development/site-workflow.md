@@ -215,6 +215,8 @@ homepage. They enable perspective after the sample session activates, without
 reading or writing Gallery settings. Reduced motion and High Contrast still
 use the component's native 2D policy. Check both documents and mode changes with
 `python3 tools/site/test_spatial_docs_browser.py` against the local site server.
+The WASM build versions its JavaScript and binary together after linking; the
+local preview server revalidates cached files on reload.
 
 The hero retains a small desktop perspective tilt and returns to a flat image
 on hover or keyboard focus. Mobile, reduced motion and High Contrast use a flat
