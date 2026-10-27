@@ -59,6 +59,7 @@ public:
     ~Slider();
 
     QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
 
     void onThemeUpdated() override { update(); }
 
@@ -66,6 +67,7 @@ public:
     void setHandleSize(int size)
     {
         m_handleSize = size;
+        updateGeometry();
         update();
     }
 
@@ -73,6 +75,7 @@ public:
     void setTrackHeight(int height)
     {
         m_trackHeight = height;
+        updateGeometry();
         update();
     }
 
@@ -97,6 +100,9 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 private:
     void drawHorizontal(QPainter& p, const QStyleOptionSlider& opt);
@@ -113,6 +119,7 @@ private:
     int m_visualMargin = 2;                // Margin so antialiasing is never clipped. zh_CN: 避免抗锯齿被裁切的边距。
     int m_defaultLength = 160;             // Default length. zh_CN: 默认长度。
     bool m_isPressed = false;
+    bool m_keyboardFocusVisible = false;
 
     // Animation state. zh_CN: 动画状态。
     qreal m_hoverRatio = 0.0;

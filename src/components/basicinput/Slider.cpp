@@ -1,9 +1,12 @@
 #include "compatibility/InputEventCompat.h"
 #include "Slider.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include <QMouseEvent>
+#include <QFocusEvent>
+#include <QKeyEvent>
 
 #include <QPainter>
 #include <QPropertyAnimation>
@@ -20,6 +23,7 @@ using namespace fluent::textfields;
 Slider::Slider(Qt::Orientation orientation, QWidget* parent) : QSlider(orientation, parent)
 {
     setAttribute(Qt::WA_Hover);
+    ::compatibility::detail::disableNativeFocusRing(this);
 
     // m_handleSize is initialized to 20 in header
 
@@ -56,6 +60,41 @@ QSize Slider::sizeHint() const
     } else {
         return QSize(thickness, length);
     }
+}
+
+QSize Slider::minimumSizeHint() const
+{
+    const int thickness = std::max(m_handleSize, m_trackHeight) + 2 * m_visualMargin;
+    const int padding = m_handleSize / 2 + m_visualMargin;
+    // Keep at least one handle's travel after reserving space for both endpoints.
+    // zh_CN: 预留两端空间后，仍保留至少一个手柄宽度的拖动行程。
+    const int length = 2 * padding + qMax(1, m_handleSize);
+    const QSize minimum = orientation() == Qt::Horizontal ? QSize(length, thickness) : QSize(thickness, length);
+    return QSlider::minimumSizeHint().expandedTo(minimum);
+}
+
+void Slider::focusInEvent(QFocusEvent* event)
+{
+    if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
+    else if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    QSlider::focusInEvent(event);
+    update();
+}
+
+void Slider::focusOutEvent(QFocusEvent* event)
+{
+    QSlider::focusOutEvent(event);
+    update();
+}
+
+void Slider::keyPressEvent(QKeyEvent* event)
+{
+    m_keyboardFocusVisible = true;
+    QSlider::keyPressEvent(event);
+    update();
 }
 
 void Slider::paintEvent(QPaintEvent*)
@@ -99,6 +138,7 @@ void Slider::mousePressEvent(QMouseEvent* event)
         return;
     }
     event->accept();
+    m_keyboardFocusVisible = false;
     m_isPressed = true;
     setSliderDown(true);
 
@@ -321,7 +361,8 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     // the track behind, producing the "white border" look.
     // zh_CN: 绘制外圆（白色填充带细边框），形成“白色外边框”遮罩，挡住背后的轨道。
     p.setBrush(outerFillColor);
-    p.setPen(QPen(outerBorderColor, 1));
+    const bool keyboardFocused = isEnabled() && hasFocus() && m_keyboardFocusVisible;
+    p.setPen(QPen(keyboardFocused ? colors.accentDefault : outerBorderColor, keyboardFocused ? 2 : 1));
     p.drawEllipse(center, baseRadius, baseRadius);
 
     // 8. Paint the inner accent circle. zh_CN: 绘制内层圆形（蓝色中心）。
@@ -414,7 +455,8 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
 
     // 7. Paint the outer circle. zh_CN: 绘制外层圆形。
     p.setBrush(outerFillColor);
-    p.setPen(QPen(outerBorderColor, 1));
+    const bool keyboardFocused = isEnabled() && hasFocus() && m_keyboardFocusVisible;
+    p.setPen(QPen(keyboardFocused ? colors.accentDefault : outerBorderColor, keyboardFocused ? 2 : 1));
     p.drawEllipse(center, baseRadius, baseRadius);
 
     // 8. Paint the inner circle. zh_CN: 绘制内层圆形。
