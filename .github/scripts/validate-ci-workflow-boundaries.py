@@ -626,6 +626,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "            build/wasm/command-palette-validation",
         "            build/wasm/command-menu-validation",
         "            build/wasm/form-validation",
+        "            build/wasm/data-grid-validation",
         "          if-no-files-found: ignore",
         "          retention-days: 7",
     ]

@@ -610,6 +610,7 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 "      - name: Upload browser smoke diagnostics\n        if: ${{ success() }}\n",
             ),
             ("            build/wasm/command-palette-validation\n", "            .git\n"),
+            ("            build/wasm/data-grid-validation\n", ""),
         ):
             with self.subTest(replacement=after):
                 errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
