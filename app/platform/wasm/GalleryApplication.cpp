@@ -34,8 +34,7 @@ std::unique_ptr<QWidget> showcaseWindow;
 
 QString requestedWindowMode()
 {
-    const char* rawMode =
-        emscripten_run_script_string("window.fluentQtWindowProfile?.mode || 'windowed'");
+    const char* rawMode = emscripten_run_script_string("window.fluentQtWindowProfile?.mode || 'windowed'");
     return QString::fromUtf8(rawMode ? rawMode : "windowed");
 }
 
@@ -61,15 +60,13 @@ void showGalleryWindow(GalleryWindow* window)
 
     const int availableWidth = qMax(1, available.width() - stageMargin * 2);
     const int availableHeight = qMax(1, available.height() - stageMargin * 2);
-    const int preferredWidth =
-        qBound(preferredMinimumWidth, qRound(available.width() * 0.72), preferredMaximumWidth);
-    const int preferredHeight =
-        qBound(preferredMinimumHeight, qRound(available.height() * 0.78), preferredMaximumHeight);
+    const int preferredWidth = qBound(preferredMinimumWidth, qRound(available.width() * 0.72), preferredMaximumWidth);
+    const int preferredHeight = qBound(preferredMinimumHeight, qRound(available.height() * 0.78),
+        preferredMaximumHeight);
     const QSize size(qMin(availableWidth, preferredWidth), qMin(availableHeight, preferredHeight));
     const QPoint topLeft(available.x() + (available.width() - size.width()) / 2,
-                         available.y() + (available.height() - size.height()) / 2);
-    showTopLevelWindow(window, QRect(topLeft, size),
-                       requestedWindowMode() == QStringLiteral("maximized"));
+        available.y() + (available.height() - size.height()) / 2);
+    showTopLevelWindow(window, QRect(topLeft, size), requestedWindowMode() == QStringLiteral("maximized"));
 }
 
 } // namespace
@@ -85,13 +82,11 @@ int runApplication(int argc, char** argv)
     application = std::make_unique<QApplication>(argc, argv);
 #if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
     using QmlSession = fluent::qmlbridge::QmlSession;
-    if (qEnvironmentVariableIsEmpty("QSG_RHI_BACKEND") &&
-        qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND") &&
-        qEnvironmentVariableIsEmpty("QMLSCENE_DEVICE"))
+    if (qEnvironmentVariableIsEmpty("QSG_RHI_BACKEND") && qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND")
+        && qEnvironmentVariableIsEmpty("QMLSCENE_DEVICE"))
         QmlSession::prepareApplication(QmlSession::GraphicsApi::OpenGL);
     if (!QmlSession::isGraphicsApiCompatible(QmlSession::GraphicsApi::OpenGL))
-        application->setProperty(
-            "fluentqtGalleryGraphicsBackendFailure",
+        application->setProperty("fluentqtGalleryGraphicsBackendFailure",
             QObject::tr("The selected Qt Quick and 3D backends cannot share a window. "
                         "Using the 2D Gallery."));
 #endif
@@ -103,7 +98,7 @@ int runApplication(int argc, char** argv)
     loggingOptions.installQtMessageHandler = true;
     fluent::support::logging::initialize(loggingOptions);
     LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2")
-                 .arg(QApplication::applicationName(), QApplication::organizationName()));
+            .arg(QApplication::applicationName(), QApplication::organizationName()));
     application->setWindowIcon(appicon::icon());
 
     const bool showcase = emscripten_run_script_int(

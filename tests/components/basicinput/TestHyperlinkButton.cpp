@@ -17,7 +17,8 @@ class HyperlinkButtonTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -25,7 +26,8 @@ public:
 
 class HyperlinkButtonTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         ThemeRegistry::instance().resetToDefaults();
         window = new HyperlinkButtonTestWindow();
         window->setFixedSize(600, 800);
@@ -70,7 +72,7 @@ protected:
         // 5. With underline (Explicitly enabled)
         layout->addWidget(new QLabel("5. With underline on hover (Explicitly enabled):", window));
         auto* withUnderline = new HyperlinkButton("Underline on hover", window);
-        withUnderline->setShowUnderline(true); 
+        withUnderline->setShowUnderline(true);
         layout->addWidget(withUnderline);
 
         // 6. Default behavior (No underline)
@@ -84,15 +86,16 @@ protected:
         auto* themeBtn = new QPushButton("Switch Theme", window);
         layout->addWidget(themeBtn);
         QObject::connect(themeBtn, &QPushButton::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light 
-                                    ? fluent::FluentElement::Dark 
-                                    : fluent::FluentElement::Light);
+            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                    ? fluent::FluentElement::Dark
+                    : fluent::FluentElement::Light);
         });
 
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         delete window;
         ThemeRegistry::instance().resetToDefaults();
     }
@@ -123,8 +126,7 @@ TEST_F(HyperlinkButtonTest, Contract_PropertiesSignalOnlyOnRealChanges)
 
 TEST_F(HyperlinkButtonTest, Contract_LightAndDarkRestPaintsWithoutOpaqueBlackFill)
 {
-    const FluentElement::Theme themes[]{FluentElement::Light,
-                                        FluentElement::Dark};
+    const FluentElement::Theme themes[]{FluentElement::Light, FluentElement::Dark};
     for (const auto theme : themes) {
         FluentElement::setTheme(theme);
         HyperlinkButton link(QStringLiteral("FluentQt"));
@@ -145,13 +147,9 @@ TEST_F(HyperlinkButtonTest, Contract_LightAndDarkRestPaintsWithoutOpaqueBlackFil
         }
         EXPECT_TRUE(painted) << "theme=" << theme;
 
-        const QColor center = image.pixelColor(image.width() / 2,
-                                                image.height() / 2);
-        const int luminance = qRound(0.299 * center.red()
-                                     + 0.587 * center.green()
-                                     + 0.114 * center.blue());
-        EXPECT_FALSE(center.alpha() > 200 && luminance < 16)
-            << "theme=" << theme;
+        const QColor center = image.pixelColor(image.width() / 2, image.height() / 2);
+        const int luminance = qRound(0.299 * center.red() + 0.587 * center.green() + 0.114 * center.blue());
+        EXPECT_FALSE(center.alpha() > 200 && luminance < 16) << "theme=" << theme;
     }
 
     ThemeRegistry::instance().resetToDefaults();
@@ -177,7 +175,8 @@ TEST_F(HyperlinkButtonTest, Contract_ThemeTypographyUsesButtonBaseContract)
     EXPECT_EQ(link.font().weight(), expected.weight());
 }
 
-TEST_F(HyperlinkButtonTest, VisualCheck) {
+TEST_F(HyperlinkButtonTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }

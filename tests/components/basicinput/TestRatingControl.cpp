@@ -22,7 +22,8 @@ using namespace fluent::basicinput;
 class RatingControlTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         const auto& c = themeColors();
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
@@ -32,23 +33,23 @@ public:
 
 class RatingControlTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new RatingControlTestWindow();
         window->setFixedSize(600, 500);
         window->setWindowTitle("Fluent RatingControl Visual Test");
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     RatingControlTestWindow* window = nullptr;
 };
 
 // ── 默认属性 ─────────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, DefaultPropertyValues) {
+TEST_F(RatingControlTest, DefaultPropertyValues)
+{
     RatingControl rc;
     EXPECT_DOUBLE_EQ(rc.value(), -1.0);
     EXPECT_DOUBLE_EQ(rc.placeholderValue(), 0.0);
@@ -62,7 +63,8 @@ TEST_F(RatingControlTest, DefaultPropertyValues) {
 
 // ── Value 属性 ───────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetValueEmitsSignal) {
+TEST_F(RatingControlTest, SetValueEmitsSignal)
+{
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::valueChanged);
     rc.setValue(3.0);
@@ -71,7 +73,8 @@ TEST_F(RatingControlTest, SetValueEmitsSignal) {
     EXPECT_DOUBLE_EQ(rc.value(), 3.0);
 }
 
-TEST_F(RatingControlTest, SetSameValueNoSignal) {
+TEST_F(RatingControlTest, SetSameValueNoSignal)
+{
     RatingControl rc;
     rc.setValue(3.0);
     QSignalSpy spy(&rc, &RatingControl::valueChanged);
@@ -79,20 +82,23 @@ TEST_F(RatingControlTest, SetSameValueNoSignal) {
     EXPECT_EQ(spy.count(), 0);
 }
 
-TEST_F(RatingControlTest, ValueClampedToMaxRating) {
+TEST_F(RatingControlTest, ValueClampedToMaxRating)
+{
     RatingControl rc;
     rc.setMaxRating(5);
     rc.setValue(10.0);
     EXPECT_DOUBLE_EQ(rc.value(), 5.0);
 }
 
-TEST_F(RatingControlTest, ValueClampedToMinusOne) {
+TEST_F(RatingControlTest, ValueClampedToMinusOne)
+{
     RatingControl rc;
     rc.setValue(-5.0);
     EXPECT_DOUBLE_EQ(rc.value(), -1.0);
 }
 
-TEST_F(RatingControlTest, HalfStarValue) {
+TEST_F(RatingControlTest, HalfStarValue)
+{
     RatingControl rc;
     rc.setValue(3.5);
     EXPECT_DOUBLE_EQ(rc.value(), 3.5);
@@ -100,7 +106,8 @@ TEST_F(RatingControlTest, HalfStarValue) {
 
 // ── PlaceholderValue 属性 ────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetPlaceholderValueEmitsSignal) {
+TEST_F(RatingControlTest, SetPlaceholderValueEmitsSignal)
+{
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::placeholderValueChanged);
     rc.setPlaceholderValue(2.5);
@@ -108,7 +115,8 @@ TEST_F(RatingControlTest, SetPlaceholderValueEmitsSignal) {
     EXPECT_DOUBLE_EQ(spy.first().first().toDouble(), 2.5);
 }
 
-TEST_F(RatingControlTest, PlaceholderValueClampedToZero) {
+TEST_F(RatingControlTest, PlaceholderValueClampedToZero)
+{
     RatingControl rc;
     rc.setPlaceholderValue(-1.0);
     EXPECT_DOUBLE_EQ(rc.placeholderValue(), 0.0);
@@ -116,7 +124,8 @@ TEST_F(RatingControlTest, PlaceholderValueClampedToZero) {
 
 // ── Caption 属性 ─────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetCaptionEmitsSignal) {
+TEST_F(RatingControlTest, SetCaptionEmitsSignal)
+{
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::captionChanged);
     rc.setCaption("312 ratings");
@@ -124,7 +133,8 @@ TEST_F(RatingControlTest, SetCaptionEmitsSignal) {
     EXPECT_EQ(rc.caption(), "312 ratings");
 }
 
-TEST_F(RatingControlTest, SetSameCaptionNoSignal) {
+TEST_F(RatingControlTest, SetSameCaptionNoSignal)
+{
     RatingControl rc;
     rc.setCaption("test");
     QSignalSpy spy(&rc, &RatingControl::captionChanged);
@@ -134,7 +144,8 @@ TEST_F(RatingControlTest, SetSameCaptionNoSignal) {
 
 // ── IsClearEnabled 属性 ──────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetIsClearEnabledEmitsSignal) {
+TEST_F(RatingControlTest, SetIsClearEnabledEmitsSignal)
+{
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::isClearEnabledChanged);
     rc.setIsClearEnabled(false);
@@ -144,7 +155,8 @@ TEST_F(RatingControlTest, SetIsClearEnabledEmitsSignal) {
 
 // ── IsReadOnly 属性 ──────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetIsReadOnlyEmitsSignal) {
+TEST_F(RatingControlTest, SetIsReadOnlyEmitsSignal)
+{
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::isReadOnlyChanged);
     rc.setIsReadOnly(true);
@@ -152,13 +164,15 @@ TEST_F(RatingControlTest, SetIsReadOnlyEmitsSignal) {
     EXPECT_TRUE(rc.isReadOnly());
 }
 
-TEST_F(RatingControlTest, ReadOnlyCursorIsArrow) {
+TEST_F(RatingControlTest, ReadOnlyCursorIsArrow)
+{
     RatingControl rc;
     rc.setIsReadOnly(true);
     EXPECT_EQ(rc.cursor().shape(), Qt::ArrowCursor);
 }
 
-TEST_F(RatingControlTest, KeyboardNavigationSupportsHalfStepsBoundsAndRtl) {
+TEST_F(RatingControlTest, KeyboardNavigationSupportsHalfStepsBoundsAndRtl)
+{
     RatingControl rc;
     rc.resize(rc.sizeHint());
     rc.show();
@@ -195,7 +209,8 @@ TEST_F(RatingControlTest, KeyboardNavigationSupportsHalfStepsBoundsAndRtl) {
     EXPECT_DOUBLE_EQ(rc.value(), 2.0);
 }
 
-TEST_F(RatingControlTest, MouseActivationTakesFocus) {
+TEST_F(RatingControlTest, MouseActivationTakesFocus)
+{
     RatingControl rc(window);
     rc.setGeometry(20, 20, rc.sizeHint().width(), rc.sizeHint().height());
     window->show();
@@ -209,7 +224,8 @@ TEST_F(RatingControlTest, MouseActivationTakesFocus) {
 
 // ── MaxRating 属性 ───────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetMaxRatingEmitsSignal) {
+TEST_F(RatingControlTest, SetMaxRatingEmitsSignal)
+{
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::maxRatingChanged);
     rc.setMaxRating(10);
@@ -217,14 +233,16 @@ TEST_F(RatingControlTest, SetMaxRatingEmitsSignal) {
     EXPECT_EQ(rc.maxRating(), 10);
 }
 
-TEST_F(RatingControlTest, MaxRatingClampsExistingValue) {
+TEST_F(RatingControlTest, MaxRatingClampsExistingValue)
+{
     RatingControl rc;
     rc.setValue(5.0);
     rc.setMaxRating(3);
     EXPECT_DOUBLE_EQ(rc.value(), 3.0);
 }
 
-TEST_F(RatingControlTest, MaxRatingMinIsOne) {
+TEST_F(RatingControlTest, MaxRatingMinIsOne)
+{
     RatingControl rc;
     rc.setMaxRating(0);
     EXPECT_EQ(rc.maxRating(), 1);
@@ -232,7 +250,8 @@ TEST_F(RatingControlTest, MaxRatingMinIsOne) {
 
 // ── StarSize 属性 ────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetStarSizeEmitsSignal) {
+TEST_F(RatingControlTest, SetStarSizeEmitsSignal)
+{
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::starSizeChanged);
     rc.setStarSize(32);
@@ -242,7 +261,8 @@ TEST_F(RatingControlTest, SetStarSizeEmitsSignal) {
 
 // ── SizeHint ─────────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SizeHintReflectsMaxRating) {
+TEST_F(RatingControlTest, SizeHintReflectsMaxRating)
+{
     RatingControl rc;
     QSize hint5 = rc.sizeHint();
     rc.setMaxRating(10);
@@ -250,7 +270,8 @@ TEST_F(RatingControlTest, SizeHintReflectsMaxRating) {
     EXPECT_GT(hint10.width(), hint5.width());
 }
 
-TEST_F(RatingControlTest, SizeHintIncludesCaption) {
+TEST_F(RatingControlTest, SizeHintIncludesCaption)
+{
     RatingControl rc;
     QSize hintNoCaption = rc.sizeHint();
     rc.setCaption("312 ratings");
@@ -260,7 +281,8 @@ TEST_F(RatingControlTest, SizeHintIncludesCaption) {
 
 // ── Disabled 状态 ────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, DisabledState) {
+TEST_F(RatingControlTest, DisabledState)
+{
     RatingControl rc;
     rc.setValue(3.0);
     rc.setEnabled(false);
@@ -283,15 +305,14 @@ TEST_F(RatingControlTest, Contract_SelectedStarHasSolidCenterAndEmptyStarDoesNot
     rating.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
     painter.end();
 
-    const QColor selectedCenter = image.pixelColor(image.width() / 4,
-                                                    image.height() / 2);
-    const QColor emptyCenter = image.pixelColor(image.width() * 3 / 4,
-                                                 image.height() / 2);
+    const QColor selectedCenter = image.pixelColor(image.width() / 4, image.height() / 2);
+    const QColor emptyCenter = image.pixelColor(image.width() * 3 / 4, image.height() / 2);
     EXPECT_NE(selectedCenter, background);
     EXPECT_EQ(emptyCenter, background);
 }
 
-TEST_F(RatingControlTest, VisualCheck) {
+TEST_F(RatingControlTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -357,8 +378,8 @@ TEST_F(RatingControlTest, VisualCheck) {
     layout->addWidget(themeBtn);
     QObject::connect(themeBtn, &Button::clicked, []() {
         fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                ? fluent::FluentElement::Dark
-                                : fluent::FluentElement::Light);
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
 
     window->show();

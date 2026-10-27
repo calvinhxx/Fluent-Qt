@@ -59,8 +59,7 @@ struct GalleryPreviewSelection {
 GalleryPreviewParseResult parseGalleryPreviewArguments(const QStringList& arguments);
 
 /** @brief Resolves one real Gallery sample factory for a preview request. */
-GalleryPreviewSelection resolveGalleryPreviewSelection(const QString& routeId,
-                                                       const QString& sampleId);
+GalleryPreviewSelection resolveGalleryPreviewSelection(const QString& routeId, const QString& sampleId);
 
 QString galleryPreviewThemeName(GalleryPreviewTheme theme);
 
@@ -68,12 +67,9 @@ QString galleryPreviewThemeName(GalleryPreviewTheme theme);
  * @brief Minimal deterministic host for one real Gallery sample card.
  * zh_CN: 用于单个真实 Gallery 示例卡片的最小确定性宿主。
  */
-class GalleryPreviewWindow final : public QWidget,
-                                   public fluent::FluentElement,
-                                   public fluent::QMLPlus {
+class GalleryPreviewWindow final : public QWidget, public fluent::FluentElement, public fluent::QMLPlus {
 public:
-    GalleryPreviewWindow(const GalleryPreviewOptions& options, const GallerySample& sample,
-                         QWidget* parent = nullptr);
+    GalleryPreviewWindow(const GalleryPreviewOptions& options, const GallerySample& sample, QWidget* parent = nullptr);
 
     GallerySampleCard* sampleCard() const { return m_sampleCard; }
     QString routeId() const { return m_routeId; }
@@ -92,10 +88,11 @@ private:
 
 /** @brief Builds the versioned machine-readable preview and Inspector report.
  */
-QJsonObject galleryPreviewReport(GalleryPreviewWindow* window, const GalleryPreviewOptions& options,
-                                 const QString& snapshotPath = QString(),
-                                 const QString& snapshotError = QString(),
-                                 const QJsonObject& interactionReport = QJsonObject());
+QJsonObject galleryPreviewReport(GalleryPreviewWindow* window,
+    const GalleryPreviewOptions& options,
+    const QString& snapshotPath = QString(),
+    const QString& snapshotError = QString(),
+    const QJsonObject& interactionReport = QJsonObject());
 
 /** @brief Runs the isolated preview path inside an initialized QApplication. */
 int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions& options);
