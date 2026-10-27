@@ -1,5 +1,6 @@
 import gc
 import json
+import math
 import os
 from pathlib import Path
 import unittest
@@ -66,6 +67,8 @@ from PySide6.QtGui import (
     QKeySequence,
     QMouseEvent,
     QPalette,
+    QPainter,
+    QRegion,
     QStandardItem,
     QStandardItemModel,
     QTextCursor,
@@ -95,6 +98,7 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QToolButton,
     QTreeView,
+    QVBoxLayout,
     QWidget,
     QWidgetAction,
 )
@@ -718,6 +722,128 @@ class FluentQtBindingTest(unittest.TestCase):
         finally:
             window.deleteLater()
             QCoreApplication.sendPostedEvents(window, QEvent.DeferredDelete)
+
+    def test_checkbox_keeps_one_focus_cue_and_keyboard_state_changes(self):
+        checkbox = fluentqt.CheckBox("Option")
+        self.assertFalse(checkbox.testAttribute(Qt.WA_MacShowFocusRect))
+        checkbox.setTristate(True)
+        QTest.keyClick(checkbox, Qt.Key_Space)
+        self.assertEqual(checkbox.checkState(), Qt.PartiallyChecked)
+        QTest.keyClick(checkbox, Qt.Key_Space)
+        self.assertEqual(checkbox.checkState(), Qt.Checked)
+        QTest.keyClick(checkbox, Qt.Key_Space)
+        self.assertEqual(checkbox.checkState(), Qt.Unchecked)
+
+    def test_radio_button_inset_preserves_mouse_and_keyboard_grouping(self):
+        host = QWidget()
+        first = fluentqt.RadioButton("First", host)
+        second = fluentqt.RadioButton("Second", host)
+        for index, radio in enumerate((first, second)):
+            self.assertGreater(radio.sizeHint().height(), radio.circleSize())
+            self.assertFalse(radio.testAttribute(Qt.WA_MacShowFocusRect))
+            radio.resize(160, radio.sizeHint().height())
+            radio.move(12, 12 + index * 40)
+        first.setChecked(True)
+        host.resize(200, 110)
+        host.show()
+        QApplication.setActiveWindow(host)
+        QCoreApplication.processEvents()
+        try:
+            QTest.mouseClick(second, Qt.LeftButton, Qt.NoModifier, QPoint(14, second.height() // 2))
+            self.assertTrue(second.isChecked())
+            self.assertFalse(first.isChecked())
+            QTest.keyClick(second, Qt.Key_Up)
+            self.assertTrue(first.isChecked())
+            self.assertFalse(second.isChecked())
+            QTest.keyClick(first, Qt.Key_Space)
+            self.assertTrue(first.isChecked())
+        finally:
+            host.close()
+            host.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+    def test_legacy_rating_hit_target_and_minimum_slider_travel(self):
+        for direction in (Qt.LeftToRight, Qt.RightToLeft):
+            rating = fluentqt.RatingControl()
+            rating.setLayoutDirection(direction)
+            rating.setFixedSize(rating.sizeHint() - QSize(8, 8))
+            leading = rating.width() - 2 if direction == Qt.RightToLeft else 2
+            QTest.mouseClick(rating, Qt.LeftButton, Qt.NoModifier, QPoint(leading, rating.height() // 2))
+            self.assertEqual(rating.value(), 0.5)
+            delete_qobject(rating)
+            for orientation in (Qt.Horizontal, Qt.Vertical):
+                slider = fluentqt.Slider(orientation)
+                slider.setLayoutDirection(direction)
+                slider.setRange(0, 100)
+                slider.resize(slider.minimumSizeHint())
+                horizontal = orientation == Qt.Horizontal
+                length = slider.width() if horizontal else slider.height()
+                def point(position):
+                    return QPoint(position, slider.height() // 2) if horizontal else QPoint(slider.width() // 2, position)
+                QTest.mouseClick(slider, Qt.LeftButton, Qt.NoModifier, point(0))
+                start = slider.value()
+                QTest.mouseClick(slider, Qt.LeftButton, Qt.NoModifier, point(length - 1))
+                self.assertEqual({start, slider.value()}, {0, 100})
+                delete_qobject(slider)
+
+    def test_control_surface_focus_and_fractional_scale_parity(self):
+        background = QColor(17, 23, 31)
+
+        def render(widget, scale):
+            image = QImage(QSize(math.ceil(widget.width() * scale), math.ceil(widget.height() * scale)),
+                           QImage.Format_ARGB32_Premultiplied)
+            image.setDevicePixelRatio(scale)
+            image.fill(background)
+            painter = QPainter(image)
+            widget.render(painter, QPoint(), QRegion(), QWidget.DrawChildren)
+            painter.end()
+            return image
+
+        for kind in (fluentqt.CheckBox, fluentqt.ComboBox, fluentqt.RatingControl,
+                     fluentqt.HyperlinkButton, fluentqt.Slider):
+            host = QWidget()
+            layout = QVBoxLayout(host)
+            layout.setContentsMargins(0, 0, 0, 0)
+            before = fluentqt.Button("Before", host)
+            control = kind(parent=host)
+            if kind is fluentqt.CheckBox:
+                control.setText("Option")
+                control.setChecked(True)
+            elif kind is fluentqt.ComboBox:
+                control.addItems(["First", "Second"])
+            elif kind is fluentqt.RatingControl:
+                control.setValue(2.5)
+                control.setStarSize(28)
+            elif kind is fluentqt.HyperlinkButton:
+                control.setText("Read documentation")
+                self.assertFalse(control.hasFocusVisual())
+            elif kind is fluentqt.Slider:
+                control.setHandleSize(36)
+                control.setValue(0)
+                self.assertGreaterEqual(control.minimumSizeHint().height(), 40)
+            layout.addWidget(before)
+            layout.addWidget(control)
+            host.resize(320, 120)
+            host.show()
+            QApplication.setActiveWindow(host)
+            QCoreApplication.processEvents()
+            try:
+                self.assertTrue(host.contentsRect().contains(control.geometry()), kind.__name__)
+                for theme in (fluentqt.Theme.Light, fluentqt.Theme.Dark, fluentqt.Theme.HighContrast):
+                    control.setProperty("fluentThemeOverride", int(theme))
+                    for scale in (1, 1.25, 1.5, 2):
+                        with self.subTest(control=kind.__name__, theme=theme, scale=scale):
+                            before.setFocus()
+                            resting = render(control, scale)
+                            control.setFocus(Qt.TabFocusReason)
+                            self.assertTrue(control.hasFocus())
+                            focused = render(control, scale)
+                            self.assertNotEqual(resting, focused)
+                            self.assertFalse(control.testAttribute(Qt.WA_MacShowFocusRect))
+            finally:
+                host.close()
+                host.deleteLater()
+                QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
     def test_public_types_and_build_versions(self):
         self.assertTrue(issubclass(fluentqt.Accordion, QWidget))

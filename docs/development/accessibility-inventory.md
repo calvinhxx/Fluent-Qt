@@ -297,6 +297,34 @@ full outline opacity. Their focused tests check rendered visibility and the hove
 contrast increase at 1x and 2x scale. Disabled and selected states retain their
 existing treatment. These pixel checks supplement native Gallery review; they do
 not certify contrast on every application background or custom palette.
+`CheckBox` and `RadioButton` use only their Fluent keyboard focus cue; the platform adapter disables
+the additional Cocoa focus ring. Tab and Space retain native checkbox behavior,
+and mouse input removes the keyboard-only cue. C++ and PySide6 regression checks
+cover this contract; the native documentation focus capture supplies visual evidence.
+`RadioButton` reserves space around its indicator so the keyboard cue does not
+overpaint the selected circle and fractional scaling does not clip its edge.
+At an explicitly fixed legacy size, optional horizontal padding yields to the
+indicator and label; keyboard focus uses the indicator outline when a surrounding
+frame would overlap the content.
+Focused rendering tests cover both text directions, custom circle sizes and
+Light, Dark and High Contrast. Mouse, arrow-key and Space selection preserve
+the native exclusive-group behavior.
+
+`CheckBox` and `ComboBox` reserve their full painted widget bounds in layouts;
+native optical margins cannot push their borders outside a parent with zero
+padding. Both editable and non-editable combo boxes show the focus underline.
+`RatingControl` leaves space between the star tips and the keyboard cue and
+centers the stars when its row is taller than its content. Fixed legacy sizes
+drop optional padding and use an underline for keyboard focus, preserving the
+original leading hit target. `HyperlinkButton` shows keyboard focus by default
+and clears that cue on mouse input. Its inherited `focusVisual` opt-in remains
+available; the base Button default is unchanged.
+`Slider` uses a single thumb outline for keyboard focus and updates its layout
+hints when handle or track dimensions change. Its minimum size accommodates
+the painted handle at both endpoints plus at least one handle's width of drag
+travel. Focus and edge regression tests cover
+Light/Dark/High Contrast, both text directions and 1x/1.25x/1.5x/2x rendering.
+PySide6 exercises the same shared implementations.
 
 The [WebAssembly runtime](../../platforms/webassembly/Runtime.cpp) keeps Qt's HTML
 accessibility proxies readable and focusable without painting a second control
