@@ -108,6 +108,11 @@ def project_version() -> str:
     return match.group(1)
 
 
+def documentation_entry(language: str) -> str:
+    from documentation_guides import guide_path
+    return guide_path('foundation', language).removesuffix('index.html')
+
+
 def translations() -> dict[str, dict[str, str]]:
     source = SITE_SCRIPT_PATH.read_text(encoding="utf-8")
     declaration = "const translations = "
@@ -292,12 +297,32 @@ def render_page(
     page = localize_text(page, values, locale)
     page = localize_attributes(page, values, locale)
     page = prefix_resources(page, locale.resource_prefix)
+    # Resolve this locale-owned link after prefixing shared assets.
+    page = page.replace("{{API_URL}}", documentation_entry(locale.key).removeprefix("zh-CN/"))
     if re.search(r"{{[A-Z0-9_]+}}", page):
         fail(f"unresolved template token in {locale.output}")
     return page.rstrip() + "\n"
 
 
 def render_sitemap() -> str:
+    from component_inventory import config
+    from documentation_guides import guides, guide_path
+    from api_sections import reference_headers, reference_path
+    from generate_api_reference import generate_reference
+    entries = []
+    paths = ['api/' + component['id'] + '/' for component in config()]
+    paths += [guide_path(item['id']).removesuffix('index.html') for item in guides()]
+    paths += [reference_path(item['source']).removesuffix('index.html') for item in reference_headers(generate_reference())]
+    for path in paths:
+        english = BASE_URL + path
+        chinese = BASE_URL + 'zh-CN/' + path
+        for url in (english, chinese):
+            entries.append(f'''  <url>
+    <loc>{url}</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="{english}" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="{chinese}" />
+  </url>''')
+    component_urls = "\n".join(entries)
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
@@ -313,9 +338,7 @@ def render_sitemap() -> str:
     <xhtml:link rel="alternate" hreflang="zh-CN" href="{BASE_URL}zh-CN/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="{BASE_URL}" />
   </url>
-  <url>
-    <loc>{BASE_URL}api/</loc>
-  </url>
+{component_urls}
 </urlset>
 '''
 

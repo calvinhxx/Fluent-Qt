@@ -104,8 +104,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="../styles.css?v=20261010-2">
-    <script src="../site.js?v=20261010-2" defer></script>
+    <link rel="stylesheet" href="../styles.css?v=20261027-home-restore-1">
+    <script src="../site.js?v=20261027-doc-nav-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">跳到主要内容</a>
@@ -132,9 +132,8 @@
         <div class="nav-cluster" id="primary-navigation">
           <div class="nav-links">
             <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
-            <a href="../api/" data-i18n="nav.api">API</a>
+            <a href="api/foundation/" data-i18n="nav.api">文档</a>
             <a href="#quick-start" data-i18n="nav.quickStart">接入</a>
-            <a href="#components" data-i18n="nav.components">控件</a>
             <a href="#why" data-i18n="nav.why">概览</a>
             <a href="#ai-build" data-i18n="nav.aiBuild">GUI Skill</a>
             <a href="#downloads" data-i18n="nav.downloads">下载</a>
@@ -298,19 +297,11 @@
               <p class="section-index">02 / GALLERY</p>
               <h2 id="gallery-title"><span data-i18n="gallery.title">控件示例</span></h2>
               <p data-i18n="gallery.copy">这个 Gallery 在浏览器中运行，无需本地配置 Qt；接入项目仍需 Qt 5.15+ 或 6.2+。</p>
-              <a
-                class="button button-primary gallery-web-link"
-                href="../gallery/"
-                data-analytics-event="cpp_web_gallery"
-              >
-                <span data-i18n="gallery.webAction">启动实时 Gallery</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-              </a>
             </div>
             <ol class="workflow-list">
               <li><span>01</span><div><strong data-i18n="gallery.searchTitle">搜索</strong><p data-i18n="gallery.searchCopy">按控件名定位页面</p></div></li>
               <li><span>02</span><div><strong data-i18n="gallery.stateTitle">验证</strong><p data-i18n="gallery.stateCopy">切换浅色、深色、高对比度主题与动效级别</p></div></li>
-              <li><span>03</span><div><strong data-i18n="gallery.codeTitle">查看示例</strong><p data-i18n="gallery.codeCopy">展开对应的 C++ 代码</p></div></li>
+              <li><span>03</span><div><strong data-i18n="gallery.codeTitle">查看示例</strong><p data-i18n="gallery.codeCopy">切换查看 C++ / Python 代码</p></div></li>
             </ol>
           </div>
 
@@ -324,16 +315,7 @@
             <div class="live-gallery-toolbar">
               <div class="live-gallery-brand">
                 <span class="live-indicator" aria-hidden="true"></span>
-                <strong>C++ Web Gallery</strong>
-                <span class="live-gallery-status" data-gallery-status data-i18n="gallery.liveStateWaiting">待加载</span>
-              </div>
-              <div class="live-gallery-actions">
-                <button type="button" class="live-toolbar-button" data-gallery-load>
-                  <span data-i18n="gallery.loadNow">立即加载</span>
-                </button>
-                <a class="live-toolbar-link" href="../gallery/" target="_blank" rel="noopener" data-analytics-event="gallery_full_page_toolbar">
-                  <span data-i18n="gallery.fullPage">完整页面</span> <span aria-hidden="true">↗</span>
-                </a>
+                <strong>Gallery</strong>
               </div>
             </div>
 
@@ -351,27 +333,24 @@
               <iframe
                 class="live-gallery-frame"
                 data-gallery-frame
-                title="Fluent-Qt C++ Web Gallery 实时体验"
+                title="Fluent-Qt Gallery"
                 data-i18n-title="gallery.frameTitle"
                 loading="lazy"
                 referrerpolicy="strict-origin-when-cross-origin"
               ></iframe>
               <div class="live-gallery-overlay" data-gallery-overlay role="status" aria-live="polite">
                 <span class="gallery-loader" aria-hidden="true"></span>
-                <strong data-gallery-message data-i18n="gallery.waitingTitle">滚动到这里后自动启动</strong>
-                <p data-gallery-detail data-i18n="gallery.waitingDetail">也可以点击“立即加载”提前启动。</p>
+                <strong data-gallery-message data-i18n="gallery.waitingTitle">正在加载 Gallery…</strong>
+                <p data-gallery-detail data-i18n="gallery.waitingDetail"></p>
                 <div class="live-gallery-overlay-actions">
-                  <button type="button" class="button button-primary" data-gallery-load>
-                    <span data-i18n="gallery.loadAction">启动实时体验</span>
+                  <button type="button" class="button button-primary" data-gallery-load hidden>
+                    <span data-i18n="gallery.retryAction">重试</span>
                   </button>
-                  <a class="button button-quiet" href="../gallery/" target="_blank" rel="noopener" data-analytics-event="gallery_full_page_overlay">
-                    <span data-i18n="gallery.openAction">在新页面打开</span>
-                  </a>
                 </div>
               </div>
             </div>
             <noscript>
-              <p class="noscript-note"><a href="../gallery/" data-i18n="gallery.noscript">打开 C++ Web Gallery</a></p>
+              <p class="noscript-note" data-i18n="gallery.noscript">启用 JavaScript 后即可在此体验 Gallery。</p>
             </noscript>
           </div>
         </div>
@@ -529,16 +508,15 @@ target_link_libraries(
                 <strong>SpatialView <span>· C++ / WebAssembly</span></strong>
                 <div>
                   <button type="button" data-showcase-stop hidden data-i18n="spatial.stop">停止并释放</button>
-                  <a href="../gallery/?showcase=spatial&amp;window-mode=maximized" target="_blank" rel="noopener" data-i18n="spatial.open">独立打开 ↗</a>
                 </div>
               </div>
               <div class="spatial-live-viewport">
                 <iframe data-showcase-frame title="真实 C++ Spatial 交互示例" data-i18n-title="spatial.frameTitle" tabindex="-1" aria-hidden="true"></iframe>
                 <div class="spatial-live-overlay" data-showcase-overlay>
                   <img src="../assets/app-icon.png?v=6bb48ccbdf19" width="64" height="64" alt="">
-                  <strong data-showcase-message data-i18n="spatial.runTitle">直接运行真实的 SpatialView</strong>
-                  <p data-showcase-detail data-i18n="spatial.runCopy">两张卡片、实时图表和镜头控件，来自 C++ Gallery 的同一个示例。点击后加载 Qt / WASM。</p>
-                  <button class="button button-primary" type="button" data-showcase-start disabled data-i18n="spatial.run">运行 C++ 3D 示例</button>
+                  <strong data-showcase-message data-i18n="spatial.runTitle">正在加载示例…</strong>
+                  <p data-showcase-detail data-i18n="spatial.runCopy"></p>
+                  <button class="button button-primary" type="button" data-showcase-start hidden data-i18n="gallery.retryAction">重试</button>
                 </div>
               </div>
             </div>
@@ -617,101 +595,10 @@ target_link_libraries(
         </div>
       </section>
 
-      <section class="component-section" id="components" aria-labelledby="components-title">
-        <div class="page-shell">
-          <div class="section-heading component-heading" data-reveal>
-            <div>
-              <p class="section-index">08 / COMPONENTS</p>
-              <h2 id="components-title"><span data-i18n="components.title">控件目录</span></h2>
-            </div>
-            <p data-i18n="components.copy">以下为 Gallery 中的部分控件</p>
-          </div>
-
-          <div class="showcase-feature" data-reveal>
-            <figure class="showcase-media">
-              <img
-                src="../assets/gallery/gallery-button-real.png?v=e9826ce22e52"
-                data-theme-src-light="../assets/gallery/gallery-button-real.png?v=e9826ce22e52"
-                data-theme-src-dark="../assets/gallery/gallery-button-dark.png?v=f0c29a7dbc02"
-                alt="Windows Mica 效果下的 Fluent-Qt Gallery Button 控件页面"
-                data-i18n-alt="images.button"
-                width="1440"
-                height="900"
-                loading="lazy"
-                decoding="async"
-              >
-            </figure>
-            <div class="showcase-copy">
-              <span class="showcase-number">01</span>
-              <p class="showcase-label">BASIC INPUT</p>
-              <h3>Button</h3>
-              <p data-i18n="components.buttonCopy">包含默认、强调、禁用和图标状态</p>
-              <div class="tag-list" aria-label="相关控件" data-i18n-aria-label="a11y.relatedControls">
-                <span>SplitButton</span><span>ComboBox</span><span>CheckBox</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="showcase-pair" data-reveal>
-            <article>
-              <figure class="showcase-media">
-                <img
-                  src="../assets/gallery/gallery-collections-real.png?v=a7e369fbdef4"
-                  data-theme-src-light="../assets/gallery/gallery-collections-real.png?v=a7e369fbdef4"
-                  data-theme-src-dark="../assets/gallery/gallery-collections-dark.png?v=49e756703117"
-                  alt="Windows Mica 效果下的 Fluent-Qt Gallery 集合视图页面"
-                  data-i18n-alt="images.collections"
-                  width="1440"
-                  height="900"
-                  loading="lazy"
-                  decoding="async"
-                >
-              </figure>
-              <div class="pair-caption"><span>02 / COLLECTIONS</span><strong>ListView · GridView · TreeView</strong></div>
-            </article>
-            <article>
-              <figure class="showcase-media">
-                <img
-                  src="../assets/gallery/gallery-home-real.png?v=b885a0fc143b"
-                  data-theme-src-light="../assets/gallery/gallery-home-real.png?v=b885a0fc143b"
-                  data-theme-src-dark="../assets/gallery/gallery-home-dark.png?v=a24d8882ccf6"
-                  alt="Windows Mica 效果下的 Fluent-Qt Gallery 导航与窗口界面"
-                  data-i18n-alt="images.system"
-                  width="1440"
-                  height="900"
-                  loading="lazy"
-                  decoding="async"
-                >
-              </figure>
-              <div class="pair-caption"><span>03 / SHELL</span><strong>Navigation · Windowing</strong></div>
-            </article>
-          </div>
-
-          <div class="family-line" data-reveal>
-            <a class="text-link" href="../api/" data-i18n="components.familiesLabel">查看完整 API 目录</a>
-          </div>
-
-          <div class="component-directory" aria-label="组件模块" data-i18n-aria-label="a11y.componentModules" data-reveal>
-            <article><strong>Foundation</strong><span>Theme · Typography · FontIcon</span></article>
-            <article><strong>Basic input</strong><span>Button · ComboBox · ToggleSwitch</span></article>
-            <article><strong>Collections</strong><span>ListView · GridView · TreeView</span></article>
-            <article><strong>Date &amp; time</strong><span>CalendarView · DatePicker · TimePicker</span></article>
-            <article><strong>Dialogs &amp; flyouts</strong><span>ContentDialog · Flyout · TeachingTip</span></article>
-            <article><strong>Layout</strong><span>Card · Accordion · Expander</span></article>
-            <article><strong>Menus &amp; toolbars</strong><span>Menu · MenuBar · CommandBar</span></article>
-            <article><strong>Navigation</strong><span>NavigationView · TabView · Breadcrumb</span></article>
-            <article><strong>Scrolling</strong><span>ScrollView · PipsPager · AnnotatedScrollBar</span></article>
-            <article><strong>Status &amp; info</strong><span>InfoBar · ProgressRing · Toast</span></article>
-            <article><strong>Text fields</strong><span>LineEdit · PasswordBox · AutoSuggestBox</span></article>
-            <article><strong>Windowing</strong><span>Window · TitleBar · WindowBackdrop</span></article>
-          </div>
-        </div>
-      </section>
-
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
         <div class="page-shell download-grid">
           <div class="download-copy" data-reveal>
-            <p class="section-index">09 / DOWNLOAD</p>
+            <p class="section-index">08 / DOWNLOAD</p>
             <h2 id="downloads-title">
               <span data-i18n="downloads.title">下载 Gallery</span>
             </h2>
@@ -788,7 +675,7 @@ target_link_libraries(
             <a href="https://github.com/calvinhxx/Fluent-Qt">GitHub</a>
             <a href="https://github.com/calvinhxx/Fluent-Qt/discussions" data-analytics-event="discussions_footer">Discussions</a>
             <a href="https://github.com/calvinhxx/Fluent-Qt/releases">Releases</a>
-            <a href="../api/" data-i18n="nav.api">API</a>
+            <a href="api/foundation/" data-i18n="nav.api">文档</a>
             <a href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples">Examples</a>
           </div>
           <div>

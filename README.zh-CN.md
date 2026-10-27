@@ -279,7 +279,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 
 | 目标 | 入口 |
 |---|---|
-| 体验和查找控件 | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) |
+| 体验和查找控件 | [组件文档](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) |
 | 构建应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) |
 | 参与 FluentQt 开发 | [开发文档树](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计](docs/design-languages/README.md) |
 | 打包或发布 | [打包工作流](docs/development/packaging-workflow.md) · [发布治理](docs/development/release-governance.md) · [版本记录](docs/releases/README.md) |

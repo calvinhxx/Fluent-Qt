@@ -53,12 +53,11 @@ function fixture() {
     visible: value => observer([{ isIntersecting: value }]), theme: value => { theme = value; controller.syncTheme(); } };
 }
 
-test('Spatial is opt-in and the initial URL retains native pixel density and host theme', () => {
+test('Spatial starts on visibility and keeps native pixel density and host theme', () => {
   const f = fixture();
-  f.visible(true);
   assert.equal(f.frame.src, undefined);
   f.theme('dark');
-  f.start.emit('click');
+  f.visible(true);
   const url = new URL(f.frame.src);
   assert.equal(url.pathname, '/gallery/');
   assert.equal(url.searchParams.get('render-scale'), 'native');
@@ -68,7 +67,7 @@ test('Spatial is opt-in and the initial URL retains native pixel density and hos
 });
 
 test('only the current same-origin frame session can report readiness', () => {
-  const f = fixture(); f.start.emit('click');
+  const f = fixture(); f.visible(true);
   f.receive('ready', '1', {origin:'https://elsewhere.test'});
   f.receive('ready', '1', {source:{}});
   f.receive('ready', 'old');
@@ -82,7 +81,7 @@ test('only the current same-origin frame session can report readiness', () => {
 });
 
 test('theme, reduced motion, viewport and document visibility reach the real Qt host', () => {
-  const f = fixture(); f.start.emit('click'); f.receive('ready');
+  const f = fixture(); f.visible(true); f.receive('ready');
   f.visible(true);
   assert.equal(f.messages.at(-1).active, true);
   f.document.hidden = true; f.document.emit('visibilitychange');
@@ -96,7 +95,7 @@ test('theme, reduced motion, viewport and document visibility reach the real Qt 
 });
 
 test('stop releases the iframe, restores focus and rejects stale callbacks after restarting', () => {
-  const f = fixture(); f.start.emit('click'); const old = new URL(f.frame.src).searchParams.get('host-session');
+  const f = fixture(); f.visible(true); const old = new URL(f.frame.src).searchParams.get('host-session');
   f.receive('ready'); f.stop.emit('click');
   assert.equal(f.frame.src, undefined);
   assert.equal(f.start.focused, true);
@@ -108,7 +107,7 @@ test('stop releases the iframe, restores focus and rejects stale callbacks after
 });
 
 test('slow loading and missing runtime expose retry without pretending to be ready', () => {
-  const f = fixture(); f.start.emit('click');
+  const f = fixture(); f.visible(true);
   [...f.timers.values()][0]();
   assert.equal(f.root.dataset.showcaseState, 'slow');
   f.frame.contentDocument.querySelector = () => null; f.frame.emit('load');
@@ -120,7 +119,7 @@ test('slow loading and missing runtime expose retry without pretending to be rea
 });
 
 test('page cache suspension preserves the session; navigation removes handlers and timers', () => {
-  const f = fixture(); f.start.emit('click'); f.receive('ready'); f.visible(true);
+  const f = fixture(); f.visible(true); f.receive('ready'); f.visible(true);
   f.window.emit('pagehide', {persisted:true});
   assert.equal(f.messages.at(-1).active, false);
   assert.ok(f.frame.src);

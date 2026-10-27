@@ -982,7 +982,7 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 
 @keyframes hero-rise {
   from {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(18px);
   }
   to {
@@ -3183,3 +3183,5 @@ html[data-site-language="zh"] [data-lang-en] {
     animation-iteration-count: 1 !important;
   }
 }
+
+[data-gallery-load][hidden], [data-showcase-start][hidden], [data-showcase-stop][hidden] { display: none !important; }
