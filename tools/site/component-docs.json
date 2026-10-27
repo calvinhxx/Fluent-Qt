@@ -9,7 +9,7 @@
       },
       "description": {
         "en": "Run an action, such as saving or submitting a form.",
-        "zh": "触发保存、提交等操作。"
+        "zh": "触发一个操作，例如保存或提交表单。"
       },
       "previews": [
         {
@@ -59,24 +59,24 @@
           "sample": "button-styles",
           "preview": "styles",
           "name": {
-            "en": "Choose an emphasis",
-            "zh": "选择按钮样式"
+            "en": "Choose a style",
+            "zh": "选择样式"
           },
           "description": {
-            "en": "Use Standard for regular actions, Accent for the primary action, and Subtle for less prominent actions.",
-            "zh": "Standard 用于普通操作，Accent 突出主要操作，Subtle 用于次要操作。"
+            "en": "Set the style with setFluentStyle(): Accent for the main action, Standard for other actions, and Subtle for less prominent ones.",
+            "zh": "用 setFluentStyle() 设置样式：Accent 用于主要操作，Standard 用于普通操作，Subtle 用于次要操作。"
           }
         },
         {
           "sample": "button-interaction-state",
           "preview": "states",
           "name": {
-            "en": "Inspect the states",
-            "zh": "观察交互状态"
+            "en": "Interaction states",
+            "zh": "交互状态"
           },
           "description": {
-            "en": "Compare resting, hover, pressed, focus and disabled states.",
-            "zh": "对照默认、悬停、按下、焦点和禁用状态。"
+            "en": "Buttons draw resting, hover, pressed, and disabled states from the current theme. The focus ring is off by default; call setFocusVisual(true) to show it.",
+            "zh": "按钮按当前主题绘制默认、悬停、按下和禁用状态。焦点环默认不显示，调用 setFocusVisual(true) 后才会绘制。"
           }
         }
       ]
@@ -88,8 +88,8 @@
         "zh": "复选框"
       },
       "description": {
-        "en": "Select one or more options. A mixed state represents a partial selection.",
-        "zh": "选择一个或多个选项，支持半选状态。"
+        "en": "Select or clear options. A mixed state shows that only some items are selected.",
+        "zh": "选择一个或多个选项；半选状态表示只选中了一部分。"
       },
       "previews": [
         {
@@ -240,36 +240,36 @@
           "sample": "checkbox-two-state",
           "preview": "unchecked",
           "name": {
-            "en": "Read a selection",
-            "zh": "读取选择状态"
+            "en": "Respond to changes",
+            "zh": "响应勾选"
           },
           "description": {
-            "en": "Check or clear an option.",
-            "zh": "勾选或取消一个选项。"
+            "en": "Connect toggled or stateChanged to respond when the box is checked or cleared.",
+            "zh": "连接 toggled 或 stateChanged，在勾选或取消时作出响应。"
           }
         },
         {
           "sample": "checkbox-three-state",
           "preview": "mixed",
           "name": {
-            "en": "Represent a mixed selection",
-            "zh": "表达半选状态"
+            "en": "Mixed state",
+            "zh": "半选状态"
           },
           "description": {
-            "en": "Use PartiallyChecked for a partial selection.",
-            "zh": "用 PartiallyChecked 表示部分选中。"
+            "en": "Call setTristate(true), then use Qt::PartiallyChecked when only some items are selected.",
+            "zh": "调用 setTristate(true) 后，可用 Qt::PartiallyChecked 表示只选中了一部分。"
           }
         },
         {
           "sample": "checkbox-select-all",
           "preview": "select-all",
           "name": {
-            "en": "Connect a select-all control",
-            "zh": "组合全选与子选项"
+            "en": "Select all",
+            "zh": "全选"
           },
           "description": {
-            "en": "The parent checkbox follows the selection of its children.",
-            "zh": "主复选框随子选项显示选中、未选或半选。"
+            "en": "The parent checkbox shows Checked, Unchecked, or PartiallyChecked to match its children.",
+            "zh": "主复选框随子选项显示全选、未选或半选。"
           }
         }
       ]

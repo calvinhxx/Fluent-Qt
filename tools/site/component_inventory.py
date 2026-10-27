@@ -40,7 +40,7 @@ def config():
         if not sample or not sample["cpp_snippet"].strip():
             raise ValueError(f"Missing canonical example: {cid}/{sample_id}")
         name = {"en": component["title"], "zh": editorial["name"]}
-        description = {"en": component["description"], "zh": editorial["description"]}
+        description = {"en": editorial.get("description_en", component["description"]), "zh": editorial["description"]}
         preview = {"id": "basic", "sample": sample_id,
                    "name": {"en": "Example", "zh": "示例"},
                    "alt": {"en": f'{component["title"]}: {sample["title"]}',
@@ -52,6 +52,6 @@ def config():
                           "minimum_preview_height": editorial.get("height", 420 if component["category_id"] in
                               ("dialogs-flyouts", "menus-toolbars", "windowing") else 196),
                           "examples": [{"sample": sample_id, "preview": "basic",
-                              "name": {"en": sample["title"], "zh": editorial.get("example", "基本用法")},
-                              "description": {"en": sample["description"], "zh": editorial.get("usage", editorial["description"])}}]})
+                              "name": {"en": editorial.get("example_en", sample["title"]), "zh": editorial.get("example", "基本用法")},
+                              "description": {"en": editorial.get("usage_en", sample["description"]), "zh": editorial.get("usage", editorial["description"])}}]})
     return documents
