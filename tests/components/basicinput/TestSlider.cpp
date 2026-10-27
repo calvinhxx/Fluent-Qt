@@ -124,8 +124,9 @@ TEST(SliderContractTest, Contract_PointerAndFilledTrackRespectQtDirectionSemanti
         {Qt::Vertical, Qt::RightToLeft, true, true},
     };
     for (const auto& item : cases) {
-        SCOPED_TRACE(::testing::Message() << "orientation=" << item.orientation << ", direction="
-                                          << item.direction << ", inverted=" << item.inverted);
+        SCOPED_TRACE(::testing::Message()
+            << "orientation=" << item.orientation << ", direction=" << item.direction
+            << ", inverted=" << item.inverted);
         Slider slider(item.orientation);
         QSlider reference(item.orientation);
         for (QSlider* target : {static_cast<QSlider*>(&slider), &reference}) {
@@ -253,8 +254,7 @@ TEST_F(SliderTest, VisualSliderGalleryLike)
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
-        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -274,11 +274,12 @@ TEST_F(SliderTest, VisualSliderGalleryLike)
     pageTitle->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(pageTitle);
 
-    Label* pageDesc = new Label("Use a Slider when you want your users to be able to set "
-                                "defined, contiguous values "
-                                "(such as volume or brightness) or a range of discrete values "
-                                "(such as screen resolution settings).",
-                                window);
+    Label* pageDesc = new Label(
+        "Use a Slider when you want your users to be able to set "
+        "defined, contiguous values "
+        "(such as volume or brightness) or a range of discrete values "
+        "(such as screen resolution settings).",
+        window);
     pageDesc->setWordWrap(true);
     pageDesc->anchors()->top = {pageTitle, Edge::Bottom, 8};
     pageDesc->anchors()->left = {window, Edge::Left, 40};
@@ -354,14 +355,10 @@ TEST_F(SliderTest, VisualSliderGalleryLike)
     QSpinBox* stepSpin = createSpinRow("StepFrequency:", rangeSlider->singleStep(), 2);
     QSpinBox* smallSpin = createSpinRow("SmallChange:", rangeSlider->singleStep(), 3);
 
-    QObject::connect(minSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
-                     &QSlider::setMinimum);
-    QObject::connect(maxSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
-                     &QSlider::setMaximum);
-    QObject::connect(stepSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
-                     &QSlider::setTickInterval);
-    QObject::connect(smallSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider,
-                     &QSlider::setSingleStep);
+    QObject::connect(minSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider, &QSlider::setMinimum);
+    QObject::connect(maxSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider, &QSlider::setMaximum);
+    QObject::connect(stepSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider, &QSlider::setTickInterval);
+    QObject::connect(smallSpin, qOverload<int>(&QSpinBox::valueChanged), rangeSlider, &QSlider::setSingleStep);
 
     // --- 3. Slider with tick marks ---
     // Fix: Anchor to smallSpin because the property panel on the right is taller than the slider itself
@@ -450,10 +447,9 @@ TEST_F(SliderTest, VisualSliderGalleryLike)
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
 
     scrollArea->show();

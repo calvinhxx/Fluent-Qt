@@ -65,51 +65,38 @@ constexpr int kPreviewReportSchemaVersion = 2;
 
 void configurePreviewParser(QCommandLineParser& parser)
 {
-    parser.setApplicationDescription(
-        QStringLiteral("Render one real FluentQt Gallery sample without starting "
-                       "the full Gallery shell."));
+    parser.setApplicationDescription(QStringLiteral(
+        "Render one real FluentQt Gallery sample without starting "
+        "the full Gallery shell."));
     parser.addHelpOption();
     parser.addOption(
-        QCommandLineOption(QStringLiteral("preview"),
-                           QStringLiteral("Run the isolated Gallery sample preview host.")));
-    parser.addOption(QCommandLineOption(QStringLiteral("route"),
-                                        QStringLiteral("Gallery component route id."),
-                                        QStringLiteral("route-id")));
-    parser.addOption(QCommandLineOption(
-        QStringLiteral("sample"),
-        QStringLiteral("Gallery sample id; defaults to the first sample for the route."),
-        QStringLiteral("sample-id")));
+        QCommandLineOption(QStringLiteral("preview"), QStringLiteral("Run the isolated Gallery sample preview host.")));
+    parser.addOption(QCommandLineOption(QStringLiteral("route"), QStringLiteral("Gallery component route id."),
+        QStringLiteral("route-id")));
+    parser.addOption(QCommandLineOption(QStringLiteral("sample"),
+        QStringLiteral("Gallery sample id; defaults to the first sample for the route."), QStringLiteral("sample-id")));
     parser.addOption(QCommandLineOption(QStringLiteral("theme"),
-                                        QStringLiteral("Preview theme: light, dark, or system."),
-                                        QStringLiteral("theme"), QStringLiteral("light")));
-    parser.addOption(QCommandLineOption(
-        QStringLiteral("rtl"), QStringLiteral("Render using right-to-left layout direction.")));
-    parser.addOption(QCommandLineOption(QStringLiteral("size"),
-                                        QStringLiteral("Preview viewport size as WIDTHxHEIGHT."),
-                                        QStringLiteral("size"), QStringLiteral("800x640")));
-    parser.addOption(QCommandLineOption(
-        QStringLiteral("snapshot"),
-        QStringLiteral("Write the settled preview window to a PNG file."), QStringLiteral("path")));
+        QStringLiteral("Preview theme: light, dark, or system."), QStringLiteral("theme"), QStringLiteral("light")));
     parser.addOption(
-        QCommandLineOption(QStringLiteral("actions"),
-                           QStringLiteral("Execute a versioned JSON interaction script before "
-                                          "capturing artifacts."),
-                           QStringLiteral("path")));
-    parser.addOption(QCommandLineOption(
-        QStringLiteral("report"),
-        QStringLiteral("Write a versioned Inspector JSON report; use '-' for stdout."),
+        QCommandLineOption(QStringLiteral("rtl"), QStringLiteral("Render using right-to-left layout direction.")));
+    parser.addOption(QCommandLineOption(QStringLiteral("size"),
+        QStringLiteral("Preview viewport size as WIDTHxHEIGHT."), QStringLiteral("size"), QStringLiteral("800x640")));
+    parser.addOption(QCommandLineOption(QStringLiteral("snapshot"),
+        QStringLiteral("Write the settled preview window to a PNG file."), QStringLiteral("path")));
+    parser.addOption(QCommandLineOption(QStringLiteral("actions"),
+        QStringLiteral(
+            "Execute a versioned JSON interaction script before "
+            "capturing artifacts."),
         QStringLiteral("path")));
-    parser.addOption(QCommandLineOption(
-        QStringLiteral("settle-ms"),
+    parser.addOption(QCommandLineOption(QStringLiteral("report"),
+        QStringLiteral("Write a versioned Inspector JSON report; use '-' for stdout."), QStringLiteral("path")));
+    parser.addOption(QCommandLineOption(QStringLiteral("settle-ms"),
         QStringLiteral("Milliseconds to wait before snapshot/report capture (0-10000)."),
         QStringLiteral("milliseconds"), QStringLiteral("250")));
-    parser.addOption(QCommandLineOption(
-        QStringLiteral("keep-open"),
+    parser.addOption(QCommandLineOption(QStringLiteral("keep-open"),
         QStringLiteral("Keep the preview open after writing requested artifacts.")));
-    parser.addOption(QCommandLineOption(
-        QStringLiteral("session-dir"),
-        QStringLiteral("Enable a local development command session in this directory."),
-        QStringLiteral("path")));
+    parser.addOption(QCommandLineOption(QStringLiteral("session-dir"),
+        QStringLiteral("Enable a local development command session in this directory."), QStringLiteral("path")));
 }
 
 bool parseViewportSize(const QString& text, QSize& size)
@@ -123,8 +110,8 @@ bool parseViewportSize(const QString& text, QSize& size)
     bool heightOk = false;
     const int width = match.captured(1).toInt(&widthOk);
     const int height = match.captured(2).toInt(&heightOk);
-    if (!widthOk || !heightOk || width < kMinimumPreviewWidth || width > kMaximumPreviewWidth ||
-        height < kMinimumPreviewHeight || height > kMaximumPreviewHeight) {
+    if (!widthOk || !heightOk || width < kMinimumPreviewWidth || width > kMaximumPreviewWidth
+        || height < kMinimumPreviewHeight || height > kMaximumPreviewHeight) {
         return false;
     }
     size = QSize(width, height);
@@ -155,8 +142,7 @@ FluentElement::Theme systemTheme()
 
     if (qApp) {
         const QPalette palette = qApp->palette();
-        if (palette.color(QPalette::Window).lightness() <
-            palette.color(QPalette::WindowText).lightness()) {
+        if (palette.color(QPalette::Window).lightness() < palette.color(QPalette::WindowText).lightness()) {
             return FluentElement::Dark;
         }
     }
@@ -193,8 +179,8 @@ bool writeJson(const QString& path, const QJsonObject& object, QString& error)
 {
     const QByteArray payload = QJsonDocument(object).toJson(QJsonDocument::Indented);
     if (path == QStringLiteral("-")) {
-        const std::size_t written =
-            std::fwrite(payload.constData(), 1, static_cast<std::size_t>(payload.size()), stdout);
+        const std::size_t written = std::fwrite(payload.constData(), 1, static_cast<std::size_t>(payload.size()),
+            stdout);
         std::fflush(stdout);
         if (written == static_cast<std::size_t>(payload.size()))
             return true;
@@ -210,21 +196,18 @@ bool writeJson(const QString& path, const QJsonObject& object, QString& error)
         return false;
     }
     if (file.write(payload) != payload.size()) {
-        error =
-            QStringLiteral("Could not write JSON artifact %1: %2").arg(path, file.errorString());
+        error = QStringLiteral("Could not write JSON artifact %1: %2").arg(path, file.errorString());
         file.cancelWriting();
         return false;
     }
     if (!file.commit()) {
-        error =
-            QStringLiteral("Could not commit JSON artifact %1: %2").arg(path, file.errorString());
+        error = QStringLiteral("Could not commit JSON artifact %1: %2").arg(path, file.errorString());
         return false;
     }
     return true;
 }
 
-bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& resolvedPath,
-                   QString& error)
+bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& resolvedPath, QString& error)
 {
     resolvedPath = absoluteArtifactPath(path);
     if (!window || resolvedPath.isEmpty()) {
@@ -258,8 +241,7 @@ bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& r
 #endif
     QSaveFile file(resolvedPath);
     if (!file.open(QIODevice::WriteOnly)) {
-        error =
-            QStringLiteral("Could not open snapshot %1: %2").arg(resolvedPath, file.errorString());
+        error = QStringLiteral("Could not open snapshot %1: %2").arg(resolvedPath, file.errorString());
         return false;
     }
     if (!snapshot.save(&file, "PNG")) {
@@ -268,8 +250,7 @@ bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& r
         return false;
     }
     if (!file.commit()) {
-        error = QStringLiteral("Could not commit snapshot %1: %2")
-                    .arg(resolvedPath, file.errorString());
+        error = QStringLiteral("Could not commit snapshot %1: %2").arg(resolvedPath, file.errorString());
         return false;
     }
     return true;
@@ -287,8 +268,8 @@ QString widgetSegment(QWidget* widget)
         for (QWidget* sibling : siblings) {
             if (sibling == widget)
                 break;
-            if (!sibling->objectName().startsWith(QStringLiteral("qt_")) &&
-                QString::fromLatin1(sibling->metaObject()->className()) == className) {
+            if (!sibling->objectName().startsWith(QStringLiteral("qt_"))
+                && QString::fromLatin1(sibling->metaObject()->className()) == className) {
                 ++index;
             }
         }
@@ -310,10 +291,8 @@ QString widgetPath(QWidget* widget, QWidget* root)
 
 QJsonObject rectObject(const QRect& rect)
 {
-    return {{QStringLiteral("x"), rect.x()},
-            {QStringLiteral("y"), rect.y()},
-            {QStringLiteral("width"), rect.width()},
-            {QStringLiteral("height"), rect.height()}};
+    return {{QStringLiteral("x"), rect.x()}, {QStringLiteral("y"), rect.y()}, {QStringLiteral("width"), rect.width()},
+        {QStringLiteral("height"), rect.height()}};
 }
 
 QJsonObject sizeObject(const QSize& size)
@@ -324,8 +303,7 @@ QJsonObject sizeObject(const QSize& size)
 QRect visibleWidgetRect(QWidget* widget, QWidget* root, const QRect& rect)
 {
     QRect visibleRect = rect.intersected(root->rect());
-    for (QWidget* ancestor = widget ? widget->parentWidget() : nullptr; ancestor;
-         ancestor = ancestor->parentWidget()) {
+    for (QWidget* ancestor = widget ? widget->parentWidget() : nullptr; ancestor; ancestor = ancestor->parentWidget()) {
         const QRect ancestorRect(ancestor->mapTo(root, QPoint(0, 0)), ancestor->size());
         visibleRect = visibleRect.intersected(ancestorRect);
         if (ancestor == root)
@@ -339,8 +317,8 @@ QJsonObject previewGeometryReport(QWidget* root)
     QJsonArray widgets;
     if (!root) {
         return {{QStringLiteral("schema_version"), 1},
-                {QStringLiteral("tool"), QStringLiteral("FluentQt Named Widget Geometry")},
-                {QStringLiteral("widgets"), widgets}};
+            {QStringLiteral("tool"), QStringLiteral("FluentQt Named Widget Geometry")},
+            {QStringLiteral("widgets"), widgets}};
     }
 
     QVector<QWidget*> candidates{root};
@@ -350,36 +328,31 @@ QJsonObject previewGeometryReport(QWidget* root)
         candidates.append(widget);
 
     for (QWidget* widget : candidates) {
-        if (!widget || widget->objectName().startsWith(QStringLiteral("qt_")) ||
-            (widget != root && !widget->isVisibleTo(root))) {
+        if (!widget || widget->objectName().startsWith(QStringLiteral("qt_"))
+            || (widget != root && !widget->isVisibleTo(root))) {
             continue;
         }
         const QRect rect(widget->mapTo(root, QPoint(0, 0)), widget->size());
         const QRect visibleRect = visibleWidgetRect(widget, root, rect);
-        widgets.append(QJsonObject{
-            {QStringLiteral("path"), widgetPath(widget, root)},
+        widgets.append(QJsonObject{{QStringLiteral("path"), widgetPath(widget, root)},
             {QStringLiteral("class"), QString::fromLatin1(widget->metaObject()->className())},
             {QStringLiteral("object_name"), widget->objectName()},
-            {QStringLiteral("stable"), !widget->objectName().isEmpty()},
-            {QStringLiteral("rect"), rectObject(rect)},
+            {QStringLiteral("stable"), !widget->objectName().isEmpty()}, {QStringLiteral("rect"), rectObject(rect)},
             {QStringLiteral("visible_rect"), rectObject(visibleRect)},
             {QStringLiteral("minimum_size"), sizeObject(widget->minimumSize())},
             {QStringLiteral("maximum_size"), sizeObject(widget->maximumSize())},
             {QStringLiteral("size_hint"), sizeObject(widget->sizeHint())},
-            {QStringLiteral("enabled"), widget->isEnabled()},
-            {QStringLiteral("has_focus"), widget->hasFocus()},
+            {QStringLiteral("enabled"), widget->isEnabled()}, {QStringLiteral("has_focus"), widget->hasFocus()},
             {QStringLiteral("clipped"), visibleRect != rect},
-            {QStringLiteral("layout_direction"), widget->layoutDirection() == Qt::RightToLeft
-                                                     ? QStringLiteral("rtl")
-                                                     : QStringLiteral("ltr")},
+            {QStringLiteral("layout_direction"),
+                widget->layoutDirection() == Qt::RightToLeft ? QStringLiteral("rtl") : QStringLiteral("ltr")},
             {QStringLiteral("accessible_name"), widget->accessibleName()}});
     }
 
     return {{QStringLiteral("schema_version"), 1},
-            {QStringLiteral("tool"), QStringLiteral("FluentQt Named Widget Geometry")},
-            {QStringLiteral("root_size"), sizeObject(root->size())},
-            {QStringLiteral("widget_count"), widgets.size()},
-            {QStringLiteral("widgets"), widgets}};
+        {QStringLiteral("tool"), QStringLiteral("FluentQt Named Widget Geometry")},
+        {QStringLiteral("root_size"), sizeObject(root->size())}, {QStringLiteral("widget_count"), widgets.size()},
+        {QStringLiteral("widgets"), widgets}};
 }
 
 QJsonObject previewEnvironment(QWidget* window)
@@ -387,8 +360,7 @@ QJsonObject previewEnvironment(QWidget* window)
     const QScreen* screen = window ? window->screen() : QGuiApplication::primaryScreen();
     const QFont font = qApp ? qApp->font() : QFont();
     QJsonObject scaleEnvironment;
-    const QStringList scaleVariables{
-        QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("QT_SCREEN_SCALE_FACTORS"),
+    const QStringList scaleVariables{QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("QT_SCREEN_SCALE_FACTORS"),
         QStringLiteral("QT_FONT_DPI"), QStringLiteral("QT_AUTO_SCREEN_SCALE_FACTOR"),
         QStringLiteral("QT_ENABLE_HIGHDPI_SCALING")};
     for (const QString& name : scaleVariables) {
@@ -396,44 +368,35 @@ QJsonObject previewEnvironment(QWidget* window)
         scaleEnvironment.insert(name, qEnvironmentVariable(key.constData()));
     }
 
-    const QJsonObject system{
-        {QStringLiteral("product_type"), QSysInfo::productType()},
+    const QJsonObject system{{QStringLiteral("product_type"), QSysInfo::productType()},
         {QStringLiteral("product_version"), QSysInfo::productVersion()},
         {QStringLiteral("kernel_type"), QSysInfo::kernelType()},
         {QStringLiteral("kernel_version"), QSysInfo::kernelVersion()},
         {QStringLiteral("cpu_architecture"), QSysInfo::currentCpuArchitecture()}};
     const QJsonObject fontObject{{QStringLiteral("family"), font.family()},
-                                 {QStringLiteral("style_name"), font.styleName()},
-                                 {QStringLiteral("point_size"), font.pointSizeF()},
-                                 {QStringLiteral("pixel_size"), font.pixelSize()},
-                                 {QStringLiteral("weight"), font.weight()},
-                                 {QStringLiteral("italic"), font.italic()}};
+        {QStringLiteral("style_name"), font.styleName()}, {QStringLiteral("point_size"), font.pointSizeF()},
+        {QStringLiteral("pixel_size"), font.pixelSize()}, {QStringLiteral("weight"), font.weight()},
+        {QStringLiteral("italic"), font.italic()}};
     QJsonObject screenObject;
     if (screen) {
-        screenObject = {
-            {QStringLiteral("name"), screen->name()},
-            {QStringLiteral("manufacturer"), screen->manufacturer()},
-            {QStringLiteral("model"), screen->model()},
-            {QStringLiteral("serial_number"), screen->serialNumber()},
-            {QStringLiteral("depth"), screen->depth()},
+        screenObject = {{QStringLiteral("name"), screen->name()},
+            {QStringLiteral("manufacturer"), screen->manufacturer()}, {QStringLiteral("model"), screen->model()},
+            {QStringLiteral("serial_number"), screen->serialNumber()}, {QStringLiteral("depth"), screen->depth()},
             {QStringLiteral("geometry"), rectObject(screen->geometry())},
             {QStringLiteral("available_geometry"), rectObject(screen->availableGeometry())},
             {QStringLiteral("physical_dpi_x"), screen->physicalDotsPerInchX()},
             {QStringLiteral("physical_dpi_y"), screen->physicalDotsPerInchY()}};
     }
 
-    return {
-        {QStringLiteral("fingerprint_schema_version"), 1},
+    return {{QStringLiteral("fingerprint_schema_version"), 1},
         {QStringLiteral("qt_version"), QString::fromLatin1(qVersion())},
         {QStringLiteral("platform_plugin"), QGuiApplication::platformName()},
         {QStringLiteral("style"), qApp && qApp->style() ? qApp->style()->objectName() : QString()},
         {QStringLiteral("device_pixel_ratio"), window ? window->devicePixelRatioF() : 0.0},
         {QStringLiteral("logical_dpi_x"), screen ? screen->logicalDotsPerInchX() : 0.0},
         {QStringLiteral("logical_dpi_y"), screen ? screen->logicalDotsPerInchY() : 0.0},
-        {QStringLiteral("locale"), QLocale().name()},
-        {QStringLiteral("font"), fontObject},
-        {QStringLiteral("screen"), screenObject},
-        {QStringLiteral("system"), system},
+        {QStringLiteral("locale"), QLocale().name()}, {QStringLiteral("font"), fontObject},
+        {QStringLiteral("screen"), screenObject}, {QStringLiteral("system"), system},
         {QStringLiteral("scale_environment"), scaleEnvironment}};
 }
 
@@ -498,8 +461,7 @@ GalleryPreviewParseResult parseGalleryPreviewArguments(const QStringList& argume
     return result;
 }
 
-GalleryPreviewSelection resolveGalleryPreviewSelection(const QString& routeId,
-                                                       const QString& sampleId)
+GalleryPreviewSelection resolveGalleryPreviewSelection(const QString& routeId, const QString& sampleId)
 {
     GalleryPreviewSelection selection;
     const QVector<GallerySample> samples = gallerySamplesForRoute(routeId);
@@ -507,10 +469,9 @@ GalleryPreviewSelection resolveGalleryPreviewSelection(const QString& routeId,
         selection.availableSampleIds.append(sample.id);
 
     if (samples.isEmpty()) {
-        selection.error =
-            galleryContentEntry(routeId)
-                ? QStringLiteral("Gallery route '%1' does not expose live samples.").arg(routeId)
-                : QStringLiteral("Unknown Gallery route '%1'.").arg(routeId);
+        selection.error = galleryContentEntry(routeId)
+            ? QStringLiteral("Gallery route '%1' does not expose live samples.").arg(routeId)
+            : QStringLiteral("Unknown Gallery route '%1'.").arg(routeId);
         return selection;
     }
 
@@ -540,7 +501,8 @@ QString galleryPreviewThemeName(GalleryPreviewTheme theme)
 }
 
 GalleryPreviewWindow::GalleryPreviewWindow(const GalleryPreviewOptions& options,
-                                           const GallerySample& sample, QWidget* parent)
+    const GallerySample& sample,
+    QWidget* parent)
     : QWidget(parent), m_routeId(options.routeId), m_sampleId(sample.id)
 {
     setObjectName(QStringLiteral("galleryPreviewWindow"));
@@ -563,10 +525,8 @@ GalleryPreviewWindow::GalleryPreviewWindow(const GalleryPreviewOptions& options,
     scrollView->setProperty("scrollChainingEnabled", false);
     scrollView->setWidgetResizable(true);
     scrollView->setHorizontalScrollMode(fluent::scrolling::ScrollView::ScrollMode::Disabled);
-    scrollView->setHorizontalScrollBarVisibility(
-        fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
-    scrollView->setVerticalScrollBarVisibility(
-        fluent::scrolling::ScrollView::ScrollBarVisibility::Auto);
+    scrollView->setHorizontalScrollBarVisibility(fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
+    scrollView->setVerticalScrollBarVisibility(fluent::scrolling::ScrollView::ScrollBarVisibility::Auto);
 
     m_canvas = new QWidget(scrollView);
     m_canvas->setObjectName(QStringLiteral("galleryPreviewCanvas"));
@@ -612,62 +572,56 @@ void GalleryPreviewWindow::applyPalette()
     }
 }
 
-QJsonObject galleryPreviewReport(GalleryPreviewWindow* window, const GalleryPreviewOptions& options,
-                                 const QString& snapshotPath, const QString& snapshotError,
-                                 const QJsonObject& interactionReport)
+QJsonObject galleryPreviewReport(GalleryPreviewWindow* window,
+    const GalleryPreviewOptions& options,
+    const QString& snapshotPath,
+    const QString& snapshotError,
+    const QJsonObject& interactionReport)
 {
     const bool snapshotRequested = !options.snapshotPath.isEmpty();
-    const bool snapshotWritten =
-        snapshotRequested && snapshotError.isEmpty() && !snapshotPath.isEmpty();
-    const QString resolvedThemeName = FluentElement::currentTheme() == FluentElement::Dark
-                                          ? QStringLiteral("dark")
-                                          : QStringLiteral("light");
+    const bool snapshotWritten = snapshotRequested && snapshotError.isEmpty() && !snapshotPath.isEmpty();
+    const QString resolvedThemeName =
+        FluentElement::currentTheme() == FluentElement::Dark ? QStringLiteral("dark") : QStringLiteral("light");
     QJsonObject artifacts{{QStringLiteral("snapshot"),
-                           QJsonObject{{QStringLiteral("requested"), snapshotRequested},
-                                       {QStringLiteral("written"), snapshotWritten},
-                                       {QStringLiteral("path"), snapshotPath},
-                                       {QStringLiteral("sha256"),
-                                        snapshotWritten ? fileSha256(snapshotPath) : QString()},
-                                       {QStringLiteral("error"), snapshotError}}}};
+        QJsonObject{{QStringLiteral("requested"), snapshotRequested}, {QStringLiteral("written"), snapshotWritten},
+            {QStringLiteral("path"), snapshotPath},
+            {QStringLiteral("sha256"), snapshotWritten ? fileSha256(snapshotPath) : QString()},
+            {QStringLiteral("error"), snapshotError}}}};
 
     const QJsonObject resolvedInteractionReport =
         interactionReport.isEmpty() ? galleryPreviewActionsNotRequested() : interactionReport;
-    const bool interactionFailed =
-        resolvedInteractionReport.value(QStringLiteral("requested")).toBool() &&
-        resolvedInteractionReport.value(QStringLiteral("status")).toString() !=
-            QStringLiteral("pass");
+    const bool interactionFailed = resolvedInteractionReport.value(QStringLiteral("requested")).toBool()
+        && resolvedInteractionReport.value(QStringLiteral("status")).toString() != QStringLiteral("pass");
 
-    return {
-        {QStringLiteral("schema_version"), kPreviewReportSchemaVersion},
+    return {{QStringLiteral("schema_version"), kPreviewReportSchemaVersion},
         {QStringLiteral("tool"), QStringLiteral("FluentQt Gallery Preview")},
-        {QStringLiteral("status"), !snapshotError.isEmpty() ? QStringLiteral("artifact-error")
-                                   : interactionFailed      ? QStringLiteral("interaction-error")
-                                                            : QStringLiteral("ok")},
+        {QStringLiteral("status"),
+            !snapshotError.isEmpty() ? QStringLiteral("artifact-error")
+                : interactionFailed
+                ? QStringLiteral("interaction-error")
+                : QStringLiteral("ok")},
         {QStringLiteral("selection"),
-         QJsonObject{{QStringLiteral("route"), options.routeId},
-                     {QStringLiteral("sample"), window ? window->sampleId() : QString()}}},
+            QJsonObject{{QStringLiteral("route"), options.routeId},
+                {QStringLiteral("sample"), window ? window->sampleId() : QString()}}},
         {QStringLiteral("scene"),
-         QJsonObject{{QStringLiteral("requested_theme"), galleryPreviewThemeName(options.theme)},
-                     {QStringLiteral("theme"), resolvedThemeName},
-                     {QStringLiteral("layout_direction"),
-                      options.rightToLeft ? QStringLiteral("rtl") : QStringLiteral("ltr")},
-                     {QStringLiteral("settle_ms"), options.settleMs},
-                     {QStringLiteral("requested_width"), options.viewportSize.width()},
-                     {QStringLiteral("requested_height"), options.viewportSize.height()},
-                     {QStringLiteral("actual_width"), window ? window->width() : 0},
-                     {QStringLiteral("actual_height"), window ? window->height() : 0}}},
-        {QStringLiteral("environment"), previewEnvironment(window)},
-        {QStringLiteral("artifacts"), artifacts},
+            QJsonObject{{QStringLiteral("requested_theme"), galleryPreviewThemeName(options.theme)},
+                {QStringLiteral("theme"), resolvedThemeName},
+                {QStringLiteral("layout_direction"),
+                    options.rightToLeft ? QStringLiteral("rtl") : QStringLiteral("ltr")},
+                {QStringLiteral("settle_ms"), options.settleMs},
+                {QStringLiteral("requested_width"), options.viewportSize.width()},
+                {QStringLiteral("requested_height"), options.viewportSize.height()},
+                {QStringLiteral("actual_width"), window ? window->width() : 0},
+                {QStringLiteral("actual_height"), window ? window->height() : 0}}},
+        {QStringLiteral("environment"), previewEnvironment(window)}, {QStringLiteral("artifacts"), artifacts},
         {QStringLiteral("interaction_report"), resolvedInteractionReport},
         {QStringLiteral("geometry_report"), previewGeometryReport(window)},
-        {QStringLiteral("quality_report"),
-         window ? diagnostics::Inspector::report(window) : QJsonObject{}}};
+        {QStringLiteral("quality_report"), window ? diagnostics::Inspector::report(window) : QJsonObject{}}};
 }
 
 int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions& options)
 {
-    const GalleryPreviewSelection selection =
-        resolveGalleryPreviewSelection(options.routeId, options.sampleId);
+    const GalleryPreviewSelection selection = resolveGalleryPreviewSelection(options.routeId, options.sampleId);
     if (!selection.isValid()) {
         writeStandardError(selection.error);
         return 3;
@@ -684,8 +638,7 @@ int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions&
         session = std::make_unique<GalleryPreviewSession>(&window, [&]() {
             QString path;
             QString error;
-            const QString requested =
-                QDir(options.sessionDirectory).filePath(QStringLiteral("capture.png"));
+            const QString requested = QDir(options.sessionDirectory).filePath(QStringLiteral("capture.png"));
             if (!writeSnapshot(&window, requested, path, error))
                 return QByteArray();
             QFile png(path);
@@ -699,16 +652,15 @@ int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions&
         }
     }
 
-    const bool hasArtifacts = !options.snapshotPath.isEmpty() || !options.reportPath.isEmpty() ||
-                              !options.actionsPath.isEmpty();
+    const bool hasArtifacts = !options.snapshotPath.isEmpty() || !options.reportPath.isEmpty()
+        || !options.actionsPath.isEmpty();
     int artifactExitCode = 0;
     if (hasArtifacts) {
         QTimer::singleShot(options.settleMs, &window, [&]() {
             QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
             QApplication::processEvents(QEventLoop::AllEvents, 50);
 
-            const GalleryPreviewActionResult actionResult =
-                runGalleryPreviewActions(&window, options.actionsPath);
+            const GalleryPreviewActionResult actionResult = runGalleryPreviewActions(&window, options.actionsPath);
             if (!actionResult.passed) {
                 artifactExitCode = 6;
                 writeStandardError(QStringLiteral("Gallery preview interactions failed."));
@@ -716,15 +668,15 @@ int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions&
 
             QString snapshotPath;
             QString snapshotError;
-            if (!options.snapshotPath.isEmpty() &&
-                !writeSnapshot(&window, options.snapshotPath, snapshotPath, snapshotError)) {
+            if (!options.snapshotPath.isEmpty()
+                && !writeSnapshot(&window, options.snapshotPath, snapshotPath, snapshotError)) {
                 artifactExitCode = 4;
                 writeStandardError(snapshotError);
             }
 
             if (!options.reportPath.isEmpty()) {
-                const QJsonObject report = galleryPreviewReport(&window, options, snapshotPath,
-                                                                snapshotError, actionResult.report);
+                const QJsonObject report = galleryPreviewReport(&window, options, snapshotPath, snapshotError,
+                    actionResult.report);
                 QString reportError;
                 const QString reportPath = absoluteArtifactPath(options.reportPath);
                 if (!writeJson(reportPath, report, reportError)) {
