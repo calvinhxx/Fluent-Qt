@@ -460,6 +460,7 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
 
 ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
 {
+    setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
     // QComboBox defaults to WheelFocus, which grants focus before wheelEvent and changes the
     // selection merely by hovering and scrolling. Fluent ComboBox accepts wheel selection only
@@ -765,6 +766,8 @@ bool ComboBox::event(QEvent* event)
         layoutLineEdit();
         update();
     }
+    if (event && (event->type() == QEvent::FocusIn || event->type() == QEvent::FocusOut))
+        update();
     return handled;
 }
 
@@ -997,7 +1000,7 @@ void ComboBox::paintEvent(QPaintEvent*)
     const QColor borderColor = colors.strokeDefault;
 
     // Bottom accent stroke when focused/open (WinUI 3 pattern)
-    if (lineEditFocused && enabled) {
+    if ((hasFocus() || lineEditFocused || m_popupVisible) && enabled) {
         // Draw normal border first
         painter.setPen(QPen(borderColor, borderStroke.width));
         painter.setBrush(Qt::NoBrush);

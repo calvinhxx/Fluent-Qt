@@ -502,6 +502,16 @@
             "dismissed"
           ],
           "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "ComboBoxSurfaceTest.Contract_LayoutContainsBoundsAndBothEditorModesShowFocus",
+          "states": [
+            "normal-light",
+            "normal-dark",
+            "keyboard-focus"
+          ],
+          "execution": "ci"
         }
       ],
       "manual_evidence": {
