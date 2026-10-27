@@ -136,7 +136,11 @@ TEST(SliderContractTest, Contract_MinimumSizeRetainsDragTravel)
                 };
                 QTest::mousePress(&slider, Qt::LeftButton, Qt::NoModifier, point(0));
                 const int start = slider.value();
-                QTest::mouseMove(&slider, point(length - 1));
+                // Send the drag directly: offscreen cursor relocation can
+                // coalesce moves when repeated cases reuse the same position.
+                QMouseEvent move(QEvent::MouseMove, QPointF(point(length - 1)), Qt::NoButton, Qt::LeftButton,
+                    Qt::NoModifier);
+                QApplication::sendEvent(&slider, &move);
                 QTest::mouseRelease(&slider, Qt::LeftButton, Qt::NoModifier, point(length - 1));
                 EXPECT_NE(slider.value(), start);
                 EXPECT_EQ(qMin(start, slider.value()), slider.minimum());
