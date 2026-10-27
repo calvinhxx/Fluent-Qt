@@ -1,6 +1,9 @@
 #include "HyperlinkButton.h"
 #include "components/basicinput/private/HyperlinkButtonAccessibility_p.h"
 #include <QDesktopServices>
+#include <QFocusEvent>
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyleOptionButton>
@@ -135,8 +138,41 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
         painter.drawLine(textX, textY + 2, textX + txtWidth, textY + 2);
     }
 
+    if (state != Disabled && hasFocus() && (m_keyboardFocusVisible || hasFocusVisual())) {
+        QColor focusColor = colors.textSecondary;
+        focusColor.setAlpha(120);
+        painter.setPen(QPen(focusColor, 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(surfaceRect.adjusted(1.5, 1.5, -1.5, -1.5), qMax<qreal>(0.0, radius.control - 1.0),
+            qMax<qreal>(0.0, radius.control - 1.0));
+    }
+
     Q_UNUSED(spacing);
     Q_UNUSED(event);
+}
+
+void HyperlinkButton::focusInEvent(QFocusEvent* event)
+{
+    if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
+    else if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    Button::focusInEvent(event);
+}
+
+void HyperlinkButton::keyPressEvent(QKeyEvent* event)
+{
+    m_keyboardFocusVisible = true;
+    Button::keyPressEvent(event);
+    update();
+}
+
+void HyperlinkButton::mousePressEvent(QMouseEvent* event)
+{
+    m_keyboardFocusVisible = false;
+    Button::mousePressEvent(event);
+    update();
 }
 
 } // namespace fluent::basicinput
