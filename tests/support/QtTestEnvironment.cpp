@@ -92,6 +92,9 @@ void initializeHeadlessTestFixedFont()
     const QString path = qEnvironmentVariable("FLUENT_QT_TEST_MONOSPACE_FONT");
     if (path.isEmpty() || !isHeadlessPlatform())
         return;
+    // Resolve before loading the font, which invalidates Qt's fallback cache.
+    const QFont fixed = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    const bool alreadyFixed = QFontInfo(fixed).fixedPitch();
     const int fontId = QFontDatabase::addApplicationFont(path);
     if (fontId < 0)
         qFatal("Cannot load test monospace font: %s", qPrintable(path));
@@ -104,8 +107,7 @@ void initializeHeadlessTestFixedFont()
     }
     if (family.isEmpty())
         qFatal("Test font has no usable fixed-pitch family: %s", qPrintable(path));
-    const QFont fixed = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    if (QFontInfo(fixed).fixedPitch())
+    if (alreadyFixed)
         return;
     if (fixed.family().isEmpty())
         qFatal("The headless system FixedFont has no family");

@@ -5,6 +5,9 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QFontDatabase>
+#include <QFontInfo>
+#include <QFontMetricsF>
 #include <QImage>
 #include <QImageReader>
 #include <QProcess>
@@ -48,6 +51,18 @@ private:
 };
 } // namespace
 
+TEST(QtTestEnvironmentTest, ConfiguredHeadlessFontResolvesFixedPitch)
+{
+    if (!tests::support::isHeadlessPlatform() || qEnvironmentVariableIsEmpty("FLUENT_QT_TEST_MONOSPACE_FONT"))
+        GTEST_SKIP() << "This host uses its native system fonts";
+
+    const QFont fixed = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    ASSERT_TRUE(QFontInfo(fixed).fixedPitch()) << fixed.family().toStdString();
+    const QFontMetricsF metrics(fixed);
+    for (const QChar character : QStringLiteral("iW019."))
+        EXPECT_DOUBLE_EQ(metrics.horizontalAdvance(character), metrics.horizontalAdvance(QLatin1Char('0')));
+}
+
 TEST(QtTestEnvironmentTest, SnapshotModeRespectsSkipPrecedence)
 {
     EnvVarGuard skipGuard("SKIP_VISUAL_TEST", QByteArray("1"));
@@ -65,8 +80,9 @@ TEST(QtTestEnvironmentTest, SnapshotFilePathUsesIdentityAndVariant)
 
     EXPECT_EQ(info.dir().dirName(), QStringLiteral("visual"));
     EXPECT_EQ(info.fileName(),
-              QStringLiteral("test_qt_test_environment__QtTestEnvironmentTest__"
-                             "SnapshotFilePathUsesIdentityAndVariant__Light_Theme.png"));
+        QStringLiteral(
+            "test_qt_test_environment__QtTestEnvironmentTest__"
+            "SnapshotFilePathUsesIdentityAndVariant__Light_Theme.png"));
 }
 
 TEST(QtTestEnvironmentTest, SnapshotCaptureSavesNonEmptyPng)
@@ -94,14 +110,13 @@ TEST(QtTestEnvironmentTest, SnapshotCaptureSavesNonEmptyPng)
 
 TEST(QtTestEnvironmentTest, BaselineFilePathUsesIdentityAndVariant)
 {
-    const QString path =
-        tests::support::visualBaselineFilePath(QStringLiteral("button-states-light-ltr"));
+    const QString path = tests::support::visualBaselineFilePath(QStringLiteral("button-states-light-ltr"));
     const QFileInfo info(path);
 
-    EXPECT_EQ(
-        info.fileName(),
-        QStringLiteral("test_qt_test_environment__QtTestEnvironmentTest__"
-                       "BaselineFilePathUsesIdentityAndVariant__button-states-light-ltr.png"));
+    EXPECT_EQ(info.fileName(),
+        QStringLiteral(
+            "test_qt_test_environment__QtTestEnvironmentTest__"
+            "BaselineFilePathUsesIdentityAndVariant__button-states-light-ltr.png"));
 }
 
 TEST(QtTestEnvironmentTest, VisualCompareIdenticalImagesSucceeds)
@@ -140,11 +155,9 @@ TEST(QtTestEnvironmentTest, VisualCompareMissingBaselineFails)
     const QString actualPath = temp.filePath(QStringLiteral("actual.png"));
     ASSERT_TRUE(actual.save(actualPath, "PNG"));
 
-    const auto result = tests::support::compareVisualSnapshotToBaseline(
-        actualPath, QStringLiteral("missing-baseline"));
+    const auto result = tests::support::compareVisualSnapshotToBaseline(actualPath, QStringLiteral("missing-baseline"));
     EXPECT_FALSE(result);
-    EXPECT_TRUE(
-        QString::fromUtf8(result.message()).contains(QStringLiteral("Missing visual baseline")));
+    EXPECT_TRUE(QString::fromUtf8(result.message()).contains(QStringLiteral("Missing visual baseline")));
 }
 
 TEST(QtTestEnvironmentTest, VisualGateRejectsWrongScale)
@@ -171,8 +184,7 @@ TEST(QtTestEnvironmentTest, VisualCompareToBaselineDetectsMismatch)
     const QString actualPath = temp.filePath(QStringLiteral("actual.png"));
     ASSERT_TRUE(actual.save(actualPath, "PNG"));
 
-    EXPECT_FALSE(
-        tests::support::compareVisualSnapshotToBaseline(actualPath, QStringLiteral("mismatch")));
+    EXPECT_FALSE(tests::support::compareVisualSnapshotToBaseline(actualPath, QStringLiteral("mismatch")));
 }
 
 // These two disabled cases run only in the subprocess contract below. A genuine
@@ -202,9 +214,8 @@ TEST(QtTestEnvironmentTest, Contract_EventLoopFailuresReachExitCodeAndXml)
     environment.insert(QStringLiteral("SKIP_VISUAL_TEST"), QStringLiteral("1"));
     child.setProcessEnvironment(environment);
     child.start(QCoreApplication::applicationFilePath(),
-                {QStringLiteral("--gtest_also_run_disabled_tests"),
-                 QStringLiteral("--gtest_filter=QtTestReporterProbe.*"),
-                 QStringLiteral("--gtest_output=xml:") + xmlPath});
+        {QStringLiteral("--gtest_also_run_disabled_tests"), QStringLiteral("--gtest_filter=QtTestReporterProbe.*"),
+            QStringLiteral("--gtest_output=xml:") + xmlPath});
     ASSERT_TRUE(child.waitForStarted(10000)) << child.errorString().toStdString();
     ASSERT_TRUE(child.waitForFinished(10000)) << child.errorString().toStdString();
     EXPECT_EQ(child.exitStatus(), QProcess::NormalExit);
@@ -239,19 +250,17 @@ TEST(QtTestEnvironmentTest, Contract_TestSourcesUseTheGTestFailureReporter)
 {
     // Qt input/event-loop helpers are valid; its standalone test-runner macros
     // do not report to this suite's GTest main and can silently pass on failure.
-    const QRegularExpression forbidden(
-        QStringLiteral("\\bQ(?:TRY_[A-Z_]+|VERIFY2?|COMPARE|FAIL|SKIP)\\s*\\("));
+    const QRegularExpression forbidden(QStringLiteral("\\bQ(?:TRY_[A-Z_]+|VERIFY2?|COMPARE|FAIL|SKIP)\\s*\\("));
     const QString root = QString::fromUtf8(FLUENT_QT_TEST_SOURCE_DIR);
     ASSERT_TRUE(QDir(root).exists());
     QDirIterator files(root, {QStringLiteral("*.cpp"), QStringLiteral("*.h")}, QDir::Files,
-                       QDirIterator::Subdirectories);
+        QDirIterator::Subdirectories);
     int checked = 0;
     while (files.hasNext()) {
         QFile source(files.next());
         ASSERT_TRUE(source.open(QIODevice::ReadOnly));
         const auto match = forbidden.match(QString::fromUtf8(source.readAll()));
-        EXPECT_FALSE(match.hasMatch())
-            << source.fileName().toStdString() << ": " << match.captured().toStdString();
+        EXPECT_FALSE(match.hasMatch()) << source.fileName().toStdString() << ": " << match.captured().toStdString();
         ++checked;
     }
     EXPECT_GT(checked, 100);
