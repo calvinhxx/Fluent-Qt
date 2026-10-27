@@ -61,8 +61,7 @@ void captureAccessibilityEvent(QAccessibleEvent* event)
 
 class ScopedAccessibilityEventCapture {
 public:
-    ScopedAccessibilityEventCapture()
-        : m_previous(QAccessible::installUpdateHandler(captureAccessibilityEvent))
+    ScopedAccessibilityEventCapture() : m_previous(QAccessible::installUpdateHandler(captureAccessibilityEvent))
     {
         g_accessibilityEvents.clear();
     }
@@ -277,10 +276,9 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAnnotatedScrollBarKeep
     bar.setRange(0, 100);
     bar.setPageStep(20);
     bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("Intro"), 0, QStringLiteral("Opening")),
-                   AnnotatedScrollBarLabel(QStringLiteral("Methods"), 25),
-                   AnnotatedScrollBarLabel(QStringLiteral("Results"), 50),
-                   AnnotatedScrollBarLabel(QStringLiteral("Discussion"), 75),
-                   AnnotatedScrollBarLabel(QStringLiteral("Appendix"), 100)});
+        AnnotatedScrollBarLabel(QStringLiteral("Methods"), 25), AnnotatedScrollBarLabel(QStringLiteral("Results"), 50),
+        AnnotatedScrollBarLabel(QStringLiteral("Discussion"), 75),
+        AnnotatedScrollBarLabel(QStringLiteral("Appendix"), 100)});
     showAndProcess(bar, QSize(110, 90));
 
     QAccessibleInterface* root = accessible(&bar);
@@ -301,8 +299,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAnnotatedScrollBarKeep
         EXPECT_FALSE(label->text(QAccessible::Name).isEmpty());
         foundOffscreen = foundOffscreen || label->state().offscreen;
     }
-    EXPECT_TRUE(foundOffscreen)
-        << "Collision-filtered labels must remain as offscreen logical links";
+    EXPECT_TRUE(foundOffscreen) << "Collision-filtered labels must remain as offscreen logical links";
 
     QSignalSpy activated(&bar, &AnnotatedScrollBar::labelActivated);
     QAccessibleInterface* results = root->child(2);
@@ -358,12 +355,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAutoSuggestRetainsText
     EXPECT_TRUE(root->state().expandable);
     ASSERT_NE(root->textInterface(), nullptr);
     ASSERT_NE(root->editableTextInterface(), nullptr);
-    EXPECT_EQ(root->textInterface()->text(0, root->textInterface()->characterCount()),
-              QStringLiteral("a"));
-
-    QWidget* list = box.findChild<QWidget*>(QStringLiteral("AutoSuggestBoxSuggestionList"));
-    ASSERT_NE(list, nullptr);
-    EXPECT_TRUE(hasControllerRelation(root, list));
+    EXPECT_EQ(root->textInterface()->text(0, root->textInterface()->characterCount()), QStringLiteral("a"));
 
     QAccessibleActionInterface* actions = root->actionInterface();
     ASSERT_NE(actions, nullptr);
@@ -373,6 +365,20 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAutoSuggestRetainsText
     EXPECT_TRUE(box.isSuggestionListOpen());
     EXPECT_TRUE(root->state().expanded);
     EXPECT_EQ(QApplication::focusWidget(), &box);
+
+    // The lazy Flyout moves into its overlay host. Follow the public relation,
+    // rather than assuming the list remains a QObject child of the editor.
+    QWidget* list = nullptr;
+    for (const auto& relation : root->relations(QAccessible::Controller)) {
+        if (relation.first && relation.second.testFlag(QAccessible::Controller)
+            && relation.first->role() == QAccessible::List) {
+            list = qobject_cast<QWidget*>(relation.first->object());
+            break;
+        }
+    }
+    ASSERT_NE(list, nullptr);
+    EXPECT_EQ(list->objectName(), QStringLiteral("AutoSuggestBoxSuggestionList"));
+    EXPECT_TRUE(hasControllerRelation(root, list));
 
     FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
