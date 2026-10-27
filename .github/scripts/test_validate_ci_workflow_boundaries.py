@@ -128,18 +128,58 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 errors = self.workflow_errors_with_replacement("ci-python.yml", requirement, "")
                 self.assertTrue(any("optional Spatial validation" in error for error in errors))
 
-    def test_ci_plan_requires_generated_site_freshness_checks(self):
-        commands = (
-            "          python3 tools/site/generate_localized_site.py --check\n",
-            "          python3 tools/site/generate_api_reference.py --check\n",
+    def test_ci_plan_requires_committed_api_catalog_check(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci.yml", "          python3 tools/site/generate_api_reference.py --check\n", "")
+        self.assertTrue(
+            any("missing orchestration contract" in error for error in errors),
+            "ci.yml accepted a stale committed API catalog",
         )
-        for command in commands:
-            with self.subTest(command=command.strip()):
-                errors = self.workflow_errors_with_replacement("ci.yml", command, "")
-                self.assertTrue(
-                    any("missing orchestration contract" in error for error in errors),
-                    "ci.yml accepted a missing generated-site freshness check",
-                )
+
+    def test_site_cache_keys_follow_the_qt_version(self):
+        for key in ("qt${{ env.QT_VERSION }}-v1-", "${{ runner.arch }}-${{ env.QT_VERSION }}"):
+            with self.subTest(key=key):
+                errors = self.workflow_errors_with_replacement(
+                    "ci-site.yml", key, key.replace("${{ env.QT_VERSION }}", "6.9.3"))
+                self.assertTrue(any("env.QT_VERSION" in error for error in errors))
+
+    def test_catalog_generation_cannot_be_removed_from_plan_or_site(self):
+        for workflow, command in (("ci.yml", "python3 tools/site/build_site.py --prepare"),
+                                   ("ci-site.yml", "python tools/site/build_site.py --prepare")):
+            with self.subTest(workflow=workflow):
+                errors = self.workflow_errors_with_replacement(workflow, command, "echo skipped")
+                self.assertTrue(any("generate catalog inputs" in error for error in errors))
+
+    def test_capture_environment_is_shared_with_cache_lookup(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci-site.yml", '      QT_SCALE_FACTOR: "2"\n', '')
+        self.assertTrue(any("share the capture environment" in error for error in errors))
+
+    def test_site_generation_and_tests_cannot_be_skipped(self):
+        for command in (
+            'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
+            'python tools/site/test_generate_api_reference.py',
+        ):
+            with self.subTest(command=command):
+                errors = self.workflow_errors_with_replacement("ci-site.yml", command, "echo skipped")
+                self.assertTrue(any("must generate and validate" in error for error in errors))
+
+    def test_site_failure_must_fail_the_ci_gate(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci.yml", 'if [[ "$SITE_RESULT" != "success" ]]; then', 'if false; then')
+        self.assertTrue(any("CI Gate script" in error for error in errors))
+
+    def test_site_receipt_must_be_checked_before_deployment(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            'run: python3 tools/site/build_site.py --verify build/site-pages --commit "$EXPECTED_COMMIT"',
+            'run: echo skipped')
+        self.assertTrue(any("integrity and source commit" in error for error in errors))
+
+    def test_pages_must_use_generated_site_instead_of_committed_snapshot(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml", 'cp -R build/site-pages/. build/pages/', 'cp -R site/. build/pages/')
+        self.assertTrue(any("site assembly" in error for error in errors))
 
     def test_third_party_actions_require_immutable_revisions(self):
         cases = (
@@ -374,7 +414,7 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_pages_deploy_must_depend_on_authorization(self):
         errors = self.workflow_errors_with_replacement(
             "pages.yml",
-            "    needs: [authorize, wasm]\n",
+            "    needs: [authorize, wasm, site]\n",
             "    needs: wasm\n",
         )
         self.assertTrue(
@@ -386,8 +426,8 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         errors = self.workflow_errors_with_replacement(
             "pages.yml",
             "    name: Deploy GitHub Pages\n"
-            "    needs: [authorize, wasm]\n",
-            "    name: Deploy GitHub Pages / needs: [authorize, wasm]\n"
+            "    needs: [authorize, wasm, site]\n",
+            "    name: Deploy GitHub Pages / needs: [authorize, wasm, site]\n"
             "    needs: wasm\n",
         )
         self.assertTrue(
@@ -422,8 +462,8 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_pages_deploy_cannot_accept_every_non_dispatch_event(self):
         errors = self.workflow_errors_with_replacement(
             "pages.yml",
-            "         (github.event_name == 'push' && needs.wasm.result == 'skipped'))\n",
-            "         (github.event_name != 'workflow_dispatch' && needs.wasm.result == 'skipped'))\n",
+            "         (github.event_name == 'push' && needs.wasm.result == 'skipped' && needs.site.result == 'skipped'))\n",
+            "         (github.event_name != 'workflow_dispatch' && needs.wasm.result == 'skipped' && needs.site.result == 'skipped'))\n",
         )
         self.assertTrue(
             any("deployment condition" in error for error in errors),
@@ -433,8 +473,8 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_pages_deploy_condition_cannot_be_made_unconditionally_true(self):
         errors = self.workflow_errors_with_replacement(
             "pages.yml",
-            "         (github.event_name == 'push' && needs.wasm.result == 'skipped'))\n",
-            "         (github.event_name == 'push' && needs.wasm.result == 'skipped')) || true\n",
+            "         (github.event_name == 'push' && needs.wasm.result == 'skipped' && needs.site.result == 'skipped'))\n",
+            "         (github.event_name == 'push' && needs.wasm.result == 'skipped' && needs.site.result == 'skipped')) || true\n",
         )
         self.assertTrue(
             any("deployment condition" in error for error in errors),
@@ -543,10 +583,10 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         errors = self.workflow_errors_with_replacement(
             "ci.yml",
             "    name: Deploy validated WebAssembly Gallery\n"
-            "    needs: [plan, wasm]\n"
-            "    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' }}\n",
+            "    needs: [plan, wasm, site]\n"
+            "    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' && needs.site.result == 'success' }}\n",
             "    name: Deploy validated WebAssembly Gallery / github.event_name == 'push' / needs.wasm.result == 'success'\n"
-            "    needs: [plan, wasm]\n"
+            "    needs: [plan, wasm, site]\n"
             "    if: ${{ true }}\n",
         )
         self.assertTrue(
@@ -1045,7 +1085,7 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             errors = MODULE.validate_boundaries()
         self.assertTrue(
             any("compact orchestration-only workflow" in error for error in errors),
-            "workflow validator accepted more than 300 active lines",
+            "workflow validator accepted excessive active orchestration lines",
         )
 
     def test_pr_file_contract_rejects_active_echo_bait(self):

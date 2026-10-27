@@ -18,7 +18,8 @@ from ci_action_policy import (
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
-MAX_ORCHESTRATOR_ACTIVE_LINES = 300
+# Includes the independent website module and its required publication/gate dependencies.
+MAX_ORCHESTRATOR_ACTIVE_LINES = 315
 EMSDK_REPOSITORY_REVISION = "2514ec738de72cebbba7f4fdba0cf2fabcb779a5"
 ACTION_TEMPLATE_PATHS = (
     ROOT / "tools/onboarding/starters/cpp-existing-qt/.github/workflows/ci.yml.in",
@@ -68,12 +69,14 @@ EXPECTED_JOBS = {
         "cpp",
         "python",
         "wasm",
+        "site",
         "pages",
         "ci-gate",
         "release-ready",
     },
     "ci-cpp.yml": {"plan", "build", "integration"},
     "ci-wasm.yml": {"build"},
+    "ci-site.yml": {"build"},
     "ci-python.yml": {
         "plan",
         "pyside6_linux",
@@ -102,11 +105,12 @@ EXPECTED_JOBS = {
         "publish",
         "publish_python",
     },
-    "pages.yml": {"authorize", "wasm", "deploy"},
+    "pages.yml": {"authorize", "wasm", "site", "deploy"},
 }
 UNCONDITIONAL_JOBS = {
     "ci-python.yml": {"plan"},
     "ci-wasm.yml": {"build"},
+    "ci-site.yml": {"build"},
     "pages.yml": {"authorize"},
 }
 SOURCE_PACKAGE_CMAKE_ENTRIES = (
@@ -240,11 +244,22 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
             "and run only for workflow_dispatch"
         )
 
+    site = job_section(contents, "site")
+    expected_site_job = [
+        "  site:",
+        "    name: Build website and component documents",
+        "    needs: authorize",
+        "    if: ${{ github.event_name == 'workflow_dispatch' }}",
+        "    uses: ./.github/workflows/ci-site.yml",
+    ]
+    if uncommented_workflow_lines(site) != expected_site_job:
+        errors.append("pages.yml manual site recovery must require authorization")
+
     deploy = job_section(contents, "deploy")
     active_deploy = "\n".join(uncommented_workflow_lines(deploy)) + "\n"
     expected_deploy_job_levels = [
         "    name: Deploy GitHub Pages",
-        "    needs: [authorize, wasm]",
+        "    needs: [authorize, wasm, site]",
         "    if: >-",
         "    permissions:",
         "    runs-on: ubuntu-latest",
@@ -257,8 +272,9 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
         )
     expected_deploy_steps = [
         "      - name: Checkout",
-        "      - name: Validate localized site outputs",
         "      - name: Configure Pages",
+        "      - name: Download generated website",
+        "      - name: Verify generated website provenance",
         "      - name: Download C++ Web Gallery",
         "      - name: Verify C++ Web Gallery provenance",
         "      - name: Assemble Pages site",
@@ -276,8 +292,8 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
         "      ${{",
         "        always() &&",
         "        needs.authorize.result == 'success' &&",
-        "        ((github.event_name == 'workflow_dispatch' && needs.wasm.result == 'success') ||",
-        "         (github.event_name == 'push' && needs.wasm.result == 'skipped'))",
+        "        ((github.event_name == 'workflow_dispatch' && needs.wasm.result == 'success' && needs.site.result == 'success') ||",
+        "         (github.event_name == 'push' && needs.wasm.result == 'skipped' && needs.site.result == 'skipped'))",
         "      }}",
     ]
     condition_lines: list[str] = []
@@ -352,20 +368,26 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
             "pages.yml artifact download must exactly use the current run and token"
         )
 
-    localized_validation = uncommented_workflow_lines(
-        named_step_section(deploy, "Validate localized site outputs")
-    )
-    expected_localized_validation = [
-        "      - name: Validate localized site outputs",
-        "        run: |",
-        "          python3 tools/site/generate_localized_site.py --check",
-        "          python3 tools/site/generate_api_reference.py --check",
-        "          node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs",
+    site_download = named_step_section(deploy, "Download generated website")
+    expected_site_download = [
+        "      - name: Download generated website",
+        "        uses: actions/download-artifact@<commit>",
+        "        with:",
+        "          name: fluentqt-site-pages",
+        "          path: build/site-pages",
+        "          github-token: ${{ github.token }}",
+        "          run-id: ${{ github.run_id }}",
     ]
-    if localized_validation != expected_localized_validation:
-        errors.append(
-            "pages.yml localized output validation step must remain exact"
-        )
+    if uncommented_workflow_lines(site_download) != expected_site_download:
+        errors.append("pages.yml site artifact download must exactly use the current run and token")
+    expected_site_verification = [
+        "      - name: Verify generated website provenance",
+        "        env:",
+        "          EXPECTED_COMMIT: ${{ github.sha }}",
+        '        run: python3 tools/site/build_site.py --verify build/site-pages --commit "$EXPECTED_COMMIT"',
+    ]
+    if uncommented_workflow_lines(named_step_section(deploy, "Verify generated website provenance")) != expected_site_verification:
+        errors.append("pages.yml must verify generated website integrity and source commit")
 
     configure_lines = uncommented_workflow_lines(
         named_step_section(deploy, "Configure Pages")
@@ -427,7 +449,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
         "        shell: bash",
         "        run: |",
         "          mkdir -p build/pages/gallery",
-        "          cp -R site/. build/pages/",
+        "          cp -R build/site-pages/. build/pages/",
         "          cp -R build/wasm-pages/. build/pages/gallery/",
         "          test -f build/pages/zh-CN/index.html",
         "          test -f build/pages/api/index.html",
@@ -1342,6 +1364,13 @@ def validate_pr_change_classification_contract(orchestrator: str) -> list[str]:
 def validate_ci_source_contracts_contract(orchestrator: str) -> list[str]:
     """Keep isolated font checks and the existing source preflight unconditional."""
     active = "\n".join(uncommented_workflow_lines(orchestrator)) + "\n"
+    plan = job_section(active, "plan")
+    prepare = named_step_section(plan, "Generate documentation inputs")
+    if uncommented_workflow_lines(prepare) != [
+        "      - name: Generate documentation inputs",
+        "        run: python3 tools/site/build_site.py --prepare",
+    ] or plan.find(prepare) > plan.find("      - name: Validate CI orchestration contracts"):
+        return ["ci.yml must generate catalog inputs before source validation"]
     step = named_step_section(job_section(active, "plan"), "Validate CI orchestration contracts")
     lines = uncommented_workflow_lines(step)
     expected_prefix = [
@@ -1378,6 +1407,14 @@ def validate_ci_gate_execution_contract(orchestrator: str) -> list[str]:
             )
 
     gate = job_section(active, "ci-gate")
+    if "    needs: [plan, cpp, python, wasm, site]" not in job_level_lines(gate):
+        errors.append("ci.yml CI Gate must wait for website generation and the runtime modules")
+    site = job_section(active, "site")
+    if uncommented_workflow_lines(site) != [
+        "  site:", "    name: Website validation", "    needs: plan",
+        "    uses: ./.github/workflows/ci-site.yml",
+    ]:
+        errors.append("ci.yml website generation must run after planning without a conditional skip")
     controls = job_level_controls(gate)
     gate_conditions = [value for value in controls if value.startswith("if:")]
     if gate_conditions != ["if: ${{ always() }}"]:
@@ -1397,6 +1434,7 @@ def validate_ci_gate_execution_contract(orchestrator: str) -> list[str]:
         "          CPP_RESULT: ${{ needs.cpp.result }}",
         "          PYTHON_RESULT: ${{ needs.python.result }}",
         "          WASM_RESULT: ${{ needs.wasm.result }}",
+        "          SITE_RESULT: ${{ needs.site.result }}",
         "          SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}",
         "          SHOULD_BUILD_PYSIDE: ${{ needs.plan.outputs.should_build_pyside }}",
         "          SHOULD_BUILD_WASM: ${{ needs.plan.outputs.should_build_wasm }}",
@@ -1407,6 +1445,10 @@ def validate_ci_gate_execution_contract(orchestrator: str) -> list[str]:
         "set -euo pipefail",
         'if [[ "$PLAN_RESULT" != "success" ]]; then',
         'echo "::error::CI planning finished with result: $PLAN_RESULT"',
+        "exit 1",
+        "fi",
+        'if [[ "$SITE_RESULT" != "success" ]]; then',
+        'echo "::error::Website generation finished with result: $SITE_RESULT"',
         "exit 1",
         "fi",
         'for value in "$SHOULD_BUILD" "$SHOULD_BUILD_PYSIDE" "$SHOULD_BUILD_WASM"; do',
@@ -1451,6 +1493,55 @@ def validate_ci_gate_execution_contract(orchestrator: str) -> list[str]:
             "ci.yml CI Gate script must exactly reject failed modules and invalid or "
             "missing classification outputs"
         )
+    return errors
+
+
+def site_generation_errors(contents: str) -> list[str]:
+    """Require fresh, tested website output before uploading it for deployment."""
+    errors = immutable_action_errors("ci-site.yml", contents)
+    build = job_section(contents, "build")
+    prepare = named_step_section(build, "Generate documentation inputs")
+    if uncommented_workflow_lines(prepare) != [
+        "      - name: Generate documentation inputs",
+        "        run: python tools/site/build_site.py --prepare",
+    ] or build.find(prepare) > build.find("      - name: Identify preview inputs"):
+        errors.append("ci-site.yml must generate catalog inputs before preview discovery")
+    job_environment = build.split("    steps:\n", 1)[0]
+    for setting in ('QT_QPA_PLATFORM: xcb', 'QT_SCALE_FACTOR: "2"', 'LIBGL_ALWAYS_SOFTWARE: "1"'):
+        if setting not in job_environment:
+            errors.append("ci-site.yml must share the capture environment across lookup, capture and generation: " + setting)
+    for step, commands in {
+        "Generate and validate website": [
+            'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
+            "python tools/site/test_build_site.py",
+            "python tools/site/test_generate_api_reference.py",
+        ],
+    }.items():
+        section = named_step_section(build, step)
+        active = uncommented_workflow_lines(section)
+        if any(line.strip().startswith(("if:", "continue-on-error:")) for line in active):
+            errors.append("ci-site.yml website generation checks must be unconditional")
+        for command in commands:
+            if not any(line.strip() in (command, "run: " + command) for line in active):
+                errors.append("ci-site.yml must generate and validate the website: " + command)
+    # Hard-coded versions in cache keys would restore an older Qt kit or older captures.
+    for step in ("Cache matching native previews", "Cache Qt native kit"):
+        keys = [line for line in uncommented_workflow_lines(named_step_section(build, step))
+                if line.strip().startswith("key:")]
+        if len(keys) != 1 or "${{ env.QT_VERSION }}" not in keys[0]:
+            errors.append(f"ci-site.yml {step} key must include env.QT_VERSION")
+    upload = normalize_action_references(named_step_section(build, "Upload generated website"))
+    if uncommented_workflow_lines(upload) != [
+        "      - name: Upload generated website",
+        "        uses: actions/upload-artifact@<commit>",
+        "        with:",
+        "          name: fluentqt-site-pages",
+        "          path: build/site-pages",
+        "          include-hidden-files: true",
+        "          if-no-files-found: error",
+        "          retention-days: 7",
+    ]:
+        errors.append("ci-site.yml must upload the generated website with missing files treated as errors")
     return errors
 
 
@@ -1499,6 +1590,7 @@ def validate_boundaries() -> list[str]:
     errors.extend(release_input_boundary_errors(release))
     errors.extend(wasm_supply_chain_errors(wasm))
     errors.extend(pages_deployment_boundary_errors(pages))
+    errors.extend(site_generation_errors(contents["ci-site.yml"]))
     active_orchestrator_lines = uncommented_workflow_lines(orchestrator)
     active_orchestrator = "\n".join(active_orchestrator_lines) + "\n"
     errors.extend(validate_pr_change_classification_contract(orchestrator))
@@ -1536,9 +1628,8 @@ def validate_boundaries() -> list[str]:
         "release_max_parallel: 4",
         "Require a current main base for release pull requests",
         ".github/scripts/check-release-branch-freshness.py",
-        "name: Validate generated site outputs",
-        "python3 tools/site/generate_localized_site.py --check",
         "python3 tools/site/generate_api_reference.py --check",
+        "uses: ./.github/workflows/ci-site.yml",
         "actions: read",
     ):
         if required not in active_orchestrator:
@@ -1562,8 +1653,8 @@ def validate_boundaries() -> list[str]:
     expected_pages_call = [
         "  pages:",
         "    name: Deploy validated WebAssembly Gallery",
-        "    needs: [plan, wasm]",
-        "    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' }}",
+        "    needs: [plan, wasm, site]",
+        "    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' && needs.site.result == 'success' }}",
         "    permissions:",
         "      actions: read",
         "      contents: read",

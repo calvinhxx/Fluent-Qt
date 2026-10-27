@@ -9,10 +9,16 @@ import re
 # Keep the allowed repositories and their invocation counts independent of the
 # revisions maintained by Dependabot. Deployment inputs are checked separately.
 PAGES_PIPELINE_ACTIONS = {
+    "ci-site.yml": {
+        "actions/checkout": 1,
+        "actions/setup-python": 1,
+        "actions/cache": 2,
+        "actions/upload-artifact": 2,
+    },
     "pages.yml": {
         "actions/checkout": 1,
         "actions/configure-pages": 1,
-        "actions/download-artifact": 1,
+        "actions/download-artifact": 2,
         "actions/upload-pages-artifact": 1,
         "actions/deploy-pages": 1,
     },
