@@ -272,7 +272,9 @@ TEST_F(CheckBoxTest, Contract_KeyboardFocusHasOneFluentCueAndMouseClearsIt)
     ASSERT_TRUE(QTest::qWaitFor([before] { return before->hasFocus(); }, 1000));
     QTest::keyClick(before, Qt::Key_Tab);
     ASSERT_TRUE(check->hasFocus());
+#ifdef Q_OS_MAC
     EXPECT_FALSE(check->testAttribute(Qt::WA_MacShowFocusRect));
+#endif
     const QImage focused = check->grab().toImage();
 
     QTest::keyClick(check, Qt::Key_Space);

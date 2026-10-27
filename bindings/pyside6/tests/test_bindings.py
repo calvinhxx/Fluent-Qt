@@ -2,6 +2,7 @@ import gc
 import json
 import math
 import os
+import sys
 from pathlib import Path
 import unittest
 import weakref
@@ -725,7 +726,8 @@ class FluentQtBindingTest(unittest.TestCase):
 
     def test_checkbox_keeps_one_focus_cue_and_keyboard_state_changes(self):
         checkbox = fluentqt.CheckBox("Option")
-        self.assertFalse(checkbox.testAttribute(Qt.WA_MacShowFocusRect))
+        if sys.platform == "darwin":
+            self.assertFalse(checkbox.testAttribute(Qt.WA_MacShowFocusRect))
         checkbox.setTristate(True)
         QTest.keyClick(checkbox, Qt.Key_Space)
         self.assertEqual(checkbox.checkState(), Qt.PartiallyChecked)
@@ -740,7 +742,8 @@ class FluentQtBindingTest(unittest.TestCase):
         second = fluentqt.RadioButton("Second", host)
         for index, radio in enumerate((first, second)):
             self.assertGreater(radio.sizeHint().height(), radio.circleSize())
-            self.assertFalse(radio.testAttribute(Qt.WA_MacShowFocusRect))
+            if sys.platform == "darwin":
+                self.assertFalse(radio.testAttribute(Qt.WA_MacShowFocusRect))
             radio.resize(160, radio.sizeHint().height())
             radio.move(12, 12 + index * 40)
         first.setChecked(True)
@@ -839,7 +842,8 @@ class FluentQtBindingTest(unittest.TestCase):
                             self.assertTrue(control.hasFocus())
                             focused = render(control, scale)
                             self.assertNotEqual(resting, focused)
-                            self.assertFalse(control.testAttribute(Qt.WA_MacShowFocusRect))
+                            if sys.platform == "darwin":
+                                self.assertFalse(control.testAttribute(Qt.WA_MacShowFocusRect))
             finally:
                 host.close()
                 host.deleteLater()

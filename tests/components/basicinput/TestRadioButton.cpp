@@ -335,7 +335,9 @@ TEST_F(RadioButtonTest, Contract_KeyboardCueDoesNotOverpaintSelection)
             const QImage resting = radio->grab().toImage();
             QTest::keyClick(before, Qt::Key_Tab);
             ASSERT_TRUE(radio->hasFocus());
+#ifdef Q_OS_MAC
             EXPECT_FALSE(radio->testAttribute(Qt::WA_MacShowFocusRect));
+#endif
             const QImage focused = radio->grab().toImage();
             const QRect logical(radio->themeSpacing().gap.tight, (radio->height() - radio->circleSize()) / 2,
                 radio->circleSize(), radio->circleSize());

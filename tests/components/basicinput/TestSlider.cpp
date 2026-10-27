@@ -111,7 +111,9 @@ TEST(SliderContractTest, Contract_FocusAndResizedHandlesStayInsideTheSurface)
             slider.setValue(50);
             QTest::keyClick(&slider, Qt::Key_Up);
             EXPECT_EQ(slider.value(), 51);
+#ifdef Q_OS_MAC
             EXPECT_FALSE(slider.testAttribute(Qt::WA_MacShowFocusRect));
+#endif
         }
     }
 }
