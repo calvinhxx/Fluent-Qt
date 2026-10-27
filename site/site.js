@@ -775,6 +775,38 @@ function setupNavigation() {
   window.matchMedia("(min-width: 901px)").addEventListener?.("change", (event) => {
     if (event.matches) setMenuOpen(false);
   });
+
+  const sectionLinks = Array.from(document.querySelectorAll('.nav-links a[href^="#"]'));
+  const sections = sectionLinks
+    .map((link) => ({ link, target: document.querySelector(link.getAttribute("href")) }))
+    .filter((entry) => entry.target);
+  if (sections.length) {
+    let pending = false;
+    const updateActiveSection = () => {
+      pending = false;
+      const offset = (siteHeader?.getBoundingClientRect().bottom || 84) + 72;
+      let active = null;
+      for (const entry of sections) {
+        const rect = entry.target.getBoundingClientRect();
+        if (rect.top <= offset && rect.bottom > offset) {
+          active = entry.link;
+        }
+      }
+      sectionLinks.forEach((link) => {
+        if (link === active) link.setAttribute("aria-current", "location");
+        else link.removeAttribute("aria-current");
+      });
+    };
+    const scheduleUpdate = () => {
+      if (!pending) {
+        pending = true;
+        window.requestAnimationFrame(updateActiveSection);
+      }
+    };
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate, { passive: true });
+    updateActiveSection();
+  }
 }
 
 function fallbackCopy(text) {

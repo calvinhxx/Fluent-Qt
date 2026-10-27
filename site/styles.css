@@ -375,11 +375,13 @@ h3 {
   transition: transform 220ms ease;
 }
 
-.nav-links a:hover {
+.nav-links a:hover,
+.nav-links a[aria-current="location"] {
   color: var(--ink);
 }
 
-.nav-links a:hover::after {
+.nav-links a:hover::after,
+.nav-links a[aria-current="location"]::after {
   transform: scaleX(1);
 }
 
@@ -1000,18 +1002,19 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 .spec-strip dl {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid color-mix(in srgb, var(--hero-ink) 14%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--hero-ink) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hero-ink) 14%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--white) 72%, transparent);
+  overflow: hidden;
 }
 
 .spec-strip dl > div {
-  padding: 22px 24px 24px;
-  border-left: 1px solid color-mix(in srgb, var(--hero-ink) 14%, transparent);
+  padding: 20px 24px 22px;
+  border-left: 1px solid color-mix(in srgb, var(--hero-ink) 12%, transparent);
 }
 
 .spec-strip dl > div:first-child {
   border-left: 0;
-  padding-left: 0;
 }
 
 .spec-strip dt {
@@ -1064,35 +1067,37 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 .path-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
-  border-left: 1px solid var(--line);
+  gap: 18px;
 }
 
 .path-card {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 260px;
+  min-height: 248px;
   flex-direction: column;
-  padding: 24px;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  padding: 26px 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
   color: var(--ink);
   background: var(--white);
-  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+  box-shadow: 0 12px 28px -16px rgba(12, 32, 48, 0.08);
+  transition: color 180ms ease, background 180ms ease, border-color 180ms ease, transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease;
 }
 
 .path-card::before {
   content: "";
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
+  inset: 0 0 auto 0;
+  height: 3px;
   background: transparent;
   transition: background 180ms ease;
 }
 
 .path-card-primary {
-  background: color-mix(in srgb, var(--panel) 54%, var(--white));
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
+  background: color-mix(in srgb, var(--panel) 48%, var(--white));
 }
 
 .path-card-primary .path-number {
@@ -1103,14 +1108,25 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 .path-card:focus-visible {
   z-index: 1;
   color: var(--ink);
-  background: color-mix(in srgb, var(--panel) 72%, var(--white));
-  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--panel) 65%, var(--white));
+  box-shadow: var(--card-shadow);
+  transform: translateY(-4px);
 }
 
 .path-card:hover::before,
 .path-card:focus-visible::before,
 .path-card-primary::before {
   background: var(--accent);
+}
+
+.path-action span:last-child {
+  transition: transform 180ms ease;
+}
+
+.path-card:hover .path-action span:last-child,
+.path-card:focus-visible .path-action span:last-child {
+  transform: translateX(3px);
 }
 
 .path-number {
@@ -1943,8 +1959,8 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 
 .code-panel pre {
   overflow-x: auto;
-  min-height: 420px;
-  padding: 34px 38px 38px;
+  min-height: 0;
+  padding: 28px 34px 32px;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.78;
@@ -2440,19 +2456,37 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 .asset-links {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 12px 20px 20px;
+  gap: 8px;
+  padding: 16px 24px 22px;
 }
 
 .asset-links a {
-  padding: 10px;
-  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--soft-line);
+  border-radius: 9px;
   color: var(--download-asset);
-  font-size: 12px;
-  transition: color 160ms ease, background 160ms ease;
+  background: color-mix(in srgb, var(--panel) 28%, var(--white));
+  font-size: 12.5px;
+  font-weight: 550;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.asset-links a::after {
+  content: "↓";
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.python-release-row + .asset-links a::after {
+  content: "↗";
 }
 
 .asset-links a:hover {
   color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   background: var(--download-hover);
 }
 
@@ -2938,7 +2972,6 @@ html[data-site-language="zh"] [data-lang-en] {
 
   .spec-strip dl > div:nth-child(odd) {
     border-left: 0;
-    padding-left: 0;
   }
 
   .spec-strip dl > div:nth-last-child(-n + 2) {
