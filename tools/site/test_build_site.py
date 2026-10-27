@@ -151,6 +151,18 @@ class SiteGenerationTest(unittest.TestCase):
                     with patch.dict(os.environ, {"DISPLAY": ":99"}):
                         self.assertEqual(original, previews.capture_digest())
 
+    def test_generated_outputs_are_untracked_but_site_sources_remain(self):
+        if not (build_site.ROOT / ".git").exists():
+            self.skipTest("Git index migration is checked in the repository checkout")
+        ignored_tracked = subprocess.check_output(
+            ["git", "ls-files", "-ci", "--exclude-standard", "site"], cwd=build_site.ROOT, text=True)
+        self.assertEqual(ignored_tracked.strip(), "", "Generated website files are still tracked")
+        tracked = set(subprocess.check_output(
+            ["git", "ls-files"], cwd=build_site.ROOT, text=True).splitlines())
+        self.assertTrue({"site/404.html", "site/app/index.html", "site/api/catalog.json",
+                         "site/api/component.js", "site/api/component.css",
+                         "tools/site/index.template.html"}.issubset(tracked))
+
     def build(self, *arguments, current=True, failing=None):
         def run(*command):
             if failing and failing in command:

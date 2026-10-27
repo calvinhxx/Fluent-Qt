@@ -259,14 +259,25 @@ to the pushed remote's `main` ref, even when it is not the currently checked
 out branch. Both hooks are read-only and never format files. Fork workflows can
 set `FLUENTQT_FORMAT_BASE` to a different local base ref.
 
-Public-header and site changes must also keep the committed generated outputs
-current. Run these deterministic checks locally; the CI planning job repeats
-them before any pull request can merge, while Pages repeats them before deploy:
+Generated website pages and native component previews are not tracked; CI
+builds them for every pull request and deployment. CI refreshes the AI and API
+catalogs from source before checking them, so public-header and sample edits
+do not require a manual generation step. To run the same preparation locally:
 
 ```bash
-python3 tools/site/generate_localized_site.py --check
-python3 tools/site/generate_api_reference.py --check
+python3 tools/site/build_site.py --prepare
 ```
+
+To build the same website artifact as CI, build the current native Gallery,
+then run:
+
+```bash
+python3 tools/site/build_site.py --gallery /path/to/fluent_qt_gallery
+```
+
+It refreshes catalog inputs, writes a verified website to `build/site-pages`, and reuses unchanged native
+previews. For quicker prose edits, see the
+[site workflow](site-workflow.md#previews-and-local-generation).
 
 The full [WebAssembly browser smoke](webassembly-workflow.md#browser-smoke)
 includes five Drawer recreation cycles inside the existing overlay contract.

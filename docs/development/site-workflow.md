@@ -34,26 +34,35 @@ the Pages layout so links from older posts and bookmarks continue to work.
    [`tools/site/index.template.html`](../../tools/site/index.template.html).
 2. Edit English and Chinese strings together in the `translations` object in
    [`site/site.js`](../../site/site.js).
-3. Regenerate committed outputs:
+3. Generate the local pages:
 
    ```bash
    python3 tools/site/generate_localized_site.py
    ```
 
-The generator owns `site/index.html`, `site/zh-CN/index.html`, and
-`site/sitemap.xml`. Do not edit those files directly.
+The generator writes `site/index.html`, `site/zh-CN/index.html`, and
+`site/sitemap.xml`. These files are not tracked: CI generates them for every
+build. Do not edit them directly.
 It versions the homepage script, stylesheet and Spatial controller by file
-content. Regenerate the pages after editing these assets so returning browsers
-do not combine new markup with a cached controller. A controller load failure
-shows a retry action instead of leaving the example waiting.
+content, so returning browsers do not combine new markup with a cached
+controller. A controller load failure shows a retry action instead of leaving
+the example waiting.
 
 The machine-readable API catalog is generated from the installed-header allowlist,
-installed public headers, and the generated AI catalog. After any of those
-inputs change, regenerate it instead of editing the JSON directly:
+installed public headers, and the generated AI catalog. `site/api/catalog.json`
+remains as a snapshot for quality tools. CI refreshes it and the AI catalog
+from current source before validation; changing a public header or Gallery
+sample does not require manually generating or committing catalog updates.
+For local inspection, use:
 
 ```bash
-python3 tools/site/generate_api_reference.py
+python3 tools/site/build_site.py --prepare
 ```
+
+`generate_api_reference.py` writes the component, guide, and reference pages;
+`--catalog-only` limits it to the machine-readable catalog. Pages are not
+tracked. The catalog does not depend on preview images, so it stays the
+same whichever machine captured them.
 
 ### Component visual documentation
 
@@ -107,29 +116,54 @@ the shared reading shell, and `component-preview.template.html` owns the live ex
 The same generator extracts the existing 64-pixel PNG from the Gallery's ICO
 for document navigation, avoiding the full-resolution application artwork.
 
-Generate real images with a configured native Gallery build:
+### Previews and local generation
+
+Native previews under `site/assets/component-previews/` are not tracked. CI
+captures them on Linux and publishes them with the pages.
+
+Editing prose or code samples does not need a native Gallery.
+`generate_api_reference.py` reuses local captures whose bytes still match the
+manifest, even after their inputs change, and uses placeholders for missing
+ones. It reports how many it reused or replaced. Placeholders show the preview's
+"unavailable" state in the browser.
+
+To capture current images, use a configured native Gallery build. Pass
+`--executable` to use an existing build instead of the preset:
 
 ```bash
 python3 tools/site/generate_component_previews.py --preset vcpkg-osx
 python3 tools/site/generate_api_reference.py
-python3 tools/site/generate_api_reference.py --check
 python3 tools/site/test_generate_api_reference.py
 ```
+
+To build the same artifact that CI publishes, run
+`python3 tools/site/build_site.py --gallery /path/to/fluent_qt_gallery`. It
+refreshes the AI and API catalogs, validates their source contracts, recaptures stale previews,
+generates every page, and writes a verified site to `build/site-pages`.
 
 The capture tool uses existing Gallery factories, named-widget actions and
 `--capture-target gallerySamplePreviewWidget`. It checks selected, mixed,
 disabled and focus states before capturing both themes. Its manifest records
 image hashes, logical/pixel dimensions, platform, Qt, fonts, binary hash and a
-digest of capture dependencies. `--check` runs without Qt and rejects stale or
-missing images. It does not certify other operating systems or approve visual
-baselines. Gallery card illustrations under `tools/gallery/artwork/` are not
+digest of capture dependencies and environment settings. Library and Gallery
+sources, headers, resources, build files and the capture workflow participate.
+Qt version, scale, platform, rendering and locale settings invalidate reuse;
+temporary display numbers do not. `--check` runs without Qt and rejects stale or
+missing images; publication uses the same rule. It does not certify other
+operating systems or approve visual baselines. Gallery card illustrations under `tools/gallery/artwork/` are not
 component preview images.
 
+When `build_site.py --gallery` is given an executable, it also compares the
+binary hash before reusing captures, so a locally rebuilt Qt kit cannot silently
+reuse images from the previous executable.
+
 Successful captures are cached by source, executable and recipe so an interrupted
-batch can resume. Larger examples use their own preview height; a capture fails
+batch can resume. A capture that times out or exits with an error is retried
+once before the batch fails. Larger examples use their own preview height; a capture fails
 if the real sample is clipped. The manifest is published after the complete batch.
 
-Preview and verify the static pages without requiring a WASM build:
+Preview and verify the static pages without requiring a WASM build. Generate
+the homepage and documents first; a fresh clone does not contain them:
 
 ```bash
 python3 tools/site/serve.py --static-only --port 8766
@@ -140,8 +174,8 @@ The browser check requires Playwright and Chromium. It covers bilingual routes,
 native images, themes, keyboard state tabs, exact code copying, absence of download panels,
 Chinese search, narrow layout, JavaScript-disabled reading, unavailable-runtime
 fallback, document assets below 300 KB (excluding the runtime), and active text
-contrast. The existing Pages generation check validates the new outputs before
-publishing; the existing `site/` copy includes their assets and detail pages.
+contrast. The website CI module generates and validates the pages before Pages
+deploys its artifact.
 
 To check live examples, build the WASM Gallery as described in the
 [WebAssembly workflow](webassembly-workflow.md), then run
@@ -292,23 +326,27 @@ so browsers and sharing previews fetch the updated assets.
 
 ## Validation
 
-Check the generated pages and scripts:
+Check the tracked catalog, the generated pages and the scripts:
 
 ```bash
-python3 tools/site/generate_localized_site.py --check
 python3 tools/site/generate_api_reference.py --check
+python3 tools/site/generate_localized_site.py
 node --check site/site.js
 node --test tools/site/test_hero_particles.mjs
 node --test tools/site/test_spatial_showcase.mjs
 ```
 
-The check requires matching translation keys, static localized text and
-attributes, valid JSON-LD and sitemap XML, canonical URLs, reciprocal
-`hreflang` links, the URL-owned 404 language contract, the legacy Gallery
-redirect, and the current CMake project version in structured data.
-The pull-request planning job runs both freshness checks before merge. The
-Pages workflow repeats them and also verifies that both localized pages and
-`sitemap.xml` are present before deployment.
+`generate_api_reference.py --check` verifies the tracked API catalog without Qt
+or previews. The homepage generator fails on mismatched translation keys,
+static localized text and attributes, invalid JSON-LD or sitemap XML, canonical
+URLs, reciprocal `hreflang` links, the URL-owned 404 language contract, the
+legacy Gallery redirect, and the current CMake project version in structured
+data.
+The pull-request planning job regenerates and checks the AI and API catalogs. The
+[website CI module](ci-workflow.md) generates the homepage, documents and
+previews on every pull request and on `main`, then uploads a verified artifact.
+Pages deploys only that artifact after checking its commit and file hashes, and
+verifies that both localized pages and `sitemap.xml` are present.
 
 The motion tests use Node's built-in test runner (Node 20+) and cover visibility,
 pause persistence, system preferences, pointer input, resize limits, and page
@@ -328,7 +366,7 @@ For a local preview with the built runtime mounted at the same URL as Pages:
 python3 tools/site/serve.py --port 8765
 ```
 
-This serves the website from `site/` and `/gallery/` from `build/wasm/app/`, without
+This serves the generated website from `site/` and `/gallery/` from `build/wasm/app/`, without
 copying compiled binaries into tracked assets. Build the `wasm` Gallery first;
 a site-only `http.server --directory site` does not contain the runtime.
 
@@ -365,7 +403,7 @@ After a Pages deployment, use the site's verified Google Search Console
 property to inspect the English home, Chinese home, and component document URLs.
 Check the fetched page, indexing status, and Google's selected canonical;
 submit `https://calvinhxx.github.io/Fluent-Qt/sitemap.xml` in the Sitemaps report.
-Record the actual result rather than treating a checked-in sitemap as proof of
+Record the actual result rather than treating a generated sitemap as proof of
 submission or indexing. Ownership verification requires the site's account;
 do not invent verification tokens or assume that missing HTML verification
 means the property is unverified.
