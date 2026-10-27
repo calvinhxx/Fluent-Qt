@@ -42,6 +42,10 @@ the Pages layout so links from older posts and bookmarks continue to work.
 
 The generator owns `site/index.html`, `site/zh-CN/index.html`, and
 `site/sitemap.xml`. Do not edit those files directly.
+It versions the homepage script, stylesheet and Spatial controller by file
+content. Regenerate the pages after editing these assets so returning browsers
+do not combine new markup with a cached controller. A controller load failure
+shows a retry action instead of leaving the example waiting.
 
 The machine-readable API catalog is generated from the installed-header allowlist,
 installed public headers, and the generated AI catalog. After any of those
