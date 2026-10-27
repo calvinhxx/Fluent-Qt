@@ -3,12 +3,16 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "SelectionIndicatorTestUtils.h"
+#include "ControlSurfaceTestUtils.h"
 #include <QApplication>
 #include <QButtonGroup>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
 #include <QSignalSpy>
+#include <QStyle>
+#include <QTest>
+#include <QtMath>
 #include <QVBoxLayout>
 #include <gtest/gtest.h>
 
@@ -82,9 +86,9 @@ TEST_F(RadioButtonTest, EmptyText)
 {
     RadioButton rb("", window);
     EXPECT_TRUE(rb.text().isEmpty());
-    // sizeHint with empty text = circle only
+    // The circle keeps space for its antialiased edge and keyboard cue.
     QSize hint = rb.sizeHint();
-    EXPECT_EQ(hint.width(), 20);
+    EXPECT_EQ(hint.width(), 28);
 }
 
 TEST_F(RadioButtonTest, SetCircleSize)
@@ -141,8 +145,35 @@ TEST_F(RadioButtonTest, SizeHintNoText)
 {
     RadioButton rb(window);
     QSize hint = rb.sizeHint();
-    // No text: width == circleSize
-    EXPECT_EQ(hint.width(), 20);
+    EXPECT_EQ(hint, QSize(28, 28));
+}
+
+TEST_F(RadioButtonTest, Contract_LegacyFixedSizeKeepsTheWholeIndicatorAndText)
+{
+    const QColor background(17, 23, 31);
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        for (const QString text : {QString(), QStringLiteral("Option")}) {
+            RadioButton compact(text), padded(text);
+            for (auto* radio : {&compact, &padded}) {
+                radio->setLayoutDirection(direction);
+                radio->setChecked(true);
+                radio->setCheckProgress(1.0);
+            }
+            const QFontMetrics metrics(compact.textFont());
+            const QSize legacy(compact.circleSize()
+                    + (text.isEmpty() ? 0 : compact.textGap() + metrics.horizontalAdvance(text)),
+                qMax(compact.circleSize(), metrics.height()));
+            compact.setFixedSize(legacy);
+            padded.resize(padded.sizeHint());
+            const int inset = padded.themeSpacing().gap.tight;
+            for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                const QImage actual = testutils::renderControlSurface(compact, scale, background);
+                const QImage reference = testutils::renderControlSurface(padded, scale, background);
+                EXPECT_EQ(actual,
+                    reference.copy(qRound(inset * scale), qRound(inset * scale), actual.width(), actual.height()));
+            }
+        }
+    }
 }
 
 TEST_F(RadioButtonTest, CheckedState)
@@ -235,9 +266,91 @@ TEST_F(RadioButtonTest, Contract_UncheckedOutlineRemainsVisibleWithoutHover)
         RadioButton radio(QStringLiteral(""));
         radio.setProperty("fluentThemeOverride", static_cast<int>(theme));
         radio.resize(48, 32);
-        const QRect indicator(0, (radio.height() - radio.circleSize()) / 2, radio.circleSize(), radio.circleSize());
+        const QRect indicator(radio.themeSpacing().gap.tight, (radio.height() - radio.circleSize()) / 2,
+            radio.circleSize(), radio.circleSize());
         testutils::expectVisibleUncheckedOutline(radio, indicator, radio.themeColors().bgLayer,
             theme == FluentElement::HighContrast);
+    }
+}
+
+TEST_F(RadioButtonTest, Contract_SelectedCircleDoesNotTouchWidgetClipAtFractionalScale)
+{
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+            RadioButton radio(QStringLiteral(""));
+            radio.setLayoutDirection(direction);
+            radio.setProperty("fluentThemeOverride", static_cast<int>(theme));
+            radio.setChecked(true);
+            const QColor background = radio.themeColors().bgLayer;
+            QPalette palette = radio.palette();
+            palette.setColor(radio.backgroundRole(), background);
+            radio.setPalette(palette);
+            radio.setAutoFillBackground(true);
+            for (const int diameter : {14, 20, 28}) {
+                radio.setCircleSize(diameter);
+                radio.resize(radio.sizeHint());
+                for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                    SCOPED_TRACE(::testing::Message()
+                        << "direction=" << direction << " theme=" << theme << " diameter=" << diameter
+                        << " scale=" << scale);
+                    QImage image(QSize(qCeil(radio.width() * scale), qCeil(radio.height() * scale)),
+                        QImage::Format_ARGB32_Premultiplied);
+                    image.setDevicePixelRatio(scale);
+                    image.fill(background);
+                    radio.render(&image);
+                    for (int x = 0; x < image.width(); ++x) {
+                        EXPECT_EQ(image.pixelColor(x, 0), background);
+                        EXPECT_EQ(image.pixelColor(x, image.height() - 1), background);
+                    }
+                    for (int y = 0; y < image.height(); ++y) {
+                        EXPECT_EQ(image.pixelColor(0, y), background);
+                        EXPECT_EQ(image.pixelColor(image.width() - 1, y), background);
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_F(RadioButtonTest, Contract_KeyboardCueDoesNotOverpaintSelection)
+{
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+            SCOPED_TRACE(::testing::Message() << "direction=" << direction << " theme=" << theme);
+            QWidget host;
+            auto* layout = new QVBoxLayout(&host);
+            auto* before = new Button(QStringLiteral("Before"), &host);
+            auto* radio = new RadioButton(QStringLiteral("Option"), &host);
+            radio->setLayoutDirection(direction);
+            radio->setProperty("fluentThemeOverride", static_cast<int>(theme));
+            radio->setChecked(true);
+            layout->addWidget(before);
+            layout->addWidget(radio);
+            layout->addWidget(new RadioButton(QStringLiteral("Other"), &host));
+            host.show();
+            QApplication::setActiveWindow(&host);
+            before->setFocus();
+            ASSERT_TRUE(QTest::qWaitFor([before] { return before->hasFocus(); }, 1000));
+            radio->setAttribute(Qt::WA_UnderMouse, false);
+            const QImage resting = radio->grab().toImage();
+            QTest::keyClick(before, Qt::Key_Tab);
+            ASSERT_TRUE(radio->hasFocus());
+            EXPECT_FALSE(radio->testAttribute(Qt::WA_MacShowFocusRect));
+            const QImage focused = radio->grab().toImage();
+            const QRect logical(radio->themeSpacing().gap.tight, (radio->height() - radio->circleSize()) / 2,
+                radio->circleSize(), radio->circleSize());
+            const QRect indicator = QStyle::visualRect(direction, radio->rect(), logical);
+            const qreal scale = focused.devicePixelRatio();
+            const QRect pixels(qRound(indicator.x() * scale), qRound(indicator.y() * scale),
+                qRound(indicator.width() * scale), qRound(indicator.height() * scale));
+            EXPECT_EQ(resting.copy(pixels), focused.copy(pixels));
+            EXPECT_NE(resting, focused);
+            QTest::mouseClick(radio, Qt::LeftButton, Qt::NoModifier, radio->rect().center());
+            EXPECT_TRUE(radio->isChecked());
+            ASSERT_TRUE(QTest::qWaitFor([radio] { return qFuzzyCompare(radio->checkProgress(), 1.0); }, 1000));
+            const QImage mouse = radio->grab().toImage();
+            EXPECT_EQ(resting, mouse);
+        }
     }
 }
 
