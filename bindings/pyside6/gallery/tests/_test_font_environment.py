@@ -13,9 +13,6 @@ def initialize_headless_test_fixed_font(application):
     path = os.environ.get("FLUENT_QT_TEST_MONOSPACE_FONT", "")
     if not path or application.platformName() not in ("offscreen", "minimal"):
         return
-    # Resolve before loading the font: loading invalidates Qt's fallback cache.
-    fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-    already_fixed = QFontInfo(fixed).fixedPitch()
     font_id = QFontDatabase.addApplicationFont(path)
     if font_id < 0:
         raise RuntimeError(f"Cannot load test monospace font: {path}")
@@ -24,7 +21,10 @@ def initialize_headless_test_fixed_font(application):
                    if QFontInfo(QFont(name)).fixedPitch()), None)
     if family is None:
         raise RuntimeError(f"Test font has no usable fixed-pitch family: {path}")
-    if already_fixed:
+    fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+    # Inspect the family database without resolving a generic font engine:
+    # Qt 6.2 may retain that engine after substitutions change.
+    if QFontDatabase().isFixedPitch(fixed.family()):
         return
     if not fixed.family():
         raise RuntimeError("The headless system FixedFont has no family")
