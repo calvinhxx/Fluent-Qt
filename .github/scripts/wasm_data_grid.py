@@ -111,6 +111,7 @@ def run_data_grid_contract(browser: object, base_url: str, artifact_dir: Path) -
                   wait_until="domcontentloaded")
         page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'", timeout=120_000)
         wait_for_gallery_ready(page)
+        page.bring_to_front()
         activation = page.locator(
             "#qt-shadow-container .qt-window-a11y-container:visible "
             "> button.hidden-visually-read-by-screen-reader"
@@ -147,13 +148,19 @@ def run_data_grid_contract(browser: object, base_url: str, artifact_dir: Path) -
             column_bounds, row_bounds = header.bounding_box(), row.bounding_box()
             if not column_bounds or not row_bounds:
                 raise RuntimeError("Missing numeric cell bounds")
-            # Give real press/release events a duration: zero-duration bursts
-            # can overtake Qt WASM's focus hand-off after the preceding editor.
-            page.mouse.dblclick(column_bounds["x"] + column_bounds["width"] / 2,
-                                row_bounds["y"] + row_bounds["height"] / 2, delay=60)
+            x = column_bounds["x"] + column_bounds["width"] / 2
+            y = row_bounds["y"] + row_bounds["height"] / 2
+            # Establish the current cell before testing double-click editing.
+            # Activating a fresh headless page or leaving a previous editor can
+            # consume the first click; wait for Qt's selection and paint turn.
+            page.bring_to_front()
+            page.mouse.click(x, y)
+            summary("8 of 8 projects · 1 selected")
+            page.evaluate("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
+            page.mouse.dblclick(x, y, delay=60)
             editor = control("fluentDataGridNumberEditor")
             expect(editor).to_be_visible()
-            page.keyboard.press("Control+A")
+            page.keyboard.press("ControlOrMeta+A")
             page.keyboard.type(value)
             page.screenshot(path=str(artifact_dir / f"number-editor-{finish}.png"))
             if finish == "focus-out":
