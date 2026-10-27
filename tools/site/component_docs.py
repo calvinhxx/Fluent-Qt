@@ -8,7 +8,7 @@ import re
 import struct
 from string import Template
 
-from generate_component_previews import ROOT, config, validated_manifest
+from generate_component_previews import ROOT, available_previews, config, preview_path
 from public_api import inventory, resolve_type
 from api_sections import (component_api, localized_description, primary_type, render_type,
                           reference_headers, reference_path, type_url, slug)
@@ -73,8 +73,8 @@ def icon(name):
     return f'<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">{paths[name]}</svg>'
 
 
-def collect(catalog):
-    capture = validated_manifest()
+def collect(catalog, capture=None):
+    capture = capture or available_previews()
     components = {c["id"]: c for c in catalog["components"]}
     canonical = json.loads((ROOT / "docs/ai/generated/fluentqt-ai-catalog.json").read_text())
     samples = {(c["id"], s["id"]): s for c in canonical["components"] for s in c["samples"]}
@@ -101,12 +101,12 @@ def collect(catalog):
         doc["component"] = components[component_id]
         doc["catalog"] = catalog
         hero = doc["previews"][0]
+        # The committed catalog must not depend on which machine captured the images.
         components[component_id]["documentation"] = {
             "name": doc["name"], "description": doc["description"],
             "urls": {lang: ("../zh-CN/api/" if lang == "zh" else "") + component_id + "/" for lang in ("en", "zh")},
-            "preview": {"alt": hero["alt"], **{theme: {"url": "../" + hero["images"][theme]["path"],
-                "sha256": hero["images"][theme]["sha256"], "background": hero["images"][theme]["background"],
-                "size": hero["images"][theme]["logical_size"]} for theme in ("light", "dark")}}}
+            "preview": {"alt": hero["alt"], **{theme: {"url": "../" + preview_path(component_id, hero["id"], theme)}
+                                              for theme in ("light", "dark")}}}
         documents.append(doc)
     return documents
 
@@ -164,7 +164,8 @@ def component_directory(doc, documents, page, language):
 def picture(preview, page, language, eager=False):
     light, dark = (preview["images"][theme] for theme in ("light", "dark"))
     def url(image):
-        return escape(relative(image["path"], page) + "?v=" + image["sha256"][:12])
+        version = "?v=" + image["sha256"][:12] if image["sha256"] else ""
+        return escape(relative(image["path"], page) + version)
     w, h = light["logical_size"]
     priority = ' fetchpriority="high"' if eager else ''
     return (f'<picture><source data-dark-src="{url(dark)}" media="(prefers-color-scheme: dark)" srcset="{url(dark)}">'
