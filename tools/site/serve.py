@@ -32,15 +32,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--wasm-root", type=Path, default=ROOT / "build/wasm/app")
+    parser.add_argument("--static-only", action="store_true", help="Preview the documentation without requiring a WASM build.")
     args = parser.parse_args()
     wasm_root = args.wasm_root.resolve()
     for name in ("index.html", "fluent_qt_gallery.js", "fluent_qt_gallery.wasm"):
-        if not (wasm_root / name).is_file():
+        if not args.static_only and not (wasm_root / name).is_file():
             parser.error(f"Missing {wasm_root / name}; build fluent_qt_gallery with the wasm preset.")
     handler = partial(SiteHandler, wasm_root=wasm_root)
     with SiteServer(("127.0.0.1", args.port), handler) as server:
         print(f"Site: http://127.0.0.1:{args.port}/zh-CN/", flush=True)
-        print(f"WASM: {wasm_root}", flush=True)
+        if not args.static_only:
+            print(f"WASM: {wasm_root}", flush=True)
         try:
             server.serve_forever()
         except KeyboardInterrupt:

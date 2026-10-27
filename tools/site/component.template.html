@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="$lang" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>$title · Fluent-Qt</title>
+  <meta name="description" content="$description">
+  <link rel="canonical" href="$canonical">
+  <link rel="alternate" hreflang="$alternate_lang" href="$alternate">
+  <link rel="icon" href="$app_icon">
+  <script>
+    document.documentElement.classList.add('js');
+    (() => {
+      let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      try {
+        const saved = localStorage.getItem('fluent-qt-theme');
+        if (['light', 'dark', 'high-contrast'].includes(saved)) theme = saved;
+      } catch { /* Use the system theme when storage is unavailable. */ }
+      document.documentElement.dataset.theme = matchMedia('(forced-colors: active)').matches ? 'high-contrast' : theme;
+    })();
+  </script>
+  <link rel="stylesheet" href="$style">
+  <link rel="stylesheet" href="$navigation_style">
+  <script src="$script" defer></script>
+</head>
+<body data-copy-success="$copied" data-copy-error="$copyError">
+  <a class="skip-link" href="#content">$skip</a>
+  $site_navigation
+  <div class="document-layout">
+    <aside class="sidebar">
+      $directory
+    </aside>
+    <main id="content" class="document-main">
+      <div class="document-intro">
+        $breadcrumb
+        <header class="document-heading"><h1>$title</h1><p>$description</p></header>
+      </div>
+      <aside class="page-outline" aria-label="$onPage">
+        <details class="page-outline-menu" open>
+          <summary>$onPage</summary>
+          <nav class="page-navigation" aria-label="$onPage">$page_navigation</nav>
+        </details>
+      </aside>
+      <div class="document-body">
+        $body
+        <footer class="document-footer">$neighbors</footer>
+      </div>
+    </main>
+  </div>
+  <div class="copy-status" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

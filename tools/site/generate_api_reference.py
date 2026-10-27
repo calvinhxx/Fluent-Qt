@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-"""Generate the searchable website index for FluentQt's installed public API."""
+"""Generate FluentQt component documents and the installed public API catalog."""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -185,6 +184,7 @@ def _component_records(
 
 
 def generate_reference() -> dict[str, object]:
+    from public_api import inventory
     catalog = json.loads(AI_CATALOG.read_text(encoding="utf-8"))
     if catalog.get("schema_version") != 2:
         raise ValueError("AI catalog schema_version must be 2")
@@ -214,11 +214,14 @@ def generate_reference() -> dict[str, object]:
         "categories": categories,
         "components": components,
         "public_headers": _public_headers(paths),
+        "types": inventory(),
     }
 
 
 def _encoded(reference: dict[str, object]) -> str:
-    return json.dumps(reference, ensure_ascii=False, indent=2) + "\n"
+    # Full type members are consumed at generation time by the HTML reference.
+    published = {key: value for key, value in reference.items() if key != "types"}
+    return json.dumps(published, ensure_ascii=False, indent=2) + "\n"
 
 
 def main() -> int:
@@ -229,18 +232,27 @@ def main() -> int:
         help="Fail when the committed website index is stale",
     )
     arguments = parser.parse_args()
-    expected = _encoded(generate_reference())
-    current = OUTPUT.read_text(encoding="utf-8") if OUTPUT.is_file() else None
-    digest = hashlib.sha256(expected.encode("utf-8")).hexdigest()[:12]
-    if current == expected:
-        print(f"ok {OUTPUT.relative_to(ROOT)} {digest}")
-        return 0
-    if arguments.check:
-        print(f"stale {OUTPUT.relative_to(ROOT)}")
+    from component_docs import collect, generated_outputs
+    reference = generate_reference()
+    documents = collect(reference)
+    outputs = {OUTPUT: _encoded(reference)}
+    outputs.update({ROOT / "site" / path: content for path, content in generated_outputs(documents).items()})
+    stale = []
+    for path, expected in outputs.items():
+        data = expected.encode("utf-8") if isinstance(expected, str) else expected
+        current = path.read_bytes() if path.is_file() else None
+        if current == data:
+            continue
+        stale.append(path)
+        if not arguments.check:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+    if arguments.check and stale:
+        for path in stale:
+            print(f"stale {path.relative_to(ROOT)}")
         return 1
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(expected, encoding="utf-8")
-    print(f"wrote {OUTPUT.relative_to(ROOT)} {digest}")
+    pages = sum(path.suffix == '.html' for path in outputs)
+    print(f"{'Verified' if arguments.check else 'Generated'} API catalog and {pages} document pages ({len(outputs)} files)")
     return 0
 
 

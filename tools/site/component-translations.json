@@ -1,0 +1,518 @@
+{
+  "compound-button": {
+    "name": "复合按钮",
+    "description": "在按钮中同时显示标题、说明和图标。",
+    "example": "主标题与辅助说明"
+  },
+  "color-picker": {
+    "name": "颜色选择器",
+    "description": "选择颜色，支持透明度与颜色值输入。",
+    "height": 420,
+    "example": "读取 RGBA 颜色值",
+    "capture_size": "920x820"
+  },
+  "combobox": {
+    "name": "下拉选择框",
+    "description": "从下拉列表中选择一个选项。",
+    "height": 420,
+    "example": "读取下拉选择"
+  },
+  "dropdown-button": {
+    "name": "下拉按钮",
+    "description": "点击按钮展开一组菜单命令。",
+    "height": 420,
+    "example": "展开菜单"
+  },
+  "file-drop-zone": {
+    "name": "文件拖放区",
+    "description": "拖入或选择文件，展示文件列表与处理状态。",
+    "capture_size": "1060x1000",
+    "example": "添加文件到工作区"
+  },
+  "hyperlink-button": {
+    "name": "链接按钮",
+    "description": "通过文字链接打开网页或执行导航。",
+    "example": "打开网址"
+  },
+  "multi-select-combobox": {
+    "name": "多选下拉框",
+    "description": "从列表中选择多个选项，并查看已选内容。",
+    "height": 420,
+    "example": "选择多个模型条目"
+  },
+  "radio-button": {
+    "name": "单选按钮",
+    "description": "在一组选项中选择一项。",
+    "example": "组合单选按钮"
+  },
+  "tree-select": {
+    "name": "树形选择器",
+    "description": "按层级浏览并选择条目。",
+    "height": 420,
+    "example": "选择层级条目"
+  },
+  "rating-control": {
+    "name": "评分控件",
+    "description": "输入或显示评分，支持只读展示。",
+    "example": "设置评分"
+  },
+  "repeat-button": {
+    "name": "重复按钮",
+    "description": "按住按钮时连续触发操作。",
+    "example": "按住按钮连续计数"
+  },
+  "slider": {
+    "name": "滑块",
+    "description": "拖动滑块选择范围内的数值。",
+    "example": "实时读取滑块值"
+  },
+  "split-button": {
+    "name": "分裂按钮",
+    "description": "将常用操作和其他菜单命令放在同一个按钮中。",
+    "height": 420,
+    "example": "主操作与更多命令"
+  },
+  "toggle-button": {
+    "name": "切换按钮",
+    "description": "用按钮表示开启或关闭状态。",
+    "example": "读取切换状态"
+  },
+  "toggle-split-button": {
+    "name": "切换分裂按钮",
+    "description": "组合开关状态与下拉菜单命令。",
+    "height": 420,
+    "example": "组合切换与菜单"
+  },
+  "toggle-switch": {
+    "name": "开关",
+    "description": "开启或关闭一个设置。",
+    "example": "读取开关状态"
+  },
+  "chart-view": {
+    "name": "图表视图",
+    "description": "通过数据模型绘制图表，并导出图像或原始数据。",
+    "capture_size": "1060x1000",
+    "example": "复制图表或数据"
+  },
+  "line-chart": {
+    "name": "折线图",
+    "description": "用折线展示数值随时间或顺序的变化。",
+    "capture_size": "1060x1000",
+    "example": "响应时间趋势"
+  },
+  "area-chart": {
+    "name": "面积图",
+    "description": "用填充区域展示连续数值及变化趋势。",
+    "capture_size": "1060x1000",
+    "example": "活跃会话趋势"
+  },
+  "bar-chart": {
+    "name": "柱状图",
+    "description": "比较不同类别的数值。",
+    "capture_size": "1060x1000",
+    "example": "每周活动比较"
+  },
+  "horizontal-bar-chart": {
+    "name": "条形图",
+    "description": "用水平条形比较类别，便于阅读较长的标签。",
+    "capture_size": "1060x1000",
+    "example": "流量来源比较"
+  },
+  "pie-chart": {
+    "name": "饼图",
+    "description": "展示各类别占总体的比例。",
+    "capture_size": "1060x1000",
+    "example": "流量来源占比"
+  },
+  "donut-chart": {
+    "name": "环形图",
+    "description": "用环形扇区展示数据占比。",
+    "capture_size": "1060x1000",
+    "example": "流量来源与总量"
+  },
+  "scatter-chart": {
+    "name": "散点图",
+    "description": "展示两组数值之间的分布关系。",
+    "capture_size": "1060x1000",
+    "example": "请求分布"
+  },
+  "sparkline": {
+    "name": "迷你趋势图",
+    "description": "在有限空间内展示数值趋势。",
+    "example": "近期变化趋势"
+  },
+  "data-grid": {
+    "name": "数据表格",
+    "description": "展示、选择和编辑表格数据，支持固定列。",
+    "example": "固定列与单元格编辑"
+  },
+  "drawer-view": {
+    "name": "抽屉视图",
+    "description": "从视图边缘展开附加内容。",
+    "example": "从右侧展开抽屉"
+  },
+  "file-list-view": {
+    "name": "文件列表",
+    "description": "展示文件、元信息、进度和处理状态。",
+    "example": "文件与进度"
+  },
+  "flip-view": {
+    "name": "翻页视图",
+    "description": "逐页浏览图片或其他内容。",
+    "example": "翻阅照片"
+  },
+  "flow-view": {
+    "name": "流式视图",
+    "description": "根据可用宽度自动换行排列内容。",
+    "example": "自适应照片排列"
+  },
+  "grid-view": {
+    "name": "网格视图",
+    "description": "以网格形式展示和选择数据项。",
+    "example": "照片网格"
+  },
+  "list-view": {
+    "name": "列表视图",
+    "description": "展示模型中的条目并处理选择。",
+    "example": "带头像的联系人列表"
+  },
+  "timeline": {
+    "name": "时间线",
+    "description": "按时间顺序展示事件和进度。",
+    "capture_size": "1060x1000",
+    "example": "模型驱动的时间线"
+  },
+  "split-view": {
+    "name": "分隔视图",
+    "description": "将内容放在可调整大小的相邻区域中。",
+    "example": "调整分栏宽度"
+  },
+  "stack-view": {
+    "name": "堆叠视图",
+    "description": "在同一区域切换不同页面。",
+    "example": "压入与弹出页面"
+  },
+  "tree-view": {
+    "name": "树形视图",
+    "description": "浏览、展开和选择层级数据。",
+    "example": "浏览文件夹层级"
+  },
+  "calendar-date-picker": {
+    "name": "日历日期选择器",
+    "description": "从弹出的日历中选择日期。",
+    "height": 420,
+    "example": "从下拉日历选择日期"
+  },
+  "calendar-view": {
+    "name": "日历视图",
+    "description": "按月份浏览并选择日期。",
+    "example": "浏览和选择日期",
+    "capture_size": "920x640"
+  },
+  "date-picker": {
+    "name": "日期选择器",
+    "description": "选择年、月和日。",
+    "height": 420,
+    "example": "分别选择年月日"
+  },
+  "date-time-range-picker": {
+    "name": "日期时间范围选择器",
+    "description": "设置开始和结束日期或时间。",
+    "height": 420,
+    "capture_size": "1060x1000",
+    "example": "按日期范围筛选"
+  },
+  "time-picker": {
+    "name": "时间选择器",
+    "description": "选择小时和分钟。",
+    "height": 420,
+    "example": "分别选择小时与分钟"
+  },
+  "content-dialog": {
+    "name": "内容对话框",
+    "description": "展示需要用户确认的内容和操作。",
+    "height": 560,
+    "example": "结果按钮与默认操作"
+  },
+  "dialog": {
+    "name": "对话框",
+    "description": "在独立对话框中组织输入、说明和操作按钮。",
+    "height": 560,
+    "example": "修改项目名称"
+  },
+  "flyout": {
+    "name": "浮出面板",
+    "description": "在触发控件附近展示附加内容。",
+    "example": "相对于目标定位"
+  },
+  "popup": {
+    "name": "弹出层",
+    "description": "按指定位置显示临时内容。",
+    "example": "在按钮旁弹出内容"
+  },
+  "teaching-tip": {
+    "name": "教学提示",
+    "description": "围绕目标控件展示说明和操作提示。",
+    "example": "展示提示并处理关闭原因"
+  },
+  "coach-mark": {
+    "name": "引导标记",
+    "description": "突出目标区域，引导用户完成操作。",
+    "example": "定位与移动引导标记"
+  },
+  "accordion": {
+    "name": "折叠面板组",
+    "description": "分组展示内容，并控制展开状态。",
+    "example": "一次展开一个分组"
+  },
+  "card": {
+    "name": "卡片",
+    "description": "用不同表面层级组织相关内容。",
+    "example": "不同表面层级"
+  },
+  "divider": {
+    "name": "分隔线",
+    "description": "分隔相邻内容，支持水平和垂直方向。",
+    "example": "水平分隔线与缩进"
+  },
+  "expander": {
+    "name": "展开面板",
+    "description": "通过标题展开或收起内容。",
+    "example": "标题与可折叠内容"
+  },
+  "field": {
+    "name": "表单字段",
+    "description": "组合标签、输入控件、说明和校验反馈。",
+    "example": "连接设置表单",
+    "capture_size": "920x900"
+  },
+  "data-grid-tool-bar": {
+    "name": "表格工具栏",
+    "description": "为数据表格提供搜索、筛选和操作入口。",
+    "example": "筛选与排列项目",
+    "capture_size": "920x800"
+  },
+  "property-panel": {
+    "name": "属性面板",
+    "description": "集中编辑分组属性，并支持搜索和重置。",
+    "example": "修改文档标题"
+  },
+  "list-detail-view": {
+    "name": "列表详情视图",
+    "description": "组合条目列表和当前条目的详细内容。",
+    "capture_size": "1060x1000",
+    "example": "单栏与双栏布局"
+  },
+  "particle-backdrop": {
+    "name": "粒子背景",
+    "description": "为界面添加可配置的粒子背景动效。",
+    "capture_size": "1060x1000",
+    "example": "流动丝带背景"
+  },
+  "spatial-view": {
+    "name": "空间视图",
+    "description": "在三维空间中组织和操作现有 Widgets 内容。",
+    "height": 560,
+    "capture_size": "1060x1000",
+    "example": "调整场景透视"
+  },
+  "spatial-item": {
+    "name": "空间项",
+    "description": "设置空间视图中单个内容项的位置、旋转和缩放。",
+    "height": 560,
+    "capture_size": "1060x1000",
+    "example": "卡片外观与空间姿态"
+  },
+  "qml-view": {
+    "name": "QML 视图",
+    "description": "在 Widgets 界面中加载 QML 页面并共享数据。",
+    "capture_size": "1060x1000",
+    "example": "加载 QML 页面"
+  },
+  "menu": {
+    "name": "菜单",
+    "description": "组织命令、快捷键和分组操作。",
+    "example": "菜单命令与快捷键"
+  },
+  "menu-bar": {
+    "name": "菜单栏",
+    "description": "在应用顶部组织多组菜单命令。",
+    "example": "承载应用菜单"
+  },
+  "command-bar": {
+    "name": "命令栏",
+    "description": "排列常用操作，并将放不下的命令收进菜单。",
+    "example": "自适应文档命令栏"
+  },
+  "command-palette": {
+    "name": "命令面板",
+    "description": "通过搜索快速查找并执行命令。",
+    "height": 420,
+    "example": "查找并执行命令"
+  },
+  "command-bar-flyout": {
+    "name": "浮动命令栏",
+    "description": "在当前内容附近显示常用操作和更多命令。",
+    "example": "照片的上下文操作"
+  },
+  "breadcrumb": {
+    "name": "面包屑导航",
+    "description": "展示当前位置，并返回上级路径。",
+    "example": "导航路径与尺寸"
+  },
+  "navigation-view": {
+    "name": "导航视图",
+    "description": "组合导航项、页面内容和窗口区域。",
+    "example": "导航与窗口区域",
+    "capture_size": "920x720"
+  },
+  "pivot": {
+    "name": "枢轴导航",
+    "description": "在相关内容页面之间切换。",
+    "example": "切换承载的页面"
+  },
+  "selector-bar": {
+    "name": "选择栏",
+    "description": "通过一组紧凑选项切换当前内容。",
+    "example": "选择并切换页面"
+  },
+  "stepper": {
+    "name": "步骤导航",
+    "description": "展示任务的步骤、当前进度和完成状态。",
+    "capture_size": "1060x1000",
+    "example": "由应用控制步骤"
+  },
+  "tab-view": {
+    "name": "标签页视图",
+    "description": "组织多个内容页面，并管理标签页。",
+    "example": "在标签页中承载内容"
+  },
+  "annotated-scrollbar": {
+    "name": "标注滚动条",
+    "description": "在滚动条上展示分组或位置提示。",
+    "example": "带分组标记的滚动范围"
+  },
+  "pips-pager": {
+    "name": "圆点分页器",
+    "description": "用圆点显示和切换当前页。",
+    "example": "与翻页视图联动"
+  },
+  "scrollbar": {
+    "name": "滚动条",
+    "description": "控制可滚动内容的位置。",
+    "example": "水平与垂直滚动值"
+  },
+  "scroll-view": {
+    "name": "滚动视图",
+    "description": "为内容提供滚动和缩放能力。",
+    "example": "滚动与缩放内容",
+    "capture_size": "920x640"
+  },
+  "avatar": {
+    "name": "头像",
+    "description": "用图片、姓名缩写或图标表示用户。",
+    "example": "姓名缩写与尺寸"
+  },
+  "info-badge": {
+    "name": "信息徽章",
+    "description": "以数字、圆点或图标展示简短状态。",
+    "example": "徽章显示模式"
+  },
+  "info-bar": {
+    "name": "信息栏",
+    "description": "在页面内展示提示、成功、警告或错误信息。",
+    "example": "不同级别的信息"
+  },
+  "progress-bar": {
+    "name": "进度条",
+    "description": "展示任务的完成进度。",
+    "example": "确定进度"
+  },
+  "progress-ring": {
+    "name": "进度环",
+    "description": "用环形进度指示任务正在运行。",
+    "example": "不确定进度与尺寸"
+  },
+  "splash-screen": {
+    "name": "启动屏幕",
+    "description": "在应用准备期间展示品牌与加载进度。",
+    "height": 560,
+    "capture_size": "1060x1000",
+    "example": "应用启动过程"
+  },
+  "shimmer": {
+    "name": "加载占位",
+    "description": "在内容加载前显示占位布局。",
+    "example": "内置占位模板"
+  },
+  "toast": {
+    "name": "轻提示",
+    "description": "用短暂浮层反馈操作结果。",
+    "height": 420,
+    "capture_size": "1060x1000",
+    "example": "操作结果提示"
+  },
+  "tooltip": {
+    "name": "工具提示",
+    "description": "在鼠标悬停时补充简短说明。",
+    "example": "悬停显示说明"
+  },
+  "auto-suggest-box": {
+    "name": "建议输入框",
+    "description": "输入文字时显示可选建议。",
+    "height": 420,
+    "example": "建议选择与查询提交"
+  },
+  "tag-input": {
+    "name": "标签输入框",
+    "description": "输入、选择和删除多个标签。",
+    "example": "选择和移除标签"
+  },
+  "code-block": {
+    "name": "代码块",
+    "description": "展示带语法高亮的代码，并支持复制。",
+    "capture_size": "1060x1000",
+    "example": "阅读和复制代码"
+  },
+  "label": {
+    "name": "文本标签",
+    "description": "按不同文字层级展示文本。",
+    "example": "文字层级"
+  },
+  "line-edit": {
+    "name": "单行输入框",
+    "description": "输入和编辑单行文字。",
+    "example": "带清除按钮的输入"
+  },
+  "number-box": {
+    "name": "数值输入框",
+    "description": "输入数值，支持步进和拖动微调。",
+    "example": "拖动调整数值"
+  },
+  "password-box": {
+    "name": "密码输入框",
+    "description": "输入密码并按需显示内容。",
+    "example": "输入与显示密码"
+  },
+  "text-edit": {
+    "name": "多行输入框",
+    "description": "输入和编辑多行文字。",
+    "example": "按可见行数调整高度"
+  },
+  "title-bar": {
+    "name": "标题栏",
+    "description": "组织窗口标题、图标和标题栏操作。",
+    "example": "避让系统窗口区域"
+  },
+  "window": {
+    "name": "窗口",
+    "description": "承载应用页面、导航和窗口控制。",
+    "height": 560,
+    "example": "承载顶层窗口内容"
+  },
+  "font-icon": {
+    "name": "字体图标",
+    "description": "显示 Fluent 图标并调整大小与颜色。",
+    "example": "不同光学尺寸"
+  }
+}
