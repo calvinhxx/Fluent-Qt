@@ -1,6 +1,8 @@
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "ControlSurfaceTestUtils.h"
+#include <QTest>
 #include <QApplication>
 #include <QColor>
 #include <QImage>
@@ -173,6 +175,39 @@ TEST_F(HyperlinkButtonTest, Contract_ThemeTypographyUsesButtonBaseContract)
     EXPECT_EQ(link.font().family(), expected.family());
     EXPECT_EQ(link.font().pixelSize(), expected.pixelSize());
     EXPECT_EQ(link.font().weight(), expected.weight());
+}
+
+TEST_F(HyperlinkButtonTest, Contract_KeyboardFocusIsVisibleByDefaultAndMouseFocusClearsIt)
+{
+    QWidget host;
+    QVBoxLayout layout(&host);
+    Button before(QStringLiteral("Before"));
+    HyperlinkButton link(QStringLiteral("Read documentation"));
+    layout.addWidget(&before);
+    layout.addWidget(&link);
+    host.show();
+    QApplication::setActiveWindow(&host);
+    EXPECT_FALSE(link.hasFocusVisual());
+    const QColor background(17, 23, 31);
+    for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+        link.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+            before.setFocus();
+            link.setFocus(Qt::MouseFocusReason);
+            const QImage resting = testutils::renderControlSurface(link, scale, background);
+            before.setFocus();
+            QTest::keyClick(&before, Qt::Key_Tab);
+            ASSERT_TRUE(QTest::qWaitFor([&link] { return link.hasFocus(); }, 1000));
+            const QImage focused = testutils::renderControlSurface(link, scale, background);
+            EXPECT_NE(resting, focused);
+            testutils::expectClearSurfacePerimeter(focused, background);
+            QTest::mouseClick(&link, Qt::LeftButton);
+            EXPECT_EQ(resting, testutils::renderControlSurface(link, scale, background));
+            link.setFocusVisual(true);
+            EXPECT_EQ(focused, testutils::renderControlSurface(link, scale, background));
+            link.setFocusVisual(false);
+        }
+    }
 }
 
 TEST_F(HyperlinkButtonTest, VisualCheck)

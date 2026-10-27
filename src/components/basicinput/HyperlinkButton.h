@@ -50,6 +50,9 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
 
 private:
     friend class detail::HyperlinkButtonAccessible;
@@ -57,6 +60,7 @@ private:
     QUrl m_url;
     bool m_showUnderline = false; // 默认悬停不显示下划线
     bool m_accessibilityVisited = false;
+    bool m_keyboardFocusVisible = false;
 };
 
 } // namespace fluent::basicinput
