@@ -1,4 +1,5 @@
 #include "CheckBox.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
@@ -13,8 +14,12 @@ namespace fluent::basicinput {
 
 CheckBox::CheckBox(const QString& text, QWidget* parent) : QCheckBox(text, parent)
 {
+    setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
     setCursor(Qt::ArrowCursor);
+    // The Fluent paint path owns the keyboard focus cue on every platform.
+    // zh_CN: 各平台的键盘焦点提示统一由 Fluent 绘制，避免叠加原生焦点环。
+    ::compatibility::detail::disableNativeFocusRing(this);
 
     auto fs = themeFont(Typography::FontRole::Body);
     setFont(fs.toQFont());

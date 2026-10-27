@@ -10,6 +10,7 @@
 #include <QImage>
 #include <QLabel>
 #include <QSignalSpy>
+#include <QTest>
 #include <QVBoxLayout>
 #include <gtest/gtest.h>
 
@@ -254,6 +255,50 @@ TEST_F(CheckBoxTest, Contract_UncheckedOutlineRemainsVisibleWithoutHover)
             checkBox.boxSize());
         testutils::expectVisibleUncheckedOutline(checkBox, indicator, checkBox.themeColors().bgLayer,
             theme == FluentElement::HighContrast);
+    }
+}
+
+TEST_F(CheckBoxTest, Contract_KeyboardFocusHasOneFluentCueAndMouseClearsIt)
+{
+    QWidget host;
+    auto* layout = new QVBoxLayout(&host);
+    auto* before = new Button(QStringLiteral("Before"), &host);
+    auto* check = new CheckBox(QStringLiteral("Option"), &host);
+    layout->addWidget(before);
+    layout->addWidget(check);
+    host.show();
+    QApplication::setActiveWindow(&host);
+    before->setFocus();
+    ASSERT_TRUE(QTest::qWaitFor([before] { return before->hasFocus(); }, 1000));
+    QTest::keyClick(before, Qt::Key_Tab);
+    ASSERT_TRUE(check->hasFocus());
+    EXPECT_FALSE(check->testAttribute(Qt::WA_MacShowFocusRect));
+    const QImage focused = check->grab().toImage();
+
+    QTest::keyClick(check, Qt::Key_Space);
+    EXPECT_EQ(check->checkState(), Qt::Checked);
+    QTest::mouseClick(check, Qt::LeftButton, Qt::NoModifier, check->rect().center());
+    EXPECT_EQ(check->checkState(), Qt::Unchecked);
+    const QImage mouse = check->grab().toImage();
+    const qreal dpr = focused.devicePixelRatio();
+    const QRect topEdge(qRound(4 * dpr), 0, qRound((check->width() - 8) * dpr), qRound(3 * dpr));
+    EXPECT_NE(focused.copy(topEdge), mouse.copy(topEdge));
+}
+
+TEST_F(CheckBoxTest, Contract_ZeroMarginLayoutContainsCustomPaintedBounds)
+{
+    QWidget host;
+    QVBoxLayout layout(&host);
+    layout.setContentsMargins(0, 0, 0, 0);
+    CheckBox check(QStringLiteral("Option"));
+    layout.addWidget(&check);
+    host.resize(240, 80);
+    host.show();
+    QApplication::processEvents();
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        host.setLayoutDirection(direction);
+        layout.activate();
+        EXPECT_TRUE(host.contentsRect().contains(check.geometry())) << check.geometry().x();
     }
 }
 
