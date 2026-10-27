@@ -16,6 +16,7 @@
 
 #include "platform/wasm/WasmSmokeRunner.h"
 #include "platform/wasm/GallerySpatialShowcase.h"
+#include "platform/wasm/GalleryComponentPreview.h"
 #include "support/logging/Log.h"
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryWindow.h"
@@ -100,6 +101,13 @@ int runApplication(int argc, char** argv)
     LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2")
             .arg(QApplication::applicationName(), QApplication::organizationName()));
     application->setWindowIcon(appicon::icon());
+
+    const bool componentPreview = emscripten_run_script_int("window.fluentQtComponentPreview === true");
+    if (componentPreview) {
+        showcaseWindow.reset(createComponentPreview());
+        showTopLevelWindow(showcaseWindow.get(), application->primaryScreen()->availableGeometry(), true);
+        return 0;
+    }
 
     const bool showcase = emscripten_run_script_int(
         "new URLSearchParams(window.location.search).get('showcase') === 'spatial'");

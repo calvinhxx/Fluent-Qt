@@ -8,6 +8,14 @@
   <link rel="icon" type="image/png" href="app-icon.png?v=@FLUENT_QT_GALLERY_ICON_HASH@">
   <script>
     document.documentElement.dataset.fluentQtLoadStartedAt = String(Date.now());
+    const componentParameters = new URLSearchParams(window.location.search);
+    window.fluentQtComponentPreview = componentParameters.get('preview') === 'component';
+    document.documentElement.dataset.fluentQtComponentPreview = String(window.fluentQtComponentPreview);
+    window.fluentQtComponentRequest = {
+      route: componentParameters.get('route') || '',
+      sample: componentParameters.get('sample') || '',
+      state: componentParameters.get('state') || ''
+    };
     window.fluentQtEmbedded = (() => {
       const embedded = new URLSearchParams(window.location.search).get('embed') === 'site';
       document.documentElement.dataset.fluentQtEmbedded = String(embedded);
@@ -108,6 +116,7 @@
       transition: opacity 180ms ease;
     }
     #loading.hidden { opacity: 0; pointer-events: none; }
+    html[data-fluent-qt-component-preview="true"] #loading { display: none; }
     #loading.error { color: #b42318; }
     .spinner { width: 28px; height: 28px; margin: auto; border: 3px solid #c7c7c7;
       border-top-color: #0067c0; border-radius: 50%; animation: spin .8s linear infinite; }
@@ -185,10 +194,22 @@
     const renderProfile = window.fluentQtRenderProfile;
     let wasmInstance = null;
     const showcase = new URLSearchParams(window.location.search).get('showcase') === 'spatial';
+    const componentPreview = window.fluentQtComponentPreview;
     const showcaseSession = new URLSearchParams(window.location.search).get('host-session') || '';
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let showcaseActive = true;
     let showcaseReduced = reducedMotion.matches;
+    let componentActive = true;
+    const syncComponent = () => {
+      if (!componentPreview) return;
+      wasmInstance?._fluentQtGalleryComponentActive?.(componentActive ? 1 : 0);
+      wasmInstance?._fluentQtGalleryComponentMotion?.(showcaseReduced ? 1 : 0);
+    };
+    const selectComponent = () => {
+      if (wasmInstance?._fluentQtGalleryComponentSelect
+          && !wasmInstance._fluentQtGalleryComponentSelect())
+        notifyHost('error', { message: 'This component example is unavailable.' });
+    };
     const syncShowcase = () => {
       if (!showcase) return;
       wasmInstance?._fluentQtGalleryShowcaseActive?.(showcaseActive ? 1 : 0);
@@ -232,6 +253,23 @@
         return;
       }
       if (event.data.type === 'theme') applyHostTheme(event.data.theme);
+      if (componentPreview && event.data.session === showcaseSession) {
+        if (event.data.type === 'component-select' && event.data.selection) {
+          const { route, sample, state } = event.data.selection;
+          if ([route, sample, state].every(value => typeof value === 'string' && value.length < 100)) {
+            window.fluentQtComponentRequest = { route, sample, state };
+            selectComponent();
+          }
+        }
+        if (event.data.type === 'component-visibility' && typeof event.data.active === 'boolean') {
+          componentActive = event.data.active;
+          syncComponent();
+        }
+        if (event.data.type === 'component-motion' && typeof event.data.reduced === 'boolean') {
+          showcaseReduced = event.data.reduced;
+          syncComponent();
+        }
+      }
       if (showcase && event.data.type === 'showcase-visibility'
           && typeof event.data.active === 'boolean') {
         showcaseActive = event.data.active;
@@ -246,6 +284,7 @@
     listenForMediaChange(reducedMotion, () => {
       showcaseReduced = reducedMotion.matches;
       syncShowcase();
+      syncComponent();
     });
     if (!window.fluentQtEmbedded && window.fluentQtHostThemeFollowsSystem)
       listenForMediaChange(window.fluentQtHostThemeMedia.systemDark,
@@ -319,6 +358,8 @@
         });
         syncHostTheme();
         syncShowcase();
+        if (componentPreview) selectComponent();
+        syncComponent();
       } catch (error) {
         console.error(error);
         document.documentElement.dataset.fluentQtError = String(error);
