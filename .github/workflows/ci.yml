@@ -49,6 +49,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Generate documentation inputs
+        run: python3 tools/site/build_site.py --prepare
       - name: Validate CI orchestration contracts
         shell: bash
         run: |
@@ -59,17 +61,14 @@ jobs:
           python3 .github/scripts/test_validate_gallery_boundary.py
           python3 scripts/release/test_preflight.py
           python3 tools/docs/validate_documentation.py --project-root . --self-test
-          python3 tools/site/test_generate_api_reference.py
+          python3 tools/site/generate_api_reference.py --check
+          python3 tools/site/test_build_site.py
           node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs
           python3 tools/ai/validate_ai_assets.py --project-root .
           python3 tools/onboarding/test_fluentqt_doctor.py
           python3 tools/onboarding/test_fluentqt_create.py
           python3 tools/onboarding/test_fluentqt_trial.py
           python3 -m unittest discover -s tools/dev -p 'test_fluent_qt_*.py'
-      - name: Validate generated site outputs
-        run: |
-          python3 tools/site/generate_localized_site.py --check
-          python3 tools/site/generate_api_reference.py --check
       - name: Require a current main base for release pull requests
         if: >-
           ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'release/') }}
@@ -227,10 +226,15 @@ jobs:
     with:
       mode: ${{ needs.plan.outputs.mode }}
 
+  site:
+    name: Website validation
+    needs: plan
+    uses: ./.github/workflows/ci-site.yml
+
   pages:
     name: Deploy validated WebAssembly Gallery
-    needs: [plan, wasm]
-    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' }}
+    needs: [plan, wasm, site]
+    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' && needs.site.result == 'success' }}
     permissions:
       actions: read
       contents: read
@@ -240,7 +244,7 @@ jobs:
 
   ci-gate:
     name: CI Gate
-    needs: [plan, cpp, python, wasm]
+    needs: [plan, cpp, python, wasm, site]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -251,6 +255,7 @@ jobs:
           CPP_RESULT: ${{ needs.cpp.result }}
           PYTHON_RESULT: ${{ needs.python.result }}
           WASM_RESULT: ${{ needs.wasm.result }}
+          SITE_RESULT: ${{ needs.site.result }}
           SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
           SHOULD_BUILD_PYSIDE: ${{ needs.plan.outputs.should_build_pyside }}
           SHOULD_BUILD_WASM: ${{ needs.plan.outputs.should_build_wasm }}
@@ -260,6 +265,10 @@ jobs:
 
           if [[ "$PLAN_RESULT" != "success" ]]; then
             echo "::error::CI planning finished with result: $PLAN_RESULT"
+            exit 1
+          fi
+          if [[ "$SITE_RESULT" != "success" ]]; then
+            echo "::error::Website generation finished with result: $SITE_RESULT"
             exit 1
           fi
           for value in "$SHOULD_BUILD" "$SHOULD_BUILD_PYSIDE" "$SHOULD_BUILD_WASM"; do

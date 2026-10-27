@@ -40,7 +40,7 @@ def capture_inputs():
     paths = {
         "tools/site/generate_component_previews.py",
         "CMakeLists.txt", "CMakePresets.json", "resources.qrc",
-        ".github/scripts/install-linux-dependencies.sh",
+        ".github/workflows/ci-site.yml", ".github/scripts/install-linux-dependencies.sh",
     }
     # The native target also depends on bootstrap, headers, support and resources
     # outside samples/. Keep the owning trees instead of a partial .cpp allowlist.
