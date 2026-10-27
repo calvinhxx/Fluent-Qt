@@ -36,7 +36,12 @@ function setupDirectory() {
     if (event.key === 'Escape') { search.value = ''; filter(true); }
     if (event.key === 'Enter' && search.value.trim()) {
       event.preventDefault();
-      entries.find(entry => !entry.hidden)?.querySelector('a').click();
+      const queryValue = search.value.trim().toLocaleLowerCase();
+      const visible = entries.filter(entry => !entry.hidden);
+      const best = visible.find(entry => entry.querySelector('a').textContent.toLocaleLowerCase().startsWith(queryValue))
+        || visible.find(entry => entry.dataset.kind === 'component')
+        || visible[0];
+      best?.querySelector('a').click();
     }
   });
   document.addEventListener('keydown', event => {
@@ -127,8 +132,8 @@ setupPageOutline();
 function highlightCodeBlocks() {
   if (!window.CSS?.highlights || !window.Highlight) return;
   const buckets = { kw: [], str: [], cmt: [], num: [], typ: [] };
-  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(auto|const|int|double|bool|void|return|class|public|private|using|namespace|new|true|false|nullptr|import|from|def|None|True|False|lambda|for|in|if|else)\b|\b([A-Z][A-Za-z0-9_]*)\b|\b(\d+(?:\.\d+)?)\b/g;
-  document.querySelectorAll('.code-example pre code').forEach(block => {
+  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(auto|const|constexpr|static|explicit|virtual|override|final|noexcept|int|double|float|qreal|bool|void|return|class|struct|enum|public|protected|private|using|namespace|new|true|false|nullptr|import|from|def|None|True|False|lambda|for|in|if|else)\b|\b([A-Z][A-Za-z0-9_]*)\b|\b(\d+(?:\.\d+)?)\b/g;
+  document.querySelectorAll('.code-example pre code, .api-member dt code').forEach(block => {
     const node = block.firstChild;
     if (!node || node.nodeType !== Node.TEXT_NODE) return;
     const text = node.nodeValue;
