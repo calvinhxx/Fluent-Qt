@@ -12,6 +12,8 @@
 #include <gtest/gtest.h>
 #include "components/basicinput/Button.h"
 #include "components/basicinput/Slider.h"
+#include "ControlSurfaceTestUtils.h"
+#include <QVBoxLayout>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -61,6 +63,86 @@ protected:
     SliderFluentTestWindow* window = nullptr;
     AnchorLayout* layout = nullptr;
 };
+
+TEST(SliderContractTest, Contract_FocusAndResizedHandlesStayInsideTheSurface)
+{
+    const QColor background(17, 23, 31);
+    for (const auto orientation : {Qt::Horizontal, Qt::Vertical}) {
+        for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            QWidget host;
+            QVBoxLayout layout(&host);
+            Button before(QStringLiteral("Before"));
+            Slider slider(orientation);
+            slider.setLayoutDirection(direction);
+            slider.setRange(0, 100);
+            layout.addWidget(&before);
+            layout.addWidget(&slider);
+            host.show();
+            QApplication::setActiveWindow(&host);
+            for (const int size : {20, 36}) {
+                slider.setHandleSize(size);
+                QApplication::processEvents();
+                const QSize minimum = slider.minimumSizeHint();
+                EXPECT_GE(orientation == Qt::Horizontal ? minimum.height() : minimum.width(), size + 4);
+                for (const int value : {0, 100}) {
+                    slider.setValue(value);
+                    for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+                        slider.setProperty("fluentThemeOverride", static_cast<int>(theme));
+                        for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                            SCOPED_TRACE(::testing::Message()
+                                << "orientation=" << orientation << " direction=" << direction << "size=" << size
+                                << " value=" << value << " theme=" << theme << " scale=" << scale);
+                            before.setFocus();
+                            ASSERT_TRUE(before.hasFocus());
+                            const QImage resting = testutils::renderControlSurface(slider, scale, background);
+                            slider.setFocus(Qt::TabFocusReason);
+                            ASSERT_TRUE(slider.hasFocus());
+                            const QImage focused = testutils::renderControlSurface(slider, scale, background);
+                            EXPECT_NE(resting, focused);
+                            testutils::expectClearSurfacePerimeter(focused, background);
+                            EXPECT_EQ(slider.value(), value);
+                            before.setFocus();
+                            slider.setFocus(Qt::MouseFocusReason);
+                            EXPECT_EQ(resting, testutils::renderControlSurface(slider, scale, background));
+                        }
+                    }
+                }
+            }
+            slider.setValue(50);
+            QTest::keyClick(&slider, Qt::Key_Up);
+            EXPECT_EQ(slider.value(), 51);
+            EXPECT_FALSE(slider.testAttribute(Qt::WA_MacShowFocusRect));
+        }
+    }
+}
+
+TEST(SliderContractTest, Contract_MinimumSizeRetainsDragTravel)
+{
+    for (const auto orientation : {Qt::Horizontal, Qt::Vertical}) {
+        for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            for (const int handle : {20, 36}) {
+                Slider slider(orientation);
+                slider.setLayoutDirection(direction);
+                slider.setHandleSize(handle);
+                slider.setRange(0, 100);
+                slider.resize(slider.minimumSizeHint());
+                slider.show();
+                const bool horizontal = orientation == Qt::Horizontal;
+                const int length = horizontal ? slider.width() : slider.height();
+                const auto point = [&](int position) {
+                    return horizontal ? QPoint(position, slider.height() / 2) : QPoint(slider.width() / 2, position);
+                };
+                QTest::mousePress(&slider, Qt::LeftButton, Qt::NoModifier, point(0));
+                const int start = slider.value();
+                QTest::mouseMove(&slider, point(length - 1));
+                QTest::mouseRelease(&slider, Qt::LeftButton, Qt::NoModifier, point(length - 1));
+                EXPECT_NE(slider.value(), start);
+                EXPECT_EQ(qMin(start, slider.value()), slider.minimum());
+                EXPECT_EQ(qMax(start, slider.value()), slider.maximum());
+            }
+        }
+    }
+}
 
 TEST(SliderContractTest, Contract_DefaultMetricsAndQSliderSemantics)
 {
