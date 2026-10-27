@@ -40,6 +40,7 @@ review. Real desktop tests and host-bound pixel baselines remain separate.
 | [ci-cpp.yml](../../.github/workflows/ci-cpp.yml) | Native Qt builds, CTest, CMake consumers, desktop packages | [C++ matrix](../../.github/ci-cpp-matrix.json) |
 | [ci-python.yml](../../.github/workflows/ci-python.yml) | Bindings, compatibility, wheels, clean installs, manylinux audits | [Wheel matrix](../../bindings/pyside6/wheel-matrix.json) |
 | [ci-wasm.yml](../../.github/workflows/ci-wasm.yml) | Browser toolchain, Hello World, Gallery, smoke tests, Pages payload | Workflow toolchain and smoke configuration |
+| [ci-site.yml](../../.github/workflows/ci-site.yml) | Native component captures, bilingual documents, API reference, website artifact | Gallery catalog and installed headers |
 
 Compiler, SDK, package-manager, and platform steps belong in the owning module,
 not the orchestrator. The Wasm module explicitly fetches and verifies the
@@ -51,7 +52,35 @@ and package configuration changes retain their broader lanes.
 
 Modules upload artifacts into the caller's run. The
 [Pages workflow](../../.github/workflows/pages.yml) consumes the payload from
-main CI; its manual entry rebuilds for recovery.
+main CI; its manual entry rebuilds both the website and Gallery for recovery.
+
+Website generation runs on pull requests as well as `main`. The planning job
+regenerates the AI catalog and `site/api/catalog.json` from current source before
+running their consistency checks. The website module repeats this preparation
+before discovering preview recipes, then generates the
+homepage and component documents from the installed headers, Gallery examples,
+and editorial translations. Generated pages and captures are not tracked in
+Git. Catalog snapshots remain available for tools that run without a build;
+their checked-in freshness is not a prerequisite for publication. Generation
+does not write commits or push back to the branch.
+
+When preview inputs change, the website module builds the native Gallery with
+Spatial and QmlBridge, then captures the real widgets under Xvfb. Each capture
+is retried once before the build fails. An exact source, recipe, and Qt version
+cache key allows unchanged captures to be reused; every image is checked
+against its manifest before reuse. These automated captures do not replace
+human desktop visual review. The digest covers the complete library and Gallery
+source trees, installed headers, resources, build files, and capture workflow.
+Qt version, platform, scale, rendering and locale settings also participate;
+the transient Xvfb display number does not. Capture settings are job-wide so
+cache lookup, capture and publication validate the same environment.
+
+Pages downloads `fluentqt-site-pages` and `fluentqt-wasm-pages` from the same CI
+run. It checks both commit receipts, the website file hashes, and full WASM
+validation before deploying them together. The website module is required by
+`CI Gate`; stale or failed generation cannot silently publish the old documents.
+New components still need Gallery registration, examples, and bilingual prose.
+CI generates their pages and previews, not their usage guidance.
 
 Use CMake aggregate targets rather than duplicating lists in YAML:
 `fluent_qt_ci_fast_tests`, `fluent_qt_ci_full_tests`, and
