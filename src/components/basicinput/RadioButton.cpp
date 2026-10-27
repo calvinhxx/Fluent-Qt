@@ -1,5 +1,6 @@
 #include "compatibility/InputEventCompat.h"
 #include "RadioButton.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "design/Typography.h"
 #include <QFocusEvent>
@@ -13,8 +14,10 @@ namespace fluent::basicinput {
 
 RadioButton::RadioButton(const QString& text, QWidget* parent) : QRadioButton(text, parent)
 {
+    setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
     setCursor(Qt::ArrowCursor);
+    ::compatibility::detail::disableNativeFocusRing(this);
 
     m_textFont = themeFont(Typography::FontRole::Body).toQFont();
     setFont(m_textFont);
@@ -101,12 +104,13 @@ void RadioButton::onThemeUpdated()
 QSize RadioButton::sizeHint() const
 {
     QFontMetrics fm(m_textFont);
+    const int inset = themeSpacing().gap.tight;
     int w = m_circleSize;
     if (!text().isEmpty()) {
         w += m_textGap + fm.horizontalAdvance(text());
     }
     int h = qMax(m_circleSize, fm.height());
-    return QSize(w, h);
+    return QSize(w + inset * 2, h + inset * 2);
 }
 
 QSize RadioButton::minimumSizeHint() const
@@ -128,7 +132,14 @@ void RadioButton::paintEvent(QPaintEvent*)
     bool checked = isChecked();
 
     // ── 1. Outer ring. zh_CN: 外圈 ───────────────────────────────
-    const QRect logicalCircleRect(0, (height() - m_circleSize) / 2, m_circleSize, m_circleSize);
+    // Yield the optional margin when a caller keeps the original fixed size.
+    // zh_CN: 调用方保留旧固定尺寸时，收起额外留白，优先保留圆环和文字空间。
+    const int desiredInset = themeSpacing().gap.tight;
+    const QSize contentSize = sizeHint() - QSize(desiredInset * 2, desiredInset * 2);
+    const int inset = qBound(0, (width() - contentSize.width()) / 2, desiredInset);
+    const bool compactFocus = inset < desiredInset || height() < contentSize.height() + desiredInset * 2;
+    const bool keyboardFocused = enabled && hasFocus() && m_keyboardFocusVisible;
+    const QRect logicalCircleRect(inset, (height() - m_circleSize) / 2, m_circleSize, m_circleSize);
     const QRectF circleRect = QStyle::visualRect(layoutDirection(), rect(), logicalCircleRect);
     QColor outerBg, outerBorder;
 
@@ -147,6 +158,8 @@ void RadioButton::paintEvent(QPaintEvent*)
         if (!isHover && effectiveTheme() != FluentElement::HighContrast)
             outerBorder.setAlphaF(outerBorder.alphaF() * 0.65);
     }
+    if (keyboardFocused && compactFocus)
+        outerBorder = colors.textPrimary;
 
     // Paint the ring fill (circle). zh_CN: 绘制外圈底色（圆形）。
     painter.setPen(Qt::NoPen);
@@ -185,13 +198,13 @@ void RadioButton::paintEvent(QPaintEvent*)
     if (!text().isEmpty()) {
         painter.setFont(m_textFont);
         painter.setPen(enabled ? colors.textPrimary : colors.textDisabled);
-        const QRect logicalTextRect = rect().adjusted(m_circleSize + m_textGap, 0, 0, 0);
+        const QRect logicalTextRect = rect().adjusted(inset + m_circleSize + m_textGap, 0, -inset, 0);
         const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
         painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
             text());
     }
 
-    if (enabled && hasFocus() && m_keyboardFocusVisible) {
+    if (keyboardFocused && !compactFocus) {
         QColor focusColor = colors.textSecondary;
         focusColor.setAlpha(120);
         painter.setPen(QPen(focusColor, 1.0));
