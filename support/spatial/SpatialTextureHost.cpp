@@ -1,8 +1,10 @@
 #include "SpatialTextureHost.h"
-#include "compatibility/private/spatial/SpatialFramebufferCompat_p.h"
-#include "compatibility/private/spatial/renderer/SpatialTextureBackend_p.h"
 #include "components/spatial/SpatialRuntime.h"
 #include "components/windowing/Window.h"
+// Parse Fluent declarations before Qt OpenGL headers expose the Windows `small` macro.
+// zh_CN: 先解析 Fluent 声明，避免 Qt OpenGL 头文件引入的 Windows small 宏污染字段名。
+#include "compatibility/private/spatial/SpatialFramebufferCompat_p.h"
+#include "compatibility/private/spatial/renderer/SpatialTextureBackend_p.h"
 #include <QResizeEvent>
 #include <utility>
 
