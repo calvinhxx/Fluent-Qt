@@ -18,7 +18,8 @@ from generate_api_reference import generate_reference, _encoded
 import component_docs
 import component_inventory
 import generate_component_previews as previews
-from api_sections import reference_headers, reference_path
+from api_sections import localized_description, reference_headers, reference_path
+from public_api import resolve_type
 from documentation_guides import guides, guide_path
 from test_public_api import PublicApiTest
 
@@ -216,6 +217,18 @@ class VisualDocumentationTest(unittest.TestCase):
             self.assertIn(member, button)
         self.assertIn('qpushbutton.html', button)
         self.assertIn('setBorrowedEditor', outputs['zh-CN/api/field/index.html'])
+
+    def test_reference_pages_lead_with_their_namesake_type(self):
+        outputs = component_docs.generated_outputs(self.documents)
+        for name, helper in (('fluent::charts::ChartModel', 'fluent::charts::ChartData'),
+                             ('fluent::diagnostics::Inspector', 'fluent::diagnostics::InspectorOptions')):
+            record, other = resolve_type(name), resolve_type(helper)
+            for language in ('en', 'zh'):
+                page = outputs[reference_path(record['source'], language)]
+                heading = page.split('<header class="document-heading">', 1)[1].split('</header>', 1)[0]
+                self.assertIn(html.escape(localized_description(record, language)), heading)
+                self.assertNotIn(html.escape(localized_description(other, language)), heading)
+                self.assertIn(html.escape(localized_description(other, language)), page)
 
     def test_generated_document_links_and_member_anchors_resolve(self):
         class Links(HTMLParser):
