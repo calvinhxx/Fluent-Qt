@@ -984,7 +984,9 @@ void showWindow(QWidget* window, const QRect& normalGeometry, WindowPresentation
                 ? surfaceGuard->rect()
                 : constrainedGeometry(normalGeometry, surfaceGuard);
             guard->setGeometry(geometry);
-            guard->raise();
+            // hostWindow already established the stacking order. A dialog may
+            // have opened since then; keep it above the application surface.
+            // zh_CN: hostWindow 已设置层级；保留此后打开的对话框，避免应用表面将其遮住。
             publishPrimaryWindowGeometry();
         }
     });
