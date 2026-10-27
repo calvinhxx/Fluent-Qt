@@ -65,6 +65,8 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--rtl", action="store_true", help="Use right-to-left layout.")
     parser.add_argument("--size", type=parse_size, default="800x640")
     parser.add_argument("--snapshot", type=Path, help="Write a settled PNG snapshot.")
+    parser.add_argument("--capture-target", help="Unique visible widget objectName to capture.")
+    parser.add_argument("--capture-padding", type=int, default=16, help="Logical target padding (0-64).")
     parser.add_argument(
         "--actions",
         type=Path,
@@ -100,6 +102,8 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
 
     if not 0 <= args.settle_ms <= 10000:
         parser.error("--settle-ms must be between 0 and 10000")
+    if not 0 <= args.capture_padding <= 64:
+        parser.error("--capture-padding must be between 0 and 64")
     if not 0.2 <= args.watch_interval <= 60:
         parser.error("--watch-interval must be between 0.2 and 60 seconds")
     if not 1 <= args.ready_timeout <= 600:
@@ -194,6 +198,8 @@ def preview_arguments(args: argparse.Namespace) -> list[str]:
         command.append("--rtl")
     if args.snapshot:
         command.extend(["--snapshot", str(args.snapshot.expanduser().resolve())])
+    if args.capture_target:
+        command.extend(["--capture-target", args.capture_target, "--capture-padding", str(args.capture_padding)])
     if args.actions:
         command.extend(["--actions", str(args.actions.expanduser().resolve())])
     if args.report:

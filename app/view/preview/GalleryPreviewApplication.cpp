@@ -83,6 +83,11 @@ void configurePreviewParser(QCommandLineParser& parser)
         QStringLiteral("Preview viewport size as WIDTHxHEIGHT."), QStringLiteral("size"), QStringLiteral("800x640")));
     parser.addOption(QCommandLineOption(QStringLiteral("snapshot"),
         QStringLiteral("Write the settled preview window to a PNG file."), QStringLiteral("path")));
+    parser.addOption(QCommandLineOption(QStringLiteral("capture-target"),
+        QStringLiteral("Capture one visible widget by its unique objectName."), QStringLiteral("object-name")));
+    parser.addOption(QCommandLineOption(QStringLiteral("capture-padding"),
+        QStringLiteral("Logical padding around the capture target (0-64)."), QStringLiteral("pixels"),
+        QStringLiteral("16")));
     parser.addOption(QCommandLineOption(QStringLiteral("actions"),
         QStringLiteral(
             "Execute a versioned JSON interaction script before "
@@ -207,7 +212,11 @@ bool writeJson(const QString& path, const QJsonObject& object, QString& error)
     return true;
 }
 
-bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& resolvedPath, QString& error)
+bool writeSnapshot(GalleryPreviewWindow* window,
+    const GalleryPreviewOptions& options,
+    const QString& path,
+    QString& resolvedPath,
+    QString& error)
 {
     resolvedPath = absoluteArtifactPath(path);
     if (!window || resolvedPath.isEmpty()) {
@@ -217,7 +226,28 @@ bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& r
     if (!ensureParentDirectory(resolvedPath, error))
         return false;
 
-    QPixmap snapshot = window->grab();
+    QRect captureRect = window->rect();
+    if (!options.captureTarget.isEmpty()) {
+        const auto matches = window->findChildren<QWidget*>(options.captureTarget);
+        if (matches.size() != 1 || !matches.first()->isVisibleTo(window)) {
+            error =
+                QStringLiteral("Capture target must name exactly one visible widget: %1").arg(options.captureTarget);
+            return false;
+        }
+        auto* target = matches.first();
+        const QRect targetRect(target->mapTo(window, QPoint()), target->size());
+        for (QWidget* ancestor = target->parentWidget(); ancestor; ancestor = ancestor->parentWidget()) {
+            if (!QRect(ancestor->mapTo(window, QPoint()), ancestor->size()).contains(targetRect)) {
+                error = QStringLiteral("Capture target is clipped: %1").arg(options.captureTarget);
+                return false;
+            }
+            if (ancestor == window)
+                break;
+        }
+        const int p = options.capturePadding;
+        captureRect = targetRect.adjusted(-p, -p, p, p).intersected(window->rect());
+    }
+    QPixmap snapshot = window->grab(captureRect);
     if (snapshot.isNull()) {
         error = QStringLiteral("Preview window returned an empty snapshot.");
         return false;
@@ -231,7 +261,7 @@ bool writeSnapshot(GalleryPreviewWindow* window, const QString& path, QString& r
         for (auto* gl : window->findChildren<QOpenGLWidget*>()) {
             if (!gl->isVisible() || !gl->isValid() || gl->visibleRegion().isEmpty())
                 continue;
-            const QPoint origin = gl->mapTo(window, QPoint());
+            const QPoint origin = gl->mapTo(window, QPoint()) - captureRect.topLeft();
             painter.save();
             painter.setClipRegion(gl->visibleRegion().translated(origin));
             painter.drawImage(QRect(origin, gl->size()), gl->grabFramebuffer());
@@ -455,6 +485,13 @@ GalleryPreviewParseResult parseGalleryPreviewArguments(const QStringList& argume
     result.options.rightToLeft = parser.isSet(QStringLiteral("rtl"));
     result.options.actionsPath = parser.value(QStringLiteral("actions")).trimmed();
     result.options.snapshotPath = parser.value(QStringLiteral("snapshot")).trimmed();
+    result.options.captureTarget = parser.value(QStringLiteral("capture-target")).trimmed();
+    bool paddingOk = false;
+    result.options.capturePadding = parser.value(QStringLiteral("capture-padding")).toInt(&paddingOk);
+    if (!paddingOk || result.options.capturePadding < 0 || result.options.capturePadding > 64) {
+        result.error = QStringLiteral("--capture-padding must be an integer from 0 to 64.");
+        return result;
+    }
     result.options.reportPath = parser.value(QStringLiteral("report")).trimmed();
     result.options.keepOpen = parser.isSet(QStringLiteral("keep-open"));
     result.options.sessionDirectory = parser.value(QStringLiteral("session-dir")).trimmed();
@@ -584,7 +621,8 @@ QJsonObject galleryPreviewReport(GalleryPreviewWindow* window,
         FluentElement::currentTheme() == FluentElement::Dark ? QStringLiteral("dark") : QStringLiteral("light");
     QJsonObject artifacts{{QStringLiteral("snapshot"),
         QJsonObject{{QStringLiteral("requested"), snapshotRequested}, {QStringLiteral("written"), snapshotWritten},
-            {QStringLiteral("path"), snapshotPath},
+            {QStringLiteral("path"), snapshotPath}, {QStringLiteral("target"), options.captureTarget},
+            {QStringLiteral("padding"), options.capturePadding},
             {QStringLiteral("sha256"), snapshotWritten ? fileSha256(snapshotPath) : QString()},
             {QStringLiteral("error"), snapshotError}}}};
 
@@ -639,7 +677,7 @@ int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions&
             QString path;
             QString error;
             const QString requested = QDir(options.sessionDirectory).filePath(QStringLiteral("capture.png"));
-            if (!writeSnapshot(&window, requested, path, error))
+            if (!writeSnapshot(&window, options, requested, path, error))
                 return QByteArray();
             QFile png(path);
             return png.open(QIODevice::ReadOnly) ? png.readAll() : QByteArray();
@@ -669,7 +707,7 @@ int runGalleryPreviewApplication(QApplication& app, const GalleryPreviewOptions&
             QString snapshotPath;
             QString snapshotError;
             if (!options.snapshotPath.isEmpty()
-                && !writeSnapshot(&window, options.snapshotPath, snapshotPath, snapshotError)) {
+                && !writeSnapshot(&window, options, options.snapshotPath, snapshotPath, snapshotError)) {
                 artifactExitCode = 4;
                 writeStandardError(snapshotError);
             }

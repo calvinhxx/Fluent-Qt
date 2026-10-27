@@ -3,6 +3,8 @@
 #include <QJsonObject>
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QImage>
+#include <QTemporaryDir>
 
 #include <gtest/gtest.h>
 
@@ -11,6 +13,44 @@
 #endif
 
 namespace {
+
+TEST(GalleryPreviewCliTest, CapturesNamedContentAndRejectsMissingTargets)
+{
+    QTemporaryDir directory;
+    ASSERT_TRUE(directory.isValid());
+    for (const auto& target : {QStringLiteral("gallerySamplePreviewWidget"), QStringLiteral("missing")}) {
+        QProcess process;
+        auto environment = QProcessEnvironment::systemEnvironment();
+        environment.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("offscreen"));
+        environment.insert(QStringLiteral("SPDLOG_LEVEL"), QStringLiteral("off"));
+        process.setProcessEnvironment(environment);
+        process.setProgram(QString::fromUtf8(FLUENT_QT_GALLERY_PREVIEW_PATH));
+        const auto imagePath = directory.filePath(target + QStringLiteral(".png"));
+        process.setArguments({QStringLiteral("--preview"), QStringLiteral("--route"), QStringLiteral("button"),
+            QStringLiteral("--sample"), QStringLiteral("button-styles"), QStringLiteral("--capture-target"), target,
+            QStringLiteral("--snapshot"), imagePath, QStringLiteral("--report"), QStringLiteral("-")});
+        process.start();
+        ASSERT_TRUE(process.waitForStarted(10000));
+        ASSERT_TRUE(process.waitForFinished(30000));
+        const auto report = QJsonDocument::fromJson(process.readAllStandardOutput()).object();
+        if (target == QStringLiteral("missing")) {
+            EXPECT_NE(process.exitCode(), 0);
+            EXPECT_EQ(report.value(QStringLiteral("status")).toString(), QStringLiteral("artifact-error"));
+            EXPECT_FALSE(QFile::exists(imagePath));
+        } else {
+            EXPECT_EQ(process.exitCode(), 0) << process.readAllStandardError().toStdString();
+            const QImage image(imagePath);
+            ASSERT_FALSE(image.isNull());
+            const double dpr =
+                report.value(QStringLiteral("environment"))
+                    .toObject()
+                    .value(QStringLiteral("device_pixel_ratio"))
+                    .toDouble();
+            EXPECT_LT(image.height() / dpr, 160);
+            EXPECT_LT(image.width() / dpr, 600);
+        }
+    }
+}
 
 TEST(GalleryPreviewCliTest, RendersTargetedSampleAndPrintsJsonReport)
 {

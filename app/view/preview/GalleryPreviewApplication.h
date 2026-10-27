@@ -33,6 +33,8 @@ struct GalleryPreviewOptions {
     QSize viewportSize{800, 640};
     QString actionsPath;
     QString snapshotPath;
+    QString captureTarget;
+    int capturePadding = 16;
     QString reportPath;
     QString sessionDirectory;
     int settleMs = 250;
