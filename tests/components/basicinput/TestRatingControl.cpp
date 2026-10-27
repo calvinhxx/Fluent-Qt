@@ -4,6 +4,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "ControlSurfaceTestUtils.h"
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QImage>
@@ -309,6 +310,76 @@ TEST_F(RatingControlTest, Contract_SelectedStarHasSolidCenterAndEmptyStarDoesNot
     const QColor emptyCenter = image.pixelColor(image.width() * 3 / 4, image.height() / 2);
     EXPECT_NE(selectedCenter, background);
     EXPECT_EQ(emptyCenter, background);
+}
+
+TEST_F(RatingControlTest, Contract_LegacyFixedSizeKeepsStarsCaptionAndHitTargets)
+{
+    const QColor background(17, 23, 31);
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        for (const QString caption : {QString(), QStringLiteral("Rating")}) {
+            RatingControl compact, padded;
+            for (auto* rating : {&compact, &padded}) {
+                rating->setLayoutDirection(direction);
+                rating->setCaption(caption);
+                rating->setValue(2.5);
+            }
+            const int inset = padded.themeSpacing().gap.tight;
+            compact.setFixedSize(padded.sizeHint() - QSize(inset * 2, inset * 2));
+            padded.resize(padded.sizeHint());
+            for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                const QImage actual = fluent::testutils::renderControlSurface(compact, scale, background);
+                const QImage reference = fluent::testutils::renderControlSurface(padded, scale, background);
+                EXPECT_EQ(actual,
+                    reference.copy(qRound(inset * scale), qRound(inset * scale), actual.width(), actual.height()));
+            }
+            const int leading = direction == Qt::RightToLeft ? compact.width() - 2 : 2;
+            QTest::mouseClick(&compact, Qt::LeftButton, Qt::NoModifier, QPoint(leading, compact.height() / 2));
+            EXPECT_DOUBLE_EQ(compact.value(), 0.5);
+        }
+    }
+}
+
+TEST_F(RatingControlTest, Contract_FocusPreservesStarInkAndEdgesAtEveryScale)
+{
+    const QColor background(17, 23, 31);
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        for (const int size : {16, 28, 40}) {
+            QWidget host;
+            QVBoxLayout layout(&host);
+            Button before(QStringLiteral("Before"));
+            RatingControl rating;
+            rating.setLayoutDirection(direction);
+            rating.setStarSize(size);
+            rating.setValue(2.5);
+            layout.addWidget(&before);
+            layout.addWidget(&rating);
+            host.adjustSize();
+            host.show();
+            QApplication::setActiveWindow(&host);
+            for (const auto theme :
+                {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
+                rating.setProperty("fluentThemeOverride", static_cast<int>(theme));
+                for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                    SCOPED_TRACE(::testing::Message()
+                        << "size=" << size << " direction=" << direction << " theme=" << theme << " scale=" << scale);
+                    before.setFocus();
+                    ASSERT_TRUE(before.hasFocus());
+                    const QImage resting = fluent::testutils::renderControlSurface(rating, scale, background);
+                    rating.setFocus(Qt::TabFocusReason);
+                    ASSERT_TRUE(rating.hasFocus());
+                    const QImage focused = fluent::testutils::renderControlSurface(rating, scale, background);
+                    fluent::testutils::expectClearSurfacePerimeter(resting, background);
+                    EXPECT_NE(resting, focused);
+                    for (int y = 0; y < resting.height(); ++y) {
+                        for (int x = 0; x < resting.width(); ++x) {
+                            if (resting.pixelColor(x, y) != background)
+                                EXPECT_EQ(resting.pixel(x, y), focused.pixel(x, y)) << "x=" << x << " y=" << y;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 TEST_F(RatingControlTest, VisualCheck)

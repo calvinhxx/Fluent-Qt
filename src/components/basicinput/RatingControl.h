@@ -133,6 +133,7 @@ private:
     double ratingFromPosition(int x) const;
     QRectF starRect(int index) const;
     int starsAreaWidth() const;
+    int contentInset() const;
     QSize iconCellSize() const;
 
     double m_value = -1.0; // -1 = 未设置
