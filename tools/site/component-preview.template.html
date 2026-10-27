@@ -1,0 +1,15 @@
+<section id="appearance" class="appearance" aria-labelledby="appearance-title">
+  <div class="section-heading"><h2 id="appearance-title">$overview</h2></div>
+  <div data-tabs class="preview" data-component="$component_id" data-runtime-url="$runtime_url" data-frame-title="$title · $overview" data-loading-label="$loadingLive" data-failed-label="$failedLive" style="--preview-light: $preview_light; --preview-dark: $preview_dark; --preview-height: ${preview_height}px">
+    <div class="preview-toolbar">
+      <div class="tab-list state-tabs" role="tablist" aria-label="$overview"$state_tabs_hidden>$tabs</div>
+      <div class="theme-options" role="group" aria-label="$theme"><button type="button" data-preview-theme="light" aria-pressed="true">$light</button><button type="button" data-preview-theme="dark" aria-pressed="false">$dark</button></div>
+    </div>
+    <div class="preview-display">
+      <div class="preview-stage">$panels</div>
+      <div class="live-stage" hidden></div>
+      <div class="live-feedback" role="status" hidden><p data-live-status></p><button type="button" data-retry-live hidden>$retryLive</button></div>
+    </div>
+  </div>
+  <noscript><p class="explanation">$noScript</p></noscript>
+</section>

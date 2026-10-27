@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="$lang">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Fluent-Qt · Documentation</title>
+  <link rel="canonical" href="$canonical">
+  <script>
+    const params = new URLSearchParams(location.search);
+    const requested = params.get('lang');
+    let preferred = '$default_language';
+    // Only the legacy language-neutral entry inherits its previous preference.
+    if (document.documentElement.lang === 'en') {
+      try {
+        const saved = localStorage.getItem('fluent-qt-api-language');
+        if (saved === 'en' || saved === 'zh') preferred = saved;
+      } catch { /* Storage can be disabled; the URL remains usable. */ }
+    }
+    const language = requested === 'en' || requested === 'zh' ? requested : preferred;
+    const documents = $documents;
+    const query = (params.get('q') || '').trim();
+    const match = documents.find(item => item.names.some(name => name.toLowerCase() === query.toLowerCase())) || documents[0];
+    const target = new URL(match.urls[language], location.href);
+    if (query) target.searchParams.set('q', query);
+    if (params.get('view') === 'headers') target.searchParams.set('view', 'headers');
+    location.replace(target.href);
+  </script>
+</head>
+<body><p><a href="$english">Documentation</a> · <a href="$chinese">文档</a></p></body>
+</html>

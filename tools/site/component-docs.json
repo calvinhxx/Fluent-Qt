@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "id": "button",
+      "name": {
+        "en": "Button",
+        "zh": "按钮"
+      },
+      "description": {
+        "en": "Run an action, such as saving or submitting a form.",
+        "zh": "触发保存、提交等操作。"
+      },
+      "previews": [
+        {
+          "id": "styles",
+          "sample": "button-styles",
+          "name": {
+            "en": "Styles",
+            "zh": "外观样式"
+          },
+          "alt": {
+            "en": "Real FluentQt Standard, Accent and Subtle buttons",
+            "zh": "真实运行的 FluentQt 标准、强调和弱化按钮"
+          }
+        },
+        {
+          "id": "states",
+          "sample": "button-interaction-state",
+          "name": {
+            "en": "Interaction states",
+            "zh": "交互状态"
+          },
+          "alt": {
+            "en": "Real buttons in resting, hovered, pressed, keyboard-focus and disabled visual states",
+            "zh": "真实按钮的默认、悬停、按下、键盘焦点和禁用外观"
+          },
+          "actions": [
+            {
+              "action": "focus",
+              "target": "buttonStateFocus",
+              "after_ms": 80
+            },
+            {
+              "action": "set_property",
+              "target": "buttonStateFocus",
+              "property": "focusVisual",
+              "value": true,
+              "expect": {
+                "has_focus": true,
+                "focusVisual": true
+              }
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "sample": "button-styles",
+          "preview": "styles",
+          "name": {
+            "en": "Choose an emphasis",
+            "zh": "选择按钮样式"
+          },
+          "description": {
+            "en": "Use Standard for regular actions, Accent for the primary action, and Subtle for less prominent actions.",
+            "zh": "Standard 用于普通操作，Accent 突出主要操作，Subtle 用于次要操作。"
+          }
+        },
+        {
+          "sample": "button-interaction-state",
+          "preview": "states",
+          "name": {
+            "en": "Inspect the states",
+            "zh": "观察交互状态"
+          },
+          "description": {
+            "en": "Compare resting, hover, pressed, focus and disabled states.",
+            "zh": "对照默认、悬停、按下、焦点和禁用状态。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "checkbox",
+      "name": {
+        "en": "CheckBox",
+        "zh": "复选框"
+      },
+      "description": {
+        "en": "Select one or more options. A mixed state represents a partial selection.",
+        "zh": "选择一个或多个选项，支持半选状态。"
+      },
+      "previews": [
+        {
+          "id": "unchecked",
+          "sample": "checkbox-two-state",
+          "name": {
+            "en": "Unchecked",
+            "zh": "未选"
+          },
+          "alt": {
+            "en": "Real unchecked FluentQt checkbox labelled Accept terms",
+            "zh": "真实运行的未选中复选框，标签为 Accept terms"
+          },
+          "actions": [
+            {
+              "action": "wait",
+              "target": "checkboxOption",
+              "milliseconds": 0,
+              "expect": {
+                "checkState": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "checked",
+          "sample": "checkbox-two-state",
+          "name": {
+            "en": "Checked",
+            "zh": "已选"
+          },
+          "alt": {
+            "en": "Real checked FluentQt checkbox and its updated state label",
+            "zh": "真实运行的已选中复选框及更新后的状态文字"
+          },
+          "actions": [
+            {
+              "action": "click",
+              "target": "checkboxOption",
+              "after_ms": 250,
+              "expect": {
+                "checkState": 2
+              }
+            }
+          ]
+        },
+        {
+          "id": "mixed",
+          "sample": "checkbox-three-state",
+          "name": {
+            "en": "Mixed",
+            "zh": "半选"
+          },
+          "alt": {
+            "en": "Real partially checked FluentQt checkbox with a horizontal mark",
+            "zh": "真实运行的半选复选框，方框内显示横线"
+          },
+          "actions": [
+            {
+              "action": "wait",
+              "target": "checkboxOption",
+              "milliseconds": 0,
+              "expect": {
+                "checkState": 1,
+                "tristate": true
+              }
+            }
+          ]
+        },
+        {
+          "id": "disabled",
+          "sample": "checkbox-two-state",
+          "name": {
+            "en": "Disabled",
+            "zh": "禁用"
+          },
+          "alt": {
+            "en": "Real disabled FluentQt checkbox",
+            "zh": "真实运行的禁用复选框"
+          },
+          "actions": [
+            {
+              "action": "set_property",
+              "target": "checkboxOption",
+              "property": "enabled",
+              "value": false,
+              "expect": {
+                "enabled": false,
+                "checkState": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "focus",
+          "sample": "checkbox-two-state",
+          "name": {
+            "en": "Keyboard focus",
+            "zh": "键盘焦点"
+          },
+          "alt": {
+            "en": "Real FluentQt checkbox with a keyboard focus indicator",
+            "zh": "真实运行的复选框及键盘焦点指示"
+          },
+          "actions": [
+            {
+              "action": "focus",
+              "target": "checkboxOption",
+              "after_ms": 80
+            },
+            {
+              "action": "key",
+              "target": "checkboxOption",
+              "key": "Space",
+              "after_ms": 250,
+              "expect": {
+                "has_focus": true,
+                "checkState": 2
+              }
+            },
+            {
+              "action": "key",
+              "target": "checkboxOption",
+              "key": "Space",
+              "after_ms": 250,
+              "expect": {
+                "has_focus": true,
+                "checkState": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "select-all",
+          "sample": "checkbox-select-all",
+          "name": {
+            "en": "Select all",
+            "zh": "全选组合"
+          },
+          "alt": {
+            "en": "Real parent checkbox with Mail, Calendar and People options",
+            "zh": "真实运行的全选复选框与 Mail、Calendar、People 三个子选项"
+          }
+        }
+      ],
+      "examples": [
+        {
+          "sample": "checkbox-two-state",
+          "preview": "unchecked",
+          "name": {
+            "en": "Read a selection",
+            "zh": "读取选择状态"
+          },
+          "description": {
+            "en": "Check or clear an option.",
+            "zh": "勾选或取消一个选项。"
+          }
+        },
+        {
+          "sample": "checkbox-three-state",
+          "preview": "mixed",
+          "name": {
+            "en": "Represent a mixed selection",
+            "zh": "表达半选状态"
+          },
+          "description": {
+            "en": "Use PartiallyChecked for a partial selection.",
+            "zh": "用 PartiallyChecked 表示部分选中。"
+          }
+        },
+        {
+          "sample": "checkbox-select-all",
+          "preview": "select-all",
+          "name": {
+            "en": "Connect a select-all control",
+            "zh": "组合全选与子选项"
+          },
+          "description": {
+            "en": "The parent checkbox follows the selection of its children.",
+            "zh": "主复选框随子选项显示选中、未选或半选。"
+          }
+        }
+      ]
+    }
+  ],
+  "include_catalog": true
+}

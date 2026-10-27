@@ -43,13 +43,132 @@ the Pages layout so links from older posts and bookmarks continue to work.
 The generator owns `site/index.html`, `site/zh-CN/index.html`, and
 `site/sitemap.xml`. Do not edit those files directly.
 
-The API Explorer catalog is generated from the installed-header allowlist,
+The machine-readable API catalog is generated from the installed-header allowlist,
 installed public headers, and the generated AI catalog. After any of those
 inputs change, regenerate it instead of editing the JSON directly:
 
 ```bash
 python3 tools/site/generate_api_reference.py
 ```
+
+### Component visual documentation
+
+Every component in the canonical Gallery catalog has English and Chinese pages under
+`site/api/<component>/` and `site/zh-CN/api/<component>/`. The homepage's single
+Documentation entry opens the foundations guide, preserving its language.
+A searchable side directory contains foundation guides, optional modules,
+component examples and nonvisual API references. On narrow screens, the directory folds above the
+document. There is no separate card index; legacy `/api/` entries redirect to a
+document and preserve the old language/search parameters.
+The language-neutral `/api/` entry also honors the former
+`fluent-qt-api-language` preference. An explicit `?lang=` takes precedence;
+the localized `/zh-CN/api/` entry stays Chinese unless its URL requests otherwise.
+The document header has Home and Documentation links only. Language follows the
+homepage's localized link; theme uses the same `fluent-qt-theme` preference,
+including High Contrast. Gallery, releases and global language selection stay
+on the homepage. Light/Dark controls inside an example change only its live
+preview and native-image fallback. They do not change the document or save the
+website theme. New document navigation follows the website theme again;
+forced colors takes precedence over a local preview choice.
+Examples start automatically when visible. The document, code, and native-image
+fallback remain readable while the runtime loads or if it fails. Only a failed
+load presents a Retry action. Site Gallery links all return to the homepage's
+embedded Gallery; the runtime under `/gallery/` remains an internal loading URL
+and a compatibility endpoint, not a second navigation destination.
+
+`tools/site/component_inventory.py` joins the canonical catalog with
+`tools/site/component-translations.json` for component names and concise Chinese
+descriptions. The inventory fails when a component is missing editorial coverage.
+`tools/site/component-docs.json` retains the curated Button and CheckBox state
+recipes. C++ teaching code
+comes from the generated AI catalog; Python code comes from
+`app/data/gallery_python_snippets.json`. Edit the owning Gallery sample before
+regenerating those catalogs. Each language's import appears inside its code
+panel. Documents provide code copying without source downloads or build panels.
+`tools/site/public_api.py` reads declarations from installed headers: constructors,
+properties, methods, signals, enums and their values, aliases, fields and constants.
+The full type-member inventory is used to generate HTML, not published again in
+`site/api/catalog.json`. That lightweight catalog retains component metadata and
+public-header links for existing tools.
+It retains overloads, excludes private implementation, groups protected subclass
+interfaces separately, and follows public FluentQt base classes. Qt base APIs
+link to Qt's full member reference. Python-only wrapper methods come from the
+corresponding binding source rather than inferred C++ signatures.
+`tools/site/documentation_guides.py` owns the bilingual foundation and module
+introductions; their API links point to generated local reference pages.
+Do not edit generated detail pages. `tools/site/component.template.html` owns
+the shared reading shell, and `component-preview.template.html` owns the live example;
+`tools/site/documentation_navigation.py` owns shared navigation, and
+`tools/site/api-entry.template.html` owns the lightweight legacy redirects.
+The same generator extracts the existing 64-pixel PNG from the Gallery's ICO
+for document navigation, avoiding the full-resolution application artwork.
+
+Generate real images with a configured native Gallery build:
+
+```bash
+python3 tools/site/generate_component_previews.py --preset vcpkg-osx
+python3 tools/site/generate_api_reference.py
+python3 tools/site/generate_api_reference.py --check
+python3 tools/site/test_generate_api_reference.py
+```
+
+The capture tool uses existing Gallery factories, named-widget actions and
+`--capture-target gallerySamplePreviewWidget`. It checks selected, mixed,
+disabled and focus states before capturing both themes. Its manifest records
+image hashes, logical/pixel dimensions, platform, Qt, fonts, binary hash and a
+digest of capture dependencies. `--check` runs without Qt and rejects stale or
+missing images. It does not certify other operating systems or approve visual
+baselines. Gallery card illustrations under `tools/gallery/artwork/` are not
+component preview images.
+
+Successful captures are cached by source, executable and recipe so an interrupted
+batch can resume. Larger examples use their own preview height; a capture fails
+if the real sample is clipped. The manifest is published after the complete batch.
+
+Preview and verify the static pages without requiring a WASM build:
+
+```bash
+python3 tools/site/serve.py --static-only --port 8766
+python3 tools/site/test_component_docs_browser.py --url http://127.0.0.1:8766/
+```
+
+The browser check requires Playwright and Chromium. It covers bilingual routes,
+native images, themes, keyboard state tabs, exact code copying, absence of download panels,
+Chinese search, narrow layout, JavaScript-disabled reading, unavailable-runtime
+fallback, document assets below 300 KB (excluding the runtime), and active text
+contrast. The existing Pages generation check validates the new outputs before
+publishing; the existing `site/` copy includes their assets and detail pages.
+
+To check live examples, build the WASM Gallery as described in the
+[WebAssembly workflow](webassembly-workflow.md), then run
+`python3 tools/site/test_component_docs_interactive.py`. The local server mounts
+that build under `/gallery/`. The check follows the homepage-to-document journey,
+uses physical pointer and keyboard input in the real Qt controls, switches themes
+and states in one runtime, and verifies automatic startup, focus preservation,
+viewport suspension and failed-load recovery. Its RadioButton edge checks use
+Pillow to inspect captures at integer and fractional pixel ratios.
+Run `python3 tools/site/test_component_focus_browser.py` to inspect all catalog
+previews at 1x, 1.25x, 1.5x and 2x in Light/Dark. It follows real Tab navigation,
+including focus delegated to child controls, and checks the repaired control
+surfaces with pixel assertions. `--routes` and `--scales` restrict a local rerun.
+Results record which examples expose a visible focus target; non-interactive
+examples retain rendering coverage. This is browser evidence, not native
+screen-reader or operating-system acceptance.
+Run `python3 tools/site/test_component_catalog_browser.py` after broad catalog or
+host changes. It checks both languages of every component document at desktop and
+phone widths, compares navigation styles, and switches preview themes while the
+homepage and another document stay open. It also switches every documented sample
+between Light and Dark in one real Qt runtime, including cleanup before returning to Button. It
+opens a dialog immediately after startup and verifies it remains above the preview
+until closed.
+`GalleryComponentPreview` owns the isolated browser host and reuses the catalog's
+sample factories. It does not instantiate the Gallery shell or read its settings.
+The document creates one iframe when its example enters the viewport, hides the
+sample outside the viewport, and removes the iframe on navigation. The mounted
+runtime retains input and dialog state while the reader visits the API section;
+hiding the sample does not stop the application's event loop. Host messages validate
+origin, source and session. Capture environment and runtime metadata belong in
+the capture manifest and verification records, not in the product copy.
 
 The hero's optional Canvas effect lives in
 [`site/hero-particles.js`](../../site/hero-particles.js). Keep the animation
@@ -67,6 +186,9 @@ blur filters: their cost grows quickly with density.
 
 Quick Start is the fourth content section after the hero, following GUI Skill
 and preceding the optional Spatial introduction. Get Started remains first.
+The original homepage content stays in place; the former Controls section is
+replaced by the single Components navigation entry into the document directory.
+Keep component-document cleanup scoped to those pages.
 The Spatial section embeds the real C++ `spatial-view-scene` Gallery
 sample through `gallery/?embed=site&showcase=spatial&render-scale=native`, not CSS
 imitations or a second full Gallery shell. The browser launcher calls the same
@@ -80,10 +202,10 @@ complete example for setup.
 Keep Chinese headings intact at desktop and narrow widths. Use short headings
 where needed; body copy wraps normally.
 
-The showcase loads only on request. Its controller pauses the Qt content when
+The showcase starts when visible. Its controller pauses the Qt content when
 offscreen or in a hidden tab; Stop unloads the iframe. Ready/error messages must
-match the origin, frame, and current session. Keep explicit error/retry and
-standalone links; never hide a failed runtime behind a simulated scene.
+match the origin, frame, and current session. Keep explicit error and retry
+states; never hide a failed runtime behind a simulated scene.
 
 The hero retains a small desktop perspective tilt and returns to a flat image
 on hover or keyboard focus. Mobile, reduced motion and High Contrast use a flat
@@ -229,7 +351,7 @@ All three should include `calvinhxx/Fluent-Qt` once the search index refreshes.
 See [GitHub repository search](https://docs.github.com/en/search-github/searching-on-github/searching-for-repositories).
 
 After a Pages deployment, use the site's verified Google Search Console
-property to inspect the English home, Chinese home, and API Explorer URLs.
+property to inspect the English home, Chinese home, and component document URLs.
 Check the fetched page, indexing status, and Google's selected canonical;
 submit `https://calvinhxx.github.io/Fluent-Qt/sitemap.xml` in the Sitemaps report.
 Record the actual result rather than treating a checked-in sitemap as proof of

@@ -3,8 +3,8 @@
 > **Status:** Current guide (documentation home)
 
 FluentQt documentation is organized by task. Start with the Gallery when you
-want to evaluate the library, the API Explorer when you know the component you
-need, and the development tree when you are changing the project itself.
+want to evaluate the library, the website documentation for foundations and API
+reference, and the development tree when you are changing the project itself.
 
 ![FluentQt Gallery on Windows with Mica, showing navigation, component cards, and live samples](assets/readme/gallery-home.jpg)
 
@@ -12,7 +12,8 @@ need, and the development tree when you are changing the project itself.
 
 | Goal | Start here | Continue with |
 |---|---|---|
-| Try controls and copy an example | [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) |
+| Try controls and copy an example | [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/#gallery) | [Component documentation](https://calvinhxx.github.io/Fluent-Qt/api/button/) |
+| Learn themes, layout, models and extension lifetimes | [FluentQt foundations](https://calvinhxx.github.io/Fluent-Qt/api/foundation/) | Use the document directory to open a guide or API reference |
 | Add FluentQt to a C++ or PySide6 application | [Project README](../README.md) | [Onboarding tools](../tools/onboarding/README.md) |
 | Add a GUI with a coding agent | [AI-assisted development](ai/README.md) | [Integration workflow](ai/add-gui-to-project.md) |
 | Add or change a component | [Development tree](development/README.md) | [Component API conventions](development/component-api-conventions.md) |
