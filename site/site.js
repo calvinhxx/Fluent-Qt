@@ -1,5 +1,5 @@
 const translations = {
-  zh: {
+  "zh": {
     "meta.title": "FluentQt (Fluent-Qt) — Qt Widgets 的 Fluent UI 控件库",
     "meta.description": "FluentQt（Fluent-Qt）是面向 Qt Widgets 的 C++17 Fluent UI 控件库，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。",
     "a11y.skip": "跳到主要内容",
@@ -24,7 +24,7 @@ const translations = {
     "nav.components": "控件",
     "nav.quickStart": "接入",
     "nav.gallery": "Gallery",
-    "nav.api": "API",
+    "nav.api": "文档",
     "nav.community": "Q&A",
     "nav.aiBuild": "GUI Skill",
     "nav.downloads": "下载",
@@ -55,8 +55,8 @@ const translations = {
     "spatial.stop": "停止并释放",
     "spatial.open": "独立打开 ↗",
     "spatial.frameTitle": "真实 C++ Spatial 交互示例",
-    "spatial.runTitle": "直接运行真实的 SpatialView",
-    "spatial.runCopy": "两张卡片、实时图表和镜头控件，来自 C++ Gallery 的同一个示例。点击后加载 Qt / WASM。",
+    "spatial.runTitle": "正在加载示例…",
+    "spatial.runCopy": "",
     "spatial.run": "运行 C++ 3D 示例",
     "spatial.caption": "真实 Qt Widgets / WebGL · 拖动滑块调整镜头，在场景内移动鼠标查看景深。",
     "spec.runtime": "UI 运行时",
@@ -107,7 +107,7 @@ const translations = {
     "gallery.stateTitle": "验证",
     "gallery.stateCopy": "切换浅色、深色、高对比度主题与动效级别",
     "gallery.codeTitle": "查看示例",
-    "gallery.codeCopy": "展开对应的 C++ 代码",
+    "gallery.codeCopy": "切换查看 C++ / Python 代码",
     "gallery.webAction": "启动实时 Gallery",
     "gallery.liveStateWaiting": "待加载",
     "gallery.liveStateLoading": "正在启动",
@@ -116,21 +116,21 @@ const translations = {
     "gallery.liveStateError": "启动失败",
     "gallery.loadNow": "立即加载",
     "gallery.fullPage": "完整页面",
-    "gallery.waitingTitle": "滚动到这里后自动启动",
-    "gallery.waitingDetail": "也可以点击“立即加载”提前启动。",
-    "gallery.loadingTitle": "正在加载 Qt 与 C++ Gallery",
-    "gallery.loadingDetail": "首次下载取决于网络速度；完成后会直接显示可操作界面。",
-    "gallery.slowTitle": "下载仍在继续",
-    "gallery.slowDetail": "可以继续等待，或在新页面中打开完整 Gallery。",
-    "gallery.readyTitle": "Gallery 已就绪",
-    "gallery.readyDetail": "现在可以搜索组件、切换主题与动效级别并操作示例。",
-    "gallery.errorTitle": "实时体验没有成功启动",
-    "gallery.errorDetail": "可以重试，或直接在完整页面中打开 Gallery。",
+    "gallery.waitingTitle": "正在加载 Gallery…",
+    "gallery.waitingDetail": "",
+    "gallery.loadingTitle": "正在加载…",
+    "gallery.loadingDetail": "",
+    "gallery.slowTitle": "仍在加载…",
+    "gallery.slowDetail": "",
+    "gallery.readyTitle": "Gallery",
+    "gallery.readyDetail": "",
+    "gallery.errorTitle": "加载失败",
+    "gallery.errorDetail": "请检查网络后重试。",
     "gallery.loadAction": "启动实时体验",
-    "gallery.retryAction": "重新加载",
+    "gallery.retryAction": "重试",
     "gallery.openAction": "在新页面打开",
-    "gallery.frameTitle": "Fluent-Qt C++ Web Gallery 实时体验",
-    "gallery.noscript": "打开 C++ Web Gallery",
+    "gallery.frameTitle": "Fluent-Qt Gallery",
+    "gallery.noscript": "启用 JavaScript 后即可在此体验 Gallery。",
     "aiBuild.title": "AI 辅助开发",
     "aiBuild.structureTitle": "工程",
     "aiBuild.structureCopy": "C++ / PySide6 项目结构",
@@ -176,9 +176,11 @@ const translations = {
     "qml.example": "完整示例",
     "qml.how": "Gallery：Plugins → QmlBridge → QmlView。",
     "qml.cppLabel": "C++ 片段",
-    "qml.caption": "Widgets 输入框与 QML 文本绑定示例。"
+    "qml.caption": "Widgets 输入框与 QML 文本绑定示例。",
+    "spatial.reload": "重新加载",
+    "spatial.stopped": "示例已停止"
   },
-  en: {
+  "en": {
     "meta.title": "FluentQt (Fluent-Qt) — Fluent UI library for Qt Widgets",
     "meta.description": "FluentQt (Fluent-Qt) is a C++17 Fluent UI library for Qt Widgets, with Qt 5/6, optional PySide6 bindings, and WebAssembly. Try the Gallery and setup examples.",
     "a11y.skip": "Skip to main content",
@@ -203,7 +205,7 @@ const translations = {
     "nav.components": "Controls",
     "nav.quickStart": "Quick start",
     "nav.gallery": "Gallery",
-    "nav.api": "API",
+    "nav.api": "Documentation",
     "nav.community": "Q&A",
     "nav.aiBuild": "GUI Skill",
     "nav.downloads": "Download",
@@ -234,8 +236,8 @@ const translations = {
     "spatial.stop": "Stop and release",
     "spatial.open": "Open separately ↗",
     "spatial.frameTitle": "Live C++ Spatial interactive sample",
-    "spatial.runTitle": "Run the actual SpatialView",
-    "spatial.runCopy": "Two cards, live charts, and camera controls from the same C++ Gallery sample. Qt / WASM loads only when you start it.",
+    "spatial.runTitle": "Loading example…",
+    "spatial.runCopy": "",
     "spatial.run": "Run the C++ 3D sample",
     "spatial.caption": "Real Qt Widgets / WebGL. Adjust the camera sliders and move the pointer across the scene to explore depth.",
     "spec.runtime": "UI runtime",
@@ -286,7 +288,7 @@ const translations = {
     "gallery.stateTitle": "Verify",
     "gallery.stateCopy": "Switch Light, Dark, High Contrast, and motion levels",
     "gallery.codeTitle": "Open an example",
-    "gallery.codeCopy": "Expand the corresponding C++ code",
+    "gallery.codeCopy": "Switch between C++ and Python code",
     "gallery.webAction": "Start the live Gallery",
     "gallery.liveStateWaiting": "Not loaded",
     "gallery.liveStateLoading": "Starting",
@@ -295,21 +297,21 @@ const translations = {
     "gallery.liveStateError": "Could not start",
     "gallery.loadNow": "Load now",
     "gallery.fullPage": "Full page",
-    "gallery.waitingTitle": "Starts automatically when you reach this section",
-    "gallery.waitingDetail": "Select “Load now” to start it earlier.",
-    "gallery.loadingTitle": "Loading Qt and the C++ Gallery",
-    "gallery.loadingDetail": "The first download depends on your connection. The interactive app appears as soon as it is ready.",
-    "gallery.slowTitle": "The download is still in progress",
-    "gallery.slowDetail": "Keep waiting or open the complete Gallery in a separate page.",
-    "gallery.readyTitle": "Gallery is ready",
-    "gallery.readyDetail": "Search controls, switch themes and motion levels, and use the examples.",
-    "gallery.errorTitle": "The live Gallery did not start",
-    "gallery.errorDetail": "Retry here or open the full Gallery in a separate page.",
+    "gallery.waitingTitle": "Loading Gallery…",
+    "gallery.waitingDetail": "",
+    "gallery.loadingTitle": "Loading…",
+    "gallery.loadingDetail": "",
+    "gallery.slowTitle": "Still loading…",
+    "gallery.slowDetail": "",
+    "gallery.readyTitle": "Gallery",
+    "gallery.readyDetail": "",
+    "gallery.errorTitle": "Could not load the example",
+    "gallery.errorDetail": "Check your connection and try again.",
     "gallery.loadAction": "Start live experience",
-    "gallery.retryAction": "Try again",
+    "gallery.retryAction": "Retry",
     "gallery.openAction": "Open in a new page",
-    "gallery.frameTitle": "Live Fluent-Qt C++ Web Gallery",
-    "gallery.noscript": "Open the C++ Web Gallery",
+    "gallery.frameTitle": "Fluent-Qt Gallery",
+    "gallery.noscript": "Enable JavaScript to try Gallery here.",
     "aiBuild.title": "Build desktop GUIs with AI",
     "aiBuild.structureTitle": "Project",
     "aiBuild.structureCopy": "C++ / PySide6 application structure",
@@ -355,7 +357,9 @@ const translations = {
     "qml.example": "Complete example",
     "qml.how": "Gallery: Plugins → QmlBridge → QmlView.",
     "qml.cppLabel": "C++ snippet",
-    "qml.caption": "A QML text binding to a Widgets input field."
+    "qml.caption": "A QML text binding to a Widgets input field.",
+    "spatial.reload": "Reload example",
+    "spatial.stopped": "Example stopped"
   }
 };
 
@@ -382,7 +386,6 @@ let spatialShowcase = null;
 
 const galleryRoot = document.querySelector("[data-live-gallery]");
 const galleryFrame = document.querySelector("[data-gallery-frame]");
-const galleryStatus = document.querySelector("[data-gallery-status]");
 const galleryMessage = document.querySelector("[data-gallery-message]");
 const galleryDetail = document.querySelector("[data-gallery-detail]");
 const galleryLoadButtons = Array.from(document.querySelectorAll("[data-gallery-load]"));
@@ -734,30 +737,23 @@ function renderGalleryState() {
   if (!galleryRoot) return;
   const values = dictionary();
   const stateKeys = {
-    waiting: ["gallery.liveStateWaiting", "gallery.waitingTitle", "gallery.waitingDetail"],
-    loading: ["gallery.liveStateLoading", "gallery.loadingTitle", "gallery.loadingDetail"],
-    slow: ["gallery.liveStateSlow", "gallery.slowTitle", "gallery.slowDetail"],
-    ready: ["gallery.liveStateReady", "gallery.readyTitle", "gallery.readyDetail"],
-    error: ["gallery.liveStateError", "gallery.errorTitle", "gallery.errorDetail"]
+    waiting: ["gallery.waitingTitle", "gallery.waitingDetail"],
+    loading: ["gallery.loadingTitle", "gallery.loadingDetail"],
+    slow: ["gallery.slowTitle", "gallery.slowDetail"],
+    ready: ["gallery.readyTitle", "gallery.readyDetail"],
+    error: ["gallery.errorTitle", "gallery.errorDetail"]
   };
-  const [statusKey, messageKey, detailKey] = stateKeys[galleryState] || stateKeys.waiting;
+  const [messageKey, detailKey] = stateKeys[galleryState] || stateKeys.waiting;
   galleryRoot.dataset.galleryState = galleryState;
   document.documentElement.dataset.galleryLoadState = galleryState;
-  if (galleryStatus) galleryStatus.textContent = values[statusKey];
   if (galleryMessage) galleryMessage.textContent = values[messageKey];
-  if (galleryDetail) galleryDetail.textContent = values[detailKey];
+  if (galleryDetail) { galleryDetail.textContent = values[detailKey]; galleryDetail.hidden = !values[detailKey]; }
 
-  const actionKey = galleryState === "error" ? "gallery.retryAction" : "gallery.loadAction";
   galleryLoadButtons.forEach((button) => {
     const label = button.querySelector("span") || button;
-    if (button.closest(".live-gallery-toolbar") && galleryState !== "error") {
-      label.textContent = values["gallery.loadNow"];
-    } else {
-      label.textContent = values[actionKey];
-    }
-    button.disabled = galleryState === "loading"
-      || galleryState === "slow"
-      || galleryState === "ready";
+    label.textContent = values["gallery.retryAction"];
+    button.hidden = galleryState !== "error";
+    button.disabled = galleryState !== "error";
   });
 }
 
@@ -883,7 +879,7 @@ function setupLiveGallery() {
     }
   });
 
-  if (!("IntersectionObserver" in window)) return;
+  if (!("IntersectionObserver" in window)) { loadGallery(false, "visible"); return; }
   const preloadMargin = navigator.connection?.saveData ? "0px" : "240px 0px";
   const observer = new IntersectionObserver((entries) => {
     if (!entries.some((entry) => entry.isIntersecting)) return;

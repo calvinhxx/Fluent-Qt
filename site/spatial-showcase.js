@@ -13,6 +13,7 @@ export function createSpatialShowcase(root, { theme, strings }) {
   let session = 0;
   let timer = 0;
   let visible = !window.IntersectionObserver;
+  let stopped = false;
   const cleanups = [];
 
   function listen(target, type, handler) {
@@ -25,6 +26,7 @@ export function createSpatialShowcase(root, { theme, strings }) {
   }
   function syncTheme() { post('theme', { theme: theme() }); }
   function syncVisibility() {
+    if (visible && !document.hidden && state === 'waiting' && !stopped) load();
     post('showcase-visibility', { active: visible && !document.hidden });
   }
   function render(next) {
@@ -34,9 +36,11 @@ export function createSpatialShowcase(root, { theme, strings }) {
       : state === 'error' ? ['gallery.errorTitle', 'gallery.errorDetail']
       : state === 'slow' ? ['gallery.slowTitle', 'gallery.slowDetail']
       : ['gallery.loadingTitle', 'gallery.loadingDetail'];
-    message.textContent = strings()[keys[0]];
-    detail.textContent = strings()[keys[1]];
-    start.textContent = strings()[state === 'error' ? 'gallery.retryAction' : 'spatial.run'];
+    message.textContent = strings()[state === 'waiting' && stopped ? 'spatial.stopped' : keys[0]];
+    detail.textContent = stopped ? '' : strings()[keys[1]];
+    detail.hidden = !detail.textContent;
+    start.textContent = strings()[state === 'error' ? 'gallery.retryAction' : 'spatial.reload'];
+    start.hidden = state !== 'error' && !(state === 'waiting' && stopped);
     start.disabled = !['waiting', 'error'].includes(state);
     stop.hidden = state === 'waiting';
     frame.tabIndex = state === 'ready' ? 0 : -1;
@@ -58,8 +62,8 @@ export function createSpatialShowcase(root, { theme, strings }) {
     timer = window.setTimeout(() => { if (state === 'loading') render('slow'); }, 30000);
     frame.src = url.href;
   }
-  listen(start, 'click', load);
-  listen(stop, 'click', () => { release(); start.focus(); });
+  listen(start, 'click', () => { stopped = false; load(); });
+  listen(stop, 'click', () => { stopped = true; release(); start.focus(); });
   listen(document, 'visibilitychange', syncVisibility);
   listen(reduced, 'change', () => post('showcase-motion', { reduced: reduced.matches }));
   listen(window, 'message', event => {
@@ -102,5 +106,6 @@ export function createSpatialShowcase(root, { theme, strings }) {
   });
   listen(window, 'pageshow', syncVisibility);
   render('waiting');
+  syncVisibility();
   return { syncTheme, destroy };
 }
