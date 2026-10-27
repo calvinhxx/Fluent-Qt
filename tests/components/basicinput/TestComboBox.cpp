@@ -40,9 +40,48 @@
 #include "design/Typography.h"
 #include "QtTestEnvironment.h"
 #include "QtFontComparison.h"
+#include "ControlSurfaceTestUtils.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
+
+TEST(ComboBoxSurfaceTest, Contract_LayoutContainsBoundsAndBothEditorModesShowFocus)
+{
+    for (const bool editable : {false, true}) {
+        for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+            QWidget host;
+            QVBoxLayout layout(&host);
+            layout.setContentsMargins(0, 0, 0, 0);
+            Button before(QStringLiteral("Before"));
+            ComboBox combo;
+            combo.addItems({"First", "Second"});
+            combo.setEditable(editable);
+            combo.setProperty("fluentThemeOverride", static_cast<int>(theme));
+            layout.addWidget(&before);
+            layout.addWidget(&combo);
+            host.resize(300, 100);
+            host.show();
+            QApplication::setActiveWindow(&host);
+            before.setFocus();
+            ASSERT_TRUE(QTest::qWaitFor([&before] { return before.hasFocus(); }, 1000));
+            EXPECT_TRUE(host.contentsRect().contains(combo.geometry()));
+            const QColor background(17, 23, 31);
+            const QColor accent = combo.themeColors().accentDefault;
+            for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                SCOPED_TRACE(
+                    ::testing::Message() << "editable=" << editable << " theme=" << theme << " scale=" << scale);
+                before.setFocus();
+                const QImage resting = testutils::renderControlSurface(combo, scale, background);
+                combo.setFocus(Qt::TabFocusReason);
+                ASSERT_TRUE(combo.hasFocus() || (combo.lineEdit() && combo.lineEdit()->hasFocus()));
+                const QImage focused = testutils::renderControlSurface(combo, scale, background);
+                EXPECT_GT(testutils::surfaceColorPixels(focused, accent),
+                    testutils::surfaceColorPixels(resting, accent));
+                EXPECT_EQ(combo.currentIndex(), 0);
+            }
+        }
+    }
+}
 
 // ─── FluentTestWindow ────────────────────────────────────────────────────────
 
