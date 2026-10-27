@@ -193,8 +193,8 @@ QSize RatingControl::iconCellSize() const
 QRectF RatingControl::starRect(int index) const
 {
     QSize cell = iconCellSize();
-    const int x = index * (cell.width() + m_itemSpacing);
-    const QRect logicalRect(x, 0, cell.width(), cell.height());
+    const int x = contentInset() + index * (cell.width() + m_itemSpacing);
+    const QRect logicalRect(x, (height() - cell.height()) / 2, cell.width(), cell.height());
     return QStyle::visualRect(layoutDirection(), rect(), logicalRect);
 }
 
@@ -202,6 +202,13 @@ int RatingControl::starsAreaWidth() const
 {
     int cellW = iconCellSize().width();
     return m_maxRating * cellW + (m_maxRating - 1) * m_itemSpacing;
+}
+
+int RatingControl::contentInset() const
+{
+    const int desired = themeSpacing().gap.tight;
+    const int contentWidth = sizeHint().width() - desired * 2;
+    return qBound(0, (width() - contentWidth) / 2, desired);
 }
 
 QSize RatingControl::sizeHint() const
@@ -216,12 +223,14 @@ QSize RatingControl::sizeHint() const
         h = qMax(h, fm.height());
     }
 
-    return QSize(w, h);
+    const int inset = themeSpacing().gap.tight;
+    return QSize(w + inset * 2, h + inset * 2);
 }
 
 QSize RatingControl::minimumSizeHint() const
 {
-    return QSize(starsAreaWidth(), iconCellSize().height());
+    const int inset = themeSpacing().gap.tight;
+    return QSize(starsAreaWidth() + inset * 2, iconCellSize().height() + inset * 2);
 }
 
 // ── Mouse-to-rating mapping. zh_CN: 鼠标 → 评分值映射 ───────────────────────
@@ -313,8 +322,9 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         QFont captionFont = themeFont(m_captionFontRole).toQFont();
         p.setFont(captionFont);
         p.setPen(isDisabled ? c.textDisabled : c.textSecondary);
-        const int captionX = starsAreaWidth() + m_itemSpacing * 2;
-        const QRect logicalCaptionRect(captionX, 0, width() - captionX, height());
+        const int inset = contentInset();
+        const int captionX = inset + starsAreaWidth() + m_itemSpacing * 2;
+        const QRect logicalCaptionRect(captionX, 0, width() - captionX - inset, height());
         const QRect captionRect = QStyle::visualRect(layoutDirection(), rect(), logicalCaptionRect);
         p.drawText(captionRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
             m_caption);
@@ -323,10 +333,23 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     if (!isDisabled && hasFocus() && m_keyboardFocusVisible) {
         QColor focusColor = c.textSecondary;
         focusColor.setAlpha(120);
-        const QRect logicalFocusRect(0, 0, starsAreaWidth(), height());
-        const QRect focusRect = QStyle::visualRect(layoutDirection(), rect(), logicalFocusRect).adjusted(1, 1, -1, -1);
+        // The keyboard cue surrounds the stars without repainting their tips.
+        // zh_CN: 键盘焦点框围住星形区域，避开星尖的绘制边缘。
+        const int inset = contentInset();
+        const int cellHeight = iconCellSize().height();
         p.setPen(QPen(focusColor, 1.0));
         p.setBrush(Qt::NoBrush);
+        if (inset < themeSpacing().gap.tight || height() < cellHeight + inset * 2) {
+            // A compact legacy size has no room for a frame around the star tips.
+            // zh_CN: 旧紧凑尺寸容不下环绕星尖的焦点框，改用星形下方的焦点线。
+            const QRect logicalArea(inset, 0, starsAreaWidth(), height());
+            const QRectF area = QStyle::visualRect(layoutDirection(), rect(), logicalArea);
+            p.drawLine(QPointF(area.left() + 0.5, height() - 0.5), QPointF(area.right() - 0.5, height() - 0.5));
+            return;
+        }
+        const QRect logicalFocusRect(0, (height() - cellHeight) / 2 - inset, starsAreaWidth() + inset * 2,
+            cellHeight + inset * 2);
+        const QRect focusRect = QStyle::visualRect(layoutDirection(), rect(), logicalFocusRect).adjusted(1, 1, -1, -1);
         p.drawRoundedRect(focusRect, themeRadius().control, themeRadius().control);
     }
 }
