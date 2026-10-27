@@ -460,6 +460,36 @@ def _wait_until(
 
 
 class PythonGalleryTest(unittest.TestCase):
+    def test_radio_selection_keeps_centered_preview_geometry_stable(self):
+        from fluentqt_gallery.native_samples import build_native_sample
+        for direction in (Qt.LeftToRight, Qt.RightToLeft):
+            host = QWidget()
+            layout = QVBoxLayout(host)
+            result = build_native_sample("radio-button", "radio-button-group", host)
+            group = result.widget
+            group.setLayoutDirection(direction)
+            layout.addWidget(group, 0, Qt.AlignCenter)
+            host.resize(560, 360)
+            host.show()
+            QApplication.processEvents()
+            radios = group.findChildren(fluentqt.RadioButton)
+            self.assertEqual(len(radios), 3)
+            def geometry():
+                return [QRect(radio.mapTo(host, QPoint()), radio.size()) for radio in radios]
+            initial, group_size = geometry(), group.size()
+            try:
+                for text in ("High", "Low", "Medium", "Medium", "High"):
+                    next(radio for radio in radios if radio.text() == text).click()
+                    QApplication.processEvents()
+                    QCoreApplication.sendPostedEvents(None, QEvent.LayoutRequest)
+                    layout.activate()
+                    self.assertEqual(geometry(), initial, text)
+                    self.assertEqual(group.size(), group_size)
+                    self.assertEqual(sum(radio.isChecked() for radio in radios), 1)
+            finally:
+                host.close()
+                delete_qobject(host)
+
     def _action_toasts(self, panel):
         # Managed factories return the native base of the public Toast facade.
         return [widget for widget in panel.window().findChildren(QWidget)

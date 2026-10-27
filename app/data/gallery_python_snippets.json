@@ -50,7 +50,7 @@
     {
       "route_id": "checkbox",
       "sample_id": "checkbox-three-state",
-      "source": "from PySide6.QtCore import Qt\n\ncheck_box = fluentqt.CheckBox('Enable selected items')\ncheck_box.setTristate(True)\ncheck_box.setCheckState(Qt.CheckState.PartiallyChecked)\nnames = {\n    Qt.CheckState.Checked: \"State: Checked\",\n    Qt.CheckState.PartiallyChecked: \"State: Mixed\",\n    Qt.CheckState.Unchecked: \"State: Unchecked\",\n}\ncheck_box.stateChanged.connect(\n    lambda state: status.setText(names[Qt.CheckState(state)])\n)\n"
+      "source": "from PySide6.QtCore import Qt\n\ncheck_box = fluentqt.CheckBox(\"Enable selected items\")\ncheck_box.setTristate(True)\ncheck_box.setCheckState(Qt.CheckState.PartiallyChecked)\nstatus = fluentqt.Label(\"State: Mixed\")\ncheck_box.stateChanged.connect(\n    lambda state: status.setText(\n        \"State: Checked\"\n        if Qt.CheckState(state) == Qt.CheckState.Checked\n        else \"State: Mixed\"\n        if Qt.CheckState(state) == Qt.CheckState.PartiallyChecked\n        else \"State: Unchecked\"\n    )\n)\n"
     },
     {
       "route_id": "checkbox",
@@ -150,7 +150,7 @@
     {
       "route_id": "radio-button",
       "sample_id": "radio-button-group",
-      "source": "low = fluentqt.RadioButton('Low')\nmedium = fluentqt.RadioButton('Medium')\nhigh = fluentqt.RadioButton('High')\nmedium.setChecked(True)\nlow.toggled.connect(\n    lambda checked, value=low: status.setText(\n    f\"Selected: {value.text()}\"\n    ) if checked else None\n)\n\nmedium.toggled.connect(\n    lambda checked, value=medium: status.setText(\n    f\"Selected: {value.text()}\"\n    ) if checked else None\n)\n\nhigh.toggled.connect(\n    lambda checked, value=high: status.setText(\n    f\"Selected: {value.text()}\"\n    ) if checked else None\n)\n"
+      "source": "status = fluentqt.Label('Selected: Medium')\nstatus.setFluentTypography(fluentqt.FontRole.Body)\nstatus.setTextColorRole(fluentqt.Label.TextColorRole.Primary)\nstatus.setMinimumWidth(status.sizeHint().width())\nlow = fluentqt.RadioButton('Low')\nmedium = fluentqt.RadioButton('Medium')\nhigh = fluentqt.RadioButton('High')\nmedium.setChecked(True)\nfor radio in (low, medium, high):\n    radio.toggled.connect(\n        lambda checked, value=radio: status.setText(\n        f\"Selected: {value.text()}\"\n        ) if checked else None\n    )\n"
     },
     {
       "route_id": "radio-button",

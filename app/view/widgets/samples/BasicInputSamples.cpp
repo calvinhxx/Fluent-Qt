@@ -233,6 +233,7 @@ QVector<GallerySample> buttonSamples()
                 auto* pressed = makeButton(group, QStringLiteral("Pressed"), Button::Standard);
                 pressed->setInteractionState(Button::Pressed);
                 auto* focused = makeButton(group, QStringLiteral("Focus"), Button::Standard);
+                focused->setObjectName(QStringLiteral("buttonStateFocus"));
                 focused->setFocusVisual(true);
                 auto* disabled = makeButton(group, QStringLiteral("Disabled"), Button::Standard);
                 disabled->setInteractionState(Button::Disabled);
@@ -342,15 +343,13 @@ QVector<GallerySample> checkBoxSamples()
             QStringLiteral(
                 "auto* checkBox = new CheckBox(\"Accept terms\", this);\n"
                 "auto* status = new Label(\"State: Unchecked\", this);\n"
-                "connect(checkBox, &CheckBox::checkStateChanged,\n"
-                "        status, [status](Qt::CheckState state) {\n"
-                "            status->setText(state == Qt::Checked\n"
-                "                ? \"State: Checked\"\n"
-                "                : \"State: Unchecked\");\n"
-                "        });"),
+                "connect(checkBox, &CheckBox::stateChanged, status, [status](int state) {\n"
+                "    status->setText(state == Qt::Checked ? \"State: Checked\" : \"State: Unchecked\");\n"
+                "});"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* checkBox = new CheckBox(QStringLiteral("Accept terms"), group);
+                checkBox->setObjectName(QStringLiteral("checkboxOption"));
                 auto* status = makeValueLabel(group, QStringLiteral("State: Unchecked"));
                 setStableStatusWidth(status, QStringLiteral("State: Unchecked"));
                 connectCheckBoxState(checkBox, status, [status](Qt::CheckState state) {
@@ -367,12 +366,17 @@ QVector<GallerySample> checkBoxSamples()
                 "auto* checkBox = new CheckBox(\"Enable selected items\", this);\n"
                 "checkBox->setTristate(true);\n"
                 "checkBox->setCheckState(Qt::PartiallyChecked);\n"
-                "connect(checkBox, &CheckBox::checkStateChanged,\n"
-                "        status, [status](Qt::CheckState state) { /* show "
-                "Checked/Mixed/Unchecked */ });"),
+                "auto* status = new Label(\"State: Mixed\", this);\n"
+                "connect(checkBox, &CheckBox::stateChanged, status, [status](int state) {\n"
+                "    status->setText(state == Qt::Checked ? \"State: Checked\"\n"
+                "            : state == Qt::PartiallyChecked\n"
+                "            ? \"State: Mixed\"\n"
+                "            : \"State: Unchecked\");\n"
+                "});"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* checkBox = new CheckBox(QStringLiteral("Enable selected items"), group);
+                checkBox->setObjectName(QStringLiteral("checkboxOption"));
                 checkBox->setTristate(true);
                 checkBox->setCheckState(Qt::PartiallyChecked);
                 auto* status = makeValueLabel(group, QStringLiteral("State: Mixed"));
@@ -391,12 +395,11 @@ QVector<GallerySample> checkBoxSamples()
                 "selectAll->setTristate(true);\n"
                 "auto* mail = new CheckBox(\"Mail\", this);\n"
                 "auto* calendar = new CheckBox(\"Calendar\", this);\n"
-                "auto* people = new CheckBox(\"People\", this);\n\n"
+                "auto* people = new CheckBox(\"People\", this);\n"
+                "\n"
                 "auto updateSelectAll = [=]() {\n"
-                "    const int checked = int(mail->isChecked())\n"
-                "        + int(calendar->isChecked()) + int(people->isChecked());\n"
-                "    selectAll->setCheckState(checked == 0 ? Qt::Unchecked\n"
-                "        : checked == 3 ? Qt::Checked : Qt::PartiallyChecked);\n"
+                "    const int checked = int(mail->isChecked()) + int(calendar->isChecked()) + int(people->isChecked());\n"
+                "    selectAll->setCheckState(checked == 0 ? Qt::Unchecked : checked == 3 ? Qt::Checked : Qt::PartiallyChecked);\n"
                 "};\n"
                 "connect(selectAll, &CheckBox::clicked, this, [=]() {\n"
                 "    const bool checked = selectAll->checkState() == Qt::Checked;\n"
@@ -911,12 +914,21 @@ QVector<GallerySample> radioButtonSamples()
         makeSample(QStringLiteral("radio-button-group"), QStringLiteral("RadioButton group"),
             QStringLiteral("Sibling radio buttons are mutually exclusive and update the selected option."),
             QStringLiteral(
+                "#include <FluentQt/TextFields.h>\n\n"
                 "auto* low = new RadioButton(\"Low\", this);\n"
                 "auto* medium = new RadioButton(\"Medium\", this);\n"
                 "auto* high = new RadioButton(\"High\", this);\n"
                 "medium->setChecked(true);\n"
-                "connect(high, &RadioButton::toggled,\n"
-                "        this, [=](bool checked) { /* update selected option */ });"),
+                "auto* status = new fluent::textfields::Label(\"Selected: Medium\", this);\n"
+                "status->setFluentTypography(Typography::FontRole::Body);\n"
+                "status->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);\n"
+                "status->setMinimumWidth(status->sizeHint().width());\n"
+                "for (auto* radio : {low, medium, high}) {\n"
+                "    connect(radio, &RadioButton::toggled, status, [radio, status](bool checked) {\n"
+                "        if (checked)\n"
+                "            status->setText(QString(\"Selected: %1\").arg(radio->text()));\n"
+                "    });\n"
+                "}"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* low = new RadioButton(QStringLiteral("Low"), group);
@@ -924,6 +936,9 @@ QVector<GallerySample> radioButtonSamples()
                 auto* high = new RadioButton(QStringLiteral("High"), group);
                 medium->setChecked(true);
                 auto* status = makeValueLabel(group, QStringLiteral("Selected: Medium"));
+                // Reserve the longest value so this centered group does not move on selection.
+                // zh_CN: 为最长状态文本预留宽度，避免居中的整组控件随选择变化而横移。
+                status->setMinimumWidth(status->sizeHint().width());
                 auto connectStatus = [status](RadioButton* radio) {
                     QObject::connect(radio, &RadioButton::toggled, status, [radio, status](bool checked) {
                         if (checked)
