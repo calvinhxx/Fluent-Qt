@@ -37,8 +37,9 @@ process to verify reporting and subsequent event delivery.
 
 Headless font-metric checks need a real fixed-pitch font. CTest uses the shared
 `FLUENT_QT_TEST_MONOSPACE_FONT` cache setting for C++ and Python Gallery fixtures;
-on Windows it defaults to an available system monospace font file. Configuration
-fails if none is available and no explicit font is supplied. Override the setting
+on Windows and macOS it defaults to an available system monospace font file.
+macOS discovers Menlo or Monaco under `/System/Library/Fonts`. Configuration
+fails on these hosts if none is available and no explicit font is supplied. Override the setting
 with a font file when using a custom test host. Direct headless runs can set the
 same environment variable. All registered offscreen/minimal Python Gallery tests
 receive it, including the glyph paint-device tests.

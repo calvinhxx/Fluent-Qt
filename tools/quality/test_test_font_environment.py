@@ -17,11 +17,12 @@ ARGS, UNITTEST_ARGS = parser.parse_known_args()
 
 
 class TestFontEnvironmentContract(unittest.TestCase):
-    def configure(self, *, windows, fonts=(), configured=None, registrations=False):
+    def configure(self, *, windows, macos=False, fonts=(), configured=None, registrations=False):
         temporary = tempfile.TemporaryDirectory(prefix="fluentqt-test-fonts-")
         self.addCleanup(temporary.cleanup)
-        root = Path(temporary.name)
-        font_dir = root / "Windows" / "Fonts"
+        # CMake expands Windows 8.3 temp paths; compare the same canonical path.
+        root = Path(temporary.name).resolve()
+        font_dir = root / ("System/Library/Fonts" if macos else "Windows/Fonts")
         font_dir.mkdir(parents=True)
         for name in fonts:
             (font_dir / name).write_bytes(b"CMake checks paths; Qt fixtures validate font contents.")
@@ -49,6 +50,9 @@ fluentqt_apply_headless_test_font_environment("${font_environment}" "^test_pysid
         (root / "CMakeLists.txt").write_text(
             'cmake_minimum_required(VERSION 3.20)\nproject(TestFonts NONE)\n'
             + f'set(CMAKE_HOST_WIN32 {"TRUE" if windows else "FALSE"})\n'
+            + f'set(CMAKE_HOST_APPLE {"TRUE" if macos else "FALSE"})\n'
+            + f'set(CMAKE_FIND_ROOT_PATH "{root.as_posix()}")\n'
+            + 'set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)\n'
             + override
             + f'include("{(ROOT / "cmake/FluentQtTestFonts.cmake").as_posix()}")\n'
             + 'fluentqt_test_font_environment(font_environment)\n'
@@ -84,6 +88,27 @@ fluentqt_apply_headless_test_font_environment("${font_environment}" "^test_pysid
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((root / "build/font-environment.txt").read_text(),
                          "FLUENT_QT_TEST_MONOSPACE_FONT=" + (root / "custom.ttf").as_posix())
+
+    def test_macos_discovers_system_fixed_font_without_bundling_it(self):
+        for fonts in (("Menlo.ttc", "Monaco.ttf"), ("Monaco.ttf",)):
+            with self.subTest(fonts=fonts):
+                root, result = self.configure(windows=False, macos=True, fonts=fonts)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual((root / "build/font-environment.txt").read_text(),
+                                 "FLUENT_QT_TEST_MONOSPACE_FONT=" + (root / "System/Library/Fonts" / fonts[0]).as_posix())
+
+    def test_macos_requires_a_font_and_respects_explicit_overrides(self):
+        for configured in (None, "", "custom.ttf"):
+            with self.subTest(configured=configured):
+                root, result = self.configure(windows=False, macos=True, configured=configured,
+                                              fonts=("Menlo.ttc",) if configured == "" else ())
+                if configured == "custom.ttf":
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual((root / "build/font-environment.txt").read_text(),
+                                     "FLUENT_QT_TEST_MONOSPACE_FONT=" + (root / "custom.ttf").as_posix())
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("macOS test fixtures require a monospace font", result.stderr)
 
     def test_invalid_explicit_paths_fail(self):
         for configured in ("missing.ttf", "directory"):
