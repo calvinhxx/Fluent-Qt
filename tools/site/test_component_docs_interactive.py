@@ -87,6 +87,38 @@ def check_radio_button_previews(browser, url, output):
         context.close()
 
 
+def check_spatial_startup_recovery(browser, url, output):
+    """A failed controller has a visible retry which starts the real Qt sample."""
+    for locale, retry_text in [('zh-CN/', '重试'), ('', 'Retry')]:
+        context = browser.new_context(viewport={'width': 1440, 'height': 960})
+        try:
+            page = context.new_page()
+            pattern = '**/spatial-showcase.js?*'
+            page.route(pattern, lambda route: route.abort())
+            page.goto(urljoin(url, locale + '#spatial'))
+            root = page.locator('[data-spatial-showcase]')
+            expect(root).to_have_attribute('data-showcase-state', 'error')
+            retry = root.locator('[data-showcase-start]')
+            expect(retry).to_be_visible()
+            expect(retry).to_have_text(retry_text)
+            assert page.locator('[data-showcase-frame]').get_attribute('src') is None
+            page.unroute(pattern)
+            retry.click()
+            expect(root).to_have_attribute('data-showcase-state', 'ready', timeout=90000)
+            expect(retry).to_be_hidden()
+            frame = page.locator('[data-showcase-frame]').element_handle().content_frame()
+            frame.wait_for_function("document.documentElement.dataset.fluentQtShowcase === 'spatial'")
+            page.locator('[data-showcase-stop]').click()
+            expect(root).to_have_attribute('data-showcase-state', 'waiting')
+            assert page.locator('[data-showcase-frame]').get_attribute('src') is None
+            retry.click()
+            expect(root).to_have_attribute('data-showcase-state', 'ready', timeout=90000)
+            page.locator('[data-showcase-frame]').scroll_into_view_if_needed()
+            page.screenshot(path=str(output / f'spatial-recovered-{locale.rstrip("/") or "en"}.png'))
+        finally:
+            context.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', default='http://127.0.0.1:8766/')
@@ -220,8 +252,10 @@ def main():
         landing.goto(urljoin(args.url, ''))
         landing.screenshot(path=str(args.output / 'homepage-en-mobile.png'))
         home_context.close()
+        check_spatial_startup_recovery(browser, args.url, args.output)
         checks.append('Gallery navigation opens the homepage and starts its single embedded Gallery')
         checks.append('Homepage 3D example also starts on visibility; start controls remain hidden')
+        checks.append('Spatial controller failure, retry and stop/restart recover in both languages')
         assert not errors, errors
         browser.close()
     result = {'status': 'pass', 'checks': checks, 'page_errors': errors}

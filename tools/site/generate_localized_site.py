@@ -25,12 +25,12 @@ BASE_URL = "https://calvinhxx.github.io/Fluent-Qt/"
 REPOSITORY_URL = "https://github.com/calvinhxx/Fluent-Qt"
 
 
-def versioned_image_url(path: str) -> str:
+def versioned_asset_url(path: str) -> str:
     digest = hashlib.sha256((SITE_ROOT / path).read_bytes()).hexdigest()[:12]
     return f"{path}?v={digest}"
 
 
-OG_IMAGE_URL = f"{BASE_URL}{versioned_image_url('assets/og.png')}"
+OG_IMAGE_URL = f"{BASE_URL}{versioned_asset_url('assets/og.png')}"
 
 TEXT_PATTERN = re.compile(
     r'(?P<open><(?P<tag>[A-Za-z][A-Za-z0-9]*)[^>]*data-i18n="(?P<key>[^"]+)"[^>]*>)'
@@ -205,18 +205,22 @@ def prefix_resources(page: str, prefix: str) -> str:
         "data-theme-src-dark",
         "data-gallery-src",
         "data-showcase-src",
+        "data-showcase-controller",
     )
     attribute_names = "|".join(re.escape(name) for name in attributes)
     pattern = re.compile(
         rf'(?P<head>\b(?:{attribute_names})=")'
-        r'(?P<url>(?:assets/|styles\.css|site\.js|gallery/|api/)[^"]*)'
+        r'(?P<url>(?:assets/|styles\.css|site\.js|spatial-showcase\.js|gallery/|api/)[^"]*)'
     )
     def replace(match: re.Match[str]) -> str:
         url = match.group("url")
-        if url.endswith(".png") and (
+        path = url.split("?", 1)[0]
+        if path in {"styles.css", "site.js", "spatial-showcase.js"}:
+            url = versioned_asset_url(path)
+        elif url.endswith(".png") and (
             url.startswith("assets/gallery/") or url == "assets/app-icon.png"
         ):
-            url = versioned_image_url(url)
+            url = versioned_asset_url(url)
         return f'{match.group("head")}{prefix}{url}'
 
     return pattern.sub(replace, page)

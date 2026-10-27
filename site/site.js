@@ -924,6 +924,28 @@ function setupGalleryPreview() {
   });
 }
 
+async function setupSpatialShowcase() {
+  const root = document.querySelector('[data-spatial-showcase]');
+  if (!root) return;
+  try {
+    const url = new URL(root.dataset.showcaseController, document.baseURI);
+    const { createSpatialShowcase } = await import(url.href);
+    spatialShowcase = createSpatialShowcase(root, { theme: activeTheme, strings: dictionary });
+  } catch {
+    // A failed controller must not leave the sample waiting with no way to retry.
+    root.dataset.showcaseState = 'error';
+    root.querySelector('[data-showcase-message]').textContent = dictionary()['gallery.errorTitle'];
+    const detail = root.querySelector('[data-showcase-detail]');
+    detail.textContent = dictionary()['gallery.errorDetail'];
+    detail.hidden = false;
+    const retry = root.querySelector('[data-showcase-start]');
+    retry.textContent = dictionary()['gallery.retryAction'];
+    retry.hidden = false;
+    retry.disabled = false;
+    retry.addEventListener('click', () => window.location.reload(), { once: true });
+  }
+}
+
 document.documentElement.setAttribute("data-i18n-ready", "");
 loadAnalytics();
 setupNavigation();
@@ -933,13 +955,7 @@ setupLiveGallery();
 setupReveal();
 releaseState.platform = detectPlatform();
 initializeTheme();
-import("./spatial-showcase.js?v=20260929-1")
-  .then(({ createSpatialShowcase }) => {
-    spatialShowcase = createSpatialShowcase(document.querySelector('[data-spatial-showcase]'), {
-      theme: activeTheme, strings: dictionary
-    });
-  })
-  .catch(() => { /* The independent sample link remains usable without the controller. */ });
+setupSpatialShowcase();
 import("./hero-particles.js?v=20260908-1")
   .then(({ createHeroParticles }) => createHeroParticles(document.querySelector(".hero")))
   .catch(() => { /* Keep the static hero if the optional decoration cannot load. */ });
