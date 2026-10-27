@@ -1575,7 +1575,8 @@ TEST_F(GallerySpatialTest, ComponentCompositionsHandleProjectedPointerInput)
             click(vivid, QPoint(10, vivid->height() / 2));
             EXPECT_TRUE(vivid->isChecked());
             EXPECT_EQ(result->text(), "Vivid selected");
-            click(rating, QPoint(8, 8));
+            // Aim at the second half of the first star, inside its focus inset.
+            click(rating, QPoint(rating->themeSpacing().gap.tight + rating->starSize() * 3 / 4, rating->height() / 2));
             EXPECT_EQ(rating->value(), 1);
             EXPECT_EQ(rating->caption(), "1 / 5");
             view->setSpatialEnabled(false);
