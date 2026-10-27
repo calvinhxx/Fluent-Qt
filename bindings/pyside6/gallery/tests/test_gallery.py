@@ -4556,18 +4556,18 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         result_namespace: dict[str, object] = {}
                         if result is not None:
                             if shiboken6.isValid(result.widget):
+                                result_namespace = _detach_sample_namespace(result.widget)
                                 result.widget.close()
+                                result.widget.deleteLater()
                         source_widget = None
                         for source_widget in source_widgets:
                             if shiboken6.isValid(source_widget):
                                 source_widget.close()
+                                source_widget.deleteLater()
+                        # Keep snippet globals alive until all native callbacks
+                        # and theme subscriptions have been disconnected.
+                        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
                         app.processEvents()
-                        if result is not None and shiboken6.isValid(
-                            result.widget
-                        ):
-                            result_namespace = _detach_sample_namespace(
-                                result.widget
-                            )
                         result = None
                         source_widgets = ()
                         source_widget = None
