@@ -20,6 +20,15 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FluentQtPreviewToolTest(unittest.TestCase):
+    def test_content_capture_forwards_target_and_rejects_unbounded_padding(self):
+        args = MODULE.parse_args(["--route", "button", "--capture-target", "gallerySamplePreviewWidget",
+                                  "--capture-padding", "20", "--no-build"])
+        command = MODULE.preview_arguments(args)
+        self.assertEqual(command[command.index("--capture-target") + 1], "gallerySamplePreviewWidget")
+        self.assertEqual(command[command.index("--capture-padding") + 1], "20")
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            MODULE.parse_args(["--route", "button", "--capture-padding", "65"])
+
     def test_watch_timing_has_bounded_defaults_and_overrides(self):
         defaults = MODULE.parse_args(["--route", "button", "--watch"])
         self.assertEqual(defaults.watch_interval, 1.0)

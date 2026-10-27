@@ -1,6 +1,7 @@
 #include "GalleryPreviewActions.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QEvent>
 #include <QEventLoop>
 #include <QFile>
@@ -237,6 +238,10 @@ QJsonValue observedProperty(QWidget* target, const QString& name, bool& found)
         return target->isEnabled();
     if (name == QStringLiteral("has_focus"))
         return target->hasFocus();
+    if (name == QStringLiteral("checkState")) {
+        if (const auto* checkBox = qobject_cast<QCheckBox*>(target))
+            return static_cast<int>(checkBox->checkState());
+    }
     if (name == QStringLiteral("x"))
         return target->x();
     if (name == QStringLiteral("y"))

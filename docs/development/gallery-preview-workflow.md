@@ -391,6 +391,14 @@ target stable `objectName` values, send Qt mouse or keyboard events, and can
 assert observable properties. A failed action or assertion makes the preview
 exit nonzero while still writing the report for diagnosis.
 
+For documentation imagery, add `--capture-target <objectName>` to capture one
+uniquely named, visible widget instead of the entire preview window. The target
+must fit its visible ancestors. `--capture-padding` adds 0–64 logical pixels
+around it (16 by default); the PNG keeps the native device pixel ratio. Missing,
+ambiguous or clipped targets fail instead of silently capturing another region.
+The default full-window capture is unchanged. Action assertions can observe a
+CheckBox's integer `checkState` as well as ordinary Qt properties.
+
 For a side-by-side review of an edited fork and the compiled sample:
 
 ```bash
