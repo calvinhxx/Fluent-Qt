@@ -28,3 +28,13 @@ CMakeUserPresets.json
 
 # codex
 tmp/
+
+# Generated website output: CI builds and deploys it with tools/site/build_site.py.
+# site/api/catalog.json stays tracked as the source catalog for quality tools.
+/site/index.html
+/site/zh-CN/index.html
+/site/sitemap.xml
+/site/api/**/index.html
+/site/zh-CN/api/
+/site/assets/app-icon-64.png
+/site/assets/component-previews/
