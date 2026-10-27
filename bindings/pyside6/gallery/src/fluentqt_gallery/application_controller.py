@@ -330,7 +330,7 @@ class GalleryApplicationController(QObject):
             and not self._exit_requested
         ):
             if _application_is_saving_session(app):
-                return super().eventFilter(watched, event)
+                return False
             close_event = event
             if isinstance(close_event, QCloseEvent):
                 close_event.ignore()
@@ -347,7 +347,9 @@ class GalleryApplicationController(QObject):
             and not self._close_prompt_open
         ):
             _single_shot(0, self, self.restore_window)
-        return super().eventFilter(watched, event)
+        # QObject's default filter passes events through. Avoid wrapping a
+        # borrowed event again, especially during Windows socket destruction.
+        return False
 
     def _handle_close_requested(self) -> None:
         self._close_request_scheduled = False
