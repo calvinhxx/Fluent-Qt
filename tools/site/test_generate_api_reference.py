@@ -4,8 +4,15 @@
 import unittest
 import copy
 import html
+import hashlib
 import json
+import os
+import io
+import re
+import sys
+from contextlib import redirect_stdout
 import struct
+import zlib
 from html.parser import HTMLParser
 import posixpath
 from urllib.parse import urlsplit, unquote
@@ -15,9 +22,11 @@ from unittest.mock import patch
 
 from generate_api_reference import _declarations, _property_reference
 from generate_api_reference import generate_reference, _encoded
+import generate_api_reference
 import component_docs
 import component_inventory
 import generate_component_previews as previews
+import generate_localized_site
 from api_sections import localized_description, reference_headers, reference_path
 from public_api import resolve_type
 from documentation_guides import guides, guide_path
@@ -55,6 +64,33 @@ enum Alignment { Left, Right };
 
 
 class PropertyReferenceTest(unittest.TestCase):
+    def test_changed_public_header_refreshes_catalog_without_rendering_or_native_capture(self):
+        root = generate_api_reference.ROOT
+        (root / 'build').mkdir(exist_ok=True)
+        header = root / 'src/components/basicinput/Button.h'
+        read_text = Path.read_text
+        marker = 'Automatically regenerated header summary.'
+
+        def edited(path, *args, **kwargs):
+            text = read_text(path, *args, **kwargs)
+            return re.sub(r'(@brief[^\n]*)', r'\1 ' + marker, text, count=1) if path == header else text
+
+        with tempfile.TemporaryDirectory(dir=root / 'build') as directory, redirect_stdout(io.StringIO()):
+            output = Path(directory) / 'catalog.json'
+            with patch.object(generate_api_reference, 'OUTPUT', output):
+                with patch.object(sys, 'argv', ['generator', '--catalog-only']):
+                    self.assertEqual(generate_api_reference.main(), 0)
+                with patch.object(Path, 'read_text', edited), \
+                     patch.object(component_docs, 'generated_outputs', side_effect=AssertionError('catalog-only renders no pages')), \
+                     patch.object(previews, 'validated_manifest', side_effect=AssertionError('catalog generation needs no native captures')):
+                    with patch.object(sys, 'argv', ['generator', '--check']):
+                        self.assertEqual(generate_api_reference.main(), 1)
+                    with patch.object(sys, 'argv', ['generator', '--catalog-only']):
+                        self.assertEqual(generate_api_reference.main(), 0)
+                    self.assertIn(marker, output.read_text())
+                    with patch.object(sys, 'argv', ['generator', '--check']):
+                        self.assertEqual(generate_api_reference.main(), 0)
+
     def test_uses_reader_comment_and_preserves_translations(self):
         source = '''
 Q_PROPERTY(qreal zoom READ zoom WRITE setZoom NOTIFY zoomChanged)
@@ -93,6 +129,17 @@ class VisualDocumentationTest(unittest.TestCase):
         self.assertTrue(self.catalog['types'])
         self.assertEqual(published['components'], self.catalog['components'])
         self.assertEqual(published['public_headers'], self.catalog['public_headers'])
+
+    def test_committed_catalog_does_not_depend_on_captured_images(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(previews, 'MANIFEST', Path(directory) / 'missing.json'):
+            placeholders = previews.available_previews()
+        self.assertTrue(all(not image['sha256'] for image in placeholders['images']))
+        catalog = generate_reference()
+        component_docs.collect(catalog, placeholders)
+        self.assertEqual(_encoded(catalog), _encoded(self.catalog))
+        preview = {c['id']: c for c in catalog['components']}['button']['documentation']['preview']
+        self.assertEqual(set(preview['light']), {'url'})
 
     def test_catalog_links_each_document_to_real_native_images(self):
         entries = {c['id']: c for c in self.catalog['components']}
@@ -242,6 +289,8 @@ class VisualDocumentationTest(unittest.TestCase):
                 if tag == 'a' and values.get('href'):
                     self.links.append(values['href'])
 
+        homepage = {locale.output.relative_to(generate_localized_site.SITE_ROOT).as_posix()
+                    for locale in generate_localized_site.LOCALES}
         outputs = component_docs.generated_outputs(self.documents)
         parsed = {path: Links(text) for path, text in outputs.items() if path.endswith('.html')}
         for path, page in parsed.items():
@@ -255,21 +304,79 @@ class VisualDocumentationTest(unittest.TestCase):
                     target += '/index.html'
                 if target in parsed and url.fragment:
                     self.assertIn(unquote(url.fragment), parsed[target].ids, f'{path}: {href}')
-                elif target not in parsed:
+                elif target not in parsed and target not in homepage:
                     self.assertTrue((component_docs.SITE / target).is_file() or (component_docs.SITE / target).is_dir(), f'{path}: {href}')
 
-    def test_changed_capture_bytes_are_rejected_without_recapturing_in_check(self):
-        manifest = json.loads(previews.MANIFEST.read_text())
-        manifest['images'][0]['sha256'] = '0' * 64
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'manifest.json'
-            path.write_text(json.dumps(manifest))
-            with patch.object(previews, 'MANIFEST', path), self.assertRaisesRegex(ValueError, 'does not match'):
+
+def png(width=4, height=2):
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+    rows = b''.join(b'\0' + b'\xf9\xf9\xf9' * width for _ in range(height))
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(rows)) + chunk(b'IEND', b''))
+
+
+class PreviewManifestTest(unittest.TestCase):
+    """Publication needs current captures; local drafts reuse or replace them."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        assets = root / 'site/assets/component-previews'
+        self.images = []
+        for theme in ('light', 'dark'):
+            path = previews.preview_path('button', 'styles', theme)
+            (root / 'site' / path).parent.mkdir(parents=True, exist_ok=True)
+            (root / 'site' / path).write_bytes(png())
+            self.images.append({'component': 'button', 'state': 'styles', 'theme': theme, 'path': path,
+                                'sha256': hashlib.sha256(png()).hexdigest(), 'pixel_size': [4, 2],
+                                'logical_size': [2, 1], 'background': '#f9f9f9'})
+        self.manifest = assets / 'manifest.json'
+        self.write_manifest()
+        recipe = [{'id': 'button', 'previews': [{'id': 'styles', 'sample': 'styles'}]}]
+        for name, value in (('ROOT', root), ('ASSETS', assets), ('MANIFEST', self.manifest)):
+            self.start(patch.object(previews, name, value))
+        self.start(patch.object(previews, 'config', return_value=recipe))
+        self.digest = self.start(patch.object(previews, 'capture_digest', return_value='current'))
+
+    def start(self, patcher):
+        self.addCleanup(patcher.stop)
+        return patcher.start()
+
+    def write_manifest(self):
+        self.manifest.write_text(json.dumps({'input_digest': 'current', 'images': self.images,
+                                            'capture_settings': previews.capture_settings()}))
+
+    def test_different_capture_environment_is_not_reused(self):
+        previews.validated_manifest()
+        with patch.dict(os.environ, {'QT_SCALE_FACTOR': '17'}):
+            with self.assertRaisesRegex(ValueError, 'stale'):
                 previews.validated_manifest()
 
-    def test_changed_recipe_marks_previews_stale(self):
-        with patch.object(previews, 'capture_digest', return_value='changed'), self.assertRaisesRegex(ValueError, 'stale'):
+    def test_publication_rejects_changed_bytes_and_stale_inputs(self):
+        previews.validated_manifest()
+        self.digest.return_value = 'changed'
+        with self.assertRaisesRegex(ValueError, 'stale'):
             previews.validated_manifest()
+        self.digest.return_value = 'current'
+        self.images[0]['sha256'] = '0' * 64
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, 'does not match'):
+            previews.validated_manifest()
+
+    def test_drafts_reuse_stale_images_and_replace_unusable_ones(self):
+        self.digest.return_value = 'changed'
+        draft = previews.available_previews()
+        self.assertEqual([image['sha256'] for image in draft['images']], [i['sha256'] for i in self.images])
+        self.assertIn('stale', draft['notice'])
+        (previews.ROOT / 'site' / self.images[1]['path']).write_bytes(b'not the captured image')
+        dark = previews.available_previews()['images'][1]
+        self.assertEqual((dark['sha256'], dark['path'], dark['background']), ('', self.images[1]['path'], '#3d3d3d'))
+        self.manifest.unlink()
+        draft = previews.available_previews()
+        self.assertTrue(all(not image['sha256'] for image in draft['images']))
+        self.assertIn('2 placeholders', draft['notice'])
 
 
 if __name__ == "__main__":

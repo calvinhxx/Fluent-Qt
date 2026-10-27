@@ -8,6 +8,7 @@ import argparse
 import json
 from pathlib import Path
 import re
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -229,14 +230,29 @@ def main() -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Fail when the committed website index is stale",
+        help="Fail when the committed API catalog is stale (document pages are not tracked)",
+    )
+    parser.add_argument(
+        "--catalog-only",
+        action="store_true",
+        help="Refresh the machine-readable catalog without rendering document pages",
+    )
+    parser.add_argument(
+        "--require-current-previews",
+        action="store_true",
+        help="Fail instead of reusing stale or placeholder previews (publication)",
     )
     arguments = parser.parse_args()
     from component_docs import collect, generated_outputs
+    from generate_component_previews import available_previews, validated_manifest
     reference = generate_reference()
-    documents = collect(reference)
+    capture = validated_manifest() if arguments.require_current_previews else available_previews()
+    documents = collect(reference, capture)
     outputs = {OUTPUT: _encoded(reference)}
-    outputs.update({ROOT / "site" / path: content for path, content in generated_outputs(documents).items()})
+    if not arguments.check and not arguments.catalog_only:
+        if capture.get("notice"):
+            print(capture["notice"], file=sys.stderr)
+        outputs.update({ROOT / "site" / path: content for path, content in generated_outputs(documents).items()})
     stale = []
     for path, expected in outputs.items():
         data = expected.encode("utf-8") if isinstance(expected, str) else expected
@@ -251,8 +267,14 @@ def main() -> int:
         for path in stale:
             print(f"stale {path.relative_to(ROOT)}")
         return 1
+    if arguments.check:
+        print(f"Verified API catalog: {OUTPUT.relative_to(ROOT)}")
+        return 0
+    if arguments.catalog_only:
+        print(f"Generated API catalog: {OUTPUT.relative_to(ROOT)}")
+        return 0
     pages = sum(path.suffix == '.html' for path in outputs)
-    print(f"{'Verified' if arguments.check else 'Generated'} API catalog and {pages} document pages ({len(outputs)} files)")
+    print(f"Generated API catalog and {pages} document pages ({len(outputs)} files)")
     return 0
 
 
