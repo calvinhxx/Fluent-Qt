@@ -1,518 +1,630 @@
 {
   "compound-button": {
     "name": "复合按钮",
-    "description": "在按钮中同时显示标题、说明和图标。",
-    "example": "主标题与辅助说明"
+    "description": "在按钮中显示标题和一行说明。",
+    "example": "标题与说明",
+    "usage": "构造时传入标题和说明文字；setFluentStyle(Button::Accent) 可将其设为主要操作。"
   },
   "color-picker": {
     "name": "颜色选择器",
-    "description": "选择颜色，支持透明度与颜色值输入。",
+    "description": "选择颜色，可以编辑 RGB、Hex 和透明度。",
     "height": 420,
-    "example": "读取 RGBA 颜色值",
+    "example": "读取 RGBA 颜色",
+    "usage": "setColor() 设置初始颜色，颜色变化时 colorChanged 给出带透明度的 QColor。",
     "capture_size": "920x820"
   },
   "combobox": {
     "name": "下拉选择框",
-    "description": "从下拉列表中选择一个选项。",
+    "description": "从下拉列表中选择一项。",
     "height": 420,
-    "example": "读取下拉选择"
+    "example": "读取选中项",
+    "usage": "addItems() 添加选项；选择变化时 currentIndexChanged 触发，用 currentText() 读取文字。"
   },
   "dropdown-button": {
     "name": "下拉按钮",
-    "description": "点击按钮展开一组菜单命令。",
+    "description": "点击后展开一组相关命令。",
     "height": 420,
-    "example": "展开菜单"
+    "example": "展开菜单",
+    "usage": "把命令加入 FluentMenu，再用 setMenu() 交给按钮。按钮本身不执行操作。"
   },
   "file-drop-zone": {
     "name": "文件拖放区",
-    "description": "拖入或选择文件，展示文件列表与处理状态。",
+    "description": "拖入文件，或点击浏览选择文件。",
     "capture_size": "1060x1000",
-    "example": "添加文件到工作区"
+    "example": "添加文件",
+    "usage": "setDescription() 和 setHintText() 说明可接受的文件；示例把选中的文件列在下方的 FileListView 中。",
+    "usage_en": "Use setDescription() and setHintText() to describe accepted files. The example lists chosen files in a FileListView below."
   },
   "hyperlink-button": {
     "name": "链接按钮",
-    "description": "通过文字链接打开网页或执行导航。",
-    "example": "打开网址"
+    "description": "外观像链接的按钮，点击后打开网址。",
+    "example": "打开网址",
+    "usage": "setUrl() 设置目标地址，点击时用系统浏览器打开。"
   },
   "multi-select-combobox": {
     "name": "多选下拉框",
-    "description": "从列表中选择多个选项，并查看已选内容。",
+    "description": "从下拉列表中选择多项。",
     "height": 420,
-    "example": "选择多个模型条目"
+    "example": "选择多项",
+    "usage": "setModel() 提供选项，setSelectedRows() 设置初始选择。勾选时列表保持打开，selectionChanged 触发后用 selectedIndexes() 读取已选项。"
   },
   "radio-button": {
     "name": "单选按钮",
-    "description": "在一组选项中选择一项。",
-    "example": "组合单选按钮"
+    "description": "在一组选项中只能选择一项。",
+    "example": "单选按钮组",
+    "usage": "同一父控件下的 RadioButton 自动互斥；在 toggled(true) 时读取选中的选项。"
   },
   "tree-select": {
     "name": "树形选择器",
-    "description": "按层级浏览并选择条目。",
+    "description": "在树形列表中搜索并选择条目。",
     "height": 420,
-    "example": "选择层级条目"
+    "example": "从层级中选择",
+    "usage": "setModel() 提供树形数据，条目的 Qt::UserRole 值作为选择键，setSelectedKeys() 设置选中项。不可选的分组只用于展开。"
   },
   "rating-control": {
     "name": "评分控件",
-    "description": "输入或显示评分，支持只读展示。",
-    "example": "设置评分"
+    "description": "查看、设置或清除星级评分。",
+    "example": "响应评分变化",
+    "usage": "用户评分后 valueChanged 给出新值；setCaption() 可更新旁边的说明文字。"
   },
   "repeat-button": {
     "name": "重复按钮",
-    "description": "按住按钮时连续触发操作。",
-    "example": "按住按钮连续计数"
+    "description": "按住时连续触发点击。",
+    "example": "按住连续计数",
+    "usage": "按住按钮时，clicked 会在初始延迟后重复触发；用 setDelay() 和 setInterval() 调整节奏。"
   },
   "slider": {
     "name": "滑块",
-    "description": "拖动滑块选择范围内的数值。",
-    "example": "实时读取滑块值"
+    "description": "拖动滑块在范围内选择数值。",
+    "example": "实时显示数值",
+    "usage": "setRange() 设置范围，拖动时 valueChanged 给出当前值。"
   },
   "split-button": {
     "name": "分裂按钮",
-    "description": "将常用操作和其他菜单命令放在同一个按钮中。",
+    "description": "左侧执行默认操作，右侧打开更多选项。",
     "height": 420,
-    "example": "主操作与更多命令"
+    "example": "默认操作与菜单",
+    "usage": "点击左侧触发 clicked；右侧打开 setMenu() 设置的菜单，选择结果通过菜单的 triggered 获取。"
   },
   "toggle-button": {
     "name": "切换按钮",
-    "description": "用按钮表示开启或关闭状态。",
-    "example": "读取切换状态"
+    "description": "点击后保持选中或未选中状态的按钮。",
+    "example": "读取选中状态",
+    "usage": "toggled(bool) 给出按钮当前是否选中。"
   },
   "toggle-split-button": {
     "name": "切换分裂按钮",
-    "description": "组合开关状态与下拉菜单命令。",
+    "description": "左侧切换开关状态，右侧打开相关选项。",
     "height": 420,
-    "example": "组合切换与菜单"
+    "example": "切换状态与菜单",
+    "usage": "点击左侧切换选中状态并触发 toggled；右侧打开 setMenu() 设置的菜单。"
   },
   "toggle-switch": {
     "name": "开关",
-    "description": "开启或关闭一个设置。",
-    "example": "读取开关状态"
+    "description": "打开或关闭一项设置。",
+    "example": "读取开关状态",
+    "usage": "setOnContent() 和 setOffContent() 设置两种状态的文字，toggled(bool) 给出当前状态。"
   },
   "chart-view": {
     "name": "图表视图",
-    "description": "通过数据模型绘制图表，并导出图像或原始数据。",
+    "description": "用 ChartModel 绘制图表，可复制为图片或 CSV。",
+    "description_en": "Draws a chart from ChartModel data and copies it as an image or CSV.",
     "capture_size": "1060x1000",
-    "example": "复制图表或数据"
+    "example": "复制图表或数据",
+    "usage": "setModel() 绑定数据；copyImage() 复制图表图片，copyData() 以 CSV 复制原始数据。"
   },
   "line-chart": {
     "name": "折线图",
-    "description": "用折线展示数值随时间或顺序的变化。",
+    "description": "用折线显示数值随时间或顺序的变化。",
+    "description_en": "Shows how values change over time or order with lines.",
     "capture_size": "1060x1000",
-    "example": "响应时间趋势"
+    "example": "响应时间趋势",
+    "usage": "把数据点和标签写入 ChartModel 后调用 setModel()；addSeries() 可再加一条序列用于对比。",
+    "usage_en": "Write points and labels into a ChartModel and call setModel(). addSeries() adds a second series for comparison."
   },
   "area-chart": {
     "name": "面积图",
-    "description": "用填充区域展示连续数值及变化趋势。",
+    "description": "用填充区域显示数值的变化趋势。",
+    "description_en": "Shows a trend as a filled area under a line.",
     "capture_size": "1060x1000",
-    "example": "活跃会话趋势"
+    "example": "活跃会话趋势",
+    "usage": "用法与 LineChart 相同：setModel() 绑定数据，addSeries() 添加第二条序列。",
+    "usage_en": "Used like LineChart: bind data with setModel() and add another series with addSeries()."
   },
   "bar-chart": {
     "name": "柱状图",
-    "description": "比较不同类别的数值。",
+    "description": "用竖直柱形比较各类别的数值。",
+    "description_en": "Compares values across categories with vertical bars.",
     "capture_size": "1060x1000",
-    "example": "每周活动比较"
+    "example": "每周活动对比",
+    "usage": "setPoints() 的第二个参数提供类别标签；addSeries() 添加第二组柱形。",
+    "usage_en": "Pass category labels as the second argument to setPoints(). addSeries() adds a second set of bars."
   },
   "horizontal-bar-chart": {
     "name": "条形图",
-    "description": "用水平条形比较类别，便于阅读较长的标签。",
+    "description": "用水平条形比较类别，较长的标签也能完整显示。",
+    "description_en": "Compares categories with horizontal bars, leaving room for long labels.",
     "capture_size": "1060x1000",
-    "example": "流量来源比较"
+    "example": "流量来源对比",
+    "usage": "setYRange() 固定数值范围，setValueSuffix(\"%\") 为数值加上单位。",
+    "usage_en": "setYRange() fixes the value range, and setValueSuffix(\"%\") adds a unit to the values."
   },
   "pie-chart": {
     "name": "饼图",
-    "description": "展示各类别占总体的比例。",
+    "description": "显示各部分占总量的比例。",
+    "description_en": "Shows how each part contributes to a total.",
     "capture_size": "1060x1000",
-    "example": "流量来源占比"
+    "example": "流量来源占比",
+    "usage": "setPoints() 中的每个值对应一个扇区，标签用作扇区名称。",
+    "usage_en": "Each value passed to setPoints() becomes a slice, named by its label."
   },
   "donut-chart": {
     "name": "环形图",
-    "description": "用环形扇区展示数据占比。",
+    "description": "用圆环显示各部分占比，中间可以放总数。",
+    "description_en": "Shows parts of a total as a ring, with room for the total in the middle.",
     "capture_size": "1060x1000",
-    "example": "流量来源与总量"
+    "example": "流量来源与总量",
+    "usage": "用法与 PieChart 相同；setCenterText() 和 setCenterCaption() 设置中间的数字和说明。",
+    "usage_en": "Used like PieChart; setCenterText() and setCenterCaption() set the number and caption in the middle."
   },
   "scatter-chart": {
     "name": "散点图",
-    "description": "展示两组数值之间的分布关系。",
+    "description": "用散点显示两个数值之间的关系。",
+    "description_en": "Shows the relationship between two values as points.",
     "capture_size": "1060x1000",
-    "example": "请求分布"
+    "example": "请求分布",
+    "usage": "setXRange() 和 setYRange() 设置坐标范围，每个数据点画成一个点；addSeries() 添加第二组数据。",
+    "usage_en": "setXRange() and setYRange() set the axes; each data point is drawn as a dot, and addSeries() adds a second group."
   },
   "sparkline": {
     "name": "迷你趋势图",
-    "description": "在有限空间内展示数值趋势。",
-    "example": "近期变化趋势"
+    "description": "不带坐标轴的小型趋势线，适合放在卡片或表格中。",
+    "description_en": "A small trend line without axes, for cards and tables.",
+    "example": "近期趋势",
+    "usage": "给它一个较小的固定尺寸，再用 setModel() 绑定数据。它没有可见标签，需要设置 setAccessibleName()。",
+    "usage_en": "Give it a small fixed size and bind data with setModel(). It has no visible label, so set an accessible name."
   },
   "data-grid": {
     "name": "数据表格",
-    "description": "展示、选择和编辑表格数据，支持固定列。",
-    "example": "固定列与单元格编辑"
+    "description": "显示、选择和编辑表格数据。",
+    "example": "固定列与编辑",
+    "usage": "setColumnPinned(0, true) 固定第一列，横向滚动时它保持可见；双击单元格或按 F2 编辑。"
   },
   "drawer-view": {
     "name": "抽屉视图",
-    "description": "从视图边缘展开附加内容。",
-    "example": "从右侧展开抽屉"
+    "description": "从窗口边缘滑出的面板。",
+    "example": "右侧抽屉",
+    "usage": "setEdge() 选择滑出方向，setDrawerLength() 设置宽度，open() 打开；点击外部区域会关闭。"
   },
   "file-list-view": {
     "name": "文件列表",
-    "description": "展示文件、元信息、进度和处理状态。",
-    "example": "文件与进度"
+    "description": "显示文件列表、传输进度和处理状态。",
+    "example": "文件与进度",
+    "usage": "通过模型角色提供每个文件的说明、状态和进度；用 retryRequested 和 removeRequested 响应重试与移除。"
   },
   "flip-view": {
     "name": "翻页视图",
-    "description": "逐页浏览图片或其他内容。",
-    "example": "翻阅照片"
+    "description": "一次显示一页，逐页浏览图片或其他内容。",
+    "example": "翻看照片",
+    "usage": "addPage() 添加页面，setShowPageIndicator(true) 显示页码圆点；可以点箭头或滑动翻页。"
   },
   "flow-view": {
     "name": "流式视图",
-    "description": "根据可用宽度自动换行排列内容。",
-    "example": "自适应照片排列"
+    "description": "按可用宽度自动换行排列条目。",
+    "example": "照片流",
+    "usage": "setDefaultItemSize() 设置条目默认尺寸，自定义 delegate 绘制每个条目；宽度变窄时自动换行。"
   },
   "grid-view": {
     "name": "网格视图",
-    "description": "以网格形式展示和选择数据项。",
-    "example": "照片网格"
+    "description": "按统一大小的网格显示和选择条目。",
+    "example": "照片网格",
+    "usage": "setCellSize() 设置格子大小，自定义 delegate 绘制封面和标题。"
   },
   "list-view": {
     "name": "列表视图",
-    "description": "展示模型中的条目并处理选择。",
-    "example": "带头像的联系人列表"
+    "description": "显示一列可选择的条目。",
+    "example": "联系人列表",
+    "usage": "setModel() 提供条目，setHeaderText() 添加列表标题；选中行会显示强调色指示条。"
   },
   "timeline": {
     "name": "时间线",
-    "description": "按时间顺序展示事件和进度。",
+    "description": "按顺序显示事件、时间和状态。",
     "capture_size": "1060x1000",
-    "example": "模型驱动的时间线"
+    "example": "由模型提供节点",
+    "usage": "用 DescriptionRole、TimestampRole 和 StatusRole 提供说明、时间和状态；修改 StatusRole 会更新节点状态。"
   },
   "split-view": {
     "name": "分隔视图",
-    "description": "将内容放在可调整大小的相邻区域中。",
-    "example": "调整分栏宽度"
+    "description": "把区域分成几块，拖动分隔条调整大小。",
+    "example": "调整面板大小",
+    "usage": "addPane() 依次添加面板，setPanePreferredSize() 设置初始尺寸，setPaneFill() 让某个面板占用剩余空间。"
   },
   "stack-view": {
     "name": "堆叠视图",
-    "description": "在同一区域切换不同页面。",
-    "example": "压入与弹出页面"
+    "description": "在同一区域压入和弹出页面。",
+    "example": "压入与弹出页面",
+    "usage": "setInitialItem() 设置首页，push() 进入下一页，pop() 返回；depthChanged 报告当前层数。"
   },
   "tree-view": {
     "name": "树形视图",
     "description": "浏览、展开和选择层级数据。",
-    "example": "浏览文件夹层级"
+    "example": "文件夹层级",
+    "usage": "setModel() 提供树形数据，点击箭头展开或收起；示例用自定义 delegate 绘制箭头和图标。"
   },
   "calendar-date-picker": {
     "name": "日历日期选择器",
-    "description": "从弹出的日历中选择日期。",
+    "description": "从弹出的日历中选择一个日期。",
     "height": 420,
-    "example": "从下拉日历选择日期"
+    "example": "从日历选择日期",
+    "usage": "setPlaceholderText() 设置提示文字，选中日期后 dateChanged 给出 QDate。"
   },
   "calendar-view": {
     "name": "日历视图",
-    "description": "按月份浏览并选择日期。",
+    "description": "按月浏览并选择日期。",
     "example": "浏览和选择日期",
+    "usage": "setSelectedDate() 设置选中日期；点击标题可切换到月份和年份视图。",
     "capture_size": "920x640"
   },
   "date-picker": {
     "name": "日期选择器",
-    "description": "选择年、月和日。",
+    "description": "分别滚动选择年、月、日。",
     "height": 420,
-    "example": "分别选择年月日"
+    "example": "选择年月日",
+    "usage": "setPlaceholderText() 为年、月、日分别设置提示，setDate() 设置初始日期。"
   },
   "date-time-range-picker": {
     "name": "日期时间范围选择器",
-    "description": "设置开始和结束日期或时间。",
+    "description": "选择开始和结束日期，也可以包含时间。",
     "height": 420,
     "capture_size": "1060x1000",
-    "example": "按日期范围筛选"
+    "example": "按日期范围筛选",
+    "usage": "setTimeEnabled(false) 只选日期，setRange() 设置初始范围；也可以直接选择预设的整天范围。"
   },
   "time-picker": {
     "name": "时间选择器",
-    "description": "选择小时和分钟。",
+    "description": "分别滚动选择小时和分钟。",
     "height": 420,
-    "example": "分别选择小时与分钟"
+    "example": "选择时间",
+    "usage": "setTime() 设置初始时间，setMinuteIncrement(5) 让分钟按 5 分钟递增。"
   },
   "content-dialog": {
     "name": "内容对话框",
-    "description": "展示需要用户确认的内容和操作。",
+    "description": "需要用户确认时使用的对话框，最多三个按钮。",
     "height": 560,
-    "example": "结果按钮与默认操作"
+    "example": "处理按钮结果",
+    "usage": "设置主要、次要和关闭按钮的文字；对话框关闭后，finished 的结果说明用户点了哪个按钮。"
   },
   "dialog": {
     "name": "对话框",
-    "description": "在独立对话框中组织输入、说明和操作按钮。",
+    "description": "可以放入任意内容的模态对话框。",
     "height": 560,
-    "example": "修改项目名称"
+    "example": "重命名项目",
+    "usage": "在 Dialog 中放入标题、输入框和按钮，由应用决定应用还是取消修改。"
   },
   "flyout": {
     "name": "浮出面板",
-    "description": "在触发控件附近展示附加内容。",
-    "example": "相对于目标定位"
+    "description": "在触发它的控件旁显示内容，点击外部即关闭。",
+    "example": "相对锚点定位",
+    "usage": "setPlacement() 选择首选方向，showAt() 在锚点控件旁显示；空间不够时会换到另一侧。"
   },
   "popup": {
     "name": "弹出层",
-    "description": "按指定位置显示临时内容。",
-    "example": "在按钮旁弹出内容"
+    "description": "在应用内容上方显示临时内容。",
+    "example": "在按钮旁弹出",
+    "usage": "setPosition() 相对按钮设置位置，open() 显示；点击外部或按 Esc 关闭。"
   },
   "teaching-tip": {
     "name": "教学提示",
-    "description": "围绕目标控件展示说明和操作提示。",
-    "example": "展示提示并处理关闭原因"
+    "description": "指向某个控件的提示卡片，不会阻挡其他操作。",
+    "example": "处理关闭原因",
+    "usage": "showAt() 指向目标控件；closing 信号中的 CloseReason 说明提示是如何关闭的。"
   },
   "coach-mark": {
     "name": "引导标记",
-    "description": "突出目标区域，引导用户完成操作。",
-    "example": "定位与移动引导标记"
+    "description": "指向目标控件的引导卡片，可以移到下一个目标。",
+    "example": "移到新目标",
+    "usage": "打开后再调用 setTarget()，卡片会移到新的目标控件。"
   },
   "accordion": {
     "name": "折叠面板组",
-    "description": "分组展示内容，并控制展开状态。",
-    "example": "一次展开一个分组"
+    "description": "一组可展开的分区，可以设为一次只展开一个。",
+    "example": "一次展开一个",
+    "usage": "setExpansionMode(Single) 后，展开一个分区会收起之前展开的分区。"
   },
   "card": {
     "name": "卡片",
-    "description": "用不同表面层级组织相关内容。",
-    "example": "不同表面层级"
+    "description": "圆角背景面板，用来把相关内容放在一起。",
+    "example": "三种背景",
+    "usage": "setAppearance() 选择 Layer、LayerAlt 或 Canvas 背景，颜色跟随当前主题。"
   },
   "divider": {
     "name": "分隔线",
-    "description": "分隔相邻内容，支持水平和垂直方向。",
-    "example": "水平分隔线与缩进"
+    "description": "水平或垂直的分隔线。",
+    "example": "全宽与缩进",
+    "usage": "setLeadingInset() 和 setTrailingInset() 设置两端缩进，让分隔线与文字对齐。"
   },
   "expander": {
     "name": "展开面板",
-    "description": "通过标题展开或收起内容。",
-    "example": "标题与可折叠内容"
+    "description": "点击标题展开或收起内容。",
+    "example": "标题与详情",
+    "usage": "setHeaderText() 设置标题，setContentWidget() 设置展开后显示的内容。"
   },
   "field": {
     "name": "表单字段",
-    "description": "组合标签、输入控件、说明和校验反馈。",
+    "description": "为输入控件加上标签、必填标记、说明和校验提示。",
     "example": "连接设置表单",
+    "usage": "示例把输入框放进 Field，并用 FormController 管理修改、异步校验和保存。",
     "capture_size": "920x900"
   },
   "data-grid-tool-bar": {
     "name": "表格工具栏",
-    "description": "为数据表格提供搜索、筛选和操作入口。",
+    "description": "为 DataGrid 提供搜索、筛选和列设置。",
     "example": "筛选与排列项目",
+    "usage": "输入关键词或组合筛选条件来过滤表格，在 Columns 菜单中显示、移动或固定列。筛选规则由应用的代理模型实现。",
     "capture_size": "920x800"
   },
   "property-panel": {
     "name": "属性面板",
-    "description": "集中编辑分组属性，并支持搜索和重置。",
-    "example": "修改文档标题"
+    "description": "根据属性定义生成分组的编辑表单。",
+    "example": "修改文档标题",
+    "usage": "示例定义了一个标题属性：修改它会更新预览，也可以把它重置为默认值。"
   },
   "list-detail-view": {
     "name": "列表详情视图",
-    "description": "组合条目列表和当前条目的详细内容。",
+    "description": "宽时并排显示列表和详情，窄时一次显示一个。",
     "capture_size": "1060x1000",
-    "example": "单栏与双栏布局"
+    "example": "单栏与双栏",
+    "usage": "setCompactThreshold() 设置切换宽度；切换布局时详情控件不会重建，正在编辑的内容会保留。"
   },
   "particle-backdrop": {
     "name": "粒子背景",
-    "description": "为界面添加可配置的粒子背景动效。",
+    "description": "可配置的粒子动画背景。",
     "capture_size": "1060x1000",
-    "example": "流动丝带背景"
+    "example": "流动丝带",
+    "usage": "setEffect() 选择效果，setParticleCount() 和 setMaximumFrameRate() 控制密度和帧率；减弱动效模式下动画会停止。"
   },
   "spatial-view": {
     "name": "空间视图",
-    "description": "在三维空间中组织和操作现有 Widgets 内容。",
+    "description": "让现有控件以透视方式显示，并随鼠标倾斜。",
     "height": 560,
     "capture_size": "1060x1000",
-    "example": "调整场景透视"
+    "example": "调整场景透视",
+    "usage": "调整镜头角度和缩放，再把鼠标移到卡片上。需要输入文字或弹出窗口时，请切换到平面模式。"
   },
   "spatial-item": {
     "name": "空间项",
-    "description": "设置空间视图中单个内容项的位置、旋转和缩放。",
+    "description": "设置 SpatialView 中单个控件的位置、旋转和缩放。",
     "height": 560,
     "capture_size": "1060x1000",
-    "example": "卡片外观与空间姿态"
+    "example": "调整卡片姿态",
+    "usage": "SpatialView::addWidget() 返回的 SpatialItem 控制这张卡片；调整它不会影响其他卡片。"
   },
   "qml-view": {
     "name": "QML 视图",
-    "description": "在 Widgets 界面中加载 QML 页面并共享数据。",
+    "description": "在 Widgets 界面中加载 QML 页面，并共享数据和主题。",
     "capture_size": "1060x1000",
-    "example": "加载 QML 页面"
+    "example": "加载 QML 页面",
+    "usage": "先激活 QmlSession，再用 createView() 创建 QmlView 并加载 QML 文件；激活失败时显示错误信息。"
   },
   "menu": {
     "name": "菜单",
-    "description": "组织命令、快捷键和分组操作。",
-    "example": "菜单命令与快捷键"
+    "description": "显示一组命令的弹出菜单。",
+    "example": "命令与快捷键",
+    "usage": "addAction() 添加命令，setShortcut() 设置快捷键，addSeparator() 分隔命令组；暂不可用的命令可以禁用。"
   },
   "menu-bar": {
     "name": "菜单栏",
-    "description": "在应用顶部组织多组菜单命令。",
-    "example": "承载应用菜单"
+    "description": "窗口顶部的一排菜单。",
+    "example": "放在卡片中的菜单栏",
+    "usage": "addMenu() 添加菜单；setBackgroundVisible(false) 去掉自身背景，便于放进卡片或标题栏。"
   },
   "command-bar": {
     "name": "命令栏",
-    "description": "排列常用操作，并将放不下的命令收进菜单。",
-    "example": "自适应文档命令栏"
+    "description": "排列常用命令，放不下的命令移到溢出菜单。",
+    "example": "自适应命令栏",
+    "usage": "宽度不够时，低优先级的命令先移入溢出菜单；setLabelPosition() 控制文字显示的位置。"
   },
   "command-palette": {
     "name": "命令面板",
-    "description": "通过搜索快速查找并执行命令。",
+    "description": "输入名称查找并运行命令。",
     "height": 420,
-    "example": "查找并执行命令"
+    "example": "查找并运行命令",
+    "usage": "addCommand() 注册 QAction；输入关键词后用方向键选择，按 Enter 运行，按 Esc 关闭。"
   },
   "command-bar-flyout": {
     "name": "浮动命令栏",
-    "description": "在当前内容附近显示常用操作和更多命令。",
-    "example": "照片的上下文操作"
+    "description": "在当前内容旁显示的上下文命令。",
+    "example": "照片的上下文操作",
+    "usage": "addPrimaryAction() 添加常用命令，addSecondaryAction() 添加更多命令。左键点击时以 Transient 模式显示且不抢焦点，右键时展开完整菜单。"
   },
   "breadcrumb": {
     "name": "面包屑导航",
-    "description": "展示当前位置，并返回上级路径。",
-    "example": "导航路径与尺寸"
+    "description": "显示当前位置的路径，可以返回上一级。",
+    "example": "两种尺寸",
+    "usage": "setItems() 设置路径，setBreadcrumbSize() 选择 Standard（20 px）或 Large（40 px）；点击路径时 itemClicked 给出位置。"
   },
   "navigation-view": {
     "name": "导航视图",
-    "description": "组合导航项、页面内容和窗口区域。",
-    "example": "导航与窗口区域",
+    "description": "应用的左侧导航和内容区域。",
+    "example": "页头、主区与页脚",
+    "usage": "setHeaderChromeWidget()、setMainChromeWidget() 和 setFooterChromeWidget() 放入应用自己的导航控件，页面由 contentHost() 切换。",
     "capture_size": "920x720"
   },
   "pivot": {
     "name": "枢轴导航",
-    "description": "在相关内容页面之间切换。",
-    "example": "切换承载的页面"
+    "description": "在同级页面之间切换的标签导航。",
+    "example": "切换页面",
+    "usage": "addItem() 添加标签，currentChanged 时切换 StackContentHost 中的页面；禁用的标签仍会显示，但不能选择。"
   },
   "selector-bar": {
     "name": "选择栏",
-    "description": "通过一组紧凑选项切换当前内容。",
-    "example": "选择并切换页面"
+    "description": "用一排选项切换当前视图。",
+    "example": "选择并切换页面",
+    "usage": "addItem() 添加选项并附带数据；currentChanged 切换页面，selectionChanged 提供选中项的数据。"
   },
   "stepper": {
     "name": "步骤导航",
-    "description": "展示任务的步骤、当前进度和完成状态。",
+    "description": "显示任务的步骤、进度和状态。",
     "capture_size": "1060x1000",
-    "example": "由应用控制步骤"
+    "example": "由应用控制步骤",
+    "usage": "点击步骤时发出 stepRequested，由应用决定是否切换；setItemState() 标记完成或出错。"
   },
   "tab-view": {
     "name": "标签页视图",
-    "description": "组织多个内容页面，并管理标签页。",
-    "example": "在标签页中承载内容"
+    "description": "用标签页组织多个页面。",
+    "example": "标签页与页面",
+    "usage": "currentChanged 切换 StackContentHost 中的页面；开启 setTabReorderEnabled() 后，用 tabMoved 同步页面顺序。"
   },
   "annotated-scrollbar": {
     "name": "标注滚动条",
-    "description": "在滚动条上展示分组或位置提示。",
-    "example": "带分组标记的滚动范围"
+    "description": "带位置标签的滚动条，方便在长内容中跳转。",
+    "example": "带标签的滚动范围",
+    "usage": "setLabels() 在指定位置添加标签，setDetailLabelProvider() 返回悬停时显示的文字。"
   },
   "pips-pager": {
     "name": "圆点分页器",
-    "description": "用圆点显示和切换当前页。",
-    "example": "与翻页视图联动"
+    "description": "用圆点显示和切换页面。",
+    "example": "与 FlipView 联动",
+    "usage": "setNumberOfPages() 设置页数，再把两个控件的当前页信号互相连接。"
   },
   "scrollbar": {
     "name": "滚动条",
-    "description": "控制可滚动内容的位置。",
-    "example": "水平与垂直滚动值"
+    "description": "Fluent 样式的滚动条，鼠标悬停时变宽。",
+    "example": "水平与垂直",
+    "usage": "与 QScrollBar 一样使用 setRange()、setPageStep() 和 setValue()。"
   },
   "scroll-view": {
     "name": "滚动视图",
-    "description": "为内容提供滚动和缩放能力。",
-    "example": "滚动与缩放内容",
+    "description": "可以滚动和缩放的内容区域。",
+    "example": "滚动与缩放",
+    "usage": "setZoomMode(Enabled) 开启缩放并设置最小和最大倍率；按钮调用 zoomBy() 和 resetZoom()。",
     "capture_size": "920x640"
   },
   "avatar": {
     "name": "头像",
-    "description": "用图片、姓名缩写或图标表示用户。",
-    "example": "姓名缩写与尺寸"
+    "description": "用图片或姓名首字母表示一个人。",
+    "example": "首字母与尺寸",
+    "usage": "没有图片时显示姓名首字母；setAvatarSize() 提供四种尺寸。"
   },
   "info-badge": {
     "name": "信息徽章",
-    "description": "以数字、圆点或图标展示简短状态。",
-    "example": "徽章显示模式"
+    "description": "用数字、图标或圆点显示简短状态。",
+    "example": "显示模式",
+    "usage": "默认根据内容决定样式：无内容显示圆点，有图标显示图标，有数值显示数字；也可以用 setDisplayMode() 指定。"
   },
   "info-bar": {
     "name": "信息栏",
-    "description": "在页面内展示提示、成功、警告或错误信息。",
-    "example": "不同级别的信息"
+    "description": "在页面中显示提示、成功、警告或错误信息。",
+    "example": "不同级别",
+    "usage": "setSeverity() 设置级别，图标和背景随之变化；setTitle() 和 setMessage() 设置内容。"
   },
   "progress-bar": {
     "name": "进度条",
-    "description": "展示任务的完成进度。",
-    "example": "确定进度"
+    "description": "显示任务完成了多少。",
+    "example": "设置进度",
+    "usage": "setRange() 和 setValue() 设置进度，progressText() 返回百分比文字。"
   },
   "progress-ring": {
     "name": "进度环",
-    "description": "用环形进度指示任务正在运行。",
-    "example": "不确定进度与尺寸"
+    "description": "用旋转的圆环表示任务正在进行。",
+    "example": "三种尺寸",
+    "usage": "setRingSize() 选择尺寸，setIsActive(true) 开始动画。"
   },
   "splash-screen": {
     "name": "启动屏幕",
-    "description": "在应用准备期间展示品牌与加载进度。",
+    "description": "应用启动时覆盖内容区，显示加载进度。",
     "height": 560,
     "capture_size": "1060x1000",
-    "example": "应用启动过程"
+    "example": "应用启动",
+    "usage": "Branded 是默认样式，Simple 只显示居中的加载圆环；示例可以重放结束时的过渡。"
   },
   "shimmer": {
     "name": "加载占位",
-    "description": "在内容加载前显示占位布局。",
-    "example": "内置占位模板"
+    "description": "内容加载前显示的占位动画。",
+    "example": "内置模板",
+    "usage": "setShimmerTemplate() 选择图片卡片、头像行或文字块模板。"
   },
   "toast": {
     "name": "轻提示",
-    "description": "用短暂浮层反馈操作结果。",
+    "description": "短暂显示的通知，不会打断当前操作。",
     "height": 420,
     "capture_size": "1060x1000",
-    "example": "操作结果提示"
+    "example": "操作反馈",
+    "usage": "showToast() 显示消息，并设置级别、时长和位置；消息可以带一个操作按钮。"
   },
   "tooltip": {
     "name": "工具提示",
-    "description": "在鼠标悬停时补充简短说明。",
-    "example": "悬停显示说明"
+    "description": "鼠标悬停时显示的简短说明。",
+    "example": "悬停显示说明",
+    "usage": "setText() 设置说明文字；示例在鼠标进入按钮时显示，离开时隐藏。"
   },
   "auto-suggest-box": {
     "name": "建议输入框",
-    "description": "输入文字时显示可选建议。",
+    "description": "输入时显示候选建议的搜索框。",
     "height": 420,
-    "example": "建议选择与查询提交"
+    "example": "建议与提交",
+    "usage": "setSuggestions() 提供候选；输入变化、选中建议和提交查询分别对应 textChangedWithReason、suggestionChosen 和 querySubmitted。"
   },
   "tag-input": {
     "name": "标签输入框",
-    "description": "输入、选择和删除多个标签。",
-    "example": "选择和移除标签"
+    "description": "把多个值显示为可以删除的标签。",
+    "example": "选择和移除标签",
+    "usage": "setSuggestions() 提供建议，addItem() 添加标签；可以用鼠标或键盘删除标签。"
   },
   "code-block": {
     "name": "代码块",
-    "description": "展示带语法高亮的代码，并支持复制。",
+    "description": "只读显示代码，带语法高亮和复制按钮。",
     "capture_size": "1060x1000",
-    "example": "阅读和复制代码"
+    "example": "阅读和复制代码",
+    "usage": "setLanguage() 设置语言，setCode() 设置代码；标题栏可以复制全部代码或折叠代码块。"
   },
   "label": {
     "name": "文本标签",
-    "description": "按不同文字层级展示文本。",
-    "example": "文字层级"
+    "description": "按 Fluent 字体层级显示文字。",
+    "example": "字体层级",
+    "usage": "setFluentTypography() 选择 Caption、Body、Subtitle 等层级，切换主题后仍然保持。"
   },
   "line-edit": {
     "name": "单行输入框",
-    "description": "输入和编辑单行文字。",
-    "example": "带清除按钮的输入"
+    "description": "输入单行文字。",
+    "example": "带清除按钮",
+    "usage": "setClearButtonEnabled(true) 在有文字时显示清除按钮，textChanged 给出当前文字。"
   },
   "number-box": {
     "name": "数值输入框",
-    "description": "输入数值，支持步进和拖动微调。",
-    "example": "拖动调整数值"
+    "description": "输入数值，可以步进或拖动调整。",
+    "example": "拖动调整数值",
+    "usage": "setScrubbingEnabled(true) 开启拖动调整；按住 Shift 微调，按 Esc 恢复开始时的值。"
   },
   "password-box": {
     "name": "密码输入框",
-    "description": "输入密码并按需显示内容。",
-    "example": "输入与显示密码"
+    "description": "输入密码，可以按需显示。",
+    "example": "读取密码",
+    "usage": "setPassword() 设置密码，passwordChanged 给出新的密码。"
   },
   "text-edit": {
     "name": "多行输入框",
-    "description": "输入和编辑多行文字。",
-    "example": "按可见行数调整高度"
+    "description": "输入多行文字。",
+    "example": "按行数调整高度",
+    "usage": "setMinVisibleLines(2) 和 setMaxVisibleLines(4) 设置高度范围，超过 4 行后出现滚动条。"
   },
   "title-bar": {
     "name": "标题栏",
-    "description": "组织窗口标题、图标和标题栏操作。",
-    "example": "避让系统窗口区域"
+    "description": "自定义窗口标题栏，可以放入自己的控件。",
+    "example": "避开系统按钮",
+    "usage": "setSystemReservedLeadingWidth() 和 setSystemReservedTrailingWidth() 为系统按钮留出空间，setContentWidget() 放入自定义内容。"
   },
   "window": {
     "name": "窗口",
-    "description": "承载应用页面、导航和窗口控制。",
+    "description": "带自定义标题栏和主题背景的顶层窗口。",
     "height": 560,
-    "example": "承载顶层窗口内容"
+    "example": "设置窗口内容",
+    "usage": "setContentWidget() 设置窗口内容，setBackdropEffect() 选择 Mica 等背景效果。"
   },
   "font-icon": {
     "name": "字体图标",
-    "description": "显示 Fluent 图标并调整大小与颜色。",
-    "example": "不同光学尺寸"
+    "description": "显示内置的 Fluent 图标。",
+    "example": "不同尺寸",
+    "usage": "传入 Typography::Icons 中的图标，setIconSize() 设置大小；FontIcon 会选用最适合该尺寸的字形。"
   }
 }

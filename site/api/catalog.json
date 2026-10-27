@@ -146,7 +146,7 @@
         },
         "description": {
           "en": "Run an action, such as saving or submitting a form.",
-          "zh": "触发保存、提交等操作。"
+          "zh": "触发一个操作，例如保存或提交表单。"
         },
         "urls": {
           "en": "button/",
@@ -219,7 +219,7 @@
         },
         "description": {
           "en": "A button with primary text and a second line that explains the action.",
-          "zh": "在按钮中同时显示标题、说明和图标。"
+          "zh": "在按钮中显示标题和一行说明。"
         },
         "urls": {
           "en": "compound-button/",
@@ -291,8 +291,8 @@
           "zh": "复选框"
         },
         "description": {
-          "en": "Select one or more options. A mixed state represents a partial selection.",
-          "zh": "选择一个或多个选项，支持半选状态。"
+          "en": "Select or clear options. A mixed state shows that only some items are selected.",
+          "zh": "选择一个或多个选项；半选状态表示只选中了一部分。"
         },
         "urls": {
           "en": "checkbox/",
@@ -365,7 +365,7 @@
         },
         "description": {
           "en": "A spectrum surface for picking a color, with RGB, hex, and optional alpha editing.",
-          "zh": "选择颜色，支持透明度与颜色值输入。"
+          "zh": "选择颜色，可以编辑 RGB、Hex 和透明度。"
         },
         "urls": {
           "en": "color-picker/",
@@ -438,7 +438,7 @@
         },
         "description": {
           "en": "A drop-down list for selecting one item from a set of options.",
-          "zh": "从下拉列表中选择一个选项。"
+          "zh": "从下拉列表中选择一项。"
         },
         "urls": {
           "en": "combobox/",
@@ -511,7 +511,7 @@
         },
         "description": {
           "en": "A button that reveals a menu of related commands when invoked.",
-          "zh": "点击按钮展开一组菜单命令。"
+          "zh": "点击后展开一组相关命令。"
         },
         "urls": {
           "en": "dropdown-button/",
@@ -584,7 +584,7 @@
         },
         "description": {
           "en": "A file entry surface with drag feedback, keyboard access, and a separate browse action.",
-          "zh": "拖入或选择文件，展示文件列表与处理状态。"
+          "zh": "拖入文件，或点击浏览选择文件。"
         },
         "urls": {
           "en": "file-drop-zone/",
@@ -657,7 +657,7 @@
         },
         "description": {
           "en": "A button styled like a hyperlink that opens a URL when clicked.",
-          "zh": "通过文字链接打开网页或执行导航。"
+          "zh": "外观像链接的按钮，点击后打开网址。"
         },
         "urls": {
           "en": "hyperlink-button/",
@@ -730,7 +730,7 @@
         },
         "description": {
           "en": "A model-backed drop-down list for selecting, filtering, and clearing several options.",
-          "zh": "从列表中选择多个选项，并查看已选内容。"
+          "zh": "从下拉列表中选择多项。"
         },
         "urls": {
           "en": "multi-select-combobox/",
@@ -803,7 +803,7 @@
         },
         "description": {
           "en": "Lets people select one option from a mutually exclusive group.",
-          "zh": "在一组选项中选择一项。"
+          "zh": "在一组选项中只能选择一项。"
         },
         "urls": {
           "en": "radio-button/",
@@ -876,7 +876,7 @@
         },
         "description": {
           "en": "Search a hierarchy and select one or more items while retaining their parent paths.",
-          "zh": "按层级浏览并选择条目。"
+          "zh": "在树形列表中搜索并选择条目。"
         },
         "urls": {
           "en": "tree-select/",
@@ -949,7 +949,7 @@
         },
         "description": {
           "en": "Lets people view, set, or clear star ratings.",
-          "zh": "输入或显示评分，支持只读展示。"
+          "zh": "查看、设置或清除星级评分。"
         },
         "urls": {
           "en": "rating-control/",
@@ -1022,7 +1022,7 @@
         },
         "description": {
           "en": "A button that raises its click event repeatedly while it stays pressed.",
-          "zh": "按住按钮时连续触发操作。"
+          "zh": "按住时连续触发点击。"
         },
         "urls": {
           "en": "repeat-button/",
@@ -1095,7 +1095,7 @@
         },
         "description": {
           "en": "Lets people select a value from a range by dragging a handle along a track.",
-          "zh": "拖动滑块选择范围内的数值。"
+          "zh": "拖动滑块在范围内选择数值。"
         },
         "urls": {
           "en": "slider/",
@@ -1168,7 +1168,7 @@
         },
         "description": {
           "en": "A two-part button: a primary action plus a chevron that opens a menu.",
-          "zh": "将常用操作和其他菜单命令放在同一个按钮中。"
+          "zh": "左侧执行默认操作，右侧打开更多选项。"
         },
         "urls": {
           "en": "split-button/",
@@ -1241,7 +1241,7 @@
         },
         "description": {
           "en": "A button that switches between checked and unchecked states.",
-          "zh": "用按钮表示开启或关闭状态。"
+          "zh": "点击后保持选中或未选中状态的按钮。"
         },
         "urls": {
           "en": "toggle-button/",
@@ -1314,7 +1314,7 @@
         },
         "description": {
           "en": "A split button whose primary half toggles on and off.",
-          "zh": "组合开关状态与下拉菜单命令。"
+          "zh": "左侧切换开关状态，右侧打开相关选项。"
         },
         "urls": {
           "en": "toggle-split-button/",
@@ -1387,7 +1387,7 @@
         },
         "description": {
           "en": "A switch that flips between on and off states.",
-          "zh": "开启或关闭一个设置。"
+          "zh": "打开或关闭一项设置。"
         },
         "urls": {
           "en": "toggle-switch/",
@@ -1459,8 +1459,8 @@
           "zh": "图表视图"
         },
         "description": {
-          "en": "Native charts share caller-owned models, preserve extrema and keep projections bounded by the viewport.",
-          "zh": "通过数据模型绘制图表，并导出图像或原始数据。"
+          "en": "Draws a chart from ChartModel data and copies it as an image or CSV.",
+          "zh": "用 ChartModel 绘制图表，可复制为图片或 CSV。"
         },
         "urls": {
           "en": "chart-view/",
@@ -1532,8 +1532,8 @@
           "zh": "折线图"
         },
         "description": {
-          "en": "LineChart shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "用折线展示数值随时间或顺序的变化。"
+          "en": "Shows how values change over time or order with lines.",
+          "zh": "用折线显示数值随时间或顺序的变化。"
         },
         "urls": {
           "en": "line-chart/",
@@ -1605,8 +1605,8 @@
           "zh": "面积图"
         },
         "description": {
-          "en": "AreaChart shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "用填充区域展示连续数值及变化趋势。"
+          "en": "Shows a trend as a filled area under a line.",
+          "zh": "用填充区域显示数值的变化趋势。"
         },
         "urls": {
           "en": "area-chart/",
@@ -1678,8 +1678,8 @@
           "zh": "柱状图"
         },
         "description": {
-          "en": "BarChart shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "比较不同类别的数值。"
+          "en": "Compares values across categories with vertical bars.",
+          "zh": "用竖直柱形比较各类别的数值。"
         },
         "urls": {
           "en": "bar-chart/",
@@ -1751,8 +1751,8 @@
           "zh": "条形图"
         },
         "description": {
-          "en": "HorizontalBarChart shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "用水平条形比较类别，便于阅读较长的标签。"
+          "en": "Compares categories with horizontal bars, leaving room for long labels.",
+          "zh": "用水平条形比较类别，较长的标签也能完整显示。"
         },
         "urls": {
           "en": "horizontal-bar-chart/",
@@ -1824,8 +1824,8 @@
           "zh": "饼图"
         },
         "description": {
-          "en": "PieChart shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "展示各类别占总体的比例。"
+          "en": "Shows how each part contributes to a total.",
+          "zh": "显示各部分占总量的比例。"
         },
         "urls": {
           "en": "pie-chart/",
@@ -1897,8 +1897,8 @@
           "zh": "环形图"
         },
         "description": {
-          "en": "DonutChart shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "用环形扇区展示数据占比。"
+          "en": "Shows parts of a total as a ring, with room for the total in the middle.",
+          "zh": "用圆环显示各部分占比，中间可以放总数。"
         },
         "urls": {
           "en": "donut-chart/",
@@ -1970,8 +1970,8 @@
           "zh": "散点图"
         },
         "description": {
-          "en": "ScatterChart shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "展示两组数值之间的分布关系。"
+          "en": "Shows the relationship between two values as points.",
+          "zh": "用散点显示两个数值之间的关系。"
         },
         "urls": {
           "en": "scatter-chart/",
@@ -2043,8 +2043,8 @@
           "zh": "迷你趋势图"
         },
         "description": {
-          "en": "Sparkline shares indexed, caller-owned models with a dedicated bounded renderer.",
-          "zh": "在有限空间内展示数值趋势。"
+          "en": "A small trend line without axes, for cards and tables.",
+          "zh": "不带坐标轴的小型趋势线，适合放在卡片或表格中。"
         },
         "urls": {
           "en": "sparkline/",
@@ -2117,7 +2117,7 @@
         },
         "description": {
           "en": "Presents large model-backed rows and columns with headers, sorting, selection, and delegate editing.",
-          "zh": "展示、选择和编辑表格数据，支持固定列。"
+          "zh": "显示、选择和编辑表格数据。"
         },
         "urls": {
           "en": "data-grid/",
@@ -2190,7 +2190,7 @@
         },
         "description": {
           "en": "A panel that slides in from a window edge over the content.",
-          "zh": "从视图边缘展开附加内容。"
+          "zh": "从窗口边缘滑出的面板。"
         },
         "urls": {
           "en": "drawer-view/",
@@ -2263,7 +2263,7 @@
         },
         "description": {
           "en": "A model-backed file list with complete names, transfer progress, and recovery actions.",
-          "zh": "展示文件、元信息、进度和处理状态。"
+          "zh": "显示文件列表、传输进度和处理状态。"
         },
         "urls": {
           "en": "file-list-view/",
@@ -2336,7 +2336,7 @@
         },
         "description": {
           "en": "Lets people flip through a collection of pages one at a time.",
-          "zh": "逐页浏览图片或其他内容。"
+          "zh": "一次显示一页，逐页浏览图片或其他内容。"
         },
         "urls": {
           "en": "flip-view/",
@@ -2409,7 +2409,7 @@
         },
         "description": {
           "en": "Lays out variable-sized items in wrapping rows, like a tag cloud.",
-          "zh": "根据可用宽度自动换行排列内容。"
+          "zh": "按可用宽度自动换行排列条目。"
         },
         "urls": {
           "en": "flow-view/",
@@ -2482,7 +2482,7 @@
         },
         "description": {
           "en": "Presents items in a grid of uniform cells with selection.",
-          "zh": "以网格形式展示和选择数据项。"
+          "zh": "按统一大小的网格显示和选择条目。"
         },
         "urls": {
           "en": "grid-view/",
@@ -2555,7 +2555,7 @@
         },
         "description": {
           "en": "Presents a vertical list of interactive items with selection.",
-          "zh": "展示模型中的条目并处理选择。"
+          "zh": "显示一列可选择的条目。"
         },
         "urls": {
           "en": "list-view/",
@@ -2628,7 +2628,7 @@
         },
         "description": {
           "en": "Presents caller-owned model rows as a timeline with text, time labels and node states.",
-          "zh": "按时间顺序展示事件和进度。"
+          "zh": "按顺序显示事件、时间和状态。"
         },
         "urls": {
           "en": "timeline/",
@@ -2701,7 +2701,7 @@
         },
         "description": {
           "en": "Hosts resizable panes separated by draggable handles.",
-          "zh": "将内容放在可调整大小的相邻区域中。"
+          "zh": "把区域分成几块，拖动分隔条调整大小。"
         },
         "urls": {
           "en": "split-view/",
@@ -2774,7 +2774,7 @@
         },
         "description": {
           "en": "A stack-based container that pushes and pops pages with transitions.",
-          "zh": "在同一区域切换不同页面。"
+          "zh": "在同一区域压入和弹出页面。"
         },
         "urls": {
           "en": "stack-view/",
@@ -2920,7 +2920,7 @@
         },
         "description": {
           "en": "A drop-down calendar for picking a single date.",
-          "zh": "从弹出的日历中选择日期。"
+          "zh": "从弹出的日历中选择一个日期。"
         },
         "urls": {
           "en": "calendar-date-picker/",
@@ -2993,7 +2993,7 @@
         },
         "description": {
           "en": "A calendar surface for browsing months and selecting dates.",
-          "zh": "按月份浏览并选择日期。"
+          "zh": "按月浏览并选择日期。"
         },
         "urls": {
           "en": "calendar-view/",
@@ -3066,7 +3066,7 @@
         },
         "description": {
           "en": "A spinning-field picker for choosing a day, month, and year.",
-          "zh": "选择年、月和日。"
+          "zh": "分别滚动选择年、月、日。"
         },
         "urls": {
           "en": "date-picker/",
@@ -3139,7 +3139,7 @@
         },
         "description": {
           "en": "A compact range entry with a calendar popup, minute precision, quick presets, and independently optional bounds.",
-          "zh": "设置开始和结束日期或时间。"
+          "zh": "选择开始和结束日期，也可以包含时间。"
         },
         "urls": {
           "en": "date-time-range-picker/",
@@ -3212,7 +3212,7 @@
         },
         "description": {
           "en": "A spinning-field picker for choosing a time of day.",
-          "zh": "选择小时和分钟。"
+          "zh": "分别滚动选择小时和分钟。"
         },
         "urls": {
           "en": "time-picker/",
@@ -3285,7 +3285,7 @@
         },
         "description": {
           "en": "A modal dialog with title, content, and up to three commit buttons.",
-          "zh": "展示需要用户确认的内容和操作。"
+          "zh": "需要用户确认时使用的对话框，最多三个按钮。"
         },
         "urls": {
           "en": "content-dialog/",
@@ -3358,7 +3358,7 @@
         },
         "description": {
           "en": "A modal window surface that hosts arbitrary content above the app.",
-          "zh": "在独立对话框中组织输入、说明和操作按钮。"
+          "zh": "可以放入任意内容的模态对话框。"
         },
         "urls": {
           "en": "dialog/",
@@ -3431,7 +3431,7 @@
         },
         "description": {
           "en": "A light-dismiss container anchored to the control that opened it.",
-          "zh": "在触发控件附近展示附加内容。"
+          "zh": "在触发它的控件旁显示内容，点击外部即关闭。"
         },
         "urls": {
           "en": "flyout/",
@@ -3504,7 +3504,7 @@
         },
         "description": {
           "en": "A floating surface positioned over app content.",
-          "zh": "按指定位置显示临时内容。"
+          "zh": "在应用内容上方显示临时内容。"
         },
         "urls": {
           "en": "popup/",
@@ -3577,7 +3577,7 @@
         },
         "description": {
           "en": "An anchored tip that draws attention to a feature without blocking interaction.",
-          "zh": "围绕目标控件展示说明和操作提示。"
+          "zh": "指向某个控件的提示卡片，不会阻挡其他操作。"
         },
         "urls": {
           "en": "teaching-tip/",
@@ -3650,7 +3650,7 @@
         },
         "description": {
           "en": "A standalone teaching tip in its own window that points a tail at a target and glides between them.",
-          "zh": "突出目标区域，引导用户完成操作。"
+          "zh": "指向目标控件的引导卡片，可以移到下一个目标。"
         },
         "urls": {
           "en": "coach-mark/",
@@ -3723,7 +3723,7 @@
         },
         "description": {
           "en": "Coordinates a vertical group of expandable sections with single or multiple expansion.",
-          "zh": "分组展示内容，并控制展开状态。"
+          "zh": "一组可展开的分区，可以设为一次只展开一个。"
         },
         "urls": {
           "en": "accordion/",
@@ -3796,7 +3796,7 @@
         },
         "description": {
           "en": "A rounded, token-backed surface for grouping related content.",
-          "zh": "用不同表面层级组织相关内容。"
+          "zh": "圆角背景面板，用来把相关内容放在一起。"
         },
         "urls": {
           "en": "card/",
@@ -3869,7 +3869,7 @@
         },
         "description": {
           "en": "A DPI-aligned horizontal or vertical separator with optional insets.",
-          "zh": "分隔相邻内容，支持水平和垂直方向。"
+          "zh": "水平或垂直的分隔线。"
         },
         "urls": {
           "en": "divider/",
@@ -3942,7 +3942,7 @@
         },
         "description": {
           "en": "A disclosure surface that reveals caller-supplied content with an optional animation.",
-          "zh": "通过标题展开或收起内容。"
+          "zh": "点击标题展开或收起内容。"
         },
         "urls": {
           "en": "expander/",
@@ -4015,7 +4015,7 @@
         },
         "description": {
           "en": "Adds a label, required marker, helper text, and validation feedback to any input control.",
-          "zh": "组合标签、输入控件、说明和校验反馈。"
+          "zh": "为输入控件加上标签、必填标记、说明和校验提示。"
         },
         "urls": {
           "en": "field/",
@@ -4088,7 +4088,7 @@
         },
         "description": {
           "en": "Search and combine filters, then show, pin or reorder DataGrid columns.",
-          "zh": "为数据表格提供搜索、筛选和操作入口。"
+          "zh": "为 DataGrid 提供搜索、筛选和列设置。"
         },
         "urls": {
           "en": "data-grid-tool-bar/",
@@ -4161,7 +4161,7 @@
         },
         "description": {
           "en": "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation.",
-          "zh": "集中编辑分组属性，并支持搜索和重置。"
+          "zh": "根据属性定义生成分组的编辑表单。"
         },
         "urls": {
           "en": "property-panel/",
@@ -4234,7 +4234,7 @@
         },
         "description": {
           "en": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes.",
-          "zh": "组合条目列表和当前条目的详细内容。"
+          "zh": "宽时并排显示列表和详情，窄时一次显示一个。"
         },
         "urls": {
           "en": "list-detail-view/",
@@ -4307,7 +4307,7 @@
         },
         "description": {
           "en": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density.",
-          "zh": "为界面添加可配置的粒子背景动效。"
+          "zh": "可配置的粒子动画背景。"
         },
         "urls": {
           "en": "particle-backdrop/",
@@ -4500,7 +4500,7 @@
         },
         "description": {
           "en": "Give existing widgets perspective and pointer tilt. Keep text editing and popups in the normal layout; native-window and OpenGL children cannot be embedded.",
-          "zh": "在三维空间中组织和操作现有 Widgets 内容。"
+          "zh": "让现有控件以透视方式显示，并随鼠标倾斜。"
         },
         "urls": {
           "en": "spatial-view/",
@@ -4639,7 +4639,7 @@
         },
         "description": {
           "en": "Position, rotate and scale a widget inside SpatialView.",
-          "zh": "设置空间视图中单个内容项的位置、旋转和缩放。"
+          "zh": "设置 SpatialView 中单个控件的位置、旋转和缩放。"
         },
         "urls": {
           "en": "spatial-item/",
@@ -4713,7 +4713,7 @@
         },
         "description": {
           "en": "A QML surface that shares application models and Fluent theme tokens with the surrounding Widgets.",
-          "zh": "在 Widgets 界面中加载 QML 页面并共享数据。"
+          "zh": "在 Widgets 界面中加载 QML 页面，并共享数据和主题。"
         },
         "urls": {
           "en": "qml-view/",
@@ -4786,7 +4786,7 @@
         },
         "description": {
           "en": "A list of commands shown in a transient surface.",
-          "zh": "组织命令、快捷键和分组操作。"
+          "zh": "显示一组命令的弹出菜单。"
         },
         "urls": {
           "en": "menu/",
@@ -4859,7 +4859,7 @@
         },
         "description": {
           "en": "A horizontal bar of top-level menus, each hosting commands.",
-          "zh": "在应用顶部组织多组菜单命令。"
+          "zh": "窗口顶部的一排菜单。"
         },
         "urls": {
           "en": "menu-bar/",
@@ -4932,7 +4932,7 @@
         },
         "description": {
           "en": "A responsive command strip with primary and overflow actions.",
-          "zh": "排列常用操作，并将放不下的命令收进菜单。"
+          "zh": "排列常用命令，放不下的命令移到溢出菜单。"
         },
         "urls": {
           "en": "command-bar/",
@@ -5005,7 +5005,7 @@
         },
         "description": {
           "en": "Find and run an action by typing its name. Use the keyboard to choose a result and press Enter to execute it.",
-          "zh": "通过搜索快速查找并执行命令。"
+          "zh": "输入名称查找并运行命令。"
         },
         "urls": {
           "en": "command-palette/",
@@ -5078,7 +5078,7 @@
         },
         "description": {
           "en": "A contextual command surface with primary and secondary actions.",
-          "zh": "在当前内容附近显示常用操作和更多命令。"
+          "zh": "在当前内容旁显示的上下文命令。"
         },
         "urls": {
           "en": "command-bar-flyout/",
@@ -5151,7 +5151,7 @@
         },
         "description": {
           "en": "Shows the trail to the current location and lets people go back up the hierarchy.",
-          "zh": "展示当前位置，并返回上级路径。"
+          "zh": "显示当前位置的路径，可以返回上一级。"
         },
         "urls": {
           "en": "breadcrumb/",
@@ -5224,7 +5224,7 @@
         },
         "description": {
           "en": "An adaptive left pane plus content area for top-level navigation.",
-          "zh": "组合导航项、页面内容和窗口区域。"
+          "zh": "应用的左侧导航和内容区域。"
         },
         "urls": {
           "en": "navigation-view/",
@@ -5297,7 +5297,7 @@
         },
         "description": {
           "en": "Header-based navigation between peer views with an animated indicator.",
-          "zh": "在相关内容页面之间切换。"
+          "zh": "在同级页面之间切换的标签导航。"
         },
         "urls": {
           "en": "pivot/",
@@ -5370,7 +5370,7 @@
         },
         "description": {
           "en": "A row of selectable items for switching between views.",
-          "zh": "通过一组紧凑选项切换当前内容。"
+          "zh": "用一排选项切换当前视图。"
         },
         "urls": {
           "en": "selector-bar/",
@@ -5443,7 +5443,7 @@
         },
         "description": {
           "en": "Presents application-controlled steps with completion, error and availability states.",
-          "zh": "展示任务的步骤、当前进度和完成状态。"
+          "zh": "显示任务的步骤、进度和状态。"
         },
         "urls": {
           "en": "stepper/",
@@ -5516,7 +5516,7 @@
         },
         "description": {
           "en": "A control that hosts multiple pages of content behind a tab strip.",
-          "zh": "组织多个内容页面，并管理标签页。"
+          "zh": "用标签页组织多个页面。"
         },
         "urls": {
           "en": "tab-view/",
@@ -5589,7 +5589,7 @@
         },
         "description": {
           "en": "A scrollbar with labels that make long content easier to navigate.",
-          "zh": "在滚动条上展示分组或位置提示。"
+          "zh": "带位置标签的滚动条，方便在长内容中跳转。"
         },
         "urls": {
           "en": "annotated-scrollbar/",
@@ -5662,7 +5662,7 @@
         },
         "description": {
           "en": "Dot-style pagination for moving through a small set of pages.",
-          "zh": "用圆点显示和切换当前页。"
+          "zh": "用圆点显示和切换页面。"
         },
         "urls": {
           "en": "pips-pager/",
@@ -5735,7 +5735,7 @@
         },
         "description": {
           "en": "A Fluent-styled scrollbar with hover expansion.",
-          "zh": "控制可滚动内容的位置。"
+          "zh": "Fluent 样式的滚动条，鼠标悬停时变宽。"
         },
         "urls": {
           "en": "scrollbar/",
@@ -5808,7 +5808,7 @@
         },
         "description": {
           "en": "A scrollable viewport with Fluent scrollbars and optional zoom.",
-          "zh": "为内容提供滚动和缩放能力。"
+          "zh": "可以滚动和缩放的内容区域。"
         },
         "urls": {
           "en": "scroll-view/",
@@ -5881,7 +5881,7 @@
         },
         "description": {
           "en": "Represents a person or identity with an image, initials fallback, shape, size, and presence.",
-          "zh": "用图片、姓名缩写或图标表示用户。"
+          "zh": "用图片或姓名首字母表示一个人。"
         },
         "urls": {
           "en": "avatar/",
@@ -5954,7 +5954,7 @@
         },
         "description": {
           "en": "A small badge that shows counts, icons, or attention dots.",
-          "zh": "以数字、圆点或图标展示简短状态。"
+          "zh": "用数字、图标或圆点显示简短状态。"
         },
         "urls": {
           "en": "info-badge/",
@@ -6027,7 +6027,7 @@
         },
         "description": {
           "en": "An inline bar for status messages with severity and optional actions.",
-          "zh": "在页面内展示提示、成功、警告或错误信息。"
+          "zh": "在页面中显示提示、成功、警告或错误信息。"
         },
         "urls": {
           "en": "info-bar/",
@@ -6100,7 +6100,7 @@
         },
         "description": {
           "en": "Shows determinate or indeterminate progress along a line.",
-          "zh": "展示任务的完成进度。"
+          "zh": "显示任务完成了多少。"
         },
         "urls": {
           "en": "progress-bar/",
@@ -6173,7 +6173,7 @@
         },
         "description": {
           "en": "Shows determinate or indeterminate progress around a ring.",
-          "zh": "用环形进度指示任务正在运行。"
+          "zh": "用旋转的圆环表示任务正在进行。"
         },
         "urls": {
           "en": "progress-ring/",
@@ -6246,7 +6246,7 @@
         },
         "description": {
           "en": "Cover a content area during startup, report progress, and dismiss when ready.",
-          "zh": "在应用准备期间展示品牌与加载进度。"
+          "zh": "应用启动时覆盖内容区，显示加载进度。"
         },
         "urls": {
           "en": "splash-screen/",
@@ -6319,7 +6319,7 @@
         },
         "description": {
           "en": "Shows a skeleton placeholder while content is loading.",
-          "zh": "在内容加载前显示占位布局。"
+          "zh": "内容加载前显示的占位动画。"
         },
         "urls": {
           "en": "shimmer/",
@@ -6392,7 +6392,7 @@
         },
         "description": {
           "en": "Shows a brief same-window notification without interrupting the current task.",
-          "zh": "用短暂浮层反馈操作结果。"
+          "zh": "短暂显示的通知，不会打断当前操作。"
         },
         "urls": {
           "en": "toast/",
@@ -6465,7 +6465,7 @@
         },
         "description": {
           "en": "A popup label that shows extra information about a control on hover.",
-          "zh": "在鼠标悬停时补充简短说明。"
+          "zh": "鼠标悬停时显示的简短说明。"
         },
         "urls": {
           "en": "tooltip/",
@@ -6538,7 +6538,7 @@
         },
         "description": {
           "en": "A search input with local or asynchronous suggestions, loading, pagination and retry.",
-          "zh": "输入文字时显示可选建议。"
+          "zh": "输入时显示候选建议的搜索框。"
         },
         "urls": {
           "en": "auto-suggest-box/",
@@ -6611,7 +6611,7 @@
         },
         "description": {
           "en": "Choose several values as compact tags with asynchronous suggestions and native text input.",
-          "zh": "输入、选择和删除多个标签。"
+          "zh": "把多个值显示为可以删除的标签。"
         },
         "urls": {
           "en": "tag-input/",
@@ -6684,7 +6684,7 @@
         },
         "description": {
           "en": "Read-only code with syntax colors, exact copying, folding and bounded scrolling.",
-          "zh": "展示带语法高亮的代码，并支持复制。"
+          "zh": "只读显示代码，带语法高亮和复制按钮。"
         },
         "urls": {
           "en": "code-block/",
@@ -6757,7 +6757,7 @@
         },
         "description": {
           "en": "Static text rendered with Fluent typography roles and elision.",
-          "zh": "按不同文字层级展示文本。"
+          "zh": "按 Fluent 字体层级显示文字。"
         },
         "urls": {
           "en": "label/",
@@ -6830,7 +6830,7 @@
         },
         "description": {
           "en": "A single-line text box with Fluent styling and a clear button.",
-          "zh": "输入和编辑单行文字。"
+          "zh": "输入单行文字。"
         },
         "urls": {
           "en": "line-edit/",
@@ -6903,7 +6903,7 @@
         },
         "description": {
           "en": "A numeric input with spin buttons and inline expression support.",
-          "zh": "输入数值，支持步进和拖动微调。"
+          "zh": "输入数值，可以步进或拖动调整。"
         },
         "urls": {
           "en": "number-box/",
@@ -6976,7 +6976,7 @@
         },
         "description": {
           "en": "A text box that conceals input with an optional reveal button.",
-          "zh": "输入密码并按需显示内容。"
+          "zh": "输入密码，可以按需显示。"
         },
         "urls": {
           "en": "password-box/",
@@ -7049,7 +7049,7 @@
         },
         "description": {
           "en": "A multi-line text surface for longer-form input.",
-          "zh": "输入和编辑多行文字。"
+          "zh": "输入多行文字。"
         },
         "urls": {
           "en": "text-edit/",
@@ -7122,7 +7122,7 @@
         },
         "description": {
           "en": "A custom window title bar with drag regions and themed chrome.",
-          "zh": "组织窗口标题、图标和标题栏操作。"
+          "zh": "自定义窗口标题栏，可以放入自己的控件。"
         },
         "urls": {
           "en": "title-bar/",
@@ -7195,7 +7195,7 @@
         },
         "description": {
           "en": "A Fluent top-level window with custom chrome and theming.",
-          "zh": "承载应用页面、导航和窗口控制。"
+          "zh": "带自定义标题栏和主题背景的顶层窗口。"
         },
         "urls": {
           "en": "window/",
@@ -7268,7 +7268,7 @@
         },
         "description": {
           "en": "A theme-aware widget that renders bundled Fluent icon glyphs at optical sizes.",
-          "zh": "显示 Fluent 图标并调整大小与颜色。"
+          "zh": "显示内置的 Fluent 图标。"
         },
         "urls": {
           "en": "font-icon/",
