@@ -33,6 +33,8 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/#top">Project website</a>
   ·
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">Questions &amp; community</a>
+  ·
+  <a href="https://calvinhxx.github.io/Fluent-Qt/#support">Support the project</a>
 </p>
 
 Fluent-Qt (FluentQt) is a cross-platform, Fluent-style C++ UI component library built on Qt Widgets. It provides native controls for input, navigation, collections, data grids, [charts](docs/architecture/charts.md), overlays, and windows. Written in C++17, it integrates into existing Qt projects through CMake and offers optional PySide6 bindings.
