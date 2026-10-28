@@ -14,7 +14,7 @@ import fluentqt
 from fluentqt.spatial import SpatialRuntime, SpatialSession
 from fluentqt._fluentqt import fluent as _native_fluent
 from PySide6.QtCore import (
-    QAbstractAnimation, QEasingCurve, QEvent, QLineF, QObject, QPoint, QPointF,
+    QAbstractAnimation, QEasingCurve, QElapsedTimer, QEvent, QLineF, QObject, QPoint, QPointF,
     QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal, Slot,
 )
 from PySide6.QtGui import (
@@ -33,6 +33,8 @@ from PySide6.QtWidgets import (
     QStyleOptionButton, QStyleOptionFrame, QWidget,
 )
 from shiboken6 import VoidPtr, invalidate, isValid
+
+from fluentqt._qt_painting import region_rects
 
 from .settings import gallery_settings
 from .glyph_paint_device import (
@@ -126,6 +128,16 @@ _CACHE_BYTES_PER_PIXEL = 4
 _PAINT_SAMPLES = 2
 _GLYPH_SCRATCH_BYTES = 512 * 1024
 _GLYPH_WORKING_SET_BYTES = _GLYPH_SCRATCH_BYTES + 2 * GLYPH_IMAGE_CACHE_BYTES
+# Continuous updates covering this share of a panel paint at native density and are
+# refined at cache density after _REFINE_DELAY_MS, as in GallerySpatialRenderPolicy.h.
+_INTERACTIVE_DAMAGE_SHARE = .3
+_INTERACTIVE_INTERVAL_MS = 120
+_REFINE_DELAY_MS = 160
+# The navigation pixel dirtied to bring a backing-store pass to the GPU surface.
+_SYNTHETIC_PASS_RECT = QRect(0, 0, 2, 2)
+# Native-density frames slower than this for _SLOW_FRAME_STREAK frames suggest 2D once.
+_SLOW_FRAME_MS = 33
+_SLOW_FRAME_STREAK = 60
 
 
 def _preferred_extra_sampling(native_dpr):
@@ -173,12 +185,120 @@ def _cache_plan(panels, native_dpr, max_dimension, max_extra=2., budget=_CACHE_B
     return None
 
 
+class _PanelDamage:
+    """Texture damage since ``base``, the revision its consumer last painted.
+
+    Mirrors GallerySpatialRenderPolicy.h: logical panel coordinates; ``full``
+    means the changed extent is unknown.
+    """
+
+    def __init__(self, base=0, region=None, full=True):
+        self.base = base
+        self.region = QRegion() if region is None else region
+        self.full = full
+
+    def add(self, dirty):
+        if dirty is None or dirty.isEmpty():
+            self.full = True
+        if self.full:
+            return
+        self.region = self.region.united(dirty)
+        if self.region.rectCount() > 32:
+            self.region = QRegion(self.region.boundingRect())
+
+    def take(self, revision):
+        changes = _PanelDamage(self.base, self.region, self.full)
+        self.base, self.region, self.full = revision, QRegion(), False
+        return changes
+
+
+class _SlowFrameTracker:
+    """Per-frame texture cost and sustained-slowness streak, as in GallerySpatialRenderPolicy.h.
+
+    Both panels of a frame count together; a frame without native-density updates
+    neither confirms nor clears a streak.
+    """
+
+    def __init__(self):
+        self.cost_ms = 0.  # every frame with texture work; drives adaptive thresholds
+        self.interactive_cost_ms = 0.  # native-density frames only; drives the streak
+        self.streak = 0
+        self.reported = False
+
+    def record(self, frame_ms, interactive):
+        """Return True once, when the streak first reaches _SLOW_FRAME_STREAK."""
+        def average(current):
+            return current * .8 + frame_ms * .2 if current > 0 else frame_ms
+        self.cost_ms = average(self.cost_ms)
+        if not interactive:
+            return False
+        self.interactive_cost_ms = average(self.interactive_cost_ms)
+        self.streak = self.streak + 1 if self.interactive_cost_ms > _SLOW_FRAME_MS else 0
+        if self.reported or self.streak < _SLOW_FRAME_STREAK:
+            return False
+        self.reported = True
+        return True
+
+
+def _covered_rows(bands):
+    return sum(bottom - top for top, bottom in bands)
+
+
+def _damage_rows(damage, dpr, height, quantum=1):
+    """Texture rows covered by logical damage, aligned outward to ``quantum``."""
+    rows = []
+    if not dpr > 0 or height <= 0 or quantum <= 0:
+        return rows
+    for rect in region_rects(damage):
+        top = min(max(math.floor(rect.top() * dpr) // quantum * quantum, 0), height)
+        bottom = math.ceil((rect.top() + rect.height()) * dpr)
+        bottom = min(max((bottom + quantum - 1) // quantum * quantum, 0), height)
+        if bottom > top:
+            rows.append([top, bottom])
+    rows.sort()
+    merged = []
+    gap = max(8, quantum)
+    for top, bottom in rows:
+        if merged and top <= merged[-1][1] + gap:
+            merged[-1][1] = max(merged[-1][1], bottom)
+        else:
+            merged.append([top, bottom])
+    return [(top, bottom) for top, bottom in merged]
+
+
+def _shared_row_quantum(native_dpr, cache_dpr):
+    """Smallest logical row step that is whole pixels at both densities, or 0."""
+    for step in range(1, 9):
+        if (abs(step * native_dpr - round(step * native_dpr)) < 1e-6
+                and abs(step * cache_dpr - round(step * cache_dpr)) < 1e-6):
+            return step
+    return 0
+
+
+def _plan_strips(top, bottom, height, capacity, guard, quantum=1):
+    """Split rows into strips whose guarded paint range fits ``capacity``."""
+    strips = []
+    if top < 0 or bottom > height or capacity <= 0 or guard < 0 or quantum <= 0:
+        return strips
+    while top < bottom:
+        paint_top = max(0, top - guard)
+        lead = top - paint_top
+        rows = bottom - top
+        if lead + rows + min(guard, height - bottom) > capacity:
+            rows = (capacity - lead - guard) // quantum * quantum
+            if rows <= 0:
+                return []
+        strips.append((top, rows, paint_top, min(height, top + rows + guard)))
+        top += rows
+    return strips
 
 
 class _Capture(QGraphicsEffect):
-    def __init__(self, invalidated, parent):
+    def __init__(self, invalidated, parent, target=None):
         super().__init__(parent)
+        # Receives the changed region in target coordinates; empty means all of it.
         self.invalidated = invalidated
+        self.target = target
         self.rendering = self.composing = False
         self.render_origin = QPoint()
         self.setEnabled(False)
@@ -194,7 +314,7 @@ class _Capture(QGraphicsEffect):
             finally:
                 painter.restore()
         elif not self.composing and self.invalidated:
-            self.invalidated()
+            self.invalidated(_native_fluent._SpatialTextureHost.graphicsEffectDirtyRegion(painter, self.target))
 
 
 class _SceneTheme(fluentqt.FluentWidget):
@@ -215,6 +335,16 @@ class _RhiSurface(_native_fluent._SpatialTextureHost):
         self.initialized.connect(self._initialized)
         self.renderingFailed.connect(owner.rendering_failed)
         self.cacheUnavailable.connect(owner.release_oversized_presentation)
+        self.paint_pending = False
+        self.fallback_timer = QTimer(self)
+        self.fallback_timer.setSingleShot(True)
+        self.fallback_timer.setInterval(50)
+        self.fallback_timer.timeout.connect(self._fallback)
+
+    @Slot()
+    def _fallback(self):
+        if self.paint_pending:
+            self.requestFrame()
 
     def _initialized(self):
         self.owner.renderer_initialized = True
@@ -223,13 +353,24 @@ class _RhiSurface(_native_fluent._SpatialTextureHost):
     def update(self):
         self.requestFrame()
 
-    def request_frame(self, with_input=False):
+    def request_frame(self, with_input=False, in_paint_pass=False):
+        # Same backing-store pass policy as the OpenGL surface.
+        if self.property("presenting") and self.scheduleFrameInBackingStorePass():
+            if not self.paint_pending and not in_paint_pass:
+                self.owner.request_backing_store_pass()
+            self.paint_pending = True
+            # Arm once per pending frame; continuous requests must not postpone it.
+            if not self.fallback_timer.isActive():
+                self.fallback_timer.start()
+            return
         self.requestFrame()
 
     def clear_frame_caches(self):
         self.clearFrameCaches()
 
     def synchronizeFrame(self):
+        self.paint_pending = False
+        self.fallback_timer.stop()
         owner = self.owner
         presenting = bool(self.property("presenting") and owner.navigation_revision)
         self.setLayerCount(3 if presenting else 1)
@@ -249,9 +390,11 @@ class _RhiSurface(_native_fluent._SpatialTextureHost):
             material.setAlphaF((.32 if dark else .34) if nav else (.62 if dark else .56))
             reflection = QColor(colors.grey10)
             reflection.setAlphaF(.18 if dark else .72)
-            self.setLayer(layer, rect, transform,
-                          owner.navigation_revision if nav else owner.content_revision,
+            revision = owner.navigation_revision if nav else owner.content_revision
+            self.setLayer(layer, rect, transform, revision,
                           12., material, reflection, owner.progress, .06 if nav else .085)
+            changes = (owner.navigation_damage if nav else owner.content_damage).take(revision)
+            self.setLayerDamage(layer, changes.base, QRegion() if changes.full else changes.region)
 
     def paintLayer(self, painter, index, region):
         if index == 0:
@@ -259,7 +402,8 @@ class _RhiSurface(_native_fluent._SpatialTextureHost):
         else:
             nav = index == 2
             origin = QPoint() if nav else self.owner.panels[1][0].topLeft().toPoint()
-            painter.translate(origin)
+            # QWidget.render places the region's top-left at the painter origin.
+            painter.translate(region.boundingRect().topLeft())
             self.owner.render_widgets(painter, nav, region.translated(-origin))
 
 
@@ -272,13 +416,13 @@ class _Surface(QOpenGLWidget):
         self.owner = owner
         self.input_frame_requested = False
         self.particles = GalleryParticleCompositor(self, getattr(owner, "session", None))
-        self.particles.frameRequested.connect(self.update)
-        self.particles.staticContentInvalidated.connect(owner._capture_content)
+        self.particles.frameRequested.connect(self.request_frame)
+        self.particles.staticContentInvalidated.connect(self._static_content_invalidated)
         self.qml_layer = None
         if QML_BRIDGE_AVAILABLE:
             from fluentqt.qmlbridge import QmlTextureLayer
             self.qml_layer = QmlTextureLayer(self)
-            self.qml_layer.frameRequested.connect(self.update)
+            self.qml_layer.frameRequested.connect(self.request_frame)
             self.qml_layer.renderingFailed.connect(self.qml_rendering_failed)
             self.qmlCompositionFailed.connect(owner.qml_rendering_failed, Qt.QueuedConnection)
         self.presented_content_texture = 0
@@ -309,10 +453,76 @@ class _Surface(QOpenGLWidget):
         fmt.setAlphaBufferSize(8)
         self.setFormat(fmt)
 
-    def request_frame(self, with_input=False):
-        if not self.input_frame_requested:
-            self.input_frame_requested = with_input
+        # Always-on counters and native-density refinement, as in the C++ surface.
+        self.navigation_painted_rows = self.content_painted_rows = 0
+        self.partial_updates = self.interactive_updates = self.refinements = 0
+        self.frame_update_ms = 0.
+        self.frame_interactive = False
+        self.slow_tracker = _SlowFrameTracker()
+        self.interactive = (os.environ.get("FLUENT_QT_SPATIAL_BENCHMARK", "0") == "0"
+                            or os.environ.get("FLUENT_QT_SPATIAL_INTERACTIVE") != "0")
+        self.clock = QElapsedTimer()
+        self.clock.start()
+        self.refine_timer = QTimer(self)
+        self.refine_timer.setSingleShot(True)
+        self.refine_timer.setInterval(_REFINE_DELAY_MS)
+        self.refine_timer.timeout.connect(self._refine)
+        self.paint_pending = False
+        self.fallback_timer = QTimer(self)
+        self.fallback_timer.setSingleShot(True)
+        self.fallback_timer.setInterval(50)
+        self.fallback_timer.timeout.connect(self._fallback)
+
+    @Slot()
+    def _static_content_invalidated(self):
+        self.owner.mark_dirty(False)
+        self.request_frame()
+
+    @Slot()
+    def _fallback(self):
+        # No backing-store pass reached this surface; queue it normally.
+        if self.paint_pending:
             self.update()
+
+    @Slot()
+    def _refine(self):
+        # Repaint rows drawn at native density during continuous updates.
+        refined = False
+        for index, cache in enumerate(self.caches):
+            degraded = cache.get("degraded") if cache else None
+            dpr = cache.get("dpr", 0) if cache else 0
+            if degraded is None or degraded.isEmpty() or not dpr > 0:
+                continue
+            logical = QRegion()
+            width = cache["rect"].width()
+            for rows in region_rects(degraded):
+                logical = logical.united(QRegion(QRectF(
+                    0, rows.top() / dpr, width, rows.height() / dpr).toAlignedRect()))
+            # A refinement is not part of the continuous update that degraded it.
+            cache["updated_at"] = -1
+            self.owner.mark_dirty(index == 0, logical)
+            refined = True
+        if refined:
+            self.refinements += 1
+            self.request_frame()
+
+    def request_frame(self, with_input=False, in_paint_pass=False):
+        # While presenting, paint inside a backing-store pass instead of queuing this
+        # texture widget: Qt repaints everything beneath a queued texture widget whenever
+        # another widget is dirty in the same pass, which would retire both panel textures.
+        if self.input_frame_requested:
+            return
+        self.input_frame_requested = with_input
+        if (self.property("presenting")
+                and _native_fluent._SpatialTextureHost.schedulePaintInBackingStorePass(self)):
+            if not self.paint_pending and not in_paint_pass:
+                self.owner.request_backing_store_pass()
+            self.paint_pending = True
+            # Arm once per pending frame; continuous requests must not postpone it.
+            if not self.fallback_timer.isActive():
+                self.fallback_timer.start()
+            return
+        self.update()
 
     @Slot(str)
     def qml_rendering_failed(self, message):
@@ -371,6 +581,7 @@ class _Surface(QOpenGLWidget):
     def clear_frame_caches(self):
         self.input_frame_requested = False
         self.has_presented_frame = False
+        self.refine_timer.stop()
         self.makeCurrent()
         self.glyph_cache.clear()
         self.particles.release()
@@ -540,12 +751,20 @@ class _Surface(QOpenGLWidget):
         if _alive(self.qml_layer):
             total += self.qml_layer.statistics().get("allocatedBytes", 0)
         return {"glyphCacheBytes": self.glyph_cache.cost(),
-                "cacheEstimatedBytes": total}
+                "cacheEstimatedBytes": total,
+                "navigationPaintedRows": self.navigation_painted_rows,
+                "contentPaintedRows": self.content_painted_rows,
+                "partialUpdates": self.partial_updates,
+                "interactiveUpdates": self.interactive_updates,
+                "refinements": self.refinements,
+                "updateCostMs": self.slow_tracker.cost_ms,
+                "slowFrames": self.slow_tracker.streak}
 
     def update_texture(self, index):
         owner = self.owner
         rect = owner.panels[index][0]
-        revision = owner.navigation_revision if index == 0 else owner.content_revision
+        navigation = index == 0
+        revision = owner.navigation_revision if navigation else owner.content_revision
         if not revision or rect.isEmpty():
             return True
         cache = self.caches[index]
@@ -555,50 +774,137 @@ class _Surface(QOpenGLWidget):
             return True
         if not cache or not cache["texture"].isValid():
             return False
+        clock = QElapsedTimer()
+        clock.start()
         pixels = cache["texture"].size()
-        guard = max(1, math.ceil(dpr))
-        stride = (pixels.height() if pixels.height() <= self.plan[2].height()
-                  else max(1, self.plan[2].height() - 2 * guard))
-        for top in range(0, pixels.height(), stride):
-            height = min(stride, pixels.height() - top)
-            paint_top = max(0, top - guard)
-            paint_bottom = min(pixels.height(), top + height + guard)
-            paint_height = paint_bottom - paint_top
+        height = pixels.height()
+        # Damage applies only to the texture state it was accumulated against.
+        changes = (owner.navigation_damage if navigation else owner.content_damage).take(revision)
+        reusable = (cache.get("revision") and cache.get("revision") == changes.base
+                    and cache.get("rect") == rect and cache.get("dpr") == dpr and not changes.full)
+        bands = _damage_rows(changes.region, dpr, height) if reusable else []
+        known = bool(reusable and bands)
+        partial = known and _covered_rows(bands) * 10 < height * 6
+        if not partial:
+            bands = [(0, height)]
+        # Continuous large updates with a reported extent paint at native density and
+        # are refined at cache density after they pause; unknown changes keep density.
+        native_dpr = self.devicePixelRatioF()
+        now = self.clock.elapsed()
+        slow = self.slow_tracker.cost_ms > 16
+        share = _INTERACTIVE_DAMAGE_SHARE / 3 if slow else _INTERACTIVE_DAMAGE_SHARE
+        interval = 2 * _INTERACTIVE_INTERVAL_MS if slow else _INTERACTIVE_INTERVAL_MS
+        quantum = _shared_row_quantum(native_dpr, dpr)
+        updated_at = cache.get("updated_at", -1)
+        continuous = updated_at >= 0 and now - updated_at < interval
+        interactive = (self.interactive and known and quantum and dpr > native_dpr and continuous
+                       and _covered_rows(bands) >= share * height)
+        cache["updated_at"] = now
+        # Qt caches nested effect pixmaps in device pixels and invalidates them only when
+        # the painter transform changes, so a density switch would replay them misplaced.
+        if interactive:
+            first, last = bands[0][0], bands[-1][1]
+            interactive = not owner.has_nested_effects(
+                navigation, QRectF(0, first / dpr, rect.width(), (last - first) / dpr).toAlignedRect())
+        if interactive and partial:
+            bands = _damage_rows(changes.region, dpr, height, round(quantum * dpr))
+        degraded = cache.get("degraded") or QRegion()
+        for top, bottom in bands:
+            if not self.paint_rows(cache, rect, navigation, top, bottom,
+                                   native_dpr if interactive else dpr, quantum):
+                return False
+            rows = QRegion(0, top, 1, bottom - top)
+            degraded = degraded.united(rows) if interactive else degraded.subtracted(rows)
+            if navigation:
+                self.navigation_painted_rows += bottom - top
+            else:
+                self.content_painted_rows += bottom - top
+        if not partial:
+            degraded = QRegion(0, 0, 1, height) if interactive else QRegion()
+        cache["degraded"] = degraded
+        self.partial_updates += bool(partial)
+        self.interactive_updates += bool(interactive)
+        if interactive:
+            self.refine_timer.start()
+        self.frame_update_ms += clock.nsecsElapsed() / 1e6
+        self.frame_interactive = self.frame_interactive or bool(interactive)
+        cache["key"] = key
+        cache["revision"], cache["rect"], cache["dpr"] = revision, QRectF(rect), dpr
+        return True
+
+    def finish_texture_frame(self):
+        if not self.frame_update_ms > 0:
+            return
+        report = self.slow_tracker.record(self.frame_update_ms, self.frame_interactive)
+        self.frame_update_ms = 0.
+        self.frame_interactive = False
+        # Sustained slow native-density frames: let the controller suggest 2D once.
+        if report:
+            QTimer.singleShot(0, self.owner.report_slow_rendering)
+
+    def paint_rows(self, cache, rect, navigation, top, bottom, paint_dpr, quantum):
+        """Paint texture rows [top, bottom); a lower density is scaled into the texture."""
+        dpr = self.plan[0]
+        pixels = cache["texture"].size()
+        scaled = paint_dpr != dpr
+        texture_step = round(quantum * dpr) if scaled else 1
+        paint_step = round(quantum * paint_dpr) if scaled else 1
+        paint_height = math.ceil(rect.height() * paint_dpr) if scaled else pixels.height()
+        paint_width = min(pixels.width(), math.ceil(rect.width() * paint_dpr)) if scaled else pixels.width()
+
+        def to_paint(row):
+            return paint_height if row >= pixels.height() else min(paint_height, row // texture_step * paint_step)
+
+        def to_texture(row):
+            return pixels.height() if row >= paint_height else min(pixels.height(), row // paint_step * texture_step)
+
+        # QWidget clips in logical pixels; guard a full logical pixel on each side.
+        guard = max(1, math.ceil(paint_dpr))
+        strips = _plan_strips(to_paint(top), to_paint(bottom), paint_height,
+                              self.plan[2].height(), guard, paint_step)
+        if not strips:
+            return top >= bottom
+        gl = self.context().functions()
+        for strip_top, strip_height, paint_top, paint_bottom in strips:
+            paint_rows = paint_bottom - paint_top
             self.paint_target.bind()
-            gl = self.context().functions()
             # Clear only the strip and its guard pixels in the shared target.
             gl.glEnable(0x0C11)
-            gl.glScissor(0, 0, pixels.width(), paint_height)
+            gl.glScissor(0, 0, paint_width, paint_rows)
             gl.glColorMask(True, True, True, True)
             gl.glStencilMask(0xFFFFFFFF)
             gl.glClearColor(0, 0, 0, 0)
             gl.glClear(0x4000 | 0x0400)
             gl.glDisable(0x0C11)
-            device = QOpenGLPaintDevice(QSize(pixels.width(), paint_height))
-            device.setDevicePixelRatio(dpr)
+            device = QOpenGLPaintDevice(QSize(paint_width, paint_rows))
+            device.setDevicePixelRatio(paint_dpr)
             glyph_device = GlyphPaintDevice(device, self.devicePixelRatioF(),
-                                            QPointF(0, paint_top / dpr), self.glyph_cache)
+                                            QPointF(0, paint_top / paint_dpr), self.glyph_cache)
             painter = QPainter(glyph_device if needs_native_glyph_coverage(self.devicePixelRatioF())
                                else device)
             painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-            strip = QRectF(0, paint_top / dpr, rect.width(), paint_height / dpr)
-            painter.setClipRect(QRectF(0, 0, rect.width(), paint_height / dpr))
-            origin = rect.topLeft() if index == 0 else QPointF()
+            strip = QRectF(0, paint_top / paint_dpr, rect.width(), paint_rows / paint_dpr)
+            painter.setClipRect(QRectF(0, 0, rect.width(), paint_rows / paint_dpr))
+            origin = rect.topLeft() if navigation else QPointF()
             source_rect = strip.translated(origin).toAlignedRect()
             # QWidget owns the integer offset for nested effect clips; the
             # painter carries only the fractional pixel alignment.
             painter.translate(QPointF(source_rect.topLeft()) - origin - strip.topLeft())
-            owner.render_widgets(painter, index == 0, QRegion(source_rect))
+            self.owner.render_widgets(painter, navigation, QRegion(source_rect))
             painter.end()
             gl.glDisable(0x0C11)
             # GLES requires matching rectangles/formats when resolving multisampling.
-            painted = QRect(0, 0, pixels.width(), paint_height)
+            painted = QRect(0, 0, paint_width, paint_rows)
             QOpenGLFramebufferObject.blitFramebuffer(
                 self.resolve_target, painted, self.paint_target, painted)
+            texture_top = to_texture(strip_top)
+            texture_bottom = to_texture(strip_top + strip_height)
             QOpenGLFramebufferObject.blitFramebuffer(
-                cache["texture"], QRect(0, pixels.height() - top - height, pixels.width(), height),
-                self.resolve_target, QRect(0, paint_bottom - top - height, pixels.width(), height))
-        cache["key"] = key
+                cache["texture"],
+                QRect(0, pixels.height() - texture_bottom, pixels.width(), texture_bottom - texture_top),
+                self.resolve_target,
+                QRect(0, paint_bottom - strip_top - strip_height, paint_width, strip_height),
+                0x4000, 0x2601 if scaled else 0x2600)  # GL_COLOR_BUFFER_BIT, GL_LINEAR/GL_NEAREST
         return True
 
     def draw_texture(self, painter, index, colors, dark):
@@ -696,6 +1002,8 @@ class _Surface(QOpenGLWidget):
 
     def paintGL(self):
         self.input_frame_requested = False
+        self.paint_pending = False
+        self.fallback_timer.stop()
         gl = self.context().functions()
         self.invalidate_backdrop()
         if self.property("presenting"):
@@ -745,6 +1053,7 @@ class _Surface(QOpenGLWidget):
                         self.owner.render_failure_timer.start(0)
                         return
                     self.presented_content_texture = self.caches[1]["texture"].texture() if self.caches[1] else 0
+            self.finish_texture_frame()
             if qml_ready and _alive(self.qml_layer):
                 texture = self.qml_layer.compose(
                     self.presented_content_texture, self.plan[1][1],
@@ -795,8 +1104,8 @@ class GallerySpatialController(QObject):
         self.settings = gallery_settings()
         self.canvas = None
         self.capture = self.content_capture = None
-        self.navigation_revision = 0
-        self.content_revision = 0
+        self.reset_revisions()
+        self.synthetic_pass_pending = False
         self.backdrop = QPixmap()
         self.backdrop_dirty = True
         self.renderer_initialized = False
@@ -940,7 +1249,7 @@ class GallerySpatialController(QObject):
             self.navigation.setGraphicsEffect(None)
         self.capture = self.content_capture = None
         self.navigation.setAttribute(Qt.WA_NoSystemBackground, self._native_background)
-        self.navigation_revision = self.content_revision = 0
+        self.reset_revisions()
         self.backdrop = QPixmap()
         self.backdrop_dirty = True
         self.grabbed = self.hovered = None
@@ -1094,23 +1403,85 @@ class GallerySpatialController(QObject):
                 self.apply_mode(True)
             return
         self.navigation.setAttribute(Qt.WA_NoSystemBackground)
-        self.content_capture = _Capture(self._capture_content, self)
+        self.content_capture = _Capture(self._capture_content, self, self.navigation.contentHost())
         self.navigation.contentHost().setGraphicsEffect(self.content_capture)
-        self.capture = _Capture(self._capture_navigation, self)
+        self.capture = _Capture(self._capture_navigation, self, self.navigation)
         self.navigation.setGraphicsEffect(self.capture)
         self.apply_mode(self.settings.spatial_mode_enabled)
 
-    def _capture_content(self):
-        self.content_revision += 1
-        if _alive(self.canvas):
-            self.canvas.request_frame()
+    def mark_dirty(self, navigation, dirty=None):
+        """Retire a panel texture; ``dirty`` is panel-local, empty means all of it."""
+        (self.navigation_damage if navigation else self.content_damage).add(dirty)
+        if navigation:
+            self.navigation_revision += 1
+        else:
+            self.content_revision += 1
 
-    def _capture_navigation(self):
-        self.navigation_revision += 1
-        self.content_revision += 1
-        self.layout()
+    def reset_revisions(self):
+        self.navigation_revision = self.content_revision = 0
+        self.navigation_damage = _PanelDamage()
+        self.content_damage = _PanelDamage()
+
+    def _capture_content(self, dirty=None):
+        self.mark_dirty(False, dirty)
         if _alive(self.canvas):
-            self.canvas.request_frame()
+            self.canvas.request_frame(in_paint_pass=True)
+
+    def request_backing_store_pass(self):
+        """Raster-dirty a navigation pixel so a backing-store pass reaches the surface."""
+        self.synthetic_pass_pending = True
+        self.navigation.update(QRect(0, 0, 1, 1))
+
+    def has_nested_effects(self, navigation, area):
+        root = self.navigation if navigation else self.navigation.contentHost()
+        for child in root.findChildren(QWidget):
+            effect = child.graphicsEffect()
+            if (effect is not None and effect.isEnabled()
+                    and effect is not self.capture and effect is not self.content_capture
+                    and child.isVisibleTo(root)
+                    and QRect(child.mapTo(root, QPoint()), child.size()).intersects(area)):
+                return True
+        return False
+
+    @Slot()
+    def report_slow_rendering(self):
+        if _alive(self.canvas) and self.canvas.property("presenting"):
+            fluentqt.Toast.showToast(
+                self.window,
+                "3D is running slowly on this device. Turn off 3D Gallery in Settings for smoother scrolling.",
+                fluentqt.Toast.Severity.Warning,
+                6000,
+            )
+
+    def _capture_navigation(self, dirty=None):
+        # The pixel dirtied only to bring a backing-store pass to the surface is not content.
+        synthetic = (self.synthetic_pass_pending and dirty is not None and not dirty.isEmpty()
+                     and _SYNTHETIC_PASS_RECT.contains(dirty.boundingRect()))
+        self.synthetic_pass_pending = False
+        if synthetic:
+            if _alive(self.canvas):
+                self.canvas.request_frame(in_paint_pass=True)
+            return
+        # The content host is a descendant of the navigation view, so Qt reports
+        # every change here. Attribute it by region instead of retiring both.
+        self.layout()
+        host = self.navigation.contentHost()
+        content = QRect(host.mapTo(self.navigation, QPoint()), host.size())
+        # A panel at revision zero was never captured; its first capture is whole.
+        if (dirty is None or dirty.isEmpty() or not self.navigation_revision
+                or not self.content_revision):
+            self.mark_dirty(True)
+            self.mark_dirty(False)
+        else:
+            navigation = self.panels[0][0].toAlignedRect()
+            navigation_dirty = dirty.intersected(navigation)
+            content_dirty = dirty.intersected(content)
+            if not navigation_dirty.isEmpty():
+                self.mark_dirty(True, navigation_dirty.translated(-navigation.topLeft()))
+            if not content_dirty.isEmpty():
+                self.mark_dirty(False, content_dirty.translated(-content.topLeft()))
+        if _alive(self.canvas):
+            self.canvas.request_frame(in_paint_pass=True)
 
     def render_widgets(self, painter, navigation, region):
         # Widgets paint directly into the GPU cache. Suppress the other panel's effect
@@ -1181,7 +1552,7 @@ class GallerySpatialController(QObject):
         self.capture = self.content_capture = None
         if isinstance(self.canvas, _Surface) and _alive(self.canvas.qml_layer):
             self.canvas.qml_layer.release()
-        self.navigation_revision = self.content_revision = 0
+        self.reset_revisions()
         self.backdrop = QPixmap()
         self.grabbed = self.hovered = None
         if _alive(self.canvas):
@@ -1231,8 +1602,8 @@ class GallerySpatialController(QObject):
     def refresh(self, *args):
         self.backdrop_dirty = True
         # The new material and its widget textures must use the same theme.
-        self.navigation_revision += 1
-        self.content_revision += 1
+        self.mark_dirty(True)
+        self.mark_dirty(False)
         if fluentqt.current_theme() == fluentqt.Theme.HighContrast:
             self.settings.set_spatial_mode_enabled(False)
         self.apply_mode(self.settings.spatial_mode_enabled)
@@ -1242,8 +1613,8 @@ class GallerySpatialController(QObject):
         # Native material removal must see the new opaque GPU background before
         # the later Gallery Settings notification. Do not restart 3D motion.
         self.backdrop_dirty = True
-        self.navigation_revision += 1
-        self.content_revision += 1
+        self.mark_dirty(True)
+        self.mark_dirty(False)
         self.sync()
 
     @Slot(bool)
@@ -1359,8 +1730,7 @@ class GallerySpatialController(QObject):
             self.canvas.clear_frame_caches()
             self.set_filtering(False)
             self.canvas.setProperty("galleryDepthProgress", 0.)
-            self.navigation_revision = 0
-            self.content_revision = 0
+            self.reset_revisions()
             self.backdrop = QPixmap()
             self.backdrop_dirty = True
             self.grabbed = self.hovered = None
@@ -1442,7 +1812,17 @@ class GallerySpatialController(QObject):
                 self.backdrop.fill(Qt.transparent)
                 painter = QPainter(self.backdrop)
                 painter.translate(-bounds.topLeft())
-                self.window.render(painter, QPoint(), QRegion(), QWidget.RenderFlags())
+                # The backdrop excludes both panels; rendering it is not a panel change.
+                captures = [capture for capture in (self.capture, self.content_capture)
+                            if capture is not None]
+                previous = [capture.composing for capture in captures]
+                for capture in captures:
+                    capture.composing = True
+                try:
+                    self.window.render(painter, QPoint(), QRegion(), QWidget.RenderFlags())
+                finally:
+                    for capture, composing in zip(captures, previous):
+                        capture.composing = composing
                 painter.end()
 
     @Slot()
