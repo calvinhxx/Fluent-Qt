@@ -87,7 +87,7 @@ def _load_contract() -> dict[str, object]:
         )
     summary = contract.get("summary", {})
     expected = {
-        "route_count": 121,
+        "route_count": 122,
         "component_count": 96,
         "sample_count": 277,
     }
@@ -210,6 +210,8 @@ def catalog_coverage_errors(manifest_classes: Iterable[str]) -> list[str]:
     """Compare routed plus embedded support types with the binding manifest."""
 
     manifest = set(manifest_classes)
+    # Every PySide6 build includes the Particles module.
+    manifest.add("ParticleBackdrop")
     if SPATIAL_AVAILABLE:
         manifest.update(("SpatialView", "SpatialItem"))
     if QML_BRIDGE_AVAILABLE:

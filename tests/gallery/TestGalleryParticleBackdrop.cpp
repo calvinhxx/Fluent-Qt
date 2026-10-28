@@ -18,7 +18,7 @@
 #include <memory>
 
 #include "components/foundation/MotionPolicy.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "model/GalleryContentCatalog.h"
 #include "platform/GalleryPlatform.h"
 #include "view/pages/GalleryHomePage.h"
@@ -27,7 +27,7 @@
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
 
-using fluent::layout::ParticleBackdrop;
+using fluent::particles::ParticleBackdrop;
 
 TEST(GalleryParticleBackdropTest, SamplesReusePublicComponentAndStartIdle)
 {

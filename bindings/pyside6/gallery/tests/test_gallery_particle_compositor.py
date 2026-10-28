@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 from fluentqt._qt_compat import delete_qobject as delete
 from PySide6.QtCore import QEventLoop, QMarginsF, QPoint, QRect, QSize, QSizeF, Qt, QTimer
 from PySide6.QtGui import QColor, QOpenGLContext, QPainter, QPalette, QRegion
@@ -99,7 +100,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
         try:
             below = QWidget(root)
             parent = QWidget(root)
-            source = fluentqt.ParticleBackdrop(parent)
+            source = ParticleBackdrop(parent)
             child = QWidget(source)
             sibling = QWidget(parent)
             above = QWidget(root)
@@ -120,7 +121,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             root.resize(300, 180)
             parent = QWidget(root)
             parent.setGeometry(20, 25, 100, 80)
-            source = fluentqt.ParticleBackdrop(parent)
+            source = ParticleBackdrop(parent)
             source.setGeometry(-10, 10, 150, 90)
             root.show()
             self.assertEqual(_clipped_rect(source, root), QRect(20, 35, 100, 70))
@@ -137,7 +138,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
         compositor = GalleryParticleCompositor()
         try:
             root.resize(300, 180)
-            source = fluentqt.ParticleBackdrop(root)
+            source = ParticleBackdrop(root)
             source.resize(root.size())
             for enabled in (False, True):
                 self.assertFalse(compositor.prepare(root, 1, root.size(), 1, 1, 32 << 20, enabled))
@@ -193,15 +194,15 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             palette = root.palette()
             palette.setColor(QPalette.Window, QColor(24, 35, 47))
             root.setPalette(palette)
-            lower = fluentqt.ParticleBackdrop(root)
+            lower = ParticleBackdrop(root)
             lower.setGeometry(root.rect())
-            lower.setEffect(fluentqt.ParticleBackdrop.FloatingDots)
+            lower.setEffect(ParticleBackdrop.FloatingDots)
             lower.setParticleCount(240)
             lower.setAnimationEnabled(False)
             lower.setFadeMargins(QMarginsF(80, 0, 0, 60))
-            upper = fluentqt.ParticleBackdrop(root)
+            upper = ParticleBackdrop(root)
             upper.setGeometry(45, 30, 330, 180)
-            upper.setEffect(fluentqt.ParticleBackdrop.Starfield)
+            upper.setEffect(ParticleBackdrop.Starfield)
             upper.setParticleCount(240)
             upper.setAnimationEnabled(False)
             translucent = _Foreground(QColor(210, 60, 25, 128), root)
@@ -256,9 +257,9 @@ class GalleryParticleCompositorTest(unittest.TestCase):
         probe = navigation = content = paint = resolve = None
         try:
             root.resize(960, 700)
-            source = fluentqt.ParticleBackdrop(root)
+            source = ParticleBackdrop(root)
             source.setGeometry(20, 20, 600, 240)
-            source.setEffect(fluentqt.ParticleBackdrop.FloatingDots)
+            source.setEffect(ParticleBackdrop.FloatingDots)
             source.setPauseWhenInactive(False)
             foreground = _Foreground(QColor(20, 90, 150, 128), root)
             foreground.setGeometry(40, 40, 300, 100)
@@ -347,7 +348,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             parent = QWidget(root)
             parent.resize(root.size())
             parent.setMask(QRegion(QRect(0, 0, 250, 150), QRegion.Ellipse))
-            source = fluentqt.ParticleBackdrop(parent)
+            source = ParticleBackdrop(parent)
             source.resize(parent.size())
             source.setAnimationEnabled(False)
             foreground = _Foreground(QColor(200, 30, 20, 180), parent)
@@ -390,9 +391,9 @@ class GalleryParticleCompositorTest(unittest.TestCase):
             root.resize(420, 320)
             parent = QWidget(root)
             parent.setGeometry(17, 11, 380, 240)
-            source = fluentqt.ParticleBackdrop(parent)
+            source = ParticleBackdrop(parent)
             source.setGeometry(-20, 10, 420, 300)
-            source.setEffect(fluentqt.ParticleBackdrop.FloatingDots)
+            source.setEffect(ParticleBackdrop.FloatingDots)
             source.setAnimationEnabled(False)
             foreground = _Foreground(QColor(25, 90, 150, 128), parent)
             foreground.setGeometry(31, 40, 310, 190)
@@ -430,7 +431,7 @@ class GalleryParticleCompositorTest(unittest.TestCase):
         try:
             root.resize(300, 180)
             hidden = QWidget(root)
-            source = fluentqt.ParticleBackdrop(hidden)
+            source = ParticleBackdrop(hidden)
             hidden.hide()
             root.show()
             self.assertTrue(QTest.qWaitForWindowExposed(root))

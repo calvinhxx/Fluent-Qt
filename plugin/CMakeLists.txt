@@ -1,5 +1,9 @@
 fluent_qt_add_plugins_library()
 
+if(FLUENT_QT_BUILD_PARTICLES)
+    add_subdirectory(Particles)
+endif()
+
 if(FLUENT_QT_BUILD_SPATIAL)
     add_subdirectory(Spatial)
 endif()

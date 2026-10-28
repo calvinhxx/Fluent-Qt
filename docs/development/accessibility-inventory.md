@@ -566,6 +566,12 @@ neutral while checking or available, critical after runtime fallback. Their hove
 tooltips and accessible descriptions explain GPU requirements or the fallback
 reason; selecting 2D or reduced motion does not report a hardware failure.
 The fallback badge remains enabled beside the disabled switch.
+ParticleBackdrop is listed under **Plugins → Particles**. Moving its source and
+build ownership does not change its decorative, non-focusable role or child
+controls' semantics. ParticlesSession pauses tracked widgets on deactivation;
+reduced motion, High Contrast, hidden/clipped surfaces and inactive windows
+retain the existing animation policy. See the [module contract](../architecture/particles.md).
+
 Particle acceleration follows the existing 3D Gallery control; there is no
 second renderer preference. The component defaults to CPU and requires an
 explicit request plus a capable host. 2D and fallback restore CPU painting.

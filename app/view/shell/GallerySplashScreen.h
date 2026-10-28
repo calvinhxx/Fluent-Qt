@@ -4,7 +4,7 @@
 #include <FluentQt/StatusInfo.h>
 #include <QVector>
 
-namespace fluent::layout {
+namespace fluent::particles {
 class ParticleBackdrop;
 }
 
@@ -30,7 +30,7 @@ protected:
 private:
     QPointer<QWidget> m_cachedContent;
     QPointer<QGraphicsEffect> m_contentEffect;
-    QVector<QPointer<fluent::layout::ParticleBackdrop>> m_pausedBackdrops;
+    QVector<QPointer<fluent::particles::ParticleBackdrop>> m_pausedBackdrops;
 };
 
 } // namespace fluent::gallery

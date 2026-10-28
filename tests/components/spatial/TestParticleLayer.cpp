@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "components/foundation/MotionPolicy.h"
-#include "components/layout/ParticleBackdrop.h"
-#include "components/layout/ParticleBackdrop_p.h"
+#include "components/particles/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop_p.h"
 #include "components/spatial/ParticleLayer.h"
 #include <QApplication>
 #include <QImage>
@@ -13,7 +13,7 @@
 #include <QSignalSpy>
 #include <QTest>
 
-using fluent::layout::ParticleBackdrop;
+using fluent::particles::ParticleBackdrop;
 using fluent::spatial::ParticleLayer;
 
 namespace {

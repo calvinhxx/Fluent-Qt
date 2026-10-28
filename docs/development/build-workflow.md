@@ -104,6 +104,8 @@ plugin
   FluentQtPlugins
   plugin_extension
     fluentqt_plugin_extension
+  Particles
+    FluentQtParticles
   Spatial
     FluentQtSpatial
     FluentQtSpatialRenderer

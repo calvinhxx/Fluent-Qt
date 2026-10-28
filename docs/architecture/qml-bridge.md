@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Plugins: optional extension lifecycle](plugins.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Window Chrome Architecture →](window-chrome.md)
+[← Particles: optional decorative effects](particles.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Window Chrome Architecture →](window-chrome.md)
 <!-- docs-nav:top:end -->
 
 QmlBridge embeds an application QML page inside a FluentQt QWidget application.
@@ -382,5 +382,5 @@ budget or cross-platform visual parity.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Plugins: optional extension lifecycle](plugins.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Window Chrome Architecture →](window-chrome.md)
+[← Particles: optional decorative effects](particles.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Window Chrome Architecture →](window-chrome.md)
 <!-- docs-nav:bottom:end -->

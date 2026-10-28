@@ -7,6 +7,7 @@
 #include "samples/DialogsFlyoutsSamples.h"
 #include "samples/FoundationSamples.h"
 #include "samples/LayoutSamples.h"
+#include "samples/ParticlesSamples.h"
 #include "samples/MenusToolbarsSamples.h"
 #include "samples/NavigationSamples.h"
 #include "samples/QmlBridgeSamples.h"
@@ -40,6 +41,9 @@ QVector<GallerySample> gallerySamplesForRoute(const QString& routeId)
         &statusInfoSamples,
         &textFieldsSamples,
         &windowingSamples,
+#ifdef FLUENT_QT_HAS_PARTICLES
+        &particlesSamples,
+#endif
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
         &qmlBridgeSamples,
 #endif

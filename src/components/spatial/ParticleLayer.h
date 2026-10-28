@@ -5,7 +5,7 @@
 #include <QSize>
 #include <memory>
 
-namespace fluent::layout {
+namespace fluent::particles {
 class ParticleBackdrop;
 }
 
@@ -39,10 +39,10 @@ class ParticleLayer : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool active READ isActive NOTIFY activeChanged)
 public:
-    explicit ParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent = nullptr);
+    explicit ParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent = nullptr);
     ~ParticleLayer() override;
 
-    layout::ParticleBackdrop* backdrop() const;
+    particles::ParticleBackdrop* backdrop() const;
     bool isActive() const;
     /** @brief Conservative current-context target bytes, or zero when unsupported.
      * Includes the actual driver MSAA count; performs at most a tiny context probe.

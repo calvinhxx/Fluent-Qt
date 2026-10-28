@@ -71,7 +71,7 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/dialogs_flyouts/TeachingTip.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "components/layout/ListDetailView.h"
 #include "components/layout/DataGridToolBar.h"
 #include "components/layout/PropertyPanel.h"
@@ -2350,7 +2350,7 @@ private:
             m_clock.restart();
             m_stage = 8;
         } else if (m_stage == 8) {
-            auto* particles = m_window->findChild<layout::ParticleBackdrop*>("galleryHomeParticles");
+            auto* particles = m_window->findChild<particles::ParticleBackdrop*>("galleryHomeParticles");
             if (!particles || !particles->isVisible() || m_clock.elapsed() < 600) {
                 if (m_clock.elapsed() > 6000)
                     finish(false, QStringLiteral("The particle Home page did not become visible"));

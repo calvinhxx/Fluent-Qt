@@ -1,6 +1,6 @@
 #include "ParticleLayer.h"
-#include "components/layout/ParticleBackdrop.h"
-#include "components/layout/ParticleBackdrop_p.h"
+#include "components/particles/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop_p.h"
 
 #include <QEvent>
 #include <QOpenGLContext>
@@ -15,7 +15,7 @@
 
 namespace fluent::spatial {
 namespace {
-using Access = layout::ParticleBackdropRenderAccess;
+using Access = particles::ParticleBackdropRenderAccess;
 
 // Preserve the caller's framebuffer and viewport across allocation/resolve.
 class TargetScope {
@@ -76,13 +76,13 @@ struct ParticleLayer::Private {
     bool active = false;
 };
 
-ParticleLayer::ParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent)
+ParticleLayer::ParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent)
     : QObject(parent), d(std::make_unique<Private>())
 {
     d->backdrop = backdrop;
     if (backdrop) {
         backdrop->installEventFilter(this);
-        connect(backdrop, &layout::ParticleBackdrop::gpuAccelerationEnabledChanged, this, [this](bool enabled) {
+        connect(backdrop, &particles::ParticleBackdrop::gpuAccelerationEnabledChanged, this, [this](bool enabled) {
             if (!enabled)
                 release();
         });
@@ -101,9 +101,9 @@ ParticleLayer::~ParticleLayer()
     release();
 }
 
-layout::ParticleBackdrop* ParticleLayer::backdrop() const
+particles::ParticleBackdrop* ParticleLayer::backdrop() const
 {
-    return qobject_cast<layout::ParticleBackdrop*>(d->backdrop.data());
+    return qobject_cast<particles::ParticleBackdrop*>(d->backdrop.data());
 }
 
 bool ParticleLayer::isActive() const
@@ -136,7 +136,7 @@ quint64 ParticleLayer::estimatedBytes(const QSize& logicalSize, qreal devicePixe
 bool ParticleLayer::render(qreal devicePixelRatio, quint64 maximumBytes)
 {
     auto* context = QOpenGLContext::currentContext();
-    QPointer<layout::ParticleBackdrop> source(backdrop());
+    QPointer<particles::ParticleBackdrop> source(backdrop());
     if (!context || !context->isValid() || !source || !source->isGpuAccelerationEnabled()
         || !Access::isInViewport(source)) {
         release();

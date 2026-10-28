@@ -12,6 +12,7 @@ import sys
 from typing import Callable, Iterable
 
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 import shiboken6
 from fluentqt._qt_compat import single_shot as _single_shot
 from fluentqt._qt_painting import font_style_strategy as _font_style_strategy
@@ -259,6 +260,7 @@ ROUTE_ICON_NAMES = {
     "date-time": chr(0xE787),
     "dialogs-flyouts": chr(0xE8BD),
     "layout": chr(0xE8E4),
+    "particles": chr(0xE72C),
     "spatial": "ic_fluent_layer_20_regular",
     "menus-toolbars": chr(0xE74E),
     "navigation": chr(0xE700),
@@ -1038,7 +1040,7 @@ class _StartupContentCache:
     def __init__(self) -> None:
         self.content: QWidget | None = None
         self.effect: _StartupContentEffect | None = None
-        self.paused_backdrops: list[fluentqt.ParticleBackdrop] = []
+        self.paused_backdrops: list[ParticleBackdrop] = []
 
     def clear(self) -> None:
         content, effect = self.content, self.effect
@@ -1088,7 +1090,7 @@ class GallerySplashScreen(fluentqt.SplashScreen):
             return
         cache = self._dismissal_cache
         cache.content = content
-        for backdrop in content.findChildren(fluentqt.ParticleBackdrop):
+        for backdrop in content.findChildren(ParticleBackdrop):
             if backdrop.isVisible() and backdrop.isAnimationEnabled():
                 cache.paused_backdrops.append(backdrop)
                 backdrop.setAnimationEnabled(False)
@@ -1436,7 +1438,7 @@ class GalleryHeroLinkCard(QWidget):
 
 
 @lru_cache(maxsize=1)
-def _home_particle_effect() -> fluentqt.ParticleBackdrop.Effect:
+def _home_particle_effect() -> ParticleBackdrop.Effect:
     """Choose once per launch, excluding the previous launch's saved effect."""
     settings = gallery_settings()
     candidates = tuple(
@@ -1446,7 +1448,7 @@ def _home_particle_effect() -> fluentqt.ParticleBackdrop.Effect:
     )
     chosen = candidates[QRandomGenerator.global_().bounded(len(candidates))]
     settings.set_last_home_particle_effect(chosen)
-    return getattr(fluentqt.ParticleBackdrop.Effect, chosen)
+    return getattr(ParticleBackdrop.Effect, chosen)
 
 
 class GalleryHomeHero(QWidget):
@@ -1493,7 +1495,7 @@ class GalleryHomeHero(QWidget):
         self.setFixedHeight(self.HEIGHT)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
-        self._particles = fluentqt.ParticleBackdrop(self)
+        self._particles = ParticleBackdrop(self)
         self._particles.setObjectName("galleryHomeParticles")
         self._particles.setParticleCount(240)
         self._particles.setSpeed(0.6)
@@ -1859,6 +1861,7 @@ _REFERENCE_MODULES = {
     "layout": "layout",
     "menus-toolbars": "menus_toolbars",
     "navigation": "navigation",
+    "particles": "particles",
     "scrolling": "scrolling",
     "spatial": "spatial",
     "qml-bridge": "qmlbridge",
@@ -1895,13 +1898,15 @@ class GalleryReferenceCard(QFrame):
                     "Import",
                     "from fluentqt.spatial import SpatialView, SpatialItem"
                     if category_id == "spatial" else
+                    "from fluentqt.particles import {0}".format(api_type)
+                    if category_id == "particles" else
                     "from fluentqt.qmlbridge import QmlSession, QmlView"
                     if category_id == "qml-bridge" else "import fluentqt",
                     "galleryComponentReferenceImport",
                 ),
                 (
                     "Type",
-                    api_type if category_id in {"spatial", "qml-bridge"} else "fluentqt.{0}".format(api_type),
+                    api_type if category_id in {"spatial", "particles", "qml-bridge"} else "fluentqt.{0}".format(api_type),
                     "galleryComponentReferenceType",
                 ),
                 (

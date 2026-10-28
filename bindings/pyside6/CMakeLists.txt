@@ -174,7 +174,6 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_propertydefinition_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_propertypanel_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_card_wrapper.cpp"
-    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_particlebackdrop_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_divider_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_expander_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_field_wrapper.cpp"
@@ -257,6 +256,18 @@ if(TARGET FluentQtPlugins)
 endif()
 string(APPEND FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER
     "#include \"${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h\"\n")
+if(TARGET FluentQtParticles)
+    set_target_properties(FluentQtParticles PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_particles_particlebackdrop_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_particles_particlesplugin_wrapper.cpp"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_particles_particlessession_wrapper.cpp")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/native/particles_types.xml" FLUENTQT_PYSIDE6_PARTICLE_TYPES)
+    string(REPLACE "<!-- Optional Particles types. -->" "${FLUENTQT_PYSIDE6_PARTICLE_TYPES}"
+        FLUENTQT_PYSIDE6_TYPES "${FLUENTQT_PYSIDE6_TYPES}")
+    string(APPEND FLUENTQT_PYSIDE6_OPTIONAL_BINDING_HEADER
+        "#include <FluentQt/Particles.h>\n")
+endif()
 if(TARGET FluentQtSpatial)
     set_target_properties(FluentQtSpatial PROPERTIES POSITION_INDEPENDENT_CODE ON)
     list(APPEND FLUENTQT_PYSIDE6_GENERATED_SOURCES
@@ -441,6 +452,9 @@ endif()
 if(TARGET FluentQtPlugins)
     target_link_libraries(_fluentqt PRIVATE FluentQt::Plugins)
 endif()
+if(TARGET FluentQtParticles)
+    target_link_libraries(_fluentqt PRIVATE FluentQt::Particles)
+endif()
 if(TARGET FluentQtQmlBridge)
     target_link_libraries(_fluentqt PRIVATE FluentQt::QmlBridge)
 endif()
@@ -510,6 +524,13 @@ set(FLUENTQT_PYSIDE6_STUB_FILES
     status_info.pyi
     textfields.pyi
     windowing.pyi)
+if(TARGET FluentQtParticles)
+    list(APPEND FLUENTQT_PYSIDE6_PYTHON_FILES particles.py)
+    list(APPEND FLUENTQT_PYSIDE6_STUB_FILES particles.pyi)
+else()
+    file(REMOVE "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/particles.py"
+                "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/particles.pyi")
+endif()
 if(TARGET FluentQtSpatial)
     list(APPEND FLUENTQT_PYSIDE6_PYTHON_FILES spatial.py)
     list(APPEND FLUENTQT_PYSIDE6_STUB_FILES spatial.pyi)
@@ -739,6 +760,14 @@ if(BUILD_TESTING)
         set_tests_properties(test_pyside6_plugin_extension PROPERTIES
             ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
             LABELS "pyside;integration;ci_fast;lifetime" TIMEOUT 60)
+    endif()
+    if(TARGET FluentQtParticles)
+        add_test(NAME test_pyside6_particles
+            COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_particles.py" -v)
+        set_tests_properties(test_pyside6_particles PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
     endif()
     if(TARGET FluentQtSpatial)
         add_test(NAME test_pyside6_spatial

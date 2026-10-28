@@ -65,7 +65,7 @@ bool SpatialSession::attachView(SpatialView* view)
     }
     return state->manager.isActive(SpatialPlugin::pluginId()) && state->plugin.attachView(view);
 }
-ParticleLayer* SpatialSession::createParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent)
+ParticleLayer* SpatialSession::createParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent)
 {
     const auto state = d;
     return state && state->manager.isActive(SpatialPlugin::pluginId())

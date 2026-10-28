@@ -256,10 +256,11 @@ def main() -> int:
             "packaged Python Gallery contract differs from current native C++ sources"
         )
     base_contract = generate_contract(project_root, include_cpp_only=False)
-    cpp_only_ids = {"spatial-view", "spatial-item", "qml-view"}
+    cpp_only_ids = {"spatial-view", "spatial-item", "qml-view", "particle-backdrop"}
     if cpp_only_ids & {c["id"] for c in base_contract["components"]}:
         raise AssertionError("The base Python Gallery must not require optional renderer bindings")
-    if any(route["id"] in ("plugins", "spatial", "spatial-view", "spatial-item", "qml-bridge", "qml-view")
+    if any(route["id"] in ("plugins", "spatial", "spatial-view", "spatial-item", "qml-bridge", "qml-view",
+                            "particles", "particle-backdrop")
            for route in base_contract["routes"]):
         raise AssertionError("The base Gallery must omit the empty Plugins subtree")
     cpp_spatial = [c for c in generated["components"] if c["category_id"] == "spatial"]
@@ -269,7 +270,7 @@ def main() -> int:
         raise AssertionError("Spatial composition samples are missing")
     summary = generated["summary"]
     if summary != {
-        "route_count": 121,
+        "route_count": 122,
         "component_count": 96,
         "sample_count": 277,
     }:
@@ -285,6 +286,7 @@ def main() -> int:
         raise AssertionError("QMLPlus must export the twelve canonical atomic examples in order")
     for route_id, parent, depth, group in (
         ("plugins", "", 0, "Plugins"), ("spatial", "plugins", 1, "Plugins"),
+        ("particles", "plugins", 1, "Plugins"), ("particle-backdrop", "particles", 2, "Particles"),
         ("spatial-view", "spatial", 2, "Spatial"), ("spatial-item", "spatial", 2, "Spatial"),
         ("qml-bridge", "plugins", 1, "Plugins"), ("qml-view", "qml-bridge", 2, "QmlBridge"),
     ):
@@ -293,14 +295,14 @@ def main() -> int:
             raise AssertionError("incorrect plugin navigation hierarchy: " + route_id)
     route_ids = [route["id"] for route in generated["routes"]]
     start = route_ids.index("plugins")
-    if route_ids[start:start + 7] != ["plugins", "spatial", "spatial-view", "spatial-item", "qml-bridge", "qml-view", "all-controls"]:
+    if route_ids[start:start + 9] != ["plugins", "particles", "particle-backdrop", "spatial", "spatial-view", "spatial-item", "qml-bridge", "qml-view", "all-controls"]:
         raise AssertionError("Plugins must precede Controls and keep its subtree together")
     native_categories = _category_metadata(
         (project_root / "app/model/GalleryComponentCatalog.cpp").read_text(encoding="utf-8")
     )
     if [category["id"] for category in generated["categories"]] != list(native_categories):
         raise AssertionError("Gallery category order must come from native metadata")
-    if [category["id"] for category in generated["categories"] if category["plugin"]] != ["spatial", "qml-bridge"]:
+    if [category["id"] for category in generated["categories"] if category["plugin"]] != ["particles", "spatial", "qml-bridge"]:
         raise AssertionError("Optional renderers must be classified as plugin modules")
     qml_view = next(c for c in generated["components"] if c["id"] == "qml-view")
     if [s["id"] for s in qml_view["samples"]] != [sample_id for sample_id, _, _ in QML_VIEW_SOURCES]:

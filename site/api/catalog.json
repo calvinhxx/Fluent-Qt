@@ -24,8 +24,8 @@
   ],
   "summary": {
     "components": 96,
-    "public_headers": 171,
-    "categories": 15
+    "public_headers": 174,
+    "categories": 16
   },
   "categories": [
     {
@@ -56,7 +56,12 @@
     {
       "id": "layout",
       "title": "Layout",
-      "component_count": 9
+      "component_count": 8
+    },
+    {
+      "id": "particles",
+      "title": "Particles",
+      "component_count": 1
     },
     {
       "id": "spatial",
@@ -3585,34 +3590,35 @@
     {
       "id": "particle-backdrop",
       "title": "ParticleBackdrop",
-      "category_id": "layout",
+      "category_id": "particles",
       "description": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density.",
       "capabilities": [
         "layout-surfaces"
       ],
       "cpp": {
-        "public_header": "<FluentQt/Layout.h>",
-        "installed_declaration_header": "<FluentQt/components/layout/ParticleBackdrop.h>",
-        "qualified_type": "fluent::layout::ParticleBackdrop",
-        "target": "FluentQt::FluentQt",
-        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/ParticleBackdrop.h"
+        "public_header": "<FluentQt/Particles.h>",
+        "installed_declaration_header": "<FluentQt/components/particles/ParticleBackdrop.h>",
+        "qualified_type": "fluent::particles::ParticleBackdrop",
+        "target": "FluentQt::Particles",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/particles/ParticleBackdrop.h"
       },
       "python": {
         "package": "FluentQt",
-        "module": "fluentqt.layout",
+        "module": "fluentqt.particles",
         "type": "ParticleBackdrop",
-        "import_statement": "from fluentqt.layout import ParticleBackdrop"
+        "import_statement": "from fluentqt.particles import ParticleBackdrop",
+        "build_option": "FLUENT_QT_BUILD_PARTICLES=ON"
       },
       "gallery": {
         "route_id": "particle-backdrop",
         "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=particle-backdrop",
-        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ParticlesSamples.cpp"
       },
       "tests": [
         {
           "target": "test_particle_backdrop",
           "ctest_label": "test_particle_backdrop",
-          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestParticleBackdrop.cpp"
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/particles/TestParticleBackdrop.cpp"
         }
       ],
       "sample_count": 3,
@@ -7195,15 +7201,40 @@
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/ListDetailView.h"
     },
     {
-      "include": "<FluentQt/components/layout/ParticleBackdrop.h>",
-      "source": "src/components/layout/ParticleBackdrop.h",
+      "include": "<FluentQt/Particles.h>",
+      "source": "include/FluentQt/Particles.h",
+      "summary": "Public declarations provided by Particles.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Particles.h"
+    },
+    {
+      "include": "<FluentQt/components/particles/ParticleBackdrop.h>",
+      "source": "src/components/particles/ParticleBackdrop.h",
       "summary": "CPU-default particle presets behind caller-composed content.",
       "declarations": [
         "ParticleBackdrop",
         "Effect",
         "BackgroundMode"
       ],
-      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/ParticleBackdrop.h"
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/particles/ParticleBackdrop.h"
+    },
+    {
+      "include": "<FluentQt/components/particles/ParticlesPlugin.h>",
+      "source": "src/components/particles/ParticlesPlugin.h",
+      "summary": "Creates and pauses caller-owned particle backdrops through the plugin lifecycle.",
+      "declarations": [
+        "ParticlesPlugin"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/particles/ParticlesPlugin.h"
+    },
+    {
+      "include": "<FluentQt/components/particles/ParticlesSession.h>",
+      "source": "src/components/particles/ParticlesSession.h",
+      "summary": "Owns a Particles plugin registration for an application scope.",
+      "declarations": [
+        "ParticlesSession"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/particles/ParticlesSession.h"
     },
     {
       "include": "<FluentQt/components/menus_toolbars/CommandBar.h>",

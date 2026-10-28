@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← QMLPlus reactive composition](qmlplus.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [QmlBridge: application QML in a QWidget host →](qml-bridge.md)
+[← QMLPlus reactive composition](qmlplus.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Particles: optional decorative effects →](particles.md)
 <!-- docs-nav:top:end -->
 
 `FluentQt::Plugins` provides a common lifecycle for application-supplied
@@ -69,7 +69,7 @@ follow the same boundary and select their own dependencies.
 
 ## Enable and consume the module
 
-The standalone build option defaults to off. Spatial and QmlBridge automatically
+The standalone build option defaults to off. Particles, Spatial and QmlBridge automatically
 build Plugins as their dependency. Enable Plugins by itself when configuring
 the library:
 
@@ -103,7 +103,17 @@ built without it. For source integration, set `FLUENT_QT_BUILD_PLUGINS` before
 `add_subdirectory()` or `FetchContent_MakeAvailable()`, then link the same
 `FluentQt::Plugins` target.
 
-## Spatial: the first concrete extension
+## Particles: decorative effects
+
+`FluentQt::Particles` provides `ParticlesPlugin` and `ParticlesSession` with ID
+`fluentqt.particles` and widget key `particle-backdrop`. A session creates or
+tracks caller-owned ParticleBackdrop widgets and pauses them while stopped,
+without changing their animation preferences. Reactivating or destroying the
+session lifts the pause. The CPU path
+requires no Spatial or OpenGL target. See the [Particles contract](particles.md)
+for ownership, motion and the Spatial GPU adapter.
+
+## Spatial: perspective widget hosts
 
 `FluentQt::Spatial` provides `fluent::spatial::SpatialPlugin`, registered under
 the ID `fluentqt.spatial`. It implements `WidgetPluginInterface` with the
@@ -423,5 +433,5 @@ published Python binaries follow the [wheel matrix](../../bindings/pyside6/wheel
 
 <!-- docs-nav:bottom:start -->
 ---
-[← QMLPlus reactive composition](qmlplus.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [QmlBridge: application QML in a QWidget host →](qml-bridge.md)
+[← QMLPlus reactive composition](qmlplus.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Particles: optional decorative effects →](particles.md)
 <!-- docs-nav:bottom:end -->

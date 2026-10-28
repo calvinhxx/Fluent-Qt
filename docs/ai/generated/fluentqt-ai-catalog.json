@@ -1163,11 +1163,20 @@
         "field",
         "data-grid-tool-bar",
         "property-panel",
-        "list-detail-view",
-        "particle-backdrop"
+        "list-detail-view"
       ],
       "cpp_header": "<FluentQt/Layout.h>",
       "python_module": "fluentqt.layout"
+    },
+    {
+      "id": "particles",
+      "title": "Particles",
+      "plugin": true,
+      "components": [
+        "particle-backdrop"
+      ],
+      "cpp_header": "<FluentQt/Particles.h>",
+      "python_module": "fluentqt.particles"
     },
     {
       "id": "spatial",
@@ -6753,7 +6762,7 @@
     {
       "id": "particle-backdrop",
       "title": "ParticleBackdrop",
-      "category_id": "layout",
+      "category_id": "particles",
       "description": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density.",
       "capabilities": [
         "layout-surfaces"
@@ -6781,7 +6790,6 @@
         "flowing",
         "follows",
         "input",
-        "layout",
         "layout-surfaces",
         "leave",
         "lights",
@@ -6795,6 +6803,7 @@
         "particle-backdrop-content",
         "particle-backdrop-interaction",
         "particlebackdrop",
+        "particles",
         "pause",
         "pointer",
         "preference.",
@@ -6815,28 +6824,29 @@
         "theme-aware"
       ],
       "cpp": {
-        "public_header": "<FluentQt/Layout.h>",
-        "declaration": "src/components/layout/ParticleBackdrop.h",
-        "qualified_type": "fluent::layout::ParticleBackdrop",
-        "cmake_target": "FluentQt::FluentQt"
+        "public_header": "<FluentQt/Particles.h>",
+        "declaration": "src/components/particles/ParticleBackdrop.h",
+        "qualified_type": "fluent::particles::ParticleBackdrop",
+        "cmake_target": "FluentQt::Particles"
       },
       "python": {
         "package": "FluentQt",
-        "module": "fluentqt.layout",
+        "module": "fluentqt.particles",
         "type": "ParticleBackdrop",
-        "import_statement": "from fluentqt.layout import ParticleBackdrop"
+        "import_statement": "from fluentqt.particles import ParticleBackdrop",
+        "build_option": "FLUENT_QT_BUILD_PARTICLES=ON"
       },
       "tests": [
         {
           "target": "test_particle_backdrop",
-          "source": "tests/components/layout/TestParticleBackdrop.cpp",
+          "source": "tests/components/particles/TestParticleBackdrop.cpp",
           "ctest_label": "test_particle_backdrop"
         }
       ],
       "gallery": {
         "route_id": "particle-backdrop",
-        "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/ParticleBackdrop.png"
+        "sample_source": "app/view/widgets/samples/ParticlesSamples.cpp",
+        "control_image": "app/assets/control_images/particles/ParticleBackdrop.png"
       },
       "samples": [
         {
@@ -11246,6 +11256,24 @@
       "description": "Explore optional FluentQt plugins and their live examples."
     },
     {
+      "id": "particles",
+      "title": "Particles",
+      "kind": "category",
+      "parent_id": "plugins",
+      "group": "Plugins",
+      "depth": 1,
+      "description": ""
+    },
+    {
+      "id": "particle-backdrop",
+      "title": "ParticleBackdrop",
+      "kind": "component",
+      "parent_id": "particles",
+      "group": "Particles",
+      "depth": 2,
+      "description": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density."
+    },
+    {
       "id": "spatial",
       "title": "Spatial",
       "kind": "category",
@@ -11867,15 +11895,6 @@
       "description": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes."
     },
     {
-      "id": "particle-backdrop",
-      "title": "ParticleBackdrop",
-      "kind": "component",
-      "parent_id": "layout",
-      "group": "Layout",
-      "depth": 1,
-      "description": "Flowing ribbons, floating dots and a starfield with pointer ripples, theme-aware colors, and controls for motion and density."
-    },
-    {
       "id": "menus-toolbars",
       "title": "Menus & toolbars",
       "kind": "category",
@@ -12275,7 +12294,7 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 121,
+    "route_count": 122,
     "component_count": 96,
     "sample_count": 277,
     "integration_pattern_count": 6,

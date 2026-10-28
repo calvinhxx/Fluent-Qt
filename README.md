@@ -55,6 +55,17 @@ each plugin has its own target for any extra dependencies.
 C++ applications call the library directly. Python uses matching PySide6 bindings,
 and WebAssembly builds compile the same C++ code to run in the browser.
 
+#### Particles
+
+The [Particles](docs/architecture/particles.md) plugin provides `ParticleBackdrop`,
+an animated particle background. It draws on the CPU and does not need Spatial or
+OpenGL. `ParticlesSession` pauses and resumes the backgrounds it manages.
+
+Build with `FLUENT_QT_BUILD_PARTICLES=ON` and link `FluentQt::Particles`. The core
+library `FluentQt::FluentQt` does not include particle effects.
+
+Open Plugins → Particles in Gallery to see the examples.
+
 #### Spatial
 
 The [Spatial](docs/architecture/spatial-view.md) plugin adds 3D presentation to
@@ -244,6 +255,7 @@ then link the corresponding target in your application.
 | Extension scope | Build option | CMake target | Integration example |
 |---|---|---|---|
 | Plugins infrastructure | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [Minimal plugin example](docs/architecture/plugins.md#minimal-extension-example) |
+| Plugins → Particles | `-DFLUENT_QT_BUILD_PARTICLES=ON` | `FluentQt::Particles` | [Particles integration](docs/architecture/particles.md) |
 | Plugins → Spatial | `-DFLUENT_QT_BUILD_SPATIAL=ON` | `FluentQt::Spatial` (automatically includes Plugins) | [Spatial Hello World](examples/hello_world/README.md) |
 | Plugins → QmlBridge | `-DFLUENT_QT_BUILD_QML_BRIDGE=ON` | `FluentQt::QmlBridge` (automatically includes Plugins) | [QML host example](examples/qml_bridge/) |
 

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "components/spatial/SpatialSession.h"
 #include "view/shell/GalleryGlyphPaintDevice.h"
 #include "view/shell/GalleryParticleCompositor.h"
@@ -19,7 +19,7 @@
 #include <QtMath>
 
 namespace {
-using fluent::layout::ParticleBackdrop;
+using fluent::particles::ParticleBackdrop;
 using fluent::gallery::spatial_render::GalleryParticleCompositor;
 using fluent::gallery::spatial_render::GalleryGlyphPaintDevice;
 

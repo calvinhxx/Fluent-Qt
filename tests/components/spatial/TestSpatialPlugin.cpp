@@ -12,7 +12,7 @@
 #include "components/spatial/SpatialView.h"
 #include "components/spatial/ParticleLayer.h"
 #include "components/layout/Card.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "components/windowing/Window.h"
 
 using namespace fluent;
@@ -69,7 +69,7 @@ TEST(SpatialPluginTest, Contract_SessionStopsViewsAndRestoresRenderOptionsWithou
 
 TEST(SpatialPluginTest, Contract_DestroyedOutputsAreGuardedAndAdaptersRemainCallerOwned)
 {
-    layout::ParticleBackdrop source;
+    particles::ParticleBackdrop source;
     QPointer<spatial::ParticleLayer> layer;
     {
         spatial::SpatialSession session;
