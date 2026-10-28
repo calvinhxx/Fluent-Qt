@@ -87,9 +87,9 @@ GallerySplashScreen::~GallerySplashScreen()
 void GallerySplashScreen::cacheDismissalContent(QWidget* content)
 {
     clearDismissalContent();
-    if (!isVisible() || !content || !content->isVisible() || content->graphicsEffect() ||
-        content->window() != window() || content == this || content->isAncestorOf(this) ||
-        isAncestorOf(content) || MotionPolicy::instance().mode() != MotionPolicy::Mode::Full)
+    if (!isVisible() || !content || !content->isVisible() || content->graphicsEffect() || content->window() != window()
+        || content == this || content->isAncestorOf(this) || isAncestorOf(content)
+        || MotionPolicy::instance().mode() != MotionPolicy::Mode::Full)
         return;
     m_cachedContent = content;
     // Freeze the decorative clock with its pixels, so resuming never jumps ahead by the

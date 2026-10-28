@@ -32,8 +32,7 @@ public:
         QPainter painter(this);
         painter.fillRect(rect(), color);
         painter.setPen(QColor(255, 255, 255, 176));
-        painter.drawText(rect().adjusted(12, 8, -12, -8), Qt::AlignCenter,
-                         QStringLiteral("Foreground Aa 123"));
+        painter.drawText(rect().adjusted(12, 8, -12, -8), Qt::AlignCenter, QStringLiteral("Foreground Aa 123"));
     }
 };
 
@@ -56,9 +55,8 @@ std::unique_ptr<QOpenGLFramebufferObject> capture(QWidget& root, qreal cacheDpr 
     QOpenGLPaintDevice device(pixels);
     device.setDevicePixelRatio(cacheDpr);
     GalleryGlyphPaintDevice glyph(device, 1);
-    QPainter painter(fluent::gallery::spatial_render::needsNativeGlyphCoverage(1)
-                         ? static_cast<QPaintDevice*>(&glyph)
-                         : &device);
+    QPainter painter(
+        fluent::gallery::spatial_render::needsNativeGlyphCoverage(1) ? static_cast<QPaintDevice*>(&glyph) : &device);
     root.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
     painter.end();
     QOpenGLFramebufferObject::blitFramebuffer(texture.get(), &paintTarget);
@@ -87,8 +85,8 @@ double difference(const QImage& actual, const QImage& expected, const QRect& reg
     for (int y = region.top(); y <= region.bottom(); ++y) {
         for (int x = region.left(); x <= region.right(); ++x) {
             const QColor a = actual.pixelColor(x, y), e = expected.pixelColor(x, y);
-            sum += qAbs(a.red() - e.red()) + qAbs(a.green() - e.green()) +
-                   qAbs(a.blue() - e.blue()) + qAbs(a.alpha() - e.alpha());
+            sum += qAbs(a.red() - e.red()) + qAbs(a.green() - e.green()) + qAbs(a.blue() - e.blue())
+                + qAbs(a.alpha() - e.alpha());
         }
     }
     return sum / (region.width() * region.height() * 4);
@@ -122,8 +120,7 @@ TEST_P(GalleryParticleCompositionTest, Contract_NativeInsertionPreservesStacking
     const bool clipped = GetParam().second;
     const QSize panelPixels(root.width() * cacheDpr, root.height() * cacheDpr);
     const auto pixelRect = [cacheDpr](const QRect& rect) {
-        return QRect(rect.x() * cacheDpr, rect.y() * cacheDpr, rect.width() * cacheDpr,
-                     rect.height() * cacheDpr);
+        return QRect(rect.x() * cacheDpr, rect.y() * cacheDpr, rect.width() * cacheDpr, rect.height() * cacheDpr);
     };
     root.setAutoFillBackground(true);
     auto palette = root.palette();
@@ -158,10 +155,8 @@ TEST_P(GalleryParticleCompositionTest, Contract_NativeInsertionPreservesStacking
     const QImage expected = textureImage(original->texture(), panelPixels);
     GalleryParticleCompositor compositor;
     quint64 revision = 1;
-    QObject::connect(&compositor, &GalleryParticleCompositor::staticContentInvalidated,
-                     [&] { ++revision; });
-    ASSERT_TRUE(
-        compositor.prepare(&root, revision, panelPixels, 1, cacheDpr, 32 * 1024 * 1024, true));
+    QObject::connect(&compositor, &GalleryParticleCompositor::staticContentInvalidated, [&] { ++revision; });
+    ASSERT_TRUE(compositor.prepare(&root, revision, panelPixels, 1, cacheDpr, 32 * 1024 * 1024, true));
     EXPECT_EQ(compositor.activeLayerCount(), 2);
     auto base = capture(root, cacheDpr);
     QOpenGLFramebufferObjectFormat sharedFormat;
@@ -171,19 +166,16 @@ TEST_P(GalleryParticleCompositionTest, Contract_NativeInsertionPreservesStacking
     const QSize sharedSize(panelPixels.width(), clipped ? 47 : panelPixels.height());
     QOpenGLFramebufferObject sharedPaint(sharedSize, sharedFormat);
     QOpenGLFramebufferObject sharedResolve(sharedSize);
-    const GLuint composed = compositor.compose(base->texture(), revision, &sharedPaint,
-                                               &sharedResolve, renderForeground);
+    const GLuint composed = compositor.compose(base->texture(), revision, &sharedPaint, &sharedResolve,
+        renderForeground);
     EXPECT_NE(composed, base->texture());
     const QImage actual = textureImage(composed, panelPixels);
     EXPECT_LT(difference(actual, expected, pixelRect(root.rect())), 2.0);
     EXPECT_LT(difference(actual, expected, pixelRect(translucent.geometry())), 1.0);
-    EXPECT_LT(difference(actual, expected, pixelRect(opaque.geometry().adjusted(2, 2, -2, -2))),
-              .1);
+    EXPECT_LT(difference(actual, expected, pixelRect(opaque.geometry().adjusted(2, 2, -2, -2))), .1);
     EXPECT_EQ(compositor.foregroundCaptureCount(), 2u);
     EXPECT_EQ(compositor.compositionCount(), 1u);
-    EXPECT_EQ(compositor.compose(base->texture(), revision, &sharedPaint, &sharedResolve,
-                                 renderForeground),
-              composed);
+    EXPECT_EQ(compositor.compose(base->texture(), revision, &sharedPaint, &sharedResolve, renderForeground), composed);
     EXPECT_EQ(compositor.foregroundCaptureCount(), 2u);
     EXPECT_EQ(compositor.compositionCount(), 1u);
     EXPECT_EQ(context.context()->functions()->glGetError(), GLenum(GL_NO_ERROR));
@@ -206,16 +198,15 @@ TEST_P(GalleryParticleCompositionTest, Contract_NativeInsertionPreservesStacking
         EXPECT_FALSE(compositor.prepare(&root, ++revision, panelPixels, 1, cacheDpr, 1, true));
     EXPECT_EQ(compositor.sourceScanCount(), scans);
     EXPECT_EQ(compositor.allocatedBytes(), 0u);
-    EXPECT_TRUE(
-        compositor.prepare(&root, revision, panelPixels, 1, cacheDpr, 32 * 1024 * 1024, true));
+    EXPECT_TRUE(compositor.prepare(&root, revision, panelPixels, 1, cacheDpr, 32 * 1024 * 1024, true));
     EXPECT_EQ(compositor.activeLayerCount(), 2);
     compositor.release();
     context.doneCurrent();
 }
 
-INSTANTIATE_TEST_SUITE_P(ScaleAndClip, GalleryParticleCompositionTest,
-                         testing::Values(std::make_pair(1, false), std::make_pair(2, false),
-                                         std::make_pair(2, true)));
+INSTANTIATE_TEST_SUITE_P(ScaleAndClip,
+    GalleryParticleCompositionTest,
+    testing::Values(std::make_pair(1, false), std::make_pair(2, false), std::make_pair(2, true)));
 
 TEST(GalleryParticleCompositorTest, Contract_NativeHiDpiBudgetKeepsAnimatedAndStaticCaches)
 {
@@ -254,24 +245,21 @@ TEST(GalleryParticleCompositorTest, Contract_NativeHiDpiBudgetKeepsAnimatedAndSt
         ASSERT_EQ(basePlan.dpr, 4);
         const auto required = compositor.requiredBytes(&root, 1, basePlan.sizes[1], 2, 4, true);
         ASSERT_GT(required, quint64(kCacheBudgetBytes - basePlan.estimatedBytes));
-        const auto plan =
-            planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, samples, 0, 0, qint64(required));
+        const auto plan = planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, samples, 0, 0, qint64(required));
         ASSERT_TRUE(plan.valid());
         ASSERT_EQ(plan.dpr, basePlan.dpr);
         ASSERT_LT(plan.paintSize.height(), basePlan.paintSize.height());
         const quint64 allowance = kCacheBudgetBytes - plan.estimatedBytes;
         QOpenGLFramebufferObject navigation(plan.sizes[0]), content(plan.sizes[1]);
         QOpenGLFramebufferObject paint(plan.paintSize, paintFormat), resolve(plan.paintSize);
-        ASSERT_TRUE(navigation.isValid() && content.isValid() && paint.isValid() &&
-                    resolve.isValid());
+        ASSERT_TRUE(navigation.isValid() && content.isValid() && paint.isValid() && resolve.isValid());
         content.bind();
         auto* gl = context.context()->functions();
         gl->glClearColor(.1f, .15f, .2f, 1.f);
         gl->glClear(GL_COLOR_BUFFER_BIT);
         ASSERT_TRUE(compositor.prepare(&root, 1, plan.sizes[1], 2, 4, allowance, true));
         ASSERT_EQ(compositor.activeLayerCount(), 1);
-        ASSERT_NE(compositor.compose(content.texture(), 2, &paint, &resolve, renderForeground),
-                  content.texture());
+        ASSERT_NE(compositor.compose(content.texture(), 2, &paint, &resolve, renderForeground), content.texture());
         const auto frames = compositor.particleFrameCount();
         const auto captures = compositor.foregroundCaptureCount();
         const auto bytes = compositor.allocatedBytes();
@@ -286,8 +274,7 @@ TEST(GalleryParticleCompositorTest, Contract_NativeHiDpiBudgetKeepsAnimatedAndSt
         EXPECT_EQ(compositor.allocatedBytes(), bytes);
         ASSERT_TRUE(compositor.prepare(&root, 2, plan.sizes[1], 2, 4, allowance, true));
         EXPECT_GT(compositor.particleFrameCount(), frames);
-        EXPECT_NE(compositor.compose(content.texture(), 2, &paint, &resolve, renderForeground),
-                  content.texture());
+        EXPECT_NE(compositor.compose(content.texture(), 2, &paint, &resolve, renderForeground), content.texture());
         EXPECT_EQ(compositor.foregroundCaptureCount(), captures);
         EXPECT_EQ(invalidated.count(), 0);
         EXPECT_EQ(content.texture(), texture);
@@ -384,16 +371,15 @@ TEST(GalleryParticleCompositorTest, Contract_NativeSessionLostDuringFactorySetup
         ASSERT_TRUE(session->activate());
         GalleryParticleCompositor compositor(nullptr, session);
         bool notified = false;
-        QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
-                         [&](bool enabled) {
-                             if (!enabled)
-                                 return;
-                             notified = true;
-                             if (destroy)
-                                 delete session.data();
-                             else
-                                 session->deactivate();
-                         });
+        QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root, [&](bool enabled) {
+            if (!enabled)
+                return;
+            notified = true;
+            if (destroy)
+                delete session.data();
+            else
+                session->deactivate();
+        });
         EXPECT_FALSE(compositor.prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
         EXPECT_TRUE(notified);
         EXPECT_FALSE(source.isGpuAccelerationEnabled());
@@ -432,13 +418,12 @@ TEST(GalleryParticleCompositorTest, Contract_NativeSessionDeactivationDuringClea
     ASSERT_TRUE(compositor.prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
     ASSERT_TRUE(source.isGpuAccelerationEnabled());
     bool notified = false;
-    QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
-                     [&](bool enabled) {
-                         if (!enabled) {
-                             notified = true;
-                             session.deactivate();
-                         }
-                     });
+    QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root, [&](bool enabled) {
+        if (!enabled) {
+            notified = true;
+            session.deactivate();
+        }
+    });
     compositor.release();
     EXPECT_TRUE(notified);
     EXPECT_FALSE(session.isActive());
@@ -475,13 +460,12 @@ TEST(GalleryParticleCompositorTest, Contract_NativeSessionDeactivationDuringRebu
         GalleryParticleCompositor compositor(nullptr, &session);
         ASSERT_TRUE(compositor.prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
         bool notified = false;
-        QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
-                         [&](bool enabled) {
-                             if (!enabled) {
-                                 notified = true;
-                                 session.deactivate();
-                             }
-                         });
+        QObject::connect(&source, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root, [&](bool enabled) {
+            if (!enabled) {
+                notified = true;
+                session.deactivate();
+            }
+        });
         if (changeSource)
             source.resize(280, 180);
         const QSize pixels = changeSource ? root.size() : root.size() + QSize(1, 1);
@@ -521,15 +505,13 @@ TEST(GalleryParticleCompositorTest, Contract_NativeOwnerDeletionDuringCleanupRes
     const QImage before = capture(root)->toImage();
     fluent::spatial::SpatialSession session;
     ASSERT_TRUE(session.activate());
-    QPointer<GalleryParticleCompositor> compositor =
-        new GalleryParticleCompositor(nullptr, &session);
+    QPointer<GalleryParticleCompositor> compositor = new GalleryParticleCompositor(nullptr, &session);
     ASSERT_TRUE(compositor->prepare(&root, 1, root.size(), 1, 1, 32 * 1024 * 1024, true));
     ASSERT_EQ(compositor->activeLayerCount(), 2);
-    QObject::connect(&first, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root,
-                     [&](bool enabled) {
-                         if (!enabled)
-                             delete compositor.data();
-                     });
+    QObject::connect(&first, &ParticleBackdrop::gpuAccelerationEnabledChanged, &root, [&](bool enabled) {
+        if (!enabled)
+            delete compositor.data();
+    });
     compositor->release();
     EXPECT_TRUE(compositor.isNull());
     EXPECT_TRUE(session.isActive());

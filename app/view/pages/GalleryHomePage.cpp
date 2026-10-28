@@ -78,12 +78,7 @@ constexpr int kHeroScrollButtonMarginX = 8;
 constexpr int kHeroScrollButtonLift = 8;
 const QString kExternalLinkIconName = QStringLiteral("ic_fluent_open_16_regular");
 
-enum HomeLinkRole {
-    LinkTitleRole = Qt::UserRole + 1,
-    LinkDescriptionRole,
-    LinkUrlRole,
-    LinkImageRole
-};
+enum HomeLinkRole { LinkTitleRole = Qt::UserRole + 1, LinkDescriptionRole, LinkUrlRole, LinkImageRole };
 
 fluent::layout::ParticleBackdrop::Effect homeParticleEffect()
 {
@@ -95,8 +90,8 @@ fluent::layout::ParticleBackdrop::Effect homeParticleEffect()
         const QString previous = settings.lastHomeParticleEffect();
         std::array<ParticleBackdrop::Effect, 3> candidates{};
         int count = 0;
-        for (const auto candidate : {ParticleBackdrop::FlowingRibbons,
-                                     ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield}) {
+        for (const auto candidate :
+            {ParticleBackdrop::FlowingRibbons, ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield}) {
             if (previous != QString::fromLatin1(names.valueToKey(candidate)))
                 candidates[count++] = candidate;
         }
@@ -129,16 +124,16 @@ QRect visibleAlphaBounds(const QImage& image)
 // zh_CN: 源图很大(256–1025px),但每个图标只画进较小的 hero 方框。一次性 drawPixmap 缩这么多(双线性)会糊成
 // 失真的团块,且忽略设备像素比在 HiDPI 上又会发虚。故一次性高质量(SmoothTransformation)缩到图标的物理像素尺寸,
 // 给结果打上 dpr 标记,并按 (路径, 尺寸, dpr) 缓存。
-QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qreal dpr,
-                       const QColor& tint)
+QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qreal dpr, const QColor& tint)
 {
     const bool isGitHub = resourcePath.endsWith(QStringLiteral("GitHub-Mark.png"));
     const QSize physical = (QSizeF(targetSize) * dpr).toSize();
-    const QString key = QStringLiteral("%1@%2x%3#%4")
-                            .arg(resourcePath)
-                            .arg(physical.width())
-                            .arg(physical.height())
-                            .arg(isGitHub && tint.isValid() ? tint.name() : QString());
+    const QString key =
+        QStringLiteral("%1@%2x%3#%4")
+            .arg(resourcePath)
+            .arg(physical.width())
+            .arg(physical.height())
+            .arg(isGitHub && tint.isValid() ? tint.name() : QString());
     static QHash<QString, QPixmap> cache;
     const auto it = cache.constFind(key);
     if (it != cache.constEnd())
@@ -175,8 +170,10 @@ QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qre
     return pixmap;
 }
 
-void drawCenteredPixmap(QPainter& painter, const QRectF& rect, const QString& resourcePath,
-                        const QColor& tint = QColor())
+void drawCenteredPixmap(QPainter& painter,
+    const QRectF& rect,
+    const QString& resourcePath,
+    const QColor& tint = QColor())
 {
     const qreal dpr = painter.device() ? painter.device()->devicePixelRatioF() : 1.0;
     const QPixmap source = homeLinkPixmap(resourcePath, rect.size().toSize(), dpr, tint);
@@ -185,8 +182,7 @@ void drawCenteredPixmap(QPainter& painter, const QRectF& rect, const QString& re
 
     // The pixmap is dpr-tagged, so its logical size = physical / dpr; centre it in the icon box.
     const QSizeF logical = QSizeF(source.size()) / source.devicePixelRatioF();
-    const QPointF topLeft(rect.center().x() - logical.width() / 2.0,
-                          rect.center().y() - logical.height() / 2.0);
+    const QPointF topLeft(rect.center().x() - logical.width() / 2.0, rect.center().y() - logical.height() / 2.0);
     painter.drawPixmap(topLeft, source);
 }
 
@@ -211,8 +207,12 @@ const QImage& acrylicNoiseTile()
     return tile;
 }
 
-void drawElidedWrappedText(QPainter& painter, const QRect& rect, const QString& text,
-                           const QFont& font, const QColor& color, int maxLines)
+void drawElidedWrappedText(QPainter& painter,
+    const QRect& rect,
+    const QString& text,
+    const QFont& font,
+    const QColor& color,
+    int maxLines)
 {
     if (rect.isEmpty() || text.isEmpty() || maxLines <= 0)
         return;
@@ -225,8 +225,7 @@ void drawElidedWrappedText(QPainter& painter, const QRect& rect, const QString& 
     QString current;
 
     for (int i = 0; i < words.size(); ++i) {
-        const QString candidate =
-            current.isEmpty() ? words.at(i) : current + QLatin1Char(' ') + words.at(i);
+        const QString candidate = current.isEmpty() ? words.at(i) : current + QLatin1Char(' ') + words.at(i);
         if (metrics.horizontalAdvance(candidate) <= rect.width() || current.isEmpty()) {
             current = candidate;
             continue;
@@ -268,8 +267,7 @@ public:
         return QSize(kHeroLinkCardWidth, kHeroLinkCellHeight);
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         if (!painter || !index.isValid())
             return;
@@ -296,7 +294,7 @@ public:
         // 下方预留 kHeroLinkShadowMargin。
         const qreal lift = active ? 2.0 : 0.0;
         QRectF cardRect(QPointF(option.rect.left(), option.rect.top() + kHeroLinkTopPad),
-                        QSizeF(kHeroLinkCardWidth, kHeroLinkCardHeight));
+            QSizeF(kHeroLinkCardWidth, kHeroLinkCardHeight));
         cardRect.adjust(0.5, 0.5, -0.5, -0.5);
         cardRect.translate(0, -lift);
         QPainterPath cardPath;
@@ -321,8 +319,8 @@ public:
             const qreal grow = reach * f;
             QColor s(0, 0, 0, qRound(peakAlpha * (1.0 - f)));
             QPainterPath sp;
-            sp.addRoundedRect(cardRect.adjusted(-grow, -grow * 0.5 + dyBias, grow, grow + dyBias),
-                              radius + grow, radius + grow);
+            sp.addRoundedRect(cardRect.adjusted(-grow, -grow * 0.5 + dyBias, grow, grow + dyBias), radius + grow,
+                radius + grow);
             painter->fillPath(sp, s);
         }
         painter->restore();
@@ -347,8 +345,7 @@ public:
         // shadow-defined surface, NOT an outlined box; on hover/press it becomes the accent fringe.
         // zh_CN: 描边：静息态几乎不可见（≈ rgba(0,0,0,0.05)），让卡片靠阴影成形，而非画成带框的盒子；
         // hover/按下时转为强调色发丝边。
-        QColor border = active ? colors.accentDefault
-                               : (dark ? QColor(255, 255, 255, 18) : QColor(0, 0, 0, 13));
+        QColor border = active ? colors.accentDefault : (dark ? QColor(255, 255, 255, 18) : QColor(0, 0, 0, 13));
         if (active)
             border.setAlpha(dark ? 150 : 120);
         painter->setPen(QPen(border, 1.0));
@@ -357,12 +354,10 @@ public:
 
         const int contentLeft = qRound(cardRect.left()) + kHeroLinkCardPadding;
         const int contentWidth = qRound(cardRect.width()) - kHeroLinkCardPadding * 2;
-        const QRectF iconRect(contentLeft, cardRect.top() + kHeroLinkCardPadding, kHeroLinkIconSize,
-                              kHeroLinkIconSize);
+        const QRectF iconRect(contentLeft, cardRect.top() + kHeroLinkCardPadding, kHeroLinkIconSize, kHeroLinkIconSize);
         // The GitHub mark is recolored to the text color (theme-aware); colored logos ignore the tint.
         // zh_CN: GitHub 标记按文字色重新着色(随主题);彩色 logo 忽略该 tint。
-        drawCenteredPixmap(*painter, iconRect, index.data(LinkImageRole).toString(),
-                           colors.textPrimary);
+        drawCenteredPixmap(*painter, iconRect, index.data(LinkImageRole).toString(), colors.textPrimary);
 
         int textY = qRound(iconRect.bottom()) + 14;
 
@@ -374,8 +369,7 @@ public:
         painter->setFont(titleFont);
         painter->setPen(colors.textPrimary);
         painter->drawText(QRect(contentLeft, textY, contentWidth, titleMetrics.height()),
-                          Qt::AlignLeft | Qt::AlignVCenter,
-                          titleMetrics.elidedText(title, Qt::ElideRight, contentWidth));
+            Qt::AlignLeft | Qt::AlignVCenter, titleMetrics.elidedText(title, Qt::ElideRight, contentWidth));
 
         textY += titleMetrics.height() + 4;
         const QString description = index.data(LinkDescriptionRole).toString();
@@ -387,11 +381,10 @@ public:
         // a standard "opens externally" affordance instead of floating alone in the bottom corner.
         // zh_CN: 外链字形移至右上角，hover 时转强调色，作为标准“外部打开”记号，而非孤零零浮在右下角。
         const QRect externalRect(qRound(cardRect.right()) - kHeroLinkCardPadding - 16,
-                                 qRound(cardRect.top()) + kHeroLinkCardPadding, 16, 16);
+            qRound(cardRect.top()) + kHeroLinkCardPadding, 16, 16);
         drawElidedWrappedText(*painter,
-                              QRect(contentLeft, textY, contentWidth,
-                                    qRound(cardRect.bottom()) - kHeroLinkCardPadding - textY),
-                              description, descFont, colors.textSecondary, 3);
+            QRect(contentLeft, textY, contentWidth, qRound(cardRect.bottom()) - kHeroLinkCardPadding - textY),
+            description, descFont, colors.textSecondary, 3);
 
         painter->setFont(glyphFont);
         painter->setPen(active ? colors.accentDefault : colors.textSecondary);
@@ -437,44 +430,40 @@ public:
         setAttribute(Qt::WA_TranslucentBackground);
         viewport()->setAttribute(Qt::WA_TranslucentBackground);
         viewport()->setCursor(Qt::PointingHandCursor);
-        setStyleSheet(QStringLiteral("QListView#galleryHomeHeroLinksView { "
-                                     "background: transparent; border: none; }"
-                                     "QListView#galleryHomeHeroLinksView::item { "
-                                     "background: transparent; }"));
+        setStyleSheet(QStringLiteral(
+            "QListView#galleryHomeHeroLinksView { "
+            "background: transparent; border: none; }"
+            "QListView#galleryHomeHeroLinksView::item { "
+            "background: transparent; }"));
 
         auto* delegate = new GalleryHomeLinkDelegate(this);
         setItemDelegate(delegate);
 
         auto* model = new QStandardItemModel(this);
-        auto append = [model](const QString& title, const QString& description, const QString& url,
-                              const QString& imagePath) {
-            auto* item = new QStandardItem(title);
-            item->setEditable(false);
-            item->setData(title, LinkTitleRole);
-            item->setData(description, LinkDescriptionRole);
-            item->setData(QUrl(url), LinkUrlRole);
-            item->setData(imagePath, LinkImageRole);
-            model->appendRow(item);
-        };
-        append(QStringLiteral("Design"),
-               QStringLiteral("Guidelines and toolkits for Fluent design."),
-               QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit"),
-               QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png"));
+        auto append =
+            [model](const QString& title, const QString& description, const QString& url, const QString& imagePath) {
+                auto* item = new QStandardItem(title);
+                item->setEditable(false);
+                item->setData(title, LinkTitleRole);
+                item->setData(description, LinkDescriptionRole);
+                item->setData(QUrl(url), LinkUrlRole);
+                item->setData(imagePath, LinkImageRole);
+                model->appendRow(item);
+            };
+        append(QStringLiteral("Design"), QStringLiteral("Guidelines and toolkits for Fluent design."),
+            QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit"),
+            QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png"));
         append(QStringLiteral("WinUI Gallery"), QStringLiteral("WinUI Gallery source on GitHub."),
-               QStringLiteral("https://github.com/microsoft/WinUI-Gallery"),
-               QStringLiteral(":/app/assets/home_header_tiles/GitHub-Mark.png"));
-        append(QStringLiteral("Fluent UI"),
-               QStringLiteral("Fluent controls and patterns for the web."),
-               QStringLiteral("https://developer.microsoft.com/en-us/fluentui#/controls/web"),
-               QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png"));
-        append(QStringLiteral("FluentQt"),
-               QStringLiteral("FluentQt UI component library source on GitHub."),
-               QStringLiteral("https://github.com/calvinhxx/Fluent-Qt"),
-               QStringLiteral(":/app/assets/app-icon.png"));
-        append(QStringLiteral("Qt Quick Controls"),
-               QStringLiteral("Qt Quick Controls reference on doc.qt.io."),
-               QStringLiteral("https://doc.qt.io/qt-6/qtquickcontrols-index.html"),
-               QStringLiteral(":/app/assets/home_header_tiles/Qt-Logo.png"));
+            QStringLiteral("https://github.com/microsoft/WinUI-Gallery"),
+            QStringLiteral(":/app/assets/home_header_tiles/GitHub-Mark.png"));
+        append(QStringLiteral("Fluent UI"), QStringLiteral("Fluent controls and patterns for the web."),
+            QStringLiteral("https://developer.microsoft.com/en-us/fluentui#/controls/web"),
+            QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png"));
+        append(QStringLiteral("FluentQt"), QStringLiteral("FluentQt UI component library source on GitHub."),
+            QStringLiteral("https://github.com/calvinhxx/Fluent-Qt"), QStringLiteral(":/app/assets/app-icon.png"));
+        append(QStringLiteral("Qt Quick Controls"), QStringLiteral("Qt Quick Controls reference on doc.qt.io."),
+            QStringLiteral("https://doc.qt.io/qt-6/qtquickcontrols-index.html"),
+            QStringLiteral(":/app/assets/home_header_tiles/Qt-Logo.png"));
         setModel(model);
 
         connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, [this] {
@@ -486,10 +475,8 @@ public:
             updateScrollButtonsVisibility();
         });
 
-        m_backButton =
-            createScrollButton(Typography::Icons::FlipViewPrevH, QStringLiteral("Scroll left"));
-        m_forwardButton =
-            createScrollButton(Typography::Icons::FlipViewNextH, QStringLiteral("Scroll right"));
+        m_backButton = createScrollButton(Typography::Icons::FlipViewPrevH, QStringLiteral("Scroll left"));
+        m_forwardButton = createScrollButton(Typography::Icons::FlipViewNextH, QStringLiteral("Scroll right"));
         connect(m_backButton, &QPushButton::clicked, this, [this] { scrollByViewport(-1); });
         connect(m_forwardButton, &QPushButton::clicked, this, [this] { scrollByViewport(1); });
 
@@ -560,14 +547,12 @@ private:
     {
         const int y = qMax(0, (height() - kHeroScrollButtonHeight) / 2 - kHeroScrollButtonLift);
         if (m_backButton) {
-            m_backButton->setGeometry(kHeroScrollButtonMarginX, y, kHeroScrollButtonWidth,
-                                      kHeroScrollButtonHeight);
+            m_backButton->setGeometry(kHeroScrollButtonMarginX, y, kHeroScrollButtonWidth, kHeroScrollButtonHeight);
             m_backButton->raise();
         }
         if (m_forwardButton) {
-            m_forwardButton->setGeometry(width() - kHeroScrollButtonMarginX -
-                                             kHeroScrollButtonWidth,
-                                         y, kHeroScrollButtonWidth, kHeroScrollButtonHeight);
+            m_forwardButton->setGeometry(width() - kHeroScrollButtonMarginX - kHeroScrollButtonWidth, y,
+                kHeroScrollButtonWidth, kHeroScrollButtonHeight);
             m_forwardButton->raise();
         }
     }
@@ -610,8 +595,7 @@ private:
  */
 class GalleryHomeHeroBanner : public QWidget, public fluent::FluentElement {
 public:
-    explicit GalleryHomeHeroBanner(const QString& title, const QString& tagline,
-                                   QWidget* parent = nullptr)
+    explicit GalleryHomeHeroBanner(const QString& title, const QString& tagline, QWidget* parent = nullptr)
         : QWidget(parent)
     {
         setObjectName(QStringLiteral("galleryHomeHero"));
@@ -632,15 +616,14 @@ public:
         m_particles->lower();
         auto& settings = GallerySettings::instance();
         connect(&settings, &GallerySettings::homeParticlesEnabledChanged, this,
-                &GalleryHomeHeroBanner::setParticlesEnabled);
+            &GalleryHomeHeroBanner::setParticlesEnabled);
         setParticlesEnabled(settings.homeParticlesEnabled());
 
         auto* layout = new QVBoxLayout(this);
         // The floating link ListView occupies the lower half of the hero, so keep the
         // text block in the upper band and let the card strip sit on the artwork.
         // zh_CN: 悬浮链接 ListView 占用 hero 下半区，因此文字块放在上方，卡片条压在横幅图上。
-        layout->setContentsMargins(kHeroMarginX, 24, kHeroMarginX,
-                                   kHeroHeight - kHeroLinkStripTop + 12);
+        layout->setContentsMargins(kHeroMarginX, 24, kHeroMarginX, kHeroHeight - kHeroLinkStripTop + 12);
         layout->setSpacing(0);
 
         m_iconLabel = new QLabel(this);
@@ -727,16 +710,16 @@ protected:
         const QSize pixels(qMax(1, qRound(width() * dpr)), qMax(1, qRound(height() * dpr)));
         const bool material = usesWindowMaterialBackdrop(this);
         const bool composited = usesCompositedWindowBackdrop(this);
-        if (m_artwork.size() == pixels && m_artwork.devicePixelRatio() == dpr &&
-            m_cachedMaterial == material && m_cachedComposited == composited) {
+        if (m_artwork.size() == pixels && m_artwork.devicePixelRatio() == dpr && m_cachedMaterial == material
+            && m_cachedComposited == composited) {
             QPainter target(this);
-            target.setCompositionMode(composited ? QPainter::CompositionMode_Source
-                                                 : QPainter::CompositionMode_SourceOver);
+            target.setCompositionMode(
+                composited ? QPainter::CompositionMode_Source : QPainter::CompositionMode_SourceOver);
             target.drawImage(QPointF(0, 0), m_artwork);
             return;
         }
         QImage artwork(qMax(1, qRound(width() * dpr)), qMax(1, qRound(height() * dpr)),
-                       QImage::Format_ARGB32_Premultiplied);
+            QImage::Format_ARGB32_Premultiplied);
         artwork.setDevicePixelRatio(dpr);
         artwork.fill(Qt::transparent);
 
@@ -767,8 +750,8 @@ protected:
         // 底部淡入内容层，使图像与页面无缝衔接（WinUI 首页）。右上角若圆角会在窗口边缘留下一小块背景缺口。
         const QRectF banner(0, 0, width(), height());
         const qreal radius = themeRadius().overlay;
-        QPainterPath clip = fluent::overlay::roundedCornerRectPath(
-            banner, radius, /*TL*/ true, /*TR*/ false, /*BR*/ false, /*BL*/ false);
+        QPainterPath clip = fluent::overlay::roundedCornerRectPath(banner, radius, /*TL*/ true, /*TR*/ false,
+            /*BR*/ false, /*BL*/ false);
         painter.save();
         painter.setClipPath(clip);
 
@@ -812,12 +795,9 @@ protected:
             g.setColorAt(1.0, edge);
             painter.fillRect(banner, g);
         };
-        bloom({bx + w * 0.86, by - h * 0.30}, h * 1.5,
-              dark ? QColor(86, 150, 232, 82) : QColor(255, 255, 255, 210));
-        bloom({bx + w * 0.94, by + h * 1.10}, h * 1.3,
-              dark ? QColor(150, 96, 206, 76) : QColor(214, 180, 236, 128));
-        bloom({bx + w * 0.62, by + h * 1.15}, h * 1.0,
-              dark ? QColor(196, 116, 168, 46) : QColor(247, 210, 214, 102));
+        bloom({bx + w * 0.86, by - h * 0.30}, h * 1.5, dark ? QColor(86, 150, 232, 82) : QColor(255, 255, 255, 210));
+        bloom({bx + w * 0.94, by + h * 1.10}, h * 1.3, dark ? QColor(150, 96, 206, 76) : QColor(214, 180, 236, 128));
+        bloom({bx + w * 0.62, by + h * 1.15}, h * 1.0, dark ? QColor(196, 116, 168, 46) : QColor(247, 210, 214, 102));
 
         // Fine grain dither: 8-bit-per-channel gradients band in the deep blue→purple range; a faint
         // overlay-blended noise (~5%) scatters the bands so the wash reads silky rather than stepped.
@@ -829,8 +809,7 @@ protected:
         painter.fillRect(banner, QBrush(acrylicNoiseTile()));
         painter.restore();
 
-        const QRectF fadeRect(banner.left(), banner.bottom() - kHeroBottomFade, banner.width(),
-                              kHeroBottomFade);
+        const QRectF fadeRect(banner.left(), banner.bottom() - kHeroBottomFade, banner.width(), kHeroBottomFade);
 
         if (materialBackdrop) {
             // Mica/Acrylic: the content area below shows the native or UILib-painted window material,
@@ -841,13 +820,9 @@ protected:
             // zh_CN: Mica/Acrylic：下方内容区透明、透出系统背景，故用 DestinationIn alpha 蒙版把横幅美术层本身
             // 淡到透明——它融入同一背景且无缝。上半区保留一点点透明，让背景色调透过整个 hero（“带一点透明”）；
             // 文字、图标与链接卡片是后绘的独立子控件，保持清晰。
-            const qreal veil =
-                dark ? 0.90 : 0.92; // upper-band opacity → backdrop shows ~8–10% through the art
-            const qreal fadeTop =
-                qBound(0.0, 1.0 - qreal(kHeroBottomFade) / qMax(1.0, banner.height()), 1.0);
-            const auto a = [](qreal o) {
-                return QColor(0, 0, 0, qBound(0, qRound(o * 255.0), 255));
-            };
+            const qreal veil = dark ? 0.90 : 0.92; // upper-band opacity → backdrop shows ~8–10% through the art
+            const qreal fadeTop = qBound(0.0, 1.0 - qreal(kHeroBottomFade) / qMax(1.0, banner.height()), 1.0);
+            const auto a = [](qreal o) { return QColor(0, 0, 0, qBound(0, qRound(o * 255.0), 255)); };
             QLinearGradient mask(banner.topLeft(), banner.bottomLeft());
             mask.setColorAt(0.0, a(veil));
             mask.setColorAt(fadeTop, a(veil));
@@ -894,8 +869,8 @@ protected:
         // zh_CN: 原生/合成器材质由 alpha 图层替换当前区域；应用侧绘制的材质
         // 则保留在图层下方，通过 SourceOver 显露出来。
         target.setCompositionMode(usesCompositedWindowBackdrop(this)
-                                      ? QPainter::CompositionMode_Source
-                                      : QPainter::CompositionMode_SourceOver);
+                ? QPainter::CompositionMode_Source
+                : QPainter::CompositionMode_SourceOver);
         target.drawImage(QPointF(0, 0), artwork);
     }
 
@@ -904,12 +879,12 @@ private:
     {
         const Colors colors = themeColors();
         if (m_titleLabel) {
-            m_titleLabel->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                            .arg(cssColor(colors.textPrimary)));
+            m_titleLabel->setStyleSheet(
+                QStringLiteral("color: %1; background: transparent;").arg(cssColor(colors.textPrimary)));
         }
         if (m_taglineLabel) {
-            m_taglineLabel->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                              .arg(cssColor(colors.textSecondary)));
+            m_taglineLabel->setStyleSheet(
+                QStringLiteral("color: %1; background: transparent;").arg(cssColor(colors.textSecondary)));
         }
     }
 
@@ -923,8 +898,8 @@ private:
 };
 
 GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
-                                 const GalleryNavigationViewModel& navigationViewModel,
-                                 QWidget* parent)
+    const GalleryNavigationViewModel& navigationViewModel,
+    QWidget* parent)
     : GalleryContentPage(entry.routeId, entry.title, QString(), parent)
 {
     setObjectName(QStringLiteral("galleryHomePage"));
@@ -935,8 +910,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     setViewportMargins(QMargins(0, 0, 0, 0));
     setContentSpacing(0);
 
-    m_heroBanner =
-        new GalleryHomeHeroBanner(QStringLiteral("Fluent-Qt Gallery"), entry.description, this);
+    m_heroBanner = new GalleryHomeHeroBanner(QStringLiteral("Fluent-Qt Gallery"), entry.description, this);
     addContentWidget(m_heroBanner);
 
     auto* body = new QWidget(this);
@@ -966,8 +940,8 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
 
     // Featured components mirror the curated routes from the content catalog.
     // zh_CN: 精选组件来自内容目录的精选路由。
-    fluent::textfields::Label* featuredHeader = createTrackedLabel(
-        QStringLiteral("Featured components"), Typography::FontRole::Subtitle, TextRole::Primary);
+    fluent::textfields::Label* featuredHeader = createTrackedLabel(QStringLiteral("Featured components"),
+        Typography::FontRole::Subtitle, TextRole::Primary);
     featuredHeader->setObjectName(QStringLiteral("galleryHomeFeaturedHeader"));
     featuredHeader->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     bodyLayout->addWidget(featuredHeader);
@@ -981,16 +955,16 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         if (const GalleryContentEntry* componentEntry = galleryContentEntry(routeId))
             description = componentEntry->description;
         const QString imageResource = galleryControlImageResource(item->title);
-        featuredEntries.append({item->id, item->title, description, imageResource,
-                                imageResource.isEmpty() ? item->iconGlyph : QString()});
+        featuredEntries.append(
+            {item->id, item->title, description, imageResource, imageResource.isEmpty() ? item->iconGlyph : QString()});
     }
     addEntryGrid(QStringLiteral("galleryHomeCards"))->setEntries(featuredEntries);
 
     // Category quick links cover the rest of the catalog.
     // zh_CN: 分类捷径覆盖目录其余部分。
     bodyLayout->addSpacing(12);
-    fluent::textfields::Label* categoriesHeader = createTrackedLabel(
-        QStringLiteral("Browse by category"), Typography::FontRole::Subtitle, TextRole::Primary);
+    fluent::textfields::Label* categoriesHeader = createTrackedLabel(QStringLiteral("Browse by category"),
+        Typography::FontRole::Subtitle, TextRole::Primary);
     categoriesHeader->setObjectName(QStringLiteral("galleryHomeCategoriesHeader"));
     categoriesHeader->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     bodyLayout->addWidget(categoriesHeader);
@@ -1002,8 +976,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
             description = categoryEntry->description;
         categoryEntries.append({item.id, item.title, description, QString(), item.iconGlyph});
     };
-    if (const GalleryNavigationItem* allControls =
-            navigationViewModel.itemById(QStringLiteral("all-controls")))
+    if (const GalleryNavigationItem* allControls = navigationViewModel.itemById(QStringLiteral("all-controls")))
         appendCategory(*allControls);
     for (const GalleryNavigationItem& item : navigationViewModel.items()) {
         if (item.kind == GalleryNavigationItem::Kind::CategoryRoute && item.depth == 0)
@@ -1013,11 +986,12 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
 
     addContentWidget(body);
 
-    LOG_DEBUG(QStringLiteral("GalleryHomePage created routeId=%1 "
-                             "featuredCards=%2 categoryCards=%3")
-                  .arg(entry.routeId)
-                  .arg(featuredEntries.size())
-                  .arg(categoryEntries.size()));
+    LOG_DEBUG(QStringLiteral(
+        "GalleryHomePage created routeId=%1 "
+        "featuredCards=%2 categoryCards=%3")
+            .arg(entry.routeId)
+            .arg(featuredEntries.size())
+            .arg(categoryEntries.size()));
 }
 
 void GalleryHomePage::onThemeUpdated()

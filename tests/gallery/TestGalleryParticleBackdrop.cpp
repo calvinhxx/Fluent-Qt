@@ -31,8 +31,7 @@ using fluent::layout::ParticleBackdrop;
 
 TEST(GalleryParticleBackdropTest, SamplesReusePublicComponentAndStartIdle)
 {
-    const auto samples =
-        fluent::gallery::gallerySamplesForRoute(QStringLiteral("particle-backdrop"));
+    const auto samples = fluent::gallery::gallerySamplesForRoute(QStringLiteral("particle-backdrop"));
     ASSERT_EQ(samples.size(), 3);
     for (const auto& sample : samples) {
         std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
@@ -42,19 +41,17 @@ TEST(GalleryParticleBackdropTest, SamplesReusePublicComponentAndStartIdle)
         ASSERT_NE(backdrop, nullptr);
         EXPECT_FALSE(backdrop->isAnimating());
         EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("new ParticleBackdrop")));
-        const auto expected = sample.id == QStringLiteral("particle-backdrop-basic")
-                                  ? ParticleBackdrop::FlowingRibbons
-                              : sample.id == QStringLiteral("particle-backdrop-content")
-                                  ? ParticleBackdrop::FloatingDots
-                                  : ParticleBackdrop::Starfield;
+        const auto expected = sample.id == QStringLiteral("particle-backdrop-basic") ? ParticleBackdrop::FlowingRibbons
+            : sample.id == QStringLiteral("particle-backdrop-content")
+            ? ParticleBackdrop::FloatingDots
+            : ParticleBackdrop::Starfield;
         EXPECT_EQ(backdrop->effect(), expected);
     }
 }
 
 TEST(GalleryParticleBackdropTest, SamplesFillAvailableWidthAndControlsChangeMotion)
 {
-    const auto samples =
-        fluent::gallery::gallerySamplesForRoute(QStringLiteral("particle-backdrop"));
+    const auto samples = fluent::gallery::gallerySamplesForRoute(QStringLiteral("particle-backdrop"));
     for (const auto& sample : samples) {
         EXPECT_TRUE(sample.fillAvailableWidth);
         fluent::gallery::GallerySampleCard card(sample);
@@ -101,8 +98,8 @@ TEST(GalleryParticleBackdropTest, SamplesFillAvailableWidthAndControlsChangeMoti
 
 TEST(GalleryParticleBackdropTest, ExistingExpandingPreviewsKeepTheirRightSpacer)
 {
-    for (const auto& route : {QStringLiteral("tab-view"), QStringLiteral("navigation-view"),
-                              QStringLiteral("button"), QStringLiteral("slider")}) {
+    for (const auto& route : {QStringLiteral("tab-view"), QStringLiteral("navigation-view"), QStringLiteral("button"),
+             QStringLiteral("slider")}) {
         const auto samples = fluent::gallery::gallerySamplesForRoute(route);
         ASSERT_FALSE(samples.isEmpty()) << route.toStdString();
         for (const auto& sample : samples) {
@@ -124,10 +121,7 @@ TEST(GalleryParticleBackdropTest, HomeUsesBoundedMotionAndStopsOutsideViewport)
     auto& settings = fluent::gallery::GallerySettings::instance();
     struct RestoreParticles {
         bool enabled;
-        ~RestoreParticles()
-        {
-            fluent::gallery::GallerySettings::instance().setHomeParticlesEnabled(enabled);
-        }
+        ~RestoreParticles() { fluent::gallery::GallerySettings::instance().setHomeParticlesEnabled(enabled); }
     } restoreParticles{settings.homeParticlesEnabled()};
     settings.setHomeParticlesEnabled(true);
     auto& policy = fluent::MotionPolicy::instance();
@@ -145,9 +139,8 @@ TEST(GalleryParticleBackdropTest, HomeUsesBoundedMotionAndStopsOutsideViewport)
     auto* backdrop = home.findChild<ParticleBackdrop*>(QStringLiteral("galleryHomeParticles"));
     ASSERT_NE(backdrop, nullptr);
     const auto launchEffect = backdrop->effect();
-    EXPECT_TRUE(launchEffect == ParticleBackdrop::FlowingRibbons ||
-                launchEffect == ParticleBackdrop::FloatingDots ||
-                launchEffect == ParticleBackdrop::Starfield);
+    EXPECT_TRUE(launchEffect == ParticleBackdrop::FlowingRibbons || launchEffect == ParticleBackdrop::FloatingDots
+        || launchEffect == ParticleBackdrop::Starfield);
     EXPECT_EQ(backdrop->particleCount(), 240);
     EXPECT_EQ(backdrop->maximumFrameRate(), 30);
     EXPECT_EQ(backdrop->backgroundMode(), ParticleBackdrop::Transparent);
@@ -181,8 +174,7 @@ TEST(GalleryParticleBackdropTest, HomeUsesBoundedMotionAndStopsOutsideViewport)
     home.onThemeUpdated();
     EXPECT_EQ(backdrop->effect(), launchEffect);
     fluent::gallery::GalleryHomePage recreatedHome(*entry, navigation);
-    auto* recreatedBackdrop =
-        recreatedHome.findChild<ParticleBackdrop*>(QStringLiteral("galleryHomeParticles"));
+    auto* recreatedBackdrop = recreatedHome.findChild<ParticleBackdrop*>(QStringLiteral("galleryHomeParticles"));
     ASSERT_NE(recreatedBackdrop, nullptr);
     EXPECT_EQ(recreatedBackdrop->effect(), launchEffect);
 }
@@ -206,7 +198,7 @@ TEST(GalleryParticleBackdropTest, HomeEffectDoesNotRepeatAcrossLaunches)
     const QString enabledKey = QStringLiteral("home/particlesEnabled");
     QSettings storage = fluent::gallery::platform::createSettings();
     const QStringList validEffects{QStringLiteral("FlowingRibbons"), QStringLiteral("FloatingDots"),
-                                   QStringLiteral("Starfield")};
+        QStringLiteral("Starfield")};
 
     if (qEnvironmentVariableIsSet("FLUENTQT_GALLERY_HERO_COLD_LOAD")) {
         const QString previous = storage.value(key).toString();
@@ -261,8 +253,7 @@ TEST(GalleryParticleBackdropTest, HomeEffectDoesNotRepeatAcrossLaunches)
             storage.sync();
         }
     } restoreSetting{storage, key, storage.contains(key), storage.value(key)};
-    RestoreSetting restoreEnabled{storage, enabledKey, storage.contains(enabledKey),
-                                  storage.value(enabledKey)};
+    RestoreSetting restoreEnabled{storage, enabledKey, storage.contains(enabledKey), storage.value(enabledKey)};
     storage.remove(key);
     storage.remove(enabledKey);
     for (int launch = 0; launch < 8; ++launch) {
@@ -280,8 +271,9 @@ TEST(GalleryParticleBackdropTest, HomeEffectDoesNotRepeatAcrossLaunches)
         probe.setProcessEnvironment(environment);
         probe.setProcessChannelMode(QProcess::MergedChannels);
         probe.start(QCoreApplication::applicationFilePath(),
-                    {QStringLiteral("--gtest_filter=GalleryParticleBackdropTest."
-                                    "HomeEffectDoesNotRepeatAcrossLaunches")});
+            {QStringLiteral(
+                "--gtest_filter=GalleryParticleBackdropTest."
+                "HomeEffectDoesNotRepeatAcrossLaunches")});
         ASSERT_TRUE(probe.waitForStarted(10000));
         ASSERT_TRUE(probe.waitForFinished(30000));
         ASSERT_EQ(probe.exitStatus(), QProcess::NormalExit);
