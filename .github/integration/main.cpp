@@ -23,8 +23,7 @@ int main(int argc, char* argv[])
     list.setFontRole(Typography::FontRole::Body);
 
     fluent::scrolling::ScrollView scrollView;
-    scrollView.setContentWidget(
-        new fluent::textfields::Label(QStringLiteral("External source consumer")),
+    scrollView.setContentWidget(new fluent::textfields::Label(QStringLiteral("External source consumer")),
         fluent::WidgetOwnership::Owned);
 
     fluent::date_time::CalendarView calendar;
@@ -37,9 +36,8 @@ int main(int argc, char* argv[])
         return 6;
     const QPoint nativeAnchor = button.mapToGlobal(QPoint(3, 5));
     fluent::overlay::presentation::setTransform(&button, QTransform::fromTranslate(7, 11));
-    if (!fluent::overlay::presentation::hasTransform(&button) ||
-        fluent::overlay::presentation::mapToGlobal(&button, QPoint(3, 5)) !=
-            nativeAnchor + QPoint(7, 11))
+    if (!fluent::overlay::presentation::hasTransform(&button)
+        || fluent::overlay::presentation::mapToGlobal(&button, QPoint(3, 5)) != nativeAnchor + QPoint(7, 11))
         return 1;
     fluent::overlay::presentation::clearTransform(&button);
     if (fluent::overlay::presentation::mapToGlobal(&button, QPoint(3, 5)) != nativeAnchor)
@@ -61,8 +59,8 @@ int main(int argc, char* argv[])
     fluent::status_info::Avatar avatar(QStringLiteral("Ada Lovelace"));
 #ifdef FLUENT_QT_HAS_SPATIAL
     fluent::spatial::SpatialRuntime::prepareApplication();
-    if (!fluent::spatial::SpatialRuntime::isHardwareRenderer(QStringLiteral("Test GPU")) ||
-        fluent::spatial::SpatialRuntime::isHardwareRenderer(QStringLiteral("llvmpipe")))
+    if (!fluent::spatial::SpatialRuntime::isHardwareRenderer(QStringLiteral("Test GPU"))
+        || fluent::spatial::SpatialRuntime::isHardwareRenderer(QStringLiteral("llvmpipe")))
         return 5;
     fluent::spatial::SpatialView spatial;
     spatial.setRenderMode(fluent::spatial::SpatialView::RenderMode::Raster);

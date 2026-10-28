@@ -22,17 +22,14 @@ TEST(SpatialPluginTest, Contract_RegistrationUsesGenericFactoryWithoutCreatingAC
     spatial::SpatialPlugin extension;
     plugins::PluginManager manager;
     ASSERT_TRUE(manager.registerPlugin(&extension));
-    EXPECT_EQ(manager.metadata(spatial::SpatialPlugin::pluginId()).id,
-              QStringLiteral("fluentqt.spatial"));
-    EXPECT_EQ(
-        manager.createWidget(spatial::SpatialPlugin::pluginId(), QStringLiteral("spatial-view")),
-        nullptr);
+    EXPECT_EQ(manager.metadata(spatial::SpatialPlugin::pluginId()).id, QStringLiteral("fluentqt.spatial"));
+    EXPECT_EQ(manager.createWidget(spatial::SpatialPlugin::pluginId(), QStringLiteral("spatial-view")), nullptr);
     ASSERT_TRUE(manager.activate(spatial::SpatialPlugin::pluginId()));
     EXPECT_TRUE(extension.isActive());
     EXPECT_EQ(QOpenGLContext::currentContext(), nullptr);
     QWidget owner;
-    auto* view = qobject_cast<spatial::SpatialView*>(manager.createWidget(
-        spatial::SpatialPlugin::pluginId(), QStringLiteral("spatial-view"), &owner));
+    auto* view = qobject_cast<spatial::SpatialView*>(
+        manager.createWidget(spatial::SpatialPlugin::pluginId(), QStringLiteral("spatial-view"), &owner));
     ASSERT_NE(view, nullptr);
     EXPECT_EQ(view->parentWidget(), &owner);
     EXPECT_EQ(QOpenGLContext::currentContext(), nullptr);
@@ -97,8 +94,7 @@ TEST(SpatialPluginTest, Contract_DestroyedOutputsAreGuardedAndAdaptersRemainCall
 TEST(SpatialPluginTest, Contract_ParentedSessionAndBorrowedProductsTeardownSafely)
 {
     const auto previousMotion = MotionPolicy::instance().mode();
-    const auto restoreMotion =
-        qScopeGuard([&] { MotionPolicy::instance().setMode(previousMotion); });
+    const auto restoreMotion = qScopeGuard([&] { MotionPolicy::instance().setMode(previousMotion); });
     MotionPolicy::instance().setMode(MotionPolicy::Mode::Full);
     for (bool nested : {false, true}) {
         SCOPED_TRACE(nested);
@@ -230,11 +226,10 @@ TEST(SpatialPluginTest, Contract_SessionDeletionInLifecycleSignalsKeepsManagerAl
         QObject receiver;
         if (!deleteWhenActive)
             ASSERT_TRUE(session->activate());
-        QObject::connect(session, &spatial::SpatialSession::activeChanged, &receiver,
-                         [&](bool active) {
-                             if (active == deleteWhenActive)
-                                 delete session.data();
-                         });
+        QObject::connect(session, &spatial::SpatialSession::activeChanged, &receiver, [&](bool active) {
+            if (active == deleteWhenActive)
+                delete session.data();
+        });
         if (deleteWhenActive)
             EXPECT_TRUE(session->activate());
         else
@@ -250,8 +245,9 @@ TEST(SpatialPluginTest, Contract_ControlSignalsCanDeleteSessionWithoutDeletingVi
     ASSERT_TRUE(session->activate());
     ASSERT_TRUE(session->attachView(&view));
     QObject receiver;
-    QObject::connect(&view, &spatial::SpatialView::renderModeChanged, &receiver,
-                     [&](spatial::SpatialView::RenderMode) { delete session.data(); });
+    QObject::connect(&view, &spatial::SpatialView::renderModeChanged, &receiver, [&](spatial::SpatialView::RenderMode) {
+        delete session.data();
+    });
     EXPECT_TRUE(session->deactivate());
     EXPECT_TRUE(session.isNull());
     EXPECT_FALSE(view.isSpatialEnabled());

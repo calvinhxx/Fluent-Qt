@@ -34,11 +34,9 @@ QImage textureFrame(const ParticleLayer& layer)
     GLuint framebuffer = 0;
     gl->glGenFramebuffers(1, &framebuffer);
     gl->glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                               layer.textureId(), 0);
+    gl->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, layer.textureId(), 0);
     QImage result(layer.textureSize(), QImage::Format_RGBA8888_Premultiplied);
-    gl->glReadPixels(0, 0, result.width(), result.height(), GL_RGBA, GL_UNSIGNED_BYTE,
-                     result.bits());
+    gl->glReadPixels(0, 0, result.width(), result.height(), GL_RGBA, GL_UNSIGNED_BYTE, result.bits());
     gl->glBindFramebuffer(GL_FRAMEBUFFER, GLuint(previous));
     gl->glDeleteFramebuffers(1, &framebuffer);
     return result.mirrored();
@@ -96,8 +94,8 @@ TEST(ParticleLayerTest, Contract_NativeGpuPreservesStateReusesFramesAndReleasesO
     backdrop.setGpuAccelerationEnabled(true);
     contextHost.doneCurrent();
 
-    for (auto effect : {ParticleBackdrop::FlowingRibbons, ParticleBackdrop::FloatingDots,
-                        ParticleBackdrop::Starfield}) {
+    for (auto effect :
+        {ParticleBackdrop::FlowingRibbons, ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield}) {
         layer.release();
         backdrop.setEffect(effect);
         const QImage before = cpuFrame(backdrop);
@@ -179,8 +177,9 @@ TEST(ParticleLayerTest, Contract_NativeActiveSourceDestructionReleasesExactlyOnc
             QPointer<ParticleLayer> layer = new ParticleLayer(source, owned ? source : nullptr);
             int activations = 0, releases = 0;
             QObject observer;
-            QObject::connect(layer, &ParticleLayer::activeChanged, &observer,
-                             [&](bool active) { active ? ++activations : ++releases; });
+            QObject::connect(layer, &ParticleLayer::activeChanged, &observer, [&](bool active) {
+                active ? ++activations : ++releases;
+            });
             contextHost.makeCurrent();
             ASSERT_TRUE(layer->render(1));
             ASSERT_TRUE(layer->isActive());
