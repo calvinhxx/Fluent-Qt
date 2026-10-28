@@ -159,6 +159,7 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         for command in (
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             'python tools/site/test_generate_api_reference.py',
+            'node --test tools/site/test_support.mjs',
         ):
             with self.subTest(command=command):
                 errors = self.workflow_errors_with_replacement("ci-site.yml", command, "echo skipped")

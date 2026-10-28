@@ -1515,6 +1515,7 @@ def site_generation_errors(contents: str) -> list[str]:
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             "python tools/site/test_build_site.py",
             "python tools/site/test_generate_api_reference.py",
+            "node --test tools/site/test_support.mjs",
         ],
     }.items():
         section = named_step_section(build, step)

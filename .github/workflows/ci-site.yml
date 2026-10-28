@@ -96,6 +96,7 @@ jobs:
           python tools/site/test_generate_api_reference.py
           python tools/site/test_generate_localized_site.py
           node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs
+          node --test tools/site/test_support.mjs
 
       - name: Upload generated website
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

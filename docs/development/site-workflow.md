@@ -260,6 +260,66 @@ opens the original 1440×900 capture in a keyboard-accessible dialog with scroll
 Escape dismissal, and focus restoration. It follows the displayed theme and
 falls back to an ordinary image link without JavaScript or dialog support.
 
+## Voluntary support
+
+The homepage's `#support` section offers ¥19, ¥49, ¥99, and an any-amount
+option for the maintainer's WeChat Pay and Alipay collection codes. Each preset
+selects its matching supplied fixed-amount code; the any-amount option uses the
+generic code. The website does not create orders or confirm payment. Payment
+status remains in the visitor's WeChat or Alipay bill, and community support
+retains the boundaries in [SUPPORT.md](../../SUPPORT.md).
+
+Keep the untouched generic images at `site/assets/support/wechat.jpg` and
+`site/assets/support/alipay.jpg`. Fixed-amount originals use the same directory
+and the names `wechat-19.jpg`, `wechat-49.jpg`, `wechat-99.jpg`, `alipay-19.jpg`,
+`alipay-49.jpg`, and `alipay-99.jpg`. CSS crops each image to the QR region inside
+a white quiet zone without exposing payee name labels or raw uncropped poster links.
+While a new image loads, hide the previous code and show a loading message; an
+image failure must never fall back to a different amount.
+
+When replacing an image, check its dimensions and crop coordinates in
+`site/styles.css`. WeChat's fixed-amount images use a different crop from its
+generic image. Asset URLs resolve beside the generic image so locale and
+deployment subpaths work. Without JavaScript, both generic codes remain available.
+
+Before the deferred controller runs, the early page script masks the QR pixels
+and shows the existing loading message. `DOMContentLoaded` releases that mask
+after the controller has selected its code, or restores the generic-code fallback
+if the main script cannot load or execute. With scripting disabled, the mask is
+never applied. Missing controls or default selections leave the static codes
+available; a support initialization exception must not stop Gallery, theme, or
+other page initialization.
+
+For local verification, open `/zh-CN/#support` and `/#support`. Check all eight
+amount/method combinations, arrow-key selection, visible focus, narrow layouts,
+and Light, Dark, and High Contrast. Check rapid selection and image-error
+recovery. Decode the rendered codes and compare them with the supplied originals.
+Also check delayed and failed main-script loading and the no-script fallback.
+Run the focused controller checks:
+
+```bash
+node --test tools/site/test_support.mjs
+```
+
+The website CI module runs this test before uploading the generated site.
+The workflow boundary check requires it to remain unconditional.
+
+Browser checks and QR decoding do not verify the payment app's displayed amount,
+continued code validity, repeat payments, or settlement. Those require a separate
+manual check in the payment app.
+
+The repository's [funding configuration](../../.github/FUNDING.yml) uses a
+custom URL pointing to the English homepage's `#support` section. The Chinese
+README links directly to `/zh-CN/#support`. These links lead to WeChat Pay and
+Alipay collection codes; GitHub does not process the payments.
+
+For publication, verify the codes in both payment apps, publish the website
+through the existing `main`-branch Pages workflow, and confirm the public
+`#support` section and images load. The funding configuration must be on the
+repository's default branch, with Settings → General → Features → Sponsorships
+enabled. Follow the public Sponsor button through to the page after deployment.
+Local previews and a file on a maintenance branch do not enable that public entry.
+
 ## Gallery screenshots
 
 Use the current **Windows native Gallery with 3D enabled and Mica** for README and first-party
