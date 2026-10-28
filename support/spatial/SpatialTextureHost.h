@@ -29,11 +29,21 @@ public:
     static QString preflightFailure();
     // Internal allocation probe shared with the Python compositor; not installed API.
     static int currentPaintSampleBytes();
+    // Internal capture helper shared with the Python compositor; not installed API.
+    // Returns the backing-store dirty region of source's graphics effect pass in source
+    // coordinates, or an empty region when the pass cannot be mapped (repaint everything).
+    static QRegion graphicsEffectDirtyRegion(const QPainter* painter, const QWidget* source);
+    // Paint textureWidget (a QOpenGLWidget or QRhiWidget) when the next backing-store pass
+    // reaches it, without queuing it as a dirty texture widget. False means use update().
+    static bool schedulePaintInBackingStorePass(QWidget* textureWidget);
     bool isReady() const;
     QString rendererName() const;
     QVariantMap statistics() const;
     QImage grabFramebuffer() const;
     void requestFrame();
+    // Paint the surface in the next backing-store pass that reaches it, without queuing
+    // it as a dirty texture widget. False means use requestFrame().
+    bool scheduleFrameInBackingStorePass();
     void clearFrameCaches();
     void setLayerCount(int count);
     void setLayer(int index,
@@ -45,6 +55,9 @@ public:
         const QColor& reflection = Qt::transparent,
         qreal progress = 0,
         qreal shadowOpacity = 0);
+    // A layer whose texture still holds baseRevision repaints only damage, in layer
+    // coordinates. An empty damage region, or any other cached revision, repaints the layer.
+    void setLayerDamage(int index, quint64 baseRevision, const QRegion& damage);
     void setSceneClip(const QRectF& clip);
 
 signals:

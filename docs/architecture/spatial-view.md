@@ -329,8 +329,9 @@ macOS/Windows/Linux Gallery policies.
 ### GPU textures and sampling
 
 The shell redirects widget painting into two cached GPU textures through an
-OpenGL painter. Content changes redraw the affected surface; pointer motion reuses
-the textures. It does not capture and upload a full-page CPU bitmap each frame.
+OpenGL painter. Content changes redraw only the changed rows of the affected
+surface; pointer motion reuses the textures. It does not capture and upload a
+full-page CPU bitmap each frame.
 The panels share a multisampled paint target and a matching resolve target. Each
 dirty panel is painted there, resolved, then copied into its own RGBA texture for
 perspective composition. The intermediate resolve keeps sample rectangles and
@@ -402,6 +403,41 @@ select an unsupported XOR caret path. C++ and Python adapters preserve the
 delegate's capabilities; native input regressions exercise focus, caret blink,
 selection, IME commit, suggestion acceptance and item-editor commit in 3D.
 
+### Incremental updates
+
+Qt reports the changed area to the shell's capture effect as the paint engine's
+system clip, and a private compatibility adapter maps it back to widget
+coordinates. The shell attributes that area to the navigation or content surface
+it covers and repaints only those texture rows, in the same guarded strips used
+for full captures. A content-only change therefore leaves the navigation texture
+untouched. A change whose extent Qt cannot report, the first capture, a theme or
+material change, a resize or a cache reallocation repaints the whole surface.
+The RHI path uploads only the changed rows as texture subresources.
+
+The GPU surface is a render-to-texture widget. If such a widget is queued with
+`update()` while any other widget is dirty, Qt repaints everything beneath it,
+which would report both surfaces as changed on every frame of an animation. While
+presenting, the shell instead asks Qt, through another private adapter, to paint
+the surface during the backing-store pass that is already painting the changed
+widgets. Frames without a widget change, such as pointer tilt, particles or
+refinement, dirty one navigation pixel so that such a pass reaches the surface;
+the capture ignores that pixel. When Qt's private widget headers are unavailable,
+the shell keeps the queued `update()` path. A pass that never reaches the surface
+falls back to `update()` after 50 ms.
+
+Continuous updates with a reported extent that cover at least 30% of a surface,
+such as scrolling, dragging or an expanding section, paint at native density and
+are scaled into the cache texture. 160 ms after they pause, the affected rows are
+repainted at cache density, so text at rest keeps its full detail. Bands that
+contain an enabled nested graphics effect always keep cache density, because Qt
+caches effect pixmaps in device pixels and would replay them at stale positions.
+Texture cost is judged per frame, with both surfaces counted together. When it
+stays slow, smaller continuous updates also use native density. If native-density
+frames still average more than 33 ms for 60 such frames in a row, the Gallery
+suggests turning off 3D once; frames without native-density updates do not end
+that streak. The `update()` fallback is armed once per pending frame, so
+continuous requests cannot postpone it.
+
 ### Cache budget
 
 The two panel textures, native-density backdrop texture, and shared paint and resolve
@@ -437,7 +473,9 @@ use the same policy. Web keeps native output resolution by default; a lower
 resolution remains an explicit choice.
 
 For a native comparison, `FLUENT_QT_SPATIAL_BENCHMARK=1` enables frame and capture
-counters. With that flag, `FLUENT_QT_SPATIAL_EXTRA_SAMPLING` can temporarily cap
+counters; per-surface painted rows, partial, native-density and refinement counts
+are always recorded. With that flag, `FLUENT_QT_SPATIAL_INTERACTIVE=0` keeps every
+update at cache density. With that flag, `FLUENT_QT_SPATIAL_EXTRA_SAMPLING` can temporarily cap
 extra sampling from 1 to 2. `FLUENT_QT_SPATIAL_SAMPLER=monotone` selects the
 previous sampler for a same-binary comparison. Both overrides are ignored during
 ordinary use. Frame-swap counts measure renderer submissions, not frames shown

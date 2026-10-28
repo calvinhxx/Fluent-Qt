@@ -2134,6 +2134,300 @@ TEST_F(GallerySpatialTest, CacheBudgetPreservesDensityAndRespectsGpuLimits)
     EXPECT_FALSE(planCaches(panels, 2, 16384, 2, kCacheBudgetBytes, kPaintSamples, 0, 0, -1).valid());
 }
 
+TEST_F(GallerySpatialTest, DirtyRowsStripsAndDensityStepsStayAligned)
+{
+    using namespace spatial_render;
+    using Bands = std::vector<RowBand>;
+    EXPECT_EQ(damageRows(QRegion(0, 10, 50, 5), 3, 300), (Bands{{30, 45}}));
+    EXPECT_EQ(damageRows(QRegion(0, 10, 50, 5) + QRegion(0, 16, 20, 4), 1, 300), (Bands{{10, 20}}))
+        << "Nearby bands merge into one paint";
+    EXPECT_EQ(damageRows(QRegion(0, 10, 5, 5) + QRegion(0, 100, 5, 5), 1, 300), (Bands{{10, 15}, {100, 105}}));
+    EXPECT_EQ(damageRows(QRegion(0, 290, 5, 50), 1, 300), (Bands{{290, 300}})) << "Bands stop at the panel edge";
+    EXPECT_EQ(damageRows(QRegion(0, 1, 10, 1), 2.5, 100, 5), (Bands{{0, 5}})) << "Bands align outward to the step";
+    EXPECT_TRUE(damageRows(QRegion(), 2, 100).empty());
+
+    EXPECT_EQ(sharedRowQuantum(2, 3), 1);
+    EXPECT_EQ(sharedRowQuantum(1, 2), 1);
+    EXPECT_EQ(sharedRowQuantum(1.5, 3), 2);
+    EXPECT_EQ(sharedRowQuantum(1.25, 2.5), 4);
+    EXPECT_EQ(sharedRowQuantum(1.1, 2.2), 0) << "No shared whole-pixel step disables native-density updates";
+
+    const auto single = planStrips(0, 100, 100, 200, 3);
+    ASSERT_EQ(single.size(), 1u);
+    EXPECT_EQ(single[0].paintTop, 0);
+    EXPECT_EQ(single[0].paintBottom, 100);
+    const auto band = planStrips(500, 520, 1000, 256, 3);
+    ASSERT_EQ(band.size(), 1u);
+    EXPECT_EQ(band[0].paintTop, 497);
+    EXPECT_EQ(band[0].paintBottom, 523) << "Interior bands carry a guard on both sides";
+    for (const int quantum : {1, 4}) {
+        const auto strips = planStrips(0, 1000, 1000, 256, 3, quantum);
+        ASSERT_FALSE(strips.empty());
+        int next = 0;
+        for (size_t i = 0; i < strips.size(); ++i) {
+            const auto& strip = strips[i];
+            EXPECT_EQ(strip.top, next);
+            EXPECT_GT(strip.height, 0);
+            EXPECT_LE(strip.paintBottom - strip.paintTop, 256);
+            EXPECT_EQ(strip.paintTop, qMax(0, strip.top - 3));
+            if (i + 1 < strips.size())
+                EXPECT_EQ(strip.height % quantum, 0);
+            next = strip.top + strip.height;
+        }
+        EXPECT_EQ(next, 1000);
+    }
+    EXPECT_TRUE(planStrips(0, 10, 10, 2, 3).empty()) << "A target smaller than its guards cannot paint";
+
+    PanelDamage damage;
+    damage.add(QRegion(0, 0, 10, 10));
+    EXPECT_TRUE(damage.full) << "Damage starts unknown until a consumer records its base";
+    auto changes = damage.take(4);
+    EXPECT_TRUE(changes.full);
+    damage.add(QRegion(0, 10, 10, 5));
+    damage.add(QRegion(0, 40, 10, 5));
+    changes = damage.take(6);
+    EXPECT_EQ(changes.base, 4u);
+    EXPECT_FALSE(changes.full);
+    EXPECT_EQ(changes.region, QRegion(0, 10, 10, 5) + QRegion(0, 40, 10, 5));
+    damage.add(QRegion(0, 0, 4, 4));
+    damage.add(QRegion());
+    damage.add(QRegion(0, 8, 4, 4));
+    EXPECT_TRUE(damage.take(9).full) << "One unknown change retires the whole panel";
+}
+
+namespace {
+class DamageProbe final : public QWidget {
+public:
+    using QWidget::QWidget;
+    int gpuPaints = 0;
+    QColor color = Qt::red;
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        gpuPaints += painter.paintEngine()->type() == QPaintEngine::OpenGL2
+            || spatial_render::GalleryGlyphPaintDevice::delegatesToOpenGL(painter);
+        painter.fillRect(rect(), color);
+    }
+};
+} // namespace
+
+TEST_F(GallerySpatialTest, GpuCacheRepaintsOnlyDamagedRowsOfTheChangedPanel)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL paint engine";
+    QWidget window;
+    window.resize(800, 600);
+    auto* navigation = new navigation::NavigationView(&window);
+    navigation->resize(window.size());
+    auto* page = new QWidget;
+    auto* changed = new DamageProbe(page);
+    changed->setGeometry(80, 60, 120, 30);
+    auto* untouched = new DamageProbe(page);
+    untouched->setGeometry(80, 360, 120, 30);
+    untouched->color = Qt::blue;
+    navigation->contentHost()->insertPage(0, page);
+    navigation->contentHost()->setCurrentIndex(0, 0, false);
+    GallerySpatialController controller(&window, navigation);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return changed->gpuPaints > 0 && untouched->gpuPaints > 0; }, 3000));
+    controller.cancelTransition();
+    QTest::qWait(300);
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(surface, nullptr);
+
+    const auto before = controller.renderingStatistics();
+    const int untouchedPaints = untouched->gpuPaints;
+    const int changedPaints = changed->gpuPaints;
+    changed->color = Qt::green;
+    changed->update();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return changed->gpuPaints > changedPaints; }, 3000));
+    QTest::qWait(100);
+    const auto after = controller.renderingStatistics();
+    EXPECT_EQ(after["navigationPaintedRows"].toLongLong(), before["navigationPaintedRows"].toLongLong())
+        << "A content-only change must not repaint the navigation texture";
+    EXPECT_GT(after["partialUpdates"].toLongLong(), before["partialUpdates"].toLongLong());
+    const qint64 rows = after["contentPaintedRows"].toLongLong() - before["contentPaintedRows"].toLongLong();
+    const qreal dpr = after["cacheDpr"].toDouble();
+    EXPECT_GT(rows, 0);
+    EXPECT_LT(rows, qCeil(60 * dpr)) << "Only the changed widget's rows are repainted";
+    EXPECT_EQ(untouched->gpuPaints, untouchedPaints) << "Widgets outside the damaged rows are not painted again";
+
+    const auto frame = surface->grabFramebuffer();
+    const auto pixelAt = [&](QWidget* widget) {
+        const QPoint projected = controller.projectedPosition(widget, widget->rect().center());
+        return frame.pixelColor(surface->mapFrom(&window, projected) * surface->devicePixelRatioF());
+    };
+    EXPECT_GT(pixelAt(changed).green(), 200);
+    EXPECT_LT(pixelAt(changed).red(), 40);
+    EXPECT_GT(pixelAt(untouched).blue(), 200) << "Rows outside the damage keep their cached pixels";
+    GallerySettings::instance().setSpatialModeEnabled(false);
+    controller.cancelTransition();
+}
+
+TEST_F(GallerySpatialTest, SlowNativeDensityFramesAreJudgedPerFrame)
+{
+    using namespace spatial_render;
+    SlowFrameTracker tracker;
+    for (int frame = 1; frame < kSlowFrameStreak; ++frame) {
+        EXPECT_FALSE(tracker.record(50, true));
+        EXPECT_FALSE(tracker.record(1, false)) << "Frames without native-density updates keep the streak";
+    }
+    EXPECT_EQ(tracker.streak, kSlowFrameStreak - 1);
+    EXPECT_TRUE(tracker.record(50, true)) << "A sustained slow streak is reported";
+    EXPECT_FALSE(tracker.record(50, true)) << "The suggestion is made only once";
+    EXPECT_LT(tracker.costMs, tracker.interactiveCostMs) << "Fast ordinary frames still lower the overall cost";
+
+    SlowFrameTracker recovering;
+    for (int frame = 0; frame < 10; ++frame)
+        recovering.record(50, true);
+    for (int frame = 0; frame < 20; ++frame)
+        recovering.record(2, true);
+    EXPECT_EQ(recovering.streak, 0) << "Fast native-density frames end the streak";
+}
+
+TEST_F(GallerySpatialTest, ContinuousFrameRequestsPresentWhenNoBackingStorePassReachesTheSurface)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL paint engine";
+    QWidget window;
+    window.resize(800, 600);
+    auto* navigation = new navigation::NavigationView(&window);
+    navigation->resize(window.size());
+    auto* page = new DamageProbe;
+    navigation->contentHost()->insertPage(0, page);
+    navigation->contentHost()->setCurrentIndex(0, 0, false);
+    GallerySpatialController controller(&window, navigation);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return page->gpuPaints > 0; }, 3000));
+    controller.cancelTransition();
+    QTest::qWait(300);
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(surface, nullptr);
+    int swaps = 0;
+    QObject::connect(surface, &QOpenGLWidget::frameSwapped, &window, [&] { ++swaps; });
+    // The synthetic navigation repaint is ignored, so only the fallback can present.
+    navigation->setUpdatesEnabled(false);
+    auto* pointer = controller.findChild<QVariantAnimation*>("galleryPointerAnimation");
+    ASSERT_NE(pointer, nullptr);
+    pointer->setDuration(400);
+    pointer->setStartValue(QPointF());
+    pointer->setEndValue(QPointF(.5, -.3));
+    pointer->start();
+    QTest::qWait(450);
+    navigation->setUpdatesEnabled(true);
+    EXPECT_GE(swaps, 3) << "Continuous requests must not keep postponing the update() fallback";
+    GallerySettings::instance().setSpatialModeEnabled(false);
+    controller.cancelTransition();
+}
+
+TEST_F(GallerySpatialTest, GalleryContentChangesKeepTheNavigationTexture)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL paint engine";
+    GalleryWindow window;
+    window.resize(1240, 850);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
+    ASSERT_TRUE(window.selectRoute("button"));
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    auto* controller = window.findChild<GallerySpatialController*>();
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(surface, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 5000));
+    controller->cancelTransition();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* current = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
+            return current && current->routeId() == QLatin1String("button") && !current->hasPendingSamples();
+        },
+        10000));
+    auto* page = window.currentContentPage();
+    QTest::qWait(600);
+    auto* probe = new DamageProbe(page);
+    probe->setGeometry(40, 40, 80, 24);
+    probe->show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return probe->gpuPaints > 0; }, 3000));
+    QTest::qWait(400);
+    const auto before = controller->renderingStatistics();
+    for (int frame = 0; frame < 6; ++frame) {
+        const int paints = probe->gpuPaints;
+        probe->color = frame % 2 ? Qt::red : Qt::green;
+        probe->update();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return probe->gpuPaints > paints; }, 3000));
+        QTest::qWait(50);
+    }
+    QTest::qWait(200);
+    const auto after = controller->renderingStatistics();
+    EXPECT_EQ(after["navigationPaintedRows"].toLongLong(), before["navigationPaintedRows"].toLongLong())
+        << "Gallery content changes must not repaint the navigation texture";
+    EXPECT_GE(after["partialUpdates"].toLongLong() - before["partialUpdates"].toLongLong(), 6);
+    GallerySettings::instance().setSpatialModeEnabled(false);
+    controller->cancelTransition();
+}
+
+TEST_F(GallerySpatialTest, ContinuousLargeUpdatesPaintAtNativeDensityThenRefine)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL paint engine";
+    QWidget window;
+    window.resize(800, 600);
+    auto* navigation = new navigation::NavigationView(&window);
+    navigation->resize(window.size());
+    auto* page = new DamageProbe;
+    navigation->contentHost()->insertPage(0, page);
+    navigation->contentHost()->setCurrentIndex(0, 0, false);
+    GallerySpatialController controller(&window, navigation);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return page->gpuPaints > 0; }, 3000));
+    controller.cancelTransition();
+    QTest::qWait(300);
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(surface, nullptr);
+    const auto before = controller.renderingStatistics();
+    if (spatial_render::sharedRowQuantum(window.devicePixelRatioF(), before["cacheDpr"].toDouble()) == 0
+        || before["cacheDpr"].toDouble() <= window.devicePixelRatioF())
+        GTEST_SKIP() << "This display density has no separate native-density step";
+    const auto pixel = [&] {
+        const auto frame = surface->grabFramebuffer();
+        const QPoint projected = controller.projectedPosition(page, page->rect().center());
+        return frame.pixelColor(surface->mapFrom(&window, projected) * surface->devicePixelRatioF());
+    };
+    for (int frame = 0; frame < 8; ++frame) {
+        page->color = frame % 2 ? Qt::blue : Qt::green;
+        const int paints = page->gpuPaints;
+        page->update();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return page->gpuPaints > paints; }, 2000));
+        QTest::qWait(20);
+    }
+    const auto moving = controller.renderingStatistics();
+    EXPECT_GT(moving["interactiveUpdates"].toLongLong(), before["interactiveUpdates"].toLongLong())
+        << "Continuous whole-page updates paint at native density";
+    EXPECT_GT(pixel().blue(), 200) << "The scaled native-density frame still shows current content";
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return controller.renderingStatistics()["refinements"].toLongLong() > moving["refinements"].toLongLong();
+        },
+        2000));
+    QTest::qWait(150);
+    const auto settled = controller.renderingStatistics();
+    EXPECT_GT(settled["contentPaintedRows"].toLongLong(), moving["contentPaintedRows"].toLongLong())
+        << "The refinement repaints degraded rows at cache density";
+    EXPECT_EQ(settled["interactiveUpdates"].toLongLong(), moving["interactiveUpdates"].toLongLong())
+        << "A refinement is never itself a native-density update";
+    EXPECT_GT(pixel().blue(), 200);
+    GallerySettings::instance().setSpatialModeEnabled(false);
+    controller.cancelTransition();
+}
+
 TEST_F(GallerySpatialTest, CacheResourceFailureAllowsRetry)
 {
     if (tests::support::isHeadlessPlatform())

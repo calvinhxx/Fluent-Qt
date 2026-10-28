@@ -10,6 +10,7 @@
 #include "components/windowing/WindowBackdrop.h"
 #include "components/windowing/Window.h"
 #include "view/support/GalleryDepth.h"
+#include "view/support/GalleryToast.h"
 #include "GallerySplashScreen.h"
 #include "viewmodel/GallerySettings.h"
 #include "GallerySpatialRenderPolicy.h"
@@ -50,6 +51,7 @@
 #include <QStyleOption>
 #include <QScopedValueRollback>
 #include <QSurfaceFormat>
+#include <utility>
 #include <QTimer>
 #include <QTouchEvent>
 #include <QVariantAnimation>
@@ -66,6 +68,9 @@ constexpr qreal kPointerYaw = .65;
 constexpr qreal kPointerPitch = .45;
 constexpr char kDirectCompositionRequiredProperty[] = "fluentqtDirectCompositionRequired";
 constexpr char kQmlFailurePendingProperty[] = "galleryQmlFailurePending";
+// The navigation pixel dirtied to bring a backing-store pass to the GPU surface, with
+// room for fractional device-pixel rounding.
+constexpr QRect kSyntheticPassRect(0, 0, 2, 2);
 
 bool requiresDirectComposition(const QWidget* root)
 {
@@ -138,7 +143,10 @@ QString accelerationUnavailableReason()
 // zh_CN: 拦截后备存储绘制并使 GPU 缓存失效；实际绘制时直接输出到 OpenGL，避免整页 CPU 位图。
 class SurfaceCapture final : public QGraphicsEffect {
 public:
-    std::function<void()> invalidated;
+    // Receives the changed region in the captured widget's coordinates; empty means all of it.
+    // zh_CN: 收到被捕获控件坐标中的变化区域；空区域表示整块变化。
+    std::function<void(const QRegion&)> invalidated;
+    QPointer<QWidget> target;
     bool rendering = false, composing = false;
     QPoint renderOrigin;
     const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK") != 0;
@@ -156,7 +164,7 @@ protected:
             drawSource(painter);
             painter->restore();
         } else if (!composing && invalidated) {
-            invalidated();
+            invalidated(spatial::SpatialTextureHost::graphicsEffectDirtyRegion(painter, target));
         }
     }
 };
@@ -167,6 +175,7 @@ struct ShellScene : FluentElement {
         QTransform transform;
     };
     quint64 navigationRevision = 0, contentRevision = 0;
+    spatial_render::PanelDamage navigationDamage, contentDamage;
     QPixmap backdrop;
     Panel navigation, content;
     qreal progress = 0;
@@ -174,12 +183,48 @@ struct ShellScene : FluentElement {
     bool top = false;
     std::function<void()> themeChanged;
     std::function<void(QPainter&, bool, const QRegion&)> renderWidgets;
+    // Whether an enabled graphics effect inside a panel intersects a panel-local area.
+    std::function<bool(bool, const QRect&)> hasNestedEffects;
     QPointer<QWidget> contentRoot;
     spatial_render::GalleryParticleCompositor::RenderWidget renderForeground;
     void onThemeUpdated() override
     {
         if (themeChanged)
             themeChanged();
+    }
+
+    // Retire a panel texture; `dirty` is panel-local, and empty means the whole panel.
+    // zh_CN: 使面板纹理失效；dirty 为面板局部坐标，空区域表示整块面板。
+    void markDirty(bool isNavigation, const QRegion& dirty = {})
+    {
+        (isNavigation ? navigationDamage : contentDamage).add(dirty);
+        ++(isNavigation ? navigationRevision : contentRevision);
+    }
+    void resetRevisions()
+    {
+        navigationRevision = contentRevision = 0;
+        navigationDamage = {};
+        contentDamage = {};
+    }
+    // Attribute a dirty region of the navigation view to the panels it covers. Both
+    // textures are retired when Qt could not say what changed.
+    // zh_CN: 将导航视图中的脏区分配给所覆盖的面板；Qt 无法给出变化范围时两块纹理都失效。
+    void invalidate(const QRegion& dirty, const QRect& contentBounds)
+    {
+        // Revision zero means the panel was never captured; its first capture is whole.
+        // zh_CN: 版本为零表示面板尚未捕获，首次捕获必须完整。
+        if (dirty.isEmpty() || !navigationRevision || !contentRevision) {
+            markDirty(true);
+            markDirty(false);
+            return;
+        }
+        const QRect navigationBounds = navigation.source.toAlignedRect();
+        const QRegion navigationDirty = dirty & navigationBounds;
+        const QRegion contentDirty = dirty & contentBounds;
+        if (!navigationDirty.isEmpty())
+            markDirty(true, navigationDirty.translated(-navigationBounds.topLeft()));
+        if (!contentDirty.isEmpty())
+            markDirty(false, contentDirty.translated(-contentBounds.topLeft()));
     }
 
     static QTransform
@@ -297,11 +342,39 @@ struct ShellScene : FluentElement {
 
 class RhiSurface final : public spatial::SpatialTextureHost {
 public:
-    RhiSurface(ShellScene* scene, QWidget* parent) : SpatialTextureHost(parent), m_scene(scene) {}
+    RhiSurface(ShellScene* scene, QWidget* parent) : SpatialTextureHost(parent), m_scene(scene)
+    {
+        m_fallback.setSingleShot(true);
+        m_fallback.setInterval(50);
+        connect(&m_fallback, &QTimer::timeout, this, [this] {
+            if (m_paintPending)
+                requestFrame();
+        });
+    }
+    std::function<void()> requestBackingStorePass;
+    // Same backing-store pass policy as the OpenGL surface.
+    // zh_CN: 与 OpenGL 表面相同的后备存储绘制策略。
+    void requestFrameInPass(bool inPaintPass)
+    {
+        if (property("presenting").toBool() && (inPaintPass || requestBackingStorePass)
+            && scheduleFrameInBackingStorePass()) {
+            if (!m_paintPending && !inPaintPass)
+                requestBackingStorePass();
+            m_paintPending = true;
+            // Arm once per pending frame; continuous requests must not postpone it.
+            // zh_CN: 每个待绘帧只启动一次，连续请求不能推迟回退。
+            if (!m_fallback.isActive())
+                m_fallback.start();
+            return;
+        }
+        requestFrame();
+    }
 
 protected:
     void synchronizeFrame() override
     {
+        m_paintPending = false;
+        m_fallback.stop();
         const bool presenting = property("presenting").toBool() && m_scene->navigationRevision;
         setLayerCount(presenting ? 3 : 1);
         const auto& backdrop = m_scene->backdrop;
@@ -321,8 +394,11 @@ protected:
             material.setAlphaF(nav ? (dark ? .32 : .34) : (dark ? .62 : .56));
             QColor reflection = colors.grey10;
             reflection.setAlphaF(dark ? .18 : .72);
-            setLayer(i, panel.source, panel.transform, nav ? m_scene->navigationRevision : m_scene->contentRevision,
-                m_scene->themeRadius().overlay * 1.5, material, reflection, m_scene->progress, nav ? .06 : .085);
+            const quint64 revision = nav ? m_scene->navigationRevision : m_scene->contentRevision;
+            setLayer(i, panel.source, panel.transform, revision, m_scene->themeRadius().overlay * 1.5, material,
+                reflection, m_scene->progress, nav ? .06 : .085);
+            const auto changes = (nav ? m_scene->navigationDamage : m_scene->contentDamage).take(revision);
+            setLayerDamage(i, changes.base, changes.full ? QRegion() : changes.region);
         }
     }
     void paintLayer(QPainter* painter, int index, const QRegion& region) override
@@ -332,16 +408,20 @@ protected:
         } else if (m_scene->renderWidgets) {
             const bool nav = index == 2;
             const QPoint origin = nav ? QPoint() : m_scene->content.source.topLeft().toPoint();
-            painter->translate(origin);
+            // QWidget::render places the region's top-left at the painter origin.
+            // zh_CN: QWidget::render 将区域左上角绘制在画笔原点。
+            painter->translate(region.boundingRect().topLeft());
             m_scene->renderWidgets(*painter, nav, region.translated(-origin));
         }
     }
 
 private:
     ShellScene* m_scene;
+    QTimer m_fallback;
+    bool m_paintPending = false;
 };
 
-void requestCanvasFrame(QWidget* canvas, bool withInput = false);
+void requestCanvasFrame(QWidget* canvas, bool withInput = false, bool inPaintPass = false);
 
 using spatial_render::PanelSampler;
 
@@ -355,18 +435,53 @@ public:
     {
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
         m_qml = new qmlbridge::QmlTextureLayer(this);
-        connect(m_qml, &qmlbridge::QmlTextureLayer::frameRequested, this, [this] { update(); });
+        connect(m_qml, &qmlbridge::QmlTextureLayer::frameRequested, this, [this] { requestFrame(false); });
         connect(m_qml, &qmlbridge::QmlTextureLayer::renderingFailed, this, [this](const QString&) {
             setProperty(kQmlFailurePendingProperty, true);
             if (qmlCompositionFailed)
                 qmlCompositionFailed(m_qml->rootWidget());
         });
 #endif
-        connect(&m_particles, &spatial_render::GalleryParticleCompositor::frameRequested, this, [this] { update(); });
-        connect(&m_particles, &spatial_render::GalleryParticleCompositor::staticContentInvalidated, this, [this] {
-            ++m_scene->contentRevision;
-            update();
+        connect(&m_particles, &spatial_render::GalleryParticleCompositor::frameRequested, this, [this] {
+            requestFrame(false);
         });
+        connect(&m_particles, &spatial_render::GalleryParticleCompositor::staticContentInvalidated, this, [this] {
+            m_scene->markDirty(false);
+            requestFrame(false);
+        });
+        m_fallback.setSingleShot(true);
+        m_fallback.setInterval(50);
+        connect(&m_fallback, &QTimer::timeout, this, [this] {
+            // No backing-store pass reached this surface; queue it normally.
+            // zh_CN: 没有后备存储绘制经过本表面，改用常规排队更新。
+            if (m_paintPending)
+                update();
+        });
+        m_clock.start();
+        m_refine.setSingleShot(true);
+        m_refine.setInterval(spatial_render::kRefineDelayMs);
+        connect(&m_refine, &QTimer::timeout, this, [this] {
+            // Repaint rows drawn at native density during continuous updates.
+            // zh_CN: 连续更新停止后，按缓存密度重画原生密度期间绘制的行。
+            bool refined = false;
+            for (auto* cache : {&m_navigation, &m_content}) {
+                if (cache->degraded.isEmpty() || !(cache->dpr > 0))
+                    continue;
+                QRegion logical;
+                for (const QRect& rows : cache->degraded)
+                    logical += QRectF(0, rows.top() / cache->dpr, cache->source.width(), rows.height() / cache->dpr)
+                                   .toAlignedRect();
+                // A refinement is not part of the continuous update that degraded it.
+                cache->updatedAtMs = -1;
+                m_scene->markDirty(cache == &m_navigation, logical);
+                refined = true;
+            }
+            if (refined) {
+                ++refinements;
+                requestFrame(false);
+            }
+        });
+        m_interactive = !measuring || qEnvironmentVariable("FLUENT_QT_SPATIAL_INTERACTIVE") != QLatin1String("0");
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setAttribute(Qt::WA_NoSystemBackground);
         setFocusPolicy(Qt::NoFocus);
@@ -447,6 +562,7 @@ public:
     {
         m_inputFrameRequested = false;
         m_hasPresentedFrame = false;
+        m_refine.stop();
         makeCurrent();
         m_glyphImages.clear();
         m_particles.release();
@@ -468,13 +584,43 @@ public:
     qint64 paints = 0, paintNanoseconds = 0;
     qint64 allocationNanoseconds = 0, firstPaintNanoseconds = 0;
     qint64 backdropUploads = 0;
+    // Always-on counters: texture rows repainted, partial and native-density updates.
+    // zh_CN: 常驻计数：重画的纹理行数、局部更新与原生密度更新次数。
+    qint64 navigationPaintedRows = 0, contentPaintedRows = 0;
+    qint64 partialUpdates = 0, interactiveUpdates = 0, refinements = 0;
+    qreal updateCostMs() const { return m_slowFrames.costMs; }
+    int slowFrames() const { return m_slowFrames.streak; }
+    // Reports, once per surface, that even native-density updates stay too slow.
+    // zh_CN: 原生密度更新仍持续过慢时通知一次。
+    std::function<void()> slowRendering;
 
-    void requestFrame(bool withInput)
+    // Raster-dirties a pixel beneath this surface so a backing-store pass reaches it.
+    std::function<void()> requestBackingStorePass;
+
+    // While presenting, paint inside a backing-store pass instead of queuing this texture
+    // widget: Qt repaints everything beneath a queued texture widget whenever another
+    // widget is dirty in the same pass, which would retire both panel textures. A pass
+    // already in progress (inPaintPass) reaches this surface after the panels beneath it.
+    // zh_CN: 呈现时在后备存储绘制中完成本表面绘制，而不是排队纹理控件；排队时只要同一次绘制
+    // 还有其他脏控件，Qt 就会重绘其下方全部区域并作废两块面板纹理。进行中的绘制会在面板之后经过本表面。
+    void requestFrame(bool withInput, bool inPaintPass = false)
     {
-        if (!m_inputFrameRequested) {
-            m_inputFrameRequested = withInput;
-            update();
+        if (m_inputFrameRequested)
+            return;
+        m_inputFrameRequested = withInput;
+        const bool passAvailable = inPaintPass || requestBackingStorePass;
+        if (property("presenting").toBool() && passAvailable
+            && spatial::SpatialTextureHost::schedulePaintInBackingStorePass(this)) {
+            if (!m_paintPending && !inPaintPass)
+                requestBackingStorePass();
+            m_paintPending = true;
+            // Arm once per pending frame; continuous requests must not postpone it.
+            // zh_CN: 每个待绘帧只启动一次，连续请求不能推迟回退。
+            if (!m_fallback.isActive())
+                m_fallback.start();
+            return;
         }
+        update();
     }
 
 protected:
@@ -523,6 +669,8 @@ protected:
     void paintGL() override
     {
         m_inputFrameRequested = false;
+        m_paintPending = false;
+        m_fallback.stop();
         QElapsedTimer clock;
         if (measuring)
             clock.start();
@@ -602,6 +750,7 @@ protected:
                     m_presentedContentTexture = m_content.texture ? m_content.texture->texture() : 0;
                 }
             }
+            finishTextureFrame();
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
             if (qmlReady) {
                 const auto qmlRevision = m_scene->contentRevision + m_particles.compositionCount();
@@ -693,6 +842,9 @@ private:
         quint64 revision = 0;
         QRectF source;
         qreal dpr = 0;
+        // Texture rows last painted at native density, as one-pixel-wide rectangles.
+        QRegion degraded;
+        qint64 updatedAtMs = -1;
     };
     TextureCache m_navigation, m_content;
     struct BackdropCache {
@@ -719,6 +871,14 @@ private:
     bool m_surfaceSamplesKnown = false;
     bool m_hasPresentedFrame = false;
     bool m_inputFrameRequested = false;
+    bool m_interactive = true;
+    bool m_paintPending = false;
+    bool m_frameInteractive = false;
+    qreal m_frameUpdateMs = 0;
+    spatial_render::SlowFrameTracker m_slowFrames;
+    QElapsedTimer m_clock;
+    QTimer m_refine;
+    QTimer m_fallback;
 
     void bindSurfaceTarget()
     {
@@ -845,6 +1005,7 @@ private:
     void releaseTextures()
     {
         m_hasPresentedFrame = false;
+        m_refine.stop();
         m_glyphImages.clear();
         m_particles.release();
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
@@ -907,46 +1068,147 @@ private:
             return true;
         if (!cache.texture || !cache.texture->isValid())
             return false;
+        QElapsedTimer clock;
+        clock.start();
         const QSize pixels = cache.texture->size();
-        const int guard = qMax(1, qCeil(dpr));
-        const int stride = pixels.height() <= m_plan.paintSize.height()
-            ? pixels.height()
-            : qMax(1, m_plan.paintSize.height() - 2 * guard);
-        for (int top = 0; top < pixels.height(); top += stride) {
-            const int height = qMin(stride, pixels.height() - top);
-            // QWidget clips in logical pixels. Guard a full logical pixel so
-            // rounded clip coordinates and MSAA coverage stay outside the copied strip.
-            const int paintTop = qMax(0, top - guard);
-            const int paintBottom = qMin(pixels.height(), top + height + guard);
-            const int paintHeight = paintBottom - paintTop;
+        const int height = pixels.height();
+        // Damage applies only to the texture state it was accumulated against.
+        // zh_CN: 脏区只适用于其累积时所对应的纹理版本。
+        const auto changes = (navigation ? m_scene->navigationDamage : m_scene->contentDamage).take(revision);
+        const bool reusable = cache.revision && cache.revision == changes.base && cache.source == source
+            && cache.dpr == dpr && !changes.full;
+        std::vector<spatial_render::RowBand> bands;
+        if (reusable)
+            bands = spatial_render::damageRows(changes.region, dpr, height);
+        const bool known = reusable && !bands.empty();
+        const bool partial = known && spatial_render::coveredRows(bands) * 10 < height * 6;
+        if (!partial)
+            bands = {{0, height}};
+        // Continuous large updates with a reported extent (scrolling, dragging, expanding)
+        // paint at native density and are refined at cache density after they pause.
+        // Unknown changes such as startup, theme or page switches keep full density.
+        // zh_CN: 范围已知的连续大面积更新（滚动、拖动、展开）按原生密度绘制，停止后按缓存密度补全；
+        // 启动、主题或换页等范围未知的变化保持完整密度。
+        const qreal nativeDpr = devicePixelRatioF();
+        const qint64 now = m_clock.elapsed();
+        const bool slow = updateCostMs() > 16;
+        const qreal share =
+            slow ? spatial_render::kInteractiveDamageShare / 3 : spatial_render::kInteractiveDamageShare;
+        const int interval = slow ? 2 * spatial_render::kInteractiveIntervalMs : spatial_render::kInteractiveIntervalMs;
+        const int quantum = spatial_render::sharedRowQuantum(nativeDpr, dpr);
+        const bool continuous = cache.updatedAtMs >= 0 && now - cache.updatedAtMs < interval;
+        bool interactive = m_interactive && known && quantum && dpr > nativeDpr && continuous
+            && spatial_render::coveredRows(bands) >= share * height;
+        cache.updatedAtMs = now;
+        // Qt caches nested effect pixmaps in device pixels and invalidates them only when the
+        // painter transform changes, so a density switch would replay them at stale positions.
+        // zh_CN: Qt 按设备像素缓存嵌套特效图像，且仅在画笔变换改变时失效；切换密度会让其按旧位置重放。
+        if (interactive && m_scene->hasNestedEffects) {
+            const auto first = bands.front().top, last = bands.back().bottom;
+            interactive = !m_scene->hasNestedEffects(navigation,
+                QRectF(0, first / dpr, source.width(), (last - first) / dpr).toAlignedRect());
+        }
+        if (interactive && partial)
+            bands = spatial_render::damageRows(changes.region, dpr, height, qRound(quantum * dpr));
+        for (const auto& band : bands) {
+            if (!paintRows(cache, source, navigation, band, interactive ? nativeDpr : dpr, quantum))
+                return false;
+            const QRegion rows(0, band.top, 1, band.bottom - band.top);
+            cache.degraded = interactive ? cache.degraded.united(rows) : cache.degraded.subtracted(rows);
+            (navigation ? navigationPaintedRows : contentPaintedRows) += band.bottom - band.top;
+        }
+        if (!partial)
+            cache.degraded = interactive ? QRegion(0, 0, 1, height) : QRegion();
+        partialUpdates += partial;
+        interactiveUpdates += interactive;
+        if (interactive)
+            m_refine.start();
+        m_frameUpdateMs += clock.nsecsElapsed() / 1e6;
+        m_frameInteractive |= interactive;
+        cache.revision = revision;
+        cache.source = source;
+        cache.dpr = dpr;
+        return true;
+    }
+
+    void finishTextureFrame()
+    {
+        if (!(m_frameUpdateMs > 0))
+            return;
+        const bool report = m_slowFrames.record(m_frameUpdateMs, m_frameInteractive);
+        m_frameUpdateMs = 0;
+        m_frameInteractive = false;
+        // Sustained slow native-density frames: let the application suggest 2D once.
+        // zh_CN: 原生密度帧持续过慢时，交由应用提示一次 2D。
+        if (report && slowRendering) {
+            QTimer::singleShot(0, this, [this] {
+                if (slowRendering)
+                    slowRendering();
+            });
+        }
+    }
+
+    // Paint texture rows [band.top, band.bottom) at paintDpr. A lower density is scaled
+    // into the texture; quantum logical rows land on whole pixels at both densities.
+    // zh_CN: 按 paintDpr 绘制纹理行 [top, bottom)；低密度结果缩放写入纹理，quantum 保证两种密度行网格对齐。
+    bool paintRows(TextureCache& cache,
+        const QRectF& source,
+        bool navigation,
+        spatial_render::RowBand band,
+        qreal paintDpr,
+        int quantum)
+    {
+        const qreal dpr = m_plan.dpr;
+        const QSize pixels = cache.texture->size();
+        const bool scaled = paintDpr != dpr;
+        const int textureStep = scaled ? qRound(quantum * dpr) : 1;
+        const int paintStep = scaled ? qRound(quantum * paintDpr) : 1;
+        const int paintHeight = scaled ? qCeil(source.height() * paintDpr) : pixels.height();
+        const int paintWidth = scaled ? qMin(pixels.width(), qCeil(source.width() * paintDpr)) : pixels.width();
+        const auto toPaint = [&](int row) {
+            return row >= pixels.height() ? paintHeight : qMin(paintHeight, row / textureStep * paintStep);
+        };
+        const auto toTexture = [&](int row) {
+            return row >= paintHeight ? pixels.height() : qMin(pixels.height(), row / paintStep * textureStep);
+        };
+        // QWidget clips in logical pixels. Guard a full logical pixel so
+        // rounded clip coordinates and MSAA coverage stay outside the copied strip.
+        const int guard = qMax(1, qCeil(paintDpr));
+        const auto strips = spatial_render::planStrips(toPaint(band.top), toPaint(band.bottom), paintHeight,
+            m_plan.paintSize.height(), guard, paintStep);
+        if (strips.empty())
+            return band.top >= band.bottom;
+        auto* gl = context()->functions();
+        for (const auto& strip : strips) {
+            const int paintTop = strip.paintTop;
+            const int paintRows = strip.paintBottom - strip.paintTop;
             m_paintTarget->bind();
-            auto* gl = context()->functions();
             // Both panels reuse a large target. Clear only this strip, including
             // its guard pixels; unused target rows/columns are never resolved.
             // zh_CN: 两个面板复用大画布，仅清空当前条带及保护像素，未使用的区域不会参与解析。
             gl->glEnable(GL_SCISSOR_TEST);
-            gl->glScissor(0, 0, pixels.width(), paintHeight);
+            gl->glScissor(0, 0, paintWidth, paintRows);
             gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
             gl->glClearColor(0, 0, 0, 0);
             gl->glStencilMask(~0u);
             gl->glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
             gl->glDisable(GL_SCISSOR_TEST);
-            QOpenGLPaintDevice device(QSize(pixels.width(), paintHeight));
-            device.setDevicePixelRatio(dpr);
-            spatial_render::GalleryGlyphPaintDevice glyphDevice(device, devicePixelRatioF(), QPointF(0, paintTop / dpr),
-                &m_glyphImages);
+            QOpenGLPaintDevice device(QSize(paintWidth, paintRows));
+            device.setDevicePixelRatio(paintDpr);
+            spatial_render::GalleryGlyphPaintDevice glyphDevice(device, devicePixelRatioF(),
+                QPointF(0, paintTop / paintDpr), &m_glyphImages);
             QPainter painter(spatial_render::needsNativeGlyphCoverage(devicePixelRatioF())
                     ? static_cast<QPaintDevice*>(&glyphDevice)
                     : &device);
             painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-            const QRectF strip(0, paintTop / dpr, source.width(), paintHeight / dpr);
-            painter.setClipRect(QRectF(0, 0, source.width(), paintHeight / dpr));
+            const QRectF stripRect(0, paintTop / paintDpr, source.width(), paintRows / paintDpr);
+            painter.setClipRect(QRectF(0, 0, source.width(), paintRows / paintDpr));
             const QPointF origin = navigation ? source.topLeft() : QPointF();
-            const QRect sourceRect = strip.translated(origin).toAlignedRect();
+            const QRect sourceRect = stripRect.translated(origin).toAlignedRect();
             // QWidget must own the integer offset for nested effect clips; only
             // the fractional pixel alignment belongs in the painter transform.
             // zh_CN: 整数偏移交给 QWidget 以正确裁剪子特效，画笔仅处理亚像素对齐。
-            painter.translate(QPointF(sourceRect.topLeft()) - origin - strip.topLeft());
+            painter.translate(QPointF(sourceRect.topLeft()) - origin - stripRect.topLeft());
             // Supply the dirty strip to QWidget::render so unrelated children are skipped.
             // zh_CN: 按条带指定绘制区域，跳过未覆盖的子控件，复用同一抗锯齿画布。
             m_scene->renderWidgets(painter, navigation, sourceRect);
@@ -954,26 +1216,28 @@ private:
             gl->glDisable(GL_SCISSOR_TEST);
             // WebGL/GLES requires identical rectangles and formats for MSAA resolve.
             // Resolve first, then move the guarded strip into the panel texture.
-            const QRect painted(0, 0, pixels.width(), paintHeight);
+            const QRect painted(0, 0, paintWidth, paintRows);
             QOpenGLFramebufferObject::blitFramebuffer(m_resolveTarget.get(), painted, m_paintTarget.get(), painted);
             // GL framebuffer coordinates run upwards; widget coordinates run downwards.
+            const int textureTop = toTexture(strip.top);
+            const int textureBottom = toTexture(strip.top + strip.height);
             QOpenGLFramebufferObject::blitFramebuffer(cache.texture.get(),
-                QRect(0, pixels.height() - top - height, pixels.width(), height), m_resolveTarget.get(),
-                QRect(0, paintBottom - top - height, pixels.width(), height));
+                QRect(0, pixels.height() - textureBottom, pixels.width(), textureBottom - textureTop),
+                m_resolveTarget.get(), QRect(0, strip.paintBottom - strip.top - strip.height, paintWidth, strip.height),
+                GL_COLOR_BUFFER_BIT, scaled ? GL_LINEAR : GL_NEAREST);
         }
-        cache.revision = revision;
-        cache.source = source;
-        cache.dpr = dpr;
         return true;
     }
 };
 
-void requestCanvasFrame(QWidget* canvas, bool withInput)
+void requestCanvasFrame(QWidget* canvas, bool withInput, bool inPaintPass)
 {
-    if (auto* rhi = dynamic_cast<spatial::SpatialTextureHost*>(canvas))
-        rhi->requestFrame();
+    if (auto* rhi = dynamic_cast<RhiSurface*>(canvas))
+        rhi->requestFrameInPass(inPaintPass);
+    else if (auto* host = dynamic_cast<spatial::SpatialTextureHost*>(canvas))
+        host->requestFrame();
     else if (auto* gl = dynamic_cast<GpuSurface*>(canvas))
-        gl->requestFrame(withInput);
+        gl->requestFrame(withInput, inPaintPass);
     else if (canvas)
         canvas->update();
 }
@@ -1012,6 +1276,8 @@ struct GallerySpatialController::Private {
     bool directCompositionRequired = false;
     bool compositionRefreshQueued = false;
     bool composingRequirements = false;
+    bool unusedComposing = false, unusedContentComposing = false;
+    bool syntheticPassPending = false;
     QPointer<QWidget> qmlFailedPage;
 
     bool canInitializeRenderer() const
@@ -1220,6 +1486,11 @@ struct GallerySpatialController::Private {
                 scene.backdrop.fill(Qt::transparent);
                 QPainter painter(&scene.backdrop);
                 painter.translate(-bounds.topLeft());
+                // The backdrop excludes both panels; rendering it is not a panel change.
+                // zh_CN: 背景不含两块面板，渲染背景不应使面板纹理失效。
+                QScopedValueRollback<bool> navigationComposing(capture ? capture->composing : unusedComposing, true);
+                QScopedValueRollback<bool>
+                    contentComposing(contentCapture ? contentCapture->composing : unusedContentComposing, true);
                 window->render(&painter, QPoint(), QRegion(), QWidget::RenderFlags());
             }
         }
@@ -1269,8 +1540,7 @@ struct GallerySpatialController::Private {
         QEvent compositionChanged(depth::changeEvent());
         QCoreApplication::sendEvent(navigation, &compositionChanged);
         if (!target) {
-            scene.navigationRevision = 0;
-            scene.contentRevision = 0;
+            scene.resetRevisions();
             scene.backdrop = {};
             backdropDirty = true;
             grabbed = nullptr;
@@ -1316,8 +1586,8 @@ GallerySpatialController::GallerySpatialController(QWidget* window, navigation::
         // Material tokens change immediately. Retire both widget textures in
         // the same transaction instead of waiting for a later raster update.
         // zh_CN: 材质 token 立即改变，同步作废两块控件纹理，避免新背景混用旧主题内容。
-        ++d->scene.navigationRevision;
-        ++d->scene.contentRevision;
+        d->scene.markDirty(true);
+        d->scene.markDirty(false);
         d->sync();
     };
     d->nativeNoSystemBackground = navigation->testAttribute(Qt::WA_NoSystemBackground);
@@ -1370,6 +1640,7 @@ GallerySpatialController::GallerySpatialController(QWidget* window, navigation::
             d->contentCapture->invalidated = {};
         d->scene.renderWidgets = {};
         d->scene.renderForeground = {};
+        d->scene.hasNestedEffects = {};
     };
     connect(window, &QObject::destroyed, this, [this, stopObserving] {
         d->window = nullptr;
@@ -1395,8 +1666,8 @@ GallerySpatialController::GallerySpatialController(QWidget* window, navigation::
             // removed. A Settings notification arrives after that transaction.
             // zh_CN: 在原生材质移除前同步实际绘制状态；Settings 通知晚于这次交接。
             d->backdropDirty = true;
-            ++d->scene.navigationRevision;
-            ++d->scene.contentRevision;
+            d->scene.markDirty(true);
+            d->scene.markDirty(false);
             d->sync();
         });
     }
@@ -1530,6 +1801,12 @@ void GallerySpatialController::ensureRenderer()
             connect(surface, &RhiSurface::initialized, this, initialized);
             connect(surface, &RhiSurface::renderingFailed, this, failed);
             connect(surface, &RhiSurface::cacheUnavailable, this, cacheUnavailable);
+            surface->requestBackingStorePass = [this] {
+                if (!d->navigation)
+                    return;
+                d->syntheticPassPending = true;
+                d->navigation->update(QRect(QPoint(), QSize(1, 1)));
+            };
         } else {
             auto* surface = new GpuSurface(&d->scene, d->window, d->session);
             d->canvas = surface;
@@ -1548,6 +1825,19 @@ void GallerySpatialController::ensureRenderer()
             surface->contextLost = [this] {
                 d->rendererInitialized = d->rendererReady = false;
                 QTimer::singleShot(0, this, &GallerySpatialController::checkRenderer);
+            };
+            surface->requestBackingStorePass = [this] {
+                if (!d->navigation)
+                    return;
+                d->syntheticPassPending = true;
+                d->navigation->update(QRect(QPoint(), QSize(1, 1)));
+            };
+            surface->slowRendering = [this] {
+                if (d->window && d->target)
+                    showGalleryToast(d->window,
+                        tr("3D is running slowly on this device. Turn off 3D Gallery in Settings for smoother "
+                           "scrolling."),
+                        status_info::Toast::Warning);
             };
         }
         d->canvas->setObjectName(QStringLiteral("gallerySpatialSurface"));
@@ -1650,8 +1940,7 @@ void GallerySpatialController::disableSpatial(const QString& reason)
     if (auto* surface = dynamic_cast<GpuSurface*>(d->canvas.data()))
         surface->qmlLayer()->release();
 #endif
-    d->scene.navigationRevision = 0;
-    d->scene.contentRevision = 0;
+    d->scene.resetRevisions();
     d->scene.backdrop = {};
     d->grabbed = nullptr;
     d->hovered = nullptr;
@@ -1661,6 +1950,8 @@ void GallerySpatialController::disableSpatial(const QString& reason)
             surface->contextLost = {};
             surface->failed = {};
             surface->cacheUnavailable = {};
+            surface->slowRendering = {};
+            surface->requestBackingStorePass = {};
         }
         d->canvas->disconnect(this);
         d->canvas->hide();
@@ -1694,15 +1985,26 @@ void GallerySpatialController::startPresentation()
     d->contentCapture->setEnabled(false);
     d->capture = new SurfaceCapture;
     d->capture->setEnabled(false);
-    d->contentCapture->invalidated = [this] {
-        ++d->scene.contentRevision;
-        requestCanvasFrame(d->canvas);
+    d->contentCapture->target = d->navigation->contentHost();
+    d->capture->target = d->navigation;
+    d->contentCapture->invalidated = [this](const QRegion& dirty) {
+        d->scene.markDirty(false, dirty);
+        requestCanvasFrame(d->canvas, false, true);
     };
-    d->capture->invalidated = [this] {
-        ++d->scene.navigationRevision;
-        ++d->scene.contentRevision;
-        d->scene.layout(d->navigation);
-        requestCanvasFrame(d->canvas);
+    // The content host is a descendant of the navigation view, so Qt reports every
+    // change through this outer effect. Attribute it by region instead of retiring both.
+    // zh_CN: 正文宿主是导航视图的后代，Qt 通过外层特效报告所有变化；按区域分配，避免两块纹理同时作废。
+    d->capture->invalidated = [this](const QRegion& dirty) {
+        // The pixel dirtied only to bring a backing-store pass to the surface is not content.
+        // zh_CN: 仅为让后备存储绘制经过表面而标脏的像素不是内容变化。
+        const bool synthetic = std::exchange(d->syntheticPassPending, false) && !dirty.isEmpty()
+            && kSyntheticPassRect.contains(dirty.boundingRect());
+        if (!synthetic) {
+            d->scene.layout(d->navigation);
+            auto* host = d->navigation->contentHost();
+            d->scene.invalidate(dirty, QRect(host->mapTo(d->navigation, QPoint()), host->size()));
+        }
+        requestCanvasFrame(d->canvas, false, true);
     };
     d->scene.renderWidgets = [this](QPainter& painter, bool navigation, const QRegion& region) {
         QScopedValueRollback<bool> navComposing(d->capture->composing, true);
@@ -1722,6 +2024,15 @@ void GallerySpatialController::startPresentation()
             ++capture->captures;
             capture->captureNanoseconds += clock.nsecsElapsed();
         }
+    };
+    d->scene.hasNestedEffects = [this](bool navigation, const QRect& area) {
+        QWidget* root = navigation ? static_cast<QWidget*>(d->navigation.data()) : d->navigation->contentHost();
+        const auto children = root->findChildren<QWidget*>();
+        return std::any_of(children.cbegin(), children.cend(), [this, root, &area](QWidget* child) {
+            const auto* effect = child->graphicsEffect();
+            return effect && effect->isEnabled() && effect != d->capture && effect != d->contentCapture
+                && child->isVisibleTo(root) && QRect(child->mapTo(root, QPoint()), child->size()).intersects(area);
+        });
     };
     d->scene.renderForeground = [this](QPainter& painter, QWidget* widget, const QRegion& region) {
         QScopedValueRollback<bool> navComposing(d->capture->composing, true);
@@ -1788,6 +2099,13 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     }
     auto* surface = static_cast<GpuSurface*>(d->canvas.data());
     result["paints"] = surface ? surface->paints : 0;
+    result["navigationPaintedRows"] = surface ? surface->navigationPaintedRows : 0;
+    result["contentPaintedRows"] = surface ? surface->contentPaintedRows : 0;
+    result["partialUpdates"] = surface ? surface->partialUpdates : 0;
+    result["interactiveUpdates"] = surface ? surface->interactiveUpdates : 0;
+    result["refinements"] = surface ? surface->refinements : 0;
+    result["updateCostMs"] = surface ? surface->updateCostMs() : 0;
+    result["slowFrames"] = surface ? surface->slowFrames() : 0;
     result["paintMs"] = surface ? surface->paintNanoseconds / 1e6 : 0;
     result["allocationMs"] = surface ? surface->allocationNanoseconds / 1e6 : 0;
     result["firstPaintMs"] = surface ? surface->firstPaintNanoseconds / 1e6 : 0;
@@ -1854,6 +2172,7 @@ void GallerySpatialController::applyMode(bool enabled)
             d->navigation->setGraphicsEffect(nullptr);
             d->scene.renderWidgets = {};
             d->scene.renderForeground = {};
+            d->scene.hasNestedEffects = {};
         } else {
             d->motion->stop();
             d->pointerMotion->stop();
