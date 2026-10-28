@@ -26,10 +26,20 @@ QVector<GallerySample> gallerySamplesForRoute(const QString& routeId)
     // zh_CN: 各分类解析器只响应自己的路由，顺序探测即可，无需重复维护路由→分类映射。
     using SampleResolver = QVector<GallerySample> (*)(const QString&);
     static constexpr SampleResolver resolvers[] = {
-        &basicInputSamples,     &chartsSamples,     &collectionsSamples, &dateTimeSamples,
-        &dialogsFlyoutsSamples, &foundationSamples, &layoutSamples,      &menusToolbarsSamples,
-        &navigationSamples,     &qmlPlusSamples,    &scrollingSamples,   &statusInfoSamples,
-        &textFieldsSamples,     &windowingSamples,
+        &basicInputSamples,
+        &chartsSamples,
+        &collectionsSamples,
+        &dateTimeSamples,
+        &dialogsFlyoutsSamples,
+        &foundationSamples,
+        &layoutSamples,
+        &menusToolbarsSamples,
+        &navigationSamples,
+        &qmlPlusSamples,
+        &scrollingSamples,
+        &statusInfoSamples,
+        &textFieldsSamples,
+        &windowingSamples,
 #ifdef FLUENT_QT_HAS_QML_BRIDGE
         &qmlBridgeSamples,
 #endif
