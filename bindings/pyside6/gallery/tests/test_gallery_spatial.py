@@ -1223,6 +1223,71 @@ class GallerySpatialTest(unittest.TestCase):
                                 delete(settings)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_dirty_rows_strips_and_density_steps_match_native_policy(self):
+        from PySide6.QtGui import QRegion
+        from fluentqt_gallery.spatial_controller import (
+            _PanelDamage, _damage_rows, _plan_strips, _shared_row_quantum,
+        )
+        self.assertEqual(_damage_rows(QRegion(0, 10, 50, 5), 3, 300), [(30, 45)])
+        self.assertEqual(_damage_rows(QRegion(0, 10, 50, 5).united(QRegion(0, 16, 20, 4)), 1, 300), [(10, 20)])
+        self.assertEqual(_damage_rows(QRegion(0, 10, 5, 5).united(QRegion(0, 100, 5, 5)), 1, 300),
+                         [(10, 15), (100, 105)])
+        self.assertEqual(_damage_rows(QRegion(0, 290, 5, 50), 1, 300), [(290, 300)])
+        self.assertEqual(_damage_rows(QRegion(0, 1, 10, 1), 2.5, 100, 5), [(0, 5)])
+        self.assertEqual(_damage_rows(QRegion(), 2, 100), [])
+        self.assertEqual(_shared_row_quantum(2, 3), 1)
+        self.assertEqual(_shared_row_quantum(1.5, 3), 2)
+        self.assertEqual(_shared_row_quantum(1.25, 2.5), 4)
+        self.assertEqual(_shared_row_quantum(1.1, 2.2), 0)
+        self.assertEqual(_plan_strips(0, 100, 100, 200, 3), [(0, 100, 0, 100)])
+        self.assertEqual(_plan_strips(500, 520, 1000, 256, 3), [(500, 20, 497, 523)])
+        for quantum in (1, 4):
+            strips = _plan_strips(0, 1000, 1000, 256, 3, quantum)
+            self.assertTrue(strips)
+            following = 0
+            for position, (top, rows, paint_top, paint_bottom) in enumerate(strips):
+                self.assertEqual(top, following)
+                self.assertGreater(rows, 0)
+                self.assertLessEqual(paint_bottom - paint_top, 256)
+                self.assertEqual(paint_top, max(0, top - 3))
+                if position + 1 < len(strips):
+                    self.assertEqual(rows % quantum, 0)
+                following = top + rows
+            self.assertEqual(following, 1000)
+        self.assertEqual(_plan_strips(0, 10, 10, 2, 3), [])
+        damage = _PanelDamage()
+        damage.add(QRegion(0, 0, 10, 10))
+        self.assertTrue(damage.take(4).full)
+        damage.add(QRegion(0, 10, 10, 5))
+        damage.add(QRegion(0, 40, 10, 5))
+        changes = damage.take(6)
+        self.assertEqual(changes.base, 4)
+        self.assertFalse(changes.full)
+        self.assertEqual(changes.region, QRegion(0, 10, 10, 5).united(QRegion(0, 40, 10, 5)))
+        damage.add(QRegion(0, 0, 4, 4))
+        damage.add(QRegion())
+        damage.add(QRegion(0, 8, 4, 4))
+        self.assertTrue(damage.take(9).full)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_slow_native_density_frames_are_judged_per_frame(self):
+        from fluentqt_gallery.spatial_controller import _SLOW_FRAME_STREAK, _SlowFrameTracker
+        tracker = _SlowFrameTracker()
+        for _frame in range(1, _SLOW_FRAME_STREAK):
+            self.assertFalse(tracker.record(50, True))
+            self.assertFalse(tracker.record(1, False))
+        self.assertEqual(tracker.streak, _SLOW_FRAME_STREAK - 1)
+        self.assertTrue(tracker.record(50, True))
+        self.assertFalse(tracker.record(50, True))
+        self.assertLess(tracker.cost_ms, tracker.interactive_cost_ms)
+        recovering = _SlowFrameTracker()
+        for _frame in range(10):
+            recovering.record(50, True)
+        for _frame in range(20):
+            recovering.record(2, True)
+        self.assertEqual(recovering.streak, 0)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_cache_budget_preserves_native_density(self):
         from fluentqt_gallery.spatial_controller import (
             _cache_plan, _preferred_extra_sampling, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES,

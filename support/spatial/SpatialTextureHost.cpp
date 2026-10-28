@@ -3,8 +3,11 @@
 #include "components/windowing/Window.h"
 // Parse Fluent declarations before Qt OpenGL headers expose the Windows `small` macro.
 // zh_CN: 先解析 Fluent 声明，避免 Qt OpenGL 头文件引入的 Windows small 宏污染字段名。
+#include "compatibility/private/spatial/GraphicsEffectRegionCompat_p.h"
 #include "compatibility/private/spatial/SpatialFramebufferCompat_p.h"
+#include "compatibility/private/spatial/renderer/RenderToTextureCompat_p.h"
 #include "compatibility/private/spatial/renderer/SpatialTextureBackend_p.h"
+#include <QBackingStore>
 #include <QResizeEvent>
 #include <utility>
 
@@ -39,6 +42,17 @@ SpatialTextureHost::~SpatialTextureHost() = default;
 int SpatialTextureHost::currentPaintSampleBytes()
 {
     return ::compatibility::detail::currentPaintSampleBytes();
+}
+
+QRegion SpatialTextureHost::graphicsEffectDirtyRegion(const QPainter* painter, const QWidget* source)
+{
+    auto* store = source ? source->backingStore() : nullptr;
+    return ::compatibility::detail::graphicsEffectDirtyRegion(painter, store ? store->paintDevice() : nullptr);
+}
+
+bool SpatialTextureHost::schedulePaintInBackingStorePass(QWidget* textureWidget)
+{
+    return ::compatibility::detail::schedulePaintInBackingStorePass(textureWidget);
 }
 
 bool SpatialTextureHost::isSupported()
@@ -91,6 +105,11 @@ void SpatialTextureHost::requestFrame()
     d->backend->requestFrame();
 }
 
+bool SpatialTextureHost::scheduleFrameInBackingStorePass()
+{
+    return d->backend->schedulePaintInBackingStorePass();
+}
+
 void SpatialTextureHost::clearFrameCaches()
 {
     d->backend->clearFrameCaches();
@@ -112,6 +131,11 @@ void SpatialTextureHost::setLayer(int index,
     qreal shadowOpacity)
 {
     d->backend->setLayer(index, source, transform, revision, radius, material, reflection, progress, shadowOpacity);
+}
+
+void SpatialTextureHost::setLayerDamage(int index, quint64 baseRevision, const QRegion& damage)
+{
+    d->backend->setLayerDamage(index, baseRevision, damage);
 }
 
 void SpatialTextureHost::setSceneClip(const QRectF& clip)

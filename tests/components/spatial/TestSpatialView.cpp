@@ -17,7 +17,10 @@
 #include <QVBoxLayout>
 #include <limits>
 #include "SpatialTestEnvironment.h"
+#include "compatibility/private/spatial/GraphicsEffectRegionCompat_p.h"
 #include "compatibility/private/spatial/GraphicsProxyCacheCompat_p.h"
+#include <QBackingStore>
+#include <QGraphicsEffect>
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 
@@ -99,6 +102,57 @@ TEST_F(SpatialViewTest, Contract_ProxyCacheRefreshesEmbeddedPixelsAndPreservesId
             EXPECT_EQ(content->paints, paints) << "Unchanged content must continue using the proxy cache";
         }
     }
+}
+
+TEST_F(SpatialViewTest, Contract_GraphicsEffectDirtyRegionReportsBackingStoreDamage)
+{
+    class Recorder final : public QGraphicsEffect {
+    public:
+        QWidget* source = nullptr;
+        QList<QRegion> regions;
+
+    protected:
+        void draw(QPainter* painter) override
+        {
+            auto* store = source->backingStore();
+            regions.append(
+                compatibility::detail::graphicsEffectDirtyRegion(painter, store ? store->paintDevice() : nullptr));
+            drawSource(painter);
+        }
+    };
+    QWidget window;
+    window.resize(260, 220);
+    auto* host = new QWidget(&window);
+    host->setGeometry(20, 30, 220, 170);
+    auto* child = new QWidget(host);
+    child->setGeometry(40, 50, 40, 30);
+    auto* recorder = new Recorder;
+    recorder->source = host;
+    host->setGraphicsEffect(recorder);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !recorder->regions.isEmpty(); }, 3000));
+    QTest::qWait(100);
+
+    // A descendant update reaches the effect as that descendant's area in host coordinates.
+    recorder->regions.clear();
+    child->update(QRect(2, 3, 10, 5));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !recorder->regions.isEmpty(); }, 3000));
+    const bool local = std::any_of(recorder->regions.cbegin(), recorder->regions.cend(), [](const QRegion& dirty) {
+        return dirty.contains(QRect(42, 53, 10, 5)) && !dirty.contains(QPoint(180, 140));
+    });
+    EXPECT_TRUE(local) << "A child update must report its own area, not the whole effect source";
+    for (const QRegion& dirty : recorder->regions)
+        EXPECT_TRUE(dirty.isEmpty() || dirty.contains(QRect(42, 53, 10, 5))) << "Reported damage must cover the change";
+
+    // QWidget::render has no backing-store mapping; callers must repaint everything.
+    recorder->regions.clear();
+    QImage image(host->size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    host->render(&image);
+    ASSERT_FALSE(recorder->regions.isEmpty());
+    EXPECT_TRUE(recorder->regions.last().isEmpty());
+    EXPECT_TRUE(compatibility::detail::graphicsEffectDirtyRegion(nullptr, nullptr).isEmpty());
 }
 
 TEST_F(SpatialViewTest, Contract_InheritsHostThemeAndRestoresCallerOverridesOnRelease)

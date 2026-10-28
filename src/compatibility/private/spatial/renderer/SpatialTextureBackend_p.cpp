@@ -1,5 +1,6 @@
 #include "SpatialTextureBackend_p.h"
 #include "compatibility/private/spatial/SpatialRenderCompat_p.h"
+#include "RenderToTextureCompat_p.h"
 
 #include <QApplication>
 #include <QFile>
@@ -11,6 +12,7 @@
 #include <utility>
 #include <QTimer>
 #include <QtMath>
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstring>
@@ -39,7 +41,40 @@ struct Layer {
     quint64 revision = 0;
     qreal radius = 0, progress = 0, shadowOpacity = 0;
     QColor material, reflection;
+    // Damage relative to damageBase, in layer coordinates; empty repaints everything.
+    quint64 damageBase = 0;
+    QRegion damage;
 };
+// Device rows covered by damage, merged. Empty when the layer should be repainted whole.
+// zh_CN: 合并脏区覆盖的设备行；应整块重绘时返回空。
+std::vector<std::pair<int, int>> damagedRows(const QRegion& damage, qreal dpr, int height)
+{
+    std::vector<std::pair<int, int>> rows;
+    if (damage.isEmpty() || !(dpr > 0) || height <= 0)
+        return rows;
+    for (const QRect& rect : damage) {
+        const int top = qBound(0, qFloor(rect.top() * dpr) - 1, height);
+        const int bottom = qBound(0, qCeil((rect.top() + rect.height()) * dpr) + 1, height);
+        if (bottom > top)
+            rows.emplace_back(top, bottom);
+    }
+    std::sort(rows.begin(), rows.end());
+    std::vector<std::pair<int, int>> merged;
+    int covered = 0;
+    for (const auto& band : rows) {
+        if (!merged.empty() && band.first <= merged.back().second + 2)
+            merged.back().second = qMax(merged.back().second, band.second);
+        else
+            merged.push_back(band);
+    }
+    for (const auto& band : merged)
+        covered += band.second - band.first;
+    // Large updates repaint the layer in one pass instead of several partial uploads.
+    // zh_CN: 大面积更新直接整块重绘，避免多次局部上传。
+    if (covered * 10 > height * 6)
+        merged.clear();
+    return merged;
+}
 #ifdef FLUENT_QT_HAS_RHI
 constexpr int kUniformBytes = 144;
 bool hardwareDevice(QRhi* rhi, const std::function<bool(const QString&)>& isHardwareRenderer)
@@ -75,7 +110,7 @@ struct SpatialTextureBackend::Private {
     bool ready = false, failurePending = false;
     QString renderer, backend;
     qreal dpr = 0;
-    qint64 captures = 0, uploads = 0, frames = 0, estimatedBytes = 0;
+    qint64 captures = 0, uploads = 0, frames = 0, estimatedBytes = 0, partialUploads = 0, uploadedRows = 0;
     int maxDimension = 0;
 #ifdef FLUENT_QT_HAS_RHI
     struct Cache {
@@ -315,6 +350,43 @@ struct SpatialTextureBackend::Private {
             }
             if (!allocate && cache.source == layer.source && cache.revision == layer.revision && cache.dpr == d->dpr)
                 return true;
+            const auto bands = !allocate && cache.revision && cache.revision == layer.damageBase
+                    && cache.source == layer.source && cache.dpr == d->dpr
+                ? damagedRows(layer.damage, d->dpr, size.height())
+                : std::vector<std::pair<int, int>>();
+            if (!bands.empty()) {
+                // Replace only damaged rows; the texture keeps every other row from its base revision.
+                // zh_CN: 仅替换脏行，其余行保留基准版本的纹理内容。
+                QRhiTextureUploadDescription description;
+                QVector<QRhiTextureUploadEntry> entries;
+                for (const auto& band : bands) {
+                    QImage image(QSize(size.width(), band.second - band.first), QImage::Format_RGBA8888_Premultiplied);
+                    if (image.isNull())
+                        return false;
+                    image.setDevicePixelRatio(d->dpr);
+                    image.fill(Qt::transparent);
+                    const QRectF rows(layer.source.left(), layer.source.top() + band.first / d->dpr,
+                        layer.source.width(), (band.second - band.first) / d->dpr);
+                    QPainter painter(&image);
+                    painter.setRenderHints(
+                        QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+                    painter.translate(-rows.topLeft());
+                    painter.setClipRect(rows);
+                    d->callbacks.paintLayer(&painter, index, QRegion(rows.toAlignedRect()));
+                    painter.end();
+                    QRhiTextureSubresourceUploadDescription subresource(image);
+                    subresource.setDestinationTopLeft(QPoint(0, band.first));
+                    entries.append(QRhiTextureUploadEntry(0, 0, subresource));
+                    d->uploadedRows += band.second - band.first;
+                }
+                description.setEntries(entries.cbegin(), entries.cend());
+                updates->uploadTexture(cache.texture.get(), description);
+                cache.revision = layer.revision;
+                ++d->captures;
+                ++d->uploads;
+                ++d->partialUploads;
+                return true;
+            }
             QImage image(size, QImage::Format_RGBA8888_Premultiplied);
             if (image.isNull())
                 return false;
@@ -333,6 +405,7 @@ struct SpatialTextureBackend::Private {
             cache.dpr = d->dpr;
             ++d->captures;
             ++d->uploads;
+            d->uploadedRows += size.height();
             return true;
         }
         std::array<float, kUniformBytes / sizeof(float)> uniforms(const Layer& layer, const QSize& size)
@@ -440,8 +513,9 @@ QString SpatialTextureBackend::rendererName() const
 QVariantMap SpatialTextureBackend::statistics() const
 {
     return {{"backend", d->backend}, {"renderer", d->renderer}, {"paints", d->frames}, {"captures", d->captures},
-        {"uploads", d->uploads}, {"cacheDpr", d->dpr}, {"cacheEstimatedBytes", d->estimatedBytes},
-        {"cacheBudgetBytes", kBudget}, {"maxCacheDimension", d->maxDimension}};
+        {"uploads", d->uploads}, {"partialUploads", d->partialUploads}, {"uploadedRows", d->uploadedRows},
+        {"cacheDpr", d->dpr}, {"cacheEstimatedBytes", d->estimatedBytes}, {"cacheBudgetBytes", kBudget},
+        {"maxCacheDimension", d->maxDimension}};
 }
 QImage SpatialTextureBackend::grabFramebuffer() const
 {
@@ -455,6 +529,14 @@ void SpatialTextureBackend::requestFrame()
 {
 #ifdef FLUENT_QT_HAS_RHI
     d->surface->update();
+#endif
+}
+bool SpatialTextureBackend::schedulePaintInBackingStorePass()
+{
+#ifdef FLUENT_QT_HAS_RHI
+    return ::compatibility::detail::schedulePaintInBackingStorePass(d->surface);
+#else
+    return false;
 #endif
 }
 void SpatialTextureBackend::clearFrameCaches()
@@ -479,7 +561,17 @@ void SpatialTextureBackend::setLayer(int index,
 {
     if (index < 0 || size_t(index) >= d->layers.size())
         return;
-    d->layers[size_t(index)] = {source, transform, revision, radius, progress, shadowOpacity, material, reflection};
+    auto& layer = d->layers[size_t(index)];
+    const quint64 damageBase = layer.damageBase;
+    QRegion damage = layer.damage;
+    layer = {source, transform, revision, radius, progress, shadowOpacity, material, reflection, damageBase, damage};
+}
+void SpatialTextureBackend::setLayerDamage(int index, quint64 baseRevision, const QRegion& damage)
+{
+    if (index < 0 || size_t(index) >= d->layers.size())
+        return;
+    d->layers[size_t(index)].damageBase = baseRevision;
+    d->layers[size_t(index)].damage = damage;
 }
 void SpatialTextureBackend::setSceneClip(const QRectF& clip)
 {

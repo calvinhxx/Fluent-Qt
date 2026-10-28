@@ -40,6 +40,8 @@ public:
     QVariantMap statistics() const;
     QImage grabFramebuffer() const;
     void requestFrame();
+    // Paint the RHI surface in the next backing-store pass that reaches it; false means use requestFrame().
+    bool schedulePaintInBackingStorePass();
     void clearFrameCaches();
     void setLayerCount(int count);
     void setLayer(int index,
@@ -51,6 +53,7 @@ public:
         const QColor& reflection,
         qreal progress,
         qreal shadowOpacity);
+    void setLayerDamage(int index, quint64 baseRevision, const QRegion& damage);
     void setSceneClip(const QRectF& clip);
     void resize(const QRect& rect);
 

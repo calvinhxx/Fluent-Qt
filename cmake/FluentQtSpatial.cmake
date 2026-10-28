@@ -49,6 +49,12 @@ function(fluent_qt_add_spatial_library)
             POSITION_INDEPENDENT_CODE ON)
         target_link_libraries(FluentQtSpatialRenderer PUBLIC FluentQt::Spatial)
         target_include_directories(FluentQtSpatialRenderer PUBLIC "${PROJECT_SOURCE_DIR}")
+        # Texture widgets paint inside backing-store passes through private widget
+        # state. Without private headers they keep Qt's queued update() path.
+        if(TARGET Qt${QT_VERSION_MAJOR}::WidgetsPrivate)
+            target_link_libraries(FluentQtSpatialRenderer PRIVATE Qt${QT_VERSION_MAJOR}::WidgetsPrivate)
+            target_compile_definitions(FluentQtSpatialRenderer PRIVATE FLUENT_QT_HAS_WIDGETS_PRIVATE=1)
+        endif()
         if(QT_VERSION_MAJOR EQUAL 6 AND Qt6_VERSION VERSION_GREATER_EQUAL 6.7 AND (WIN32 OR APPLE))
             target_link_libraries(FluentQtSpatialRenderer PRIVATE Qt6::GuiPrivate)
             target_compile_definitions(FluentQtSpatialRenderer PRIVATE FLUENT_QT_HAS_RHI=1)
