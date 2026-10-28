@@ -1,5 +1,29 @@
 const translations = {
   "zh": {
+    "support.kicker": "09 / SPONSOR · 赛博投喂",
+    "support.title": "大佬，赏点 Token？",
+    "support.intro": "开源用爱发电，奈何 AI 实在太费电。写 C++ 掉的是作者的头发，跑 Agent 烧的是真金白银的上下文。如果 Fluent-Qt 帮你的界面少踩了几个坑、省下了调样式的深夜，不妨投喂一点「赛博猫粮」——哪怕不够大模型塞牙缝，也能让维护者嘴角疯狂上扬。",
+    "support.amount": "选择投喂档位",
+    "support.tier19": "一杯续命冰美式",
+    "support.tier49": "够烧几轮长上下文",
+    "support.tier99": "今晚放心开满推理",
+    "support.any": "随心投喂",
+    "support.tierAny": "丰俭由人，心意无价",
+    "support.method": "切换投喂通道",
+    "support.wechat": "微信支付",
+    "support.alipay": "支付宝",
+    "support.instruction": "已切好 ¥{amount} 专属码，扫码核对无误即可投喂，感谢老板大气！",
+    "support.anyInstruction": "已切到自由额度码，扫码后金额全凭心情，多少都是满格电量！",
+    "support.wechatScan": "微信扫一扫 · 立即投喂",
+    "support.alipayScan": "支付宝扫一扫 · 立即投喂",
+    "support.wechatAlt": "维护者的微信收款二维码",
+    "support.alipayAlt": "维护者的支付宝收款二维码",
+    "support.mobileHelp": "手机端冲浪？截屏后去微信或支付宝「扫一扫」里从相册召唤即可。",
+    "support.policy": "纯属自愿投喂，仅用于补充咖啡因与 Token，不解锁催更特权或付费服务（但会收获作者在心里的疯狂感谢）。",
+    "support.policyLink": "正经支持说明",
+    "support.loading": "正在召唤收款码…",
+    "support.imageError": "哎呀，收款码在路上迷路了，刷新页面或换个档位再试试？",
+    "support.footer": "投喂支持",
     "meta.title": "FluentQt (Fluent-Qt) — Qt Widgets 的 Fluent UI 控件库",
     "meta.description": "FluentQt（Fluent-Qt）是面向 Qt Widgets 的 C++17 Fluent UI 控件库，支持 Qt 5/6、可选 PySide6 绑定和 WebAssembly。在线体验 Gallery，查看 API 与接入示例。",
     "a11y.skip": "跳到主要内容",
@@ -181,6 +205,30 @@ const translations = {
     "spatial.stopped": "示例已停止"
   },
   "en": {
+    "support.kicker": "09 / SPONSOR · TOKEN FUND",
+    "support.title": "Spare a few tokens?",
+    "support.intro": "Open source runs on love, caffeine, and an alarming amount of LLM context. Writing C++ costs the maintainer’s hairline; wrangling AI agents costs cold, hard tokens. If Fluent-Qt saved your UI from a late-night stylesheet meltdown, toss a few coins into the token furnace—every bit keeps the commits flowing.",
+    "support.amount": "Pick a fuel tier · CNY",
+    "support.tier19": "Iced coffee fuel",
+    "support.tier49": "Fresh context window",
+    "support.tier99": "Max-reasoning night",
+    "support.any": "Freestyle",
+    "support.tierAny": "Name your bounty",
+    "support.method": "Payment channel",
+    "support.wechat": "WeChat Pay",
+    "support.alipay": "Alipay",
+    "support.instruction": "Locked in at ¥{amount}—scan, double-check the number, and you’re officially a legend.",
+    "support.anyInstruction": "Freestyle code ready—scan and punch in whatever feels right. Every drop counts!",
+    "support.wechatScan": "Scan with WeChat Pay",
+    "support.alipayScan": "Scan with Alipay",
+    "support.wechatAlt": "The maintainer’s WeChat Pay collection QR code",
+    "support.alipayAlt": "The maintainer’s Alipay collection QR code",
+    "support.mobileHelp": "On your phone? Take a quick screenshot and load it from your payment app’s album scanner.",
+    "support.policy": "100% voluntary fuel for caffeine and tokens—no paid SLA or priority queue attached, just genuine gratitude.",
+    "support.policyLink": "Support policy",
+    "support.loading": "Summoning QR code…",
+    "support.imageError": "Oops, the QR code got lost in transit. Try refreshing or switching tiers.",
+    "support.footer": "Fuel the project",
     "meta.title": "FluentQt (Fluent-Qt) — Fluent UI library for Qt Widgets",
     "meta.description": "FluentQt (Fluent-Qt) is a C++17 Fluent UI library for Qt Widgets, with Qt 5/6, optional PySide6 bindings, and WebAssembly. Try the Gallery and setup examples.",
     "a11y.skip": "Skip to main content",
@@ -938,6 +986,80 @@ function setupInteractions() {
   });
 }
 
+function setupSupport() {
+  const root = document.querySelector("[data-support]");
+  if (!root) return;
+  const controls = root.querySelector("[data-support-controls]");
+  const instruction = root.querySelector("[data-support-instruction]");
+  // An incomplete template keeps the static codes and leaves the controls hidden.
+  if (!controls || !instruction
+      || !controls.querySelector('[name="support-method"]:checked')
+      || !controls.querySelector('[name="support-amount"]:checked')) return;
+  const payments = Array.from(root.querySelectorAll("[data-support-payment]"), (payment) => {
+    const method = payment.dataset.supportPayment;
+    const code = payment.querySelector("[data-support-code]");
+    const viewport = payment.querySelector(".support-code-window");
+    const loading = payment.querySelector("[data-support-loading]");
+    const error = payment.querySelector("[data-support-error]");
+    const genericImage = viewport.querySelector("img");
+    const images = new Map([["any", genericImage]]);
+    let activeImage = null;
+
+    const syncImage = (image) => {
+      // A late response for an earlier selection must not reveal or hide this code.
+      if (image !== activeImage) return;
+      const ready = image.complete && image.naturalWidth > 0;
+      const failed = image.complete && image.naturalWidth === 0;
+      image.hidden = !ready;
+      code.hidden = failed;
+      loading.hidden = image.complete;
+      error.hidden = !failed;
+    };
+    const watchImage = (image) => {
+      image.addEventListener("load", () => syncImage(image));
+      image.addEventListener("error", () => syncImage(image));
+    };
+    watchImage(genericImage);
+
+    const select = (amount) => {
+      let image = images.get(amount);
+      if (!image) {
+        image = genericImage.cloneNode(false);
+        image.removeAttribute("data-i18n-alt");
+        image.dataset.supportFixed = "";
+        image.alt = `${genericImage.alt} · ¥${amount}`;
+        // Resolve beside the localized generic asset, including project subpaths.
+        image.src = new URL(`${method}-${amount}.jpg`, genericImage.src).href;
+        watchImage(image);
+        images.set(amount, image);
+      }
+      image.loading = "eager";
+      activeImage = image;
+      syncImage(image);
+      // Separate image nodes prevent the previous amount's pixels lingering on load.
+      viewport.replaceChildren(image);
+    };
+    return { payment, method, select };
+  });
+  const render = () => {
+    const method = controls.querySelector('[name="support-method"]:checked').value;
+    const amount = controls.querySelector('[name="support-amount"]:checked').value;
+    const values = dictionary();
+    const message = values[amount === "any" ? "support.anyInstruction" : "support.instruction"];
+    instruction.textContent = message.replace("{amount}", amount);
+    payments.forEach(({ payment, method: paymentMethod, select }) => {
+      if (paymentMethod === method) select(amount);
+      payment.hidden = paymentMethod !== method;
+    });
+  };
+
+  controls.addEventListener("change", render);
+  // Reset the derived view when a browser restores radio selections from history.
+  window.addEventListener("pageshow", render);
+  render();
+  controls.hidden = false;
+}
+
 function setupGalleryPreview() {
   const link = document.querySelector("[data-gallery-preview]");
   const dialog = document.querySelector(".gallery-preview");
@@ -983,6 +1105,11 @@ loadAnalytics();
 setupNavigation();
 setupInteractions();
 setupGalleryPreview();
+try {
+  setupSupport();
+} catch (error) {
+  console.warn("Support controls could not initialize; continuing page setup.", error);
+}
 setupLiveGallery();
 setupReveal();
 releaseState.platform = detectPlatform();

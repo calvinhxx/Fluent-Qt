@@ -45,6 +45,12 @@
     </script>
     <script>
       (() => {
+        // Hide generic QR pixels until the deferred controller chooses an amount.
+        document.documentElement.setAttribute("data-support-pending", "");
+        // Also release the fallback if the main script fails to load or execute.
+        document.addEventListener("DOMContentLoaded", () => {
+          document.documentElement.removeAttribute("data-support-pending");
+        }, { once: true });
         const forcedHighContrast = matchMedia("(forced-colors: active)").matches;
         const systemTheme = matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
@@ -613,6 +619,106 @@ target_link_libraries(
           </div>
         </div>
       </section>
+
+      <section class="support-section" id="support" aria-labelledby="support-title" data-support>
+        <div class="page-shell support-layout">
+          <div class="support-copy">
+            <p class="section-index" data-i18n="support.kicker">09 / SPONSOR · 赛博投喂</p>
+            <h2 id="support-title" data-i18n="support.title">大佬，赏点 Token？</h2>
+            <p class="support-intro" data-i18n="support.intro">开源用爱发电，奈何 AI 实在太费电。写 C++ 掉的是作者的头发，跑 Agent 烧的是真金白银的上下文。如果 Fluent-Qt 帮你的界面少踩了几个坑、省下了调样式的深夜，不妨投喂一点「赛博猫粮」——哪怕不够大模型塞牙缝，也能让维护者嘴角疯狂上扬。</p>
+
+            <div class="support-controls" data-support-controls hidden>
+              <fieldset class="support-fieldset" aria-describedby="support-instruction">
+                <legend data-i18n="support.amount">选择投喂档位</legend>
+                <div class="support-amounts">
+                  <label class="support-option">
+                    <input type="radio" name="support-amount" value="19" checked>
+                    <span class="support-option-card">
+                      <strong class="support-amount-value">¥19</strong>
+                      <small class="support-amount-tag" data-i18n="support.tier19">一杯续命冰美式</small>
+                    </span>
+                  </label>
+                  <label class="support-option">
+                    <input type="radio" name="support-amount" value="49">
+                    <span class="support-option-card">
+                      <strong class="support-amount-value">¥49</strong>
+                      <small class="support-amount-tag" data-i18n="support.tier49">够烧几轮长上下文</small>
+                    </span>
+                  </label>
+                  <label class="support-option">
+                    <input type="radio" name="support-amount" value="99">
+                    <span class="support-option-card">
+                      <strong class="support-amount-value">¥99</strong>
+                      <small class="support-amount-tag" data-i18n="support.tier99">今晚放心开满推理</small>
+                    </span>
+                  </label>
+                  <label class="support-option">
+                    <input type="radio" name="support-amount" value="any">
+                    <span class="support-option-card">
+                      <strong class="support-amount-value support-amount-any" data-i18n="support.any">随心投喂</strong>
+                      <small class="support-amount-tag" data-i18n="support.tierAny">丰俭由人，心意无价</small>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="support-fieldset">
+                <legend data-i18n="support.method">切换投喂通道</legend>
+                <div class="support-methods">
+                  <label class="support-option">
+                    <input type="radio" name="support-method" value="wechat" aria-controls="support-wechat" checked>
+                    <span class="support-method-pill support-method-wechat">
+                      <svg class="support-method-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9.5 4C5.36 4 2 6.91 2 10.5c0 1.98 1.03 3.75 2.66 4.95L4 18l2.76-1.38c.86.25 1.78.38 2.74.38.34 0 .68-.02 1.01-.06A5.95 5.95 0 0 1 10 14.5c0-3.04 2.91-5.5 6.5-5.5.17 0 .34.01.5.02C16.25 6.13 13.18 4 9.5 4Zm-2.25 4.25a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm4.5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM16.5 10c-3.04 0-5.5 2.01-5.5 4.5S13.46 19 16.5 19c.77 0 1.5-.13 2.17-.36L21 19.8l-.55-2.18C21.42 16.79 22 15.7 22 14.5c0-2.49-2.46-4.5-5.5-4.5Zm-1.75 2.75a.85.85 0 1 1 0 1.7.85.85 0 0 1 0-1.7Zm3.5 0a.85.85 0 1 1 0 1.7.85.85 0 0 1 0-1.7Z"/>
+                      </svg>
+                      <span data-i18n="support.wechat">微信支付</span>
+                    </span>
+                  </label>
+                  <label class="support-option">
+                    <input type="radio" name="support-method" value="alipay" aria-controls="support-alipay">
+                    <span class="support-method-pill support-method-alipay">
+                      <svg class="support-method-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 3v2H7.5v1.6H12v1.8H8.2v1.5h3.5a9.3 9.3 0 0 1-1.9 2.7c-1.1-.4-2.1-.9-2.8-1.4l-.9 1.3c.8.6 1.9 1.1 3.2 1.6a11.7 11.7 0 0 1-4.1 1.4l.6 1.6c1.8-.3 3.4-.9 4.9-1.9 1.7.6 3.7 1.1 6.1 1.5l.5-1.7c-2.1-.3-3.9-.7-5.4-1.3.9-1.1 1.6-2.3 2-3.8H18V11.4h-4.4V9.6H17V8h-3.4V6H12Z"/>
+                      </svg>
+                      <span data-i18n="support.alipay">支付宝</span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+              <p class="support-instruction" id="support-instruction" data-support-instruction role="status" aria-live="polite" aria-atomic="true"></p>
+            </div>
+
+          </div>
+
+          <div class="support-payments">
+            <figure class="support-payment" id="support-wechat" data-support-payment="wechat">
+              <figcaption data-i18n="support.wechatScan">微信扫一扫 · 立即投喂</figcaption>
+              <div class="support-code" data-support-code>
+                <div class="support-code-window support-code-wechat">
+                  <img src="assets/support/wechat.jpg" width="828" height="1124" loading="lazy" decoding="async" alt="维护者的微信收款二维码" data-i18n-alt="support.wechatAlt">
+                </div>
+                <p class="support-code-loading" data-support-loading hidden role="status" data-i18n="support.loading">正在召唤收款码…</p>
+              </div>
+              <p class="support-image-error" data-support-error hidden data-i18n="support.imageError">哎呀，收款码在路上迷路了，刷新页面或换个档位再试试？</p>
+            </figure>
+            <figure class="support-payment" id="support-alipay" data-support-payment="alipay">
+              <figcaption data-i18n="support.alipayScan">支付宝扫一扫 · 立即投喂</figcaption>
+              <div class="support-code" data-support-code>
+                <div class="support-code-window support-code-alipay">
+                  <img src="assets/support/alipay.jpg" width="1280" height="1919" loading="lazy" decoding="async" alt="维护者的支付宝收款二维码" data-i18n-alt="support.alipayAlt">
+                </div>
+                <p class="support-code-loading" data-support-loading hidden role="status" data-i18n="support.loading">正在召唤收款码…</p>
+              </div>
+              <p class="support-image-error" data-support-error hidden data-i18n="support.imageError">哎呀，收款码在路上迷路了，刷新页面或换个档位再试试？</p>
+            </figure>
+          </div>
+
+          <div class="support-details">
+            <p class="support-mobile-help" data-i18n="support.mobileHelp">手机端冲浪？截屏后去微信或支付宝「扫一扫」里从相册召唤即可。</p>
+            <p class="support-policy"><span data-i18n="support.policy">纯属自愿投喂，仅用于补充咖啡因与 Token，不解锁催更特权或付费服务（但会收获作者在心里的疯狂感谢）。</span> <a href="https://github.com/calvinhxx/Fluent-Qt/blob/main/SUPPORT.md" data-i18n="support.policyLink">正经支持说明</a></p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <dialog class="gallery-preview" aria-labelledby="gallery-preview-title">
@@ -636,6 +742,7 @@ target_link_libraries(
             <a href="https://github.com/calvinhxx/Fluent-Qt">GitHub</a>
             <a href="https://github.com/calvinhxx/Fluent-Qt/discussions" data-analytics-event="discussions_footer">Discussions</a>
             <a href="https://github.com/calvinhxx/Fluent-Qt/releases">Releases</a>
+            <a href="#support" data-i18n="support.footer">支持项目</a>
             <a href="{{API_URL}}" data-i18n="nav.api">文档</a>
             <a href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples">Examples</a>
           </div>

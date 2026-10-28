@@ -33,6 +33,8 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top">项目官网</a>
   ·
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">提问与交流</a>
+  ·
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#support">支持项目</a>
 </p>
 
 Fluent-Qt（FluentQt）是基于 Qt Widgets 的跨平台 Fluent 风格 C++ UI 组件库，提供输入、导航、集合、数据表格、[图表](docs/architecture/charts.md)、弹窗和窗口等原生控件。组件库采用 C++17 开发，可通过 CMake 接入现有 Qt 项目，并提供可选的 PySide6 绑定。
