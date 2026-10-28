@@ -2,7 +2,7 @@
 
 #ifdef FLUENT_QT_HAS_SPATIAL
 #include "GalleryGlyphPaintDevice.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "components/spatial/ParticleLayer.h"
 #include "components/spatial/SpatialSession.h"
 
@@ -27,7 +27,7 @@
 
 namespace fluent::gallery::spatial_render {
 namespace {
-using layout::ParticleBackdrop;
+using particles::ParticleBackdrop;
 using spatial::ParticleLayer;
 
 bool unsupportedAncestors(QWidget* widget, QWidget* root)

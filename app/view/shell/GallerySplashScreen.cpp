@@ -5,7 +5,7 @@
 #include <QPainter>
 
 #include "components/foundation/MotionPolicy.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "view/shell/AppIcon.h"
 
 namespace fluent::gallery {
@@ -95,7 +95,7 @@ void GallerySplashScreen::cacheDismissalContent(QWidget* content)
     // Freeze the decorative clock with its pixels, so resuming never jumps ahead by the
     // handoff duration. Hidden and already-disabled samples keep their own preferences.
     // zh_CN: 装饰动效的时钟随画面一起暂停，恢复时不跳过整段交接时间；隐藏及已禁用的示例保持原状。
-    for (auto* backdrop : content->findChildren<layout::ParticleBackdrop*>()) {
+    for (auto* backdrop : content->findChildren<particles::ParticleBackdrop*>()) {
         if (backdrop->isVisible() && backdrop->isAnimationEnabled()) {
             m_pausedBackdrops.append(backdrop);
             backdrop->setAnimationEnabled(false);

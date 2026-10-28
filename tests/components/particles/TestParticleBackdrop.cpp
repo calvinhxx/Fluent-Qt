@@ -10,11 +10,11 @@
 
 #include "components/basicinput/Button.h"
 #include "components/foundation/MotionPolicy.h"
-#include "components/layout/ParticleBackdrop.h"
-#include "components/layout/ParticleBackdrop_p.h"
+#include "components/particles/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop_p.h"
 #include "QtTestEnvironment.h"
 
-using fluent::layout::ParticleBackdrop;
+using fluent::particles::ParticleBackdrop;
 
 class ParticleBackdropTest : public ::testing::Test {
 protected:
@@ -34,14 +34,13 @@ protected:
     fluent::FluentElement::Theme oldTheme;
 };
 
-class ParticleBackdropPresetTest : public ParticleBackdropTest,
-                                   public ::testing::WithParamInterface<ParticleBackdrop::Effect> {
-};
+class ParticleBackdropPresetTest
+    : public ParticleBackdropTest,
+      public ::testing::WithParamInterface<ParticleBackdrop::Effect> {};
 
-INSTANTIATE_TEST_SUITE_P(Presets, ParticleBackdropPresetTest,
-                         ::testing::Values(ParticleBackdrop::FlowingRibbons,
-                                           ParticleBackdrop::FloatingDots,
-                                           ParticleBackdrop::Starfield));
+INSTANTIATE_TEST_SUITE_P(Presets,
+    ParticleBackdropPresetTest,
+    ::testing::Values(ParticleBackdrop::FlowingRibbons, ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield));
 
 TEST_F(ParticleBackdropTest, Contract_DefaultsAndNormalizedSetters)
 {
@@ -252,8 +251,8 @@ TEST_F(ParticleBackdropTest, Contract_EffectSwitchPreservesSettingsAndNotifiesOn
     QSignalSpy effects(&backdrop, &ParticleBackdrop::effectChanged);
     QSignalSpy motion(&backdrop, &ParticleBackdrop::animatingChanged);
     QSignalSpy counts(&backdrop, &ParticleBackdrop::particleCountChanged);
-    for (auto effect : {ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield,
-                        ParticleBackdrop::FlowingRibbons}) {
+    for (auto effect :
+        {ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield, ParticleBackdrop::FlowingRibbons}) {
         ASSERT_TRUE(backdrop.setProperty("effect", QVariant::fromValue(effect)));
         backdrop.setEffect(effect);
         backdrop.setEffect(static_cast<ParticleBackdrop::Effect>(-1));
@@ -325,8 +324,7 @@ TEST_P(ParticleBackdropPresetTest, Contract_PresetsAnimateAndFreeze)
 TEST_F(ParticleBackdropTest, Contract_EffectNotificationMayDestroySurface)
 {
     QPointer<ParticleBackdrop> backdrop = new ParticleBackdrop;
-    QObject::connect(backdrop, &ParticleBackdrop::effectChanged, backdrop,
-                     [backdrop] { delete backdrop; });
+    QObject::connect(backdrop, &ParticleBackdrop::effectChanged, backdrop, [backdrop] { delete backdrop; });
     backdrop->setEffect(ParticleBackdrop::FloatingDots);
     EXPECT_TRUE(backdrop.isNull());
 }
@@ -341,11 +339,10 @@ TEST_F(ParticleBackdropTest, Contract_AnimatingNotificationMayDestroySurface)
     host.show();
     QTest::qWait(25);
     ASSERT_TRUE(backdrop->isAnimating());
-    QObject::connect(backdrop, &ParticleBackdrop::animatingChanged, &host,
-                     [backdrop](bool running) {
-                         if (!running)
-                             delete backdrop;
-                     });
+    QObject::connect(backdrop, &ParticleBackdrop::animatingChanged, &host, [backdrop](bool running) {
+        if (!running)
+            delete backdrop;
+    });
     QPointer<ParticleBackdrop> guard(backdrop);
     backdrop->setAnimationEnabled(false);
     EXPECT_TRUE(guard.isNull());
@@ -399,7 +396,7 @@ TEST_P(ParticleBackdropPresetTest, Contract_IsolatedRenderPreservesTheCpuFrame)
         isolated.fill(Qt::transparent);
         {
             QPainter painter(&isolated);
-            fluent::layout::ParticleBackdropRenderAccess::paintIsolated(&backdrop, painter);
+            fluent::particles::ParticleBackdropRenderAccess::paintIsolated(&backdrop, painter);
         }
         EXPECT_EQ(isolated, cpu);
         // Changing the destination does not advance or reset simulation time.
@@ -419,7 +416,7 @@ TEST_F(ParticleBackdropTest, Contract_ExternalFramesDoNotRepaintTheWidgetAndOwne
             ParticleBackdrop::paintEvent(event);
         }
     } backdrop;
-    using Access = fluent::layout::ParticleBackdropRenderAccess;
+    using Access = fluent::particles::ParticleBackdropRenderAccess;
     backdrop.resize(300, 180);
     backdrop.setPauseWhenInactive(false);
     backdrop.show();
@@ -445,6 +442,39 @@ TEST_F(ParticleBackdropTest, Contract_ExternalFramesDoNotRepaintTheWidgetAndOwne
     EXPECT_TRUE(backdrop.isAnimating());
 }
 
+TEST_F(ParticleBackdropTest, Contract_LifecycleSuspensionKeepsSettingsAndFollowsOwners)
+{
+    using Access = fluent::particles::ParticleBackdropRenderAccess;
+    ParticleBackdrop backdrop;
+    backdrop.resize(200, 140);
+    backdrop.setPauseWhenInactive(false);
+    backdrop.show();
+    ASSERT_TRUE(backdrop.isAnimating());
+    QSignalSpy preference(&backdrop, &ParticleBackdrop::animationEnabledChanged);
+    QObject first;
+    auto* second = new QObject;
+    Access::suspend(&backdrop, &first);
+    Access::suspend(&backdrop, &first);
+    Access::suspend(&backdrop, second);
+    EXPECT_FALSE(backdrop.isAnimating());
+    EXPECT_TRUE(backdrop.isAnimationEnabled());
+    EXPECT_TRUE(Access::isSuspendedBy(&backdrop, &first));
+
+    Access::resume(&backdrop, &first);
+    EXPECT_FALSE(Access::isSuspendedBy(&backdrop, &first));
+    EXPECT_FALSE(backdrop.isAnimating());
+    delete second; // A destroyed owner cannot leave its pause behind.
+    EXPECT_TRUE(backdrop.isAnimating());
+
+    Access::suspend(&backdrop, &first);
+    backdrop.setAnimationEnabled(false);
+    backdrop.setAnimationEnabled(true);
+    EXPECT_FALSE(backdrop.isAnimating());
+    Access::resume(&backdrop, &first);
+    EXPECT_TRUE(backdrop.isAnimating());
+    EXPECT_EQ(preference.count(), 2);
+}
+
 TEST_F(ParticleBackdropTest, VisualCheck_ParticlesAndChildControls)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
@@ -463,8 +493,9 @@ TEST_F(ParticleBackdropTest, VisualCheck_ParticlesAndChildControls)
     layout->addWidget(backdrop);
     auto* ripple = new fluent::basicinput::Button(QStringLiteral("Create a ripple"), backdrop);
     ripple->setGeometry(24, 24, 160, 36);
-    QObject::connect(ripple, &fluent::basicinput::Button::clicked, backdrop,
-                     [backdrop] { backdrop->triggerRipple(QPointF(580, 220)); });
+    QObject::connect(ripple, &fluent::basicinput::Button::clicked, backdrop, [backdrop] {
+        backdrop->triggerRipple(QPointF(580, 220));
+    });
     window.show();
     if (tests::support::isVisualSnapshotMode()) {
         tests::support::VisualSnapshotOptions options;

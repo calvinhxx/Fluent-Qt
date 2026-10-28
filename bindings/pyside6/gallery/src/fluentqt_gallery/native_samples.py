@@ -6899,6 +6899,7 @@ from . import native_samples_charts as _native_samples_charts  # noqa: E402,F401
 from . import native_samples_collections as _native_samples_collections  # noqa: E402,F401
 from . import native_samples_dialogs as _native_samples_dialogs  # noqa: E402,F401
 from . import native_samples_layout as _native_samples_layout  # noqa: E402,F401
+from . import native_samples_particles as _native_samples_particles  # noqa: E402,F401
 from . import native_samples_property_panel as _native_samples_property_panel  # noqa: E402,F401
 from . import native_samples_navigation as _native_samples_navigation  # noqa: E402,F401
 from . import native_samples_sequences as _native_samples_sequences  # noqa: E402,F401

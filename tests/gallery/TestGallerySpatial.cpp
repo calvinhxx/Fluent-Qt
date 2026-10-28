@@ -4068,8 +4068,8 @@ TEST_F(GallerySpatialTest, PointerFramePacingProbe)
                     : window.currentContentPage() && window.currentContentPage()->routeId() == route;
             },
             2000));
-        if (auto* particles = window.findChild<layout::ParticleBackdrop*>("galleryHomeParticles")) {
-            particles->setEffect(layout::ParticleBackdrop::Starfield);
+        if (auto* particles = window.findChild<particles::ParticleBackdrop*>("galleryHomeParticles")) {
+            particles->setEffect(particles::ParticleBackdrop::Starfield);
             particles->setPauseWhenInactive(false);
         }
         if (route == "spatial-view") {
@@ -4145,9 +4145,9 @@ TEST_F(GallerySpatialTest, StationaryParticleFramePacingProbe)
     window.resize(1200, 850);
     window.show();
     ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
-    auto* particles = window.findChild<layout::ParticleBackdrop*>("galleryHomeParticles");
+    auto* particles = window.findChild<particles::ParticleBackdrop*>("galleryHomeParticles");
     ASSERT_NE(particles, nullptr);
-    particles->setEffect(layout::ParticleBackdrop::Starfield);
+    particles->setEffect(particles::ParticleBackdrop::Starfield);
     settings.setSpatialModeEnabled(true);
     auto* controller = window.findChild<GallerySpatialController*>();
     auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");

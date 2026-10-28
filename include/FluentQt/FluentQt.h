@@ -46,6 +46,9 @@ bool initializeResources();
 #include <FluentQt/Layout.h>
 #include <FluentQt/MenusToolbars.h>
 #include <FluentQt/Navigation.h>
+#ifdef FLUENT_QT_HAS_PARTICLES
+#include <FluentQt/Particles.h>
+#endif
 #ifdef FLUENT_QT_HAS_PLUGINS
 #include <FluentQt/Plugins.h>
 #endif

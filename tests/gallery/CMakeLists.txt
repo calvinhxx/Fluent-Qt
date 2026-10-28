@@ -217,3 +217,15 @@ if(TARGET FluentQtQmlBridge)
         endif()
     endforeach()
 endif()
+
+# GalleryCore keeps runtime dependencies private, so these tests link the
+# particle module and its feature definition directly.
+if(TARGET FluentQtParticles)
+    foreach(_particles_gallery_test
+            test_gallery_shell_framework test_gallery_shell_motion_policy
+            test_gallery_spatial test_gallery_content_pages test_gallery_qml_bridge)
+        if(TARGET ${_particles_gallery_test})
+            target_link_libraries(${_particles_gallery_test} PRIVATE FluentQt::Particles)
+        endif()
+    endforeach()
+endif()

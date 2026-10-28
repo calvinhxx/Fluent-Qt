@@ -608,8 +608,8 @@
       "risk": "low",
       "status": "not-applicable",
       "evidence": [
-        "src/components/layout/ParticleBackdrop.h",
-        "tests/components/layout/TestParticleBackdrop.cpp",
+        "src/components/particles/ParticleBackdrop.h",
+        "tests/components/particles/TestParticleBackdrop.cpp",
         "tests/gallery/TestGalleryParticleBackdrop.cpp"
       ],
       "gap": "All three CPU presets are decorative; contained controls own semantics and optional pointer effects convey no information. Effect switching preserves paused motion; MotionPolicy stops every preset and HighContrast suppresses decoration. Gallery uses a named keyboard-operable ComboBox for effect selection and a persisted, default-on ToggleSwitch to hide and stop home decoration."

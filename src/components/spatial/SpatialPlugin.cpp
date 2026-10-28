@@ -7,7 +7,7 @@
 #include "ParticleLayer.h"
 #include "SpatialRuntime.h"
 #include "SpatialView.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 
 namespace fluent::spatial {
 
@@ -152,7 +152,7 @@ QWidget* SpatialPlugin::createWidget(const QString& key, QWidget* parent, QStrin
     return view.data();
 }
 
-ParticleLayer* SpatialPlugin::createParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent)
+ParticleLayer* SpatialPlugin::createParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent)
 {
     if (!d->active || !onGuiThread(this) || !backdrop || backdrop->thread() != thread()
         || (parent && parent->thread() != thread()))

@@ -6,7 +6,7 @@
 #include <memory>
 
 class QWidget;
-namespace fluent::layout {
+namespace fluent::particles {
 class ParticleBackdrop;
 }
 namespace fluent::windowing {
@@ -52,7 +52,7 @@ public:
     bool attachView(SpatialView* view);
     /** @brief Creates a caller-owned adapter for a borrowed particle source while active.
      * zh_CN: 激活时为借用粒子源创建调用方持有的适配器。 */
-    ParticleLayer* createParticleLayer(layout::ParticleBackdrop* backdrop, QObject* parent = nullptr);
+    ParticleLayer* createParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent = nullptr);
     /** @brief Prepares a hidden window without a GPU context; false while inactive.
      * zh_CN: 不创建 GPU 上下文地准备隐藏窗口；停用时返回 false。 */
     bool prepareWindow(windowing::Window* window);

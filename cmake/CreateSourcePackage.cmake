@@ -84,6 +84,7 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInstallHeaders.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSpatial.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtPlugins.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtParticles.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtQmlBridge.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtHelloWorldExamples.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtPluginExtensionExample.cmake"

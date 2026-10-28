@@ -194,6 +194,10 @@ delegation; returned objects, content widgets, and models keep their recorded ow
 Use `addOwnedWidget()` to transfer a widget to the view, `addBorrowedWidget()`
 to retain it, or `addReparentedWidget()` to restore its original parent on release.
 
+`fluentqt.particles` exposes `ParticleBackdrop`, `ParticlesPlugin`, and
+`ParticlesSession`; import them from this module. It uses ordinary Widgets and
+needs no Spatial context. See the [Particles contract](../../docs/architecture/particles.md).
+
 `ParticleLayer` is a lower-level integration for an **existing** OpenGL
 compositor, not another widget or particle simulation. It borrows a visible
 `ParticleBackdrop`; that component still defaults to CPU rendering. For example:

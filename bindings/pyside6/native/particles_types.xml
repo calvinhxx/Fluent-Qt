@@ -1,0 +1,21 @@
+<namespace-type name="particles" visible="no">
+    <object-type name="ParticleBackdrop">
+        <enum-type name="Effect"/>
+        <enum-type name="BackgroundMode"/>
+    </object-type>
+    <object-type name="ParticlesPlugin"/>
+    <object-type name="ParticlesSession">
+        <modify-function signature="activate(QString*)">
+            <modify-argument index="1"><remove-argument/></modify-argument>
+        </modify-function>
+        <modify-function signature="deactivate(QString*)">
+            <modify-argument index="1"><remove-argument/></modify-argument>
+        </modify-function>
+        <modify-function signature="createBackdrop(QWidget*)">
+            <modify-argument index="return">
+                <parent index="1" action="add"/>
+                <define-ownership class="target" owner="target"/>
+            </modify-argument>
+        </modify-function>
+    </object-type>
+</namespace-type>

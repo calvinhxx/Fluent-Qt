@@ -695,6 +695,8 @@ jobs:
           test -f "$package_dir/FluentQtTargets.cmake"
           test ! -f "$package_dir/FluentQtSpatialTargets.cmake"
           test ! -f "$RUNNER_TEMP/fluentqt/include/FluentQt/Spatial.h"
+          test ! -f "$package_dir/FluentQtParticlesTargets.cmake"
+          test ! -f "$RUNNER_TEMP/fluentqt/include/FluentQt/Particles.h"
           test -f "$RUNNER_TEMP/fluentqt/include/FluentQt/Diagnostics.h"
           test -f "$RUNNER_TEMP/fluentqt/include/FluentQt/utils/Inspector.h"
           if grep -R -E 'spdlog|fmt::|GTest|FluentQtLoggingSupport|support/logging' "$package_dir"; then
@@ -729,25 +731,26 @@ jobs:
         shell: bash
         run: cmake --build build/integration-installed --parallel 4
 
-      - name: Build and install optional Spatial component
+      - name: Build and install optional Spatial and Particles components
         shell: bash
         run: |
           cmake -S .github/integration -B build/integration-source \
             -DFLUENT_QT_INTEGRATION_SPATIAL=ON \
+            -DFLUENT_QT_INTEGRATION_PARTICLES=ON \
             -DCMAKE_DISABLE_FIND_PACKAGE_Qt6OpenGL=FALSE \
             -DCMAKE_DISABLE_FIND_PACKAGE_Qt6OpenGLWidgets=FALSE
           cmake --build build/integration-source --parallel 4
           cmake --install build/integration-source \
             --config Release --component Development \
-            --prefix "$RUNNER_TEMP/fluentqt-spatial"
+            --prefix "$RUNNER_TEMP/fluentqt-optional"
 
-      - name: Verify separate base and Spatial package consumers
+      - name: Verify separate base, Spatial and Particles package consumers
         shell: bash
         run: |
           cmake -S .github/integration -B build/integration-installed-base \
             -DFLUENT_QT_INTEGRATION_MODE=INSTALLED \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt-spatial" \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt-optional" \
             -DCMAKE_DISABLE_FIND_PACKAGE_Qt6OpenGL=TRUE \
             -DCMAKE_DISABLE_FIND_PACKAGE_Qt6OpenGLWidgets=TRUE
           cmake --build build/integration-installed-base --parallel 4
@@ -755,10 +758,19 @@ jobs:
             -DFLUENT_QT_INTEGRATION_MODE=INSTALLED \
             -DFLUENT_QT_INTEGRATION_SPATIAL=ON \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt-spatial"
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt-optional"
           cmake --build build/integration-installed-spatial --parallel 4
+          cmake -S .github/integration -B build/integration-installed-particles \
+            -DFLUENT_QT_INTEGRATION_MODE=INSTALLED \
+            -DFLUENT_QT_INTEGRATION_PARTICLES=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt-optional" \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Qt6OpenGL=TRUE \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Qt6OpenGLWidgets=TRUE
+          cmake --build build/integration-installed-particles --parallel 4
           QT_QPA_PLATFORM=offscreen build/integration-installed-base/fluentqt_external_integration
           QT_QPA_PLATFORM=offscreen build/integration-installed-spatial/fluentqt_external_integration
+          QT_QPA_PLATFORM=offscreen build/integration-installed-particles/fluentqt_external_integration
 
       - name: Verify FluentQt library source package
         if: ${{ matrix.qt_source == 'apt6' }}

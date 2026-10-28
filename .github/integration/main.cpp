@@ -6,6 +6,9 @@
 #include <QLocale>
 
 bool verifyOverlayWindowHeaders(QWidget* child, QWidget* top);
+#ifdef FLUENT_QT_HAS_PARTICLES
+bool verifyParticlesModule();
+#endif
 
 // Compile/link fixture for external add_subdirectory consumers.
 // CI builds this target but does not start its event loop.
@@ -50,12 +53,10 @@ int main(int argc, char* argv[])
     fluent::basicinput::CompoundButton compoundButton(QStringLiteral("Install update"), &button);
     compoundButton.setSecondaryText(QStringLiteral("Downloads and restarts the application"));
     fluent::layout::Accordion accordion;
-    fluent::layout::ParticleBackdrop particles;
-    if (particles.isGpuAccelerationEnabled())
-        return 3;
-    particles.setGpuAccelerationEnabled(true);
-    if (!particles.isGpuAccelerationEnabled())
-        return 4;
+#ifdef FLUENT_QT_HAS_PARTICLES
+    if (!verifyParticlesModule())
+        return 7;
+#endif
     fluent::status_info::Avatar avatar(QStringLiteral("Ada Lovelace"));
 #ifdef FLUENT_QT_HAS_SPATIAL
     fluent::spatial::SpatialRuntime::prepareApplication();

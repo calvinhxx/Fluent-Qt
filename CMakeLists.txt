@@ -26,6 +26,7 @@ endif()
 option(BUILD_TESTING "Enable testing and build tests" OFF)
 option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" OFF)
 option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
+option(FLUENT_QT_BUILD_PARTICLES "Build the optional particle effects plugin" OFF)
 option(FLUENT_QT_BUILD_SPATIAL "Build the optional Spatial module (requires Qt OpenGL support)" OFF)
 option(FLUENT_QT_BUILD_PLUGINS "Build the optional plugin interfaces and lifecycle manager" OFF)
 option(FLUENT_QT_BUILD_QML_BRIDGE "Build the optional QML host plugin (requires Qt QuickWidgets)" OFF)
@@ -73,6 +74,13 @@ list(FILTER SRC EXCLUDE REGEX "/(components/qmlbridge|compatibility/private/quic
 set(FLUENT_QT_PLUGIN_SOURCES ${SRC})
 list(FILTER FLUENT_QT_PLUGIN_SOURCES INCLUDE REGEX "/components/foundation/plugins/")
 list(FILTER SRC EXCLUDE REGEX "/components/foundation/plugins/")
+set(FLUENT_QT_PARTICLE_SOURCES ${SRC})
+list(FILTER FLUENT_QT_PARTICLE_SOURCES INCLUDE REGEX "/components/particles/")
+list(FILTER SRC EXCLUDE REGEX "/components/particles/")
+# Gallery and bindings expose particle controls; Spatial's GPU layer renders them.
+if(FLUENT_QT_BUILD_GALLERY OR FLUENT_QT_BUILD_PYSIDE6_BINDINGS OR FLUENT_QT_BUILD_SPATIAL)
+    set(FLUENT_QT_BUILD_PARTICLES ON)
+endif()
 set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES "")
 if(EMSCRIPTEN AND FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
     set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES
@@ -88,10 +96,11 @@ if(APPLE)
     include(cmake/FluentQtApplePlatformDependencies.cmake)
 endif()
 
-if(FLUENT_QT_BUILD_SPATIAL OR FLUENT_QT_BUILD_QML_BRIDGE)
+if(FLUENT_QT_BUILD_SPATIAL OR FLUENT_QT_BUILD_QML_BRIDGE OR FLUENT_QT_BUILD_PARTICLES)
     set(FLUENT_QT_BUILD_PLUGINS ON)
 endif()
 include(cmake/FluentQtPlugins.cmake)
+include(cmake/FluentQtParticles.cmake)
 include(cmake/FluentQtSpatial.cmake)
 include(cmake/FluentQtQmlBridge.cmake)
 # Imported Qt targets must be visible to sibling app, bindings, and tests.
@@ -159,6 +168,12 @@ if(FLUENT_QT_INSTALL)
         NAMESPACE FluentQt::
         DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}"
         COMPONENT Development)
+    if(TARGET FluentQtParticles)
+        install(TARGETS FluentQtParticles EXPORT FluentQtParticlesTargets
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
+        install(EXPORT FluentQtParticlesTargets NAMESPACE FluentQt::
+            DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}" COMPONENT Development)
+    endif()
     if(TARGET FluentQtSpatial)
         install(TARGETS FluentQtSpatial EXPORT FluentQtSpatialTargets
             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)

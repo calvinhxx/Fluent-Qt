@@ -1,5 +1,5 @@
-#ifndef FLUENTQT_COMPONENTS_LAYOUT_PARTICLEBACKDROP_H
-#define FLUENTQT_COMPONENTS_LAYOUT_PARTICLEBACKDROP_H
+#ifndef FLUENTQT_COMPONENTS_PARTICLES_PARTICLEBACKDROP_H
+#define FLUENTQT_COMPONENTS_PARTICLES_PARTICLEBACKDROP_H
 
 #include <QMarginsF>
 #include <QPointF>
@@ -9,7 +9,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 
-namespace fluent::layout {
+namespace fluent::particles {
 
 class ParticleBackdropPrivate;
 class ParticleBackdropRenderAccess;
@@ -141,6 +141,6 @@ private:
     std::unique_ptr<ParticleBackdropPrivate> d;
 };
 
-} // namespace fluent::layout
+} // namespace fluent::particles
 
-#endif // FLUENTQT_COMPONENTS_LAYOUT_PARTICLEBACKDROP_H
+#endif // FLUENTQT_COMPONENTS_PARTICLES_PARTICLEBACKDROP_H

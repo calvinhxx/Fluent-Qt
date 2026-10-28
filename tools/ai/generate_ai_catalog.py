@@ -17,6 +17,15 @@ from typing import Iterable
 
 
 CATEGORY_API = {
+    "particles": {
+        "cpp_header": "Particles.h",
+        "cpp_namespace": "fluent::particles",
+        "python_module": "particles",
+        "source_directory": "particles",
+        "sample_source": "ParticlesSamples.cpp",
+        "cmake_target": "FluentQt::Particles",
+        "build_option": "FLUENT_QT_BUILD_PARTICLES=ON",
+    },
     "qml-bridge": {
         "cpp_header": "QmlBridge.h",
         "cpp_namespace": "fluent::qmlbridge",

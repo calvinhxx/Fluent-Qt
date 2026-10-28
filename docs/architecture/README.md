@@ -40,6 +40,7 @@ flowchart TD
 | [Date and time range picker](date-time-range-picker.md) | Nullable start/end inputs, minute precision, date-only mode, and query-boundary ownership |
 | [Charts](charts.md) | Model ownership, indexed projections, streaming, chart aggregation, or accessibility |
 | [Timeline and Stepper](sequence-controls.md) | Caller-owned sequences, step requests, layout, motion, and accessibility |
+| [Particles](particles.md) | Particle presets, scoped motion lifecycle, and CPU drawing |
 | [Spatial](spatial-view.md) | SpatialSession lifecycle, composition with SpatialView and SpatialItem, parameters, ownership, and native 2D fallback |
 | [Overlay behavior](overlay-behavior.md) | Popup, Flyout, Dialog, TeachingTip, dropdown, drawer, or another same-window transient surface |
 | [Window chrome](window-chrome.md) | Title bars, native move/resize, backdrops, hit testing, or platform window behavior |
