@@ -40,6 +40,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     native_samples_datetime.py
     native_samples_collections.py
     native_samples_layout.py
+    native_samples_particles.py
     native_samples_property_panel.py
     native_samples_dialogs.py
     native_samples_overlays.py

@@ -14,6 +14,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 from fluentqt._qt_compat import delete_qobject as delete
 from PySide6.QtCore import QAbstractAnimation, QEvent, QEventLoop, QObject, QPoint, QPointF, QRect, QRectF, QSettings, QSize, QSizeF, QTimer, Qt, qVersion
 from PySide6.QtGui import QCursor, QMouseEvent, QPainter, QPolygonF, QTransform, QWindow, qGray
@@ -274,7 +275,7 @@ class GallerySpatialTest(unittest.TestCase):
                 self.assertTrue(session.activate())
                 compositor = GalleryParticleCompositor(host, session)
                 compositor.root = host
-                source = fluentqt.ParticleBackdrop(host)
+                source = ParticleBackdrop(host)
                 source.setGpuAccelerationEnabled(previous)
                 compositor.sources = [source]
                 compositor.source_rects = [QRect(0, 0, 32, 32)]
@@ -301,7 +302,7 @@ class GallerySpatialTest(unittest.TestCase):
                 self.assertTrue(session.activate())
                 compositor = GalleryParticleCompositor(host, session)
                 compositor.root = host
-                source = fluentqt.ParticleBackdrop(host)
+                source = ParticleBackdrop(host)
                 source.setGpuAccelerationEnabled(False)
                 compositor.sources = [source]
                 compositor.source_rects = [QRect(0, 0, 32, 32)]
@@ -335,7 +336,7 @@ class GallerySpatialTest(unittest.TestCase):
                 self.assertTrue(session.activate())
                 compositor = GalleryParticleCompositor(host, session)
                 compositor.root = host
-                source = fluentqt.ParticleBackdrop(host)
+                source = ParticleBackdrop(host)
                 source.setGpuAccelerationEnabled(False)
                 compositor.sources = [source]
                 compositor.source_rects = [QRect(0, 0, 32, 32)]
@@ -368,7 +369,7 @@ class GallerySpatialTest(unittest.TestCase):
         session = SpatialSession(host, host)
         self.assertTrue(session.activate())
         compositor = GalleryParticleCompositor(host, session)
-        source = fluentqt.ParticleBackdrop(host)
+        source = ParticleBackdrop(host)
         source.setGpuAccelerationEnabled(True)
         renderer = QObject(compositor)
         compositor.layers = [{"renderer": renderer, "source": source,
@@ -392,7 +393,7 @@ class GallerySpatialTest(unittest.TestCase):
                 session = SpatialSession(host, host)
                 self.assertTrue(session.activate())
                 compositor = GalleryParticleCompositor(host, session)
-                sources = [fluentqt.ParticleBackdrop(host), fluentqt.ParticleBackdrop(host)]
+                sources = [ParticleBackdrop(host), ParticleBackdrop(host)]
                 renderers = [QObject(compositor), QObject(compositor)]
                 releases = []
                 for source, renderer in zip(sources, renderers):
@@ -441,7 +442,7 @@ class GallerySpatialTest(unittest.TestCase):
                     self.assertTrue(session.activate())
                     compositor = particle.GalleryParticleCompositor(host, session)
                     compositor.root = host
-                    sources = [fluentqt.ParticleBackdrop(host), fluentqt.ParticleBackdrop(host)]
+                    sources = [ParticleBackdrop(host), ParticleBackdrop(host)]
                     compositor.sources = sources.copy()
                     compositor.source_rects = [QRect(0, 0, 32, 32), QRect(32, 0, 32, 32)]
                     compositor.source_clips = compositor.source_rects.copy()
@@ -497,7 +498,7 @@ class GallerySpatialTest(unittest.TestCase):
                     context = QObject(host)
                     compositor.root = host if geometry else QWidget(host)
                     compositor.context, compositor.native_dpr = context, 1.
-                    sources = [fluentqt.ParticleBackdrop(host), fluentqt.ParticleBackdrop(host)]
+                    sources = [ParticleBackdrop(host), ParticleBackdrop(host)]
                     compositor.sources = sources.copy()
                     compositor.candidates = sources.copy()
                     compositor.source_rects = [QRect(0, 0, 16, 16), QRect(16, 0, 16, 16)]
@@ -1349,10 +1350,11 @@ assert {entry.route_id for entry in ENTRIES} == {
     component["id"] for component in CONTRACT["components"] if component["category_id"] not in ("spatial", "qml-bridge")}
 assert {route.id for route in ROUTES} == {
     route["id"] for route in CONTRACT["routes"]
-    if route["id"] not in ("plugins", "spatial", "qml-bridge") and route["parent_id"] not in ("spatial", "qml-bridge")}
+    if route["id"] not in ("spatial", "qml-bridge") and route["parent_id"] not in ("spatial", "qml-bridge")}
 assert len(ROUTES) == len({route.id for route in ROUTES})
-assert "plugins" not in window._main_navigation_pane._route_items
-assert "plugins" not in window._top_main_navigation_pane._buttons
+# Particles ships with every binding, so Plugins keeps exactly that subtree.
+assert "particles" in window._main_navigation_pane._route_items
+assert "plugins" in window._top_main_navigation_pane._buttons
 assert "PySide6.QtOpenGLWidgets" not in sys.modules
 assert "PySide6.QtOpenGL" not in sys.modules
 assert "fluentqt.spatial" not in sys.modules
@@ -1682,9 +1684,9 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertTrue(QTest.qWaitForWindowExposed(window))
             if window.devicePixelRatioF() > 2:
                 self.skipTest("this full-size acceleration budget covers native DPR up to 2")
-            particles = window.findChild(fluentqt.ParticleBackdrop, "galleryHomeParticles")
+            particles = window.findChild(ParticleBackdrop, "galleryHomeParticles")
             self.assertIsNotNone(particles)
-            particles.setEffect(fluentqt.ParticleBackdrop.Starfield)
+            particles.setEffect(ParticleBackdrop.Starfield)
             particles.setPauseWhenInactive(False)
             self.settings.set_spatial_mode_enabled(True)
             controller = window._spatial_controller

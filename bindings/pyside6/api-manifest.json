@@ -76,7 +76,6 @@
     "MultiSelectComboBox",
     "NavigationView",
     "NumberBox",
-    "ParticleBackdrop",
     "PasswordBox",
     "PieChart",
     "PipsPager",
@@ -1496,30 +1495,6 @@
       "tabWidthMode",
       "visibleTabIndexes"
     ],
-    "ParticleBackdrop": [
-      "isGpuAccelerationEnabled",
-      "setGpuAccelerationEnabled",
-      "effect",
-      "setEffect",
-      "isAnimationEnabled",
-      "setAnimationEnabled",
-      "isAnimating",
-      "speed",
-      "setSpeed",
-      "particleCount",
-      "setParticleCount",
-      "maximumFrameRate",
-      "setMaximumFrameRate",
-      "isInteractive",
-      "setInteractive",
-      "isPauseWhenInactive",
-      "setPauseWhenInactive",
-      "backgroundMode",
-      "setBackgroundMode",
-      "fadeMargins",
-      "setFadeMargins",
-      "triggerRipple"
-    ],
     "ChartData": [
       "fromPoints",
       "isValid",
@@ -2135,6 +2110,54 @@
           "activeBackend",
           "rendererName",
           "fallbackReason"
+        ]
+      }
+    },
+    "fluentqt.particles": {
+      "build_option": "FLUENT_QT_BUILD_PARTICLES",
+      "classes": [
+        "ParticleBackdrop",
+        "ParticlesPlugin",
+        "ParticlesSession"
+      ],
+      "methods": {
+        "ParticleBackdrop": [
+          "isGpuAccelerationEnabled",
+          "setGpuAccelerationEnabled",
+          "effect",
+          "setEffect",
+          "isAnimationEnabled",
+          "setAnimationEnabled",
+          "isAnimating",
+          "speed",
+          "setSpeed",
+          "particleCount",
+          "setParticleCount",
+          "maximumFrameRate",
+          "setMaximumFrameRate",
+          "isInteractive",
+          "setInteractive",
+          "isPauseWhenInactive",
+          "setPauseWhenInactive",
+          "backgroundMode",
+          "setBackgroundMode",
+          "fadeMargins",
+          "setFadeMargins",
+          "triggerRipple"
+        ],
+        "ParticlesPlugin": [
+          "pluginId",
+          "metadata",
+          "widgetKeys",
+          "isActive",
+          "attachBackdrop"
+        ],
+        "ParticlesSession": [
+          "activate",
+          "deactivate",
+          "isActive",
+          "createBackdrop",
+          "attachBackdrop"
         ]
       }
     }

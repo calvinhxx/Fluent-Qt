@@ -59,6 +59,7 @@
 #include "components/charts/ChartView.h"
 #include "components/textfields/NumberBox.h"
 #include "components/layout/ListDetailView.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/CompoundButton.h"
 #include "components/basicinput/MultiSelectComboBox.h"
@@ -1373,10 +1374,12 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
             EXPECT_NE(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
             const bool isSpatial = category.id == QStringLiteral("spatial");
             const bool isQmlBridge = category.id == QStringLiteral("qml-bridge");
+            const bool isParticles = category.id == QStringLiteral("particles");
             EXPECT_EQ(reference.cmakeTarget,
-                isSpatial ? QStringLiteral("FluentQt::Spatial")
-                    : isQmlBridge
-                    ? QStringLiteral("FluentQt::QmlBridge")
+                isSpatial         ? QStringLiteral("FluentQt::Spatial")
+                    : isQmlBridge ? QStringLiteral("FluentQt::QmlBridge")
+                    : isParticles
+                    ? QStringLiteral("FluentQt::Particles")
                     : QStringLiteral("FluentQt::FluentQt"));
             if (category.id == QStringLiteral("spatial")) {
                 EXPECT_TRUE(reference.hasPythonReference());
@@ -1384,6 +1387,13 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
                 EXPECT_EQ(reference.pythonImport,
                     QStringLiteral("from fluentqt.spatial import %1").arg(component.title));
                 EXPECT_TRUE(reference.pythonInstall.contains(QStringLiteral("FLUENT_QT_BUILD_SPATIAL=ON")));
+            } else if (isParticles) {
+                EXPECT_EQ(reference.header, QStringLiteral("<FluentQt/Particles.h>"));
+                EXPECT_TRUE(reference.hasPythonReference());
+                EXPECT_EQ(reference.pythonType, component.title);
+                EXPECT_EQ(reference.pythonImport,
+                    QStringLiteral("from fluentqt.particles import %1").arg(component.title));
+                EXPECT_TRUE(reference.pythonInstall.contains(QStringLiteral("FLUENT_QT_BUILD_PARTICLES=ON")));
             } else if (isQmlBridge) {
                 EXPECT_EQ(reference.header, QStringLiteral("<FluentQt/QmlBridge.h>"));
                 EXPECT_TRUE(reference.hasPythonReference());
@@ -1665,6 +1675,9 @@ TEST_F(GalleryContentPagesTest, PluginLandingListsModulesSeparatelyFromControls)
     GalleryNavigationViewModel navigation;
     const auto* entry = galleryContentEntry(QStringLiteral("plugins"));
     QStringList modules;
+#ifdef FLUENT_QT_HAS_PARTICLES
+    modules.append(QStringLiteral("particles"));
+#endif
 #ifdef FLUENT_QT_HAS_SPATIAL
     modules.append(QStringLiteral("spatial"));
 #endif
@@ -1680,6 +1693,12 @@ TEST_F(GalleryContentPagesTest, PluginLandingListsModulesSeparatelyFromControls)
     GalleryCategoryPage page(*entry, navigation);
     EXPECT_EQ(page.componentRouteIds(), modules);
     EXPECT_EQ(entry->relatedRouteIds, modules);
+#ifdef FLUENT_QT_HAS_PARTICLES
+    const auto* particlesEntry = galleryContentEntry(QStringLiteral("particles"));
+    ASSERT_NE(particlesEntry, nullptr);
+    GalleryCategoryPage particlesModule(*particlesEntry, navigation);
+    EXPECT_EQ(particlesModule.componentRouteIds(), QStringList{QStringLiteral("particle-backdrop")});
+#endif
 #ifdef FLUENT_QT_HAS_SPATIAL
     const auto* spatialEntry = galleryContentEntry(QStringLiteral("spatial"));
     ASSERT_NE(spatialEntry, nullptr);
@@ -3377,7 +3396,10 @@ TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSourc
                     EXPECT_TRUE(toast->isClosable());
                     EXPECT_EQ(toast->message(), QStringLiteral("Changes saved"));
                 }
-                const QByteArray qualifiedType = reference.qualifiedType.toUtf8();
+                // The 1.x Particles namespace aliases the established layout meta-object.
+                const QByteArray qualifiedType = component.id == QStringLiteral("particle-backdrop")
+                    ? QByteArray(fluent::particles::ParticleBackdrop::staticMetaObject.className())
+                    : reference.qualifiedType.toUtf8();
                 if (sample.id == QStringLiteral("drawer-view-backdrop-effects")) {
                     auto* trigger = preview->findChild<Button*>(QStringLiteral("Gallery.Drawer.OpenEffects"));
                     ASSERT_NE(trigger, nullptr);

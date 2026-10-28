@@ -20,7 +20,7 @@
 
 #include "components/foundation/MotionPolicy.h"
 
-namespace fluent::layout {
+namespace fluent::particles {
 namespace {
 constexpr double Tau = 6.283185307179586;
 QColor alpha(QColor color, double opacity)
@@ -111,6 +111,11 @@ public:
     QPointer<QObject> frameOwner;
     std::function<void()> requestFrame;
     QMetaObject::Connection frameOwnerDestroyed;
+    struct Suspension {
+        const QObject* owner;
+        QMetaObject::Connection ownerDestroyed;
+    };
+    std::vector<Suspension> suspensions;
 
     int width() const { return q->width(); }
     int height() const { return q->height(); }
@@ -137,7 +142,7 @@ public:
     }
     bool motionAllowed() const
     {
-        return speed > 0 && q->isEnabled() && q->effectiveTheme() != FluentElement::HighContrast
+        return speed > 0 && suspensions.empty() && q->isEnabled() && q->effectiveTheme() != FluentElement::HighContrast
             && MotionPolicy::instance().shouldAnimate(animationEnabled, MotionPolicy::Kind::Continuous);
     }
     bool inViewport() const
@@ -807,4 +812,42 @@ void ParticleBackdropRenderAccess::paintIsolated(ParticleBackdrop* backdrop, QPa
     if (backdrop)
         backdrop->d->paint(painter, true);
 }
-} // namespace fluent::layout
+
+void ParticleBackdropRenderAccess::suspend(ParticleBackdrop* backdrop, QObject* owner)
+{
+    if (!backdrop || !owner || isSuspendedBy(backdrop, owner))
+        return;
+    auto* data = backdrop->d.get();
+    // The owner pointer is only an identity key; its destruction lifts the pause.
+    const auto destroyed = QObject::connect(owner, &QObject::destroyed, backdrop, [backdrop, owner] {
+        resume(backdrop, owner);
+    });
+    data->suspensions.push_back({owner, destroyed});
+    data->syncTimer();
+}
+
+void ParticleBackdropRenderAccess::resume(ParticleBackdrop* backdrop, const QObject* owner)
+{
+    if (!backdrop || !owner)
+        return;
+    auto& suspensions = backdrop->d->suspensions;
+    const auto entry = std::find_if(suspensions.begin(), suspensions.end(), [owner](const auto& suspension) {
+        return suspension.owner == owner;
+    });
+    if (entry == suspensions.end())
+        return;
+    QObject::disconnect(entry->ownerDestroyed);
+    suspensions.erase(entry);
+    backdrop->d->syncTimer();
+}
+
+bool ParticleBackdropRenderAccess::isSuspendedBy(const ParticleBackdrop* backdrop, const QObject* owner)
+{
+    if (!backdrop || !owner)
+        return false;
+    const auto& suspensions = backdrop->d->suspensions;
+    return std::any_of(suspensions.begin(), suspensions.end(), [owner](const auto& suspension) {
+        return suspension.owner == owner;
+    });
+}
+} // namespace fluent::particles

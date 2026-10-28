@@ -51,6 +51,14 @@ Fluent-Qt（FluentQt）是基于 Qt Widgets 的跨平台 Fluent 风格 C++ UI �
 
 C++ 直接调用库，Python 使用配套的 PySide6 绑定。WebAssembly 版本由同一份 C++ 代码编译，在浏览器中运行。
 
+#### Particles
+
+[Particles](docs/architecture/particles.md) 插件提供粒子动画背景 `ParticleBackdrop`，用 CPU 绘制，不依赖 Spatial 或 OpenGL。`ParticlesSession` 可以统一暂停和恢复它管理的背景。
+
+构建时打开 `FLUENT_QT_BUILD_PARTICLES=ON`，链接 `FluentQt::Particles`。核心库 `FluentQt::FluentQt` 不包含粒子特效。
+
+在 Gallery 的 Plugins → Particles 中查看示例。
+
 #### Spatial
 
 [Spatial](docs/architecture/spatial-view.md) 为现有 Qt Widgets 界面提供 3D 展示能力。`SpatialSession` 负责激活插件、创建视图和停用时的清理。
@@ -224,6 +232,7 @@ cmake --install build/fluentqt --config Release \
 | 扩展层级 | 构建选项 | CMake target | 接入示例 |
 |---|---|---|---|
 | Plugins 公共基础设施 | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [最小插件示例](docs/architecture/plugins.md#minimal-extension-example) |
+| Plugins → Particles | `-DFLUENT_QT_BUILD_PARTICLES=ON` | `FluentQt::Particles` | [粒子接入](docs/architecture/particles.md) |
 | Plugins → Spatial | `-DFLUENT_QT_BUILD_SPATIAL=ON` | `FluentQt::Spatial`（自动包含 Plugins） | [Spatial Hello World](examples/hello_world/README.md) |
 | Plugins → QmlBridge | `-DFLUENT_QT_BUILD_QML_BRIDGE=ON` | `FluentQt::QmlBridge`（自动包含 Plugins） | [QML 宿主示例](examples/qml_bridge/) |
 

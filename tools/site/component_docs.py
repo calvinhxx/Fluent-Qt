@@ -115,7 +115,7 @@ def component_directory(doc, documents, page, language):
     translated_categories = {"basic-input": "基础输入", "charts": "图表", "collections": "集合视图",
         "date-time": "日期与时间", "dialogs-flyouts": "对话框与浮层", "layout": "布局", "menus-toolbars": "菜单与工具栏",
         "navigation": "导航", "scrolling": "滚动", "status-info": "状态与信息", "text-fields": "文本输入",
-        "windowing": "窗口", "spatial": "空间", "qml-bridge": "QML 桥接", "foundation": "图标"}
+        "windowing": "窗口", "particles": "粒子", "spatial": "空间", "qml-bridge": "QML 桥接", "foundation": "图标"}
     available = {item["id"]: item for item in documents}
     groups = []
     for group, labels in (('foundation', ('Foundations', '基础能力')), ('modules', ('Modules', '扩展模块'))):

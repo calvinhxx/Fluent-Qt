@@ -17,6 +17,7 @@ from unittest.mock import patch
 import uuid
 
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 from fluentqt._qt_compat import delete_qobject
 from _test_font_environment import initialize_headless_test_fixed_font
 import fluentqt_gallery.application_controller as application_controller_module
@@ -3003,18 +3004,18 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     )
                     self.assertLessEqual(preview.parentWidget().width(), card.width())
                 if sample.id == "particle-backdrop-interaction":
-                    backdrop = preview.findChild(fluentqt.ParticleBackdrop)
+                    backdrop = preview.findChild(ParticleBackdrop)
                     effect = preview.findChild(fluentqt.ComboBox, "particleEffect")
                     pause = preview.findChild(fluentqt.Button, "particlePause")
                     speed = preview.findChild(fluentqt.Slider, "particleSpeed")
                     QTest.mouseClick(pause, Qt.LeftButton)
                     self.assertFalse(backdrop.isAnimationEnabled())
                     self.assertEqual(pause.text(), "Resume motion")
-                    self.assertEqual(backdrop.effect(), fluentqt.ParticleBackdrop.Effect.Starfield)
+                    self.assertEqual(backdrop.effect(), ParticleBackdrop.Effect.Starfield)
                     presets = (
-                        ("FlowingRibbons", fluentqt.ParticleBackdrop.Effect.FlowingRibbons),
-                        ("FloatingDots", fluentqt.ParticleBackdrop.Effect.FloatingDots),
-                        ("Starfield", fluentqt.ParticleBackdrop.Effect.Starfield),
+                        ("FlowingRibbons", ParticleBackdrop.Effect.FlowingRibbons),
+                        ("FloatingDots", ParticleBackdrop.Effect.FloatingDots),
+                        ("Starfield", ParticleBackdrop.Effect.Starfield),
                     )
                     for index, (identifier, preset) in enumerate(presets):
                         effect.setCurrentIndex(index)
@@ -4748,9 +4749,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         try:
             launch_effect = window._pages["home"][1]._gallery_hero._particles.effect()
             self.assertIn(launch_effect, (
-                fluentqt.ParticleBackdrop.Effect.FlowingRibbons,
-                fluentqt.ParticleBackdrop.Effect.FloatingDots,
-                fluentqt.ParticleBackdrop.Effect.Starfield,
+                ParticleBackdrop.Effect.FlowingRibbons,
+                ParticleBackdrop.Effect.FloatingDots,
+                ParticleBackdrop.Effect.Starfield,
             ))
             self.assertEqual(window.windowTitle(), "Fluent-Qt Gallery")
             self.assertEqual(window.titleBar().titleBarHeight(), 42)
@@ -4876,6 +4877,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 fluentqt.prepare_high_dpi_application()
 from PySide6.QtCore import QStandardPaths
 from PySide6.QtWidgets import QApplication
@@ -4903,13 +4905,13 @@ with (
     if enabled:
         candidates = tuple(name for name in identifiers if name != previous)
         assert chosen == candidates[0]
-        assert first._particles.effect() == getattr(fluentqt.ParticleBackdrop.Effect, chosen)
+        assert first._particles.effect() == getattr(ParticleBackdrop.Effect, chosen)
         random.global_.return_value.bounded.assert_called_once_with(len(candidates))
         settings.set_home_particles_enabled(False)
         assert first._particles.isHidden() and second._particles.isHidden()
         assert not settings_module._config_settings().value("home/particlesEnabled", True, type=bool)
         settings.set_home_particles_enabled(True)
-        assert first._particles.effect() == getattr(fluentqt.ParticleBackdrop.Effect, chosen)
+        assert first._particles.effect() == getattr(ParticleBackdrop.Effect, chosen)
         assert settings.last_home_particle_effect == chosen
         random.global_.return_value.bounded.assert_called_once()
     else:
@@ -5102,7 +5104,7 @@ with (
             window._prewarm_next_route()
             home = window._pages["home"][1]
             self.assertTrue(home.isHidden())
-            for backdrop in home.findChildren(fluentqt.ParticleBackdrop):
+            for backdrop in home.findChildren(ParticleBackdrop):
                 self.assertFalse(backdrop.isAnimating())
             window._prewarm_next_route()
             window._prewarm_next_route()
@@ -5221,10 +5223,10 @@ with (
         host.resize(640, 420)
         content = QWidget(host)
         content.setGeometry(0, 0, 300, 220)
-        visible = fluentqt.ParticleBackdrop(content)
-        disabled = fluentqt.ParticleBackdrop(content)
+        visible = ParticleBackdrop(content)
+        disabled = ParticleBackdrop(content)
         disabled.setAnimationEnabled(False)
-        hidden = fluentqt.ParticleBackdrop(content)
+        hidden = ParticleBackdrop(content)
         hidden.hide()
         cover_host = QWidget(host)
         cover_host.setGeometry(310, 0, 300, 220)
@@ -5791,8 +5793,9 @@ with (
         try:
             pane = window._main_navigation_pane
             if not SPATIAL_AVAILABLE:
-                self.assertEqual("plugins" in pane._route_items, QML_BRIDGE_AVAILABLE)
-                self.assertEqual("plugins" in window._top_main_navigation_pane._buttons, QML_BRIDGE_AVAILABLE)
+                # Particles ships with every binding, so Plugins is always present.
+                self.assertIn("plugins", pane._route_items)
+                self.assertIn("plugins", window._top_main_navigation_pane._buttons)
                 return
             # Complete route/count parity is covered against the generated
             # contract; this test owns the plugin navigation hierarchy.
@@ -5850,8 +5853,10 @@ with (
 
     def test_plugins_top_and_compact_flyouts_drill_down_from_same_anchor(self):
         if not SPATIAL_AVAILABLE:
-            self.assertNotIn("plugins", ROUTE_BY_ID)
+            self.assertIn("plugins", ROUTE_BY_ID)
             return
+        # Particles precedes Spatial among plugin categories.
+        spatial = [c.id for c in CATEGORIES if c.plugin].index("spatial")
         window = GalleryWindow(startup_visuals=False)
         window.setFixedSize(1180, 900)
         window.show()
@@ -5879,7 +5884,7 @@ with (
             self.assertTrue(_wait_until(lambda: top._child_flyout is not None))
             rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
             self.assertEqual([row._route_id for row in rows], [c.id for c in CATEGORIES if c.plugin])
-            QTest.mouseClick(rows[0], Qt.LeftButton, pos=rows[0].rect().center())
+            QTest.mouseClick(rows[spatial], Qt.LeftButton, pos=rows[spatial].rect().center())
             self.assertTrue(_wait_until(lambda: top._child_flyout_panel is not None
                                        and [row._route_id for row in top._child_flyout_panel.findChildren(
                                            QWidget, options=Qt.FindDirectChildrenOnly)] == ["spatial-view", "spatial-item"]))
@@ -5893,7 +5898,7 @@ with (
             self.assertEqual(anchor.text(), "Plugins")
             top._show_child_flyout("plugins", anchor)
             rows = top._child_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
-            self.assertTrue(rows[0]._selected)
+            self.assertTrue(rows[spatial]._selected)
             top._close_child_flyout(False)
             QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
@@ -5907,7 +5912,7 @@ with (
             rows = pane._compact_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
             self.assertEqual([row._route_id for row in rows], [c.id for c in CATEGORIES if c.plugin])
             anchor_geometry = pane._compact_flyout_anchor.geometry()
-            QTest.mouseClick(rows[0], Qt.LeftButton, pos=rows[0].rect().center())
+            QTest.mouseClick(rows[spatial], Qt.LeftButton, pos=rows[spatial].rect().center())
             self.assertTrue(_wait_until(lambda: pane._compact_flyout_panel is not None
                                        and [row._route_id for row in pane._compact_flyout_panel.findChildren(
                                            QWidget, options=Qt.FindDirectChildrenOnly)] == ["spatial-view", "spatial-item"]))
@@ -5920,7 +5925,7 @@ with (
             self.assertEqual(pane._tree.currentIndex().data(Qt.UserRole + 1), "plugins")
             pane._show_compact_flyout(pane._route_items["plugins"].index())
             rows = pane._compact_flyout_panel.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
-            self.assertTrue(rows[0]._selected)
+            self.assertTrue(rows[spatial]._selected)
         finally:
             delete_qobject(window)
 
@@ -6731,7 +6736,7 @@ with (
     def test_particle_gpu_request_is_component_owned_not_persisted(self):
         settings = gallery_settings_module.gallery_settings()
         self.assertFalse(hasattr(settings, "particle_acceleration_enabled"))
-        backdrop = fluentqt.ParticleBackdrop()
+        backdrop = ParticleBackdrop()
         try:
             self.assertFalse(backdrop.isGpuAccelerationEnabled())
             changes = []

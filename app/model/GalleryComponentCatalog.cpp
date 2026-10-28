@@ -84,8 +84,13 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
                 {QStringLiteral("field"), QStringLiteral("Field"), Typography::Icons::Edit},
                 {QStringLiteral("data-grid-tool-bar"), QStringLiteral("DataGridToolBar"), Typography::Icons::Grid},
                 {QStringLiteral("property-panel"), QStringLiteral("PropertyPanel"), Typography::Icons::Settings},
-                {QStringLiteral("list-detail-view"), QStringLiteral("ListDetailView"), Typography::Icons::AllApps},
-                {QStringLiteral("particle-backdrop"), QStringLiteral("ParticleBackdrop"), Typography::Icons::Refresh}}},
+                {QStringLiteral("list-detail-view"), QStringLiteral("ListDetailView"), Typography::Icons::AllApps}}},
+#ifdef FLUENT_QT_HAS_PARTICLES
+        {QStringLiteral("particles"), QStringLiteral("Particles"), QStringLiteral("particles"),
+            Typography::Icons::Refresh,
+            {{QStringLiteral("particle-backdrop"), QStringLiteral("ParticleBackdrop"), Typography::Icons::Refresh}},
+            true},
+#endif
 #ifdef FLUENT_QT_HAS_SPATIAL
         {QStringLiteral("spatial"), QStringLiteral("Spatial"), QStringLiteral("spatial"),
             Typography::Icons::glyph(QStringLiteral("ic_fluent_layer_diagonal_20_regular")),
@@ -169,6 +174,7 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
         {QStringLiteral("dialogs_flyouts"), QStringLiteral("<FluentQt/DialogsFlyouts.h>")},
         {QStringLiteral("foundation"), QStringLiteral("<FluentQt/Foundation.h>")},
         {QStringLiteral("layout"), QStringLiteral("<FluentQt/Layout.h>")},
+        {QStringLiteral("particles"), QStringLiteral("<FluentQt/Particles.h>")},
         {QStringLiteral("menus_toolbars"), QStringLiteral("<FluentQt/MenusToolbars.h>")},
         {QStringLiteral("navigation"), QStringLiteral("<FluentQt/Navigation.h>")},
         {QStringLiteral("qmlbridge"), QStringLiteral("<FluentQt/QmlBridge.h>")},
@@ -188,6 +194,12 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
             const QString apiNamespace = component.apiNamespace.isEmpty()
                 ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
                 : component.apiNamespace;
+            if (category.id == QStringLiteral("particles")) {
+                return {categoryHeaders.value(category.sourceDirectory),
+                    QStringLiteral("%1::%2").arg(apiNamespace, typeName), QStringLiteral("FluentQt::Particles"),
+                    QStringLiteral("Source build: FLUENT_QT_BUILD_PARTICLES=ON"),
+                    QStringLiteral("from fluentqt.particles import %1").arg(typeName), typeName};
+            }
             if (category.id == QStringLiteral("spatial")) {
                 return {categoryHeaders.value(category.sourceDirectory),
                     QStringLiteral("%1::%2").arg(apiNamespace, typeName), QStringLiteral("FluentQt::Spatial"),

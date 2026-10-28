@@ -59,6 +59,7 @@ from shiboken6 import Shiboken
 
 
 OPTIONAL_NATIVE_EXPORTS = {
+    "particles": ("ParticleBackdrop", "ParticlesPlugin", "ParticlesSession"),
     "plugins": ("PluginMetadata", "PluginContext", "_Plugin", "_WidgetPlugin", "_PluginManager"),
     "qmlbridge": ("QmlPlugin", "QmlSession", "QmlTheme", "QmlTextureLayer", "QmlView"),
 }
@@ -340,10 +341,11 @@ def main():
     if all(spatial_exports):
         report_stage("Spatial controls from installed wheel")
         from fluentqt._qt_compat import delete_qobject
+        from fluentqt.particles import ParticleBackdrop
 
         view = SpatialView()
         view.setRenderMode(SpatialView.RenderMode.Raster)
-        backdrop = fluentqt.ParticleBackdrop(view)
+        backdrop = ParticleBackdrop(view)
         layer = ParticleLayer(backdrop, view)
         try:
             content = fluentqt.Button("Spatial wheel smoke")

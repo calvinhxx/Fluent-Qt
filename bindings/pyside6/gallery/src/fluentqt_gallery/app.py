@@ -124,8 +124,10 @@ def runtime_catalog_errors() -> list[str]:
     errors = []
     from .spatial_support import SPATIAL_AVAILABLE
 
-    covered_types = [(fluentqt, entry.name) for entry in ENTRIES
-                     if entry.category_id not in {"spatial", "qml-bridge"}]
+    from fluentqt import particles
+
+    covered_types = [(particles if entry.category_id == "particles" else fluentqt, entry.name)
+                     for entry in ENTRIES if entry.category_id not in {"spatial", "qml-bridge"}]
     covered_types.extend((fluentqt, name) for name in sorted(SUPPORT_TYPES))
     if SPATIAL_AVAILABLE:
         from fluentqt import spatial

@@ -8,6 +8,7 @@ import unittest
 import weakref
 
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 import fluentqt._fluentqt as native
 from fluentqt._qt_compat import delete_qobject
 import PySide6
@@ -599,26 +600,27 @@ class FluentQtBindingTest(unittest.TestCase):
     def test_particle_backdrop_public_api_and_child_ownership(self):
         host = QWidget()
         host.resize(360, 220)
-        backdrop = fluentqt.ParticleBackdrop(host)
-        self.assertIs(layout.ParticleBackdrop, fluentqt.ParticleBackdrop)
+        backdrop = ParticleBackdrop(host)
+        self.assertFalse(hasattr(layout, "ParticleBackdrop"))
+        self.assertFalse(hasattr(fluentqt, "ParticleBackdrop"))
         self.assertIs(backdrop.parentWidget(), host)
         self.assertFalse(backdrop.isAnimating())
         self.assertTrue(backdrop.isPauseWhenInactive())
         self.assertEqual(backdrop.particleCount(), 240)
         self.assertEqual(backdrop.maximumFrameRate(), 30)
-        self.assertEqual(backdrop.effect(), fluentqt.ParticleBackdrop.Effect.FlowingRibbons)
+        self.assertEqual(backdrop.effect(), ParticleBackdrop.Effect.FlowingRibbons)
         backdrop.setAnimationEnabled(False)
         effects = QSignalSpy(backdrop.effectChanged)
-        for effect in (fluentqt.ParticleBackdrop.Effect.FloatingDots,
-                       fluentqt.ParticleBackdrop.Effect.Starfield,
-                       fluentqt.ParticleBackdrop.Effect.FlowingRibbons):
+        for effect in (ParticleBackdrop.Effect.FloatingDots,
+                       ParticleBackdrop.Effect.Starfield,
+                       ParticleBackdrop.Effect.FlowingRibbons):
             backdrop.setEffect(effect)
             backdrop.setEffect(effect)
             self.assertEqual(backdrop.effect(), effect)
             self.assertFalse(backdrop.isAnimationEnabled())
             self.assertEqual(backdrop.particleCount(), 240)
         self.assertEqual(effects.count(), 3)
-        backdrop.setBackgroundMode(fluentqt.ParticleBackdrop.BackgroundMode.Solid)
+        backdrop.setBackgroundMode(ParticleBackdrop.BackgroundMode.Solid)
         backdrop.setFadeMargins(QMarginsF(100, 0, 0, 50))
         self.assertEqual(backdrop.fadeMargins(), QMarginsF(100, 0, 0, 50))
         count = QSignalSpy(backdrop.particleCountChanged)

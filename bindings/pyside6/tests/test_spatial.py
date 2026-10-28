@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QApplication, QGraphicsView, QVBoxLayout, QWidget
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 import shiboken6
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 from fluentqt._qt_compat import delete_qobject
 from fluentqt.spatial import ParticleLayer, SpatialItem, SpatialPlugin, SpatialRuntime, SpatialSession, SpatialView
 
@@ -68,7 +69,7 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
 
     def test_session_activation_and_cleanup_preserve_caller_owned_outputs(self):
         host = QWidget()
-        source = fluentqt.ParticleBackdrop(host)
+        source = ParticleBackdrop(host)
         session = SpatialSession(host)
         view = layer = None
         try:
@@ -208,7 +209,7 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
 
     def test_session_factory_outputs_without_parent_can_be_collected_by_the_caller(self):
         session = SpatialSession()
-        source = fluentqt.ParticleBackdrop()
+        source = ParticleBackdrop()
         try:
             self.assertTrue(session.activate())
             view = session.createView()
@@ -352,7 +353,7 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
 
     def test_particle_layer_keeps_cpu_default_and_borrows_source(self):
         parent = QWidget()
-        source = fluentqt.ParticleBackdrop(parent)
+        source = ParticleBackdrop(parent)
         layer = ParticleLayer(source)
         self.assertIs(layer.backdrop(), source)
         self.assertIs(source.parentWidget(), parent)
@@ -371,7 +372,7 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
         delete_qobject(layer)
 
     def test_particle_layer_python_source_collection_is_safe(self):
-        source = fluentqt.ParticleBackdrop()
+        source = ParticleBackdrop()
         source_reference = weakref.ref(source)
         layer = ParticleLayer(source)
         del source
@@ -385,7 +386,7 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
         for owner_type in (QObject, QWidget):
             with self.subTest(owner=owner_type):
                 owner = owner_type()
-                source = fluentqt.ParticleBackdrop()
+                source = ParticleBackdrop()
                 layer = ParticleLayer(source, owner)
                 layer.release()
                 delete_qobject(layer)
@@ -403,11 +404,11 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
         context.resize(320, 220)
         parent = QWidget()
         parent.resize(240, 160)
-        source = fluentqt.ParticleBackdrop(parent)
+        source = ParticleBackdrop(parent)
         source.resize(parent.size())
         source.setAnimationEnabled(False)
         source.setGpuAccelerationEnabled(True)
-        source.setEffect(fluentqt.ParticleBackdrop.Effect.Starfield)
+        source.setEffect(ParticleBackdrop.Effect.Starfield)
         layer = ParticleLayer(source)
         spy = QSignalSpy(layer.activeChanged)
         try:
@@ -430,7 +431,7 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
             self.assertIs(layer.backdrop(), source)
             self.assertFalse(layer.render(1., 1))
             self.assertEqual(layer.allocatedBytes(), 0)
-            self.assertEqual(source.effect(), fluentqt.ParticleBackdrop.Effect.Starfield)
+            self.assertEqual(source.effect(), ParticleBackdrop.Effect.Starfield)
             self.assertFalse(source.isAnimationEnabled())
             self.assertTrue(layer.render(1., estimate))
             delete_qobject(source)

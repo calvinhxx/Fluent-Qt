@@ -9,6 +9,7 @@ import math
 import struct
 
 import fluentqt
+from fluentqt.particles import ParticleBackdrop
 from fluentqt._qt_compat import delete_qobject
 from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSize, QSizeF, Qt, Signal, Slot
 from PySide6.QtGui import QOpenGLContext, QPainter, QRegion, QSurfaceFormat, QVector2D, QVector4D
@@ -273,7 +274,7 @@ class GalleryParticleCompositor(QObject):
                 for child in parent.children():
                     if not isinstance(child, QWidget) or child.isWindow() or child.isHidden():
                         continue
-                    if isinstance(child, fluentqt.ParticleBackdrop):
+                    if isinstance(child, ParticleBackdrop):
                         self.candidates.append(child)
                     visit(child)
 

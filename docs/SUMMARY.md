@@ -16,6 +16,7 @@ standalone reading tasks.
   - **Runtime contracts**
     - [QMLPlus reactive composition](architecture/qmlplus.md)
     - [Plugins: optional extension lifecycle](architecture/plugins.md)
+    - [Particles: optional decorative effects](architecture/particles.md)
     - [QmlBridge: application QML in a QWidget host](architecture/qml-bridge.md)
     - [Window Chrome Architecture](architecture/window-chrome.md)
     - [Overlay Behavior Contract](architecture/overlay-behavior.md)

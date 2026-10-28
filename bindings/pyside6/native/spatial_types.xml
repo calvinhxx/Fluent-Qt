@@ -1,7 +1,7 @@
 <namespace-type name="spatial" visible="no">
     <value-type name="SpatialRuntime"/>
     <object-type name="SpatialPlugin">
-        <modify-function signature="createParticleLayer(fluent::layout::ParticleBackdrop*,QObject*)">
+        <modify-function signature="createParticleLayer(fluent::particles::ParticleBackdrop*,QObject*)">
             <modify-argument index="return">
                 <define-ownership class="target" owner="target"/>
                 <parent index="2" action="add"/>
@@ -27,7 +27,7 @@
                 <define-ownership class="target" owner="target"/>
             </modify-argument>
         </modify-function>
-        <modify-function signature="createParticleLayer(fluent::layout::ParticleBackdrop*,QObject*)">
+        <modify-function signature="createParticleLayer(fluent::particles::ParticleBackdrop*,QObject*)">
             <modify-argument index="return">
                 <parent index="2" action="add"/>
                 <define-ownership class="target" owner="target"/>

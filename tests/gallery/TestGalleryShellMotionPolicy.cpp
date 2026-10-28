@@ -22,7 +22,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/foundation/overlay/OverlayScrim.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/status_info/ProgressBar.h"
 #include "components/status_info/ProgressRing.h"
@@ -244,11 +244,11 @@ TEST_F(GalleryShellMotionPolicyTest, SplashContentCacheRespectsEffectsCancellati
     host.resize(640, 480);
     QWidget content(&host);
     content.setGeometry(host.rect());
-    fluent::layout::ParticleBackdrop background(&content);
+    fluent::particles::ParticleBackdrop background(&content);
     background.setGeometry(content.rect());
-    fluent::layout::ParticleBackdrop disabledBackground(&content);
+    fluent::particles::ParticleBackdrop disabledBackground(&content);
     disabledBackground.setAnimationEnabled(false);
-    fluent::layout::ParticleBackdrop hiddenBackground(&content);
+    fluent::particles::ParticleBackdrop hiddenBackground(&content);
     hiddenBackground.hide();
     auto* splash = new GallerySplashScreen(&host);
     showAndProcess(host);
@@ -863,7 +863,7 @@ TEST_F(GalleryStartupTest, BoundedStartupAndCancellableColdPagesPreserveWarmStat
     auto* presenter = window.findChild<fluent::gallery::GalleryContentPresenter*>();
     ASSERT_NE(presenter, nullptr);
     QPointer<GallerySplashScreen> splash = window.findChild<GallerySplashScreen*>();
-    auto* particles = window.findChild<fluent::layout::ParticleBackdrop*>("galleryHomeParticles");
+    auto* particles = window.findChild<fluent::particles::ParticleBackdrop*>("galleryHomeParticles");
     ASSERT_NE(particles, nullptr);
     particles->setPauseWhenInactive(false);
     EXPECT_FALSE(particles->isAnimating());

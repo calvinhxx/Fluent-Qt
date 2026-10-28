@@ -208,6 +208,7 @@ if (!paletteGuard) {
         </object-type>
         <value-type name="BindingHandle"/>
         <!-- Optional Plugins types. -->
+        <!-- Optional Particles types. -->
         <!-- Optional plugin binding adapters. -->
         <!-- Optional Spatial types. -->
         <!-- Optional QmlBridge types. -->
@@ -949,10 +950,6 @@ if (!paletteGuard) {
                         <define-ownership class="target" owner="target"/>
                     </modify-argument>
                 </modify-function>
-            </object-type>
-            <object-type name="ParticleBackdrop">
-                <enum-type name="Effect"/>
-                <enum-type name="BackgroundMode"/>
             </object-type>
             <object-type name="Card">
                 <enum-type name="Appearance"/>

@@ -68,7 +68,7 @@
         <file alias="assets/control_images/layout/DataGridToolBar.svg">../tools/gallery/artwork/layout/DataGridToolBar.svg</file>
         <file alias="assets/control_images/layout/PropertyPanel.svg">../tools/gallery/artwork/layout/PropertyPanel.svg</file>
         <file alias="assets/control_images/layout/ListDetailView.svg">../tools/gallery/artwork/layout/ListDetailView.svg</file>
-        <file alias="assets/control_images/layout/ParticleBackdrop.svg">../tools/gallery/artwork/layout/ParticleBackdrop.svg</file>
+        <file alias="assets/control_images/particles/ParticleBackdrop.svg">../tools/gallery/artwork/particles/ParticleBackdrop.svg</file>
         <file alias="assets/control_images/menus-toolbars/Menu.svg">../tools/gallery/artwork/menus-toolbars/Menu.svg</file>
         <file alias="assets/control_images/menus-toolbars/MenuBar.svg">../tools/gallery/artwork/menus-toolbars/MenuBar.svg</file>
         <file alias="assets/control_images/menus-toolbars/CommandBar.svg">../tools/gallery/artwork/menus-toolbars/CommandBar.svg</file>

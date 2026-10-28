@@ -123,7 +123,10 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/layout/Field.h
     src/components/layout/PropertyPanel.h
     src/components/layout/ListDetailView.h
-    src/components/layout/ParticleBackdrop.h
+    include/FluentQt/Particles.h
+    src/components/particles/ParticleBackdrop.h
+    src/components/particles/ParticlesPlugin.h
+    src/components/particles/ParticlesSession.h
 
     src/components/menus_toolbars/CommandBar.h
     src/components/menus_toolbars/CommandBarFlyout.h
@@ -197,6 +200,10 @@ set(FLUENT_QT_INSTALL_HEADERS
 
 function(fluent_qt_install_headers source_root)
     foreach(_header IN LISTS FLUENT_QT_INSTALL_HEADERS)
+        if(NOT FLUENT_QT_BUILD_PARTICLES AND
+           (_header MATCHES "^src/components/particles/" OR _header STREQUAL "include/FluentQt/Particles.h"))
+            continue()
+        endif()
         if(NOT FLUENT_QT_BUILD_PLUGINS AND
            (_header MATCHES "^src/components/foundation/plugins/" OR _header STREQUAL "include/FluentQt/Plugins.h"))
             continue()

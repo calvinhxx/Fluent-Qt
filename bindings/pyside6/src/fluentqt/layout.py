@@ -10,7 +10,6 @@ ListDetailView = _native.fluent.ListDetailView
 DataGridToolBar = _native.fluent.DataGridToolBar
 PropertyDefinition = _native.fluent.PropertyDefinition
 PropertyPanel = _native.fluent.PropertyPanel
-ParticleBackdrop = _native.fluent.ParticleBackdrop
 Divider = _native.fluent.Divider
 WidgetOwnership = _native.fluent.WidgetOwnership
 _NativeAccordion = _native.fluent.Accordion
@@ -378,4 +377,4 @@ class Field(_NativeField):
         self._fluentqt_original_parent = None
 
 
-__all__ = ["Accordion", "Card", "Divider", "Expander", "Field", "DataGridToolBar", "ListDetailView", "ParticleBackdrop", "PropertyDefinition", "PropertyPanel"]
+__all__ = ["Accordion", "Card", "Divider", "Expander", "Field", "DataGridToolBar", "ListDetailView", "PropertyDefinition", "PropertyPanel"]

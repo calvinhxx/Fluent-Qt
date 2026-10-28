@@ -28,7 +28,7 @@
 #include <QPainterPath>
 
 #include "components/basicinput/Button.h"
-#include "components/layout/ParticleBackdrop.h"
+#include "components/particles/ParticleBackdrop.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/scrolling/ScrollBar.h"
@@ -80,9 +80,9 @@ const QString kExternalLinkIconName = QStringLiteral("ic_fluent_open_16_regular"
 
 enum HomeLinkRole { LinkTitleRole = Qt::UserRole + 1, LinkDescriptionRole, LinkUrlRole, LinkImageRole };
 
-fluent::layout::ParticleBackdrop::Effect homeParticleEffect()
+fluent::particles::ParticleBackdrop::Effect homeParticleEffect()
 {
-    using fluent::layout::ParticleBackdrop;
+    using fluent::particles::ParticleBackdrop;
     // Keep the launch's choice when navigation or theme changes recreate the home page.
     static const auto effect = [] {
         auto& settings = GallerySettings::instance();
@@ -607,7 +607,7 @@ public:
         // 两者之间不再有不透明硬缝。Normal 模式下不透明 wash 会完全覆盖它，等同无操作。
         setAttribute(Qt::WA_TranslucentBackground);
 
-        m_particles = new fluent::layout::ParticleBackdrop(this);
+        m_particles = new fluent::particles::ParticleBackdrop(this);
         m_particles->setObjectName(QStringLiteral("galleryHomeParticles"));
         m_particles->setParticleCount(240);
         m_particles->setSpeed(.6);
@@ -888,7 +888,7 @@ private:
         }
     }
 
-    fluent::layout::ParticleBackdrop* m_particles = nullptr;
+    fluent::particles::ParticleBackdrop* m_particles = nullptr;
     QImage m_artwork;
     bool m_cachedMaterial = false, m_cachedComposited = false;
     QLabel* m_iconLabel = nullptr;

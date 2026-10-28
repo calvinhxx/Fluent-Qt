@@ -34,6 +34,7 @@ CATEGORY_SOURCES = (
         "dialogs-flyouts", "Dialogs & flyouts", "DialogsFlyoutsSamples.cpp"
     ),
     CategorySource("layout", "Layout", "LayoutSamples.cpp"),
+    CategorySource("particles", "Particles", "ParticlesSamples.cpp"),
     CategorySource("spatial", "Spatial", "SpatialSamples.cpp"),
     CategorySource("qml-bridge", "QmlBridge", "QmlBridgeSamples.cpp"),
     CategorySource(
@@ -867,7 +868,7 @@ def generate_contract(project_root: Path, *, include_cpp_only: bool = True) -> d
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    expected_counts = (96, 277, 121) if include_cpp_only else (93, 260, 115)
+    expected_counts = (96, 277, 122) if include_cpp_only else (92, 257, 114)
     for name, actual, expected in zip(
         ("component", "sample", "route"),
         (component_count, sample_count, len(routes)),

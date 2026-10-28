@@ -29,7 +29,7 @@ Read the owning code and the guide sections relevant to the task below.
 
 - CMake target ownership follows [uilib/](uilib/) for the Widgets library and its
   minimal example, [plugin/](plugin/) for the lifecycle framework and its
-  `plugin_extension`, `Spatial`, and `QmlBridge` subdirectories, and [app/](app/)
+  `plugin_extension`, `Particles`, `Spatial`, and `QmlBridge` subdirectories, and [app/](app/)
   for Gallery and its support targets. Keep this `add_subdirectory()` hierarchy
   consistent across IDEs. Library sources remain under `src/`; standalone
   example entry points and sources remain under `examples/`.
@@ -47,6 +47,10 @@ Read the owning code and the guide sections relevant to the task below.
   Use `SpatialSession` for shared extension activation and cleanup; preserve
   the native 2D fallback. Keep Plugins and OpenGL out of base package discovery.
   Preserve caller-owned collection and chart models.
+- Particle effects live in `particles/` (`fluent::particles`), built only by the
+  optional `FluentQt::Particles` target owned by `plugin/Particles`. Keep them out
+  of the base library. Spatial links Particles for its GPU layer; keep
+  dependencies acyclic (Spatial → Particles → Plugins → FluentQt).
 - Nonvisual plugin infrastructure lives in `foundation/plugins/`
   (`fluent::plugins`), built by opt-in `FluentQt::Plugins`. Concrete extension
   dependencies belong in separate targets; preserve borrowed plugin/host

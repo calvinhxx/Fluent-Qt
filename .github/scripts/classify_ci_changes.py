@@ -149,6 +149,7 @@ CPP_COMPONENT_TEST_GROUPS = frozenset(
         "layout",
         "menus_toolbars",
         "navigation",
+        "particles",
         "qmlbridge",
         "scrolling",
         "spatial",
