@@ -340,19 +340,19 @@ jobs:
           ASAN_OPTIONS: ${{ matrix.asan_options || '' }}
           UBSAN_OPTIONS: ${{ matrix.ubsan_options || '' }}
         run: |
-          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
+          $python = if ("${{ runner.os }}" -eq "Windows") { "python" } else { "python3" }
+          $buildArgs = @("--preset", "${{ matrix.preset }}")
           $buildTargets = "${{ matrix.build_targets }}"
           if ($buildTargets) {
             $buildArgs += "--target"
             $buildArgs += $buildTargets -split " "
           }
-          $buildParallel = "${{ matrix.build_parallel }}"
-          if ($buildParallel) {
-            $buildArgs += @("--parallel", $buildParallel)
-          } else {
-            $buildArgs += "--parallel"
-          }
-          cmake @buildArgs
+          # An empty matrix value selects CPU- and memory-bounded jobs. A bare
+          # --parallel lets Makefile builds start every compiler at once.
+          $jobs = "${{ matrix.build_parallel }}"
+          if (-not $jobs) { $jobs = "auto" }
+          & $python tools/dev/fluent_qt_build.py --jobs $jobs @buildArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify relocatable macOS CMake package
         if: ${{ matrix.id == 'mac-arm64-qt62-build' }}
