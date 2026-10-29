@@ -43,6 +43,11 @@ the Pages layout so links from older posts and bookmarks continue to work.
 The generator writes `site/index.html`, `site/zh-CN/index.html`, and
 `site/sitemap.xml`. These files are not tracked: CI generates them for every
 build. Do not edit them directly.
+Website copies of the application icon, README hero, and home JPEG are also
+untracked. `tools/site/site_assets.py` maps their existing URLs to canonical
+files in `app/assets/` and `docs/assets/readme/`. The local server serves those
+files directly, and the artifact builder copies their exact bytes into the
+published site. Do not recreate copies under `site/` for source previews.
 It versions the homepage script, stylesheet and Spatial controller by file
 content, so returning browsers do not combine new markup with a cached
 controller. A controller load failure shows a retry action instead of leaving
@@ -347,8 +352,8 @@ Review `home`, `button`, and `collections` in both themes for the website. Also
 refresh the stored `slider` and `toggle-switch` material so the Gallery asset set
 stays on the same platform. Save the reviewed frames under the existing names in
 `site/assets/gallery/`: `*-real.png` is Light and `*-dark.png` is Dark. Keep the
-home JPEGs at `docs/assets/readme/gallery-home.jpg` and
-`site/assets/gallery-home.jpg` synchronized with the Light home capture. Preserve
+home JPEG at `docs/assets/readme/gallery-home.jpg` synchronized with the Light
+home capture; publication copies it to `site/assets/gallery-home.jpg`. Preserve
 the captured pixels when converting formats; do not retouch native controls.
 
 The current set was recaptured on 2026-09-29 from a local Release build of Gallery
@@ -372,11 +377,13 @@ python3 -m playwright install chromium
 python3 tools/site/generate_promo_assets.py
 ```
 
-The renderer uses the Light home capture and bundled Inter fonts. It downsamples
+The renderer uses the Light home capture and the generated FluentQt text fonts
+from `res/`; it does not need the upstream font input cache. It downsamples
 the README's embedded capture once with high-quality filtering at its final
 1232×770 size, leaving the source PNG untouched. This does not remove softness
 already present in the native 3D rendering. It produces
-the 1600×900 README image and matching loading poster, plus a separate
+the 1600×900 README image (copied to the matching loading poster during
+publication), plus a separate
 1731×909 `site/assets/og.png`. Use `--output-root /tmp/fluentqt-promo-review`
 to preview them before replacement. Do not copy a raw screenshot over these
 outputs. Keep HTML dimensions and OG metadata aligned, and review the exported
