@@ -47,7 +47,7 @@ def main() -> int:
                 image.replaceWith(canvas);
             }""")
             for selector, paths in (
-                ("#readme", ("docs/assets/readme/hero.png", "site/assets/gallery/gallery-hero-real.png")),
+                ("#readme", ("docs/assets/readme/hero.png",)),
                 ("#social", ("site/assets/og.png",)),
             ):
                 png = page.locator(selector).screenshot(animations="disabled")

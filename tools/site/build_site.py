@@ -19,6 +19,7 @@ import sys
 import tempfile
 
 from generate_component_previews import ROOT, capture_digest, validated_manifest
+from site_assets import COPIED_ASSETS, copy_assets
 
 RECEIPT = "site-build-info.json"
 
@@ -63,7 +64,7 @@ def verify(folder: Path, commit: str) -> None:
         raise ValueError("Site artifact contents differ from the validated build")
     for name in ("index.html", "zh-CN/index.html", "api/index.html", "api/catalog.json",
                  "api/button/index.html", "zh-CN/api/button/index.html", "sitemap.xml",
-                 "assets/component-previews/manifest.json"):
+                 "assets/component-previews/manifest.json", *COPIED_ASSETS):
         if name not in receipt["files"]:
             raise ValueError(f"Incomplete site artifact: {name}")
 
@@ -87,6 +88,8 @@ def stage(output: Path, commit: str) -> None:
         staged = Path(temporary) / "site"
         for path in source.rglob("*"):
             relative = path.relative_to(source).as_posix()
+            if relative in COPIED_ASSETS:
+                continue
             if relative == "gallery" or relative.startswith("gallery/"):
                 continue
             if path.is_symlink():
@@ -102,6 +105,7 @@ def stage(output: Path, commit: str) -> None:
             destination = staged / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(path, destination)
+        copy_assets(staged, ROOT)
         receipt = {"schema_version": 1, "commit": commit,
                    "preview_input_digest": previews["input_digest"], "files": checksums(staged)}
         (staged / RECEIPT).write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")

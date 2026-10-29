@@ -301,7 +301,7 @@ class VisualDocumentationTest(unittest.TestCase):
                     continue
                 target = posixpath.normpath(posixpath.join(posixpath.dirname(path), unquote(url.path))) if url.path else path
                 if url.path.endswith('/'):
-                    target += '/index.html'
+                    target = posixpath.normpath(target + '/index.html')
                 if target in parsed and url.fragment:
                     self.assertIn(unquote(url.fragment), parsed[target].ids, f'{path}: {href}')
                 elif target not in parsed and target not in homepage:

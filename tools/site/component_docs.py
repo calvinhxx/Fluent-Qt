@@ -14,6 +14,7 @@ from api_sections import (component_api, localized_description, primary_type, re
                           reference_headers, reference_path, type_url, slug)
 from documentation_guides import guides, guide_path
 from documentation_navigation import navigation as site_navigation, breadcrumb, relative as relative_url
+from site_assets import source_path
 
 SITE = ROOT / "site"
 WORDS = {
@@ -45,7 +46,7 @@ def relative(path, page):
 
 
 def asset(path, page):
-    return relative(path, page) + "?v=" + hashlib.sha256((SITE / path).read_bytes()).hexdigest()[:12]
+    return relative(path, page) + "?v=" + hashlib.sha256(source_path(path, SITE).read_bytes()).hexdigest()[:12]
 
 
 def site_icon():

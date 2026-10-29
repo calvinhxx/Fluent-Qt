@@ -93,6 +93,7 @@ jobs:
         run: |
           python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"
           python tools/site/test_build_site.py
+          python tools/site/test_site_assets.py
           python tools/site/test_generate_api_reference.py
           python tools/site/test_generate_localized_site.py
           node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs

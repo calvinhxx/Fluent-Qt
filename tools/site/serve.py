@@ -6,6 +6,8 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from site_assets import source_path
+
 ROOT = Path(__file__).resolve().parents[2]
 SITE = ROOT / "site"
 
@@ -20,7 +22,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
         relative = translated.relative_to(SITE)
         if relative.parts and relative.parts[0] == "gallery":
             return str(self.wasm_root.joinpath(*relative.parts[1:]))
-        return str(translated)
+        return str(source_path(relative.as_posix(), SITE))
 
     def end_headers(self):
         # A local rebuild must be visible on reload, including nested WASM frames.
