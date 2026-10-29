@@ -105,12 +105,12 @@ jobs:
       build_release_bundle: true
       # The exact same commit must pass the full CI workflow before promotion.
       # Avoid rerunning its two legacy compatibility lanes here. The macOS
-      # CPython 3.11 lane stays because it supplies one publishable wheel.
+      # ARM64 lane stays because it supplies one publishable wheel.
       run_compatibility_validation: false
       run_macos_release_validation: true
-      # Eight dynamic lanes plus the fixed macOS CPython 3.11 lane leave room
-      # for the nine desktop package lanes while avoiding a third wheel wave.
-      release_max_parallel: 8
+      # Five dynamic platform lanes run beside the fixed macOS ARM64 lane.
+      # This cap does not reserve hosted runners for concurrent CI jobs.
+      release_max_parallel: 5
 
   ready:
     name: Release Candidate ready
@@ -190,8 +190,8 @@ jobs:
              .source.commit == $commit and
              .source.ci_run_id == $run_id and
              .source.ci_run_attempt == $run_attempt and
-             (.files | length) == 18 and
-             (.audits | length) == 5' \
+             (.files | length) == 7 and
+             (.audits | length) == 2' \
             "$python/python-release-manifest.json"
           (
             cd "$python"
@@ -244,5 +244,5 @@ jobs:
             echo "- Commit: ${{ needs.plan.outputs.source_commit }}"
             echo "- Version: ${{ needs.plan.outputs.version }}"
             echo "- Desktop packages: 9"
-            echo "- Python wheels: 18"
+            echo "- Python wheels: 7"
           } >> "$GITHUB_STEP_SUMMARY"

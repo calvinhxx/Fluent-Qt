@@ -22,8 +22,8 @@ SPEC.loader.exec_module(VERIFIER)
 class PackageIndexVerifierTest(unittest.TestCase):
     def setUp(self):
         self.expected = {
-            "fluentqt-1.6.0-cp311-cp311-win_amd64.whl": "a" * 64,
-            "fluentqt-1.6.0-cp312-cp312-win_amd64.whl": "b" * 64,
+            "fluentqt-1.6.0-cp311-abi3-win_amd64.whl": "a" * 64,
+            "fluentqt-1.6.0-cp311-abi3-win_arm64.whl": "b" * 64,
         }
 
     def actual(self, filenames=None):
@@ -42,8 +42,8 @@ class PackageIndexVerifierTest(unittest.TestCase):
         dist.mkdir()
         audits.mkdir()
         files = []
-        for index in range(17):
-            filename = f"fluentqt-1.6.0-cp311-cp311-test_{index:02d}.whl"
+        for index in range(VERIFIER.CORE_WHEEL_COUNT):
+            filename = f"fluentqt-1.6.0-cp311-abi3-test_{index:02d}.whl"
             wheel = dist / filename
             wheel.write_bytes(f"core-{index}".encode("ascii"))
             files.append(
@@ -63,7 +63,7 @@ class PackageIndexVerifierTest(unittest.TestCase):
             }
         )
         audit_entries = []
-        for index in range(5):
+        for index in range(VERIFIER.AUDIT_COUNT):
             audit = audits / f"linux-{index}.json"
             audit.write_text(f'{{"index": {index}}}\n', encoding="utf-8")
             audit_entries.append(

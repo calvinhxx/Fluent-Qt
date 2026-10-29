@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -174,13 +175,25 @@ class ReleaseBundleAssemblerTest(unittest.TestCase):
             ci_run_attempt="1",
         )
 
-    def test_complete_matrix_produces_eighteen_wheel_bundle(self):
+    def test_complete_matrix_produces_seven_wheel_bundle(self):
         manifest = self.assemble()
 
-        self.assertEqual(len(manifest["files"]), 18)
-        self.assertEqual(len(manifest["audits"]), 5)
-        self.assertEqual(len(list((self.output_dir / "dist").glob("*.whl"))), 18)
-        self.assertEqual(len(list((self.output_dir / "audits").glob("*.json"))), 5)
+        self.assertEqual(len(manifest["files"]), 7)
+        self.assertEqual(len(manifest["audits"]), 2)
+        self.assertEqual(len(list((self.output_dir / "dist").glob("*.whl"))), 7)
+        self.assertEqual(len(list((self.output_dir / "audits").glob("*.json"))), 2)
+        self.assertEqual(manifest["policy"]["core_wheel_count"], 6)
+        self.assertEqual(manifest["policy"]["manylinux_audit_count"], 2)
+        core_files = [
+            item["filename"]
+            for item in manifest["files"]
+            if item["distribution"] == "FluentQt"
+        ]
+        self.assertEqual(len(core_files), 6)
+        self.assertTrue(
+            all(re.search(r"-cp31[12]-abi3-", name) for name in core_files),
+            core_files,
+        )
         self.assertTrue((self.output_dir / "PYTHON_SHA256SUMS.txt").is_file())
         written = json.loads(
             (self.output_dir / "python-release-manifest.json").read_text(
@@ -211,6 +224,16 @@ class ReleaseBundleAssemblerTest(unittest.TestCase):
                                 archive.writestr(zip_info(member), b"")
                     with self.assertRaisesRegex(ASSEMBLER.BundleError, "must include Spatial"):
                         self.assemble()
+
+    def test_version_specific_wheel_cannot_replace_stable_abi_wheel(self):
+        scenario = next(
+            item for item in self.scenarios if item["platform"] == "windows"
+        )
+        wheel = self.core_wheel(scenario)
+        wheel.rename(wheel.with_name(wheel.name.replace("-abi3-", "-cp311-")))
+
+        with self.assertRaisesRegex(ASSEMBLER.BundleError, "expected one"):
+            self.assemble()
 
     def test_compatibility_wheel_is_rejected(self):
         artifact = self.artifact_dir(self.scenarios[0])

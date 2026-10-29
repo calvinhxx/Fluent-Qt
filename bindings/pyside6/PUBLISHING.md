@@ -51,6 +51,39 @@ The manifest records the project version, source commit, originating workflow
 run and attempt, every wheel hash, and every audit hash. TestPyPI and PyPI must
 receive the files from this artifact. A publication run never rebuilds wheels.
 
+## Stable-ABI wheel set
+
+Each platform and architecture publishes one `FluentQt` wheel tagged
+`cp3XY-abi3`. Its release lane builds with the oldest CPython in the lane's
+`test_python_versions`: 3.11, or 3.12 on Linux ARM64 (see the
+[manylinux policy](MANYLINUX.md)). The tag is therefore the install floor, and
+`Requires-Python: >=3.11,<3.14` remains the upper bound. After the
+build-interpreter checks, the lane installs that exact wheel in a fresh
+environment for each newer listed interpreter and runs the core and Gallery
+wheel smoke and `pip check` through
+[`smoke-pyside-wheel-interpreters.py`](../../.github/scripts/smoke-pyside-wheel-interpreters.py).
+
+Before promoting a stable-ABI candidate, every release platform and architecture
+in the matrix must pass its native build, installed-wheel acceptance, and
+additional interpreter checks on the final source commit. Linux checks use the
+repaired manylinux wheel. Windows checks must reject version-specific Python
+runtime DLL imports. One platform's successful build does not validate the
+others; local helper tests do not replace these candidate jobs or the TestPyPI
+and PyPI verification stages.
+
+The extension compiles with `Py_LIMITED_API=0x03090000`, matching the
+`cp39-abi3` PySide6 and Shiboken6 6.9.3 runtime. Under the limited API,
+Shiboken 6.9's `pep384impl.h` redeclares the buffer functions, which conflicts
+with CPython's own declarations from the 3.11 level on, so do not raise the
+macro for this runtime. On Windows the module links `python3.lib`, and the
+wheel builder rejects a `.pyd` that imports any `python3XY.dll`.
+
+`FLUENT_QT_PYSIDE6_STABLE_ABI=OFF` builds a `cp3XY-cp3XY` wheel for local
+comparison only. The wheel matrix, bundle assembler, and index verifier accept
+only the stable-ABI set. The non-published Qt 6.2.4 compatibility artifact
+stays single-version. Releases that predate this policy published one wheel
+per CPython version; their index files are immutable and unaffected.
+
 ## One-time Trusted Publishing setup
 
 The top-level [Python Release workflow](../../.github/workflows/python-release.yml)

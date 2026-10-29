@@ -144,18 +144,36 @@ before assembly. The retained launch
 report explicitly leaves hardware 3D unvalidated; GPU rendering and input need
 a capable graphics environment and separate native review.
 
-On that release commit, Release Candidate also owns the macOS ARM64 CPython
-3.11 representative omitted from simultaneous main CI. Scheduled and manual
-full runs retain it. Bundle-enabled Python runs validate all declared wheels;
-their ordering prioritizes the expensive acceptance lanes without reducing
-matrix coverage. Consult the wheel matrix for supported ABIs and the
+On that release commit, Release Candidate also owns the macOS ARM64
+stable-ABI lane omitted from simultaneous main CI. Scheduled and manual full
+runs retain it. Bundle-enabled Python runs build one stable-ABI wheel per
+platform with its oldest supported CPython, then install and smoke-test that
+same wheel on every newer interpreter in the lane's `test_python_versions`.
+The critical Windows ARM64 lane is queued first. Consult the wheel matrix for
+supported ABIs and the
 [Python publishing runbook](../../bindings/pyside6/PUBLISHING.md) for promotion,
 index verification, and recovery.
+
+A release push starts Release Candidate and full CI together. They share
+hosted-runner capacity, including the account's platform-specific limits. A
+matrix's `max-parallel` is an upper bound for that matrix; it neither reserves
+runners nor guarantees a share for another workflow. The candidate cap allows
+the current dynamic platform lanes to run together, with the fixed macOS ARM64
+lane counted separately. Full CI retains its own matrix caps. Measure queue
+time, execution time, and the slowest required job after a matrix change;
+timing estimates from the former per-interpreter wheel matrix do not predict
+the stable-ABI pipeline.
 
 The main matrix builds in C++ CI, desktop Release Candidate, and Desktop Compat
 Packages use `tools/dev/fluent_qt_build.py --jobs auto` when `build_parallel` is
 empty, including on Windows. The workflow validator checks all three entry
 points, preserves explicit job counts, and requires build failures to propagate.
+
+Require a successful `CI Gate` before merging a release-to-main pull request.
+Configure that required check in the `main` branch rules; workflow source checks
+alone do not enforce repository settings. For an external failure, rerun failed
+jobs in the same run and commit: successful lanes and their retained artifacts
+can be reused. A source change requires validation of the new commit.
 
 ## Validate CI changes
 

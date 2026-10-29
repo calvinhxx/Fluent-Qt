@@ -73,8 +73,8 @@ code and assets out of the reusable UI library wheel.
 
 ## Compatibility
 
-Official wheels target CPython 3.11–3.13 with matched Qt, PySide6, and
-Shiboken6 6.9.3 runtimes.
+Each platform has one CPython stable-ABI (`abi3`) wheel for CPython 3.11–3.13
+with matched Qt, PySide6, and Shiboken6 6.9.3 runtimes.
 
 | Platform | Architectures |
 | --- | --- |

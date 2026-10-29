@@ -27,12 +27,12 @@ class PySidePlatformArtifactTest(unittest.TestCase):
 
     def test_all_six_platform_architecture_summaries_are_populated(self):
         expected_counts = {
-            ("linux", "x64"): 8,
-            ("linux", "arm64"): 4,
-            ("windows", "x64"): 8,
-            ("windows", "arm64"): 5,
-            ("macos", "x64"): 5,
-            ("macos", "arm64"): 5,
+            ("linux", "x64"): 6,
+            ("linux", "arm64"): 3,
+            ("windows", "x64"): 6,
+            ("windows", "arm64"): 3,
+            ("macos", "x64"): 3,
+            ("macos", "arm64"): 3,
         }
 
         actual_counts = {
@@ -41,32 +41,28 @@ class PySidePlatformArtifactTest(unittest.TestCase):
         }
 
         self.assertEqual(actual_counts, expected_counts)
-        self.assertEqual(sum(actual_counts.values()), 35)
+        self.assertEqual(sum(actual_counts.values()), 24)
 
     def test_expected_names_follow_scenario_artifact_suffixes(self):
         names = VERIFY.expected_artifacts(self.catalog, "linux", "arm64")
 
-        self.assertIn(
-            "fluentqt-pyside6-qt693-cp312-linux-arm64",
+        self.assertEqual(
             names,
-        )
-        self.assertIn(
-            "fluentqt-pyside6-showcase-qt693-cp312-linux-arm64",
-            names,
-        )
-        self.assertNotIn(
-            "fluentqt-pyside6-showcase-qt693-cp313-linux-arm64",
-            names,
+            [
+                "fluentqt-pyside6-qt693-cp312-abi3-linux-arm64",
+                "fluentqt-pyside6-showcase-qt693-cp312-abi3-linux-arm64",
+                "fluentqt-pyside6-window-chrome-qt693-cp312-abi3-linux-arm64",
+            ],
         )
 
     def test_release_scope_excludes_compatibility_lanes(self):
         expected_counts = {
-            ("linux", "x64"): 5,
-            ("linux", "arm64"): 4,
-            ("windows", "x64"): 5,
-            ("windows", "arm64"): 5,
-            ("macos", "x64"): 5,
-            ("macos", "arm64"): 5,
+            ("linux", "x64"): 3,
+            ("linux", "arm64"): 3,
+            ("windows", "x64"): 3,
+            ("windows", "arm64"): 3,
+            ("macos", "x64"): 3,
+            ("macos", "arm64"): 3,
         }
 
         actual_counts = {
@@ -79,7 +75,7 @@ class PySidePlatformArtifactTest(unittest.TestCase):
         }
 
         self.assertEqual(actual_counts, expected_counts)
-        self.assertEqual(sum(actual_counts.values()), 29)
+        self.assertEqual(sum(actual_counts.values()), 18)
         self.assertNotIn(
             "PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4",
             VERIFY.expected_job_names(
@@ -92,15 +88,11 @@ class PySidePlatformArtifactTest(unittest.TestCase):
 
         self.assertEqual(
             names,
-            [
-                "PySide6 release / macOS x64 / CPython 3.11 / Qt 6.9.3",
-                "PySide6 release / macOS x64 / CPython 3.12 / Qt 6.9.3",
-                "PySide6 release / macOS x64 / CPython 3.13 / Qt 6.9.3",
-            ],
+            ["PySide6 release / macOS x64 / CPython 3.11-3.13 abi3 / Qt 6.9.3"],
         )
 
     def test_reusable_workflow_job_prefix_is_accepted(self):
-        expected = "PySide6 release / Linux ARM64 / CPython 3.12 / Qt 6.9.3"
+        expected = "PySide6 release / Linux ARM64 / CPython 3.12-3.13 abi3 / Qt 6.9.3"
         results = [(f"PySide6 validation / {expected}", "success")]
 
         self.assertEqual(

@@ -360,8 +360,8 @@ jobs:
              .source.commit == $commit and
              .source.ci_run_id == $run_id and
              .source.ci_run_attempt == $run_attempt and
-             (.files | length) == 18 and
-             (.audits | length) == 5' \
+             (.files | length) == 7 and
+             (.audits | length) == 2' \
             "$manifest"
           (
             cd "$candidate"
@@ -654,8 +654,8 @@ jobs:
           set -euo pipefail
           python -m pip install pypi-attestations==0.0.29
           url_count="$(grep -c '^https://' pypi-release-urls.txt)"
-          if [[ "$url_count" != "18" ]]; then
-            echo "::error::Expected 18 PyPI file URLs, found $url_count."
+          if [[ "$url_count" != "7" ]]; then
+            echo "::error::Expected 7 PyPI file URLs, found $url_count."
             exit 1
           fi
           while IFS= read -r wheel_url; do

@@ -17,6 +17,10 @@ from urllib.request import Request, urlopen
 
 DISTRIBUTIONS = ("FluentQt", "FluentQt-Gallery")
 MODES = ("absent", "subset", "complete")
+# One stable-ABI FluentQt wheel per platform, one Gallery wheel, and one
+# manylinux audit per Linux architecture.
+CORE_WHEEL_COUNT = 6
+AUDIT_COUNT = 2
 
 
 class IndexVerificationError(RuntimeError):
@@ -44,11 +48,15 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if not isinstance(version, str) or not version:
         raise IndexVerificationError("release manifest has no version")
     files = manifest.get("files")
-    if not isinstance(files, list) or len(files) != 18:
-        raise IndexVerificationError("release manifest must contain 18 wheel files")
+    if not isinstance(files, list) or len(files) != CORE_WHEEL_COUNT + 1:
+        raise IndexVerificationError(
+            f"release manifest must contain {CORE_WHEEL_COUNT + 1} wheel files"
+        )
     audits = manifest.get("audits")
-    if not isinstance(audits, list) or len(audits) != 5:
-        raise IndexVerificationError("release manifest must contain five audits")
+    if not isinstance(audits, list) or len(audits) != AUDIT_COUNT:
+        raise IndexVerificationError(
+            f"release manifest must contain {AUDIT_COUNT} audits"
+        )
     return manifest
 
 
@@ -75,8 +83,10 @@ def expected_files(
         if filename in expected[distribution]:
             raise IndexVerificationError(f"duplicate release filename: {filename}")
         expected[distribution][filename] = digest
-    if len(expected["FluentQt"]) != 17:
-        raise IndexVerificationError("manifest must contain 17 FluentQt wheels")
+    if len(expected["FluentQt"]) != CORE_WHEEL_COUNT:
+        raise IndexVerificationError(
+            f"manifest must contain {CORE_WHEEL_COUNT} FluentQt wheels"
+        )
     if len(expected["FluentQt-Gallery"]) != 1:
         raise IndexVerificationError("manifest must contain one Gallery wheel")
     if bundle_dir is not None:
