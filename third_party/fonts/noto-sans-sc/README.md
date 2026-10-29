@@ -15,3 +15,7 @@ repertoire and renames the derivative to `FluentQt UI Simplified Chinese`.
 generated face is embedded only by supported WebAssembly builds, where Qt
 cannot use host system fonts. Desktop builds continue to use the platform CJK
 fallback and do not carry this optional asset.
+
+The original inputs are not stored here. The
+[font-source helper](../../../tools/fonts/fetch_font_sources.py) restores verified
+generation inputs; normal builds use `res/` and do not need them.

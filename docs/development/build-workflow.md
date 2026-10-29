@@ -157,6 +157,35 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 Use [packaging workflow](packaging-workflow.md) for desktop Gallery installers
 and [WebAssembly workflow](webassembly-workflow.md) for browser artifacts.
 
+## Rebuild bundled fonts
+
+Ordinary CMake builds use the committed resources in `res/` and make no font
+network requests. Upstream font-generation inputs are described by
+`tools/fonts/source-assets.json`; their licenses and provenance remain under
+`third_party/`. They are cached in the ignored `build/font-sources/` directory.
+
+A full clone can restore these inputs from local Git objects without networking:
+
+```bash
+python3 tools/fonts/fetch_font_sources.py
+```
+
+For a shallow/partial clone or source archive without those objects, explicitly
+allow downloads with `python3 tools/fonts/fetch_font_sources.py --download`.
+Every cache entry, recovered object, and download must match the pinned size
+and SHA-256 before use. Set `FLUENTQT_FONT_SOURCE_CACHE` to use a shared or
+prepopulated offline cache; `--cache-dir` overrides it for the fetch command.
+Missing inputs fail with preparation instructions rather than using a system
+font. A corrupt download never replaces a cache entry.
+
+After installing `tools/fonts/requirements.txt` in a Python environment, verify
+that generation preserves the committed runtime resources:
+
+```bash
+python3 tools/fonts/generate_typography_assets.py --check
+python3 tools/fonts/generate_typography_assets.py --check-web-fallback
+```
+
 ## Selection policy
 
 The wrapper takes the smaller calculated limit from the CPU and memory checks,

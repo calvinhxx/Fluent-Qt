@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "path": "third_party/fonts/inter/Inter-Regular.ttf",
+      "role": "text",
+      "bytes": 411640,
+      "sha256": "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82",
+      "git_blob": "b7aaca8de1fe458399e17311d35d543a1fa2f984",
+      "url": "https://raw.githubusercontent.com/calvinhxx/Fluent-Qt/0974cbd29fb84fba83c39c14dab99575dfdf4333/third_party/fonts/inter/Inter-Regular.ttf"
+    },
+    {
+      "path": "third_party/fonts/inter/Inter-SemiBold.ttf",
+      "role": "text",
+      "bytes": 419744,
+      "sha256": "78a843fade9d4612a5567302fb595b56976eb5fcebf4fea5a5912d638bafcde3",
+      "git_blob": "47f8ab1d68144fc004b310d65d95180d502b449b",
+      "url": "https://raw.githubusercontent.com/calvinhxx/Fluent-Qt/0974cbd29fb84fba83c39c14dab99575dfdf4333/third_party/fonts/inter/Inter-SemiBold.ttf"
+    },
+    {
+      "path": "third_party/fonts/inter/InterDisplay-SemiBold.ttf",
+      "role": "text",
+      "bytes": 418540,
+      "sha256": "0310d7a325896129730c6c8cf9a6e0f81ee258bedf77b1ff059b2a7b75f74e02",
+      "git_blob": "cf3123989d81006e86b0c7c0dfaf39efe8cb6463",
+      "url": "https://raw.githubusercontent.com/calvinhxx/Fluent-Qt/0974cbd29fb84fba83c39c14dab99575dfdf4333/third_party/fonts/inter/InterDisplay-SemiBold.ttf"
+    },
+    {
+      "path": "third_party/fonts/noto-sans-sc/NotoSansSC-Regular.otf",
+      "role": "web-fallback",
+      "bytes": 8331336,
+      "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+      "git_blob": "fc0fda9394367c16c1af7555a2ae4d5e2e6a6f02",
+      "url": "https://raw.githubusercontent.com/calvinhxx/Fluent-Qt/0974cbd29fb84fba83c39c14dab99575dfdf4333/third_party/fonts/noto-sans-sc/NotoSansSC-Regular.otf"
+    },
+    {
+      "path": "third_party/icons/fluentui-system-icons/FluentSystemIcons-Regular.ttf",
+      "role": "icons",
+      "bytes": 2771436,
+      "sha256": "8ebc946d0de5ff7cd8fa653020f7c4046c71e27574ac6a9013aa727021290c32",
+      "git_blob": "de13f0eefb9e56f80fb265191421284a3336a045",
+      "url": "https://raw.githubusercontent.com/calvinhxx/Fluent-Qt/0974cbd29fb84fba83c39c14dab99575dfdf4333/third_party/icons/fluentui-system-icons/FluentSystemIcons-Regular.ttf"
+    },
+    {
+      "path": "third_party/icons/fluentui-system-icons/FluentSystemIcons-Regular.json",
+      "role": "icons",
+      "bytes": 461967,
+      "sha256": "9c782fa7f81a5a631ef68fa618305fd946d0fd0697372f11988116ee5852ae70",
+      "git_blob": "dc81d54888c59d59812b7e99df4a22fe3d49789e",
+      "url": "https://raw.githubusercontent.com/calvinhxx/Fluent-Qt/0974cbd29fb84fba83c39c14dab99575dfdf4333/third_party/icons/fluentui-system-icons/FluentSystemIcons-Regular.json"
+    }
+  ]
+}

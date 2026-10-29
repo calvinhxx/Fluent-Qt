@@ -22,6 +22,8 @@ def run_font_contracts(environment_dir: Path) -> None:
         [sys.executable, "-m", "venv", str(environment_dir)],
         [str(python), "-m", "pip", "install", "--disable-pip-version-check",
          "-r", "tools/fonts/requirements.txt"],
+        [str(python), "tools/fonts/test_fetch_font_sources.py"],
+        [str(python), "tools/fonts/fetch_font_sources.py", "--download"],
         [str(python), "tools/fonts/test_generate_typography_assets.py"],
         [str(python), "tools/fonts/generate_typography_assets.py", "--check"],
         [str(python), "tools/fonts/generate_typography_assets.py", "--check-web-fallback"],

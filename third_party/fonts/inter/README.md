@@ -4,7 +4,7 @@
 - Release: `v4.1`
 - License: SIL Open Font License 1.1; see `LICENSE.txt`.
 
-Vendored hinted static TrueType files:
+Pinned hinted static TrueType inputs:
 
 | File | SHA-256 |
 | --- | --- |
@@ -17,3 +17,7 @@ fonts. `tools/fonts/generate_typography_assets.py` renames these static faces to
 `FluentQt UI Text`, `FluentQt UI Heading`, and `FluentQt UI Display` while
 preserving their TrueType hint programs. Only the renamed derivatives are
 embedded in the runtime resource file.
+
+The original inputs are not stored here. The
+[font-source helper](../../../tools/fonts/fetch_font_sources.py) restores verified
+generation inputs; normal builds use `res/` and do not need them.

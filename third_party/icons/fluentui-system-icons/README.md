@@ -4,7 +4,7 @@
 - Release: `1.1.328`
 - License: MIT; see `LICENSE.txt` and `NOTICE.txt`.
 
-Vendored upstream files:
+Pinned upstream inputs:
 
 | File | SHA-256 |
 | --- | --- |
@@ -17,3 +17,7 @@ semantic codepoint shortcuts used by FluentQt controls. If an upstream icon
 occupies one of those shortcut positions, it is moved to an unused
 supplementary private-use codepoint and the generated catalog is updated; no
 official glyph is dropped.
+
+The original inputs are not stored here. The
+[font-source helper](../../../tools/fonts/fetch_font_sources.py) restores verified
+generation inputs; normal builds use `res/` and do not need them.

@@ -1565,6 +1565,8 @@ class CiSourceContractsTest(unittest.TestCase):
         self.assertEqual([call.args[0] for call in run.call_args_list], [
             [sys.executable, "-m", "venv", str(directory)],
             [str(python), "-m", "pip", "install", "--disable-pip-version-check", "-r", "tools/fonts/requirements.txt"],
+            [str(python), "tools/fonts/test_fetch_font_sources.py"],
+            [str(python), "tools/fonts/fetch_font_sources.py", "--download"],
             [str(python), "tools/fonts/test_generate_typography_assets.py"],
             [str(python), "tools/fonts/generate_typography_assets.py", "--check"],
             [str(python), "tools/fonts/generate_typography_assets.py", "--check-web-fallback"],
@@ -1576,7 +1578,7 @@ class CiSourceContractsTest(unittest.TestCase):
             self.assertNotIn("PYTHONHOME", call.kwargs["env"])
 
     def test_each_font_failure_stops_before_later_checks(self):
-        for index in range(5):
+        for index in range(7):
             with self.subTest(failed_command=index), mock.patch.object(
                 self.source.subprocess, "run",
                 side_effect=[mock.Mock(returncode=0)] * index + [subprocess.CalledProcessError(7, "font check")],

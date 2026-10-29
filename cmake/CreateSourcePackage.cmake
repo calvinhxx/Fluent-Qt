@@ -30,7 +30,6 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/include"
     "${FLUENT_QT_SOURCE_DIR}/src"
     "${FLUENT_QT_SOURCE_DIR}/res"
-    "${FLUENT_QT_SOURCE_DIR}/third_party"
     "${FLUENT_QT_SOURCE_DIR}/bindings"
     "${FLUENT_QT_SOURCE_DIR}/platforms"
     "${FLUENT_QT_SOURCE_DIR}/uilib"
@@ -40,6 +39,12 @@ file(COPY
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE)
+# Keep licenses/provenance while excluding maintainer inputs even if an older
+# checkout or local experiment left copies beside the metadata.
+file(COPY "${FLUENT_QT_SOURCE_DIR}/third_party" DESTINATION "${_package_root}"
+    PATTERN "*.ttf" EXCLUDE
+    PATTERN "*.otf" EXCLUDE
+    PATTERN "FluentSystemIcons-Regular.json" EXCLUDE)
 file(COPY "${FLUENT_QT_SOURCE_DIR}/support/spatial" DESTINATION "${_package_root}/support")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/.github/scripts/setup-shiboken-clang.py"
@@ -103,6 +108,11 @@ configure_file(
     "${FLUENT_QT_SOURCE_DIR}/cmake/SourcePackageREADME.md"
     "${_package_root}/README.md"
     COPYONLY)
+# Directory copies read the working tree, so drop Finder metadata that Git ignores.
+file(GLOB_RECURSE _finder_metadata LIST_DIRECTORIES false "${_package_root}/.DS_Store")
+if(_finder_metadata)
+    file(REMOVE ${_finder_metadata})
+endif()
 
 file(REMOVE "${_archive}")
 execute_process(

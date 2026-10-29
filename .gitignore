@@ -29,6 +29,11 @@ CMakeUserPresets.json
 # codex
 tmp/
 
+# Upstream font inputs are prepared in build/font-sources, not vendored here.
+/third_party/fonts/**/*.ttf
+/third_party/fonts/**/*.otf
+/third_party/icons/**/FluentSystemIcons-Regular.*
+
 # Generated website output: CI builds and deploys it with tools/site/build_site.py.
 # site/api/catalog.json stays tracked as the source catalog for quality tools.
 /site/index.html

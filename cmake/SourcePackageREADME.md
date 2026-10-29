@@ -10,7 +10,7 @@ requires a full checkout with the native Gallery catalogs and artwork.
 
 The archive preserves the CMake module tree: `uilib/` owns the Widgets library
 and its minimal example; `plugin/` owns the lifecycle framework and the
-`plugin_extension`, `Spatial`, and `QmlBridge` subdirectories. Library
+`plugin_extension`, `Particles`, `Spatial`, and `QmlBridge` subdirectories. Library
 implementations remain under `src/`, and example sources and standalone
 projects remain under `examples/`. The full checkout also has `app/` for
 Gallery, which is excluded here.
@@ -21,6 +21,7 @@ Requirements:
 - CMake 3.16+
 - Qt Widgets 5.15+ or 6.2+
 - Optional Plugins: enable `FLUENT_QT_BUILD_PLUGINS=ON` and link `FluentQt::Plugins`; uses the existing Qt Widgets dependencies
+- Optional Particles: enable `FLUENT_QT_BUILD_PARTICLES=ON` and link `FluentQt::Particles`; includes Plugins automatically
 - Optional Spatial: enable `FLUENT_QT_BUILD_SPATIAL=ON` and link `FluentQt::Spatial`; includes Plugins automatically; Qt 6 requires OpenGLWidgets, Qt 5 requires QOpenGLWidget support
 - Optional QmlBridge: enable `FLUENT_QT_BUILD_QML_BRIDGE=ON` and link `FluentQt::QmlBridge`; includes Plugins automatically and requires Qt Qml, Quick, and QuickWidgets
 
