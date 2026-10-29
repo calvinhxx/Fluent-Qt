@@ -228,9 +228,13 @@ environment variables for one invocation.
 
 Direct `cmake --build ... --parallel` remains supported. With no numeric value,
 CMake delegates the decision to the native build tool, which does not apply
-this repository's memory check. CI and packaging workflows may
-continue to use explicit job counts because their runner resources and
-reproducibility requirements are known.
+this repository's memory check. Makefile generators then allow an unlimited
+number of ready build tasks. The main matrix builds in `ci-cpp.yml`,
+`desktop-release-candidate.yml`, and `package-win10-compat-test.yml` use the
+adaptive wrapper: an explicit `build_parallel` becomes `--jobs N`, and an empty
+value uses `--jobs auto`. This applies to Windows as well as macOS and Linux.
+The automatic result depends on the CPU and memory available at invocation;
+it need not equal the runner's processor count.
 
 <!-- docs-nav:bottom:start -->
 ---

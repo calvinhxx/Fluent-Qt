@@ -121,6 +121,29 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 )
                 self.assertTrue(any("packaging contract" in error for error in errors))
 
+    def test_matrix_builds_cannot_fall_back_to_unbounded_parallelism(self):
+        bounded = '          if (-not $jobs) { $jobs = "auto" }\n'
+        for workflow_name in ("ci-cpp.yml", "desktop-release-candidate.yml", "package-win10-compat-test.yml"):
+            for replacement in ('          if (-not $jobs) { $buildArgs += "--parallel" }\n',
+                                '          if (-not $jobs) { $jobs = "" }\n',
+                                '          # if (-not $jobs) { $jobs = "auto" }\n'):
+                with self.subTest(workflow=workflow_name, replacement=replacement.strip()):
+                    errors = self.workflow_errors_with_replacement(
+                        workflow_name, bounded, replacement)
+                    self.assertTrue(any("memory-bounded jobs" in error or "unbounded" in error
+                                        for error in errors))
+
+    def test_matrix_builds_keep_job_selection_and_failure_propagation(self):
+        for workflow_name in ("ci-cpp.yml", "desktop-release-candidate.yml", "package-win10-compat-test.yml"):
+            for original, replacement in (
+                ('$jobs = "${{ matrix.build_parallel }}"', '$jobs = "64"'),
+                ('tools/dev/fluent_qt_build.py --jobs $jobs', 'tools/dev/fluent_qt_build.py --jobs 64'),
+                ('          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\n', ''),
+            ):
+                with self.subTest(workflow=workflow_name, original=original):
+                    errors = self.workflow_errors_with_replacement(workflow_name, original, replacement)
+                    self.assertTrue(any("memory-bounded jobs" in error for error in errors))
+
     def test_optional_spatial_binding_cannot_silently_skip_coverage(self):
         for requirement in ("-DFLUENT_QT_BUILD_SPATIAL=ON", "assert SPATIAL_AVAILABLE",
                             "-R '^test_pyside6_gallery_spatial_backdrop_native$'"):

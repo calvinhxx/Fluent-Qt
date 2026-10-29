@@ -96,6 +96,7 @@ EXPECTED_JOBS = {
         "verify_pypi",
     },
     "desktop-release-candidate.yml": {"plan", "package", "windows_arm64_install", "assemble"},
+    "package-win10-compat-test.yml": {"plan", "package"},
     "release-candidate.yml": {"plan", "desktop", "python", "ready"},
     "release.yml": {
         "preflight",
@@ -911,6 +912,28 @@ def job_level_controls(job: str) -> list[str]:
             f"{match.group('name')}: {value}" if value else f"{match.group('name')}:"
         )
     return controls
+
+
+def validate_bounded_matrix_build(name: str, job: str) -> list[str]:
+    """Keep matrix builds from falling back to an unbounded native parallel level."""
+    errors = []
+    step = named_step_section(job, "Build")
+    if not step:
+        return [f"{name} matrix build must have a Build step with memory-bounded jobs"]
+    active = "\n".join(uncommented_workflow_lines(step))
+    # Makefile generators turn a bare --parallel into `make -j`, which starts
+    # as many ready compilation tasks as the dependency graph permits.
+    if '+= "--parallel"' in active or re.search(r"^\s*cmake @buildArgs\s*$", active, re.MULTILINE):
+        errors.append(f"{name} must not build with an unbounded native parallel level")
+    for required in (
+        '$jobs = "${{ matrix.build_parallel }}"',
+        'if (-not $jobs) { $jobs = "auto" }',
+        "tools/dev/fluent_qt_build.py --jobs $jobs",
+        'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
+    ):
+        if required not in active:
+            errors.append(f"{name} matrix build must use memory-bounded jobs: {required}")
+    return errors
 
 
 def validate_cpp_execution_contract(cpp: str) -> list[str]:
@@ -1742,6 +1765,11 @@ def validate_boundaries() -> list[str]:
     for forbidden in ("pip install PySide6", "shiboken6_generator==", "pyside6_release:"):
         if forbidden in cpp:
             errors.append(f"ci-cpp.yml contains PySide6 execution detail: {forbidden}")
+    errors.extend(validate_bounded_matrix_build("ci-cpp.yml", cpp_build))
+    errors.extend(validate_bounded_matrix_build(
+        "desktop-release-candidate.yml", job_section(desktop_candidate, "package")))
+    errors.extend(validate_bounded_matrix_build(
+        "package-win10-compat-test.yml", job_section(contents["package-win10-compat-test.yml"], "package")))
 
     if "bindings/pyside6/wheel-matrix.json" not in python:
         errors.append("ci-python.yml must own the PySide6 wheel matrix catalog")

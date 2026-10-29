@@ -200,20 +200,20 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}", "--target", "fluent_qt_gallery")
+          $python = if ("${{ runner.os }}" -eq "Windows") { "python" } else { "python3" }
+          $buildArgs = @("--preset", "${{ matrix.preset }}", "--target", "fluent_qt_gallery")
           if (
             "${{ inputs.run_tests }}" -eq "true" -and
             "${{ matrix.windows_arm64_cross }}" -ne "true"
           ) {
             $buildArgs += "fluent_qt_ci_fast_tests"
           }
-          $parallel = "${{ matrix.build_parallel }}"
-          if ($parallel) {
-            $buildArgs += @("--parallel", $parallel)
-          } else {
-            $buildArgs += "--parallel"
-          }
-          cmake @buildArgs
+          # An empty matrix value selects CPU- and memory-bounded jobs. A bare
+          # --parallel lets Makefile builds start every compiler at once.
+          $jobs = "${{ matrix.build_parallel }}"
+          if (-not $jobs) { $jobs = "auto" }
+          & $python tools/dev/fluent_qt_build.py --jobs $jobs @buildArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Smoke launch macOS Release Gallery
         if: ${{ matrix.platform == 'macos' }}
