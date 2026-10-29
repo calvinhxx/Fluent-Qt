@@ -30,6 +30,7 @@ CMakeUserPresets.json
 tmp/
 
 # Upstream font inputs are prepared in build/font-sources, not vendored here.
+# tools/dev/fluent_qt_repository_size.py rejects tracked files matching this file.
 /third_party/fonts/**/*.ttf
 /third_party/fonts/**/*.otf
 /third_party/icons/**/FluentSystemIcons-Regular.*

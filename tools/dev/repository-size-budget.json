@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "max_total_bytes": 44000000,
+  "max_file_bytes": 1000000,
+  "large_files": {
+    "res/icons/FluentQtIcons.ttf": {"max_bytes": 2850000, "reason": "Complete public icon catalog and optical variants"},
+    "res/fonts/FluentQtUISimplifiedChinese-Regular.otf": {"max_bytes": 2050000, "reason": "WebAssembly GB2312 Chinese fallback"},
+    "app/assets/Fluent-Qt-Gallery.icns": {"max_bytes": 1550000, "reason": "Native macOS application icon sizes"}
+  }
+}

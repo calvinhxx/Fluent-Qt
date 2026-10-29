@@ -60,6 +60,7 @@ jobs:
         shell: bash
         run: |
           python3 .github/scripts/check-ci-source-contracts.py
+          python3 tools/dev/fluent_qt_repository_size.py
           python3 .github/scripts/test_check_release_branch_freshness.py
           python3 .github/scripts/test_validate_ci_workflow_boundaries.py
           python3 .github/scripts/validate-gallery-boundary.py
