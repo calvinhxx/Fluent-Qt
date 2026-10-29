@@ -1786,6 +1786,16 @@ def validate_boundaries() -> list[str]:
             "ci-python.yml must gate matrix selection, release jobs, bundle, and summary"
         )
     pyside_release = job_section(python, "pyside6_release")
+    for required in (
+        '--scenario "${{ matrix.id }}"',
+        "contains(matrix.test_python_versions, '3.12')",
+        "contains(matrix.test_python_versions, '3.13')",
+    ):
+        if required not in pyside_release:
+            errors.append(
+                "ci-python.yml release lanes must smoke-test each stable-ABI "
+                f"wheel on every catalog interpreter: {required}"
+            )
     if "max-parallel: ${{ inputs.release_max_parallel }}" not in pyside_release:
         errors.append(
             "ci-python.yml release matrix must honor release_max_parallel"
@@ -1842,10 +1852,10 @@ def validate_boundaries() -> list[str]:
         "name: Test representative PySide6 bindings\n        if: ${{ matrix.extended_acceptance == true }}",
         "fluentqt-pyside6-qt624-cp310-linux-x64",
         "fluentqt-pyside6-qt624-cp310-windows-x64",
-        "fluentqt-pyside6-qt693-cp311-macos-arm64",
+        "fluentqt-pyside6-qt693-cp311-abi3-macos-arm64",
         "name: PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4",
         "name: PySide6 compatibility / Windows x64 / CPython 3.10 / Qt 6.2.4",
-        "name: PySide6 release / macOS ARM64 / CPython 3.11 / Qt 6.9.3",
+        "name: PySide6 release / macOS ARM64 / CPython 3.11-3.13 abi3 / Qt 6.9.3",
         "name: Assemble canonical Python release bundle",
         "name: fluentqt-python-release-bundle",
         "Linux x64|linux|x64",
@@ -1861,6 +1871,9 @@ def validate_boundaries() -> list[str]:
         ("Test core wheel in a clean virtual environment (fast)", 2),
         ("needs.plan.outputs.mode != 'full'", 2),
         ("Run extended installed-wheel acceptance", 1),
+        ("name: Test stable-ABI wheel on every supported CPython", 2),
+        (".github/scripts/smoke-pyside-wheel-interpreters.py", 2),
+        ("update-environment: false", 4),
     ):
         actual_count = python.count(contract)
         if actual_count != expected_count:
@@ -1920,7 +1933,7 @@ def validate_boundaries() -> list[str]:
         "build_release_bundle: true",
         "run_compatibility_validation: false",
         "run_macos_release_validation: true",
-        "release_max_parallel: 8",
+        "release_max_parallel: 5",
         "name: Release Candidate ready",
         "refs/tags/$tag^{tag}",
         "docs/releases/$tag.md",

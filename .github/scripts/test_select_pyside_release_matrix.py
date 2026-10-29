@@ -28,46 +28,38 @@ class PySideReleaseMatrixSelectorTest(unittest.TestCase):
             matrix["include"][0]["id"], SELECTOR.CRITICAL_RELEASE_ID
         )
 
-    def test_all_dynamic_extended_acceptance_lanes_form_first_wave(self):
+    def test_every_dynamic_lane_runs_extended_acceptance(self):
         matrix = SELECTOR.select_release_matrix(self.catalog)
-        expected_ids = {
-            scenario["id"]
-            for scenario in self.catalog["scenarios"]
-            if scenario["release"] is True
-            and scenario["fast"] is False
-            and scenario["extended_acceptance"] is True
-        }
-        first_wave = matrix["include"][: len(expected_ids)]
 
-        self.assertEqual(
-            {scenario["id"] for scenario in first_wave}, expected_ids
-        )
         self.assertTrue(
-            all(scenario["extended_acceptance"] is True for scenario in first_wave)
+            all(
+                scenario["extended_acceptance"] is True
+                for scenario in matrix["include"]
+            )
         )
 
-    def test_slow_non_representative_lanes_follow_the_first_wave(self):
+    def test_remaining_platforms_follow_queue_priority(self):
         matrix = SELECTOR.select_release_matrix(self.catalog)
-        representative_count = sum(
-            scenario["release"] is True
-            and scenario["fast"] is False
-            and scenario["extended_acceptance"] is True
-            for scenario in self.catalog["scenarios"]
-        )
 
         self.assertEqual(
+            [scenario["id"] for scenario in matrix["include"]],
             [
-                scenario["id"]
-                for scenario in matrix["include"][
-                    representative_count : representative_count + 3
-                ]
-            ],
-            [
-                "macos-x64-qt693-cp313",
-                "linux-x64-qt693-cp313",
-                "linux-arm64-qt693-cp313",
+                "windows-arm64-qt693-cp311-abi3",
+                "macos-x64-qt693-cp311-abi3",
+                "linux-x64-qt693-cp311-abi3",
+                "linux-arm64-qt693-cp312-abi3",
+                "windows-x64-qt693-cp311-abi3",
             ],
         )
+
+    def test_every_lane_carries_its_interpreter_test_set(self):
+        matrix = SELECTOR.select_release_matrix(self.catalog)
+
+        for scenario in matrix["include"]:
+            self.assertEqual(
+                scenario["test_python_versions"][0], scenario["python_version"]
+            )
+            self.assertTrue(scenario["stable_abi"])
 
     def test_fixed_fast_and_compatibility_lanes_are_excluded(self):
         matrix = SELECTOR.select_release_matrix(self.catalog)
@@ -79,7 +71,7 @@ class PySideReleaseMatrixSelectorTest(unittest.TestCase):
         }
 
         self.assertTrue(selected_ids.isdisjoint(excluded_ids))
-        self.assertEqual(len(matrix["include"]), 16)
+        self.assertEqual(len(matrix["include"]), 5)
 
     def test_auditwheel_version_is_injected_into_every_lane(self):
         matrix = SELECTOR.select_release_matrix(self.catalog)
@@ -101,18 +93,6 @@ class PySideReleaseMatrixSelectorTest(unittest.TestCase):
         ]
 
         with self.assertRaisesRegex(ValueError, "exactly once"):
-            SELECTOR.select_release_matrix(catalog)
-
-    def test_invalid_python_version_is_rejected(self):
-        catalog = copy.deepcopy(self.catalog)
-        scenario = next(
-            scenario
-            for scenario in catalog["scenarios"]
-            if scenario["id"] == "macos-x64-qt693-cp313"
-        )
-        scenario["python_version"] = "next"
-
-        with self.assertRaisesRegex(ValueError, "invalid python_version"):
             SELECTOR.select_release_matrix(catalog)
 
 

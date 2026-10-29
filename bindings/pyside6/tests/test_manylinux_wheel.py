@@ -26,7 +26,7 @@ SPEC.loader.exec_module(TOOL)
 class ManylinuxWheelTest(unittest.TestCase):
     def create_repaired_wheel(self, root: Path, bundle_qt: bool = False) -> Path:
         wheel = root / (
-            "fluentqt-1.5.2-cp311-cp311-"
+            "fluentqt-1.5.2-cp311-abi3-"
             "manylinux_2_28_x86_64.whl"
         )
         with zipfile.ZipFile(wheel, "w") as archive:
@@ -42,7 +42,7 @@ class ManylinuxWheelTest(unittest.TestCase):
                 "fluentqt-1.5.2.dist-info/WHEEL",
                 "Wheel-Version: 1.0\n"
                 "Root-Is-Purelib: false\n"
-                "Tag: cp311-cp311-manylinux_2_28_x86_64\n\n",
+                "Tag: cp311-abi3-manylinux_2_28_x86_64\n\n",
             )
             archive.writestr(
                 "fluentqt/_fluentqt.cpython-311-x86_64-linux-gnu.so",
@@ -85,7 +85,7 @@ class ManylinuxWheelTest(unittest.TestCase):
         self.assertEqual(report["metadata_version"], "1.5.2")
         self.assertEqual(
             report["tags"],
-            ["cp311-cp311-manylinux_2_28_x86_64"],
+            ["cp311-abi3-manylinux_2_28_x86_64"],
         )
 
     def test_repaired_archive_rejects_bundled_qt(self):
@@ -132,9 +132,9 @@ class ManylinuxWheelTest(unittest.TestCase):
     def test_native_wheel_discovery_is_architecture_specific(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            expected = root / "fluentqt-1.5.2-cp311-cp311-linux_x86_64.whl"
+            expected = root / "fluentqt-1.5.2-cp311-abi3-linux_x86_64.whl"
             expected.touch()
-            (root / "fluentqt-1.5.2-cp311-cp311-linux_aarch64.whl").touch()
+            (root / "fluentqt-1.5.2-cp311-abi3-linux_aarch64.whl").touch()
 
             self.assertEqual(
                 TOOL.find_native_wheel(root, "x86_64"),

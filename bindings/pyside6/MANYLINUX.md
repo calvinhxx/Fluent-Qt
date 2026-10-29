@@ -19,8 +19,12 @@ The authoritative values live in [`wheel-matrix.json`](wheel-matrix.json):
 
 | Architecture | CPython | Build image | Publish tag |
 |---|---|---|---|
-| x86_64 | 3.11–3.13 | `quay.io/pypa/manylinux_2_28_x86_64` | `manylinux_2_28_x86_64` |
-| aarch64 | 3.12–3.13 | `quay.io/pypa/manylinux_2_39_aarch64` | `manylinux_2_39_aarch64` |
+| x86_64 | 3.11–3.13 | `quay.io/pypa/manylinux_2_28_x86_64` | `cp311-abi3-manylinux_2_28_x86_64` |
+| aarch64 | 3.12–3.13 | `quay.io/pypa/manylinux_2_39_aarch64` | `cp312-abi3-manylinux_2_39_aarch64` |
+
+Each architecture publishes one CPython stable-ABI wheel. Its `cp3XY` tag is
+the oldest supported interpreter, which is also the build interpreter; newer
+interpreters install the same file.
 
 The ARM64 policy is intentionally newer because the official PySide6 6.9.3
 ARM64 wheel itself requires glibc 2.39. Do not relabel either architecture to
@@ -33,7 +37,8 @@ runtime omits the owned-reference increment when returning `Py_None` from
 wrapped void functions; on CPython 3.11 this eventually aborts with
 `none_dealloc`, while CPython 3.12 singletons are immortal. Binding
 configuration runs a small ownership probe and rejects the unsafe runtime
-combination. This architecture-specific release floor does not change the
+combination, and the `cp312-abi3` tag keeps installers on CPython 3.11 from
+selecting the ARM64 wheel. This architecture-specific release floor does not change the
 non-published Python 3.10 + Qt 6.2 compatibility baseline; official package
 metadata starts at Python 3.11.
 
@@ -42,7 +47,7 @@ metadata starts at Python 3.11.
 The full CI matrix mounts the matching official Qt 6.9.3 SDK into the native
 PyPA manylinux image and runs
 [`tools/build_manylinux_wheel.sh`](tools/build_manylinux_wheel.sh). The script
-selects `/opt/python/<tag>-<tag>` for each declared CPython ABI, installs the
+selects `/opt/python/<tag>-<tag>` for the lane's build interpreter, installs the
 exact PySide6/Shiboken6 6.9.3 packages and the auditwheel version pinned by the
 matrix, then configures a fresh release build and invokes the opt-in CMake
 target:
@@ -88,11 +93,13 @@ Every Linux release lane must produce one repaired wheel and
   manylinux image digest;
 - the repaired wheel installs in a fresh environment on the matching native
   runner, passes the full wheel smoke, `pip check`, strict mypy, and `ldd`
-  resolution without `LD_LIBRARY_PATH`.
+  resolution without `LD_LIBRARY_PATH`;
+- the same repaired wheel passes the core and Gallery wheel smoke and
+  `pip check` in a fresh environment for every newer interpreter in the lane's
+  `test_python_versions`.
 
-All five Linux ABI/architecture release lanes must pass together with the
-other 12 native release wheels before a publication job can consume their
-artifacts. Compatibility lanes using Qt/PySide 6.2.4 remain non-publishable
+Both Linux architecture lanes must pass together with the other four native
+release wheels before a publication job can consume their artifacts. Compatibility lanes using Qt/PySide 6.2.4 remain non-publishable
 regression gates and are not repaired.
 
 Upstream references: [PyPA manylinux images](https://github.com/pypa/manylinux),

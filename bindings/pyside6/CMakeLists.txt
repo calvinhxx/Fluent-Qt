@@ -4,7 +4,7 @@ if(NOT QT_VERSION_MAJOR EQUAL 6)
 endif()
 
 if(WIN32)
-    # Python::Python is required by the Windows extension link step.
+    # Windows needs Python import libraries, including python3.lib for abi3.
     find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development)
 else()
     # Unix extension modules do not embed Python. Requiring Development.Embed
@@ -41,6 +41,26 @@ if(FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.11,<3.14"
     message(FATAL_ERROR
         "Official FluentQt wheels currently support CPython 3.11 through "
         "3.13, found ${Python_VERSION}")
+endif()
+
+# Official wheels compile against CPython's stable ABI, so one cp3XY-abi3
+# wheel per platform serves every supported interpreter from its build
+# interpreter onward. The non-published Qt 6.2 artifact keeps a single-version
+# tag.
+if(FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.11,<3.14")
+    set(FLUENTQT_PYSIDE6_DEFAULT_STABLE_ABI ON)
+else()
+    set(FLUENTQT_PYSIDE6_DEFAULT_STABLE_ABI OFF)
+endif()
+set(FLUENT_QT_PYSIDE6_STABLE_ABI
+    "${FLUENTQT_PYSIDE6_DEFAULT_STABLE_ABI}"
+    CACHE BOOL
+    "Build the FluentQt extension and wheel for the CPython stable ABI")
+if(FLUENT_QT_PYSIDE6_STABLE_ABI
+   AND NOT FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.11,<3.14")
+    message(FATAL_ERROR
+        "FLUENT_QT_PYSIDE6_STABLE_ABI requires the official release policy "
+        "'>=3.11,<3.14'; the Qt 6.2 compatibility artifact is single-version")
 endif()
 
 execute_process(
@@ -423,6 +443,13 @@ target_compile_definitions(_fluentqt PRIVATE
     FLUENT_QT_PYSIDE6_VERSION="${FLUENTQT_PYSIDE6_VERSION}"
     FLUENT_QT_SHIBOKEN6_VERSION="${FLUENTQT_SHIBOKEN6_VERSION}"
     FLUENT_QT_SHIBOKEN6_GENERATOR_VERSION="${FLUENTQT_SHIBOKEN6_GENERATOR_VERSION}")
+if(FLUENT_QT_PYSIDE6_STABLE_ABI)
+    # Match the cp39-abi3 PySide6/Shiboken6 runtime. Shiboken 6.9's
+    # pep384impl.h redeclares the buffer API, which conflicts with CPython's
+    # own declarations once Py_LIMITED_API reaches 3.11. The wheel tag, not
+    # this macro, carries the 3.11 interpreter floor.
+    target_compile_definitions(_fluentqt PRIVATE Py_LIMITED_API=0x03090000)
+endif()
 if(MSVC)
     target_compile_options(_fluentqt PRIVATE
         /MP
@@ -458,7 +485,29 @@ endif()
 if(TARGET FluentQtQmlBridge)
     target_link_libraries(_fluentqt PRIVATE FluentQt::QmlBridge)
 endif()
-if(WIN32)
+if(WIN32 AND FLUENT_QT_PYSIDE6_STABLE_ABI)
+    # A stable-ABI module must import python3.dll, never python3XY.dll.
+    # pyconfig.h also auto-links python3.lib once Py_LIMITED_API is defined.
+    set(FLUENTQT_PYSIDE6_STABLE_ABI_LIBRARY "")
+    foreach(FLUENTQT_PYSIDE6_PYTHON_LIBRARY_DIR IN LISTS Python_LIBRARY_DIRS)
+        if(EXISTS "${FLUENTQT_PYSIDE6_PYTHON_LIBRARY_DIR}/python3.lib")
+            set(FLUENTQT_PYSIDE6_STABLE_ABI_LIBRARY
+                "${FLUENTQT_PYSIDE6_PYTHON_LIBRARY_DIR}/python3.lib")
+            break()
+        endif()
+    endforeach()
+    if(NOT FLUENTQT_PYSIDE6_STABLE_ABI_LIBRARY)
+        message(FATAL_ERROR
+            "The stable-ABI build requires python3.lib below "
+            "${Python_LIBRARY_DIRS}")
+    endif()
+    get_filename_component(FLUENTQT_PYSIDE6_STABLE_ABI_LIBRARY_DIR
+        "${FLUENTQT_PYSIDE6_STABLE_ABI_LIBRARY}" DIRECTORY)
+    target_link_directories(_fluentqt PRIVATE
+        "${FLUENTQT_PYSIDE6_STABLE_ABI_LIBRARY_DIR}")
+    target_link_libraries(_fluentqt PRIVATE
+        "${FLUENTQT_PYSIDE6_STABLE_ABI_LIBRARY}")
+elseif(WIN32)
     target_link_libraries(_fluentqt PRIVATE Python::Python)
 elseif(APPLE)
     target_link_options(_fluentqt PRIVATE "-undefined" "dynamic_lookup")
@@ -651,6 +700,10 @@ set(FLUENTQT_PYSIDE6_WHEEL_STAGE
     "${FLUENTQT_PYSIDE6_WHEEL_ROOT}/staging")
 set(FLUENTQT_PYSIDE6_WHEELHOUSE
     "${PROJECT_BINARY_DIR}/wheelhouse")
+set(FLUENTQT_PYSIDE6_WHEEL_ABI_ARGUMENTS)
+if(FLUENT_QT_PYSIDE6_STABLE_ABI)
+    set(FLUENTQT_PYSIDE6_WHEEL_ABI_ARGUMENTS --stable-abi)
+endif()
 add_custom_target(fluentqt_pyside6_wheel
     COMMAND "${CMAKE_COMMAND}" -E remove_directory
         "${FLUENTQT_PYSIDE6_WHEEL_STAGE}"
@@ -668,6 +721,7 @@ add_custom_target(fluentqt_pyside6_wheel
         --pyside-version "${FLUENTQT_PYSIDE6_VERSION}"
         --shiboken-version "${FLUENTQT_SHIBOKEN6_VERSION}"
         --requires-python "${FLUENT_QT_PYSIDE6_REQUIRES_PYTHON}"
+        ${FLUENTQT_PYSIDE6_WHEEL_ABI_ARGUMENTS}
         --description-file "${CMAKE_CURRENT_SOURCE_DIR}/PYPI.md"
         --license-file "${PROJECT_SOURCE_DIR}/LICENSE"
         --license-file "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"

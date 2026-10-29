@@ -53,6 +53,8 @@ PYSIDE_ROOT_FILES = {
 PYSIDE_CI_FILES = {
     ".github/scripts/install-linux-dependencies.sh",
     ".github/scripts/setup-shiboken-clang.py",
+    ".github/scripts/smoke-pyside-wheel-interpreters.py",
+    ".github/scripts/test_smoke_pyside_wheel_interpreters.py",
     ".github/scripts/test_validate_pyside_wheel_matrix.py",
     ".github/scripts/validate-pyside-wheel-matrix.py",
     ".github/workflows/ci.yml",
