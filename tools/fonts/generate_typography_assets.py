@@ -6,7 +6,10 @@ Run from the repository root after installing the pinned dependency:
     python tools/fonts/generate_typography_assets.py
 
 Use ``--check`` in CI or before a release to verify that the committed outputs
-are byte-for-byte reproducible from the vendored upstream fonts.
+are byte-for-byte reproducible from the verified upstream input cache.
+Full clones restore missing inputs from local Git history without networking.
+For a shallow clone or source archive, explicitly prepare the cache with
+``python tools/fonts/fetch_font_sources.py --download`` first.
 """
 
 from __future__ import annotations
@@ -22,30 +25,25 @@ import fontTools
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
+from fetch_font_sources import FontSources
+
 
 ROOT = Path(__file__).resolve().parents[2]
-INTER_DIR = ROOT / "third_party" / "fonts" / "inter"
-NOTO_SANS_SC_DIR = ROOT / "third_party" / "fonts" / "noto-sans-sc"
+FONT_SOURCES = FontSources(ROOT)
+INTER_DIR = FONT_SOURCES.cache / "third_party" / "fonts" / "inter"
+NOTO_SANS_SC_DIR = FONT_SOURCES.cache / "third_party" / "fonts" / "noto-sans-sc"
 NOTO_SANS_SC_SOURCE = NOTO_SANS_SC_DIR / "NotoSansSC-Regular.otf"
-FLUENT_ICONS_DIR = ROOT / "third_party" / "icons" / "fluentui-system-icons"
+FLUENT_ICONS_DIR = FONT_SOURCES.cache / "third_party" / "icons" / "fluentui-system-icons"
 ICON_SOURCE = FLUENT_ICONS_DIR / "FluentSystemIcons-Regular.ttf"
 ICON_CATALOG_SOURCE = FLUENT_ICONS_DIR / "FluentSystemIcons-Regular.json"
 ICON_ALIASES_SOURCE = ROOT / "tools" / "fonts" / "fluent_icon_aliases.json"
 TYPOGRAPHY_SOURCE = ROOT / "src" / "design" / "Typography.cpp"
 
 FONTTOOLS_VERSION = "4.59.1"
-SOURCE_SHA256 = {
-    INTER_DIR / "Inter-Regular.ttf":
-        "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82",
-    INTER_DIR / "Inter-SemiBold.ttf":
-        "78a843fade9d4612a5567302fb595b56976eb5fcebf4fea5a5912d638bafcde3",
-    INTER_DIR / "InterDisplay-SemiBold.ttf":
-        "0310d7a325896129730c6c8cf9a6e0f81ee258bedf77b1ff059b2a7b75f74e02",
-    ICON_SOURCE:
-        "8ebc946d0de5ff7cd8fa653020f7c4046c71e27574ac6a9013aa727021290c32",
-    ICON_CATALOG_SOURCE:
-        "9c782fa7f81a5a631ef68fa618305fd946d0fd0697372f11988116ee5852ae70",
-}
+DESKTOP_INPUTS = FONT_SOURCES.paths("text", "icons")
+WEB_FALLBACK_INPUTS = FONT_SOURCES.paths("web-fallback")
+SOURCE_SHA256 = {FONT_SOURCES.path(path): FONT_SOURCES.assets[path]["sha256"]
+                 for path in DESKTOP_INPUTS}
 
 TEXT_FACES = (
     {
@@ -85,9 +83,6 @@ TEXT_FACES = (
 )
 
 TEXT_HINT_TABLES = {"cvt ", "fpgm", "prep", "gasp"}
-NOTO_SANS_SC_SHA256 = (
-    "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9"
-)
 
 
 def sha256(path: Path) -> str:
@@ -103,6 +98,7 @@ def validate_inputs() -> None:
         raise RuntimeError(
             f"fontTools {FONTTOOLS_VERSION} is required; found {fontTools.__version__}"
         )
+    FONT_SOURCES.prepare(DESKTOP_INPUTS)
     for path, expected in SOURCE_SHA256.items():
         if not path.is_file():
             raise FileNotFoundError(path)
@@ -253,14 +249,7 @@ def generate_web_fallback(output_root: Path) -> Path:
         raise RuntimeError(
             f"fontTools {FONTTOOLS_VERSION} is required; found {fontTools.__version__}"
         )
-    if not NOTO_SANS_SC_SOURCE.is_file():
-        raise FileNotFoundError(NOTO_SANS_SC_SOURCE)
-    actual = sha256(NOTO_SANS_SC_SOURCE)
-    if actual != NOTO_SANS_SC_SHA256:
-        raise RuntimeError(
-            f"Unexpected upstream asset hash for {NOTO_SANS_SC_SOURCE}: "
-            f"{actual} (expected {NOTO_SANS_SC_SHA256})"
-        )
+    FONT_SOURCES.prepare(WEB_FALLBACK_INPUTS)
     return generate_simplified_chinese_fallback(output_root / "res" / "fonts")
 
 
@@ -462,20 +451,24 @@ def main() -> None:
         help="verify only the committed WebAssembly fallback font",
     )
     args = parser.parse_args()
-    if args.check_web_fallback:
-        check_web_fallback_output()
-        return
-    if args.web_fallback:
-        output = generate_web_fallback(ROOT)
-        print(f"{output.relative_to(ROOT)} {output.stat().st_size} bytes {sha256(output)}")
-        return
-    if args.check:
-        check_outputs()
-        return
+    try:
+        if args.check_web_fallback:
+            check_web_fallback_output()
+            return
+        if args.web_fallback:
+            output = generate_web_fallback(ROOT)
+            print(f"{output.relative_to(ROOT)} {output.stat().st_size} bytes {sha256(output)}")
+            return
+        if args.check:
+            check_outputs()
+            return
 
-    outputs = generate(ROOT)
-    for output in outputs:
-        print(f"{output.relative_to(ROOT)} {output.stat().st_size} bytes {sha256(output)}")
+        outputs = generate(ROOT)
+        for output in outputs:
+            print(f"{output.relative_to(ROOT)} {output.stat().st_size} bytes {sha256(output)}")
+    except FileNotFoundError as error:
+        # A missing upstream input already names the command that prepares it.
+        parser.exit(1, f"{error}\n")
 
 
 if __name__ == "__main__":
