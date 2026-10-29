@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from site_assets import source_path
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SITE_ROOT = ROOT / "site"
@@ -26,7 +28,7 @@ REPOSITORY_URL = "https://github.com/calvinhxx/Fluent-Qt"
 
 
 def versioned_asset_url(path: str) -> str:
-    digest = hashlib.sha256((SITE_ROOT / path).read_bytes()).hexdigest()[:12]
+    digest = hashlib.sha256(source_path(path, SITE_ROOT).read_bytes()).hexdigest()[:12]
     return f"{path}?v={digest}"
 
 

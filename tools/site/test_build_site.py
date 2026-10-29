@@ -29,6 +29,11 @@ class SiteArtifactTest(unittest.TestCase):
             path = self.site / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("current " + name)
+        for relative, canonical in build_site.COPIED_ASSETS.items():
+            source = self.root / canonical
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_bytes(b"canonical artwork " + canonical.encode())
+        build_site.copy_assets(self.site, self.root)
         self.receipt = {"schema_version": 1, "commit": "current-sha", "files": build_site.checksums(self.site)}
         (self.site / build_site.RECEIPT).write_text(json.dumps(self.receipt))
 
@@ -59,6 +64,7 @@ class SiteArtifactTest(unittest.TestCase):
             build_site.verify(self.site, "current-sha")
 
     def test_staging_removes_retired_documents_and_previews(self):
+        (self.site / "assets/app-icon.png").write_bytes(b"stale local duplicate")
         for name in ("api/retired/index.html", "zh-CN/api/retired/index.html",
                      "assets/component-previews/retired/light.png", "gallery/local-only.wasm"):
             path = self.site / name
@@ -82,6 +88,8 @@ class SiteArtifactTest(unittest.TestCase):
         self.assertFalse((output / "gallery").exists())
         self.assertTrue((output / ".nojekyll").exists())
         self.assertTrue((self.site / "api/retired/index.html").exists())
+        for relative, canonical in build_site.COPIED_ASSETS.items():
+            self.assertEqual((output / relative).read_bytes(), (self.root / canonical).read_bytes())
 
 
 class SiteGenerationTest(unittest.TestCase):
