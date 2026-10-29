@@ -110,6 +110,24 @@ Qt/PySide line and rerun that job before requesting another full matrix. A
 same-commit retry can reuse the failed job; a code change needs new validation.
 Keep full validation on the final release commit.
 
+## Repository size and font inputs
+
+The planning job checks tracked file content with
+`python3 tools/dev/fluent_qt_repository_size.py`. The budget in
+`tools/dev/repository-size-budget.json` covers the total and reviewed large
+runtime files. The check also rejects any tracked file that matches
+`.gitignore`, so generated site assets and upstream font inputs are listed in
+one place. Review resource changes before changing that budget. The report
+excludes Git history, filesystem allocation, and untracked build caches; use
+`--ref` to inspect a committed tree against the current `.gitignore`, or
+`--json` for machine-readable results.
+
+Font-generation inputs are cached by their manifest hash. The source-contract
+check explicitly prepares verified inputs before the existing typography and
+WebAssembly font reproducibility checks. Cached content is always revalidated;
+missing or corrupt inputs cannot skip those checks. Ordinary CMake builds do
+not fetch font sources.
+
 ## Build release artifacts once
 
 For an untagged release version on `main`,
