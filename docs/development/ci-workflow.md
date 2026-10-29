@@ -89,8 +89,9 @@ membership in `FLUENT_QT_CI_FAST_TARGETS`, `FLUENT_QT_CI_FULL_TARGETS`, or the
 local-only set. `fluent_qt_all_tests` and `fluent_qt_contract_tests` serve local
 host and focused contract validation.
 
-CI may pin build parallelism to its measured runner capacity. Local builds use
-the [adaptive wrapper](build-workflow.md).
+CI may pin build parallelism to its measured runner capacity. Local builds and
+matrix builds without an explicit job count use the
+[adaptive wrapper](build-workflow.md).
 
 Full Python validation also builds the optional Spatial binding on one Linux
 Qt 6.9 lane. It checks the binding and Gallery contracts offscreen, then OpenGL
@@ -150,6 +151,11 @@ their ordering prioritizes the expensive acceptance lanes without reducing
 matrix coverage. Consult the wheel matrix for supported ABIs and the
 [Python publishing runbook](../../bindings/pyside6/PUBLISHING.md) for promotion,
 index verification, and recovery.
+
+The main matrix builds in C++ CI, desktop Release Candidate, and Desktop Compat
+Packages use `tools/dev/fluent_qt_build.py --jobs auto` when `build_parallel` is
+empty, including on Windows. The workflow validator checks all three entry
+points, preserves explicit job counts, and requires build failures to propagate.
 
 ## Validate CI changes
 
