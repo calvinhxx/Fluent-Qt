@@ -1,10 +1,13 @@
 """Tests for FluentQt wheel metadata helpers."""
 
+import argparse
 import ast
 import importlib.util
 import json
 from email.parser import Parser
 from pathlib import Path
+import struct
+import sys
 import tempfile
 import unittest
 
@@ -20,6 +23,31 @@ WHEEL_BUILDER_SPEC = importlib.util.spec_from_file_location(
 )
 WHEEL_BUILDER = importlib.util.module_from_spec(WHEEL_BUILDER_SPEC)
 WHEEL_BUILDER_SPEC.loader.exec_module(WHEEL_BUILDER)
+
+
+def pe_image(dll_names):
+    """Return a minimal PE32+ image whose import directory names DLLs."""
+    optional = 0x58
+    optional_size = 112 + 16 * 8
+    header = bytearray(0x200)
+    header[0:2] = b"MZ"
+    struct.pack_into("<I", header, 0x3C, 0x40)
+    header[0x40:0x44] = b"PE\0\0"
+    struct.pack_into("<HHIIIHH", header, 0x44, 0x8664, 1, 0, 0, 0, optional_size, 0)
+    struct.pack_into("<H", header, optional, 0x20B)
+    struct.pack_into("<I", header, optional + 108, 16)
+    struct.pack_into("<II", header, optional + 120, 0x1000, 0x200)
+    section = optional + optional_size
+    header[section:section + 8] = b".idata\0\0"
+    struct.pack_into("<4I", header, section + 8, 0x200, 0x1000, 0x200, 0x200)
+    imports = bytearray(0x200)
+    name_offset = 20 * (len(dll_names) + 1)
+    for index, name in enumerate(dll_names):
+        struct.pack_into("<5I", imports, 20 * index, 0, 0, 0, 0x1000 + name_offset, 0)
+        encoded = name.encode("ascii") + b"\0"
+        imports[name_offset:name_offset + len(encoded)] = encoded
+        name_offset += len(encoded)
+    return bytes(header + imports)
 
 
 class WheelBuilderTest(unittest.TestCase):
@@ -169,6 +197,75 @@ class WheelBuilderTest(unittest.TestCase):
             "https://github.com/calvinhxx/Fluent-Qt",
             "\n".join(parsed.get_all("Project-URL", [])),
         )
+
+    def write_pyd(self, directory, dll_names):
+        extension = Path(directory) / "_fluentqt.pyd"
+        extension.write_bytes(pe_image(dll_names))
+        return extension
+
+    def test_windows_import_directory_is_read(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            extension = self.write_pyd(
+                temporary,
+                ["Qt6Core.dll", "python3.dll", "shiboken6.abi3.dll"],
+            )
+
+            self.assertEqual(
+                WHEEL_BUILDER.windows_imported_dlls(extension),
+                ["Qt6Core.dll", "python3.dll", "shiboken6.abi3.dll"],
+            )
+
+    def test_stable_abi_windows_module_must_import_only_python3_dll(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            WHEEL_BUILDER.verify_stable_abi_extension(
+                self.write_pyd(temporary, ["Qt6Core.dll", "PYTHON3.DLL"])
+            )
+            for dll_names in (
+                ["python311.dll"],
+                ["python3.dll", "python313.dll"],
+                ["python3_d.dll"],
+                ["Qt6Core.dll"],
+            ):
+                with self.subTest(dll_names=dll_names):
+                    with self.assertRaisesRegex(
+                        RuntimeError, "must import only python3.dll"
+                    ):
+                        WHEEL_BUILDER.verify_stable_abi_extension(
+                            self.write_pyd(temporary, dll_names)
+                        )
+
+    def test_malformed_windows_module_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            extension = Path(temporary) / "_fluentqt.pyd"
+            extension.write_bytes(b"MZ" + b"\0" * 16)
+            with self.assertRaisesRegex(RuntimeError, "Cannot read PE imports"):
+                WHEEL_BUILDER.windows_imported_dlls(extension)
+
+    def test_stable_abi_tag_keeps_build_interpreter_floor(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            extension = Path(temporary) / "_fluentqt.so"
+            extension.write_bytes(b"not a native image")
+            python_tag = "cp{0}{1}".format(*sys.version_info[:2])
+
+            stable = WHEEL_BUILDER.python_wheel_tag(extension, stable_abi=True)
+            single = WHEEL_BUILDER.python_wheel_tag(extension)
+
+        self.assertTrue(stable.startswith(python_tag + "-abi3-"), stable)
+        self.assertTrue(
+            single.startswith("{0}-{0}-".format(python_tag)),
+            single,
+        )
+
+    def test_stable_abi_is_limited_to_release_policy(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            args = argparse.Namespace(
+                package_dir=temporary,
+                output_dir=temporary,
+                requires_python=">=3.10,<3.11",
+                stable_abi=True,
+            )
+            with self.assertRaisesRegex(RuntimeError, "Stable-ABI wheels require"):
+                WHEEL_BUILDER.build_wheel(args)
 
     def test_empty_pypi_description_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:

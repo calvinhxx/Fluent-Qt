@@ -25,6 +25,9 @@ RELEASE_REQUIRES_PYTHON = ">=3.11,<3.14"
 CORE_DISTRIBUTION = "FluentQt"
 GALLERY_DISTRIBUTION = "FluentQt-Gallery"
 GALLERY_TAG = "py3-none-any"
+# One stable-ABI core wheel per platform; Linux x64 and ARM64 add audits.
+CORE_WHEEL_COUNT = 6
+MANYLINUX_AUDIT_COUNT = 2
 REQUIRED_PROJECT_URL_LABELS = {
     "Changelog",
     "Documentation",
@@ -223,9 +226,10 @@ def release_scenarios(catalog: dict[str, Any]) -> list[dict[str, Any]]:
         for scenario in scenarios
         if isinstance(scenario, dict) and scenario.get("release") is True
     ]
-    if len(selected) != 17:
+    if len(selected) != CORE_WHEEL_COUNT:
         raise BundleError(
-            f"wheel matrix must define exactly 17 release scenarios, found {len(selected)}"
+            f"wheel matrix must define exactly {CORE_WHEEL_COUNT} release "
+            f"scenarios, found {len(selected)}"
         )
     return sorted(selected, key=lambda scenario: str(scenario.get("id", "")))
 
@@ -400,17 +404,19 @@ def assemble_bundle(
             )
 
     core_filenames = [record.filename for record in core_records]
-    if len(set(core_filenames)) != 17:
+    if len(set(core_filenames)) != CORE_WHEEL_COUNT:
         raise BundleError("release core wheel filenames must be unique")
-    if len(audit_records) != 5:
+    if len(audit_records) != MANYLINUX_AUDIT_COUNT:
         raise BundleError(
-            f"release bundle must contain five manylinux audits, found {len(audit_records)}"
+            f"release bundle must contain {MANYLINUX_AUDIT_COUNT} manylinux "
+            f"audits, found {len(audit_records)}"
         )
 
     gallery_hashes = {sha256_file(path) for path in gallery_candidates}
-    if len(gallery_candidates) != 17 or len(gallery_hashes) != 1:
+    if len(gallery_candidates) != CORE_WHEEL_COUNT or len(gallery_hashes) != 1:
         raise BundleError(
-            "all 17 release lanes must produce a byte-identical Gallery wheel"
+            f"all {CORE_WHEEL_COUNT} release lanes must produce a "
+            "byte-identical Gallery wheel"
         )
     gallery_source = sorted(gallery_candidates, key=lambda path: str(path))[0]
     gallery_record = WheelRecord(
@@ -464,9 +470,9 @@ def assemble_bundle(
                 "ci_run_attempt": int(ci_run_attempt),
             },
             "policy": {
-                "core_wheel_count": 17,
+                "core_wheel_count": CORE_WHEEL_COUNT,
                 "gallery_wheel_count": 1,
-                "manylinux_audit_count": 5,
+                "manylinux_audit_count": MANYLINUX_AUDIT_COUNT,
                 "requires_python": RELEASE_REQUIRES_PYTHON,
             },
             "files": [

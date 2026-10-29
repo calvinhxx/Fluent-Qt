@@ -11,6 +11,7 @@ import hashlib
 import io
 from pathlib import Path
 import re
+import struct
 import subprocess
 import sys
 import sysconfig
@@ -23,6 +24,9 @@ SUPPORTED_REQUIRES_PYTHON = {
     ">=3.10,<3.11",
     ">=3.11,<3.14",
 }
+# Stable-ABI wheels cover the release policy only; Qt 6.2 stays single-version.
+STABLE_ABI_REQUIRES_PYTHON = ">=3.11,<3.14"
+PYTHON_RUNTIME_DLL = re.compile(r"^python3\d*(?:_d)?\.dll$", re.IGNORECASE)
 PROJECT_URLS = (
     ("Homepage", "https://calvinhxx.github.io/Fluent-Qt/"),
     ("Documentation", "https://github.com/calvinhxx/Fluent-Qt#readme"),
@@ -246,12 +250,99 @@ def macos_architecture(extension):
     return None
 
 
-def python_wheel_tag(extension):
+def windows_imported_dlls(extension):
+    """Return the DLL names in a PE image's import directory."""
+    data = Path(extension).read_bytes()
+
+    def u16(offset):
+        return struct.unpack_from("<H", data, offset)[0]
+
+    def u32(offset):
+        return struct.unpack_from("<I", data, offset)[0]
+
+    try:
+        if data[:2] != b"MZ":
+            raise ValueError("missing DOS header")
+        header = u32(0x3C)
+        if data[header:header + 4] != b"PE\0\0":
+            raise ValueError("missing PE signature")
+        coff = header + 4
+        section_count = u16(coff + 2)
+        optional = coff + 20
+        magic = u16(optional)
+        if magic == 0x10B:
+            directory_count_offset = optional + 92
+        elif magic == 0x20B:
+            directory_count_offset = optional + 108
+        else:
+            raise ValueError("unknown optional header magic 0x{0:x}".format(magic))
+        if u32(directory_count_offset) < 2:
+            return []
+        import_rva = u32(directory_count_offset + 4 + 8)
+        if not import_rva:
+            return []
+        sections = optional + u16(coff + 16)
+
+        def file_offset(rva):
+            for index in range(section_count):
+                section = sections + 40 * index
+                virtual_size, virtual_address, raw_size, raw_pointer = (
+                    struct.unpack_from("<4I", data, section + 8)
+                )
+                if virtual_address <= rva < virtual_address + max(
+                    virtual_size,
+                    raw_size,
+                ):
+                    return raw_pointer + rva - virtual_address
+            raise ValueError("RVA 0x{0:x} is outside every section".format(rva))
+
+        names = []
+        descriptor = file_offset(import_rva)
+        while True:
+            fields = struct.unpack_from("<5I", data, descriptor)
+            if not any(fields):
+                return names
+            name = file_offset(fields[3])
+            names.append(data[name:data.index(b"\0", name)].decode("ascii"))
+            descriptor += 20
+    except (ValueError, struct.error, UnicodeDecodeError) as error:
+        raise RuntimeError(
+            "Cannot read PE imports from {0}: {1}".format(extension, error)
+        )
+
+
+def verify_stable_abi_extension(extension):
+    """Reject a Windows module bound to one CPython runtime DLL."""
+    if Path(extension).suffix.lower() != ".pyd":
+        # ELF and Mach-O extension modules resolve Python symbols from the
+        # host interpreter; Py_LIMITED_API at compile time is their contract.
+        return
+    runtimes = sorted(
+        name.lower()
+        for name in windows_imported_dlls(extension)
+        if PYTHON_RUNTIME_DLL.match(name)
+    )
+    if runtimes != ["python3.dll"]:
+        raise RuntimeError(
+            "A stable-ABI extension must import only python3.dll; {0} "
+            "imports {1}".format(
+                Path(extension).name,
+                ", ".join(runtimes) or "no Python runtime",
+            )
+        )
+
+
+def python_wheel_tag(extension, stable_abi=False):
     if sys.implementation.name != "cpython":
         raise RuntimeError("FluentQt wheels currently support CPython only")
+    # A stable-ABI wheel installs on its build interpreter and newer ones, so
+    # each platform builds with its oldest supported CPython.
     python_tag = "cp{0}{1}".format(sys.version_info[0], sys.version_info[1])
-    return "{0}-{0}-{1}".format(
+    if stable_abi:
+        verify_stable_abi_extension(extension)
+    return "{0}-{1}-{2}".format(
         python_tag,
+        "abi3" if stable_abi else python_tag,
         normalized_platform_tag(extension),
     )
 
@@ -330,8 +421,15 @@ def build_wheel(args):
             "Package directory does not exist: {0}".format(package_dir)
         )
 
+    if args.stable_abi and args.requires_python != STABLE_ABI_REQUIRES_PYTHON:
+        raise RuntimeError(
+            "Stable-ABI wheels require Requires-Python {0}, not {1}".format(
+                STABLE_ABI_REQUIRES_PYTHON,
+                args.requires_python,
+            )
+        )
     files, extension = package_files(package_dir)
-    tag = python_wheel_tag(extension)
+    tag = python_wheel_tag(extension, args.stable_abi)
     dist_info = DIST_INFO_NAME.format(version=args.version)
     license_paths = [Path(name).resolve() for name in args.license_file]
     for license_path in license_paths:
@@ -391,6 +489,11 @@ def parse_args():
     parser.add_argument("--requires-python", required=True)
     parser.add_argument("--description-file", required=True)
     parser.add_argument("--license-file", action="append", default=[])
+    parser.add_argument(
+        "--stable-abi",
+        action="store_true",
+        help="tag the wheel cp3XY-abi3 for the Py_LIMITED_API extension",
+    )
     return parser.parse_args()
 
 

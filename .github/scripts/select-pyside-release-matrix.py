@@ -16,7 +16,7 @@ DEFAULT_CATALOG = (
     / "pyside6"
     / "wheel-matrix.json"
 )
-CRITICAL_RELEASE_ID = "windows-arm64-qt693-cp311"
+CRITICAL_RELEASE_ID = "windows-arm64-qt693-cp311-abi3"
 PLATFORM_QUEUE_PRIORITY = {
     ("macos", "x64"): 0,
     ("linux", "x64"): 1,
@@ -74,27 +74,16 @@ def select_release_matrix(catalog: dict[str, Any]) -> dict[str, list[dict[str, A
             f"critical release lane {CRITICAL_RELEASE_ID!r} must run extended acceptance"
         )
 
-    def queue_priority(scenario: dict[str, Any]) -> tuple[int, int, int, str]:
-        if scenario.get("id") == CRITICAL_RELEASE_ID:
-            return (0, 0, 0, str(scenario.get("id", "")))
-        if scenario.get("extended_acceptance") is True:
-            return (1, 0, 0, str(scenario.get("id", "")))
-
-        version = str(scenario.get("python_version", ""))
-        try:
-            major, minor = (int(part) for part in version.split(".", 1))
-        except (TypeError, ValueError) as error:
-            raise ValueError(
-                f"release lane {scenario.get('id')!r} has invalid python_version {version!r}"
-            ) from error
-        version_priority = -(major * 100 + minor)
+    # Each platform builds one stable-ABI wheel. Queue the critical lane,
+    # then the slowest platforms, so a lower max-parallel cap delays the
+    # cheapest lanes.
+    def queue_priority(scenario: dict[str, Any]) -> tuple[int, int, str]:
         platform_priority = PLATFORM_QUEUE_PRIORITY.get(
             (str(scenario.get("platform", "")), str(scenario.get("arch", ""))),
             len(PLATFORM_QUEUE_PRIORITY),
         )
         return (
-            2,
-            version_priority,
+            0 if scenario.get("id") == CRITICAL_RELEASE_ID else 1,
             platform_priority,
             str(scenario.get("id", "")),
         )
