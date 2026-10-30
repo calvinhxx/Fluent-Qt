@@ -403,6 +403,17 @@ add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
 if(Python3_Interpreter_FOUND)
     add_test(
+        NAME SpatialPrivateHeaders.Contract_Configuration
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/quality/test_spatial_private_headers.py
+            --cmake ${CMAKE_COMMAND}
+    )
+    set_tests_properties(SpatialPrivateHeaders.Contract_Configuration PROPERTIES
+        LABELS "test_spatial_view;quality;contract;ci_fast;ci_full;local_full"
+        TIMEOUT 120
+    )
+
+    add_test(
         NAME TestFonts.Contract_Configuration
         COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_SOURCE_DIR}/tools/quality/test_test_font_environment.py

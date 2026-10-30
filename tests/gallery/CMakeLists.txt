@@ -19,9 +19,16 @@ endif()
 
 # Link the resource objects into every test executable so static-resource
 # initialization is retained, while compiling the large QRC only once.
+# Generate explicit sources: Visual Studio can otherwise use different object
+# paths for an OBJECT library's AUTORCC output and its consuming executables.
+if(QT_VERSION_MAJOR EQUAL 6)
+    qt6_add_resources(_gallery_test_resource_sources ${FLUENT_QT_GALLERY_RESOURCES})
+else()
+    qt5_add_resources(_gallery_test_resource_sources ${FLUENT_QT_GALLERY_RESOURCES})
+endif()
 add_library(FluentQtGalleryTestPlatform OBJECT
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
-    ${FLUENT_QT_GALLERY_RESOURCES}
+    ${_gallery_test_resource_sources}
 )
 fluent_qt_configure_cpp_target(FluentQtGalleryTestPlatform)
 fluent_qt_enable_sanitizers(FluentQtGalleryTestPlatform)
