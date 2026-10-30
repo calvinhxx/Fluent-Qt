@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include "compatibility/WindowChromeCompat.h"
 #include "components/basicinput/Button.h"
+#include "components/dialogs_flyouts/Dialog.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
 #include "components/windowing/WindowBackdrop.h"
@@ -206,6 +209,48 @@ private:
 #endif
 
 } // namespace
+
+TEST(WindowsWindowOverlayTest, ModalDialogFollowsCaptionMaximizeRestore)
+{
+    if (QGuiApplication::platformName() != QLatin1String("windows"))
+        GTEST_SKIP() << "Caption transitions require the Windows desktop platform";
+
+    Window window;
+    window.resize(720, 520);
+    window.setCustomWindowChromeEnabled(true);
+    window.showMaximized();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window, 2000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 2000));
+
+    fluent::dialogs_flyouts::Dialog dialog(&window);
+    dialog.setAnimationEnabled(false);
+    dialog.setModal(true);
+    dialog.setDim(true);
+    dialog.setBackdropBlurRadius(0.0);
+    dialog.setFixedSize(320, 220);
+    dialog.open();
+    auto* scrim = window.findChild<fluent::overlay::OverlayScrim*>(QStringLiteral("DialogSmokeScrim"));
+    ASSERT_NE(scrim, nullptr);
+    QSignalSpy finished(&dialog, &QDialog::finished);
+    const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+    for (int cycle = 0; cycle < 2; ++cycle) {
+        for (const bool maximized : {false, true}) {
+            SCOPED_TRACE(::testing::Message() << "cycle=" << cycle << ", maximized=" << maximized);
+            SendMessageW(hwnd, WM_NCLBUTTONDBLCLK, HTCAPTION, 0);
+            ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized() == maximized; }, 2000));
+            QApplication::processEvents();
+            const QRect expectedSurface = fluent::overlay::overlaySurfaceRect(&window);
+            EXPECT_EQ(scrim->geometry(), expectedSurface);
+            EXPECT_EQ(expectedSurface, window.rect());
+            EXPECT_LE((dialog.geometry().center() - expectedSurface.center()).manhattanLength(), 2);
+            EXPECT_TRUE(dialog.isVisible());
+            EXPECT_TRUE(scrim->isVisible());
+            EXPECT_EQ(finished.count(), 0);
+        }
+    }
+    dialog.close();
+    window.close();
+}
 
 TEST(WindowsWindowBackdropTest, HiddenPreparedWindowKeepsRequestedGeometryDuringChromeConfiguration)
 {

@@ -63,6 +63,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 if(WIN32)
     add_qt_test_module(test_window_win TestWindowWin.cpp)
+    configure_native_window_desktop_test(
+        WindowsWindowOverlayTest.ModalDialogFollowsCaptionMaximizeRestore windows)
     if(TARGET FluentQtSpatial)
         target_link_libraries(test_window_win PRIVATE FluentQt::Spatial)
         if(QT_VERSION_MAJOR EQUAL 6)

@@ -298,6 +298,7 @@
       "evidence": [
         "src/components/dialogs_flyouts/Dialog.h",
         "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
+          "tests/components/windowing/TestWindowWin.cpp",
         "tests/gallery/TestGalleryOverlaySamples.cpp"
       ],
       "gap": ""
