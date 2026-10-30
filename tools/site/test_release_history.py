@@ -126,8 +126,11 @@ class ReleaseHistoryTest(unittest.TestCase):
         self.assertIn('&lt;FluentQt/Particles.h&gt;', body)
         self.assertIn('2026-10-27', body)
         self.assertIn('setFontFamily', body.split('id="unreleased"', 1)[1].split('id="v1.10.3"', 1)[0])
-        self.assertIn('particle-backdrop', body.split('id="unreleased"', 1)[1].split('data-release-search="', 1)[1].split('"', 1)[0])
-        malicious = copy.deepcopy(data['unreleased']['migrations'][0])
+        particle_entry = next(item for item in [data['unreleased'], *data['versions']]
+                              if any(m['id'] == 'particles-module' for m in item.get('migrations', [])))
+        anchor = 'v' + particle_entry['version'] if 'version' in particle_entry else 'unreleased'
+        self.assertIn('particle-backdrop', body.split(f'id="{anchor}"', 1)[1].split('data-release-search="', 1)[1].split('"', 1)[0])
+        malicious = copy.deepcopy(next(m for m in particle_entry['migrations'] if m['id'] == 'particles-module'))
         malicious['impact']['en'] = '<script>alert(1)</script> `<img src=x>`'
         rendered = release_pages.migration_html(malicious, 'en')
         self.assertNotIn('<script>', rendered)

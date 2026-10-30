@@ -286,7 +286,7 @@ Before creating a stable tag:
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).
 6. Wait for `Release Candidate ready` on the same `main` SHA. It must contain
-   the nine desktop packages, the 18-wheel Python bundle, and a receipt binding
+   the nine desktop packages, the complete Python wheel bundle, and a receipt binding
    both candidates to that repository and commit. Together with `Release ready`,
    this is also the macOS ARM64 Python representative gate for the release
    commit. For a post-tag recovery, run
@@ -306,7 +306,7 @@ Stable releases publish the supported PySide6 distributions to TestPyPI and
 PyPI; follow the
 [Python publishing runbook](../../bindings/pyside6/PUBLISHING.md). The normal
 `CI full` run remains focused on validation. In parallel, the automatic
-`Release Candidate` workflow builds the expensive 18-wheel bundle and desktop
+`Release Candidate` workflow builds the complete Python wheel bundle and desktop
 packages before tagging. A stable tag verifies their commit-bound manifests
 and promotes them without recompiling, then runs TestPyPI → verification →
 PyPI → attestation and install verification. Release is not green until the
