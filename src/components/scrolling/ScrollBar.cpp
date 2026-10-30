@@ -9,8 +9,50 @@
 #include <QStyleOptionSlider>
 
 #include "components/foundation/private/MotionPolicy_p.h"
+#include "compatibility/private/ScrollBarStyleCompat_p.h"
 
 namespace fluent::scrolling {
+
+namespace {
+
+QRectF scrollBarTrackRect(const QRect& rect)
+{
+    return QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5);
+}
+
+QRectF scrollBarThumbRect(const QStyleOptionSlider& opt, const QMargins& padding, int minimumThumbLength)
+{
+    const QRectF thumbTrack = scrollBarTrackRect(opt.rect).adjusted(padding.left(), padding.top(), -padding.right(),
+        -padding.bottom());
+    const bool vertical = opt.orientation == Qt::Vertical;
+    const qreal trackLength = vertical ? thumbTrack.height() : thumbTrack.width();
+    if (trackLength <= 0.0)
+        return {};
+
+    const qreal scrollRange = static_cast<qreal>(opt.maximum) - opt.minimum;
+    const qreal page = qMax<qreal>(1.0, opt.pageStep);
+    const qreal minThumbLength = qMin<qreal>(minimumThumbLength, trackLength);
+    const qreal proportionalLength = scrollRange > 0.0 ? trackLength * page / (scrollRange + page) : trackLength;
+    const qreal thumbLength = qBound(minThumbLength, proportionalLength, trackLength);
+    const qreal travel = qMax<qreal>(0.0, trackLength - thumbLength);
+    qreal ratio = scrollRange > 0.0
+        ? qBound<qreal>(0.0, (static_cast<qreal>(opt.sliderPosition) - opt.minimum) / scrollRange, 1.0)
+        : 0.0;
+    if (::compatibility::detail::scrollBarValueReversed(opt))
+        ratio = 1.0 - ratio;
+    const qreal thumbOffset = travel * ratio;
+
+    QRectF drawRect;
+    if (vertical) {
+        drawRect = QRectF(thumbTrack.left(), thumbTrack.top() + thumbOffset, thumbTrack.width(), thumbLength);
+    } else {
+        drawRect = QRectF(thumbTrack.left() + thumbOffset, thumbTrack.top(), thumbLength, thumbTrack.height());
+    }
+
+    return drawRect;
+}
+
+} // namespace
 
 ScrollBar::ScrollBar(Qt::Orientation orientation, QWidget* parent) : QScrollBar(orientation, parent)
 {
@@ -26,6 +68,27 @@ ScrollBar::~ScrollBar() = default;
 
 void ScrollBar::init()
 {
+    auto* scrollStyle = new ::compatibility::detail::ScrollBarStyle(
+        [this](const QStyleOptionSlider& option, QStyle::SubControl control) {
+            const auto& padding = m_thumbPadding;
+            QRect geometry = (control == QStyle::SC_ScrollBarSlider
+                    ? scrollBarThumbRect(option, padding, m_minThumbLength)
+                    : scrollBarTrackRect(option.rect)
+                          .adjusted(padding.left(), padding.top(), -padding.right(), -padding.bottom()))
+                                 .toRect();
+            // The full thickness remains draggable, including the thumb's side padding.
+            // zh_CN: 整个厚度都可拖动，包括滑块两侧留白。
+            if (option.orientation == Qt::Vertical) {
+                geometry.setLeft(option.rect.left());
+                geometry.setRight(option.rect.right());
+            } else {
+                geometry.setTop(option.rect.top());
+                geometry.setBottom(option.rect.bottom());
+            }
+            return geometry;
+        });
+    scrollStyle->setParent(this);
+    setStyle(scrollStyle);
     setAttribute(Qt::WA_Hover);
     // Keep normal Qt background propagation for the transparent resting state. Overlay scrollbars are
     // visible even while opacity is 0; WA_NoSystemBackground can expose stale black backing-store
@@ -146,9 +209,7 @@ void ScrollBar::paintEvent(QPaintEvent* event)
     // tiny gap to the widget bounds (a separate trackPadding could come later).
     // zh_CN: 轨道——轻量 Subtle 填充，圆角为厚度一半；与外框只留极小间距
     // （可按需再引入独立 trackPadding）。
-    const int trackInset = 0;
-    const QRectF trackRect = QRectF(rect()).adjusted(trackInset + 0.5, trackInset + 0.5, -trackInset - 0.5,
-        -trackInset - 0.5);
+    const QRectF trackRect = scrollBarTrackRect(rect());
     QColor trackColor = colors.subtleSecondary;
     const qreal trackMaxAlpha = isDark ? 0.18 : 0.20;
     if (trackColor.alphaF() > trackMaxAlpha)
@@ -161,41 +222,12 @@ void ScrollBar::paintEvent(QPaintEvent* event)
         p.drawRoundedRect(trackRect, r, r);
     }
 
-    // Thumb geometry is computed here while QScrollBar keeps the interaction,
-    // so the rounded ends keep full antialiasing room at the extremes instead
-    // of being clipped by the widget bounds.
-    // zh_CN: 自行计算 Thumb 绘制几何，交互仍由 QScrollBar 处理；极值位置端部
-    // 保留完整抗锯齿空间，避免圆角被 widget 边界裁掉。
-    const QRectF thumbTrack = trackRect.adjusted(m_thumbPadding.left(), m_thumbPadding.top(), -m_thumbPadding.right(),
-        -m_thumbPadding.bottom());
-    const bool vertical = orientation() == Qt::Vertical;
-    const qreal trackLength = vertical ? thumbTrack.height() : thumbTrack.width();
-    if (trackLength <= 0.0)
-        return;
-
     QStyleOptionSlider opt;
     initStyleOption(&opt);
-    const qreal scrollRange = static_cast<qreal>(opt.maximum) - opt.minimum;
-    const qreal page = qMax<qreal>(1.0, pageStep());
-    const qreal minThumbLength = qMin<qreal>(m_minThumbLength, trackLength);
-    const qreal proportionalLength = scrollRange > 0.0 ? trackLength * page / (scrollRange + page) : trackLength;
-    const qreal thumbLength = qBound(minThumbLength, proportionalLength, trackLength);
-    const qreal travel = qMax<qreal>(0.0, trackLength - thumbLength);
-    qreal ratio = scrollRange > 0.0
-        ? qBound<qreal>(0.0, (static_cast<qreal>(opt.sliderPosition) - opt.minimum) / scrollRange, 1.0)
-        : 0.0;
-    // QScrollBar leaves horizontal RTL mirroring to QStyle's geometry.
-    // zh_CN: QScrollBar 将水平 RTL 镜像交给 QStyle 的几何计算，自绘时需保持一致。
-    if (opt.upsideDown != (!vertical && opt.direction == Qt::RightToLeft))
-        ratio = 1.0 - ratio;
-    const qreal thumbOffset = travel * ratio;
-
-    QRectF drawRect;
-    if (vertical) {
-        drawRect = QRectF(thumbTrack.left(), thumbTrack.top() + thumbOffset, thumbTrack.width(), thumbLength);
-    } else {
-        drawRect = QRectF(thumbTrack.left() + thumbOffset, thumbTrack.top(), thumbLength, thumbTrack.height());
-    }
+    const QRectF drawRect = scrollBarThumbRect(opt, m_thumbPadding, m_minThumbLength);
+    if (drawRect.isEmpty())
+        return;
+    const bool vertical = orientation() == Qt::Vertical;
 
     QColor thumbRest = colors.textTertiary;
     QColor thumbActive = colors.textSecondary;

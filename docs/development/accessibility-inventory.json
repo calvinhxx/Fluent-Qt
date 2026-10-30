@@ -777,7 +777,8 @@
       "risk": "low",
       "status": "covered",
       "evidence": [
-        "src/components/scrolling/ScrollBar.h"
+        "src/components/scrolling/ScrollBar.h",
+        "tests/components/scrolling/TestScrollBar.cpp"
       ],
       "gap": ""
     },
