@@ -133,7 +133,13 @@ TEST(FontIconTest, Contract_CustomFontUsesExactPixelSizeAtMultipleDpr)
     const QString family = Typography::FontFamily::UIText;
     const QRawFont raw = QRawFont::fromFont(QFont(family));
     ASSERT_TRUE(raw.isValid());
-    ASSERT_EQ(raw.familyName(), family);
+    // Check the physical face: backend family names can include fallback aliases.
+    const QRawFont expected(QStringLiteral(":/res/fonts/FluentQtUIText-Regular.ttf"), 19);
+    ASSERT_TRUE(expected.isValid());
+    for (const char* table : {"name", "cmap"}) {
+        ASSERT_FALSE(expected.fontTable(table).isEmpty());
+        ASSERT_EQ(raw.fontTable(table), expected.fontTable(table)) << table;
+    }
     ASSERT_TRUE(raw.supportsCharacter('F'));
     fluent::FontIcon icon(QStringLiteral("F"));
     icon.setFontFamily(family);
