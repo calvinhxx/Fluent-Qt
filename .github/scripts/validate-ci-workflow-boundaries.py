@@ -123,6 +123,7 @@ SOURCE_PACKAGE_CMAKE_ENTRIES = (
     "cmake/FluentQtPlugins.cmake",
     "cmake/FluentQtSpatial.cmake",
     "cmake/FluentQtQmlBridge.cmake",
+    "cmake/FluentQtRuntime.cmake",
     "cmake/FluentQtHelloWorldExamples.cmake",
     "cmake/FluentQtPluginExtensionExample.cmake",
     "cmake/FluentQtQmlBridgeExample.cmake",

@@ -805,6 +805,7 @@ jobs:
               plugin/Spatial/CMakeLists.txt \
               plugin/QmlBridge/CMakeLists.txt \
               cmake/FluentQtPlugins.cmake \
+              cmake/FluentQtRuntime.cmake \
               cmake/FluentQtSpatial.cmake \
               cmake/FluentQtQmlBridge.cmake \
               cmake/FluentQtHelloWorldExamples.cmake \

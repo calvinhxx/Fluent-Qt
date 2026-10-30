@@ -23,6 +23,10 @@ endif()
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+if(NOT FLUENTQT_SOURCE_DIR AND COMMAND fluent_qt_use_sdk_runtime)
+    fluent_qt_use_sdk_runtime()
+endif()
+
 add_library(@APP_TARGET@_domain INTERFACE)
 target_include_directories(@APP_TARGET@_domain INTERFACE src)
 
