@@ -2,6 +2,11 @@
 
 include(CMakeFindDependencyMacro)
 
+# Metadata is descriptive. An application chooses explicitly whether to adopt it.
+set(FluentQt_DEBUG_RELEASE_RUNTIME "@FLUENT_QT_DEBUG_RELEASE_RUNTIME@")
+set(FluentQt_MSVC_RUNTIME_LIBRARY "@FLUENT_QT_SDK_MSVC_RUNTIME_LIBRARY@")
+include("${CMAKE_CURRENT_LIST_DIR}/FluentQtRuntime.cmake")
+
 find_dependency(Qt@QT_VERSION_MAJOR@ COMPONENTS Widgets)
 
 if(APPLE)

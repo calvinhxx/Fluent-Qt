@@ -37,6 +37,11 @@ option(FLUENT_QT_INSTALL "Install Fluent-Qt library targets, headers, and CMake 
 option(FLUENT_QT_ENABLE_GALLERY_PACKAGING "Enable CPack packaging for the Gallery application" OFF)
 option(FLUENT_QT_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for FluentQt tests" OFF)
 option(FLUENT_QT_ENABLE_WARNINGS "Enable strict compiler warnings for the FluentQt library" ${FLUENT_QT_IS_TOP_LEVEL})
+option(FLUENT_QT_DEBUG_RELEASE_RUNTIME
+    "Link Debug builds to release Qt and dependencies with a matching MSVC runtime"
+    ${FLUENT_QT_IS_TOP_LEVEL})
+
+fluent_qt_configure_debug_runtime()
 
 if(BUILD_TESTING AND
    (FLUENT_QT_BUILD_TESTS OR FLUENT_QT_BUILD_PYSIDE6_BINDINGS))
@@ -156,6 +161,7 @@ if(FLUENT_QT_INSTALL)
     fluent_qt_install_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
     set(FLUENT_QT_CMAKE_PACKAGE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/FluentQt")
+    _fluent_qt_msvc_runtime_for_target(FluentQt FLUENT_QT_SDK_MSVC_RUNTIME_LIBRARY)
     configure_package_config_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FluentQtConfig.cmake.in"
         "${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfig.cmake"
@@ -195,6 +201,7 @@ if(FLUENT_QT_INSTALL)
     install(FILES
         "${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfig.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfigVersion.cmake"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FluentQtRuntime.cmake"
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/FluentQtApplePlatformDependencies.cmake"
         DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}"
         COMPONENT Development)

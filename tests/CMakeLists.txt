@@ -402,6 +402,30 @@ add_dependencies(test_visual_comparison fluent_qt_visual_compare)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
 if(Python3_Interpreter_FOUND)
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.21)
+        add_test(
+            NAME SdkRuntime.Contract_Configuration
+            COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tools/quality/test_sdk_runtime_configuration.py
+                --cmake ${CMAKE_COMMAND}
+        )
+        set_tests_properties(SdkRuntime.Contract_Configuration PROPERTIES
+            LABELS "quality;contract;ci_fast;ci_full;local_full"
+            TIMEOUT 90
+        )
+    endif()
+
+    add_test(
+        NAME DebugRuntime.Contract_Configuration
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/quality/test_debug_runtime_configuration.py
+            --cmake ${CMAKE_COMMAND}
+    )
+    set_tests_properties(DebugRuntime.Contract_Configuration PROPERTIES
+        LABELS "quality;contract;ci_fast;ci_full;local_full"
+        TIMEOUT 60
+    )
+
     add_test(
         NAME SpatialPrivateHeaders.Contract_Configuration
         COMMAND ${Python3_EXECUTABLE}

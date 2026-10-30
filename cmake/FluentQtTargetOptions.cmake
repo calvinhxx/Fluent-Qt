@@ -1,3 +1,32 @@
+# These defaults must be set in the caller's directory before imports and targets
+# are created. An embedded library cannot change its host's existing target ABI.
+include("${CMAKE_CURRENT_LIST_DIR}/FluentQtRuntime.cmake")
+
+macro(fluent_qt_configure_debug_runtime)
+    if(FLUENT_QT_DEBUG_RELEASE_RUNTIME)
+        if(NOT FLUENT_QT_IS_TOP_LEVEL)
+            message(FATAL_ERROR
+                "FLUENT_QT_DEBUG_RELEASE_RUNTIME is only supported in top-level FluentQt builds; "
+                "leave it OFF when embedding FluentQt and let the host select its runtime")
+        endif()
+        # All desktop hosts use optimized dependencies while project code keeps
+        # its Debug settings. Preserve configuration-less system Qt packages.
+        fluent_qt_release_dependency_configurations(CMAKE_MAP_IMPORTED_CONFIG_DEBUG)
+        if(MSVC)
+            if(CMAKE_VERSION VERSION_LESS 3.21)
+                message(FATAL_ERROR "FLUENT_QT_DEBUG_RELEASE_RUNTIME requires CMake 3.21 or newer")
+            endif()
+            if(DEFINED CMAKE_MSVC_RUNTIME_LIBRARY AND NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
+                message(FATAL_ERROR "FLUENT_QT_DEBUG_RELEASE_RUNTIME requires the dynamic MSVC runtime")
+            endif()
+            # Release Qt and vcpkg libraries must share their CRT with project
+            # code. The target helper deploys the DLLs selected by those imports.
+            set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+            set(VCPKG_APPLOCAL_DEPS OFF)
+        endif()
+    endif()
+endmacro()
+
 function(fluent_qt_configure_cpp_target target)
     if(NOT TARGET "${target}")
         message(FATAL_ERROR "Unknown FluentQt target: ${target}")
@@ -35,6 +64,17 @@ function(fluent_qt_configure_cpp_target target)
         # Do not override MSVC_RUNTIME_LIBRARY here. With CMP0091 enabled, each
         # target inherits CMAKE_MSVC_RUNTIME_LIBRARY from the caller/toolchain,
         # so vcpkg's VCPKG_CRT_LINKAGE choice remains effective.
+        get_target_property(_fluent_qt_target_type "${target}" TYPE)
+        if(FLUENT_QT_DEBUG_RELEASE_RUNTIME AND _fluent_qt_target_type STREQUAL "EXECUTABLE")
+            # Deploy the release dependency DLLs that the mapped imports load. Qt
+            # keeps loading from its kit, where it also finds its plugins.
+            set(_fluent_qt_runtime_dlls
+                "$<FILTER:$<TARGET_RUNTIME_DLLS:${target}>,EXCLUDE,[/\\\\]Qt[56][^/\\\\]*\\.dll$>")
+            add_custom_command(TARGET "${target}" POST_BUILD
+                COMMAND "$<IF:$<BOOL:${_fluent_qt_runtime_dlls}>,${CMAKE_COMMAND};-E;copy_if_different;${_fluent_qt_runtime_dlls};$<TARGET_FILE_DIR:${target}>,${CMAKE_COMMAND};-E;true>"
+                COMMAND_EXPAND_LISTS
+                VERBATIM)
+        endif()
     endif()
 endfunction()
 
