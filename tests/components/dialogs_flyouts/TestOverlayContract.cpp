@@ -20,6 +20,8 @@
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/collections/DrawerView.h"
 #include "components/foundation/overlay/OverlayScrim.h"
+#include "components/foundation/overlay/OverlayCoordinator.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/MotionPolicy.h"
 
 namespace {
@@ -70,10 +72,23 @@ protected:
     }
 };
 
+class OverlayHost : public QWidget {
+public:
+    bool publishSurfaceOnResize = false;
+
+protected:
+    void resizeEvent(QResizeEvent* event) override
+    {
+        QWidget::resizeEvent(event);
+        if (publishSurfaceOnResize)
+            setProperty(fluent::overlay::overlaySurfaceRectPropertyName(), rect());
+    }
+};
+
 template <class Surface> class OverlayContractTest : public ::testing::Test {
 protected:
     fluent::FluentElement::Theme previousTheme = fluent::FluentElement::currentTheme();
-    QWidget host;
+    OverlayHost host;
     BackgroundProbe background{&host};
     Surface surface{&host};
     LineEdit outside{&host};
@@ -116,6 +131,54 @@ protected:
 };
 using Surfaces = ::testing::Types<Popup, Dialog, DrawerView>;
 TYPED_TEST_SUITE(OverlayContractTest, Surfaces);
+
+TYPED_TEST(OverlayContractTest, HostSurfaceChangesUpdateOpenScrim)
+{
+    using namespace fluent::overlay;
+    auto& host = this->host;
+    auto& surface = this->surface;
+    host.publishSurfaceOnResize = true;
+    host.setProperty(overlaySurfaceRectPropertyName(), host.rect());
+    surface.setModal(true);
+    surface.setDim(true);
+    surface.setBackdropBlurRadius(0.0);
+    surface.open();
+    auto* scrim = host.template findChild<OverlayScrim*>();
+    auto* coordinator = surface.template findChild<OverlayCoordinator*>();
+    ASSERT_NE(scrim, nullptr);
+    ASSERT_NE(coordinator, nullptr);
+    QSignalSpy geometryChanged(coordinator, &OverlayCoordinator::hostGeometryChanged);
+    for (const QSize size : {QSize(640, 480), QSize(1000, 720), QSize(640, 480), QSize(1000, 720)}) {
+        SCOPED_TRACE(::testing::Message() << "size=" << size.width() << 'x' << size.height());
+        host.resize(size);
+        // Native window managers can acknowledge an earlier resize asynchronously.
+        // Like Window, the host publishes from each resizeEvent after event filters.
+        QSize previousSize;
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&] {
+                const QSize currentSize = host.size();
+                const bool settled = currentSize == size && currentSize == previousSize;
+                previousSize = currentSize;
+                return settled;
+            },
+            2000));
+        EXPECT_TRUE(surface.isOpen());
+        EXPECT_EQ(scrim->geometry(), host.rect());
+        if constexpr (std::is_same_v<TypeParam, Dialog>)
+            EXPECT_LE((surface.geometry().center() - host.rect().center()).manhattanLength(), 2);
+    }
+
+    // A frame/inset change can update the usable surface without resizing the window.
+    const QRect insetSurface = host.rect().adjusted(12, 20, -12, -20);
+    host.setProperty(overlaySurfaceRectPropertyName(), insetSurface);
+    EXPECT_EQ(scrim->geometry(), insetSurface);
+    geometryChanged.clear();
+    host.setProperty("unrelatedOverlayTestProperty", 1);
+    EXPECT_EQ(geometryChanged.count(), 0);
+    host.setProperty(overlaySurfaceRectPropertyName(), QVariant());
+    EXPECT_EQ(scrim->geometry(), host.rect());
+    this->close();
+}
 
 TYPED_TEST(OverlayContractTest, CachedSurfaceCapturesContentRaisedAfterConstruction)
 {

@@ -3,6 +3,7 @@
 #include <QEvent>
 #include <QApplication>
 #include <QContextMenuEvent>
+#include <QDynamicPropertyChangeEvent>
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -411,7 +412,13 @@ bool OverlayCoordinator::eventFilter(QObject* watched, QEvent* event)
         return false;
     }
 
-    if (event->type() == QEvent::Resize) {
+    // Window publishes its final surface from resizeEvent, after this filter's
+    // Resize notification. Observe that publication too, including inset-only changes.
+    // zh_CN: Window 在 resizeEvent 中发布最终区域，晚于此处的 Resize 过滤；
+    // 同步该属性更新，同时覆盖只有边距变化而没有 resize 的情况。
+    const bool surfaceChanged = event->type() == QEvent::DynamicPropertyChange
+        && static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() == overlaySurfaceRectPropertyName();
+    if (event->type() == QEvent::Resize || surfaceChanged) {
         syncScrimGeometry();
         raiseStack();
         emit hostGeometryChanged();
