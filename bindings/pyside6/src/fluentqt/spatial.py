@@ -13,7 +13,7 @@ from types import MethodType
 from shiboken6 import isValid
 from PySide6.QtWidgets import QWidget
 from . import _fluentqt as _native
-from ._qt_compat import delete_qobject
+from ._qt_widgets import create_owned_widget
 
 SpatialItem = _native.fluent.SpatialItem
 SpatialRuntime = _native.fluent.SpatialRuntime
@@ -95,14 +95,15 @@ def _prepare_spatial_view(view):
 class SpatialSession(_native.fluent.SpatialSession):
     def createView(self, parent: QWidget | None = None) -> SpatialView | None:
         """Create a tracked view with Python widget ownership bookkeeping."""
-        if not self.isActive():
+        # Keep creation reentrancy local to this session; deactivation can still cancel it.
+        if getattr(self, "_creating_view", False):
             return None
-        view = SpatialView(parent)
-        if not isValid(self) or not isValid(view) or not self.attachView(view):
-            if isValid(view):
-                delete_qobject(view)
-            return None
-        return view
+        self._creating_view = True
+        try:
+            return create_owned_widget(self, SpatialView, self.isActive, self.attachView, parent,
+                                       affinity=_native.objectHasCurrentThreadAffinityForBinding)
+        finally:
+            self._creating_view = False
 
 
 __all__ = ["SpatialPlugin", "SpatialSession", "SpatialView", "SpatialItem", "ParticleLayer", "SpatialRuntime"]
