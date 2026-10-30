@@ -6097,7 +6097,7 @@
       "id": "font-icon",
       "title": "FontIcon",
       "category_id": "foundation",
-      "description": "A theme-aware widget that renders bundled Fluent icon glyphs at optical sizes.",
+      "description": "A theme-aware widget for bundled Fluent icons or glyphs from an application-provided font family.",
       "capabilities": [
         "window-and-icons"
       ],
@@ -6126,15 +6126,15 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/TestFontIcon.cpp"
         }
       ],
-      "sample_count": 2,
+      "sample_count": 3,
       "documentation": {
         "name": {
           "en": "FontIcon",
           "zh": "字体图标"
         },
         "description": {
-          "en": "A theme-aware widget that renders bundled Fluent icon glyphs at optical sizes.",
-          "zh": "显示内置的 Fluent 图标。"
+          "en": "A theme-aware widget for bundled Fluent icons or glyphs from an application-provided font family.",
+          "zh": "显示内置 Fluent 图标或应用自定义字体中的字形。"
         },
         "urls": {
           "en": "font-icon/",
@@ -6944,7 +6944,7 @@
     {
       "include": "<FluentQt/components/foundation/FontIcon.h>",
       "source": "src/components/foundation/FontIcon.h",
-      "summary": "Theme-aware Fluent icon glyph with optical-size selection.",
+      "summary": "Theme-aware icon glyph with bundled or application-provided fonts.",
       "declarations": [
         "FontIcon"
       ],

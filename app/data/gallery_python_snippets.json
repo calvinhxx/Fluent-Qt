@@ -4,7 +4,7 @@
   "summary": {
     "component_count": 96,
     "foundation_topic_count": 1,
-    "sample_count": 289
+    "sample_count": 290
   },
   "samples": [
     {
@@ -1563,6 +1563,11 @@
       "route_id": "font-icon",
       "sample_id": "font-icon-color-rotation",
       "source": "from PySide6.QtGui import QColor\n\ninherited = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\ninherited.setIconSize(24)\n\naccent = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\naccent.setIconSize(24)\naccent.setColor(QColor(\"#0F6CBD\"))\naccent.setRotation(90.0)\n\nwarning = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\nwarning.setIconSize(24)\nwarning.setColor(QColor(\"#F7630C\"))\nwarning.setRotation(180.0)\n"
+    },
+    {
+      "route_id": "font-icon",
+      "sample_id": "font-icon-custom-font",
+      "source": "family = fluentqt.font_for_role(fluentqt.FontRole.Body).family()\ncustom = fluentqt.FontIcon(\"F\")\ncustom.setFontFamily(family)\ncustom.setIconSize(24)\n\nrotated = fluentqt.FontIcon(\"F\")\nrotated.setFontFamily(family)\nrotated.setIconSize(24)\nrotated.setRotation(90.0)\n\ndisabled = fluentqt.FontIcon(\"F\")\ndisabled.setFontFamily(family)\ndisabled.setIconSize(24)\ndisabled.setEnabled(False)\n"
     },
     {
       "route_id": "foundation-qmlplus",

@@ -171,6 +171,11 @@
     "widget_theme_overrides"
   ],
   "methods": {
+    "FontIcon": [
+      "fontFamily",
+      "setFontFamily",
+      "fontFamilyChanged"
+    ],
     "ToggleSwitch": [
       "setVisualScale",
       "visualScale"
