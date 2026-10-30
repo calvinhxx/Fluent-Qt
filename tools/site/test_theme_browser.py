@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check static website themes and responsive homepages without a WASM build."""
+"""Check website themes and generated release documentation without loading WASM."""
 
 from __future__ import annotations
 
@@ -35,6 +35,52 @@ def prepare_site_theme_contract(project_root: Path) -> None:
         cwd=project_root,
         check=True,
     )
+
+
+def check_release_documents(page: object, site_url: str, language: str) -> None:
+    """Exercise the generated reading surface without requesting a Gallery runtime."""
+    response = page.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
+    if response is None or not response.ok:
+        raise RuntimeError('Missing generated release history')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    all_count = page.locator('[data-release-entry]').count()
+    page.locator('[data-release-breaking]').check()
+    page.locator('[data-release-from]').select_option('1.6.4')
+    if page.locator('[id="v1.5.0"]').is_visible() or not page.locator('[id="v1.7.0"]').is_visible():
+        raise RuntimeError('Upgrade range filtering is incorrect')
+    page.locator('[data-release-filters] button[type="reset"]').click()
+    if page.locator('[data-release-entry]:visible').count() != all_count:
+        raise RuntimeError('Clearing release filters did not restore every record')
+    page.locator('[data-release-query]').fill('ParticleBackdrop')
+    if not page.locator('[id="v1.8.3"]').is_visible():
+        raise RuntimeError('Component class names must match their documentation identifiers')
+    page.reload(wait_until='domcontentloaded')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if page.locator('[data-release-query]').input_value() != 'ParticleBackdrop':
+        raise RuntimeError('Reloading lost the release query')
+    if page.locator('[data-directory-search]').input_value():
+        raise RuntimeError('Release search leaked into the documentation directory')
+    page.locator('[data-release-query]').fill('no-such-component-123')
+    if not page.locator('[data-release-empty]').is_visible():
+        raise RuntimeError('Release history is missing its empty state')
+    page.locator('[data-release-filters] button[type="reset"]').click()
+    for width in (1280, 390):
+        page.set_viewport_size({'width': width, 'height': 800})
+        if page.evaluate('document.documentElement.scrollWidth > innerWidth'):
+            raise RuntimeError(f'Release history overflows at {width}px')
+    page.goto(site_url + 'api/roadmap/', wait_until='domcontentloaded')
+    if page.locator('.roadmap-phase').count() < 3:
+        raise RuntimeError('Roadmap is missing its maintained phases')
+    # This guide shares the API shell without starting a component's live preview.
+    page.goto(site_url + 'api/foundation-iconography/', wait_until='domcontentloaded')
+    if page.locator('.document-version-note a').count():
+        page.locator('.document-version-note a').click()
+        page.wait_for_selector('[data-release-filters]:not([hidden])')
+        if page.locator('[data-release-query]').input_value() != 'foundation-iconography':
+            raise RuntimeError('The API notice lost its related release filter')
+        anchor = urlsplit(page.url).fragment
+        if not page.locator(f'[data-release-entry][id="{anchor}"]').is_visible():
+            raise RuntimeError('The API notice did not reach its pending change')
 
 
 def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | None = None) -> dict:
@@ -124,12 +170,15 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     if page.locator('[data-showcase-frame]').get_attribute('src'):
                         raise RuntimeError("Website eagerly loaded the opt-in Spatial runtime")
                     page.screenshot(path=str(output / f"{language}-{width}.png"))
+                if site_root is not None:
+                    check_release_documents(page, site_url, language)
                 if errors:
                     raise RuntimeError(f"Website page errors ({language}): {errors}")
                 if runtime_requests:
                     raise RuntimeError(f"Static website eagerly requested WASM ({language}): {runtime_requests}")
                 results.append({"language": language, "themes": ["light", "dark", "high-contrast"],
-                                "forced_colors": "passed", "widths": [1280, 390], "runtime_requests": []})
+                                "forced_colors": "passed", "widths": [1280, 390], "runtime_requests": [],
+                                "release_documents": "passed" if site_root is not None else "not_run"})
             finally:
                 page.close()
     finally:

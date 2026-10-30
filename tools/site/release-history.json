@@ -1,0 +1,772 @@
+{
+  "schema_version": 1,
+  "versions": [
+    {
+      "version": "1.10.3",
+      "status": "published",
+      "published_at": "2026-10-27T15:07:38Z",
+      "source_sha256": "417cf01a1293f3df846955d511bb60bb89ffe40a6d05913393ea43d20b42d099",
+      "summary": {
+        "en": "New editing and selection controls, chart export, and a rebuilt documentation site.",
+        "zh": "新增数值与属性编辑、图表导出和几种选择控件，官网文档改版。"
+      },
+      "related": [
+        "number-box",
+        "property-panel",
+        "chart-view",
+        "line-chart",
+        "auto-suggest-box",
+        "tag-input",
+        "tree-select",
+        "data-grid",
+        "split-view",
+        "list-detail-view"
+      ],
+      "changes": [
+        {
+          "en": "`NumberBox` values can be dragged as well as typed, and a drag can be cancelled. `PropertyPanel` groups fields, finds them by name and resets them to defaults.",
+          "zh": "`NumberBox` 可以拖动调值，拖动过程可以取消。`PropertyPanel` 支持分组、按名称查找和恢复默认值。"
+        },
+        {
+          "en": "Charts save a PNG or export the source rows as CSV, for the visible range or all data.",
+          "zh": "图表可以保存为 PNG，或把源数据导出为 CSV，范围可选当前视图或全部数据。"
+        },
+        {
+          "en": "`AutoSuggestBox` accepts asynchronous suggestions and drops stale ones. New: `TagInput` for tags with stable IDs and `TreeSelect` for picking from a tree model.",
+          "zh": "`AutoSuggestBox` 支持异步建议，并丢弃过期结果。新增 `TagInput`（带稳定 ID 的标签）和 `TreeSelect`（从树形模型中选择）。"
+        },
+        {
+          "en": "`DataGrid` can pin columns, and `DataGridToolBar` adds search, filters and column controls.",
+          "zh": "`DataGrid` 支持固定列，`DataGridToolBar` 提供搜索、筛选和列设置。"
+        },
+        {
+          "en": "Each component page on the website shows a live example, C++ and PySide6 code, and the public API, in English and Chinese.",
+          "zh": "官网每个组件页都有可操作的示例、C++ 与 PySide6 代码和公开 API，提供中英文版本。"
+        }
+      ],
+      "migrations": []
+    },
+    {
+      "version": "1.10.2",
+      "status": "published",
+      "published_at": "2026-10-20T17:01:16Z",
+      "source_sha256": "9c04d250720617ee64e8612ffe6e5093eacdbce88705a8309111ba6d22053e22",
+      "summary": {
+        "en": "Adds `CommandPalette`, `FormController` and `CodeBlock`. `Popup`, `Dialog` and `DrawerView` share one set of backdrop blur and dimming options, and modal surfaces block clicks and shortcuts behind them.",
+        "zh": "新增 `CommandPalette`、`FormController` 和 `CodeBlock`。`Popup`、`Dialog` 与 `DrawerView` 使用同一套背景模糊和遮罩选项，模态层会拦截背后的点击和快捷键。"
+      },
+      "related": [
+        "command-palette",
+        "field",
+        "code-block",
+        "dialog",
+        "drawer-view",
+        "popup"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.10.1",
+      "status": "published",
+      "published_at": "2026-10-17T13:38:17Z",
+      "source_sha256": "e19e03c144a95e3f250d7c353028845bb080508366c401f5c2cb78a0f9a875a1",
+      "summary": {
+        "en": "`CommandBar` and `CommandBarFlyout` accept actions with nested `FluentMenu` submenus. `TextEdit::appendPlainText()` appends log lines without losing the selection or undo history. Unchecked check boxes and radio buttons have stronger outlines.",
+        "zh": "`CommandBar` 和 `CommandBarFlyout` 支持带多级子菜单的 action。新增 `TextEdit::appendPlainText()`，追加日志时保留选区和撤销记录。未选中的复选框和单选按钮描边更清楚。"
+      },
+      "related": [
+        "command-bar",
+        "command-bar-flyout",
+        "text-edit",
+        "spatial-view"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.10.0",
+      "status": "published",
+      "published_at": "2026-10-11T21:37:42Z",
+      "source_sha256": "0e944f22d5a65c6c97960e4c82e08e60884e4f469e3f2cff7799c2bc4c76a78b",
+      "summary": {
+        "en": "Adds `DateTimeRangePicker`, QmlBridge for hosting application QML pages in Widgets windows, and an optional Plugins module that handles extension dependencies, activation and cleanup. Python Live Scene now reloads previews in the same window.",
+        "zh": "新增 `DateTimeRangePicker`；QmlBridge 可以在 Widgets 窗口中嵌入应用自己的 QML 页面；可选的 Plugins 模块负责扩展的依赖、启用和清理。Python Live Scene 改为在原窗口内重新加载预览。"
+      },
+      "related": [
+        "date-time-range-picker",
+        "calendar-view",
+        "qml-view",
+        "module-qmlbridge",
+        "module-plugins",
+        "foundation-qmlplus"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.9.3",
+      "status": "published",
+      "published_at": "2026-10-07T16:14:21Z",
+      "source_sha256": "7daf0bcecb9ef65260048092c964b7aaa517195ee88915e67fb048704388bb95",
+      "summary": {
+        "en": "Fixes window backgrounds at startup and during material changes. New windows no longer flash white in dark mode, and switching away from Mica or Acrylic keeps the old material until the new background is drawn.",
+        "zh": "修复窗口启动和切换材质时的背景问题。深色模式下新窗口不再闪白；从 Mica 或 Acrylic 切走时，旧材质会保留到新背景画好为止。"
+      },
+      "related": [
+        "window"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.9.2",
+      "status": "published",
+      "published_at": "2026-10-01T05:06:33Z",
+      "source_sha256": "a56e8259f8b9e88b5d139efbcaec55cff2558158392adb069ea9b72706f72e74",
+      "summary": {
+        "en": "Adds `Timeline` and `Stepper`. Gallery images and text are sharper at display scales other than 100%.",
+        "zh": "新增 `Timeline` 和 `Stepper`。Gallery 在非 100% 显示缩放下的图片和文字更清晰。"
+      },
+      "related": [
+        "timeline",
+        "stepper",
+        "spatial-view"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.9.1",
+      "status": "published",
+      "published_at": "2026-09-28T16:12:20Z",
+      "source_sha256": "ddbeae022593ebaffb8582b24f318b6f9bc4b98bf69d293d4c541ac8d15d61b9",
+      "summary": {
+        "en": "Fixes the packaged 3D Gallery. Python wheels now include Spatial, Windows ARM64 renders with Direct3D 11, and the app falls back to 2D when hardware acceleration is unavailable.",
+        "zh": "修复打包后的 3D Gallery：Python wheel 补上了 Spatial，Windows ARM64 改用 Direct3D 11 渲染，没有硬件加速时回退到 2D 界面。"
+      },
+      "related": [
+        "spatial-view",
+        "module-spatial",
+        "window"
+      ],
+      "changes": [
+        {
+          "en": "The 1.9.0 wheels shipped without Spatial. Upgrade both `FluentQt` and `FluentQt-Gallery` to 1.9.1 to get the 3D Gallery.",
+          "zh": "1.9.0 的 wheel 缺少 Spatial。请把 `FluentQt` 和 `FluentQt-Gallery` 一起升级到 1.9.1，才能使用 3D Gallery。"
+        }
+      ],
+      "migrations": []
+    },
+    {
+      "version": "1.9.0",
+      "status": "published",
+      "published_at": "2026-09-28T06:55:25Z",
+      "source_sha256": "62bce55fdb96498db00e10b3ecfe91f26524346484fbeea84170e0c717d249e5",
+      "summary": {
+        "en": "Adds the optional Spatial module. `SpatialView` places ordinary widgets on 3D surfaces in perspective, and they keep their input handling and signals. The desktop and browser Galleries gain a 3D mode.",
+        "zh": "新增可选的 Spatial 模块。`SpatialView` 把普通控件放到带透视的 3D 平面上，控件的输入和信号照常工作。桌面版和浏览器版 Gallery 都加入了 3D 模式。"
+      },
+      "related": [
+        "spatial-view",
+        "module-spatial"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.8.5",
+      "status": "published",
+      "published_at": "2026-09-18T12:42:22Z",
+      "source_sha256": "d6aa9270c55ee340b2ca94af56456b26a0273bb46814f2f133e9e6c09f2667e1",
+      "summary": {
+        "en": "Adds a Charts module (line, area, bar, pie, donut, scatter and sparkline) drawn with Qt Widgets and no Qt Charts dependency, plus `FileDropZone` and `FileListView`. `Toast` has a new card style and an optional close button.",
+        "zh": "新增图表模块（折线、面积、柱状、饼图、环形、散点和迷你图），用 Qt Widgets 绘制，不依赖 Qt Charts；另新增 `FileDropZone` 和 `FileListView`。`Toast` 换了卡片样式，并可显示关闭按钮。"
+      },
+      "related": [
+        "chart-view",
+        "line-chart",
+        "area-chart",
+        "bar-chart",
+        "horizontal-bar-chart",
+        "pie-chart",
+        "donut-chart",
+        "scatter-chart",
+        "sparkline",
+        "toast"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.8.4",
+      "status": "published",
+      "published_at": "2026-09-16T12:48:52Z",
+      "source_sha256": "e5ecff55d69ac1df31c38c69a1f6541aa5138a8820cd38dda6b92b630726ef2c",
+      "summary": {
+        "en": "`SplashScreen` repaints less during its reveal animation. The Gallery has a new app icon, installer artwork and website screenshots.",
+        "zh": "`SplashScreen` 在展开动画中的重绘更少。Gallery 更换了应用图标、安装器图片和官网截图。"
+      },
+      "related": [
+        "splash-screen",
+        "particle-backdrop"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.8.3",
+      "status": "published",
+      "published_at": "2026-09-13T15:39:37Z",
+      "source_sha256": "74067c115990a2c3258eda000c3b4ff362c075f3defffcb1320aac70cde5ee30",
+      "summary": {
+        "en": "Adds `ParticleBackdrop`, a CPU-painted particle background, and a reusable `SplashScreen`. Also fixes keyboard selection and text editing, and makes Gallery source easier to read and copy.",
+        "zh": "新增 `ParticleBackdrop`（CPU 绘制的粒子背景）和可复用的 `SplashScreen`。修复键盘选择和文本编辑问题，Gallery 源码也更方便阅读和复制。"
+      },
+      "related": [
+        "particle-backdrop",
+        "splash-screen",
+        "text-edit",
+        "code-block"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.8.2",
+      "status": "published",
+      "published_at": "2026-09-08T12:36:09Z",
+      "source_sha256": "34c631ae789e22b8ec9520c73f4a5d0460929f72e149e88a299203e85523963b",
+      "summary": {
+        "en": "`UserTheme::applyOverrides()` changes colors, corner radii and fonts for the whole app, and `setThemeOverrides()` does the same for a single component. `ComboBox` dropdowns now use custom fonts. Also fixes callback, navigation and slider bugs on supported Qt versions.",
+        "zh": "`UserTheme::applyOverrides()` 可以全局修改颜色、圆角和字体，`setThemeOverrides()` 只修改单个组件。`ComboBox` 下拉列表现在会使用自定义字体。另修复了回调、导航和滑块在各 Qt 版本上的问题。"
+      },
+      "related": [
+        "combobox",
+        "slider",
+        "foundation-color",
+        "foundation-typography"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.8.1",
+      "status": "published",
+      "published_at": "2026-09-06T07:35:51Z",
+      "source_sha256": "1a5835c2bcad070c1de543afca10f9823ba3a10f65ad8f00bbb531c3bba57152",
+      "summary": {
+        "en": "Adds `ToggleSwitch::visualScale`. Fixes input signals in collection views, `FlowView` layout after rows are removed, and `NumberBox` callbacks that delete the widget.",
+        "zh": "新增 `ToggleSwitch::visualScale`。修复集合视图的输入信号、删除行后 `FlowView` 的布局，以及 `NumberBox` 回调中删除控件导致的问题。"
+      },
+      "related": [
+        "toggle-switch",
+        "flow-view",
+        "number-box"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.8.0",
+      "status": "published",
+      "published_at": "2026-09-03T03:39:46Z",
+      "source_sha256": "921f8e68ae660ca34e69edd7b1ca605f745cc04354d47e3f88f079ba43117149",
+      "summary": {
+        "en": "Adds a `HighContrast` theme and an app-wide `MotionPolicy` (`Full`, `Reduced`, `Disabled`) for C++, PySide6 and the browser Gallery. A focused `TextEdit` animates its auto-height changes.",
+        "zh": "新增 `HighContrast` 主题和全局 `MotionPolicy`（`Full`、`Reduced`、`Disabled`），C++、PySide6 和浏览器 Gallery 都能使用。`TextEdit` 获得焦点时，自动高度变化带过渡动画。"
+      },
+      "related": [
+        "foundation-motion",
+        "foundation-color",
+        "text-edit"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.7.6",
+      "status": "published",
+      "published_at": "2026-09-01T16:37:24Z",
+      "source_sha256": "6a36a4124687e2f3db2a9ea9ca7c0e95ed3b85394821b97847f268472f2ee08e",
+      "summary": {
+        "en": "`MultiSelectComboBox` joins selected labels with `、` instead of a translated “and”. Pickers and command bars drop duplicated internal code without behavior changes, and icon-only `TabView` buttons get accessible names. Release workflows pin their actions to reviewed revisions.",
+        "zh": "`MultiSelectComboBox` 改用“、”连接选中项，不再出现翻译出来的连接词。选择器和命令栏去掉了重复实现，行为不变；`TabView` 的纯图标按钮补上了无障碍名称。发布流程使用的 Actions 固定到已审查的版本。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.7.5",
+      "status": "published",
+      "published_at": "2026-08-30T14:40:04Z",
+      "source_sha256": "60760127f1e879f45c88795159148e7ba0e4aff47fffffd49f4cae89cd8ae211",
+      "summary": {
+        "en": "Buttons, toggle switches and date/time pickers follow the same `fontRole` rules, and an explicit `setFont()` still wins. Gallery samples behave the same in C++, PySide6 and WebAssembly. The `build-fluentqt-gui` Skill now runs from project analysis through independent review.",
+        "zh": "按钮、开关和日期/时间选择器统一遵循 `fontRole`，显式调用 `setFont()` 仍然优先。Gallery 示例在 C++、PySide6 和 WebAssembly 中行为一致。`build-fluentqt-gui` Skill 覆盖从项目分析到独立评审的完整流程。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.7.4",
+      "status": "published",
+      "published_at": "2026-08-28T19:14:29Z",
+      "source_sha256": "49eb5d2545052dbf1735a9c3e5d0eb8605a1f664634d3e75635b0e90d242ab28",
+      "summary": {
+        "en": "Native Gallery previews can replay pointer and keyboard actions before a capture, and reports include widget geometry and Inspector findings. Menu access keys keep working while menus animate. Local builds choose a parallel job count from available CPU and memory.",
+        "zh": "原生 Gallery 预览可以在截图前回放鼠标和键盘操作，报告附带控件几何信息和 Inspector 检查结果。菜单动画期间访问键不再失效。本地构建会按 CPU 和内存自动选择并行数。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.7.3",
+      "status": "published",
+      "published_at": "2026-08-27T09:53:03Z",
+      "source_sha256": "2eccf92ce928b6bf824b684f6b2388048e8ae84ad1f601d72f44fed2f79d85ce",
+      "summary": {
+        "en": "Live Scene keeps a PySide6 preview window open and refreshes it on save. `CalendarView` selection outlines are rounded, picker flyouts line up with their fields, and `TeachingTip` shadows spread evenly.",
+        "zh": "Live Scene 让 PySide6 预览窗口保持打开，保存后自动刷新。`CalendarView` 的选中框改为圆角，选择器弹出层与输入框对齐，`TeachingTip` 阴影四周均匀。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.7.2",
+      "status": "published",
+      "published_at": "2026-08-26T07:50:30Z",
+      "source_sha256": "83e45973b3af3a8d1459b3325f8657fdf8fa5a8233ff5b038717cbb8feb0c1bb",
+      "summary": {
+        "en": "Adds `MultiSelectComboBox`, and `fluentqt doctor`, `create` and `trial` commands that check the local Qt setup and generate a starter C++ or PySide6 project. Also fixes several picker and list issues across platforms.",
+        "zh": "新增 `MultiSelectComboBox`，以及 `fluentqt doctor`、`create`、`trial` 命令，用于检查本机 Qt 环境并生成 C++ 或 PySide6 起步项目。另修复了选择器和列表在不同平台上的若干问题。"
+      },
+      "related": [
+        "multi-select-combobox"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.7.1",
+      "status": "published",
+      "published_at": "2026-08-21T03:36:25Z",
+      "source_sha256": "5291ce42cfe3b4d115aa7d1777b96febc11044f0032fcf414a6bbdc0b84d608b",
+      "summary": {
+        "en": "No library API changes. The website gets separate English and Chinese homepages, GitHub Discussions gets question and proposal forms, and stable releases wait for every Python wheel before publishing.",
+        "zh": "库 API 没有变化。官网拆分出中英文两个首页，GitHub Discussions 增加了提问和建议模板，正式版会等所有 Python wheel 构建完成后再发布。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.7.0",
+      "status": "published",
+      "published_at": "2026-08-20T10:05:08Z",
+      "source_sha256": "951d4f15b87c51be2795e3bbbf4b057109cd5a15c2e5ab5927482aff6555f171",
+      "summary": {
+        "en": "Removes the Material and Cupertino design languages, leaving Fluent as the only one. Adds `Field` and `DataGrid`, and documents open, close and modal behavior for every overlay.",
+        "zh": "移除 Material 和 Cupertino 设计语言，只保留 Fluent。新增 `Field` 和 `DataGrid`，并明确了所有浮层的打开、关闭和模态行为。"
+      },
+      "related": [
+        "field",
+        "data-grid",
+        "foundation-color"
+      ],
+      "changes": [],
+      "migrations": [
+        {
+          "id": "fluent-only-themes",
+          "title": {
+            "en": "Design-language and style-theme APIs removed",
+            "zh": "设计语言与样式主题接口已移除"
+          },
+          "impact": {
+            "en": "`DesignLanguage`, `StyleTheme` and `StyleThemeCatalog` are gone, with no aliases. Apps that only used Fluent Light and Dark are unaffected.",
+            "zh": "`DesignLanguage`、`StyleTheme` 和 `StyleThemeCatalog` 已删除，没有保留别名。只使用 Fluent 浅色和深色主题的应用不受影响。"
+          },
+          "action": {
+            "en": "Choose the appearance with `Theme` and customize tokens with `UserTheme`. In Python, use `current_theme()`, `apply_user_theme()`, `set_accent_color()` and `reset_theme_tokens()`. The Gallery ignores the old `styleTheme` setting.",
+            "zh": "外观用 `Theme` 选择，语义 token 用 `UserTheme` 定制。Python 改用 `current_theme()`、`apply_user_theme()`、`set_accent_color()` 和 `reset_theme_tokens()`。Gallery 不再读取旧的 `styleTheme` 设置。"
+          },
+          "before": "FluentElement::DesignLanguage\nStyleTheme / StyleThemeCatalog\ncurrent_design_language()\napply_style_theme()",
+          "after": "FluentElement::Theme\nfluent::UserTheme\ncurrent_theme()\napply_user_theme()"
+        }
+      ],
+      "headers": [
+        "src/components/foundation/FluentElement.h",
+        "src/components/foundation/ThemeRegistry.h"
+      ]
+    },
+    {
+      "version": "1.6.4",
+      "status": "published",
+      "published_at": "2026-08-13T01:58:27Z",
+      "source_sha256": "ad2e610b4bb0c7ef6af92b5fd306b368b3b88311974efc5d05c3e5f71d5e276e",
+      "summary": {
+        "en": "Code samples in the browser Gallery can switch between C++ and PySide6. `TextEdit` respects custom content margins. The `build-fluentqt-gui` Skill scales its checks to the size of the app.",
+        "zh": "浏览器版 Gallery 的示例代码可以在 C++ 和 PySide6 之间切换。`TextEdit` 正确应用自定义内容边距。`build-fluentqt-gui` Skill 会按应用规模调整检查项。"
+      },
+      "related": [
+        "text-edit"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.6.3",
+      "status": "published",
+      "published_at": "2026-08-11T15:47:36Z",
+      "source_sha256": "9ffc25525bf5e0300192855eeba88d77981d281ac769b44759d8348e8d3a0a04",
+      "summary": {
+        "en": "Ships the `build-fluentqt-gui` Skill for coding agents, with a component catalog that maps C++ and PySide6 APIs to Gallery samples. `ListView` gets a default delegate, and installed packages no longer embed build-machine SDK paths.",
+        "zh": "随包提供面向编程助手的 `build-fluentqt-gui` Skill，以及把 C++/PySide6 API 对应到 Gallery 示例的组件目录。`ListView` 增加默认委托；安装包不再写入构建机的 SDK 路径。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.6.2",
+      "status": "published",
+      "published_at": "2026-08-10T18:10:41Z",
+      "source_sha256": "661764d3ac8ee81c8d6120668e70f9b90f705ec0f5a40be0286258d88f166399",
+      "summary": {
+        "en": "Adds opt-in WebAssembly support through `FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT`. The website embeds the C++ Gallery running in the browser. Desktop and PySide6 builds are unchanged.",
+        "zh": "新增可选的 WebAssembly 支持（`FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT`）。官网直接嵌入在浏览器中运行的 C++ Gallery。桌面和 PySide6 构建不受影响。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.6.1",
+      "status": "published",
+      "published_at": "2026-08-08T18:15:26Z",
+      "source_sha256": "20059962f82b4d9a969424fc2da3f36feccc5594bad2833c8c36c56533802197",
+      "summary": {
+        "en": "The PyPI pages for `FluentQt` and `FluentQt-Gallery` now have full descriptions and project links. Components and the Python API are unchanged.",
+        "zh": "`FluentQt` 和 `FluentQt-Gallery` 的 PyPI 页面补上了完整说明和项目链接。组件和 Python API 没有变化。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.6.0",
+      "status": "published",
+      "published_at": "2026-08-08T10:28:13Z",
+      "source_sha256": "cdcd238eeee15d50ca126f88b71fa536b389f08bd98e353e54676c0cb41def70",
+      "summary": {
+        "en": "First PySide6 release. The `FluentQt` wheel binds the component library, and `FluentQt-Gallery` installs the Gallery separately. The C++ library and the Qt 5.15 build are unchanged.",
+        "zh": "首个 PySide6 版本。`FluentQt` wheel 提供组件库的 Python 绑定，`FluentQt-Gallery` 可单独安装 Gallery。C++ 库和 Qt 5.15 构建保持不变。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.5.3",
+      "status": "published",
+      "published_at": "2026-08-04T15:21:19Z",
+      "source_sha256": "2173c03cf66f05adfe9bd7b1b2ec80d872b7269fc60d2449459f9bfda4ff5141",
+      "summary": {
+        "en": "Pressed buttons no longer hide their bottom border. On macOS, custom title bars fall back to native window dragging when Qt drops trackpad events.",
+        "zh": "按钮按下时不再遮住底边框。macOS 上 Qt 丢失触控板事件时，自定义标题栏改用系统原生拖动。"
+      },
+      "related": [
+        "button",
+        "window"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.5.2",
+      "status": "published",
+      "published_at": "2026-07-30T05:56:06Z",
+      "source_sha256": "e6f7db79171d4ddfa9e99e8f22bc79831ce33cd46f6912824894b775d3920188",
+      "summary": {
+        "en": "Adds `CommandBar`, `CommandBarFlyout`, and `EditingCommandRouter` for undo, copy, paste and related actions. `Toast` gains action buttons, pause on hover and in-place updates.",
+        "zh": "新增 `CommandBar`、`CommandBarFlyout`，以及统一处理撤销、复制、粘贴等操作的 `EditingCommandRouter`。`Toast` 支持操作按钮、悬停暂停和原位更新。"
+      },
+      "related": [
+        "command-bar",
+        "command-bar-flyout",
+        "toast"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.5.1",
+      "status": "published",
+      "published_at": "2026-07-28T04:52:57Z",
+      "source_sha256": "9d9626aa022119c43b801f9598d3a8dd2006bb591ae614e5ad0a6aafff015cc4",
+      "summary": {
+        "en": "Makes `Card`, `Divider`, `Expander`, `Accordion`, `FontIcon`, `CompoundButton`, `Avatar` and `Toast` public, so applications can use the same controls as the Gallery.",
+        "zh": "公开 `Card`、`Divider`、`Expander`、`Accordion`、`FontIcon`、`CompoundButton`、`Avatar` 和 `Toast`，应用可以直接使用 Gallery 中的这些控件。"
+      },
+      "related": [
+        "card",
+        "divider",
+        "expander",
+        "accordion",
+        "avatar",
+        "toast",
+        "font-icon",
+        "compound-button"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.5.0",
+      "status": "published",
+      "published_at": "2026-07-26T14:06:28Z",
+      "source_sha256": "9f27d146398dbcb33fe249136bb08a6d52e7950ef9e08787ebe401b537c01e06",
+      "summary": {
+        "en": "Adds per-category headers such as `<FluentQt/BasicInput.h>`, typed font roles and selection modes, and explicit ownership for hosted widgets. Applications now provide their own localized picker and switch text.",
+        "zh": "新增按类别拆分的头文件（如 `<FluentQt/BasicInput.h>`），字体角色和选择模式改为强类型，托管控件需要显式指定所有权。选择器和开关的文字改由应用提供本地化内容。"
+      },
+      "related": [
+        "foundation-typography",
+        "list-view",
+        "tree-view",
+        "flow-view",
+        "grid-view",
+        "drawer-view",
+        "stack-view",
+        "scroll-view"
+      ],
+      "changes": [],
+      "migrations": [
+        {
+          "id": "typed-public-contracts",
+          "title": {
+            "en": "Typed font roles, shared selection modes and explicit ownership",
+            "zh": "字体角色、选择模式与控件所有权"
+          },
+          "impact": {
+            "en": "Code that passes font roles as strings, uses per-view selection enums, includes implementation headers, or relies on implicit ownership of hosted widgets needs updating.",
+            "zh": "以字符串传入字体角色、使用各视图自己的选择枚举、包含实现头文件，或依赖托管控件隐式所有权的代码需要修改。"
+          },
+          "action": {
+            "en": "Include public headers only, and pass `WidgetOwnership` where an API asks for it. Supply localized picker text, `ToggleSwitch` labels and accessible names from the application.",
+            "zh": "只包含公开头文件，在接口要求时传入 `WidgetOwnership`。选择器文字、`ToggleSwitch` 标签和无障碍名称由应用提供本地化文本。"
+          },
+          "before": "\"Body\"\nFlowSelectionMode / GridSelectionMode\nListSelectionMode / TreeSelectionMode",
+          "after": "Typography::FontRole::Body\nfluent::collections::SelectionMode\nfluent::WidgetOwnership"
+        }
+      ],
+      "headers": [
+        "src/design/Typography.h",
+        "src/components/foundation/WidgetOwnership.h",
+        "src/components/collections/SelectionMode.h"
+      ]
+    },
+    {
+      "version": "1.4.2",
+      "status": "published",
+      "published_at": "2026-07-24T09:32:50Z",
+      "source_sha256": "2ec73e9d4f1142e0772bedf6e70fec3da9424da625d154abb67880484427bad5",
+      "summary": {
+        "en": "Fixes `AnchorLayout` right and bottom anchors, QMLPlus state transitions, and access to bundled resources before `QApplication` exists. `TextEdit` forwards focus correctly and keeps undo history when its text is set again.",
+        "zh": "修复 `AnchorLayout` 右/下锚点、QMLPlus 状态切换，以及在 `QApplication` 创建前访问内置资源的问题。`TextEdit` 正确转交焦点，重新设置文本时保留撤销记录。"
+      },
+      "related": [
+        "label",
+        "text-edit",
+        "foundation-qmlplus"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.4.1",
+      "status": "published",
+      "published_at": "2026-07-23T12:01:59Z",
+      "source_sha256": "e708718a51f0d9b7f891a729816df7c919e8a91c3d314cc91287a678b85ed5fc",
+      "summary": {
+        "en": "Controls stay sharp at fractional display scales up to 300%. `Dialog` and `CoachMark` open as overlays inside the owning window instead of separate native windows, which fixes frozen input on macOS.",
+        "zh": "控件在 300% 以内的分数缩放下保持清晰。`Dialog` 和 `CoachMark` 改为在所属窗口内以浮层显示，不再创建独立的原生窗口，修复了 macOS 上输入卡住的问题。"
+      },
+      "related": [
+        "dialog",
+        "coach-mark",
+        "window"
+      ],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.4.0",
+      "status": "published",
+      "published_at": "2026-07-19T13:40:29Z",
+      "source_sha256": "e56fa48c3759faa64cb179bab13e66f7f18e8d1a0cdd19483b59876ea2729e54",
+      "summary": {
+        "en": "Bundles its fonts and Fluent System Icons, so text and icons no longer depend on Segoe being installed. Adds Gallery pages for typography, color, icons and spacing, and follows the system display scale.",
+        "zh": "内置字体和 Fluent System Icons，不再依赖系统安装 Segoe。Gallery 增加排版、颜色、图标和间距页面，并跟随系统显示缩放。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.3.2",
+      "status": "archive",
+      "published_at": null,
+      "source_sha256": "43f4228193d4ad9646957e1ef350de5fd58c55cd4d702cacd63e6275903a3b35",
+      "summary": {
+        "en": "Installed packages expose only an explicit list of public headers. Gallery component pages show the header, C++ type and CMake target, and switching pages is faster.",
+        "zh": "安装包只导出明确列出的公开头文件。Gallery 组件页显示头文件、C++ 类型和 CMake 目标，页面切换更快。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.3.1",
+      "status": "archive",
+      "published_at": null,
+      "source_sha256": "c843cf60bd63d5b796e8b272953e8910d84466d624c589cbbb53bd31f9b5ba45",
+      "summary": {
+        "en": "The library now depends only on Qt Widgets; spdlog stays with the Gallery. Releases include a library-only source archive, and Gallery packages drop unused Qt modules.",
+        "zh": "组件库只依赖 Qt Widgets，spdlog 只留在 Gallery 中。发布页新增仅含库代码的源码压缩包，Gallery 安装包去掉了用不到的 Qt 模块。"
+      },
+      "related": [],
+      "changes": [],
+      "migrations": []
+    },
+    {
+      "version": "1.3.0",
+      "status": "archive",
+      "published_at": null,
+      "source_sha256": "64b56e2ac9caa28afe8f5e8812f8d1845ae956207a46b5b424caf1648ca22727",
+      "summary": {
+        "en": "Adds Linux support for X11 and Wayland on x64 and ARM64, with Debian packages. `Window::setBackdropEffect()` provides one Mica/Acrylic API on every platform.",
+        "zh": "支持 Linux（X11 与 Wayland，x64 与 ARM64），并提供 Debian 安装包。`Window::setBackdropEffect()` 在所有平台上提供同一套 Mica/Acrylic 接口。"
+      },
+      "related": [
+        "window"
+      ],
+      "changes": [],
+      "migrations": []
+    }
+  ],
+  "unreleased": {
+    "after": "1.10.3",
+    "related": [
+      "font-icon",
+      "foundation-iconography",
+      "particle-backdrop",
+      "module-particles",
+      "module-spatial",
+      "spatial-view",
+      "foundation"
+    ],
+    "headers": [
+      "src/components/foundation/FontIcon.h",
+      "src/components/particles/ParticleBackdrop.h",
+      "src/components/particles/ParticlesSession.h"
+    ],
+    "changes": [
+      {
+        "en": "`FontIcon` adds `fontFamily()` and `setFontFamily()` for application-provided fonts. Pass the font's Unicode glyph directly; an empty family keeps the existing bundled Fluent icon rendering. C++ and PySide6 Gallery include a custom-font example.",
+        "zh": "`FontIcon` 新增 `fontFamily()` 和 `setFontFamily()`，支持应用自定义字体。传入该字体的 Unicode 字形即可；字体族为空时保持原有的内置 Fluent 图标绘制。C++ 和 PySide6 Gallery 均提供自定义字体示例。"
+      },
+      {
+        "en": "Particle effects move out of the core library into the optional Particles module.",
+        "zh": "粒子特效从核心库移到可选的 Particles 模块。"
+      },
+      {
+        "en": "Gallery 3D uploads only the texture rows that changed, sharpens frames once motion stops, keeps its cache within a memory budget, and switches to 2D if rendering stays slow.",
+        "zh": "Gallery 3D 只上传有变化的纹理行，交互停止后恢复清晰画面，缓存控制在内存预算内，渲染持续过慢时切回 2D。"
+      },
+      {
+        "en": "Desktop Debug builds link the release Qt runtime by default. Set `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF` to use a debug Qt.",
+        "zh": "桌面 Debug 构建默认链接 release 版 Qt。需要 debug 版 Qt 时，设置 `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF`。"
+      }
+    ],
+    "migrations": [
+      {
+        "id": "particles-module",
+        "title": {
+          "en": "ParticleBackdrop moves to the Particles module",
+          "zh": "ParticleBackdrop 移到 Particles 模块"
+        },
+        "impact": {
+          "en": "The `fluent::layout` names and import paths are gone. Linking only `FluentQt::FluentQt` no longer includes particle effects.",
+          "zh": "`fluent::layout` 下的名称和导入路径已删除。只链接 `FluentQt::FluentQt` 时不再包含粒子特效。"
+        },
+        "action": {
+          "en": "When building from source, turn on `FLUENT_QT_BUILD_PARTICLES`. With an installed SDK, request `COMPONENTS Particles` and link `FluentQt::Particles`. Then update includes, namespaces and Python imports as shown below.",
+          "zh": "从源码集成时打开 `FLUENT_QT_BUILD_PARTICLES`；使用已安装的 SDK 时，在 `find_package` 中加上 `COMPONENTS Particles` 并链接 `FluentQt::Particles`。头文件、命名空间和 Python 导入按下面的写法修改。"
+        },
+        "before": "FluentQt::FluentQt\n#include <FluentQt/Layout.h>\nfluent::layout::ParticleBackdrop\nfrom fluentqt.layout import ParticleBackdrop",
+        "after": "find_package(FluentQt CONFIG REQUIRED COMPONENTS Particles)\ntarget_link_libraries(app PRIVATE FluentQt::Particles)\n#include <FluentQt/Particles.h>\nfluent::particles::ParticleBackdrop\nfrom fluentqt.particles import ParticleBackdrop",
+        "commit": "b674c944078c65f92aaa71df95ddf5050a6ecc62"
+      }
+    ]
+  },
+  "roadmap": {
+    "source": "docs/development/technical-debt-roadmap.md",
+    "reviewed_on": "2026-10-30",
+    "phases": [
+      {
+        "id": "TD-3",
+        "state": "Active",
+        "title": {
+          "en": "Visual regression coverage",
+          "zh": "视觉回归覆盖"
+        },
+        "body": {
+          "en": "Add geometry checks and reviewed screenshot baselines for the components most likely to break visually: overlays, collection views and windows.",
+          "zh": "为最容易出视觉问题的组件（浮层、集合视图和窗口）补充几何检查和经过人工确认的截图基线。"
+        }
+      },
+      {
+        "id": "TD-4",
+        "state": "Planned",
+        "title": {
+          "en": "Testing on real platforms",
+          "zh": "真实平台验收"
+        },
+        "body": {
+          "en": "Record how screen readers, input methods, window management, drag and drop, and touch behave on Windows, macOS and Linux. Simulated Qt input events do not count.",
+          "zh": "在 Windows、macOS 和 Linux 上实测并记录读屏、输入法、窗口管理、拖放和触摸行为。Qt 模拟的输入事件不算数。"
+        }
+      },
+      {
+        "id": "TD-5",
+        "state": "Deferred",
+        "title": {
+          "en": "Compatibility cleanup for 2.0",
+          "zh": "2.0 兼容层清理"
+        },
+        "body": {
+          "en": "List the aliases and ownership APIs kept for 1.x compatibility, each with its replacement and a release test, so they can be removed in 2.0. No date is set.",
+          "zh": "整理 1.x 为兼容保留的别名和所有权接口，为每一项写明替代方式和发布测试，以便在 2.0 中移除。暂无时间表。"
+        }
+      },
+      {
+        "id": "TD-2",
+        "state": "Complete",
+        "title": {
+          "en": "Public API drift checks",
+          "zh": "公开 API 漂移检查"
+        },
+        "body": {
+          "en": "Static checks in CTest and CI cover installed headers, catalog mappings and API naming conventions.",
+          "zh": "CTest 和 CI 中的静态检查覆盖安装头文件、目录映射和 API 命名约定。"
+        }
+      }
+    ],
+    "source_sha256": "db4818219cd228eab89431664d566e68c5917526e5dd7bf3332baed06b6844a2"
+  }
+}

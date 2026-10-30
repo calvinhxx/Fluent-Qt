@@ -24,6 +24,7 @@ from generate_api_reference import _declarations, _property_reference
 from generate_api_reference import generate_reference, _encoded
 import generate_api_reference
 import component_docs
+import release_pages
 import component_inventory
 import generate_component_previews as previews
 import generate_localized_site
@@ -155,6 +156,21 @@ class VisualDocumentationTest(unittest.TestCase):
         self.assertEqual(data[:8], b'\x89PNG\r\n\x1a\n')
         self.assertEqual(struct.unpack_from('>2I', data, 16), (64, 64))
         self.assertLess(len(data), 10_000)
+
+    def test_unreleased_notices_reach_components_guides_and_header_references(self):
+        data = json.loads(json.dumps(release_pages.load_history()))
+        data['unreleased']['related'] = ['font-icon', 'foundation-iconography']
+        data['unreleased']['headers'] = ['src/components/particles/ParticlesSession.h']
+        data['versions'] = [item for item in data['versions'] if item['status'] != 'candidate']
+        with patch.object(release_pages, 'load_history', return_value=data):
+            outputs = component_docs.generated_outputs(self.documents)
+        for prefix in ('', 'zh-CN/'):
+            for route in ('font-icon', 'foundation-iconography', 'reference/particles-session'):
+                page = outputs[f'{prefix}api/{route}/index.html']
+                self.assertIn('class="document-version-note"', page)
+                self.assertRegex(page, r'releases/\?change=[^"<>]+#unreleased')
+            for route in ('checkbox', 'releases', 'roadmap'):
+                self.assertNotIn('class="document-version-note"', outputs[f'{prefix}api/{route}/index.html'])
 
     def test_every_catalog_component_has_bilingual_visual_documentation(self):
         documents = {doc['id']: doc for doc in self.documents}

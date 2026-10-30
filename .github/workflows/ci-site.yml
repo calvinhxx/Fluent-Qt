@@ -96,6 +96,7 @@ jobs:
           python tools/site/test_site_assets.py
           python tools/site/test_generate_api_reference.py
           python tools/site/test_generate_localized_site.py
+          python tools/site/test_release_history.py
           python tools/site/test_theme_browser_runner.py
           node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs
           node --test tools/site/test_support.mjs
