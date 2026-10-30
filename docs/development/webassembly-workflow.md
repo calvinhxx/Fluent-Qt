@@ -227,14 +227,18 @@ The Gallery owns condition-driven browser checks selected by a query parameter:
   LineEdit, opaque active client chrome, the painted-surface cache, and the
   selected render profile;
 - both tiers verify the embedded `light` / `dark` / `high-contrast` query and
-  message contract, forced-colors precedence and restoration, and the website
-  theme cycle/persistence behavior;
+  message contract, forced-colors precedence and restoration;
 - browser smoke records WebAssembly heap capacity and program-break watermarks;
 - both tiers verify the Simplified Chinese fallback, launch the staged base and
   Spatial minimal apps, and click the Spatial Button at its projected position;
 - both tiers operate the plugin example through activation, creation,
   deactivation, and restoration, checking retained widgets and native
   dependency/failure probes.
+
+Website theme cycling and persistence are covered by the
+[static theme contract](../../tools/site/test_theme_browser.py) in
+[website CI](ci-workflow.md#keep-workflow-ownership-explicit), without loading
+WebAssembly.
 
 The runner publishes `data-fluent-qt-smoke="pass|fail"` and a detail field on
 the document root. CI drives that contract through Playwright:

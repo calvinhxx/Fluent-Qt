@@ -12,7 +12,7 @@ PAGES_PIPELINE_ACTIONS = {
     "ci-site.yml": {
         "actions/checkout": 1,
         "actions/setup-python": 1,
-        "actions/cache": 2,
+        "actions/cache": 3,
         "actions/upload-artifact": 2,
     },
     "pages.yml": {

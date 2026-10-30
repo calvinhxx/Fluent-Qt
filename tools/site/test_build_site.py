@@ -134,6 +134,8 @@ class SiteGenerationTest(unittest.TestCase):
                 "src/components/basicinput/Button.cpp", "app/main.cpp",
                 "app/platform/desktop/GalleryApplication.cpp", "app/view/widgets/GallerySampleCard.h",
                 "app/view/support/GalleryStyleSupport.h", "include/FluentQt/BasicInput.h",
+                "support/spatial/SpatialTextureHost.cpp", "support/spatial/SpatialTextureHost.h",
+                "support/spatial/shaders/spatial_rhi.qrc",
             )
             for name in sources:
                 path = root / name

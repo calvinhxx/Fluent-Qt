@@ -44,7 +44,7 @@ def capture_inputs():
     }
     # The native target also depends on bootstrap, headers, support and resources
     # outside samples/. Keep the owning trees instead of a partial .cpp allowlist.
-    for directory in ("src", "include", "res", "cmake", "uilib", "plugin", "support/logging", "app"):
+    for directory in ("src", "include", "res", "cmake", "uilib", "plugin", "support", "app"):
         paths.update(str(p.relative_to(ROOT)) for p in (ROOT / directory).rglob("*")
                      if p.is_file() and not any(part.startswith(".") or part == "__pycache__"
                                                 for part in p.relative_to(ROOT).parts))
