@@ -27,6 +27,31 @@ constexpr qint64 kGlyphWorkingSetBytes = kGlyphScratchBytes + 2LL * kGlyphCacheB
 constexpr qreal kInteractiveDamageShare = .3;
 constexpr int kInteractiveIntervalMs = 120;
 constexpr int kRefineDelayMs = 160;
+// Such an update keeps cache density while its estimated cost, added to the texture work
+// already spent in the frame, fits this budget: half of a 60 Hz frame.
+// zh_CN: 此类更新的估算耗时加上本帧已用的纹理时间不超过此预算（60 Hz 的半帧）时，保持缓存密度。
+constexpr qreal kCacheDensityBudgetMs = 8;
+
+// Measured cache-density paint cost per texture row. Only updates covering at least
+// kInteractiveDamageShare of a panel are sampled, so per-update overhead does not dominate.
+// zh_CN: 实测的缓存密度每纹理行绘制耗时；只采样覆盖面板至少 kInteractiveDamageShare 的更新，
+// 避免单次固定开销主导估算。
+struct CacheDensityCost {
+    qreal msPerRow = 0; // zero until the first sample
+
+    void record(qreal paintMs, int rows)
+    {
+        if (rows <= 0 || !(paintMs >= 0))
+            return;
+        const qreal sample = paintMs / rows;
+        msPerRow = msPerRow > 0 ? msPerRow * .8 + sample * .2 : sample;
+    }
+    // Whether `rows` more cache-density rows keep the frame within kCacheDensityBudgetMs.
+    bool fits(int rows, qreal frameSpentMs) const
+    {
+        return msPerRow > 0 && frameSpentMs + rows * msPerRow <= kCacheDensityBudgetMs;
+    }
+};
 // Native-density frames slower than kSlowFrameMs for kSlowFrameStreak frames in a row
 // make the Gallery suggest 2D once.
 // zh_CN: 原生密度帧连续 kSlowFrameStreak 帧慢于 kSlowFrameMs 时，Gallery 提示一次 2D。
@@ -56,6 +81,39 @@ struct SlowFrameTracker {
         reported = true;
         return true;
     }
+};
+
+// A content frame whose window composition and buffer swap take longer than
+// kSlowPresentationMs, kSlowPresentationStreak times in a row, returns the Gallery to 2D
+// once. Some forwarded displays, such as WSLg's Wayland session, hold every changed
+// frame for hundreds of milliseconds while paintGL() stays fast.
+// zh_CN: 内容帧的窗口合成与缓冲交换连续 kSlowPresentationStreak 次慢于 kSlowPresentationMs 时，
+// Gallery 回到 2D 一次；部分转发显示环境（如 WSLg 的 Wayland 会话）每个变化帧都会阻塞数百毫秒，
+// 而 paintGL() 本身很快。
+constexpr qreal kSlowPresentationMs = 150;
+constexpr int kSlowPresentationStreak = 6;
+
+// Presentation latency of content frames, those that repainted panel texture rows while
+// the window was active. The caller skips other frames, which neither confirm nor clear
+// a streak; a resize or cache release interrupts it.
+// zh_CN: 统计窗口活动时重画了面板纹理行的内容帧的呈现延迟；其他帧由调用方跳过，既不累计
+// 也不清零；尺寸变化或缓存释放会中断累计。
+struct SlowPresentationTracker {
+    qreal lastMs = 0;
+    int streak = 0;
+    bool reported = false;
+
+    // Returns true once, when the streak first reaches kSlowPresentationStreak.
+    bool record(qreal presentationMs)
+    {
+        lastMs = presentationMs;
+        streak = presentationMs > kSlowPresentationMs ? streak + 1 : 0;
+        if (reported || streak < kSlowPresentationStreak)
+            return false;
+        reported = true;
+        return true;
+    }
+    void interrupt() { streak = 0; }
 };
 
 // Dense displays already resolve small glyphs. Keep perspective headroom without

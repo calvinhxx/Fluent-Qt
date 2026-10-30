@@ -54,10 +54,9 @@ class GalleryGlyphImageCacheTest(unittest.TestCase):
         self.assertEqual(cache.retain(self.tile(Qt.red)).pixelColor(0, 0), QColor(Qt.red))
         self.assertEqual(cache.retain(self.tile(Qt.red)).cacheKey(), red.cacheKey())
 
-    def test_digest_collision_never_substitutes_different_pixels(self):
+    def test_checksum_collision_never_substitutes_different_pixels(self):
         cache = GlyphImageCache()
-        with patch("fluentqt_gallery.glyph_paint_device.sha256") as digest:
-            digest.return_value.digest.return_value = b"same digest"
+        with patch("fluentqt_gallery.glyph_paint_device.adler32", return_value=1):
             red = cache.retain(self.tile(Qt.red))
             blue = cache.retain(self.tile(Qt.blue))
             self.assertNotEqual(blue.cacheKey(), red.cacheKey())

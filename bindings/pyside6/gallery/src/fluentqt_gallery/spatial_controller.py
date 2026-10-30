@@ -133,11 +133,18 @@ _GLYPH_WORKING_SET_BYTES = _GLYPH_SCRATCH_BYTES + 2 * GLYPH_IMAGE_CACHE_BYTES
 _INTERACTIVE_DAMAGE_SHARE = .3
 _INTERACTIVE_INTERVAL_MS = 120
 _REFINE_DELAY_MS = 160
+# Such an update keeps cache density while its estimated cost, added to the texture
+# work already spent in the frame, fits this budget: half of a 60 Hz frame.
+_CACHE_DENSITY_BUDGET_MS = 8
 # The navigation pixel dirtied to bring a backing-store pass to the GPU surface.
 _SYNTHETIC_PASS_RECT = QRect(0, 0, 2, 2)
 # Native-density frames slower than this for _SLOW_FRAME_STREAK frames suggest 2D once.
 _SLOW_FRAME_MS = 33
 _SLOW_FRAME_STREAK = 60
+# Content frames whose composition and swap exceed this _SLOW_PRESENTATION_STREAK times
+# in a row return the Gallery to 2D once, as in GallerySpatialRenderPolicy.h.
+_SLOW_PRESENTATION_MS = 150
+_SLOW_PRESENTATION_STREAK = 6
 
 
 def _preferred_extra_sampling(native_dpr):
@@ -238,6 +245,53 @@ class _SlowFrameTracker:
             return False
         self.reported = True
         return True
+
+
+class _CacheDensityCost:
+    """Measured cache-density paint cost per texture row, as in GallerySpatialRenderPolicy.h.
+
+    Only updates covering at least _INTERACTIVE_DAMAGE_SHARE of a panel are sampled, so
+    per-update overhead does not dominate the estimate.
+    """
+
+    def __init__(self):
+        self.ms_per_row = 0.  # zero until the first sample
+
+    def record(self, paint_ms, rows):
+        if rows <= 0 or not paint_ms >= 0:
+            return
+        sample = paint_ms / rows
+        self.ms_per_row = self.ms_per_row * .8 + sample * .2 if self.ms_per_row > 0 else sample
+
+    def fits(self, rows, frame_spent_ms):
+        """Whether ``rows`` more cache-density rows keep the frame within the budget."""
+        return self.ms_per_row > 0 and frame_spent_ms + rows * self.ms_per_row <= _CACHE_DENSITY_BUDGET_MS
+
+
+class _SlowPresentationTracker:
+    """Presentation latency of content frames, as in GallerySpatialRenderPolicy.h.
+
+    Content frames repainted panel texture rows while the window was active. The
+    caller skips other frames, which neither confirm nor clear a streak; a resize or
+    cache release interrupts it.
+    """
+
+    def __init__(self):
+        self.last_ms = 0.
+        self.streak = 0
+        self.reported = False
+
+    def record(self, presentation_ms):
+        """Return True once, when the streak first reaches _SLOW_PRESENTATION_STREAK."""
+        self.last_ms = presentation_ms
+        self.streak = self.streak + 1 if presentation_ms > _SLOW_PRESENTATION_MS else 0
+        if self.reported or self.streak < _SLOW_PRESENTATION_STREAK:
+            return False
+        self.reported = True
+        return True
+
+    def interrupt(self):
+        self.streak = 0
 
 
 def _covered_rows(bands):
@@ -459,6 +513,14 @@ class _Surface(QOpenGLWidget):
         self.frame_update_ms = 0.
         self.frame_interactive = False
         self.slow_tracker = _SlowFrameTracker()
+        self.cache_density_cost = _CacheDensityCost()
+        # Time the window composition that presents a content frame, including its
+        # buffer swap. Forwarded displays can spend far longer there than in paintGL().
+        self.judge_presentation = False
+        self.presentation_clock = QElapsedTimer()
+        self.presentation_tracker = _SlowPresentationTracker()
+        self.aboutToCompose.connect(self._begin_presentation)
+        self.frameSwapped.connect(self._end_presentation)
         self.interactive = (os.environ.get("FLUENT_QT_SPATIAL_BENCHMARK", "0") == "0"
                             or os.environ.get("FLUENT_QT_SPATIAL_INTERACTIVE") != "0")
         self.clock = QElapsedTimer()
@@ -577,10 +639,33 @@ class _Surface(QOpenGLWidget):
 
     def resizeGL(self, width, height):
         self.has_presented_frame = False
+        self.presentation_tracker.interrupt()
+
+    def _begin_presentation(self):
+        if self.judge_presentation:
+            self.presentation_clock.start()
+        else:
+            self.presentation_clock.invalidate()
+        self.judge_presentation = False
+
+    def _end_presentation(self):
+        if not self.presentation_clock.isValid():
+            return
+        presentation_ms = self.presentation_clock.nsecsElapsed() / 1e6
+        self.presentation_clock.invalidate()
+        handle = self.window().windowHandle()
+        if (not self.property("presenting") or not self.isActiveWindow()
+                or handle is None or not handle.isExposed()):
+            return
+        if self.presentation_tracker.record(presentation_ms):
+            QTimer.singleShot(0, self.owner.release_slow_presentation)
 
     def clear_frame_caches(self):
         self.input_frame_requested = False
         self.has_presented_frame = False
+        self.judge_presentation = False
+        self.presentation_tracker.interrupt()
+        self.cache_density_cost = _CacheDensityCost()
         self.refine_timer.stop()
         self.makeCurrent()
         self.glyph_cache.clear()
@@ -608,6 +693,7 @@ class _Surface(QOpenGLWidget):
 
     def release_context(self):
         self.has_presented_frame = False
+        self.cache_density_cost = _CacheDensityCost()
         self.makeCurrent()
         self.glyph_cache.clear()
         self.particles.release()
@@ -758,7 +844,10 @@ class _Surface(QOpenGLWidget):
                 "interactiveUpdates": self.interactive_updates,
                 "refinements": self.refinements,
                 "updateCostMs": self.slow_tracker.cost_ms,
-                "slowFrames": self.slow_tracker.streak}
+                "slowFrames": self.slow_tracker.streak,
+                "cacheDensityMsPerRow": self.cache_density_cost.ms_per_row,
+                "presentationMs": self.presentation_tracker.last_ms,
+                "slowPresentations": self.presentation_tracker.streak}
 
     def update_texture(self, index):
         owner = self.owner
@@ -787,8 +876,9 @@ class _Surface(QOpenGLWidget):
         partial = known and _covered_rows(bands) * 10 < height * 6
         if not partial:
             bands = [(0, height)]
-        # Continuous large updates with a reported extent paint at native density and
-        # are refined at cache density after they pause; unknown changes keep density.
+        # Continuous large updates with a reported extent paint at native density when
+        # cache density would exceed the frame budget, and are refined at cache density
+        # after they pause; unknown changes keep density.
         native_dpr = self.devicePixelRatioF()
         now = self.clock.elapsed()
         slow = self.slow_tracker.cost_ms > 16
@@ -797,8 +887,11 @@ class _Surface(QOpenGLWidget):
         quantum = _shared_row_quantum(native_dpr, dpr)
         updated_at = cache.get("updated_at", -1)
         continuous = updated_at >= 0 and now - updated_at < interval
+        damaged_rows = _covered_rows(bands)
+        large = damaged_rows >= _INTERACTIVE_DAMAGE_SHARE * height
         interactive = (self.interactive and known and quantum and dpr > native_dpr and continuous
-                       and _covered_rows(bands) >= share * height)
+                       and damaged_rows >= share * height
+                       and not self.cache_density_cost.fits(damaged_rows, self.frame_update_ms))
         cache["updated_at"] = now
         # Qt caches nested effect pixmaps in device pixels and invalidates them only when
         # the painter transform changes, so a density switch would replay them misplaced.
@@ -826,7 +919,12 @@ class _Surface(QOpenGLWidget):
         self.interactive_updates += bool(interactive)
         if interactive:
             self.refine_timer.start()
-        self.frame_update_ms += clock.nsecsElapsed() / 1e6
+        update_ms = clock.nsecsElapsed() / 1e6
+        # A texture's first paint also compiles paint-engine shaders and fills glyph and
+        # image caches; it does not predict the cost of later updates.
+        if not interactive and large and cache.get("revision"):
+            self.cache_density_cost.record(update_ms, damaged_rows)
+        self.frame_update_ms += update_ms
         self.frame_interactive = self.frame_interactive or bool(interactive)
         cache["key"] = key
         cache["revision"], cache["rect"], cache["dpr"] = revision, QRectF(rect), dpr
@@ -835,6 +933,8 @@ class _Surface(QOpenGLWidget):
     def finish_texture_frame(self):
         if not self.frame_update_ms > 0:
             return
+        # Judge the composition that presents these rows; a first or resized frame warms up.
+        self.judge_presentation = self.has_presented_frame
         report = self.slow_tracker.record(self.frame_update_ms, self.frame_interactive)
         self.frame_update_ms = 0.
         self.frame_interactive = False
@@ -1514,6 +1614,24 @@ class GallerySpatialController(QObject):
         # Resource pressure can recover; keep the GPU available for another attempt.
         self.settings.set_spatial_mode_enabled(False)
         self.settle()
+
+    @Slot()
+    def release_slow_presentation(self):
+        # The renderer works, but every presented change stalls the window. Return to
+        # 2D as after a cache limit; turning 3D on again is honored for this surface.
+        # Rendering-contract tests keep 3D on hosts whose presentation is slow.
+        application = QGuiApplication.instance()
+        if (not _alive(self.window) or not self.settings.spatial_mode_enabled
+                or (application is not None and application.property("fluentqtGalleryKeepSlowPresentation"))):
+            return
+        self.release_oversized_presentation()
+        fluentqt.Toast.showToast(
+            self.window,
+            "3D presentation is too slow on this device, so the Gallery switched to 2D. "
+            "You can turn 3D Gallery on again in Settings.",
+            fluentqt.Toast.Severity.Warning,
+            6000,
+        )
 
     @Slot()
     def rendering_failed(self):
