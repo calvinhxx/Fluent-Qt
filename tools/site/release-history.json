@@ -69,8 +69,8 @@
         }
       ],
       "version": "1.11.0",
-      "status": "candidate",
-      "published_at": null,
+      "status": "published",
+      "published_at": "2026-10-30T14:30:39Z",
       "source_sha256": "71c569029fef813333fa055be8dfd45bcebb6667381e4740b321430bc7bae158",
       "summary": {
         "en": "Makes particles optional, adds application-provided icon fonts, improves 3D rendering, and introduces stable-ABI Python wheels and bilingual upgrade guidance.",
@@ -736,7 +736,7 @@
     }
   ],
   "unreleased": {
-    "after": "1.10.3",
+    "after": "1.11.0",
     "related": [],
     "headers": [],
     "changes": [],
