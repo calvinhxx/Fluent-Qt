@@ -96,6 +96,7 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtQmlBridgeExample.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSanitizers.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtTargetOptions.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtRuntime.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/CreateSourcePackage.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/SourcePackageREADME.md"
     DESTINATION "${_package_root}/cmake")

@@ -81,6 +81,39 @@ CMake applies it to the native metadata templates under `app/platform/windows`,
 `app/platform/macos`, and `app/platform/linux`; do not duplicate the application
 ID or display name in those templates.
 
+## Using an installed SDK
+
+The default Debug SDK uses release Qt dependencies. On Windows its code retains
+Debug information and optimization settings while using the release CRT. A
+consumer must use the same runtime across its executable and business libraries.
+
+For a standalone application, discover its dependencies and call the SDK setup
+directly in the top-level `CMakeLists.txt`, outside function scopes and before
+creating targets or adding subdirectories:
+
+```cmake
+find_package(FluentQt CONFIG REQUIRED)
+# Discover any other application dependencies here.
+fluent_qt_use_sdk_runtime()
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+This setup requires CMake 3.21 or newer. It selects the SDK's MSVC runtime for
+subsequently created application targets and maps already imported dependencies
+to release configurations when the SDK uses that policy. The installed FluentQt
+targets retain their own Debug configuration. The C++ onboarding starters make
+this call for standalone installed-SDK projects.
+
+`find_package()` only exposes the contract and helper; it does not change the
+host's runtime or Qt target mappings. Existing applications must coordinate the
+runtime at their root before constructing their target graph. The helper
+rejects late calls and calls from embedded subprojects. It does not retrofit
+existing targets, and dependencies discovered later remain the host's
+responsibility. The package exports `FluentQt_MSVC_RUNTIME_LIBRARY` and
+`FluentQt_DEBUG_RELEASE_RUNTIME` for hosts that configure this themselves.
+
 ## Release Qt Policy
 
 The Qt version used to produce an installer is a packaging-toolchain choice,

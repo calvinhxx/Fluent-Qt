@@ -30,6 +30,38 @@ toolchain: `vcpkg-osx` for macOS arm64, `vcpkg-windows` for Windows x64, or
 `vcpkg-linux` for Linux x64. Architecture variants are listed in
 `CMakePresets.json`; use `cmake --list-presets` to see those available locally.
 
+### Debug builds with release Qt
+
+Top-level builds and the standard desktop presets enable
+`FLUENT_QT_DEBUG_RELEASE_RUNTIME` by default on Windows, macOS, and Linux.
+Project code keeps its Debug optimization and debug-information settings, while
+imported Qt and other dependencies prefer Release, RelWithDebInfo, or MinSizeRel.
+Single-configuration system kits with `NONE` or unqualified imports are also
+supported. A kit that exports only Debug cannot satisfy this policy.
+
+On MSVC, project targets use the matching release CRT (`/MD`). The build copies
+the selected vcpkg DLLs next to each executable; Qt loads from its kit. This
+Windows deployment path requires CMake 3.21 or newer and the dynamic MSVC
+runtime. Other platforms keep their compiler runtime and deployment settings.
+
+To investigate Qt debug-library assertions, Windows debug-heap checks, or
+checked STL iterators with a suitable Qt kit, explicitly disable the policy:
+
+```bash
+cmake --preset vcpkg-windows -DFLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF
+```
+
+Configuring the standard preset without that override restores ON. Keep the
+option OFF when embedding FluentQt with `add_subdirectory()` or `FetchContent`;
+embedded builds default to OFF so the host selects a consistent configuration
+for its whole application.
+
+An installed SDK records its runtime contract. Applications using that SDK
+must match it, including their own static libraries. The
+[SDK runtime setup](packaging-workflow.md#using-an-installed-sdk) provides one
+explicit application-level call; `find_package()` alone does not change the
+host's runtime settings.
+
 If Qt is not found automatically, put its installation prefix in an ignored
 `CMakeUserPresets.json`. For example, replace the path below with the directory
 containing your Qt kit's `lib/cmake`:

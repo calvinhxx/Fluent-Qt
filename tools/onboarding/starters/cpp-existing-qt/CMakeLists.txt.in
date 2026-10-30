@@ -24,6 +24,11 @@ endif()
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
+        AND NOT FLUENTQT_SOURCE_DIR AND COMMAND fluent_qt_use_sdk_runtime)
+    fluent_qt_use_sdk_runtime()
+endif()
+
 add_library(@APP_TARGET@_workspace_panel STATIC
     src/application/WorkspaceSummary.cpp
     src/application/WorkspaceSummary.h
