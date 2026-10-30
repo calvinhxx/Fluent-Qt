@@ -328,6 +328,11 @@ bool performAction(QWidget* target, const QJsonObject& step, QString& mechanism,
     }
     if (action == QStringLiteral("focus")) {
         mechanism = QStringLiteral("focus-api");
+        target->window()->activateWindow();
+        if (!targetGuard) {
+            error = QStringLiteral("Target was removed while activating its window.");
+            return false;
+        }
         target->setFocus(Qt::OtherFocusReason);
         return true;
     }
