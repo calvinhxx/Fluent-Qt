@@ -341,6 +341,14 @@ screen-reader and IME acceptance.
 
 ## Component contracts
 
+`FontIcon` remains a non-focusable, mouse-transparent decoration with either
+bundled icons or an explicit application-registered `fontFamily`. Both paths
+retain theme and disabled text colors, explicit color overrides, rotation, and
+the same size hints. Font selection does not create an action or an accessible
+name from a private-use glyph; the caller supplies meaningful names and labels
+on the containing control. `TestFontIcon.cpp` covers family notifications,
+restoring the bundled mode, raw supplementary glyphs, and fractional/high DPI.
+
 `CommandPalette` composes the native accessible search editor and model-backed
 `ListView` rows inside a same-window `Popup`. Row names include the command group
 and shortcut; enabled and checked states follow the borrowed `QAction`.

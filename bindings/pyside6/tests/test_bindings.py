@@ -1753,6 +1753,7 @@ class FluentQtBindingTest(unittest.TestCase):
     def test_font_icon_properties_and_signals(self):
         empty_icon = fluentqt.FontIcon()
         self.assertEqual(empty_icon.glyph(), "")
+        self.assertEqual(empty_icon.fontFamily(), "")
 
         icon = fluentqt.FontIcon("ic_fluent_settings_20_regular")
         self.assertEqual(
@@ -1772,10 +1773,21 @@ class FluentQtBindingTest(unittest.TestCase):
         size_changes = []
         color_changes = []
         rotation_changes = []
+        family_changes = []
         icon.glyphChanged.connect(glyph_changes.append)
         icon.iconSizeChanged.connect(size_changes.append)
         icon.colorChanged.connect(color_changes.append)
         icon.rotationChanged.connect(rotation_changes.append)
+        icon.fontFamilyChanged.connect(family_changes.append)
+
+        family = fluentqt.font_for_role(fluentqt.FontRole.Body).family()
+        self.assertTrue(icon.setProperty("fontFamily", family))
+        icon.setFontFamily(family)
+        self.assertEqual(icon.fontFamily(), family)
+        icon.setFontFamily("")
+        icon.setFontFamily("")
+        self.assertEqual(family_changes, [family, ""])
+        self.assertEqual(icon.fontFamily(), "")
 
         icon.setGlyph("ic_fluent_save_20_regular")
         icon.setGlyph("ic_fluent_save_20_regular")

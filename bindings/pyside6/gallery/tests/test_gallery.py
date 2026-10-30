@@ -2296,7 +2296,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             for key, sample in SAMPLE_BY_KEY.items()
             if sample.preview_orientation is not None
         }
-        self.assertEqual(len(grouped_samples), 75)
+        self.assertEqual(len(grouped_samples), 76)
         expected_types = {
             "horizontal": QHBoxLayout,
             "vertical": QVBoxLayout,
@@ -2635,6 +2635,21 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 row.layout().alignment(),
                 Qt.AlignLeft | Qt.AlignVCenter,
             )
+        finally:
+            dispose(result)
+
+        result = build_sample("font-icon", "font-icon-custom-font")
+        try:
+            icons = result.widget.findChildren(fluentqt.FontIcon)
+            self.assertEqual(len(icons), 3)
+            family = fluentqt.font_for_role(fluentqt.FontRole.Body).family()
+            for icon in icons:
+                self.assertEqual(icon.fontFamily(), family)
+                self.assertEqual(icon.glyph(), "F")
+                self.assertEqual(icon.iconSize(), 24)
+            self.assertEqual(icons[1].rotation(), 90.0)
+            self.assertFalse(icons[2].isEnabled())
+            self.assertIn("setFontFamily(family)", result.source)
         finally:
             dispose(result)
 

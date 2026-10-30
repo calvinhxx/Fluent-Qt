@@ -1712,6 +1712,16 @@ def main():
         raise AssertionError("FontIcon did not preserve its explicit color")
     if font_icon.rotation() != 45.0:
         raise AssertionError("FontIcon did not preserve its rotation")
+    family_changes = []
+    font_icon.fontFamilyChanged.connect(family_changes.append)
+    family = fluentqt.font_for_role(fluentqt.FontRole.Body).family()
+    font_icon.setFontFamily(family)
+    font_icon.setFontFamily(family)
+    if font_icon.fontFamily() != family or family_changes != [family]:
+        raise AssertionError("FontIcon did not select the custom family exactly once")
+    font_icon.setFontFamily("")
+    if font_icon.fontFamily() or family_changes != [family, ""]:
+        raise AssertionError("FontIcon did not restore its bundled font mode")
 
     avatar = next(
         control
