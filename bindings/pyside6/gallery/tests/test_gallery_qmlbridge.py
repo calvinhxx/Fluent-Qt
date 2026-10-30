@@ -156,10 +156,12 @@ class GalleryQmlBridgeTest(unittest.TestCase):
                         _session_active=Mock(return_value=True), renderer_failed=False,
                         canvas=None, disable=Mock(), window=Mock(), navigation=Mock(),
                         set_filtering=Mock(), sync=Mock(), start_presentation=Mock(),
+                        _prepare_backdrop=Mock(),
                     )
                     controller.navigation.mapTo.return_value = QPoint()
                     controller.navigation.size.return_value = QSize(100, 100)
                     surface = Mock()
+                    surface.show.side_effect = controller._prepare_backdrop.assert_called_once_with
                     with patch.object(spatial._RhiSurface, "isPreferred", return_value=True), \
                             patch.object(spatial._RhiSurface, "preflightFailure",
                                          return_value="A hardware graphics device is unavailable."), \
@@ -178,12 +180,14 @@ class GalleryQmlBridgeTest(unittest.TestCase):
                             gl_probe.assert_called_once_with()
                             gl_surface.assert_called_once_with(controller, controller.window)
                             self.assertIs(controller.canvas, surface)
+                            controller._prepare_backdrop.assert_called_once_with()
                             surface.show.assert_called_once_with()
                         else:
                             controller.disable.assert_called_once_with(
                                 "A hardware graphics device is unavailable.")
                             gl_probe.assert_not_called()
                             gl_surface.assert_not_called()
+                            controller._prepare_backdrop.assert_not_called()
                             self.assertIsNone(controller.canvas)
         finally:
             self.app.setProperty("fluentqtGalleryGraphicsBackendFailure", previous)

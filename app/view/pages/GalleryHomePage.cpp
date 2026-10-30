@@ -55,6 +55,11 @@ constexpr int kHeroBottomFade =
 constexpr int kBodyMarginX = 24; // Body content inset (was 48) — matches the hero.
 constexpr int kBodyMarginTop = 20;
 constexpr int kHeroIconSize = 56;
+// CPU particle painting re-renders the hero beneath its children. Allow a higher update
+// cap while the compositor accelerates it; neither cap promises a measured display rate.
+// zh_CN: CPU 粒子绘制需重绘子控件下方的 hero；合成器加速时提高更新上限，两种上限都不代表实际显示帧率。
+constexpr int kHeroParticleCpuFrameRate = 30;
+constexpr int kHeroParticleGpuFrameRate = 60;
 constexpr int kHeroLinkCardWidth = 198;
 constexpr int kHeroLinkCardHeight = 150;
 constexpr int kHeroLinkCardSpacing = 16;
@@ -611,7 +616,13 @@ public:
         m_particles->setObjectName(QStringLiteral("galleryHomeParticles"));
         m_particles->setParticleCount(240);
         m_particles->setSpeed(.6);
-        m_particles->setMaximumFrameRate(30);
+        m_particles->setMaximumFrameRate(kHeroParticleCpuFrameRate);
+        // The 3D compositor requests acceleration only while it renders this backdrop.
+        // zh_CN: 仅当 3D 合成器实际渲染此背景时才请求加速。
+        connect(m_particles, &fluent::particles::ParticleBackdrop::gpuAccelerationEnabledChanged, this,
+            [this](bool accelerated) {
+                m_particles->setMaximumFrameRate(accelerated ? kHeroParticleGpuFrameRate : kHeroParticleCpuFrameRate);
+            });
         m_particles->setAttribute(Qt::WA_TransparentForMouseEvents);
         m_particles->lower();
         auto& settings = GallerySettings::instance();

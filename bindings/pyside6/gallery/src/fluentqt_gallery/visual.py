@@ -1455,6 +1455,10 @@ class GalleryHomeHero(QWidget):
     """Full-width native-style gradient hero and external link strip."""
 
     HEIGHT = 390
+    # Match the C++ Gallery's animation update caps. CPU painting re-renders the
+    # hero beneath its children; GPU composition can use the higher update cap.
+    PARTICLE_CPU_FRAME_RATE = 30
+    PARTICLE_GPU_FRAME_RATE = 60
 
     _LINKS = (
         (
@@ -1499,7 +1503,9 @@ class GalleryHomeHero(QWidget):
         self._particles.setObjectName("galleryHomeParticles")
         self._particles.setParticleCount(240)
         self._particles.setSpeed(0.6)
-        self._particles.setMaximumFrameRate(30)
+        self._particles.setMaximumFrameRate(self.PARTICLE_CPU_FRAME_RATE)
+        # The 3D compositor requests acceleration only while it renders this backdrop.
+        self._particles.gpuAccelerationEnabledChanged.connect(self._particle_acceleration_changed)
         self._particles.setAttribute(Qt.WA_TransparentForMouseEvents)
         self._particles.lower()
         settings = gallery_settings()
@@ -1610,6 +1616,10 @@ class GalleryHomeHero(QWidget):
             self._particles.setEffect(_home_particle_effect())
         self._particles.setAnimationEnabled(enabled)
         self._particles.setVisible(enabled)
+
+    def _particle_acceleration_changed(self, accelerated: bool) -> None:
+        self._particles.setMaximumFrameRate(
+            self.PARTICLE_GPU_FRAME_RATE if accelerated else self.PARTICLE_CPU_FRAME_RATE)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

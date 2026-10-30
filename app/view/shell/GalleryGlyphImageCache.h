@@ -2,7 +2,7 @@
 #define GALLERYGLYPHIMAGECACHE_H
 
 #include <QCache>
-#include <QCryptographicHash>
+#include <QHash>
 #include <QImage>
 #include "GallerySpatialRenderPolicy.h"
 
@@ -25,9 +25,14 @@ public:
         const qint64 bytes = qint64(image.bytesPerLine()) * image.height();
         if (bytes > m_images.maxCost() - metadataBytes)
             return image;
-        QByteArray key = QCryptographicHash::hash(
-            QByteArray::fromRawData(reinterpret_cast<const char*>(image.constBits()), int(bytes)),
-            QCryptographicHash::Sha256);
+        // The key only selects a candidate; the exact comparison below decides reuse.
+        // A cryptographic digest cost more than rasterizing the tile, notably with a
+        // Debug Qt runtime. A nonzero seed selects Qt's accelerated hash where available.
+        // zh_CN: 键只用于挑选候选项，是否复用由下方精确比较决定。加密摘要比栅格化本身更慢
+        // （Debug Qt 运行时尤甚）；非零种子在可用时启用 Qt 的硬件加速哈希。
+        constexpr uint seed = 0x9e3779b9u;
+        const auto digest = qHashBits(image.constBits(), size_t(bytes), seed);
+        QByteArray key(reinterpret_cast<const char*>(&digest), int(sizeof(digest)));
         const int width = image.width(), height = image.height();
         const qreal dpr = image.devicePixelRatioF();
         key.append(reinterpret_cast<const char*>(&width), sizeof(width));

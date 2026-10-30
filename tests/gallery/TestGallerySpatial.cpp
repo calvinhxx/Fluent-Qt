@@ -31,6 +31,7 @@
 #include <QScopeGuard>
 #include <QCheckBox>
 #include <QTest>
+#include <QThread>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QStackedLayout>
@@ -102,8 +103,13 @@ protected:
     windowing::BackdropEffect oldEffect;
     bool oldSpatial, oldIntro, oldAvailable, oldPending, oldParticles;
     QString oldUnavailableReason;
+    QVariant oldKeepSlowPresentation;
     void SetUp() override
     {
+        // Rendering contracts stay in 3D on hosts with slow presentation, such as WSLg.
+        // The presentation policy test opts back in.
+        oldKeepSlowPresentation = qApp->property("fluentqtGalleryKeepSlowPresentation");
+        qApp->setProperty("fluentqtGalleryKeepSlowPresentation", true);
         auto& s = GallerySettings::instance();
         oldAvailable = s.spatialAvailable();
         oldPending = s.spatialAvailabilityPending();
@@ -138,6 +144,7 @@ protected:
             s.setSpatialAvailability(oldAvailable, oldUnavailableReason);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QApplication::processEvents();
+        qApp->setProperty("fluentqtGalleryKeepSlowPresentation", oldKeepSlowPresentation);
     }
 };
 
@@ -2200,14 +2207,19 @@ class DamageProbe final : public QWidget {
 public:
     using QWidget::QWidget;
     int gpuPaints = 0;
+    // Simulates content whose cache-density paint exceeds the frame budget.
+    ulong paintDelayMs = 0;
     QColor color = Qt::red;
 
 protected:
     void paintEvent(QPaintEvent*) override
     {
         QPainter painter(this);
-        gpuPaints += painter.paintEngine()->type() == QPaintEngine::OpenGL2
+        const bool gpu = painter.paintEngine()->type() == QPaintEngine::OpenGL2
             || spatial_render::GalleryGlyphPaintDevice::delegatesToOpenGL(painter);
+        gpuPaints += gpu;
+        if (gpu && paintDelayMs)
+            QThread::msleep(paintDelayMs);
         painter.fillRect(rect(), color);
     }
 };
@@ -2287,6 +2299,113 @@ TEST_F(GallerySpatialTest, SlowNativeDensityFramesAreJudgedPerFrame)
     for (int frame = 0; frame < 20; ++frame)
         recovering.record(2, true);
     EXPECT_EQ(recovering.streak, 0) << "Fast native-density frames end the streak";
+}
+
+TEST_F(GallerySpatialTest, SlowContentPresentationsAreJudgedInARow)
+{
+    using namespace spatial_render;
+    SlowPresentationTracker tracker;
+    for (int frame = 1; frame < kSlowPresentationStreak; ++frame)
+        EXPECT_FALSE(tracker.record(kSlowPresentationMs + 1));
+    EXPECT_EQ(tracker.streak, kSlowPresentationStreak - 1);
+    EXPECT_FALSE(tracker.record(kSlowPresentationMs)) << "A presentation at the threshold is not slow";
+    EXPECT_EQ(tracker.streak, 0) << "A fast presentation ends the streak";
+    for (int frame = 1; frame < kSlowPresentationStreak; ++frame)
+        tracker.record(500);
+    tracker.interrupt();
+    EXPECT_EQ(tracker.streak, 0) << "A resize or cache release restarts the streak";
+    for (int frame = 1; frame < kSlowPresentationStreak; ++frame)
+        EXPECT_FALSE(tracker.record(500));
+    EXPECT_TRUE(tracker.record(500)) << "A sustained slow streak is reported";
+    EXPECT_DOUBLE_EQ(tracker.lastMs, 500);
+    for (int frame = 0; frame < kSlowPresentationStreak * 2; ++frame)
+        EXPECT_FALSE(tracker.record(500)) << "The return to 2D happens only once";
+}
+
+TEST_F(GallerySpatialTest, NativeSlowContentPresentationReturnsTo2DOnce)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL window composition";
+    QWidget window;
+    window.resize(800, 600);
+    auto* navigation = new navigation::NavigationView(&window);
+    navigation->resize(window.size());
+    auto* page = new DamageProbe;
+    navigation->contentHost()->insertPage(0, page);
+    navigation->contentHost()->setCurrentIndex(0, 0, false);
+    GallerySpatialController controller(&window, navigation);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    auto& settings = GallerySettings::instance();
+    qApp->setProperty("fluentqtGalleryKeepSlowPresentation", false);
+    const auto restore = qScopeGuard([&] {
+        settings.setSpatialModeEnabled(false);
+        controller.cancelTransition();
+    });
+    settings.setSpatialModeEnabled(true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return page->gpuPaints > 0; }, 3000));
+    controller.cancelTransition();
+    QTest::qWait(300);
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    if (!surface)
+        GTEST_SKIP() << "The active RHI backend does not time OpenGL window composition";
+    ASSERT_TRUE(surface->property("presenting").toBool());
+
+    // Stall every window composition after the surface has started timing it.
+    bool stall = true;
+    QObject::connect(surface, &QOpenGLWidget::aboutToCompose, &window, [&] {
+        if (stall)
+            QThread::msleep(ulong(spatial_render::kSlowPresentationMs) + 40);
+    });
+    const auto repaintContent = [&](int frames) {
+        for (int frame = 0; frame < frames && settings.spatialModeEnabled(); ++frame) {
+            const int paints = page->gpuPaints;
+            page->color = frame % 2 ? Qt::blue : Qt::green;
+            page->update();
+            if (!QTest::qWaitFor([&] { return page->gpuPaints > paints || !settings.spatialModeEnabled(); }, 3000))
+                return false;
+            QTest::qWait(20);
+        }
+        return true;
+    };
+
+    auto* pointer = controller.findChild<QVariantAnimation*>("galleryPointerAnimation");
+    ASSERT_NE(pointer, nullptr);
+    const auto paintedRows = [&] {
+        const auto stats = controller.renderingStatistics();
+        return stats["contentPaintedRows"].toLongLong() + stats["navigationPaintedRows"].toLongLong();
+    };
+    const qint64 rowsBeforePointer = paintedRows();
+    pointer->setDuration(500);
+    pointer->setStartValue(QPointF());
+    pointer->setEndValue(QPointF(.5, -.3));
+    pointer->start();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return pointer->state() == QAbstractAnimation::Stopped; }, 5000));
+    QTest::qWait(100);
+    // Without Qt's private widget headers, a queued surface update repaints the panels
+    // beneath it, so those pointer frames are content frames and are judged.
+    if (paintedRows() == rowsBeforePointer) {
+        EXPECT_TRUE(settings.spatialModeEnabled()) << "Pointer-only frames repaint no panel rows and are not judged";
+        EXPECT_EQ(controller.renderingStatistics()["slowPresentations"].toInt(), 0);
+    }
+
+    ASSERT_TRUE(repaintContent(spatial_render::kSlowPresentationStreak + 3));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !settings.spatialModeEnabled(); }, 3000))
+        << "Sustained slow content presentation returns to 2D";
+    EXPECT_GT(controller.renderingStatistics()["presentationMs"].toDouble(), spatial_render::kSlowPresentationMs);
+    EXPECT_TRUE(settings.spatialAvailable()) << "The renderer stays available for another attempt";
+    EXPECT_FALSE(surface->property("presenting").toBool());
+
+    settings.setSpatialModeEnabled(true);
+    controller.cancelTransition();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 3000));
+    EXPECT_EQ(surface, window.findChild<QOpenGLWidget*>("gallerySpatialSurface"));
+    QTest::qWait(300);
+    ASSERT_TRUE(repaintContent(spatial_render::kSlowPresentationStreak + 3));
+    QTest::qWait(100);
+    EXPECT_TRUE(settings.spatialModeEnabled()) << "Turning 3D on again is honored for this surface";
+    stall = false;
 }
 
 TEST_F(GallerySpatialTest, ContinuousFrameRequestsPresentWhenNoBackingStorePassReachesTheSurface)
@@ -2381,6 +2500,8 @@ TEST_F(GallerySpatialTest, ContinuousLargeUpdatesPaintAtNativeDensityThenRefine)
     auto* navigation = new navigation::NavigationView(&window);
     navigation->resize(window.size());
     auto* page = new DamageProbe;
+    // Cache density must exceed the frame budget before continuous updates degrade.
+    page->paintDelayMs = ulong(2 * spatial_render::kCacheDensityBudgetMs);
     navigation->contentHost()->insertPage(0, page);
     navigation->contentHost()->setCurrentIndex(0, 0, false);
     GallerySpatialController controller(&window, navigation);
@@ -2424,6 +2545,69 @@ TEST_F(GallerySpatialTest, ContinuousLargeUpdatesPaintAtNativeDensityThenRefine)
     EXPECT_EQ(settled["interactiveUpdates"].toLongLong(), moving["interactiveUpdates"].toLongLong())
         << "A refinement is never itself a native-density update";
     EXPECT_GT(pixel().blue(), 200);
+    GallerySettings::instance().setSpatialModeEnabled(false);
+    controller.cancelTransition();
+}
+
+TEST_F(GallerySpatialTest, CacheDensityCostKeepsAffordableUpdatesSharp)
+{
+    using namespace spatial_render;
+    CacheDensityCost cost;
+    EXPECT_FALSE(cost.fits(1, 0)) << "Without a measurement, continuous updates keep the previous fallback";
+    cost.record(4, 800);
+    EXPECT_DOUBLE_EQ(cost.msPerRow, .005);
+    EXPECT_TRUE(cost.fits(800, 0));
+    EXPECT_TRUE(cost.fits(800, kCacheDensityBudgetMs - 4)) << "Work already spent in the frame counts";
+    EXPECT_FALSE(cost.fits(800, kCacheDensityBudgetMs - 3.9));
+    cost.record(32, 800);
+    EXPECT_DOUBLE_EQ(cost.msPerRow, .005 * .8 + .04 * .2) << "Samples are averaged";
+    EXPECT_FALSE(cost.fits(800, 0)) << "9.6 ms exceeds the budget";
+    cost.record(-1, 800);
+    cost.record(5, 0);
+    EXPECT_DOUBLE_EQ(cost.msPerRow, .005 * .8 + .04 * .2) << "Invalid samples are ignored";
+}
+
+TEST_F(GallerySpatialTest, AffordableContinuousLargeUpdatesKeepCacheDensity)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires a native OpenGL paint engine";
+    QWidget window;
+    window.resize(800, 600);
+    auto* navigation = new navigation::NavigationView(&window);
+    navigation->resize(window.size());
+    auto* page = new DamageProbe;
+    navigation->contentHost()->insertPage(0, page);
+    navigation->contentHost()->setCurrentIndex(0, 0, false);
+    GallerySpatialController controller(&window, navigation);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return page->gpuPaints > 0; }, 3000));
+    controller.cancelTransition();
+    QTest::qWait(300);
+    // A texture's first paint is cold; a later isolated large update measures cache density.
+    page->update();
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return controller.renderingStatistics()["cacheDensityMsPerRow"].toDouble() > 0; }, 2000));
+    QTest::qWait(2 * spatial_render::kInteractiveIntervalMs);
+    const auto before = controller.renderingStatistics();
+    if (spatial_render::sharedRowQuantum(window.devicePixelRatioF(), before["cacheDpr"].toDouble()) == 0
+        || before["cacheDpr"].toDouble() <= window.devicePixelRatioF())
+        GTEST_SKIP() << "This display density has no separate native-density step";
+    for (int frame = 0; frame < 8; ++frame) {
+        page->color = frame % 2 ? Qt::blue : Qt::green;
+        const int paints = page->gpuPaints;
+        page->update();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return page->gpuPaints > paints; }, 2000));
+        QTest::qWait(20);
+    }
+    const auto after = controller.renderingStatistics();
+    const qreal panelRows = page->height() * after["cacheDpr"].toDouble();
+    if (after["cacheDensityMsPerRow"].toDouble() * panelRows > spatial_render::kCacheDensityBudgetMs)
+        GTEST_SKIP() << "This host paints cache density above the frame budget";
+    EXPECT_EQ(after["interactiveUpdates"].toLongLong(), before["interactiveUpdates"].toLongLong())
+        << "Updates that fit the frame budget keep text at cache density";
+    EXPECT_GT(after["contentPaintedRows"].toLongLong(), before["contentPaintedRows"].toLongLong());
     GallerySettings::instance().setSpatialModeEnabled(false);
     controller.cancelTransition();
 }
@@ -2718,7 +2902,11 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
         baselineFrame.save(dir + QStringLiteral("/nested-opacity-baseline.png"));
         baseline.save(dir + QStringLiteral("/nested-opacity-baseline-crop.png"));
     }
-    for (const int y : {180, 520}) {
+    // High-DPI desktops can constrain the requested window to a smaller logical
+    // height. Keep both effect positions inside the captured content surface.
+    const int lowerTileY = qMin(520, page->height() - tile->height() - 16);
+    ASSERT_GT(lowerTileY, 180) << "The fixture needs room for two visible effect positions";
+    for (const int y : {180, lowerTileY}) {
         SCOPED_TRACE(y);
         tile->move(80, y);
         for (const qreal alpha : {.25, .5, .75, 1.}) {
@@ -2726,7 +2914,9 @@ TEST_F(GallerySpatialTest, NativeNestedOpacityKeepsColorAndUnrelatedPixels)
             effect->setOpacity(alpha);
             QTest::qWait(100);
             const QImage image = spatialFrame(surface);
-            const QColor actual = image.pixelColor(point(tile, tile->rect().center()));
+            const QPoint samplePoint = point(tile, tile->rect().center());
+            ASSERT_TRUE(image.rect().contains(samplePoint)) << "The effect sample must stay inside the GPU frame";
+            const QColor actual = image.pixelColor(samplePoint);
             EXPECT_NEAR(actual.red(), 240 * (1 - alpha) + 220 * alpha, 6);
             EXPECT_NEAR(actual.green(), 240 * (1 - alpha) + 40 * alpha, 6);
             EXPECT_NEAR(actual.blue(), 240 * (1 - alpha) + 70 * alpha, 6);

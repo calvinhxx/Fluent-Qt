@@ -46,6 +46,8 @@ class GallerySpatialTest(unittest.TestCase):
             if not SPATIAL_AVAILABLE:
                 raise RuntimeError("Native Spatial tests require the optional Spatial binding")
         cls.app.setProperty("fluentqtGalleryAutomated", True)
+        # Rendering contracts stay in 3D on hosts with slow presentation, such as WSLg.
+        cls.app.setProperty("fluentqtGalleryKeepSlowPresentation", True)
         fluentqt.initialize_resources()
         cls.app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
 
@@ -73,6 +75,7 @@ class GallerySpatialTest(unittest.TestCase):
         controller = window._spatial_controller
         controller.cache_failure_timer.start(0)
         controller.render_failure_timer.start(0)
+        QTimer.singleShot(0, controller.release_slow_presentation)
         delete(window)
         self.assertFalse(isValid(controller))
         self.settings.set_spatial_availability(True)
@@ -1288,6 +1291,47 @@ class GallerySpatialTest(unittest.TestCase):
         self.assertEqual(recovering.streak, 0)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_cache_density_cost_keeps_affordable_updates_sharp(self):
+        from fluentqt_gallery.spatial_controller import _CACHE_DENSITY_BUDGET_MS, _CacheDensityCost
+        self.assertEqual(_CACHE_DENSITY_BUDGET_MS, 8)
+        cost = _CacheDensityCost()
+        self.assertFalse(cost.fits(1, 0))
+        cost.record(4, 800)
+        self.assertAlmostEqual(cost.ms_per_row, .005)
+        self.assertTrue(cost.fits(800, 0))
+        self.assertTrue(cost.fits(800, _CACHE_DENSITY_BUDGET_MS - 4))
+        self.assertFalse(cost.fits(800, _CACHE_DENSITY_BUDGET_MS - 3.9))
+        cost.record(32, 800)
+        self.assertAlmostEqual(cost.ms_per_row, .005 * .8 + .04 * .2)
+        self.assertFalse(cost.fits(800, 0))
+        cost.record(-1, 800)
+        cost.record(5, 0)
+        self.assertAlmostEqual(cost.ms_per_row, .005 * .8 + .04 * .2)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_slow_content_presentations_are_judged_in_a_row(self):
+        from fluentqt_gallery.spatial_controller import (
+            _SLOW_PRESENTATION_MS, _SLOW_PRESENTATION_STREAK, _SlowPresentationTracker,
+        )
+        self.assertEqual((_SLOW_PRESENTATION_MS, _SLOW_PRESENTATION_STREAK), (150, 6))
+        tracker = _SlowPresentationTracker()
+        for _frame in range(1, _SLOW_PRESENTATION_STREAK):
+            self.assertFalse(tracker.record(_SLOW_PRESENTATION_MS + 1))
+        self.assertEqual(tracker.streak, _SLOW_PRESENTATION_STREAK - 1)
+        self.assertFalse(tracker.record(_SLOW_PRESENTATION_MS))
+        self.assertEqual(tracker.streak, 0)
+        for _frame in range(1, _SLOW_PRESENTATION_STREAK):
+            tracker.record(500)
+        tracker.interrupt()
+        self.assertEqual(tracker.streak, 0)
+        for _frame in range(1, _SLOW_PRESENTATION_STREAK):
+            self.assertFalse(tracker.record(500))
+        self.assertTrue(tracker.record(500))
+        self.assertEqual(tracker.last_ms, 500)
+        for _frame in range(_SLOW_PRESENTATION_STREAK * 2):
+            self.assertFalse(tracker.record(500))
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_cache_budget_preserves_native_density(self):
         from fluentqt_gallery.spatial_controller import (
             _cache_plan, _preferred_extra_sampling, _CACHE_BUDGET_BYTES, _PAINT_SAMPLES,
@@ -1650,49 +1694,67 @@ print("2D-only Gallery: no OpenGL imports")
             self.skipTest("requires native OpenGL context recreation")
         from fluentqt_gallery.spatial_controller import GallerySpatialController
 
-        desktop = QWidget()
-        window = fluentqt.Window()
-        window._splash = window._dismissal_splash = None
-        window.resize(800, 600)
-        navigation = fluentqt.NavigationView(window)
-        navigation.resize(window.size())
-        controller = GallerySpatialController(window, navigation)
-        try:
-            window.show()
-            self.assertTrue(QTest.qWaitForWindowExposed(window))
-            self.settings.set_spatial_mode_enabled(True)
-            _qwait(600)
-            surface = controller.canvas
-            self.assertTrue(surface.property("presenting"))
-            old_context = surface.context()
-            old_functions = old_context.functions()
-            self.settings.set_spatial_mode_enabled(False)
-            _qwait(600)
-            self.assertTrue(surface.isHidden())
-            self.assertTrue(isValid(old_context))
-            self.assertTrue(isValid(old_functions), "2D mode must not invalidate a live context")
-            window.setParent(desktop, Qt.Widget)
-            desktop.resize(800, 600)
-            desktop.show()
-            window.show()
-            self.assertTrue(QTest.qWaitForWindowExposed(desktop))
-            self.settings.set_spatial_mode_enabled(True)
-            for _ in range(60):
-                if surface.property("presenting"):
-                    break
-                _qwait(50)
-            self.assertTrue(surface.property("presenting"))
-            self.assertTrue(surface.isValid())
-            self.assertTrue(self.settings.spatial_available)
-            self.assertIs(controller.canvas, surface)
-            self.assertFalse(isValid(old_context))
-            self.assertFalse(isValid(old_functions), "Retired context functions must leave the wrapper registry")
-            final_functions = surface.context().functions()
-            self.assertTrue(isValid(final_functions))
-        finally:
-            delete(window)
-            delete(desktop)
-        self.assertFalse(isValid(final_functions), "Window destruction must invalidate its borrowed functions")
+        for presenting in (False, True):
+            with self.subTest(presenting=presenting):
+                self.settings.set_spatial_mode_enabled(False)
+                desktop = QWidget()
+                window = fluentqt.Window()
+                window._splash = window._dismissal_splash = None
+                window.resize(800, 600)
+                navigation = fluentqt.NavigationView(window)
+                navigation.resize(window.size())
+                page = fluentqt.Card()
+                editor = fluentqt.LineEdit(page)
+                editor.setGeometry(20, 20, 240, 32)
+                editor.setText("Preserved context state")
+                navigation.contentHost().insertPage(0, page)
+                navigation.contentHost().setCurrentIndex(0, 0, False)
+                controller = GallerySpatialController(window, navigation)
+                try:
+                    window.show()
+                    self.assertTrue(QTest.qWaitForWindowExposed(window))
+                    self.settings.set_spatial_mode_enabled(True)
+                    _qwait(600)
+                    surface = controller.canvas
+                    self.assertTrue(surface.property("presenting"))
+                    old_context = surface.context()
+                    old_functions = old_context.functions()
+                    surface.cache_density_cost.record(8, 800)
+                    self.assertGreater(surface.cache_density_cost.ms_per_row, 0)
+                    if not presenting:
+                        self.settings.set_spatial_mode_enabled(False)
+                        _qwait(600)
+                        self.assertTrue(surface.isHidden())
+                    self.assertTrue(isValid(old_context))
+                    self.assertTrue(isValid(old_functions), "2D mode must not invalidate a live context")
+                    released_costs = []
+                    old_context.aboutToBeDestroyed.connect(
+                        lambda: released_costs.append(surface.cache_density_cost.ms_per_row))
+                    window.setParent(desktop, Qt.Widget)
+                    desktop.resize(800, 600)
+                    desktop.show()
+                    window.show()
+                    self.assertTrue(QTest.qWaitForWindowExposed(desktop))
+                    self.settings.set_spatial_mode_enabled(True)
+                    for _ in range(60):
+                        if surface.property("presenting") and surface.has_presented_frame:
+                            break
+                        _qwait(50)
+                    self.assertTrue(surface.property("presenting"))
+                    self.assertTrue(surface.has_presented_frame)
+                    self.assertTrue(surface.isValid())
+                    self.assertTrue(self.settings.spatial_available)
+                    self.assertIs(controller.canvas, surface)
+                    self.assertFalse(isValid(old_context))
+                    self.assertFalse(isValid(old_functions), "Retired context functions must leave the wrapper registry")
+                    final_functions = surface.context().functions()
+                    self.assertTrue(isValid(final_functions))
+                    self.assertEqual(editor.text(), "Preserved context state")
+                    self.assertEqual(released_costs, [0.], "A new GL context needs a fresh density-cost estimate")
+                finally:
+                    delete(window)
+                    delete(desktop)
+                self.assertFalse(isValid(final_functions), "Window destruction must invalidate its borrowed functions")
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_missing_initialization_callback_falls_back_after_waiting(self):
@@ -2023,6 +2085,96 @@ print("2D-only Gallery: no OpenGL imports")
             delete(window)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_slow_presentation_returns_to_2d_and_allows_retry(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires a native GPU surface")
+        from fluentqt_gallery.spatial_controller import (
+            GallerySpatialController, _RhiSurface, _SlowPresentationTracker, _Surface,
+        )
+
+        class SlowClock:
+            valid = False
+
+            def start(self):
+                self.valid = True
+
+            def invalidate(self):
+                self.valid = False
+
+            def isValid(self):
+                return self.valid
+
+            def nsecsElapsed(self):
+                return 190_000_000
+
+        key = "fluentqtGalleryKeepSlowPresentation"
+        previous = self.app.property(key)
+        window = fluentqt.Window()
+        window._splash = window._dismissal_splash = None
+        try:
+            window.resize(800, 600)
+            navigation = fluentqt.NavigationView(window)
+            navigation.resize(window.size())
+            page = fluentqt.Card()
+            editor = fluentqt.LineEdit(page)
+            editor.setGeometry(20, 20, 240, 32)
+            navigation.contentHost().insertPage(0, page)
+            navigation.contentHost().setCurrentIndex(0, 0, False)
+            controller = GallerySpatialController(window, navigation)
+            window.show()
+            self.assertTrue(QTest.qWaitForWindowExposed(window))
+            window.activateWindow()
+            self.settings.set_spatial_mode_enabled(True)
+            if isinstance(controller.canvas, _RhiSurface):
+                self.skipTest("RHI does not use the OpenGL presentation tracker")
+            self.assertIsInstance(controller.canvas, _Surface)
+            surface = controller.canvas
+            for _ in range(100):
+                if surface.property("presenting") and surface.has_presented_frame and window.isActiveWindow():
+                    break
+                _qwait(50)
+            self.assertTrue(surface.property("presenting"))
+            self.assertTrue(surface.has_presented_frame)
+            self.assertTrue(window.isActiveWindow())
+            # Inject only elapsed time; real content invalidation and compose/swap
+            # signals still decide which frames count. The UI thread never sleeps.
+            surface.presentation_clock = SlowClock()
+            surface.presentation_tracker = _SlowPresentationTracker()
+            self.app.setProperty(key, False)
+            with patch.object(fluentqt.Toast, "showToast") as toast:
+                for frame in range(30):
+                    editor.setText(f"Preserved value {frame}")
+                    _qwait(50)
+                    if not self.settings.spatial_mode_enabled:
+                        break
+                self.assertFalse(self.settings.spatial_mode_enabled)
+                self.assertFalse(surface.property("presenting"))
+                self.assertTrue(self.settings.spatial_available)
+                self.assertIs(controller.canvas, surface)
+                self.assertFalse(navigation.graphicsEffect().isEnabled())
+                self.assertFalse(navigation.contentHost().graphicsEffect().isEnabled())
+                self.assertEqual(surface.statistics()["glyphCacheBytes"], 0)
+                self.assertEqual(editor.text(), f"Preserved value {frame}")
+                self.assertTrue(isValid(editor))
+                editor.setFocus()
+                editor.setCursorPosition(len(editor.text()))
+                QTest.keyClicks(editor, " native")
+                self.assertEqual(editor.text(), f"Preserved value {frame} native")
+                toast.assert_called_once()
+                self.assertIn("switched to 2D", toast.call_args.args[1])
+                self.settings.set_spatial_mode_enabled(True)
+                for frame in range(12):
+                    editor.setText(f"Retry value {frame}")
+                    _qwait(50)
+                self.assertTrue(self.settings.spatial_mode_enabled)
+                self.assertTrue(surface.property("presenting"))
+                self.assertEqual(editor.text(), "Retry value 11")
+                toast.assert_called_once()
+        finally:
+            delete(window)
+            self.app.setProperty(key, previous)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_gpu_filters_projected_high_dpi_detail(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
             self.skipTest("requires native GPU texture sampling")
@@ -2086,9 +2238,19 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertGreater(surface.paint_target.format().samples(), 1)
             dpr = surface.devicePixelRatioF()
             from fluentqt_gallery.glyph_paint_device import glyph_raster_dpr, needs_native_glyph_coverage
-            self.assertEqual(content.glyph_dpr,
-                             glyph_raster_dpr(content.font(), dpr, surface.plan[0])
-                             if needs_native_glyph_coverage(dpr) else 0)
+            expected_glyph_dpr = (glyph_raster_dpr(content.font(), dpr, surface.plan[0])
+                                  if needs_native_glyph_coverage(dpr) else 0)
+            # Activation can still have native-density rows awaiting refinement.
+            # Judge settled text after those rows return to the cache density.
+            for _ in range(40):
+                if (content.glyph_dpr == expected_glyph_dpr
+                        and all(cache.get("degraded") is None or cache["degraded"].isEmpty()
+                                for cache in surface.caches)):
+                    break
+                _qwait(50)
+            self.assertEqual(content.glyph_dpr, expected_glyph_dpr)
+            self.assertTrue(all(cache.get("degraded") is None or cache["degraded"].isEmpty()
+                                for cache in surface.caches), surface.statistics())
             controller.motion.setStartValue(0.)
             controller.motion.setEndValue(1.)
             controller.motion.setCurrentTime(controller.motion.duration() // 2)

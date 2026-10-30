@@ -6750,6 +6750,20 @@ with (
         finally:
             delete_qobject(backdrop)
 
+    def test_home_particles_restore_update_caps_when_acceleration_changes(self):
+        hero = GalleryHomeHero()
+        try:
+            backdrop = hero.findChild(ParticleBackdrop, "galleryHomeParticles")
+            self.assertIsNotNone(backdrop)
+            self.assertEqual(backdrop.maximumFrameRate(), 30)
+            # The 3D compositor requests acceleration only while it renders the backdrop.
+            backdrop.setGpuAccelerationEnabled(True)
+            self.assertEqual(backdrop.maximumFrameRate(), 60)
+            backdrop.setGpuAccelerationEnabled(False)
+            self.assertEqual(backdrop.maximumFrameRate(), 30)
+        finally:
+            delete_qobject(hero)
+
     def test_settings_page_matches_native_rows_and_choices(self):
         window = GalleryWindow()
         window.show()
