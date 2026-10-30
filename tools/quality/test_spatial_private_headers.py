@@ -53,13 +53,21 @@ def qt_private_targets(root, *, major=6, missing_target=None, missing_directory=
 
 
 class SpatialPrivateHeadersContract(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._workspace = tempfile.TemporaryDirectory(prefix="fluentqt-spatial-config-")
+        cls.addClassCleanup(cls._workspace.cleanup)
+        cls._projects = Path(cls._workspace.name).resolve()
+
     def configure(self, *, major=6, missing_target=None, missing_directory=None,
                   widget_header=None, conditional=False, disabled_headers=None):
-        with tempfile.TemporaryDirectory(prefix="fluentqt-spatial-private-") as temporary:
-            root = Path(temporary).resolve()
+        root = self._projects / "headers"
+        root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="case-", dir=root) as temporary:
+            headers = Path(temporary).resolve()
             source = ["cmake_minimum_required(VERSION 3.16)", "project(PrivateHeaders NONE)",
                       f"set(QT_VERSION_MAJOR {major})"]
-            source += qt_private_targets(root, major=major, missing_target=missing_target,
+            source += qt_private_targets(headers, major=major, missing_target=missing_target,
                                          missing_directory=missing_directory, widget_header=widget_header,
                                          conditional=conditional, disabled_headers=disabled_headers)
             source.extend([
@@ -83,8 +91,11 @@ class SpatialPrivateHeadersContract(unittest.TestCase):
                            rhi_headers=RHI_HEADERS, **private_options):
         # Exercise the production target creation, not a copied linkage condition.
         # A real compiled target makes CMake validate imported include directories.
-        with tempfile.TemporaryDirectory(prefix="fluentqt-spatial-renderer-") as temporary:
-            root = Path(temporary).resolve()
+        # Reuse compiler discovery; fresh header fixtures keep missing-path cases isolated.
+        root = self._projects / "renderer"
+        root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="case-", dir=root) as temporary:
+            headers = Path(temporary).resolve()
             for relative in ("dummy.cpp", "support/spatial/SpatialTextureHost.cpp",
                              "support/spatial/SpatialTextureHost.h",
                              "support/spatial/shaders/spatial_rhi.qrc"):
@@ -95,7 +106,7 @@ class SpatialPrivateHeadersContract(unittest.TestCase):
                       f"set(QT_VERSION_MAJOR {major})", f"set(Qt6_VERSION {version})",
                       f"set(WIN32 {'TRUE' if platform == 'windows' else 'FALSE'})",
                       f"set(APPLE {'TRUE' if platform == 'macos' else 'FALSE'})"]
-            source += qt_private_targets(root, major=major, rhi_headers=rhi_headers,
+            source += qt_private_targets(headers, major=major, rhi_headers=rhi_headers,
                                          widget_header="private/qwidget_p.h", **private_options)
             source += [
                 f"add_library(Qt{major}::OpenGLWidgets INTERFACE IMPORTED)",

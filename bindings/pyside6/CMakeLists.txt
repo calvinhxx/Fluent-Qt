@@ -1105,17 +1105,24 @@ if(BUILD_TESTING)
         set_tests_properties(test_pyside6_gallery_qmlplus PROPERTIES
             ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
             LABELS "pyside;unit;ci_fast;lifetime" TIMEOUT 60)
-        add_test(
-            NAME test_pyside6_gallery
-            COMMAND "${Python_EXECUTABLE}" -X faulthandler
-                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery.py")
-        set_tests_properties(test_pyside6_gallery PROPERTIES
-            ENVIRONMENT
-                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
-            LABELS "pyside;unit;ci_fast"
-            TIMEOUT 240)
+        foreach(_gallery_test IN ITEMS test_pyside6_gallery test_pyside6_gallery_routes)
+            add_test(
+                NAME ${_gallery_test}
+                COMMAND "${Python_EXECUTABLE}" -X faulthandler
+                    "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery.py")
+            set_tests_properties(${_gallery_test} PROPERTIES
+                ENVIRONMENT
+                    "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+                LABELS "pyside;unit;ci_fast"
+                TIMEOUT 240)
+        endforeach()
+        set_property(TEST test_pyside6_gallery APPEND PROPERTY ENVIRONMENT
+            "FLUENT_QT_GALLERY_TEST_GROUP=core")
+        set_property(TEST test_pyside6_gallery_routes APPEND PROPERTY ENVIRONMENT
+            "FLUENT_QT_GALLERY_TEST_GROUP=routes")
         if(TARGET FluentQtQmlBridge)
-            set_property(TEST test_pyside6_gallery APPEND PROPERTY ENVIRONMENT "QT_QUICK_BACKEND=software")
+            set_property(TEST test_pyside6_gallery test_pyside6_gallery_routes APPEND PROPERTY
+                ENVIRONMENT "QT_QUICK_BACKEND=software")
             add_test(NAME test_pyside6_gallery_qmlbridge
                 COMMAND "${Python_EXECUTABLE}" -X faulthandler
                     "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_qmlbridge.py" -v)

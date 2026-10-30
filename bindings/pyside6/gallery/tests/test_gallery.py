@@ -7022,5 +7022,34 @@ class _GalleryTestRunner(unittest.TextTestRunner):
     resultclass = _GalleryTestResult
 
 
+def _test_cases(suite):
+    for item in suite:
+        if isinstance(item, unittest.TestSuite):
+            yield from _test_cases(item)
+        else:
+            yield item
+
+
+def load_tests(_loader, tests, _pattern):
+    """Partition full route sweeps after unittest applies its name filters."""
+    group = os.environ.get("FLUENT_QT_GALLERY_TEST_GROUP", "all")
+    if group == "all":
+        return tests
+    if group not in {"core", "routes"}:
+        raise ValueError(f"Unknown Gallery test group: {group}")
+    route_sweeps = {
+        "test_window_builds_all_available_routes_and_sample_cards",
+        "test_all_built_routes_survive_theme_refresh_cycles",
+    }
+    if any(not hasattr(PythonGalleryTest, name) for name in route_sweeps):
+        raise RuntimeError("The Gallery route-sweep test group is stale")
+    prefix = f"{PythonGalleryTest.__module__}.{PythonGalleryTest.__qualname__}."
+    route_ids = {prefix + name for name in route_sweeps}
+    return unittest.TestSuite(
+        test for test in _test_cases(tests)
+        if (test.id() in route_ids) == (group == "routes")
+    )
+
+
 if __name__ == "__main__":
     unittest.main(testRunner=_GalleryTestRunner, verbosity=2)
