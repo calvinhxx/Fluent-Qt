@@ -30,6 +30,7 @@ def run(*arguments: str) -> None:
 
 def prepare_catalogs() -> None:
     """Refresh derived inputs before quality gates or preview recipe discovery."""
+    run("tools/site/release_history.py")
     run("tools/ai/generate_ai_catalog.py", "--project-root", str(ROOT))
     run("tools/site/generate_api_reference.py", "--catalog-only")
     run("tools/ai/generate_ai_catalog.py", "--project-root", str(ROOT), "--check")
@@ -64,6 +65,8 @@ def verify(folder: Path, commit: str) -> None:
         raise ValueError("Site artifact contents differ from the validated build")
     for name in ("index.html", "zh-CN/index.html", "api/index.html", "api/catalog.json",
                  "api/button/index.html", "zh-CN/api/button/index.html", "sitemap.xml",
+                 "api/releases/index.html", "zh-CN/api/releases/index.html",
+                 "api/roadmap/index.html", "zh-CN/api/roadmap/index.html",
                  "assets/component-previews/manifest.json", *COPIED_ASSETS):
         if name not in receipt["files"]:
             raise ValueError(f"Incomplete site artifact: {name}")

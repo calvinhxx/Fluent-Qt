@@ -24,6 +24,8 @@ class SiteArtifactTest(unittest.TestCase):
         self.site = self.root / "site"
         self.files = (".nojekyll", "index.html", "zh-CN/index.html", "api/index.html", "api/catalog.json",
                       "api/button/index.html", "zh-CN/api/button/index.html", "sitemap.xml",
+                      "api/releases/index.html", "zh-CN/api/releases/index.html",
+                      "api/roadmap/index.html", "zh-CN/api/roadmap/index.html",
                       "assets/component-previews/manifest.json", "assets/component-previews/button/light.png")
         for name in self.files:
             path = self.site / name
@@ -209,7 +211,8 @@ class SiteGenerationTest(unittest.TestCase):
 
     def test_catalogs_are_generated_before_checks_and_invalid_sources_still_fail(self):
         self.build()
-        self.assertEqual(self.commands[:4], [
+        self.assertEqual(self.commands[:5], [
+            ("tools/site/release_history.py",),
             ("tools/ai/generate_ai_catalog.py", "--project-root", str(build_site.ROOT)),
             ("tools/site/generate_api_reference.py", "--catalog-only"),
             ("tools/ai/generate_ai_catalog.py", "--project-root", str(build_site.ROOT), "--check"),

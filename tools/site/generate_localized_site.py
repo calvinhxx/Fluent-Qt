@@ -305,6 +305,8 @@ def render_page(
     page = prefix_resources(page, locale.resource_prefix)
     # Resolve this locale-owned link after prefixing shared assets.
     page = page.replace("{{API_URL}}", documentation_entry(locale.key).removeprefix("zh-CN/"))
+    for kind in ('releases', 'roadmap'):
+        page = page.replace('{{' + kind.upper() + '_URL}}', 'api/' + kind + '/')
     if re.search(r"{{[A-Z0-9_]+}}", page):
         fail(f"unresolved template token in {locale.output}")
     return page.rstrip() + "\n"
@@ -317,6 +319,7 @@ def render_sitemap() -> str:
     from generate_api_reference import generate_reference
     entries = []
     paths = ['api/' + component['id'] + '/' for component in config()]
+    paths += ['api/releases/', 'api/roadmap/']
     paths += [guide_path(item['id']).removesuffix('index.html') for item in guides()]
     paths += [reference_path(item['source']).removesuffix('index.html') for item in reference_headers(generate_reference())]
     for path in paths:
