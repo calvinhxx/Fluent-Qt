@@ -390,6 +390,9 @@ The action schema is `tools/dev/gallery-preview-actions.schema.json`. Steps
 target stable `objectName` values, send Qt mouse or keyboard events, and can
 assert observable properties. A failed action or assertion makes the preview
 exit nonzero while still writing the report for diagnosis.
+An explicit `focus` action requests activation of the target's top-level window
+before setting widget focus. Native hosts may refuse activation; keep
+`has_focus` assertions when a capture requires keyboard focus.
 
 For documentation imagery, add `--capture-target <objectName>` to capture one
 uniquely named, visible widget instead of the entire preview window. The target

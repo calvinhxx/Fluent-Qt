@@ -159,6 +159,29 @@ TEST(GalleryPreviewTest, ExecutesInputAndStateInteractionStepsWithAssertions)
     QApplication::processEvents();
 }
 
+TEST(GalleryPreviewTest, FocusActionActivatesItsInactivePreviewWindow)
+{
+    QWidget root;
+    QPushButton button(QStringLiteral("Focus target"), &root);
+    button.setObjectName(QStringLiteral("focusTarget"));
+    root.show();
+    QWidget other;
+    other.show();
+    other.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&other));
+    ASSERT_FALSE(root.isActiveWindow());
+    ASSERT_FALSE(button.hasFocus());
+
+    const QJsonObject script{{"schema_version", 1},
+        {"steps",
+            QJsonArray{QJsonObject{{"action", "focus"}, {"target", "focusTarget"}, {"after_ms", 100},
+                {"expect", QJsonObject{{"has_focus", true}}}}}}};
+    const auto result = fluent::gallery::executeGalleryPreviewActions(&root, script, QString());
+    EXPECT_TRUE(result.passed) << QJsonDocument(result.report).toJson().toStdString();
+    EXPECT_TRUE(root.isActiveWindow());
+    EXPECT_TRUE(button.hasFocus());
+}
+
 TEST(GalleryPreviewTest, RejectsWaitForFocusedWidgetOutsidePreviewRoot)
 {
     QWidget window;
