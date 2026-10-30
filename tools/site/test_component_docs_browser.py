@@ -59,8 +59,12 @@ def main():
                 code.get_by_role("tab", name="PySide6", exact=True).click()
                 displayed = code.locator('[role="tabpanel"]:not([hidden]) code').inner_text()
                 code.locator("[data-copy]").click()
-                assert page.evaluate("navigator.clipboard.readText()") == displayed
                 expect(page.locator(".copy-status")).to_be_visible()
+                expect(page.locator(".copy-status")).to_have_text(
+                    page.locator("body").get_attribute("data-copy-success"))
+                # Windows clipboard text uses CRLF; retain exact code comparison in LF form.
+                copied = page.evaluate("navigator.clipboard.readText()").replace("\r\n", "\n")
+                assert copied == displayed
                 expect(page.locator('a[download], .imports, .run-instructions')).to_have_count(0)
                 assert displayed.startswith('import fluentqt')
                 if component == "button" and language == "en":
