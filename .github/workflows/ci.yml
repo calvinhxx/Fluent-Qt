@@ -48,11 +48,11 @@ jobs:
       cpp_test_targets: ${{ steps.changes.outputs.cpp_test_targets }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Generate documentation inputs
         run: python3 tools/site/build_site.py --prepare
       - name: Cache verified font source inputs
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/font-sources
           key: fluentqt-font-sources-v1-${{ hashFiles('tools/fonts/source-assets.json') }}

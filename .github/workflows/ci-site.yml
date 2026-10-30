@@ -18,12 +18,12 @@ jobs:
       LIBGL_ALWAYS_SOFTWARE: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
 
@@ -37,7 +37,7 @@ jobs:
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       - name: Cache matching native previews
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: site/assets/component-previews
           key: fluentqt-site-previews-ubuntu24-qt${{ env.QT_VERSION }}-v1-${{ steps.preview-key.outputs.digest }}
@@ -62,7 +62,7 @@ jobs:
       - name: Cache Qt native kit
         if: ${{ steps.previews.outputs.build == 'true' }}
         id: qt-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/Qt
           key: fluentqt-site-qt-${{ runner.os }}-${{ runner.arch }}-${{ env.QT_VERSION }}
@@ -102,7 +102,7 @@ jobs:
           node --test tools/site/test_support.mjs
 
       - name: Cache Chromium
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: fluentqt-playwright-${{ runner.os }}-${{ runner.arch }}-1.58.0
@@ -117,7 +117,7 @@ jobs:
         run: python tools/site/test_theme_browser.py --site-root build/site-pages --output build/site-theme-browser
 
       - name: Upload generated website
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-site-pages
           path: build/site-pages
@@ -127,7 +127,7 @@ jobs:
 
       - name: Upload capture diagnostics
         if: ${{ failure() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-site-capture-diagnostics-${{ github.run_attempt }}
           path: |
