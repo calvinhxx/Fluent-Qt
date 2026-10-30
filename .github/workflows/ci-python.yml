@@ -40,7 +40,7 @@ jobs:
       pyside_release_matrix: ${{ steps.matrix.outputs.pyside_release_matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate PySide6 catalogs and policies
         shell: bash
@@ -103,21 +103,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Linux build and virtual display tools
         shell: bash
         run: bash .github/scripts/install-linux-dependencies.sh aqt
 
       - name: Install Qt 6.9.3 SDK
-        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.9.3"
           arch: linux_gcc_64
           cache: true
 
       - name: Install Python 3.11
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
           cache: pip
@@ -188,21 +188,21 @@ jobs:
       VALIDATION_MODE: ${{ needs.plan.outputs.mode }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Linux build tools
         shell: bash
         run: bash .github/scripts/install-linux-dependencies.sh aqt
 
       - name: Install Qt 6.2.4 SDK
-        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.2.4"
           arch: gcc_64
           cache: true
 
       - name: Install Python 3.10
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.10"
           cache: pip
@@ -492,7 +492,7 @@ jobs:
             --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
 
       - name: Upload PySide6 wheel
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-qt624-cp310-linux-x64
           path: |
@@ -502,7 +502,7 @@ jobs:
 
       - name: Upload PySide6 acceptance snapshot
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-showcase-qt624-cp310-linux-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
@@ -510,7 +510,7 @@ jobs:
 
       - name: Upload PySide6 native window acceptance
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-window-chrome-qt624-cp310-linux-x64
           path: |
@@ -541,7 +541,7 @@ jobs:
 
       - name: Upload Linux PySide6 first-window report
         if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-first-window-python-${{ needs.plan.outputs.mode }}-linux-x64-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fluentqt-first-window-python-linux.json
@@ -558,17 +558,17 @@ jobs:
       VALIDATION_MODE: ${{ needs.plan.outputs.mode }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Python 3.10
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.10"
           cache: pip
           cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt 6.2.4 SDK
-        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.2.4"
           arch: win64_msvc2019_64
@@ -722,7 +722,7 @@ jobs:
 
       - name: Upload native Python lifetime diagnostics
         if: ${{ !cancelled() && (steps.windows_binding_tests.outcome == 'success' || steps.windows_binding_tests.outcome == 'failure') }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-windows-python-lifetime-diagnostics
           path: |
@@ -886,7 +886,7 @@ jobs:
             --report (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-window-chrome.json")
 
       - name: Upload PySide6 wheel
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-qt624-cp310-windows-x64
           path: |
@@ -896,7 +896,7 @@ jobs:
 
       - name: Upload PySide6 acceptance snapshot
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-showcase-qt624-cp310-windows-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
@@ -904,7 +904,7 @@ jobs:
 
       - name: Upload PySide6 native window acceptance
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-window-chrome-qt624-cp310-windows-x64
           path: |
@@ -941,7 +941,7 @@ jobs:
 
       - name: Upload Windows PySide6 first-window report
         if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-first-window-python-${{ needs.plan.outputs.mode }}-windows-x64-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fluentqt-first-window-python-windows.json
@@ -958,10 +958,10 @@ jobs:
       FLUENTQT_REQUIRE_SPATIAL: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Python 3.11
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
           cache: pip
@@ -971,20 +971,20 @@ jobs:
       # only install and smoke-test it, so they leave PATH unchanged.
       - name: Install CPython 3.12 for stable-ABI wheel tests
         id: python312
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
           update-environment: false
 
       - name: Install CPython 3.13 for stable-ABI wheel tests
         id: python313
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
           update-environment: false
 
       - name: Install Qt 6.9.3 SDK
-        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.9.3"
           arch: clang_64
@@ -1217,7 +1217,7 @@ jobs:
             --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
 
       - name: Upload PySide6 wheel
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-qt693-cp311-abi3-macos-arm64
           path: |
@@ -1226,14 +1226,14 @@ jobs:
           if-no-files-found: error
 
       - name: Upload PySide6 acceptance snapshot
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-showcase-qt693-cp311-abi3-macos-arm64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
           if-no-files-found: error
 
       - name: Upload PySide6 native window acceptance
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-window-chrome-qt693-cp311-abi3-macos-arm64
           path: |
@@ -1260,7 +1260,7 @@ jobs:
 
       - name: Upload macOS PySide6 first-window report
         if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-first-window-python-${{ needs.plan.outputs.mode }}-macos-arm64-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fluentqt-first-window-python-macos.json
@@ -1284,7 +1284,7 @@ jobs:
       matrix: ${{ fromJson(needs.plan.outputs.pyside_release_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Verify native runner architecture
         shell: pwsh
@@ -1299,7 +1299,7 @@ jobs:
         run: bash .github/scripts/install-linux-dependencies.sh aqt
 
       - name: Install Python ${{ matrix.python_version }} ${{ matrix.arch }}
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python_version }}
           architecture: ${{ matrix.python_arch }}
@@ -1311,7 +1311,7 @@ jobs:
       - name: Install CPython 3.12 ${{ matrix.arch }} for stable-ABI wheel tests
         id: python312
         if: ${{ contains(matrix.test_python_versions, '3.12') && matrix.python_version != '3.12' }}
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
           architecture: ${{ matrix.python_arch }}
@@ -1320,14 +1320,14 @@ jobs:
       - name: Install CPython 3.13 ${{ matrix.arch }} for stable-ABI wheel tests
         id: python313
         if: ${{ contains(matrix.test_python_versions, '3.13') && matrix.python_version != '3.13' }}
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
           architecture: ${{ matrix.python_arch }}
           update-environment: false
 
       - name: Install Qt ${{ matrix.qt_version }} SDK
-        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: ${{ matrix.qt_version }}
           host: ${{ matrix.qt_host }}
@@ -1852,7 +1852,7 @@ jobs:
 
       - name: Upload PySide6 release wheel
         if: ${{ runner.os != 'Linux' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
           path: |
@@ -1862,7 +1862,7 @@ jobs:
 
       - name: Upload PySide6 manylinux release wheel and audit
         if: ${{ runner.os == 'Linux' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
           path: |
@@ -1873,7 +1873,7 @@ jobs:
 
       - name: Upload PySide6 release acceptance snapshot
         if: ${{ matrix.extended_acceptance == true }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-showcase-${{ matrix.artifact_suffix }}
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
@@ -1881,7 +1881,7 @@ jobs:
 
       - name: Upload PySide6 release native window acceptance
         if: ${{ matrix.extended_acceptance == true }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-pyside6-window-chrome-${{ matrix.artifact_suffix }}
           path: |
@@ -1907,10 +1907,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Download release-wheel artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: fluentqt-pyside6-qt693-*
           path: ${{ runner.temp }}/fluentqt-python-release-input
@@ -1968,7 +1968,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload canonical Python release bundle
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fluentqt-python-release-bundle
           path: ${{ runner.temp }}/fluentqt-python-release-bundle
@@ -1988,7 +1988,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Read current-attempt evidence
         env:
