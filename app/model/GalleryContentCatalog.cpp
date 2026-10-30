@@ -30,8 +30,8 @@ const QHash<QString, QString>& routeDescriptions()
             QStringLiteral("The complete searchable Fluent UI System Icons Regular "
                            "catalog bundled with FluentQt.")},
         {QStringLiteral("font-icon"),
-            QStringLiteral("A theme-aware widget that renders bundled Fluent icon "
-                           "glyphs at optical sizes.")},
+            QStringLiteral("A theme-aware widget for bundled Fluent icons or glyphs "
+                           "from an application-provided font family.")},
         {QStringLiteral("foundation-geometry"),
             QStringLiteral("Corner-radius and stroke-width tokens that define "
                            "FluentQt control shapes.")},

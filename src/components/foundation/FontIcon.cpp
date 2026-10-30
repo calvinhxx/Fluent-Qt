@@ -4,6 +4,8 @@
 #include <QPaintEvent>
 #include <QPainter>
 
+#include "compatibility/FontCompat.h"
+
 namespace fluent {
 
 FontIcon::FontIcon(QWidget* parent) : FontIcon(QString(), parent) {}
@@ -22,6 +24,16 @@ void FontIcon::setGlyph(const QString& glyph)
     m_glyph = glyph;
     update();
     emit glyphChanged(m_glyph);
+}
+
+void FontIcon::setFontFamily(const QString& family)
+{
+    if (m_fontFamily == family)
+        return;
+
+    m_fontFamily = family;
+    update();
+    emit fontFamilyChanged(m_fontFamily);
 }
 
 void FontIcon::setIconSize(int size)
@@ -86,7 +98,15 @@ void FontIcon::paintEvent(QPaintEvent* event)
         painter.rotate(m_rotation);
         painter.translate(-center);
     }
-    Typography::Icons::paintGlyph(painter, QRectF(rect()), m_glyph, m_iconSize, Qt::AlignCenter);
+    if (m_fontFamily.isEmpty()) {
+        Typography::Icons::paintGlyph(painter, QRectF(rect()), m_glyph, m_iconSize, Qt::AlignCenter);
+    } else {
+        QFont iconFont(m_fontFamily);
+        iconFont.setPixelSize(m_iconSize);
+        fluentConfigureTextRendering(iconFont);
+        painter.setFont(iconFont);
+        painter.drawText(QRectF(rect()), Qt::AlignCenter, m_glyph);
+    }
 }
 
 void FontIcon::changeEvent(QEvent* event)

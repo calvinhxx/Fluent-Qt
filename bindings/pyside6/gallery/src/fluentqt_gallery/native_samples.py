@@ -5229,6 +5229,23 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             'large = fluentqt.FontIcon("ic_fluent_search_20_regular")',
             "large.setIconSize(32)",
         )
+    if key == ("font-icon", "font-icon-custom-font"):
+        return _source(
+            'family = fluentqt.font_for_role(fluentqt.FontRole.Body).family()',
+            'custom = fluentqt.FontIcon("F")',
+            'custom.setFontFamily(family)',
+            'custom.setIconSize(24)',
+            '',
+            'rotated = fluentqt.FontIcon("F")',
+            'rotated.setFontFamily(family)',
+            'rotated.setIconSize(24)',
+            'rotated.setRotation(90.0)',
+            '',
+            'disabled = fluentqt.FontIcon("F")',
+            'disabled.setFontFamily(family)',
+            'disabled.setIconSize(24)',
+            'disabled.setEnabled(False)',
+        )
     if key == ("font-icon", "font-icon-color-rotation"):
         return _source(
             'inherited = fluentqt.FontIcon("ic_fluent_arrow_right_20_regular")',
@@ -6121,6 +6138,61 @@ def _field(sample_id: str, parent: QWidget | None) -> PreviewResult:
         ),
         "Field",
     )
+
+
+register_source_samples(
+    "font-icon",
+    ("FontIcon",),
+    {
+        "font-icon-custom-font": (
+            "root",
+            _source(
+                'root = QWidget()',
+                'layout = QHBoxLayout(root)',
+                'layout.setContentsMargins(0, 0, 0, 0)',
+                'layout.setSpacing(20)',
+                'layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)',
+                '',
+                'def add_icon(icon, caption):',
+                '    cell = QWidget(root)',
+                '    body = QVBoxLayout(cell)',
+                '    body.setContentsMargins(8, 4, 8, 4)',
+                '    body.setSpacing(8)',
+                '    body.setAlignment(Qt.AlignHCenter | Qt.AlignTop)',
+                '    icon.setAccessibleName(caption)',
+                '    label = fluentqt.Label(caption, cell)',
+                '    label.setFluentTypography(fluentqt.FontRole.Caption)',
+                '    label.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)',
+                '    label.setAlignment(Qt.AlignCenter)',
+                '    body.addWidget(icon, 0, Qt.AlignHCenter)',
+                '    body.addWidget(label)',
+                '    layout.addWidget(cell)',
+                '',
+                'family = fluentqt.font_for_role(fluentqt.FontRole.Body).family()',
+                'custom = fluentqt.FontIcon("F", root)',
+                'custom.setFontFamily(family)',
+                'custom.setIconSize(24)',
+                'add_icon(custom, "UI font")',
+                '',
+                'rotated = fluentqt.FontIcon("F", root)',
+                'rotated.setFontFamily(family)',
+                'rotated.setIconSize(24)',
+                'rotated.setRotation(90.0)',
+                'add_icon(rotated, "Rotated · 90°")',
+                '',
+                'disabled = fluentqt.FontIcon("F", root)',
+                'disabled.setFontFamily(family)',
+                'disabled.setIconSize(24)',
+                'disabled.setEnabled(False)',
+                'add_icon(disabled, "Disabled")',
+                imports=(
+                    "from PySide6.QtCore import Qt\n"
+                    "from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget"
+                ),
+            ),
+        ),
+    },
+)
 
 
 @native_samples("font-icon", "font-icon-optical-sizes", "font-icon-color-rotation")

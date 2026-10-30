@@ -377,6 +377,27 @@ TEST_F(GalleryContentPagesTest, ContentTextRolesAreAppliedBeforeFirstPaint)
     EXPECT_EQ(body->textColorRole(), fluent::textfields::Label::TextColorRole::Secondary);
 }
 
+TEST_F(GalleryContentPagesTest, FontIconCustomFontSamplePreservesVisualStates)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("font-icon"), QStringLiteral("font-icon-custom-font"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    const auto icons = preview->findChildren<fluent::FontIcon*>();
+    ASSERT_EQ(icons.size(), 3);
+    const QString family = Typography::fontStyle(Typography::FontRole::Body).family;
+    for (auto* icon : icons) {
+        EXPECT_EQ(icon->fontFamily(), family);
+        EXPECT_EQ(icon->glyph(), QStringLiteral("F"));
+        EXPECT_EQ(icon->iconSize(), 24);
+        EXPECT_FALSE(icon->accessibleName().isEmpty());
+        EXPECT_EQ(icon->focusPolicy(), Qt::NoFocus);
+        EXPECT_TRUE(icon->testAttribute(Qt::WA_TransparentForMouseEvents));
+    }
+    EXPECT_DOUBLE_EQ(icons.at(1)->rotation(), 90.0);
+    EXPECT_FALSE(icons.at(2)->isEnabled());
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("setFontFamily(family)")));
+}
+
 // Task 6.1: seeded content routes resolve and stay consistent with navigation routes.
 TEST_F(GalleryContentPagesTest, ContentCatalogSeededRoutesMatchNavigation)
 {
@@ -1929,7 +1950,7 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
         {QStringLiteral("accordion"), QStringLiteral("Accordion"), 2},
         {QStringLiteral("card"), QStringLiteral("Card"), 2}, {QStringLiteral("divider"), QStringLiteral("Divider"), 2},
         {QStringLiteral("expander"), QStringLiteral("Expander"), 2},
-        {QStringLiteral("font-icon"), QStringLiteral("FontIcon"), 2},
+        {QStringLiteral("font-icon"), QStringLiteral("FontIcon"), 3},
         {QStringLiteral("avatar"), QStringLiteral("Avatar"), 2},
         {QStringLiteral("info-badge"), QStringLiteral("InfoBadge"), 4},
         {QStringLiteral("toast"), QStringLiteral("Toast"), 5},
