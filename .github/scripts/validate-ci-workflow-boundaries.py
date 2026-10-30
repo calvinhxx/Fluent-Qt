@@ -1539,6 +1539,7 @@ def site_generation_errors(contents: str) -> list[str]:
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             "python tools/site/test_build_site.py",
             "python tools/site/test_generate_api_reference.py",
+            "python tools/site/test_theme_browser_runner.py",
             "node --test tools/site/test_support.mjs",
         ],
     }.items():
@@ -1549,6 +1550,15 @@ def site_generation_errors(contents: str) -> list[str]:
         for command in commands:
             if not any(line.strip() in (command, "run: " + command) for line in active):
                 errors.append("ci-site.yml must generate and validate the website: " + command)
+    browser = named_step_section(build, "Verify website browser themes")
+    if uncommented_workflow_lines(browser) != [
+        "      - name: Verify website browser themes",
+        "        shell: bash",
+        "        run: python tools/site/test_theme_browser.py --site-root build/site-pages --output build/site-theme-browser",
+    ] or not (build.find("      - name: Generate and validate website")
+              < build.find("      - name: Verify website browser themes")
+              < build.find("      - name: Upload generated website")):
+        errors.append("ci-site.yml must unconditionally verify browser themes on the generated artifact before upload")
     # Hard-coded versions in cache keys would restore an older Qt kit or older captures.
     for step in ("Cache matching native previews", "Cache Qt native kit"):
         keys = [line for line in uncommented_workflow_lines(named_step_section(build, step))

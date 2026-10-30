@@ -563,83 +563,6 @@ def run_spatial_showcase_contract(browser: object, base_url: str, root: Path) ->
         context.close()
 
 
-def run_site_theme_contract(browser: object, root: Path) -> None:
-    site_root = Path(__file__).resolve().parents[2] / "site"
-    handler = partial(QuietHandler, directory=str(site_root))
-    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
-    server_thread.start()
-    page = browser.new_page(viewport={"width": 1280, "height": 800})
-    try:
-        page.route("https://api.github.com/**", lambda route: route.abort())
-        page.emulate_media(color_scheme="light", forced_colors="none")
-        site_url = f"http://127.0.0.1:{server.server_port}/index.html"
-        response = page.goto(site_url, wait_until="domcontentloaded")
-        if response is None or not response.ok:
-            raise RuntimeError("Could not load the source website theme contract")
-        page.wait_for_selector("html[data-i18n-ready]", timeout=10_000)
-
-        def active_theme() -> str:
-            return page.evaluate("document.documentElement.dataset.theme")
-
-        def stored_theme() -> str | None:
-            return page.evaluate("localStorage.getItem('fluent-qt-theme')")
-
-        toggle = page.locator("[data-theme-toggle]")
-        if active_theme() != "light":
-            raise RuntimeError("Website did not start in the emulated light theme")
-        toggle.click()
-        if active_theme() != "dark" or stored_theme() != "dark":
-            raise RuntimeError("Website light-to-dark theme transition failed")
-        toggle.click()
-        if active_theme() != "high-contrast" or stored_theme() != "high-contrast":
-            raise RuntimeError("Website dark-to-high-contrast transition failed")
-        gallery_theme = page.evaluate(
-            "new URL(galleryUrl()).searchParams.get('host-theme')"
-        )
-        if gallery_theme != "high-contrast":
-            raise RuntimeError("Website Gallery URL omitted the high-contrast host theme")
-
-        page.reload(wait_until="domcontentloaded")
-        page.wait_for_selector("html[data-i18n-ready]", timeout=10_000)
-        if active_theme() != "high-contrast":
-            raise RuntimeError("Website did not restore the high-contrast preference")
-        page.locator("[data-theme-toggle]").click()
-        if active_theme() != "light" or stored_theme() != "light":
-            raise RuntimeError("Website high-contrast-to-light transition failed")
-
-        page.emulate_media(forced_colors="active")
-        page.wait_for_function(
-            "document.documentElement.dataset.theme === 'high-contrast'"
-        )
-        if not page.locator("[data-theme-toggle]").is_disabled():
-            raise RuntimeError("Website theme control stayed active during forced-colors")
-        if stored_theme() != "light":
-            raise RuntimeError("forced-colors overwrote the stored website preference")
-        page.emulate_media(forced_colors="none")
-        page.wait_for_function("document.documentElement.dataset.theme === 'light'")
-        if page.locator("[data-theme-toggle]").is_disabled():
-            raise RuntimeError("Website theme control did not recover after forced-colors")
-        for width in (1280, 390):
-            page.set_viewport_size({"width": width, "height": 800})
-            page.goto(f"http://127.0.0.1:{server.server_port}/zh-CN/#top")
-            page.wait_for_selector("html[data-i18n-ready]")
-            if page.evaluate("document.documentElement.scrollWidth > innerWidth"):
-                raise RuntimeError(f"Website overflows horizontally at {width}px")
-            page.wait_for_function("""width =>
-                (getComputedStyle(document.querySelector('.hero-window')).transform === 'none') === (width < 900)
-            """, arg=width)
-            page.wait_for_function("getComputedStyle(document.querySelector('.hero-message')).opacity === '1'")
-            if page.locator('[data-showcase-frame]').get_attribute('src'):
-                raise RuntimeError("Website eagerly loaded the opt-in Spatial runtime")
-            page.screenshot(path=str(root / "showcase-evidence" / f"site-{width}.png"))
-    finally:
-        page.close()
-        server.shutdown()
-        server.server_close()
-        server_thread.join(timeout=5)
-
-
 def validate_hello_world_spatial_state(state: dict, text: str) -> None:
     expected = {
         "window": {"width": 720, "height": 520},
@@ -1138,7 +1061,6 @@ def run_smoke(
             run_embedded_theme_contract(browser, base_url)
             run_plugin_extension_contract(browser, base_url, root / "plugin-validation")
             run_spatial_showcase_contract(browser, base_url, root)
-            run_site_theme_contract(browser, root)
 
             browser.close()
     except Exception:

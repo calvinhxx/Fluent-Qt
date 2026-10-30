@@ -82,6 +82,16 @@ validation before deploying them together. The website module is required by
 New components still need Gallery registration, examples, and bilingual prose.
 CI generates their pages and previews, not their usage guidance.
 
+Website CI runs the static browser theme contract against that generated artifact
+before upload, on every pull request. It checks both homepage languages, three
+themes, forced colors, and wide/narrow layouts without loading WebAssembly.
+Website styles, homepage templates, and generation helpers therefore use the
+required website lane without starting native validation or a WASM build.
+The WASM module retains the real embedded Gallery theme and Spatial contracts;
+changes to its runtime, shell, or browser helpers still select that module.
+The mixed UI/runtime scripts `site/site.js` and `site/spatial-showcase.js` also
+keep the WASM lane because they own real iframe lifecycle and host messages.
+
 Use CMake aggregate targets rather than duplicating lists in YAML:
 `fluent_qt_ci_fast_tests`, `fluent_qt_ci_full_tests`, and
 `fluent_qt_ci_windows_platform_tests`. When registering a test, choose its

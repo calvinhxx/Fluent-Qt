@@ -38,7 +38,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
                 "docs/development/testing-workflow.md",
                 "site/index.html",
                 "tools/docs/validate_documentation.py",
-                "tools/site/generate_localized_site.py",
+                "tools/site/generate_api_reference.py",
             ],
             native=False,
             pyside=False,
@@ -358,6 +358,49 @@ class ClassifyCiChangesTest(unittest.TestCase):
             wasm=True,
         )
 
+    def test_static_website_browser_inputs_use_the_always_required_site_lane(self):
+        for path in (
+            "tools/site/serve.py",
+            "tools/site/site_assets.py",
+            "tools/site/generate_localized_site.py",
+            "tools/site/index.template.html",
+            "tools/site/test_theme_browser.py",
+            "tools/site/test_theme_browser_runner.py",
+            "site/styles.css",
+        ):
+            with self.subTest(path=path):
+                self.assert_classification([path], native=False, pyside=False, wasm=False)
+                self.assert_cpp_selection([path], scope="none", labels="", targets=())
+
+    def test_website_runtime_hosts_keep_wasm_routing(self):
+        for path in ("site/site.js", "site/spatial-showcase.js"):
+            for paths in ([path], ["site/styles.css", path]):
+                with self.subTest(paths=paths):
+                    self.assert_classification(paths, native=True, pyside=False, wasm=True)
+                    self.assert_cpp_selection(paths, scope="none", labels="", targets=())
+
+    def test_embedded_runtime_inputs_and_mixed_website_changes_keep_wasm(self):
+        for path in (
+            "platforms/webassembly/fluentqt_shell.html",
+            "app/platform/wasm/GallerySpatialShowcase.cpp",
+            ".github/scripts/run-wasm-browser-smoke.py",
+        ):
+            for paths in ([path], ["site/styles.css", path]):
+                with self.subTest(paths=paths):
+                    self.assertTrue(MODULE.classify_changes(paths).should_build_wasm)
+                    self.assertTrue(MODULE.classify_changes(paths).should_build)
+
+    def test_unrelated_website_documents_keep_documentation_only_routing(self):
+        for path in (
+            "tools/site/component.template.html",
+            "tools/site/generate_api_reference.py",
+            "site/api/component.css",
+            "docs/development/site-workflow.md",
+        ):
+            with self.subTest(path=path):
+                self.assert_classification([path], native=False, pyside=False, wasm=False)
+                self.assert_cpp_selection([path], scope="none", labels="", targets=())
+
     def test_command_submenu_smoke_helper_alone_runs_wasm(self):
         self.assert_classification(
             [".github/scripts/wasm_command_submenus.py"],
@@ -368,7 +411,11 @@ class ClassifyCiChangesTest(unittest.TestCase):
 
     def test_browser_smoke_local_dependencies_run_wasm(self):
         directory = SCRIPT.parent
+        site_directory = PROJECT_ROOT / "tools/site"
+        # Include website helper imports if the WASM runner gains a real one;
+        # pure website contracts belong to the always-required website lane.
         pending = [directory / "run-wasm-browser-smoke.py"]
+        import_directories = (site_directory, directory)
         visited = set()
         while pending:
             script = pending.pop()
@@ -384,9 +431,11 @@ class ClassifyCiChangesTest(unittest.TestCase):
                 else:
                     continue
                 for module in modules:
-                    dependency = directory / (module.split(".", 1)[0] + ".py")
-                    if dependency.is_file():
-                        pending.append(dependency)
+                    for import_directory in import_directories:
+                        dependency = import_directory / (module.split(".", 1)[0] + ".py")
+                        if dependency.is_file():
+                            pending.append(dependency)
+                            break
         for script in visited:
             path = script.relative_to(PROJECT_ROOT).as_posix()
             with self.subTest(path=path):

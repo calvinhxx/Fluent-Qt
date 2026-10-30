@@ -126,6 +126,9 @@ WASM_CI_FILES = {
     ".github/workflows/ci.yml",
     ".github/workflows/ci-wasm.yml",
     ".github/workflows/pages.yml",
+    # These mixed UI/runtime hosts own iframe lifecycle and messages to WASM.
+    "site/site.js",
+    "site/spatial-showcase.js",
 }
 
 # These paths build only the opt-in browser adapter, even when they live under
@@ -231,7 +234,7 @@ class CppTestSelection:
 
 def is_documentation_path(path: str) -> bool:
     """Return whether a path is covered by the documentation-only gate."""
-    if path in NON_DOCUMENTATION_PATHS:
+    if path in NON_DOCUMENTATION_PATHS or path in WASM_CI_FILES:
         return False
     return (
         path.endswith(".md")

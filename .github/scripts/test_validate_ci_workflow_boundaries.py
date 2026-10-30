@@ -182,11 +182,31 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         for command in (
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             'python tools/site/test_generate_api_reference.py',
+            'python tools/site/test_theme_browser_runner.py',
             'node --test tools/site/test_support.mjs',
         ):
             with self.subTest(command=command):
                 errors = self.workflow_errors_with_replacement("ci-site.yml", command, "echo skipped")
                 self.assertTrue(any("must generate and validate" in error for error in errors))
+
+    def test_site_browser_contract_cannot_be_skipped_or_use_stale_source_pages(self):
+        command = "python tools/site/test_theme_browser.py --site-root build/site-pages --output build/site-theme-browser"
+        for replacement in ("echo skipped", command + " || true", command.replace("build/site-pages", "site")):
+            with self.subTest(replacement=replacement):
+                errors = self.workflow_errors_with_replacement("ci-site.yml", command, replacement)
+                self.assertTrue(any("unconditionally verify browser themes" in error for error in errors))
+        for entry in ("if: false", "continue-on-error: true"):
+            with self.subTest(entry=entry):
+                errors = self.workflow_errors_with_replacement(
+                    "ci-site.yml", "      - name: Verify website browser themes\n",
+                    "      - name: Verify website browser themes\n        " + entry + "\n")
+                self.assertTrue(any("unconditionally verify browser themes" in error for error in errors))
+
+    def test_site_browser_contract_must_run_before_upload(self):
+        contents = MODULE.read_workflow("ci-site.yml")
+        browser = MODULE.named_step_section(MODULE.job_section(contents, "build"), "Verify website browser themes")
+        moved = contents.replace(browser, "", 1) + browser
+        self.assertTrue(any("before upload" in error for error in MODULE.site_generation_errors(moved)))
 
     def test_site_failure_must_fail_the_ci_gate(self):
         errors = self.workflow_errors_with_replacement(
