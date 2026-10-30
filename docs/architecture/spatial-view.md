@@ -426,9 +426,15 @@ the shell keeps the queued `update()` path. A pass that never reaches the surfac
 falls back to `update()` after 50 ms.
 
 Continuous updates with a reported extent that cover at least 30% of a surface,
-such as scrolling, dragging or an expanding section, paint at native density and
-are scaled into the cache texture. 160 ms after they pause, the affected rows are
-repainted at cache density, so text at rest keeps its full detail. Bands that
+such as scrolling, dragging, an expanding section or a page transition, keep cache
+density while they fit an 8 ms texture budget per frame. The estimate multiplies
+their rows by the measured cache-density cost per row of earlier large updates and
+adds the texture work already spent in that frame. A texture's first paint is not
+sampled, because it also compiles shaders and fills glyph and image caches. Updates
+that do not fit, or that
+occur before a measurement exists, paint at native density and are scaled into the
+cache texture. 160 ms after they pause, those rows are repainted at cache density,
+so text at rest keeps its full detail. Bands that
 contain an enabled nested graphics effect always keep cache density, because Qt
 caches effect pixmaps in device pixels and would replay them at stale positions.
 Texture cost is judged per frame, with both surfaces counted together. When it
@@ -437,6 +443,22 @@ frames still average more than 33 ms for 60 such frames in a row, the Gallery
 suggests turning off 3D once; frames without native-density updates do not end
 that streak. The `update()` fallback is armed once per pending frame, so
 continuous requests cannot postpone it.
+
+Presentation is judged separately from texture cost. A content frame repaints
+panel texture rows; the OpenGL surface times the window composition that shows it,
+from `aboutToCompose` to the completed buffer swap. If six content frames in a row
+take more than 150 ms there, the Gallery returns to 2D once and says why. Some
+forwarded displays hold every changed frame for hundreds of milliseconds while
+`paintGL()` stays fast; see the
+[WSLg upload note](../development/linux-workflow.md#manual-desktop-tests) for one
+such environment and its process-only workaround. Leaving 3D hides the surface,
+and Qt returns to its raster flush. Frames without panel texture updates and
+frames while the window is inactive or unexposed are not judged and do not end
+the streak. A faster content presentation ends it. Resizing or releasing caches
+resets the streak, and the first content frame afterward is warm-up. As after a cache allocation
+failure, the saved mode becomes 2D and the renderer stays available. If the
+user turns 3D on again, the same surface does not switch to 2D a second time.
+The Direct3D 11 QRhi surface does not use this measurement.
 
 ### Cache budget
 
@@ -501,6 +523,14 @@ can retain its static cache. A cached transparent foreground preserves QWidget
 stacking, text coverage and translucent content without painting them twice.
 Foreground changes refresh that cache. This does not move particle simulation
 to a compute shader or increase the component's configured animation rate.
+
+The Home backdrop chooses its own animation update cap from that request:
+60 updates per second while the compositor accelerates it, and 30 for CPU
+painting, including 2D. These are configured limits, not measured display rates;
+the display and rendering workload determine the delivered rate. CPU painting
+repaints the hero beneath its children. The simulation advances by elapsed time,
+so changing the cap preserves motion speed. C++ and Python use the same limits;
+particle samples keep the rate shown in their source.
 
 Particle targets and composition textures share the same 192 MiB shell budget.
 Before allocating the shell's paint target, the planner estimates visible particle

@@ -482,6 +482,31 @@ public:
             }
         });
         m_interactive = !measuring || qEnvironmentVariable("FLUENT_QT_SPATIAL_INTERACTIVE") != QLatin1String("0");
+        // Time the window composition that presents a content frame, including its buffer
+        // swap. Forwarded displays can spend far longer there than in paintGL().
+        // zh_CN: 计量呈现内容帧的窗口合成（含缓冲交换）；转发显示环境在此处的耗时可能远超 paintGL()。
+        connect(this, &QOpenGLWidget::aboutToCompose, this, [this] {
+            if (m_judgePresentation)
+                m_presentationClock.start();
+            else
+                m_presentationClock.invalidate();
+            m_judgePresentation = false;
+        });
+        connect(this, &QOpenGLWidget::frameSwapped, this, [this] {
+            if (!m_presentationClock.isValid())
+                return;
+            const qreal presentationMs = m_presentationClock.nsecsElapsed() / 1e6;
+            m_presentationClock.invalidate();
+            const auto* handle = window()->windowHandle();
+            if (!property("presenting").toBool() || !isActiveWindow() || !handle || !handle->isExposed())
+                return;
+            if (m_slowPresentations.record(presentationMs) && slowPresentation) {
+                QTimer::singleShot(0, this, [this] {
+                    if (slowPresentation)
+                        slowPresentation();
+                });
+            }
+        });
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setAttribute(Qt::WA_NoSystemBackground);
         setFocusPolicy(Qt::NoFocus);
@@ -562,6 +587,9 @@ public:
     {
         m_inputFrameRequested = false;
         m_hasPresentedFrame = false;
+        m_judgePresentation = false;
+        m_slowPresentations.interrupt();
+        m_cacheDensityCost = {};
         m_refine.stop();
         makeCurrent();
         m_glyphImages.clear();
@@ -590,9 +618,15 @@ public:
     qint64 partialUpdates = 0, interactiveUpdates = 0, refinements = 0;
     qreal updateCostMs() const { return m_slowFrames.costMs; }
     int slowFrames() const { return m_slowFrames.streak; }
+    qreal cacheDensityMsPerRow() const { return m_cacheDensityCost.msPerRow; }
+    qreal presentationMs() const { return m_slowPresentations.lastMs; }
+    int slowPresentations() const { return m_slowPresentations.streak; }
     // Reports, once per surface, that even native-density updates stay too slow.
     // zh_CN: 原生密度更新仍持续过慢时通知一次。
     std::function<void()> slowRendering;
+    // Reports, once per surface, that presenting content frames stays too slow.
+    // zh_CN: 内容帧呈现持续过慢时通知一次。
+    std::function<void()> slowPresentation;
 
     // Raster-dirties a pixel beneath this surface so a backing-store pass reaches it.
     std::function<void()> requestBackingStorePass;
@@ -624,7 +658,11 @@ public:
     }
 
 protected:
-    void resizeGL(int, int) override { m_hasPresentedFrame = false; }
+    void resizeGL(int, int) override
+    {
+        m_hasPresentedFrame = false;
+        m_slowPresentations.interrupt();
+    }
 
     void initializeGL() override
     {
@@ -876,6 +914,10 @@ private:
     bool m_frameInteractive = false;
     qreal m_frameUpdateMs = 0;
     spatial_render::SlowFrameTracker m_slowFrames;
+    spatial_render::CacheDensityCost m_cacheDensityCost;
+    bool m_judgePresentation = false;
+    QElapsedTimer m_presentationClock;
+    spatial_render::SlowPresentationTracker m_slowPresentations;
     QElapsedTimer m_clock;
     QTimer m_refine;
     QTimer m_fallback;
@@ -1005,6 +1047,7 @@ private:
     void releaseTextures()
     {
         m_hasPresentedFrame = false;
+        m_cacheDensityCost = {};
         m_refine.stop();
         m_glyphImages.clear();
         m_particles.release();
@@ -1085,10 +1128,11 @@ private:
         if (!partial)
             bands = {{0, height}};
         // Continuous large updates with a reported extent (scrolling, dragging, expanding)
-        // paint at native density and are refined at cache density after they pause.
-        // Unknown changes such as startup, theme or page switches keep full density.
-        // zh_CN: 范围已知的连续大面积更新（滚动、拖动、展开）按原生密度绘制，停止后按缓存密度补全；
-        // 启动、主题或换页等范围未知的变化保持完整密度。
+        // paint at native density when cache density would exceed the frame budget, and
+        // are refined at cache density after they pause. Unknown changes such as startup,
+        // theme or page switches keep full density.
+        // zh_CN: 范围已知的连续大面积更新（滚动、拖动、展开）在缓存密度会超出帧预算时按原生密度
+        // 绘制，停止后按缓存密度补全；启动、主题或换页等范围未知的变化保持完整密度。
         const qreal nativeDpr = devicePixelRatioF();
         const qint64 now = m_clock.elapsed();
         const bool slow = updateCostMs() > 16;
@@ -1097,8 +1141,10 @@ private:
         const int interval = slow ? 2 * spatial_render::kInteractiveIntervalMs : spatial_render::kInteractiveIntervalMs;
         const int quantum = spatial_render::sharedRowQuantum(nativeDpr, dpr);
         const bool continuous = cache.updatedAtMs >= 0 && now - cache.updatedAtMs < interval;
+        const int damagedRows = spatial_render::coveredRows(bands);
+        const bool large = damagedRows >= spatial_render::kInteractiveDamageShare * height;
         bool interactive = m_interactive && known && quantum && dpr > nativeDpr && continuous
-            && spatial_render::coveredRows(bands) >= share * height;
+            && damagedRows >= share * height && !m_cacheDensityCost.fits(damagedRows, m_frameUpdateMs);
         cache.updatedAtMs = now;
         // Qt caches nested effect pixmaps in device pixels and invalidates them only when the
         // painter transform changes, so a density switch would replay them at stale positions.
@@ -1123,7 +1169,13 @@ private:
         interactiveUpdates += interactive;
         if (interactive)
             m_refine.start();
-        m_frameUpdateMs += clock.nsecsElapsed() / 1e6;
+        const qreal updateMs = clock.nsecsElapsed() / 1e6;
+        // A texture's first paint also compiles paint-engine shaders and fills glyph and
+        // image caches; it does not predict the cost of later updates.
+        // zh_CN: 纹理首次绘制还会编译绘制引擎着色器并填充字形与图像缓存，不能代表后续更新的耗时。
+        if (!interactive && large && cache.revision)
+            m_cacheDensityCost.record(updateMs, damagedRows);
+        m_frameUpdateMs += updateMs;
         m_frameInteractive |= interactive;
         cache.revision = revision;
         cache.source = source;
@@ -1135,6 +1187,9 @@ private:
     {
         if (!(m_frameUpdateMs > 0))
             return;
+        // Judge the composition that presents these rows; a first or resized frame warms up.
+        // zh_CN: 评估呈现这些行的窗口合成；首帧或尺寸变化后的首帧用于预热，不计入。
+        m_judgePresentation = m_hasPresentedFrame;
         const bool report = m_slowFrames.record(m_frameUpdateMs, m_frameInteractive);
         m_frameUpdateMs = 0;
         m_frameInteractive = false;
@@ -1839,6 +1894,22 @@ void GallerySpatialController::ensureRenderer()
                            "scrolling."),
                         status_info::Toast::Warning);
             };
+            surface->slowPresentation = [this] {
+                // The renderer works, but every presented change stalls the window. Return to
+                // 2D as after a cache limit; turning 3D on again is honored for this surface.
+                // zh_CN: 渲染器可用，但每次呈现变化都会阻塞窗口。与缓存受限时一样回到 2D；
+                // 之后再次开启 3D 时，本表面不再自动关闭。
+                // Rendering-contract tests keep 3D on hosts whose presentation is slow.
+                // zh_CN: 渲染契约测试在呈现缓慢的主机上仍保持 3D。
+                if (!d->window || !GallerySettings::instance().spatialModeEnabled()
+                    || qApp->property("fluentqtGalleryKeepSlowPresentation").toBool())
+                    return;
+                releaseOversizedPresentation();
+                showGalleryToast(d->window,
+                    tr("3D presentation is too slow on this device, so the Gallery switched to 2D. You can turn 3D "
+                       "Gallery on again in Settings."),
+                    status_info::Toast::Warning);
+            };
         }
         d->canvas->setObjectName(QStringLiteral("gallerySpatialSurface"));
         d->canvas->setProperty("galleryGpuComposition", true);
@@ -1951,6 +2022,7 @@ void GallerySpatialController::disableSpatial(const QString& reason)
             surface->failed = {};
             surface->cacheUnavailable = {};
             surface->slowRendering = {};
+            surface->slowPresentation = {};
             surface->requestBackingStorePass = {};
         }
         d->canvas->disconnect(this);
@@ -2106,6 +2178,9 @@ QVariantMap GallerySpatialController::renderingStatistics() const
     result["refinements"] = surface ? surface->refinements : 0;
     result["updateCostMs"] = surface ? surface->updateCostMs() : 0;
     result["slowFrames"] = surface ? surface->slowFrames() : 0;
+    result["cacheDensityMsPerRow"] = surface ? surface->cacheDensityMsPerRow() : 0;
+    result["presentationMs"] = surface ? surface->presentationMs() : 0;
+    result["slowPresentations"] = surface ? surface->slowPresentations() : 0;
     result["paintMs"] = surface ? surface->paintNanoseconds / 1e6 : 0;
     result["allocationMs"] = surface ? surface->allocationNanoseconds / 1e6 : 0;
     result["firstPaintMs"] = surface ? surface->firstPaintNanoseconds / 1e6 : 0;

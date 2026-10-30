@@ -142,6 +142,11 @@ TEST(GalleryParticleBackdropTest, HomeUsesBoundedMotionAndStopsOutsideViewport)
     EXPECT_TRUE(launchEffect == ParticleBackdrop::FlowingRibbons || launchEffect == ParticleBackdrop::FloatingDots
         || launchEffect == ParticleBackdrop::Starfield);
     EXPECT_EQ(backdrop->particleCount(), 240);
+    EXPECT_EQ(backdrop->maximumFrameRate(), 30) << "CPU painting keeps the lighter frame budget";
+    // The 3D compositor requests acceleration only while it renders the backdrop.
+    backdrop->setGpuAccelerationEnabled(true);
+    EXPECT_EQ(backdrop->maximumFrameRate(), 60) << "Acceleration raises the configured update cap";
+    backdrop->setGpuAccelerationEnabled(false);
     EXPECT_EQ(backdrop->maximumFrameRate(), 30);
     EXPECT_EQ(backdrop->backgroundMode(), ParticleBackdrop::Transparent);
     EXPECT_FALSE(backdrop->isInteractive());

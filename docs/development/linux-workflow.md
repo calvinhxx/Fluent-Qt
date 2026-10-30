@@ -215,6 +215,17 @@ startup. Keep it out of application defaults and global shell configuration;
 record default and workaround runs separately. Improved upload timing does not
 by itself establish that Gallery interaction or native visual checks pass.
 
+The OpenGL 3D Gallery can expose this cost because its changed frames pass
+through the GL-composed window. In a local 1382 x 842 window measurement, one 3D scroll
+step took about 300 ms by default and 20–45 ms with the workaround, for both
+Wayland and XCB; `paintGL()` itself was unchanged. Without the workaround,
+that XCB configuration was fast only when the window's device width was a multiple
+of 64 pixels. These timings and alignment effects describe that environment,
+not a portable sizing rule. Product code does not resize windows or select a
+platform for this environment.
+When presentation stays slow, the 3D Gallery returns to 2D once (see
+[Spatial presentation](../architecture/spatial-view.md#incremental-updates)).
+
 VisualCheck tests remain manual and use the same direct-binary pattern with
 `--gtest_filter="*VisualCheck*"`.
 

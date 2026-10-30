@@ -8,7 +8,7 @@ and multisampling still use the target device.
 import math
 import weakref
 from collections import OrderedDict
-from hashlib import sha256
+from zlib import adler32
 
 from fluentqt._qt_painting import (
     device_pixel_ratio_metric, forward_paint_array, forward_paint_polygon, forwarding_paint_engine_features,
@@ -52,14 +52,15 @@ class GlyphImageCache:
         cost = image.sizeInBytes() + self._ENTRY_METADATA_BYTES
         if cost > self._budget:
             return QImage(image)
-        key = (sha256(memoryview(image.constBits()).cast("B")).digest(),
+        # The checksum only selects a candidate; exact pixels below decide reuse.
+        key = (adler32(memoryview(image.constBits()).cast("B")),
                image.width(), image.height(), image.devicePixelRatioF())
         cached = self._images.get(key)
         if cached is not None:
             if cached[0] == image:
                 self._images.move_to_end(key)
                 return QImage(cached[0])
-            # A digest match alone must never return different raster pixels.
+            # A checksum match alone must never return different raster pixels.
             self._cost -= cached[1]
             del self._images[key]
         while self._images and self._cost + cost > self._budget:
