@@ -55,6 +55,13 @@ The WebAssembly Gallery offers the matching C++ and Python source. The Python
 helpers use the shared native QMLPlus runtime; see the
 [QMLPlus contract](../../../docs/architecture/qmlplus.md).
 
+CTest separates focused Gallery contracts (`test_pyside6_gallery`) from the
+complete route and theme sweeps (`test_pyside6_gallery_routes`). Both groups
+retain the same per-process timeout and run in fast CI. Run both with
+`ctest --test-dir <build> -R '^test_pyside6_gallery(_routes)?$' --output-on-failure`.
+Running `gallery/tests/test_gallery.py` directly still runs the complete suite;
+standard unittest test-name and `-k` selection remain available.
+
 ## Spatial mode
 
 Release wheels include Spatial starting with 1.9.1, so the installed Gallery
