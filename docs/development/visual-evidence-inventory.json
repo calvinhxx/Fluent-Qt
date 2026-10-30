@@ -1261,6 +1261,15 @@
       "family": "collection-scroll",
       "automated_evidence": [
         {
+          "kind": "interaction",
+          "test_case": "ScrollBarTest.Contract_PaintedThumbCanBeDraggedFromBothEnds",
+          "states": [
+            "normal-light",
+            "rtl"
+          ],
+          "execution": "ci"
+        },
+        {
           "kind": "geometry",
           "test_case": "ScrollBarTest.VerticalThumbKeepsRoundedCapsAtExtremes",
           "states": [

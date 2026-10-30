@@ -4,6 +4,7 @@
 #include <QPalette>
 #include <QPixmap>
 #include <QScrollArea>
+#include <QSignalSpy>
 #include <QStyle>
 #include <QStyleOptionSlider>
 #include <QTest>
@@ -17,6 +18,7 @@
 #include "components/foundation/ThemeRegistry.h"
 
 #include "components/scrolling/ScrollBar.h"
+#include "compatibility/EventConstructionCompat.h"
 #include "components/textfields/Label.h"
 
 using namespace fluent::scrolling;
@@ -34,8 +36,7 @@ public:
     {
         QStyleOptionSlider option;
         initStyleOption(&option);
-        return style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarSlider,
-                                       this);
+        return style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarSlider, this);
     }
 };
 
@@ -141,13 +142,13 @@ TEST_F(ScrollBarTest, Contract_ThumbDirectionMatchesQtInversionAndLayoutDirectio
     for (const auto orientation : {Qt::Horizontal, Qt::Vertical}) {
         for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
             for (const bool inverted : {false, true}) {
-                SCOPED_TRACE(::testing::Message() << "orientation=" << orientation << ", direction="
-                                                  << direction << ", inverted=" << inverted);
+                SCOPED_TRACE(::testing::Message()
+                    << "orientation=" << orientation << ", direction=" << direction << ", inverted=" << inverted);
                 ScrollBar scrollBar(orientation);
                 NativeScrollBarGeometry reference(orientation);
                 const bool vertical = orientation == Qt::Vertical;
                 for (QScrollBar* target :
-                     {static_cast<QScrollBar*>(&scrollBar), static_cast<QScrollBar*>(&reference)}) {
+                    {static_cast<QScrollBar*>(&scrollBar), static_cast<QScrollBar*>(&reference)}) {
                     target->resize(vertical ? QSize(9, 240) : QSize(240, 9));
                     target->setRange(0, 100);
                     target->setPageStep(20);
@@ -170,7 +171,7 @@ TEST_F(ScrollBarTest, Contract_ThumbDirectionMatchesQtInversionAndLayoutDirectio
                 };
                 EXPECT_NE(position(minimumBounds), position(maximumBounds));
                 EXPECT_EQ(position(minimumBounds) < position(maximumBounds),
-                          position(nativeMinimum) < position(nativeMaximum));
+                    position(nativeMinimum) < position(nativeMaximum));
             }
         }
     }
@@ -191,8 +192,7 @@ TEST_F(ScrollBarTest, Contract_FullIntegerRangePreservesThumbSizeAndPosition)
             target->setOpacity(1.0);
         }
         for (int index = 0; index < 3; ++index) {
-            SCOPED_TRACE(::testing::Message()
-                         << "orientation=" << orientation << ", value=" << values[index]);
+            SCOPED_TRACE(::testing::Message() << "orientation=" << orientation << ", value=" << values[index]);
             scrollBar.setValue(values[index]);
             normalized.setValue(percentages[index]);
             EXPECT_EQ(renderScrollBarImage(&scrollBar), renderScrollBarImage(&normalized));
@@ -218,6 +218,128 @@ TEST_F(ScrollBarTest, Contract_TrackingDisabledPaintsPendingSliderPosition)
     EXPECT_EQ(scrollBar.sliderPosition(), 75);
     EXPECT_EQ(renderScrollBarImage(&scrollBar), atSeventyFive);
     scrollBar.setSliderDown(false);
+}
+
+TEST_F(ScrollBarTest, Contract_PaintedThumbCanBeDraggedFromBothEnds)
+{
+    for (const auto orientation : {Qt::Vertical, Qt::Horizontal}) {
+        for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            for (const bool inverted : {false, true}) {
+                for (const int initialValue : {0, 1000}) {
+                    SCOPED_TRACE(::testing::Message()
+                        << "orientation=" << orientation << ", direction=" << direction << ", inverted=" << inverted
+                        << ", initialValue=" << initialValue);
+                    ScrollBar bar(orientation);
+                    const bool vertical = orientation == Qt::Vertical;
+                    bar.resize(vertical ? QSize(9, 240) : QSize(240, 9));
+                    bar.setRange(0, 1000);
+                    bar.setPageStep(10);
+                    bar.setLayoutDirection(direction);
+                    bar.setInvertedAppearance(inverted);
+                    bar.setValue(initialValue);
+                    bar.setOpacity(1.0);
+                    const QRect paintedThumb = alphaBounds(renderScrollBarImage(&bar));
+                    ASSERT_TRUE(paintedThumb.isValid());
+                    const QPoint start = paintedThumb.center();
+                    const QPoint end = bar.rect().center();
+                    QSignalSpy pressed(&bar, &QScrollBar::sliderPressed);
+                    QSignalSpy released(&bar, &QScrollBar::sliderReleased);
+                    QTest::mousePress(&bar, Qt::LeftButton, Qt::NoModifier, start);
+                    EXPECT_TRUE(bar.isSliderDown());
+                    EXPECT_EQ(bar.value(), initialValue);
+                    FLUENT_MAKE_MOUSE_EVENT(move, QEvent::MouseMove, &bar, end, Qt::NoButton, Qt::LeftButton,
+                        Qt::NoModifier);
+                    QApplication::sendEvent(&bar, &move);
+                    EXPECT_GT(bar.value(), 350);
+                    EXPECT_LT(bar.value(), 650);
+                    QTest::mouseRelease(&bar, Qt::LeftButton, Qt::NoModifier, end);
+                    EXPECT_FALSE(bar.isSliderDown());
+                    EXPECT_EQ(pressed.count(), 1);
+                    EXPECT_EQ(released.count(), 1);
+                }
+            }
+        }
+    }
+}
+
+TEST_F(ScrollBarTest, Contract_ThumbDragDefersValueUntilReleaseWhenTrackingDisabled)
+{
+    for (const auto orientation : {Qt::Vertical, Qt::Horizontal}) {
+        for (const int pageStep : {10, 400}) {
+            SCOPED_TRACE(::testing::Message() << "orientation=" << orientation << ", pageStep=" << pageStep);
+            ScrollBar bar(orientation);
+            const bool vertical = orientation == Qt::Vertical;
+            bar.resize(vertical ? QSize(9, 240) : QSize(240, 9));
+            bar.setRange(0, 1000);
+            bar.setPageStep(pageStep);
+            bar.setValue(500);
+            bar.setTracking(false);
+            bar.setOpacity(1.0);
+            const QPoint start = alphaBounds(renderScrollBarImage(&bar)).center();
+            const QPoint end = vertical ? QPoint(start.x(), 260) : QPoint(260, start.y());
+            QSignalSpy changed(&bar, &QScrollBar::valueChanged);
+            QSignalSpy moved(&bar, &QScrollBar::sliderMoved);
+            QTest::mousePress(&bar, Qt::LeftButton, Qt::NoModifier, start);
+            ASSERT_TRUE(bar.isSliderDown());
+            EXPECT_EQ(bar.sliderPosition(), 500);
+            FLUENT_MAKE_MOUSE_EVENT(move, QEvent::MouseMove, &bar, end, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(&bar, &move);
+            EXPECT_EQ(bar.sliderPosition(), 1000);
+            EXPECT_EQ(bar.value(), 500);
+            EXPECT_EQ(changed.count(), 0);
+            EXPECT_GT(moved.count(), 0);
+            QTest::mouseRelease(&bar, Qt::LeftButton, Qt::NoModifier, end);
+            EXPECT_EQ(bar.value(), 1000);
+            EXPECT_EQ(changed.count(), 1);
+            EXPECT_FALSE(bar.isSliderDown());
+        }
+    }
+}
+
+TEST_F(ScrollBarTest, Contract_TrackClicksPageTowardPointer)
+{
+    struct DirectionCase {
+        Qt::Orientation orientation;
+        Qt::LayoutDirection direction;
+        bool inverted;
+        int expectedValue;
+    };
+    // Keep the oracle independent of the adapter used by painting and hit testing.
+    const DirectionCase cases[] = {
+        {Qt::Vertical, Qt::LeftToRight, false, 600},
+        {Qt::Vertical, Qt::LeftToRight, true, 400},
+        {Qt::Vertical, Qt::RightToLeft, false, 600},
+        {Qt::Vertical, Qt::RightToLeft, true, 400},
+        {Qt::Horizontal, Qt::LeftToRight, false, 600},
+        {Qt::Horizontal, Qt::LeftToRight, true, 400},
+        {Qt::Horizontal, Qt::RightToLeft, false, 400},
+        {Qt::Horizontal, Qt::RightToLeft, true, 600},
+    };
+    for (const auto& row : cases) {
+        const auto orientation = row.orientation;
+        const auto direction = row.direction;
+        const bool inverted = row.inverted;
+        SCOPED_TRACE(::testing::Message()
+            << "orientation=" << orientation << ", direction=" << direction << ", inverted=" << inverted);
+        ScrollBar bar(orientation);
+        const bool vertical = orientation == Qt::Vertical;
+        bar.resize(vertical ? QSize(9, 240) : QSize(240, 9));
+        bar.setRange(0, 1000);
+        bar.setPageStep(100);
+        bar.setLayoutDirection(direction);
+        bar.setInvertedAppearance(inverted);
+        bar.setValue(500);
+        QSignalSpy pressed(&bar, &QScrollBar::sliderPressed);
+        const QPoint end = vertical ? QPoint(4, 220) : QPoint(220, 4);
+        QTest::mouseClick(&bar, Qt::LeftButton, Qt::NoModifier, end);
+        EXPECT_EQ(bar.value(), row.expectedValue);
+        EXPECT_EQ(pressed.count(), 0);
+        EXPECT_FALSE(bar.isSliderDown());
+        bar.setEnabled(false);
+        const int disabledValue = bar.value();
+        QTest::mouseClick(&bar, Qt::LeftButton, Qt::NoModifier, end);
+        EXPECT_EQ(bar.value(), disabledValue);
+    }
 }
 
 TEST_F(ScrollBarTest, HiddenInitializationPreservesPinnedOpacity)
@@ -268,8 +390,7 @@ TEST_F(ScrollBarTest, VisualPropertyVerification)
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
-        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -358,8 +479,9 @@ TEST_F(ScrollBarTest, VisualPropertyVerification)
     lblValue->anchors()->left = {sbInteract, Edge::Right, 20};
     layout->addWidget(lblValue);
 
-    QObject::connect(sbInteract, &ScrollBar::valueChanged,
-                     [lblValue](int val) { lblValue->setText(QString("Value: %1").arg(val)); });
+    QObject::connect(sbInteract, &ScrollBar::valueChanged, [lblValue](int val) {
+        lblValue->setText(QString("Value: %1").arg(val));
+    });
 
     // --- 4. Integration with QScrollArea Example ---
     // This is tricky because QScrollArea manages its own scrollbars usually.
@@ -384,8 +506,9 @@ TEST_F(ScrollBarTest, VisualPropertyVerification)
     QWidget* content = new QWidget;
     content->setFixedSize(400, 400); // larger than viewport
     // subtle gradient to see scrolling
-    content->setStyleSheet("background: qlineargradient(x1:0, y1:0, x2:1, y2:1, "
-                           "stop:0 #eee, stop:1 #ccc);");
+    content->setStyleSheet(
+        "background: qlineargradient(x1:0, y1:0, x2:1, y2:1, "
+        "stop:0 #eee, stop:1 #ccc);");
     scrollArea->setWidget(content);
 
     scrollArea->anchors()->top = {lblIntegration, Edge::Bottom, 10};
@@ -400,10 +523,9 @@ TEST_F(ScrollBarTest, VisualPropertyVerification)
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
 
     window->show();
