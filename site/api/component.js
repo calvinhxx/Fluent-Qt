@@ -95,7 +95,7 @@ function setupPageOutline() {
   links.forEach(link => link.addEventListener('click', () => {
     if (compact.matches && menu) menu.open = false;
   }));
-  const targets = links.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+  const targets = links.map(link => document.getElementById(link.getAttribute('href').slice(1))).filter(Boolean);
   const activate = id => {
     links.forEach(link => {
       if (link.getAttribute('href') === `#${id}`) {
@@ -372,3 +372,70 @@ document.querySelectorAll("[data-copy]").forEach(button => {
     }
   });
 });
+
+function setupReleaseHistory() {
+  const form = document.querySelector('[data-release-filters]');
+  if (!form) return;
+  const entries = [...document.querySelectorAll('[data-release-entry]')];
+  const normalize = value => value.toLocaleLowerCase().replace(/[-_\s]/g, '');
+  const terms = new Map(entries.map(entry => [entry, normalize(entry.dataset.releaseSearch)]));
+  const query = form.querySelector('[data-release-query]');
+  const from = form.querySelector('[data-release-from]');
+  const breaking = form.querySelector('[data-release-breaking]');
+  const result = form.querySelector('[data-release-result]');
+  const empty = document.querySelector('[data-release-empty]');
+  const chinese = document.documentElement.lang === 'zh-CN';
+  const params = new URLSearchParams(location.search);
+  query.value = params.get('change') || '';
+  from.value = [...from.options].some(option => option.value === params.get('from')) ? params.get('from') : '';
+  breaking.checked = params.get('breaking') === '1';
+  const newer = (version, baseline) => {
+    if (!baseline || version === 'unreleased') return true;
+    const a = version.split('.').map(Number), b = baseline.split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+      if (a[i] !== b[i]) return a[i] > b[i];
+    }
+    return false;
+  };
+  function filter(updateUrl = false) {
+    const term = normalize(query.value.trim());
+    let count = 0;
+    entries.forEach(entry => {
+      const visible = (!term || terms.get(entry).includes(term))
+        && (!breaking.checked || entry.dataset.breaking === 'true') && newer(entry.dataset.version, from.value);
+      entry.hidden = !visible;
+      if (visible) count++;
+      const outline = document.querySelector(`.page-navigation a[href="#${entry.id}"]`);
+      if (outline) outline.hidden = !visible;
+    });
+    empty.hidden = count !== 0;
+    result.textContent = chinese ? `${from.value ? `${from.value} 之后共` : '共'} ${count} 条记录`
+      : `${count} ${count === 1 ? 'entry' : 'entries'}${from.value ? ` after ${from.value}` : ''}`;
+    if (updateUrl) {
+      const url = new URL(location.href);
+      for (const [key, value] of [['change', query.value.trim()], ['from', from.value], ['breaking', breaking.checked ? '1' : '']]) {
+        if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
+      }
+      history.replaceState(null, '', url);
+    }
+  }
+  form.hidden = false;
+  form.addEventListener('submit', event => event.preventDefault());
+  form.addEventListener('input', () => filter(true));
+  form.addEventListener('change', () => filter(true));
+  form.addEventListener('reset', event => {
+    event.preventDefault();
+    query.value = '';
+    from.value = '';
+    breaking.checked = false;
+    filter(true);
+  });
+  window.addEventListener('hashchange', () => {
+    let anchor;
+    try { anchor = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+    const entry = document.getElementById(anchor)?.closest('[data-release-entry]');
+    if (entry?.hidden) { form.reset(); queueMicrotask(() => entry.scrollIntoView({block: 'start'})); }
+  });
+  filter();
+}
+setupReleaseHistory();

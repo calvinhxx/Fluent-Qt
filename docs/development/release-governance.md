@@ -45,6 +45,48 @@ represent supported patch lines, not Git Flow release branches.
 - Do not create a permanent `develop` branch, and do not delete supported
   long-lived release branches.
 
+## Bilingual website history
+
+Public release notes in `docs/releases/vX.Y.Z.md` remain the canonical record.
+Maintain their bilingual summaries, publication metadata, related documentation
+IDs, and migration instructions in `tools/site/release-history.json`.
+The website's version history and roadmap are generated from that input during
+the ordinary website build; generated HTML stays untracked.
+
+When preparing a release:
+
+1. Add the canonical release note and its English and Chinese summary. Mark a
+   not-yet-published version as `candidate`, with no publication timestamp.
+2. Describe every breaking change with affected callers, before/after names or
+   code, and the action needed to migrate. Add affected component/guide IDs or
+   public header paths so the release search finds the change. A breaking-change
+   heading starting with `## Breaking` requires a migration record; headings
+   such as `## Non-breaking changes` do not.
+   Keep removed document IDs in `retired_document_ids` so historical component
+   searches remain useful after an API page is retired.
+   Add source-only API additions to `unreleased` before merging. Related
+   component, guide, and header-reference pages show a notice linked to the
+   pending record. Move those associations with the change when it ships so
+   published APIs no longer show an unreleased notice.
+3. After reviewing the translation, record the source digest with
+   `python3 tools/site/release_history.py --refresh-digest X.Y.Z`. Navigation-only
+   regeneration does not invalidate this digest.
+4. When publication is confirmed, set `status` to `published` and record the
+   actual GitHub `published_at` timestamp in UTC. Move delivered entries out of
+   `unreleased`, update its `after` baseline, and retain pending changes there.
+   Do not infer publication from the CMake version or assign a release number
+   to development-only changes.
+5. Run `python3 tools/site/build_site.py --prepare` and
+   `python3 tools/site/test_release_history.py`. These checks require every
+   version note to have a current translation. Website artifacts must include
+   both languages of the version history and roadmap.
+
+The roadmap follows `docs/development/technical-debt-roadmap.md`. Review its
+bilingual explanation and `reviewed_on` date after source changes, then run
+`python3 tools/site/release_history.py --refresh-roadmap-digest` to acknowledge
+the review. Stale translations and mismatched phase states fail the build.
+Historical roadmaps are delivery records, not new commitments.
+
 ## Commits
 
 Use Angular-style Conventional Commits:

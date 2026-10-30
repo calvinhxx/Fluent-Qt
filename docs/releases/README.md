@@ -8,6 +8,17 @@ Release notes are immutable snapshots of shipped behavior. Use them to answer
 “what changed in this version”; use the [development tree](../development/README.md)
 for current workflow and policy.
 
+The website provides [English release summaries and migrations](https://calvinhxx.github.io/Fluent-Qt/api/releases/)
+and [Chinese release summaries and migrations](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/releases/).
+Use the version and component filters before an upgrade. Changes after the
+latest stable release appear separately under **Unreleased**, without an
+assigned release number. The [website roadmap](https://calvinhxx.github.io/Fluent-Qt/api/roadmap/)
+tracks current maintenance priorities rather than promising delivery dates.
+
+API pages describe current source. They are not archived API snapshots for
+every historical binary; each release note and comparison remains available
+from its version entry.
+
 | Series | Releases |
 |---|---|
 | 1.10 | [1.10.3](v1.10.3.md) · [1.10.2](v1.10.2.md) · [1.10.1](v1.10.1.md) · [1.10.0](v1.10.0.md) |
