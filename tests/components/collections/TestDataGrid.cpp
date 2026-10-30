@@ -811,6 +811,42 @@ TEST_F(DataGridTest, Contract_PinnedEmptyAreaTracksThemeUnderStyledAncestor)
     }
 }
 
+TEST_F(DataGridTest, Contract_OverlayThumbDragFromOriginScrollsViewport)
+{
+    CountingTableModel model(1000, 20);
+    DataGrid view;
+    view.setModel(&model);
+    showOffscreen(&view, QSize(360, 180));
+    view.doItemsLayout();
+    processEvents();
+
+    for (const auto orientation : {Qt::Vertical, Qt::Horizontal}) {
+        SCOPED_TRACE(::testing::Message() << "orientation=" << orientation);
+        const bool vertical = orientation == Qt::Vertical;
+        auto* overlay = vertical ? view.verticalFluentScrollBar() : view.horizontalFluentScrollBar();
+        auto* native = vertical ? view.verticalScrollBar() : view.horizontalScrollBar();
+        ASSERT_NE(overlay, nullptr);
+        ASSERT_TRUE(overlay->isVisible());
+        ASSERT_GT(native->maximum(), 0);
+        ASSERT_EQ(overlay->value(), overlay->minimum());
+        const QRect cellBefore = view.visualRect(model.index(0, 0));
+        const QPoint start = vertical ? QPoint(overlay->width() / 2, 8) : QPoint(8, overlay->height() / 2);
+        const QPoint end = overlay->rect().center();
+        QTest::mousePress(overlay, Qt::LeftButton, Qt::NoModifier, start);
+        EXPECT_TRUE(overlay->isSliderDown());
+        FLUENT_MAKE_MOUSE_EVENT(move, QEvent::MouseMove, overlay, end, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(overlay, &move);
+        QTest::mouseRelease(overlay, Qt::LeftButton, Qt::NoModifier, end);
+        EXPECT_GT(native->value(), native->minimum());
+        EXPECT_EQ(overlay->value(), native->value());
+        const QRect cellAfter = view.visualRect(model.index(0, 0));
+        if (vertical)
+            EXPECT_LT(cellAfter.top(), cellBefore.top());
+        else
+            EXPECT_LT(cellAfter.left(), cellBefore.left());
+    }
+}
+
 TEST_F(DataGridTest, Contract_FluentScrollBarsMirrorAndChainAtBoundaries)
 {
     CountingTableModel model(1000, 20);
