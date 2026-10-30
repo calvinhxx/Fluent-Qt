@@ -9,6 +9,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+import xml.etree.ElementTree as ET
 
 
 VERIFIER = (
@@ -4504,6 +4505,24 @@ class GeneratedContractVerifierTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("invalid charts Q_ENUM helper", result.stderr)
                 self.assertIn(helper_name, result.stderr)
+
+    def test_rejected_namespace_q_enum_helpers_do_not_leak(self):
+        typesystem = ET.parse(VERIFIER.parent.parent / "native" / "typesystem_fluentqt.xml")
+        namespaces = [entry.attrib["class"].removeprefix("fluent::")
+                      for entry in typesystem.findall("rejection")
+                      if entry.attrib.get("function-name") == "^qt_getEnum(MetaObject|Name)$"]
+        self.assertTrue(namespaces)
+        for namespace in namespaces:
+            for helper_name in ("qt_getEnumMetaObject", "qt_getEnumName"):
+                with self.subTest(namespace=namespace, helper=helper_name):
+                    self.write_fluent_namespace()
+                    namespace_path = self.generated_dir / FLUENT_NAMESPACE_WRAPPER
+                    with namespace_path.open("a", encoding="utf-8") as stream:
+                        stream.write("::fluent::{0}::{1}(cppArg0);\n".format(namespace, helper_name))
+                    result = self.run_verifier()
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("invalid {0} Q_ENUM helper".format(namespace), result.stderr)
+                    self.assertIn(helper_name, result.stderr)
 
     def test_command_bar_flyout_anchor_retention_is_required(self):
         self.write_command_surfaces(

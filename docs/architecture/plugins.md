@@ -289,6 +289,15 @@ its registration, and stops surviving dependents. The manager does not keep a
 borrowed host alive either. Parentless factory outputs become caller-owned
 Python widgets; successful outputs can outlive both the plugin and manager.
 
+`ParticlesSession.createBackdrop()` and `SpatialSession.createView()` construct
+Python-owned widgets, then use native attachment to track them without taking
+ownership. An explicit QWidget parent retains normal Qt ownership. These Python
+factories do not enter the native manager's operation guard. Call them after
+`activate()` returns; defer requests from lifecycle signals until the current
+operation returns. A nested factory call on the same Session returns `None`.
+Deactivating a Session during widget construction still cancels that creation
+and releases its undelivered widget.
+
 Context value copies retain guarded manager and host references. They can be
 stored outside a hook and return `None` for destroyed objects. A returned plugin
 or host pointer remains borrowed; the context does not extend its native lifetime.

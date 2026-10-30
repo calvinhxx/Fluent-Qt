@@ -1,7 +1,10 @@
 """Shared lifetime, event and paint adapter runtime contracts."""
 from types import SimpleNamespace
+from functools import partial
+import gc
+import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QEvent, QObject, QPointF, QRect, QTimer
 from PySide6.QtGui import QFont, QImage, QPaintDevice, QRegion
@@ -18,6 +21,11 @@ from fluentqt._qt_painting import (
 )
 from fluentqt._qt_widgets import application_is_saving_session
 from fluentqt import _qt_widgets
+from fluentqt._fluentqt import objectHasCurrentThreadAffinityForBinding
+
+
+create_owned_widget = partial(_qt_widgets.create_owned_widget,
+                              affinity=objectHasCurrentThreadAffinityForBinding)
 
 
 class QtLifetimeCompatTest(unittest.TestCase):
@@ -109,6 +117,160 @@ class QtLifetimeCompatTest(unittest.TestCase):
         self.app.processEvents()
         self.assertEqual(result, [False])
         self.assertTrue(isValid(self.app))
+
+
+class QtWidgetFactoryCompatTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def test_preserves_parent_and_unparented_collection(self):
+        owner, parent = QObject(), QWidget()
+        destroyed = []
+        try:
+            widget = create_owned_widget(owner, QWidget, lambda: True, lambda _: True)
+            widget.destroyed.connect(lambda: destroyed.append(True))
+            del widget
+            gc.collect()
+            self.assertEqual(destroyed, [True])
+            child = create_owned_widget(owner, QWidget, lambda: True, lambda _: True, parent)
+            self.assertIs(child.parentWidget(), parent)
+            delete_qobject(parent)
+            self.assertFalse(isValid(child))
+        finally:
+            delete_qobject(owner)
+            delete_qobject(parent)
+
+    def test_rejects_worker_before_reading_policy_or_constructing(self):
+        owner = QObject()
+        active, factory, attach = Mock(return_value=True), Mock(return_value=None), Mock()
+        results = []
+        worker = threading.Thread(target=lambda: results.append(
+            create_owned_widget(owner, factory, active, attach)))
+        try:
+            worker.start()
+            worker.join(timeout=5)
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(results, [None])
+            active.assert_not_called()
+            factory.assert_not_called()
+            attach.assert_not_called()
+            active.return_value = False
+            self.assertIsNone(create_owned_widget(owner, factory, active, attach))
+            factory.assert_not_called()
+            attach.assert_not_called()
+        finally:
+            delete_qobject(owner)
+
+    def test_rechecks_parent_after_policy_callback(self):
+        owner, parent = QObject(), QWidget()
+        factory = Mock(return_value=None)
+        def active():
+            delete_qobject(parent)
+            return True
+        try:
+            self.assertIsNone(create_owned_widget(owner, factory, active, lambda _: True, parent))
+            factory.assert_not_called()
+        finally:
+            delete_qobject(owner)
+            delete_qobject(parent)
+
+    def test_rejects_parent_changes_during_factory_or_attach(self):
+        for phase in ("factory", "attach"):
+            for relationship in ("parent-to-other", "parent-to-none", "none-to-other"):
+                with self.subTest(phase=phase, relationship=relationship):
+                    owner, parent, other = QObject(), QWidget(), QWidget()
+                    requested = None if relationship == "none-to-other" else parent
+                    replacement = None if relationship == "parent-to-none" else other
+                    created = []
+
+                    def factory(requested_parent):
+                        widget = QWidget(requested_parent)
+                        created.append(widget)
+                        if phase == "factory":
+                            widget.setParent(replacement)
+                        return widget
+
+                    def attach_widget(widget):
+                        if phase == "attach":
+                            widget.setParent(replacement)
+                        return True
+
+                    attach = Mock(side_effect=attach_widget)
+                    try:
+                        self.assertIsNone(create_owned_widget(
+                            owner, factory, lambda: True, attach, requested))
+                        self.assertFalse(isValid(created[0]))
+                        self.assertEqual(attach.call_count, 0 if phase == "factory" else 1)
+                        self.assertTrue(all(isValid(obj) for obj in (owner, parent, other)))
+                        self.assertEqual(parent.children(), [])
+                        self.assertEqual(other.children(), [])
+                    finally:
+                        for obj in created + [owner, parent, other]:
+                            delete_qobject(obj)
+
+    def test_rejects_destroyed_parent_when_factory_output_survives(self):
+        for phase in ("factory", "attach"):
+            with self.subTest(phase=phase):
+                owner, parent, other = QObject(), QWidget(), QWidget()
+                created = []
+
+                def replace_parent(widget):
+                    widget.setParent(other)
+                    delete_qobject(parent)
+
+                def factory(requested_parent):
+                    widget = QWidget(requested_parent)
+                    created.append(widget)
+                    if phase == "factory":
+                        replace_parent(widget)
+                    return widget
+
+                def attach_widget(widget):
+                    if phase == "attach":
+                        replace_parent(widget)
+                    return True
+
+                attach = Mock(side_effect=attach_widget)
+                try:
+                    self.assertIsNone(create_owned_widget(
+                        owner, factory, lambda: True, attach, parent))
+                    self.assertFalse(isValid(created[0]))
+                    self.assertFalse(isValid(parent))
+                    self.assertTrue(isValid(owner))
+                    self.assertTrue(isValid(other))
+                    self.assertEqual(other.children(), [])
+                    self.assertEqual(attach.call_count, 0 if phase == "factory" else 1)
+                finally:
+                    for obj in created + [owner, parent, other]:
+                        delete_qobject(obj)
+
+    def test_cleans_failed_and_reentrant_attachments(self):
+        for action in ("reject", "destroy-owner", "destroy-widget", "raise"):
+            with self.subTest(action=action):
+                owner = QObject()
+                created = []
+                def factory(parent):
+                    created.append(QWidget(parent))
+                    return created[-1]
+                def attach(widget):
+                    if action == "destroy-owner":
+                        delete_qobject(owner)
+                    elif action == "destroy-widget":
+                        delete_qobject(widget)
+                    elif action == "raise":
+                        raise RuntimeError("Attachment failed")
+                    return action != "reject"
+                try:
+                    if action == "raise":
+                        with self.assertRaisesRegex(RuntimeError, "Attachment failed"):
+                            create_owned_widget(owner, factory, lambda: True, attach)
+                    else:
+                        self.assertIsNone(create_owned_widget(owner, factory, lambda: True, attach))
+                    self.assertEqual(len(created), 1)
+                    self.assertFalse(isValid(created[0]))
+                finally:
+                    delete_qobject(owner)
 
 
 class QtAdapterCompatTest(unittest.TestCase):

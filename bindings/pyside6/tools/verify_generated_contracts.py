@@ -272,7 +272,12 @@ def verify_no_namespace_enum_helpers(generated_dir):
             )
         )
     namespace_source = namespace_path.read_text(encoding="utf-8")
-    for namespace in ("charts", "menus_toolbars"):
+    # Match the namespace helper rejections in typesystem_fluentqt.xml.
+    for namespace in (
+        "basicinput", "charts", "collections", "date_time", "dialogs_flyouts",
+        "layout", "menus_toolbars", "navigation", "particles", "qmlbridge",
+        "scrolling", "spatial", "status_info", "textfields",
+    ):
         for helper_name in ("qt_getEnumMetaObject", "qt_getEnumName"):
             leaked_helper = "fluent::{0}::{1}".format(namespace, helper_name)
             if leaked_helper in namespace_source:
@@ -3463,7 +3468,7 @@ def verify_contracts(generated_dir, check_backdrop_converter):
         "ComboBox dropdown and editor ownership",
         "AutoSuggestBox suggestion popup privacy",
         "Fluent menu ownership",
-        "charts and menus/toolbars Qt 6.2 enum extraction",
+        "namespace Qt 6.2 enum extraction",
         "command surface borrowed action ownership",
         "date/time picker popup privacy",
         "ScrollView ownership",

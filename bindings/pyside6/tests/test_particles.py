@@ -1,6 +1,7 @@
 """Particle module identity, lifecycle and Python ownership contracts."""
 import gc
 import unittest
+from unittest.mock import patch
 
 from PySide6.QtCore import QObject
 from PySide6.QtTest import QSignalSpy
@@ -23,6 +24,8 @@ class ParticlesBindingTest(unittest.TestCase):
         self.assertFalse(hasattr(fluentqt, "ParticleBackdrop"))
         self.assertFalse(hasattr(layout, "ParticleBackdrop"))
         self.assertEqual(ParticlesPlugin.pluginId(), "fluentqt.particles")
+        for name in ("onActivate", "onDeactivate", "createWidget"):
+            self.assertFalse(hasattr(ParticlesPlugin, name), name)
 
     def show_in(self, owner, backdrop):
         backdrop.setPauseWhenInactive(False)
@@ -79,6 +82,72 @@ class ParticlesBindingTest(unittest.TestCase):
         self.assertEqual(destroyed, [True])
         self.assertTrue(session.deactivate())
         delete_qobject(session)
+
+    def test_parent_notification_can_stop_the_session_during_creation(self):
+        class Host(QWidget):
+            def childEvent(self, event):
+                super().childEvent(event)
+                session = getattr(self, "session", None)
+                if event.added() and session is not None and isValid(session):
+                    if self.destroy_session:
+                        delete_qobject(session)
+                    else:
+                        session.deactivate()
+
+        for destroy in (False, True):
+            with self.subTest(destroy_session=destroy):
+                host = Host()
+                session = ParticlesSession(host)
+                host.session, host.destroy_session = session, destroy
+                try:
+                    self.assertTrue(session.activate())
+                    self.assertIsNone(session.createBackdrop(host))
+                    self.assertEqual(host.children(), [])
+                    if destroy:
+                        self.assertFalse(isValid(session))
+                    else:
+                        self.assertFalse(session.isActive())
+                finally:
+                    if isValid(session):
+                        delete_qobject(session)
+                    delete_qobject(host)
+
+    def test_session_factory_rejects_nested_creation_and_recovers_after_errors(self):
+        class Host(QWidget):
+            callback = None
+
+            def childEvent(self, event):
+                super().childEvent(event)
+                if event.added() and self.callback is not None:
+                    callback, self.callback = self.callback, None
+                    callback()
+
+        host, session, other = Host(), ParticlesSession(), ParticlesSession()
+        nested, independent = [], []
+        try:
+            self.assertTrue(session.activate())
+            self.assertTrue(other.activate())
+
+            def reenter():
+                nested.append(session.createBackdrop(host))
+                independent.append(other.createBackdrop(host))
+
+            host.callback = reenter
+            backdrop = session.createBackdrop(host)
+            self.assertIsInstance(backdrop, ParticleBackdrop)
+            self.assertIs(backdrop.parentWidget(), host)
+            self.assertEqual(nested, [None])
+            self.assertIsInstance(independent[0], ParticleBackdrop)
+            self.assertIsNotNone(session.createBackdrop(host))
+
+            with patch("fluentqt.particles.ParticleBackdrop", side_effect=RuntimeError("creation failed")):
+                with self.assertRaisesRegex(RuntimeError, "creation failed"):
+                    session.createBackdrop(host)
+            self.assertIsInstance(session.createBackdrop(host), ParticleBackdrop)
+        finally:
+            delete_qobject(session)
+            delete_qobject(other)
+            delete_qobject(host)
 
     def test_borrowed_host_can_disappear_before_explicit_cleanup(self):
         host = QObject()
