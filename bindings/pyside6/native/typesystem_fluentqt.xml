@@ -41,6 +41,8 @@ if (!paletteGuard) {
                function-name="^(metadata|onActivate|onDeactivate)$"/>
     <rejection class="fluent::pluginbinding::WidgetPluginAdapter"
                function-name="^(metadata|onActivate|onDeactivate|widgetKeys|createWidget)$"/>
+    <rejection class="fluent::particles::ParticlesPlugin"
+               function-name="^(onActivate|onDeactivate|createWidget)$"/>
     <rejection class="fluent::spatial::SpatialPlugin"
                function-name="^(onActivate|onDeactivate|createWidget)$"/>
     <rejection class="fluent::qmlbridge::QmlPlugin"
@@ -51,6 +53,8 @@ if (!paletteGuard) {
          and qualified calls to them do not compile. Reject them during API
          extraction while keeping the declared enum types available. -->
     <rejection class="fluent::basicinput"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::particles"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::spatial"
                function-name="^qt_getEnum(MetaObject|Name)$"/>

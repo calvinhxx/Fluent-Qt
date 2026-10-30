@@ -144,6 +144,48 @@ assert "PySide6.QtOpenGLWidgets" not in sys.modules
                 delete_qobject(view)
             delete_qobject(model)
 
+    def test_session_factory_rejects_nested_creation_and_recovers_after_errors(self):
+        class Host(QWidget):
+            callback = None
+
+            def childEvent(self, event):
+                super().childEvent(event)
+                if event.added() and self.callback is not None:
+                    callback, self.callback = self.callback, None
+                    callback()
+
+        host, session, other = Host(), SpatialSession(), SpatialSession()
+        nested, independent = [], []
+        try:
+            self.assertTrue(session.activate())
+            self.assertTrue(other.activate())
+
+            def reenter():
+                nested.append(session.createView(host))
+                independent.append(other.createView(host))
+
+            host.callback = reenter
+            view = session.createView(host)
+            self.assertIsInstance(view, SpatialView)
+            self.assertIs(view.parentWidget(), host)
+            self.assertEqual(nested, [None])
+            self.assertIsInstance(independent[0], SpatialView)
+            self.assertIsNotNone(session.createView(host))
+
+            with patch("fluentqt.spatial.SpatialView", side_effect=RuntimeError("creation failed")):
+                with self.assertRaisesRegex(RuntimeError, "creation failed"):
+                    session.createView(host)
+            self.assertIsInstance(session.createView(host), SpatialView)
+            host.callback = session.deactivate
+            self.assertIsNone(session.createView(host))
+            self.assertFalse(session.isActive())
+            self.assertTrue(session.activate())
+            self.assertIsInstance(session.createView(host), SpatialView)
+        finally:
+            delete_qobject(session)
+            delete_qobject(other)
+            delete_qobject(host)
+
     def test_parented_session_teardown_preserves_widget_ownership(self):
         for nested in (False, True):
             with self.subTest(nested=nested):

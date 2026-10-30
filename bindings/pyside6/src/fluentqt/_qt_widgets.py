@@ -3,9 +3,50 @@
 from PySide6 import __version_info__ as _PYSIDE_VERSION_INFO
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QGuiApplication, QIcon, QKeySequence
+from PySide6.QtWidgets import QApplication
+from shiboken6 import isValid
+from ._qt_compat import delete_qobject
 
 __all__ = ["application_is_saving_session", "enforce_final_type", "install_legacy_callable_add_action",
-           "system_color_scheme"]
+           "system_color_scheme", "create_owned_widget"]
+
+
+def create_owned_widget(owner, factory, is_active, attach, parent=None, *, affinity):
+    """Construct a Python-owned widget before attaching it to a borrowed scope.
+
+    Legacy Shiboken retains native-created widget wrappers even after ownership
+    transfer. Python construction avoids that reference without exposing a
+    process-lifetime QThread wrapper or moving scope policy into this adapter.
+    """
+    def on_current_thread(obj):
+        return obj is not None and isValid(obj) and affinity(obj)
+
+    app = QApplication.instance()
+    if (not isinstance(app, QApplication) or not on_current_thread(app)
+            or not on_current_thread(owner)
+            or (parent is not None and not on_current_thread(parent))):
+        return None
+    if (not is_active() or not on_current_thread(app) or not on_current_thread(owner)
+            or (parent is not None and not on_current_thread(parent))):
+        return None
+    widget = factory(parent)
+    if widget is None:
+        return None
+
+    def matches_request():
+        return (on_current_thread(owner) and on_current_thread(widget)
+                and (parent is None or on_current_thread(parent))
+                and widget.parentWidget() is parent)
+
+    retained = False
+    try:
+        # Application callbacks may change ownership during construction or attachment.
+        retained = matches_request() and bool(attach(widget))
+        retained = retained and matches_request()
+        return widget if retained else None
+    finally:
+        if not retained and isValid(widget):
+            delete_qobject(widget)
 
 
 def system_color_scheme() -> str | None:
