@@ -139,7 +139,7 @@ include(FetchContent)
 FetchContent_Declare(
     fluentqt
     GIT_REPOSITORY https://github.com/calvinhxx/Fluent-Qt.git
-    GIT_TAG v1.10.3
+    GIT_TAG v1.11.0
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(fluentqt)

@@ -2,6 +2,82 @@
   "schema_version": 1,
   "versions": [
     {
+      "related": [
+        "font-icon",
+        "foundation-iconography",
+        "particle-backdrop",
+        "module-particles",
+        "module-spatial",
+        "spatial-view",
+        "foundation",
+        "scrollbar",
+        "module-plugins"
+      ],
+      "headers": [
+        "src/components/foundation/FontIcon.h",
+        "src/components/particles/ParticleBackdrop.h",
+        "src/components/particles/ParticlesSession.h"
+      ],
+      "changes": [
+        {
+          "en": "`FontIcon` adds `fontFamily()` and `setFontFamily()` for application-provided fonts. Pass the font's Unicode glyph directly; an empty family keeps the existing bundled Fluent icon rendering. C++ and PySide6 Gallery include a custom-font example.",
+          "zh": "`FontIcon` 新增 `fontFamily()` 和 `setFontFamily()`，支持应用自定义字体。传入该字体的 Unicode 字形即可；字体族为空时保持原有的内置 Fluent 图标绘制。C++ 和 PySide6 Gallery 均提供自定义字体示例。"
+        },
+        {
+          "en": "Particle effects move out of the core library into the optional Particles module.",
+          "zh": "粒子特效从核心库移到可选的 Particles 模块。"
+        },
+        {
+          "en": "Gallery 3D uploads only the texture rows that changed, sharpens frames once motion stops, keeps its cache within a memory budget, and switches to 2D if rendering stays slow.",
+          "zh": "Gallery 3D 只上传有变化的纹理行，交互停止后恢复清晰画面，缓存控制在内存预算内，渲染持续过慢时切回 2D。"
+        },
+        {
+          "en": "Desktop Debug builds link the release Qt runtime by default. Set `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF` to use a debug Qt.",
+          "zh": "桌面 Debug 构建默认链接 release 版 Qt。需要 debug 版 Qt 时，设置 `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF`。"
+        },
+        {
+          "en": "Open overlays follow their host surface; scrollbar thumb painting matches native hit testing, and PySide6 extension widgets enforce ownership boundaries.",
+          "zh": "打开的浮层跟随宿主表面变化，滚动条绘制与原生命中区域对齐，PySide6 扩展控件加强创建和所有权检查。"
+        },
+        {
+          "en": "Six stable-ABI native wheel builds retain 17 platform/interpreter installation checks. Immutable candidates are promoted without recompiling; CI uses bounded compiler parallelism and targeted website validation.",
+          "zh": "原生 wheel 由 17 次独立编译缩为 6 个稳定 ABI 构建，仍保留 17 组平台／Python 安装验证。发布复用不可变候选产物，CI 限制编译并行度并按改动选择网站验证。"
+        },
+        {
+          "en": "The website adds bilingual version history, migration comparisons, a roadmap and API notices for pending changes. Source-driven generation checks translation freshness.",
+          "zh": "官网新增双语版本记录、迁移对照、路线图和 API 未发布提示，由源码生成并检查译文是否及时更新。"
+        }
+      ],
+      "migrations": [
+        {
+          "id": "particles-module",
+          "title": {
+            "en": "ParticleBackdrop moves to the Particles module",
+            "zh": "ParticleBackdrop 移到 Particles 模块"
+          },
+          "impact": {
+            "en": "The `fluent::layout` names and import paths are gone. Linking only `FluentQt::FluentQt` no longer includes particle effects.",
+            "zh": "`fluent::layout` 下的名称和导入路径已删除。只链接 `FluentQt::FluentQt` 时不再包含粒子特效。"
+          },
+          "action": {
+            "en": "When building from source, turn on `FLUENT_QT_BUILD_PARTICLES`. With an installed SDK, request `COMPONENTS Particles` and link `FluentQt::Particles`. Then update includes, namespaces and Python imports as shown below.",
+            "zh": "从源码集成时打开 `FLUENT_QT_BUILD_PARTICLES`；使用已安装的 SDK 时，在 `find_package` 中加上 `COMPONENTS Particles` 并链接 `FluentQt::Particles`。头文件、命名空间和 Python 导入按下面的写法修改。"
+          },
+          "before": "FluentQt::FluentQt\n#include <FluentQt/Layout.h>\nfluent::layout::ParticleBackdrop\nfrom fluentqt.layout import ParticleBackdrop",
+          "after": "find_package(FluentQt CONFIG REQUIRED COMPONENTS Particles)\ntarget_link_libraries(app PRIVATE FluentQt::Particles)\n#include <FluentQt/Particles.h>\nfluent::particles::ParticleBackdrop\nfrom fluentqt.particles import ParticleBackdrop",
+          "commit": "b674c944078c65f92aaa71df95ddf5050a6ecc62"
+        }
+      ],
+      "version": "1.11.0",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "71c569029fef813333fa055be8dfd45bcebb6667381e4740b321430bc7bae158",
+      "summary": {
+        "en": "Makes particles optional, adds application-provided icon fonts, improves 3D rendering, and introduces stable-ABI Python wheels and bilingual upgrade guidance.",
+        "zh": "粒子特效拆为可选模块，FontIcon 支持应用字体，3D 渲染减少重复工作；Python 改用稳定 ABI wheel，官网新增双语版本与迁移说明。"
+      }
+    },
+    {
       "version": "1.10.3",
       "status": "published",
       "published_at": "2026-10-27T15:07:38Z",
@@ -661,58 +737,10 @@
   ],
   "unreleased": {
     "after": "1.10.3",
-    "related": [
-      "font-icon",
-      "foundation-iconography",
-      "particle-backdrop",
-      "module-particles",
-      "module-spatial",
-      "spatial-view",
-      "foundation"
-    ],
-    "headers": [
-      "src/components/foundation/FontIcon.h",
-      "src/components/particles/ParticleBackdrop.h",
-      "src/components/particles/ParticlesSession.h"
-    ],
-    "changes": [
-      {
-        "en": "`FontIcon` adds `fontFamily()` and `setFontFamily()` for application-provided fonts. Pass the font's Unicode glyph directly; an empty family keeps the existing bundled Fluent icon rendering. C++ and PySide6 Gallery include a custom-font example.",
-        "zh": "`FontIcon` 新增 `fontFamily()` 和 `setFontFamily()`，支持应用自定义字体。传入该字体的 Unicode 字形即可；字体族为空时保持原有的内置 Fluent 图标绘制。C++ 和 PySide6 Gallery 均提供自定义字体示例。"
-      },
-      {
-        "en": "Particle effects move out of the core library into the optional Particles module.",
-        "zh": "粒子特效从核心库移到可选的 Particles 模块。"
-      },
-      {
-        "en": "Gallery 3D uploads only the texture rows that changed, sharpens frames once motion stops, keeps its cache within a memory budget, and switches to 2D if rendering stays slow.",
-        "zh": "Gallery 3D 只上传有变化的纹理行，交互停止后恢复清晰画面，缓存控制在内存预算内，渲染持续过慢时切回 2D。"
-      },
-      {
-        "en": "Desktop Debug builds link the release Qt runtime by default. Set `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF` to use a debug Qt.",
-        "zh": "桌面 Debug 构建默认链接 release 版 Qt。需要 debug 版 Qt 时，设置 `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF`。"
-      }
-    ],
-    "migrations": [
-      {
-        "id": "particles-module",
-        "title": {
-          "en": "ParticleBackdrop moves to the Particles module",
-          "zh": "ParticleBackdrop 移到 Particles 模块"
-        },
-        "impact": {
-          "en": "The `fluent::layout` names and import paths are gone. Linking only `FluentQt::FluentQt` no longer includes particle effects.",
-          "zh": "`fluent::layout` 下的名称和导入路径已删除。只链接 `FluentQt::FluentQt` 时不再包含粒子特效。"
-        },
-        "action": {
-          "en": "When building from source, turn on `FLUENT_QT_BUILD_PARTICLES`. With an installed SDK, request `COMPONENTS Particles` and link `FluentQt::Particles`. Then update includes, namespaces and Python imports as shown below.",
-          "zh": "从源码集成时打开 `FLUENT_QT_BUILD_PARTICLES`；使用已安装的 SDK 时，在 `find_package` 中加上 `COMPONENTS Particles` 并链接 `FluentQt::Particles`。头文件、命名空间和 Python 导入按下面的写法修改。"
-        },
-        "before": "FluentQt::FluentQt\n#include <FluentQt/Layout.h>\nfluent::layout::ParticleBackdrop\nfrom fluentqt.layout import ParticleBackdrop",
-        "after": "find_package(FluentQt CONFIG REQUIRED COMPONENTS Particles)\ntarget_link_libraries(app PRIVATE FluentQt::Particles)\n#include <FluentQt/Particles.h>\nfluent::particles::ParticleBackdrop\nfrom fluentqt.particles import ParticleBackdrop",
-        "commit": "b674c944078c65f92aaa71df95ddf5050a6ecc62"
-      }
-    ]
+    "related": [],
+    "headers": [],
+    "changes": [],
+    "migrations": []
   },
   "roadmap": {
     "source": "docs/development/technical-debt-roadmap.md",

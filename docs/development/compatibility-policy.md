@@ -14,11 +14,13 @@ provide.
 
 ## Public API
 
-- Patch and minor releases remain source compatible within major version 1.
+- Patch and minor releases remain source compatible within major version 1,
+  apart from the explicitly approved particle-module migration in 1.11.
 - New overloads, properties, signals, and components may be added compatibly.
 - Removing or changing an established public API requires the next major
-  release. The Fluent-only cleanup in 1.7 was the documented final exception
-  before this policy.
+  release. The Fluent-only cleanup in 1.7 predates this policy. The particle
+  extraction in [1.11.0](../releases/v1.11.0.md#breaking-change-particle-module-extraction)
+  is a one-time approved exception with explicit C++ and Python migration steps.
 - Installed headers listed by `cmake/FluentQtInstallHeaders.cmake`, exported
   CMake targets, and documented PySide6 names are public. Private headers,
   Gallery internals, tests, and generated implementation details are not.
