@@ -210,8 +210,13 @@ The document creates one iframe when its example enters the viewport, hides the
 sample outside the viewport, and removes the iframe on navigation. The mounted
 runtime retains input and dialog state while the reader visits the API section;
 hiding the sample does not stop the application's event loop. Host messages validate
-origin, source and session. Capture environment and runtime metadata belong in
-the capture manifest and verification records, not in the product copy.
+origin, source and session. While the sample is visible, the runtime sends a
+`content-size` message with the height the sample needs at the current width.
+The document keeps the running example between its minimum height (taller for
+dialogs, menus and windows, whose overlays open beyond the sample) and the
+smaller of 720 px and 80% of the viewport; a taller sample scrolls inside Qt.
+Hosts that ignore the message keep the captured preview height. Capture
+environment and runtime metadata belong in the capture manifest and verification records, not in the product copy.
 
 The hero's optional Canvas effect lives in
 [`site/hero-particles.js`](../../site/hero-particles.js). Keep the animation

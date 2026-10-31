@@ -299,6 +299,10 @@
         detail
       }, window.location.origin);
     };
+    // The component preview reports the height its sample needs; the host clamps it.
+    window.fluentQtComponentResized = height => {
+      if (componentPreview) notifyHost('content-size', { height });
+    };
     const formatScale = value => Number(value).toFixed(2).replace(/\.?0+$/, '');
     const profileLabel = renderProfile.profile === 'adaptive' ? 'adaptive ' : '';
     const softOneX = renderProfile.nativeDpr > 1

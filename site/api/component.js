@@ -194,6 +194,7 @@ function createInteractivePreview() {
     clearTimeout(timer);
     frame?.remove();
     frame = null;
+    root.style.removeProperty('--live-height');
     render(next);
   }
   function syncVisibility() {
@@ -231,7 +232,11 @@ function createInteractivePreview() {
   window.addEventListener('message', event => {
     if (!frame || event.origin !== location.origin || event.source !== frame.contentWindow
         || event.data?.source !== 'fluent-qt-gallery' || event.data.session !== String(session)) return;
-    if (event.data.state === 'ready') {
+    if (event.data.state === 'content-size') {
+      // CSS clamps the sample's own height between the document minimum and the viewport.
+      const height = Number(event.data.detail?.height);
+      if (Number.isFinite(height) && height > 0) root.style.setProperty('--live-height', `${Math.ceil(height)}px`);
+    } else if (event.data.state === 'ready') {
       clearTimeout(timer);
       render('ready');
       post('component-select', { selection: selected() });

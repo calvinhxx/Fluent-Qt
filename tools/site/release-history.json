@@ -747,6 +747,10 @@
       {
         "en": "The documentation sidebar now groups component categories under Components, icons under Foundations, and each extension guide with its components. Search expands matching branches and restores your expanded sections when cleared.",
         "zh": "文档侧栏按层级组织：控件分类归入“组件”，图标归入“基础能力”，扩展模块的概述与组件放在一起。搜索自动展开匹配分支，清空后恢复原来的展开状态。"
+      },
+      {
+        "en": "Live component examples now take the height their sample needs, so tall charts, grids and pickers no longer scroll inside a short frame. Dialog, menu and window examples keep extra room for their overlays.",
+        "zh": "组件文档里的实时示例会按示例内容自动调整高度，图表、表格和选择器不再挤在过矮的窗口里滚动。对话框、菜单和窗口类示例仍保留浮层所需的空间。"
       }
     ],
     "migrations": []

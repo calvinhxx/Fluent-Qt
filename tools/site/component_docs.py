@@ -297,10 +297,12 @@ def render_document(doc, documents, language):
         pid = 'state-' + preview['id']
         tabs.append(f'<button type="button" role="tab" id="tab-{pid}" aria-controls="{pid}" data-sample="{escape(preview["sample"])}" data-state="{escape(preview["id"])}" aria-selected="{str(i == 0).lower()}" tabindex="{0 if i == 0 else -1}">{escape(preview["name"][language])}</button>')
         panels.append(f'<div class="preview-panel" role="tabpanel" aria-labelledby="tab-{pid}" id="{pid}"{" hidden" if i else ""}>{picture(preview, page, language, i == 0)}</div>')
+    # The live example may grow to its sample's reported height, never below this.
+    minimum = doc.get('minimum_preview_height', 196)
     preview_values = {**words, 'component_id': doc['id'], 'runtime_url': relative('gallery/', page) + '/',
         'title': escape(title), 'preview_light': doc['previews'][0]['images']['light']['background'],
         'preview_dark': doc['previews'][0]['images']['dark']['background'],
-        'preview_height': min(720, max(doc.get('minimum_preview_height', 196),
+        'preview_min': minimum, 'preview_height': min(720, max(minimum,
             max(p['images']['light']['logical_size'][1] for p in doc['previews']) + 32)),
         'state_tabs_hidden': ' hidden' if len(doc['previews']) == 1 else '', 'tabs': ''.join(tabs), 'panels': ''.join(panels)}
     body = Template((ROOT / 'tools/site/component-preview.template.html').read_text()).substitute(preview_values)
