@@ -843,7 +843,7 @@ pre {
 .release-result { grid-column: 1 / -1; margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .release-empty { color: var(--muted); }
 .release-entry { padding: 32px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
-.release-entry > p, .release-changes, .migration-note > p, .roadmap-phase > p, .roadmap-context { max-width: 72ch; }
+.release-entry > p, .release-changes, .migration-note > p { max-width: 72ch; }
 .release-entry > p { margin: 12px 0 0; line-height: 1.7; }
 .release-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; }
 .release-heading h2 { margin: 0; font-size: 22px; font-variant-numeric: tabular-nums; }
@@ -855,7 +855,7 @@ pre {
 .release-breaking { font-size: 12px; font-weight: 600; color: var(--accent); border: 1px solid currentColor; padding: 0 6px; border-radius: 4px; line-height: 1.6; }
 .release-changes { margin: 14px 0 0; padding-left: 20px; }
 .release-changes li { margin: 6px 0; line-height: 1.65; }
-.release-entry :not(pre) > code, .roadmap-phase code, .migration-commit code { font-size: .88em; padding: 1px 4px; border-radius: 4px; background: var(--surface); overflow-wrap: anywhere; }
+.release-entry :not(pre) > code, .migration-commit code { font-size: .88em; padding: 1px 4px; border-radius: 4px; background: var(--surface); overflow-wrap: anywhere; }
 .release-links { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; }
 .migration-note { margin-top: 22px; padding: 18px 20px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); scroll-margin-top: 20px; }
 .migration-note h3 { font-size: 16px; margin: 0 0 8px; }
@@ -868,11 +868,6 @@ pre {
 .migration-comparison pre { margin: 0; padding: 12px 14px; background: var(--code); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.7; }
 .migration-commit { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
 .migration-commit code { background: var(--canvas); }
-.roadmap-context { color: var(--muted); }
-.roadmap-phase { border-bottom: 1px solid var(--line); padding: 26px 0; }
-.roadmap-phase > p { margin: 10px 0 0; line-height: 1.7; }
-.roadmap-phase[data-state="active"] .release-state { color: var(--accent); font-weight: 600; }
-.roadmap-source { margin-top: 24px; font-size: 13px; color: var(--muted); }
 @media (max-width: 640px) {
   .release-filters { grid-template-columns: minmax(0, 1fr); padding: 16px; }
   .release-filters button { justify-self: start; }

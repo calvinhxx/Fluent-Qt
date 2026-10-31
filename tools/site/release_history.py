@@ -82,15 +82,6 @@ def load_history(root=ROOT):
     ids = [m['id'] for item in [data['unreleased'], *versions] for m in item.get('migrations', [])]
     if len(ids) != len(set(ids)):
         raise ValueError('Duplicate migration anchor')
-    roadmap = data['roadmap']
-    source = (root / roadmap['source']).read_text(encoding='utf-8')
-    if roadmap.get('source_sha256') != note_digest(source):
-        raise ValueError('Review the bilingual roadmap after changing its source')
-    for phase in roadmap['phases']:
-        if not re.search(r'\| ' + re.escape(phase['id']) + r':[^|]+\| ' + re.escape(phase['state']) + r' \|', source):
-            raise ValueError(f'Roadmap state drift: {phase["id"]}')
-        bilingual(phase['title'], phase['id'])
-        bilingual(phase['body'], phase['id'])
     return data
 
 
@@ -108,21 +99,16 @@ def validate_related_documents(data, document_ids):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--refresh-digest', metavar='VERSION', help='Acknowledge one reviewed translation after editing its canonical note')
-    parser.add_argument('--refresh-roadmap-digest', action='store_true', help='Acknowledge the reviewed bilingual roadmap')
     args = parser.parse_args()
-    if args.refresh_digest or args.refresh_roadmap_digest:
+    if args.refresh_digest:
         path = ROOT / SOURCE
         data = json.loads(path.read_text(encoding='utf-8'))
-        if args.refresh_digest:
-            version_key(args.refresh_digest)
-            entry = next((item for item in data['versions'] if item['version'] == args.refresh_digest), None)
-            if entry is None:
-                parser.error('Add the bilingual version record before acknowledging its source')
-            bilingual(entry['summary'], args.refresh_digest)
-            entry['source_sha256'] = note_digest((ROOT / f'docs/releases/v{args.refresh_digest}.md').read_text(encoding='utf-8'))
-        if args.refresh_roadmap_digest:
-            roadmap = data['roadmap']
-            roadmap['source_sha256'] = note_digest((ROOT / roadmap['source']).read_text(encoding='utf-8'))
+        version_key(args.refresh_digest)
+        entry = next((item for item in data['versions'] if item['version'] == args.refresh_digest), None)
+        if entry is None:
+            parser.error('Add the bilingual version record before acknowledging its source')
+        bilingual(entry['summary'], args.refresh_digest)
+        entry['source_sha256'] = note_digest((ROOT / f'docs/releases/v{args.refresh_digest}.md').read_text(encoding='utf-8'))
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     data = load_history()
     print(f'Verified bilingual history: {len(data["versions"])} versions; latest stable {data["latest"]}')

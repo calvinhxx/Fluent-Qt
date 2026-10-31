@@ -1,9 +1,10 @@
-"""Render version history and roadmap inside the existing documentation shell."""
+"""Render version history inside the existing documentation shell."""
 
 import html
 import re
 from urllib.parse import urlencode
 from documentation_navigation import relative
+from generate_localized_site import BASE_URL
 from release_history import load_history, page_path, REPOSITORY
 
 
@@ -120,23 +121,23 @@ def history_body(data, language, page):
     return filters + ''.join(entries)
 
 
-def roadmap_body(data, language, page):
-    zh = language == 'zh'
-    history = relative(page_path('releases', language), page)
-    body = f'<p class="roadmap-context">' + (
-        f'这里只说明工作方向，不承诺发布时间。已实现但还没发布的改动见<a href="{history}#unreleased">开发中</a>，已发布的内容见<a href="{history}">版本记录</a>。' if zh else
-        f'This page describes direction, not release dates. Implemented but unreleased work is listed under <a href="{history}#unreleased">Unreleased</a>; shipped work is in the <a href="{history}">release history</a>.') + '</p>'
-    states = {'Active': ('In progress', '进行中'), 'Planned': ('Planned', '计划中'), 'Deferred': ('Deferred', '暂缓'), 'Complete': ('Done', '已完成')}
-    toc = []
-    for phase in data['roadmap']['phases']:
-        title = phase['title'][language]
-        toc.append((phase['id'].lower(), title))
-        body += (f'<section class="roadmap-phase" id="{phase["id"].lower()}" data-state="{phase["state"].lower()}">'
-                 f'<header class="release-heading"><h2>{escape(title)}</h2><span class="release-state">{states[phase["state"]][zh]}</span></header>'
-                 f'<p>{prose(phase["body"][language])}</p></section>')
-    source = f'<a href="{REPOSITORY}/blob/main/{data["roadmap"]["source"]}"' + (' hreflang="en">技术债路线图</a>（英文）' if zh else '>technical debt roadmap</a>')
-    body += '<p class="roadmap-source">' + ('依据：' if zh else 'Based on the ') + source + ('' if zh else '.') + '</p>'
-    return body, toc
+def roadmap_redirect(language):
+    """Keep published roadmap URLs usable without a second project-updates page."""
+    target = page_path('releases', language)
+    link = relative(target, page_path('roadmap', language))
+    title = '版本记录与迁移' if language == 'zh' else 'Releases and migrations'
+    return f'''<!doctype html>
+<html lang="{'zh-CN' if language == 'zh' else 'en'}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0; url={link}">
+  <link rel="canonical" href="{BASE_URL}{target.removesuffix('index.html')}">
+  <title>{title} · Fluent-Qt</title>
+</head>
+<body><p><a href="{link}">{title}</a></p></body>
+</html>
+'''
 
 
 def generated_outputs(documents, catalog, render_shell):
@@ -144,18 +145,13 @@ def generated_outputs(documents, catalog, render_shell):
     outputs = {}
     for language in ('en', 'zh'):
         zh = language == 'zh'
-        for kind in ('releases', 'roadmap'):
-            page = page_path(kind, language)
-            context = {'id': kind, 'catalog': catalog, 'component': {'category_id': 'project'}}
-            if kind == 'releases':
-                title = '版本记录与迁移' if zh else 'Releases and migrations'
-                description = '每个版本改了什么，升级时需要改哪些代码。' if zh else 'What changed in each release, and what to change in your code when you upgrade.'
-                body = history_body(data, language, page)
-                toc = [('unreleased', '开发中' if zh else 'Unreleased')]
-                toc += [('v' + v['version'], v['version']) for v in data['versions']]
-            else:
-                title = '路线图' if zh else 'Roadmap'
-                description = '正在进行、已计划和已完成的工程工作。' if zh else 'Engineering work in progress, planned, and done.'
-                body, toc = roadmap_body(data, language, page)
-            outputs[page] = render_shell(context, documents, page, language, title, description, body, toc)
+        page = page_path('releases', language)
+        context = {'id': 'releases', 'catalog': catalog, 'component': {'category_id': 'project'}}
+        title = '版本记录与迁移' if zh else 'Releases and migrations'
+        description = '每个版本改了什么，升级时需要改哪些代码。' if zh else 'What changed in each release, and what to change in your code when you upgrade.'
+        body = history_body(data, language, page)
+        toc = [('unreleased', '开发中' if zh else 'Unreleased')]
+        toc += [('v' + v['version'], v['version']) for v in data['versions']]
+        outputs[page] = render_shell(context, documents, page, language, title, description, body, toc)
+        outputs[page_path('roadmap', language)] = roadmap_redirect(language)
     return outputs

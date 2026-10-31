@@ -50,7 +50,7 @@ represent supported patch lines, not Git Flow release branches.
 Public release notes in `docs/releases/vX.Y.Z.md` remain the canonical record.
 Maintain their bilingual summaries, publication metadata, related documentation
 IDs, and migration instructions in `tools/site/release-history.json`.
-The website's version history and roadmap are generated from that input during
+The website's version history is generated from that input during
 the ordinary website build; generated HTML stays untracked.
 
 When preparing a release:
@@ -79,13 +79,12 @@ When preparing a release:
 5. Run `python3 tools/site/build_site.py --prepare` and
    `python3 tools/site/test_release_history.py`. These checks require every
    version note to have a current translation. Website artifacts must include
-   both languages of the version history and roadmap.
+   both languages of the version history and the legacy roadmap redirects.
 
-The roadmap follows `docs/development/technical-debt-roadmap.md`. Review its
-bilingual explanation and `reviewed_on` date after source changes, then run
-`python3 tools/site/release_history.py --refresh-roadmap-digest` to acknowledge
-the review. Stale translations and mismatched phase states fail the build.
-Historical roadmaps are delivery records, not new commitments.
+Keep engineering plans in `docs/development/technical-debt-roadmap.md`; the
+website does not duplicate this internal maintenance queue as a public roadmap.
+The former `api/roadmap/` and `zh-CN/api/roadmap/` URLs redirect to their respective
+release histories. Historical roadmaps remain delivery records, not new commitments.
 
 ## Commits
 

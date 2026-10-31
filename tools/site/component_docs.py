@@ -120,13 +120,11 @@ def component_directory(doc, documents, page, language):
         "navigation": "导航", "scrolling": "滚动", "status-info": "状态与信息", "text-fields": "文本输入",
         "windowing": "窗口", "particles": "粒子", "spatial": "空间", "qml-bridge": "QML 桥接", "foundation": "图标"}
     available = {item["id"]: item for item in documents}
-    project_links = []
-    for kind, labels in (('releases', ('Releases and migrations', '版本记录与迁移')), ('roadmap', ('Roadmap', '路线图'))):
-        current = ' aria-current="page"' if doc['id'] == kind else ''
-        terms = ' '.join((kind, *labels)).lower()
-        project_links.append(f'<li data-directory-entry data-search="{escape(terms)}"><a href="{relative_url(release_page_path(kind, language), page)}"{current}>{labels[language == "zh"]}</a></li>')
+    current = ' aria-current="page"' if doc['id'] == 'releases' else ''
+    label = '版本记录与迁移' if language == 'zh' else 'Releases and migrations'
+    project_link = f'<li data-directory-entry data-search="releases releases and migrations 版本记录与迁移"><a href="{relative_url(release_page_path("releases", language), page)}"{current}>{label}</a></li>'
     opened = ' open' if doc['component']['category_id'] == 'project' else ''
-    groups = [f'<details data-directory-group{opened}><summary>{"Project updates" if language == "en" else "项目更新"}</summary><ul>{"".join(project_links)}</ul></details>']
+    groups = [f'<details data-directory-group{opened}><summary>{"Project updates" if language == "en" else "项目更新"}</summary><ul>{project_link}</ul></details>']
     for group, labels in (('foundation', ('Foundations', '基础能力')), ('modules', ('Modules', '扩展模块'))):
         entries = []
         for item in guides():
@@ -311,8 +309,9 @@ def generated_outputs(documents):
         introductions = [{'names': [g['id'], *g['name'].values()],
             'urls': {lang: relative_url(guide_path(g['id'], lang), entry) for lang in ('en', 'zh')}} for g in guides()]
         redirects = introductions + redirects
-        redirects += [{'names': [kind, *labels], 'urls': {lang: relative_url(release_page_path(kind, lang), entry) for lang in ('en', 'zh')}}
-                      for kind, labels in (('releases', ('版本记录', '更新日志', 'Changelog')), ('roadmap', ('路线图', 'Roadmap')))]
+        redirects.append({'names': ['releases', '版本记录', '更新日志', 'Changelog', 'roadmap', '路线图'],
+                          'urls': {lang: relative_url(release_page_path('releases', lang), entry) for lang in ('en', 'zh')},
+                          'filterDirectory': False})
         outputs[entry] = Template((ROOT / 'tools/site/api-entry.template.html').read_text()).substitute(
             lang='zh-CN' if language == 'zh' else 'en', default_language=language,
             canonical='https://calvinhxx.github.io/Fluent-Qt/' + guide_path('foundation', language).removesuffix('index.html'),

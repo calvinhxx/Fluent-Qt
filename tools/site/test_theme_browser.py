@@ -69,8 +69,15 @@ def check_release_documents(page: object, site_url: str, language: str) -> None:
         if page.evaluate('document.documentElement.scrollWidth > innerWidth'):
             raise RuntimeError(f'Release history overflows at {width}px')
     page.goto(site_url + 'api/roadmap/', wait_until='domcontentloaded')
-    if page.locator('.roadmap-phase').count() < 3:
-        raise RuntimeError('Roadmap is missing its maintained phases')
+    page.wait_for_url(site_url + 'api/releases/')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if page.locator('a[href*="/roadmap/"]').count():
+        raise RuntimeError('Retired roadmap must not appear in the documentation navigation')
+    page.goto(site_url + 'api/?q=roadmap', wait_until='domcontentloaded')
+    page.wait_for_url(site_url + 'api/releases/')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if page.locator('[data-directory-search]').input_value():
+        raise RuntimeError('The legacy roadmap alias must not filter the documentation directory')
     # This guide shares the API shell without starting a component's live preview.
     page.goto(site_url + 'api/foundation-iconography/', wait_until='domcontentloaded')
     if page.locator('.document-version-note a').count():

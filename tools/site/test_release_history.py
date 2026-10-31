@@ -17,12 +17,11 @@ class ReleaseHistoryTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for directory in ('docs/releases', 'tools/site', 'docs/development'):
+        for directory in ('docs/releases', 'tools/site'):
             (self.root / directory).mkdir(parents=True)
         for source in (history.ROOT / 'docs/releases').glob('v*.md'):
             shutil.copyfile(source, self.root / 'docs/releases' / source.name)
-        for name in (history.SOURCE, 'docs/development/technical-debt-roadmap.md'):
-            shutil.copyfile(history.ROOT / name, self.root / name)
+        shutil.copyfile(history.ROOT / history.SOURCE, self.root / history.SOURCE)
         self.data = json.loads((self.root / history.SOURCE).read_text())
 
     def write(self):
@@ -63,20 +62,10 @@ class ReleaseHistoryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'migration record'):
             history.load_history(self.root)
 
-    def test_unreleased_baseline_and_roadmap_cannot_silently_drift(self):
-        baseline = self.data['unreleased']['after']
+    def test_unreleased_baseline_cannot_silently_drift(self):
         self.data['unreleased']['after'] = '1.9.0'
         self.write()
         with self.assertRaisesRegex(ValueError, 'baseline'):
-            history.load_history(self.root)
-        self.data['unreleased']['after'] = baseline
-        self.data['roadmap']['phases'][0]['state'] = 'Complete'
-        self.write()
-        with self.assertRaisesRegex(ValueError, 'Roadmap state drift'):
-            history.load_history(self.root)
-        source = self.root / self.data['roadmap']['source']
-        source.write_text(source.read_text() + '\nA changed roadmap commitment.\n')
-        with self.assertRaisesRegex(ValueError, 'Review the bilingual roadmap'):
             history.load_history(self.root)
 
     def test_only_explicit_breaking_headings_require_migrations(self):

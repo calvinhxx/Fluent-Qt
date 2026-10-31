@@ -172,6 +172,17 @@ class VisualDocumentationTest(unittest.TestCase):
             for route in ('checkbox', 'releases', 'roadmap'):
                 self.assertNotIn('class="document-version-note"', outputs[f'{prefix}api/{route}/index.html'])
 
+    def test_retired_roadmap_urls_forward_to_releases_in_their_language(self):
+        outputs = component_docs.generated_outputs(self.documents)
+        for prefix, lang in (('', 'en'), ('zh-CN/', 'zh-CN')):
+            page = outputs[f'{prefix}api/roadmap/index.html']
+            self.assertIn(f'<html lang="{lang}">', page)
+            self.assertIn('<meta http-equiv="refresh" content="0; url=../releases/">', page)
+            self.assertIn('<a href="../releases/">', page)
+            self.assertIn(f'<link rel="canonical" href="{generate_localized_site.BASE_URL}{prefix}api/releases/">', page)
+            # A redirect that also says noindex gives search engines two conflicting signals.
+            self.assertNotIn('noindex', page)
+
     def test_every_catalog_component_has_bilingual_visual_documentation(self):
         documents = {doc['id']: doc for doc in self.documents}
         self.assertEqual(set(documents), {c['id'] for c in self.catalog['components']})
