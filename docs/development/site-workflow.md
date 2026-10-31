@@ -318,10 +318,18 @@ Browser checks and QR decoding do not verify the payment app's displayed amount,
 continued code validity, repeat payments, or settlement. Those require a separate
 manual check in the payment app.
 
-The repository's [funding configuration](../../.github/FUNDING.yml) uses a
-custom URL pointing to the English homepage's `#support` section. The Chinese
-README links directly to `/zh-CN/#support`. These links lead to WeChat Pay and
-Alipay collection codes; GitHub does not process the payments.
+The repository's [funding configuration](../../.github/FUNDING.yml) lists four
+custom URLs, one per tier. GitHub's Sponsor dialog shows custom links as bare
+URLs without labels or styling, so each one is a short path that names its tier:
+`/fuel/iced-coffee/`, `/fuel/context-window/`, `/fuel/max-reasoning/`, and
+`/fuel/freestyle/`. `generate_localized_site.py` writes these redirect pages from
+`SUPPORT_TIERS`. Each opens `?fuel=<tier>#support` on the Chinese homepage when
+the browser language is Chinese, and on the English homepage otherwise; without
+JavaScript, the meta refresh opens the English homepage. The support controller
+selects the named tier and greets the visitor until they change the selection;
+unknown values keep the default tier. GitHub accepts at most four custom links.
+The Chinese README links directly to `/zh-CN/#support`. These links lead to
+WeChat Pay and Alipay collection codes; GitHub does not process the payments.
 
 For publication, verify the codes in both payment apps, publish the website
 through the existing `main`-branch Pages workflow, and confirm the public

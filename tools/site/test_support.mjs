@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL('../../site/site.js', import.meta.url), 'utf8');
 const template = await readFile(new URL('./index.template.html', import.meta.url), 'utf8');
+const funding = await readFile(new URL('../../.github/FUNDING.yml', import.meta.url), 'utf8');
 const setup = source.slice(source.indexOf('function setupSupport() {'), source.indexOf('\nfunction setupGalleryPreview()'));
 const strings = vm.runInNewContext(`(${source.slice(source.indexOf('{'), source.indexOf('\n};\n\nconst fallbackVersion') + 2)})`);
 
@@ -37,15 +38,19 @@ class TestImage extends Element {
   }
 }
 
-function fixture(page = 'https://example.test/', locale = 'en', missing = '') {
+function fixture(page = 'https://example.test/', locale = 'en', missing = '', search = '') {
   const window = new Element();
+  window.location = { search };
   const controls = new Element();
   const instruction = new Element();
   controls.hidden = true;
   let amount = '19', method = 'wechat';
   controls.querySelector = selector => {
     const name = selector.includes('support-amount') ? 'amount' : 'method';
-    return missing === name ? null : { value: name === 'amount' ? amount : method };
+    if (missing === name) return null;
+    const value = selector.match(/\[value="([^"]+)"\]/)?.[1];
+    if (value) return { set checked(on) { if (on) amount = value; } };
+    return { value: name === 'amount' ? amount : method };
   };
   const payments = ['wechat', 'alipay'].map(name => {
     const payment = new Element(), viewport = new Element(), generic = new TestImage();
@@ -68,7 +73,7 @@ function fixture(page = 'https://example.test/', locale = 'en', missing = '') {
   if (missing === 'instruction') delete root.selectors['[data-support-instruction]'];
   root.querySelectorAll = () => payments.map(entry => entry.payment);
   vm.runInNewContext(`${setup}\nsetupSupport();`, {
-    document: { querySelector: () => root }, window, URL,
+    document: { querySelector: () => root }, window, URL, URLSearchParams,
     dictionary: () => strings[locale]
   });
   return {
@@ -104,6 +109,30 @@ test('all eight selections keep code and instructions aligned in both locales an
         assert.ok((await readFile(new URL(`../../site/assets/support/${file}`, import.meta.url))).length > 0);
       }
     }
+  }
+});
+
+test('each GitHub funding link opens its tier with a greeting until the visitor changes it', () => {
+  // Each short path redirects to `?fuel=<tier>#support`; the Python tests cover the redirect pages.
+  const tiers = [...funding.matchAll(/^\s*- \S+\/fuel\/([a-z-]+)\/$/gm)].map(match => match[1]);
+  assert.equal(tiers.length, 4, 'GitHub accepts at most four custom funding links, one per tier');
+  const amounts = ['19', '49', '99', 'any'];
+  for (const locale of ['en', 'zh']) {
+    tiers.forEach((tier, index) => {
+      const amount = amounts[index];
+      const f = fixture('https://example.test/', locale, '', `?fuel=${tier}`);
+      const label = strings[locale][amount === 'any' ? 'support.any' : `support.tier${amount}`];
+      const greeting = strings[locale][amount === 'any' ? 'support.linkedAnyInstruction' : 'support.linkedInstruction'];
+      assert.equal(f.instruction.textContent, greeting.replace('{amount}', amount).replace('{tier}', label));
+      assert.ok(f.payments[0].viewport.children[0].src.endsWith(amount === 'any' ? '/wechat.jpg' : `/wechat-${amount}.jpg`));
+      f.choose('alipay', '49');
+      assert.equal(f.instruction.textContent, strings[locale]['support.instruction'].replace('{amount}', '49'));
+    });
+  }
+  // Unknown and inherited names keep the default tier and the usual copy.
+  for (const fuel of ['espresso', 'constructor', '__proto__']) {
+    const f = fixture('https://example.test/', 'en', '', `?fuel=${fuel}`);
+    assert.equal(f.instruction.textContent, strings.en['support.instruction'].replace('{amount}', '19'));
   }
 });
 
