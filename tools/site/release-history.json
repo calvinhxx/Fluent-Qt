@@ -743,6 +743,10 @@
       {
         "en": "Project updates now live in Releases and migrations. The standalone roadmap is removed; its old URLs open the release history in the same language.",
         "zh": "官网项目更新统一在“版本记录与迁移”查看。独立路线图页已移除，旧地址跳转到对应语言的版本记录。"
+      },
+      {
+        "en": "The documentation sidebar now groups component categories under Components, icons under Foundations, and each extension guide with its components. Search expands matching branches and restores your expanded sections when cleared.",
+        "zh": "文档侧栏按层级组织：控件分类归入“组件”，图标归入“基础能力”，扩展模块的概述与组件放在一起。搜索自动展开匹配分支，清空后恢复原来的展开状态。"
       }
     ],
     "migrations": []

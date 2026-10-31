@@ -90,6 +90,61 @@ def check_release_documents(page: object, site_url: str, language: str) -> None:
             raise RuntimeError('The API notice did not reach its pending change')
 
 
+def check_directory_hierarchy(page: object, site_url: str) -> None:
+    """Keep each document discoverable through its owning branch and search."""
+    cases = (
+        ('releases', ['project']),
+        ('foundation', ['foundation']),
+        ('foundation-iconography', ['foundation', 'category-foundation']),
+        ('module-particles', ['modules', 'category-particles']),
+        ('module-spatial', ['modules', 'category-spatial']),
+        ('module-qmlbridge', ['modules', 'category-qml-bridge']),
+        ('reference/particles-session', ['reference']),
+    )
+    # The previous release check also exercises the compact layout.
+    page.set_viewport_size({'width': 1280, 'height': 800})
+    for route, expected in cases:
+        page.goto(site_url + 'api/' + route + '/', wait_until='domcontentloaded')
+        roots = page.locator('.directory-groups > [data-directory-group]').evaluate_all(
+            'groups => groups.map(group => group.dataset.directoryGroup)')
+        if roots != ['project', 'foundation', 'components', 'modules', 'reference']:
+            raise RuntimeError(f'Unexpected documentation sections: {roots}')
+        current = page.locator('.directory-groups a[aria-current="page"]')
+        if current.count() != 1 or not current.is_visible():
+            raise RuntimeError(f'The current document is not exposed in its branch: {route}')
+        ancestors = current.evaluate('''link => {
+            const groups = [];
+            for (let parent = link.parentElement; parent; parent = parent.parentElement) {
+                if (parent.hasAttribute('data-directory-group')) groups.unshift(parent.dataset.directoryGroup);
+            }
+            return groups;
+        }''')
+        if ancestors != expected:
+            raise RuntimeError(f'Wrong documentation branch for {route}: {ancestors}')
+
+    page.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
+    components = page.locator('[data-directory-group="components"]')
+    components.locator(':scope > summary').click()
+    basic = page.locator('[data-directory-group="category-basic-input"]')
+    basic.locator(':scope > summary').focus()
+    basic.locator(':scope > summary').press('Enter')
+    if not page.locator('[data-component-id="button"]').is_visible():
+        raise RuntimeError('Keyboard expansion did not expose nested components')
+    before = page.locator('[data-directory-group]').evaluate_all('groups => groups.map(g => g.open)')
+    search = page.locator('[data-directory-search]')
+    for query, component in (('ParticleBackdrop', 'particle-backdrop'), ('FontIcon', 'font-icon'), ('ChartView', 'chart-view')):
+        search.fill(query)
+        if not page.locator(f'[data-component-id="{component}"]').is_visible():
+            raise RuntimeError(f'Search did not expand the matched component branch: {query}')
+    search.fill('no-such-document-xyz')
+    if page.locator('[data-directory-group]:not([hidden])').count():
+        raise RuntimeError('Empty search results left empty branches visible')
+    search.press('Escape')
+    after = page.locator('[data-directory-group]').evaluate_all('groups => groups.map(g => g.open)')
+    if before != after:
+        raise RuntimeError('Clearing search lost the reader\'s expanded branches')
+
+
 def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | None = None) -> dict:
     if site_root is None:
         prepare_site_theme_contract(PROJECT_ROOT)
@@ -179,13 +234,15 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     page.screenshot(path=str(output / f"{language}-{width}.png"))
                 if site_root is not None:
                     check_release_documents(page, site_url, language)
+                    check_directory_hierarchy(page, site_url)
                 if errors:
                     raise RuntimeError(f"Website page errors ({language}): {errors}")
                 if runtime_requests:
                     raise RuntimeError(f"Static website eagerly requested WASM ({language}): {runtime_requests}")
                 results.append({"language": language, "themes": ["light", "dark", "high-contrast"],
                                 "forced_colors": "passed", "widths": [1280, 390], "runtime_requests": [],
-                                "release_documents": "passed" if site_root is not None else "not_run"})
+                                "release_documents": "passed" if site_root is not None else "not_run",
+                                "directory_hierarchy": "passed" if site_root is not None else "not_run"})
             finally:
                 page.close()
     finally:
