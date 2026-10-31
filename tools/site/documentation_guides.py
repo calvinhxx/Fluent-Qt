@@ -8,9 +8,9 @@ def section(en, zh, english, chinese, cpp='', python=''):
     return {'title': {'en': en, 'zh': zh}, 'body': {'en': english, 'zh': chinese}, 'cpp': cpp, 'python': python}
 
 
-def guide(id, en, zh, english, chinese, headers, sections, group='foundation'):
+def guide(id, en, zh, english, chinese, headers, sections, group='foundation', *, component_category=None):
     return {'id': id, 'name': {'en': en, 'zh': zh}, 'description': {'en': english, 'zh': chinese},
-            'headers': headers, 'sections': sections, 'group': group}
+            'headers': headers, 'sections': sections, 'group': group, 'component_category': component_category}
 
 
 GUIDES = [
@@ -74,7 +74,7 @@ GUIDES = [
                 'import fluentqt\nfrom PySide6.QtGui import QFontDatabase\n\nfont_id = QFontDatabase.addApplicationFont(":/icons/application.ttf")\nfamilies = QFontDatabase.applicationFontFamilies(font_id)\nif font_id >= 0 and families:\n    # Replace this codepoint with one defined by your font.\n    icon = fluentqt.FontIcon(chr(0xE064))\n    icon.setFontFamily(families[0])\n    icon.setIconSize(20)\n    icon.setAccessibleName("Application icon")'),
             section('Sizes and accessible names', '尺寸与无障碍名称',
                 'Typography::IconSize lists the sizes the icon font is designed for: Standard (16px) for most controls, Compact (12px) for chevrons and small indicators, and Large (20px) or XLarge (24px) for headers. An icon-only button needs setAccessibleName() so screen readers can announce what it does.',
-                'Typography::IconSize 列出了图标字体的设计尺寸：大多数控件用 Standard（16px），折叠箭头等小指示用 Compact（12px），标题区可用 Large（20px）或 XLarge（24px）。只有图标的按钮要调用 setAccessibleName()，让读屏软件能读出它的作用。')]),
+                'Typography::IconSize 列出了图标字体的设计尺寸：大多数控件用 Standard（16px），折叠箭头等小指示用 Compact（12px），标题区可用 Large（20px）或 XLarge（24px）。只有图标的按钮要调用 setAccessibleName()，让读屏软件能读出它的作用。')], component_category='foundation'),
     guide('foundation-geometry', 'Corners, shadows, and materials', '圆角、阴影与材质',
         'Shared values for corner radii, shadows, and window backgrounds.',
         '圆角、阴影和窗口背景的共用参数。',
@@ -195,7 +195,7 @@ GUIDES = [
                 'from fluentqt.particles import ParticleBackdrop\n\nbackdrop = ParticleBackdrop(parent)\nbackdrop.setEffect(ParticleBackdrop.Effect.Starfield)'),
             section('Dependencies', '依赖关系',
                 'FluentQt::FluentQt contains no particle code. FluentQt::Particles depends on FluentQt::Plugins. Gallery, PySide6 and Spatial builds turn it on automatically; Spatial uses it for its GPU particle layer.',
-                'FluentQt::FluentQt 不包含粒子代码。FluentQt::Particles 依赖 FluentQt::Plugins。构建 Gallery、PySide6 或 Spatial 时会自动打开它，Spatial 用它实现 GPU 粒子层。')], group='modules'),
+                'FluentQt::FluentQt 不包含粒子代码。FluentQt::Particles 依赖 FluentQt::Plugins。构建 Gallery、PySide6 或 Spatial 时会自动打开它，Spatial 用它实现 GPU 粒子层。')], group='modules', component_category='particles'),
     guide('module-spatial', 'Spatial', 'Spatial 透视视图',
         'Show existing widgets in perspective, with a flat layout when needed.',
         '以透视方式显示现有控件，需要时切换为平面布局。',
@@ -207,7 +207,7 @@ GUIDES = [
                 'from fluentqt.spatial import SpatialSession\n\n# The session uses its own PluginManager; window stays caller-owned.\nsession = SpatialSession(window, window)\nif session.activate():\n    view = session.createView(parent_widget)\n    item = view.addBorrowedWidget(card)'),
             section('Renderer and flat mode', '渲染后端与平面模式',
                 'setRenderMode() requests Auto, Raster, or OpenGL. If OpenGL is unavailable, the view falls back to Raster and stays in perspective; activeBackend() and fallbackReason() report the result. setSpatialEnabled(false) puts the same widgets back in a normal vertical layout. Reduced motion, high contrast, and pressing Tab or Esc in the scene also switch to this flat mode. Use it for text input, popups, and accessibility.',
-                'setRenderMode() 请求 Auto、Raster 或 OpenGL。OpenGL 不可用时会回退到 Raster，仍保持透视，activeBackend() 和 fallbackReason() 报告结果。setSpatialEnabled(false) 把同一批控件放回普通的纵向布局；减弱动效、高对比度，以及在场景中按 Tab 或 Esc，也会切换到这种平面模式。输入文字、弹出窗口和无障碍场景请使用平面模式。')], 'modules'),
+                'setRenderMode() 请求 Auto、Raster 或 OpenGL。OpenGL 不可用时会回退到 Raster，仍保持透视，activeBackend() 和 fallbackReason() 报告结果。setSpatialEnabled(false) 把同一批控件放回普通的纵向布局；减弱动效、高对比度，以及在场景中按 Tab 或 Esc，也会切换到这种平面模式。输入文字、弹出窗口和无障碍场景请使用平面模式。')], 'modules', component_category='spatial'),
     guide('module-qmlbridge', 'QmlBridge', 'QmlBridge：嵌入 QML',
         'Embed QML views in a Widgets application, sharing theme tokens and your models.',
         '在 Widgets 应用中嵌入 QML 视图，共享主题 token 和应用模型。',
@@ -219,7 +219,7 @@ GUIDES = [
                 'from fluentqt.qmlbridge import QmlSession\n\n# The session uses its own PluginManager; window and models stay caller-owned.\nsession = QmlSession(window, window)\nif session.activate():\n    qml_view = session.createView(parent_widget)'),
             section('Graphics API and theme', '图形 API 与主题',
                 'If Quick shares a window with SpatialView or QOpenGLWidget, call QmlSession::prepareApplication() before the first Quick surface is created; activating a session does not choose a graphics API. QmlTheme gives QML the host\'s theme tokens as the read-only fluentTheme object.',
-                'Quick 与 SpatialView 或 QOpenGLWidget 共用窗口时，要在创建第一个 Quick 表面之前调用 QmlSession::prepareApplication()；激活会话不会选择图形 API。QmlTheme 以只读的 fluentTheme 对象向 QML 提供宿主的主题 token。')], 'modules'),
+                'Quick 与 SpatialView 或 QOpenGLWidget 共用窗口时，要在创建第一个 Quick 表面之前调用 QmlSession::prepareApplication()；激活会话不会选择图形 API。QmlTheme 以只读的 fluentTheme 对象向 QML 提供宿主的主题 token。')], 'modules', component_category='qml-bridge'),
     guide('foundation-diagnostics', 'Diagnostics', '界面检查',
         'Check a running widget tree for clipped text, missing accessible names, and small hit areas.',
         '检查运行中的控件树，找出文字截断、缺少无障碍名称和点击区域过小等问题。',

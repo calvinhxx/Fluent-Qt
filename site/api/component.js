@@ -6,7 +6,8 @@ function setupDirectory() {
   if (!search) return;
   const entries = [...directory.querySelectorAll('[data-directory-entry]')];
   const groups = [...directory.querySelectorAll('[data-directory-group]')];
-  const defaults = new Map(groups.map(group => [group, group.open]));
+  const expanded = new Map();
+  let filtering = false;
   const status = directory.querySelector('[data-directory-status]');
   const compact = matchMedia('(max-width: 960px)');
   const chinese = document.documentElement.lang === 'zh-CN';
@@ -14,11 +15,14 @@ function setupDirectory() {
   search.value = query.get('q') || '';
   function filter(updateUrl = false) {
     const value = search.value.trim().toLocaleLowerCase();
+    if (value && !filtering) groups.forEach(group => expanded.set(group, group.open));
     entries.forEach(entry => { entry.hidden = value !== '' && !entry.dataset.search.includes(value); });
     groups.forEach(group => {
       group.hidden = !group.querySelector('[data-directory-entry]:not([hidden])');
-      group.open = value !== '' ? !group.hidden : defaults.get(group);
+      if (value) group.open = !group.hidden;
+      else if (filtering) group.open = expanded.get(group);
     });
+    filtering = Boolean(value);
     const count = entries.filter(entry => !entry.hidden).length;
     status.hidden = !value;
     status.textContent = count ? (chinese ? `${count} 个结果` : `${count} results`)
