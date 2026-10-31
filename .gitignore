@@ -41,6 +41,7 @@ tmp/
 /site/index.html
 /site/zh-CN/index.html
 /site/sitemap.xml
+/site/fuel/
 /site/api/**/index.html
 /site/zh-CN/api/
 /site/assets/app-icon-64.png

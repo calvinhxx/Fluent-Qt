@@ -25,6 +25,9 @@ ERROR_PAGE_PATH = SITE_ROOT / "404.html"
 LEGACY_GALLERY_REDIRECT_PATH = SITE_ROOT / "app" / "index.html"
 BASE_URL = "https://calvinhxx.github.io/Fluent-Qt/"
 REPOSITORY_URL = "https://github.com/calvinhxx/Fluent-Qt"
+# GitHub's Sponsor dialog shows custom funding links as bare URLs, so each tier
+# gets a short path; site.js selects the tier named by the `fuel` parameter.
+SUPPORT_TIERS = ("iced-coffee", "context-window", "max-reasoning", "freestyle")
 
 
 def versioned_asset_url(path: str) -> str:
@@ -417,6 +420,27 @@ def validate_error_page() -> None:
             fail(f"site/404.html must not infer language from browser state: {forbidden}")
 
 
+def render_support_redirect(tier: str) -> str:
+    """Open the homepage support section with one tier selected."""
+    target = f"../../?fuel={tier}#support"
+    return f'''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0; url={target}">
+  <link rel="canonical" href="{BASE_URL}">
+  <title>Support Fluent-Qt</title>
+  <script>
+    // WeChat Pay and Alipay visitors usually read Chinese; both pages keep the tier.
+    if (navigator.language.toLowerCase().startsWith("zh")) location.replace("../../zh-CN/?fuel={tier}#support");
+  </script>
+</head>
+<body><p><a href="{target}">Support Fluent-Qt</a></p></body>
+</html>
+'''
+
+
 def validate_legacy_gallery_redirect() -> None:
     try:
         page = LEGACY_GALLERY_REDIRECT_PATH.read_text(encoding="utf-8")
@@ -492,6 +516,7 @@ def main() -> int:
             (SITE_ROOT / "sitemap.xml", sitemap),
         )
     )
+    outputs.extend((SITE_ROOT / "fuel" / tier / "index.html", render_support_redirect(tier)) for tier in SUPPORT_TIERS)
 
     valid = all(write_or_check(path, content, arguments.check) for path, content in outputs)
     if not valid:

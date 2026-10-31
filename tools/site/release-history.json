@@ -751,6 +751,10 @@
       {
         "en": "Live component examples now take the height their sample needs, so tall charts, grids and pickers no longer scroll inside a short frame. Dialog, menu and window examples keep extra room for their overlays.",
         "zh": "组件文档里的实时示例会按示例内容自动调整高度，图表、表格和选择器不再挤在过矮的窗口里滚动。对话框、菜单和窗口类示例仍保留浮层所需的空间。"
+      },
+      {
+        "en": "The GitHub Sponsor button now lists a short link for each support tier. Each opens the homepage in your browser's language with that tier already selected.",
+        "zh": "GitHub 的 Sponsor 小爱心现在为每个投喂档位列出一个短链接，点开后按浏览器语言打开官网，并自动选好对应档位。"
       }
     ],
     "migrations": []

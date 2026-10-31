@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Keep cached homepage assets consistent with the generated page."""
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -44,6 +45,17 @@ class HomepageAssetTest(unittest.TestCase):
         template = '<div data-showcase-src="gallery/?embed=site&amp;showcase=spatial&amp;render-scale=native"></div>'
         self.assertEqual(site.prefix_resources(template, ''), template)
         self.assertEqual(site.prefix_resources(template, '../'), template.replace('="gallery/', '="../gallery/'))
+
+
+    def test_each_funding_link_has_a_tier_page_in_both_languages(self):
+        funding = (site.ROOT / '.github/FUNDING.yml').read_text(encoding='utf-8')
+        links = re.findall(r'^\s*- (\S+)$', funding, re.MULTILINE)
+        self.assertEqual(links, [f'{site.BASE_URL}fuel/{tier}/' for tier in site.SUPPORT_TIERS])
+        for tier in site.SUPPORT_TIERS:
+            page = site.render_support_redirect(tier)
+            self.assertIn(f'<meta http-equiv="refresh" content="0; url=../../?fuel={tier}#support">', page)
+            self.assertIn(f'location.replace("../../zh-CN/?fuel={tier}#support")', page)
+            self.assertIn(f'<a href="../../?fuel={tier}#support">', page)
 
 
 if __name__ == '__main__':

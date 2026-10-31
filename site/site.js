@@ -14,6 +14,8 @@ const translations = {
     "support.alipay": "支付宝",
     "support.instruction": "已切好 ¥{amount} 专属码，扫码核对无误即可投喂，感谢老板大气！",
     "support.anyInstruction": "已切到自由额度码，扫码后金额全凭心情，多少都是满格电量！",
+    "support.linkedInstruction": "顺着小爱心摸过来的？「{tier}」已就位，¥{amount} 专属码扫码核对即可，感谢老板大气！",
+    "support.linkedAnyInstruction": "顺着小爱心摸过来的？「{tier}」已就位，扫码后金额全凭心情，多少都是满格电量！",
     "support.wechatScan": "微信扫一扫 · 立即投喂",
     "support.alipayScan": "支付宝扫一扫 · 立即投喂",
     "support.wechatAlt": "维护者的微信收款二维码",
@@ -221,6 +223,8 @@ const translations = {
     "support.alipay": "Alipay",
     "support.instruction": "Locked in at ¥{amount}—scan, double-check the number, and you’re officially a legend.",
     "support.anyInstruction": "Freestyle code ready—scan and punch in whatever feels right. Every drop counts!",
+    "support.linkedInstruction": "Followed the little heart? {tier} is locked in at ¥{amount}—scan, double-check the number, and you’re officially a legend.",
+    "support.linkedAnyInstruction": "Followed the little heart? {tier} is ready—scan and punch in whatever feels right. Every drop counts!",
     "support.wechatScan": "Scan with WeChat Pay",
     "support.alipayScan": "Scan with Alipay",
     "support.wechatAlt": "The maintainer’s WeChat Pay collection QR code",
@@ -1045,19 +1049,35 @@ function setupSupport() {
     };
     return { payment, method, select };
   });
+  // GitHub's Sponsor dialog shows funding links as bare URLs, so each link names its tier.
+  const linkedAmount = new Map([
+    ["iced-coffee", "19"], ["context-window", "49"], ["max-reasoning", "99"], ["freestyle", "any"]
+  ]).get(new URLSearchParams(window.location.search).get("fuel"));
+  const linkedInput = linkedAmount && controls.querySelector(`[name="support-amount"][value="${linkedAmount}"]`);
+  if (linkedInput) linkedInput.checked = true;
+  // Greet the arrival until the visitor picks something else.
+  let linked = Boolean(linkedInput);
   const render = () => {
     const method = controls.querySelector('[name="support-method"]:checked').value;
     const amount = controls.querySelector('[name="support-amount"]:checked').value;
     const values = dictionary();
-    const message = values[amount === "any" ? "support.anyInstruction" : "support.instruction"];
-    instruction.textContent = message.replace("{amount}", amount);
+    const any = amount === "any";
+    const message = linked
+      ? values[any ? "support.linkedAnyInstruction" : "support.linkedInstruction"]
+      : values[any ? "support.anyInstruction" : "support.instruction"];
+    instruction.textContent = message
+      .replace("{amount}", amount)
+      .replace("{tier}", values[any ? "support.any" : `support.tier${amount}`]);
     payments.forEach(({ payment, method: paymentMethod, select }) => {
       if (paymentMethod === method) select(amount);
       payment.hidden = paymentMethod !== method;
     });
   };
 
-  controls.addEventListener("change", render);
+  controls.addEventListener("change", () => {
+    linked = false;
+    render();
+  });
   // Reset the derived view when a browser restores radio selections from history.
   window.addEventListener("pageshow", render);
   render();
