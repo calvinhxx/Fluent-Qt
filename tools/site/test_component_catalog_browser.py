@@ -185,7 +185,7 @@ def main():
             selection = {'route': doc['id'], 'sample': preview['sample'], 'state': preview['id']}
             print('Loading ' + doc['id'], flush=True)
             page.evaluate('''() => {
-                document.querySelector('[data-component]').style.setProperty('--preview-height', '600px');
+                document.querySelector('[data-component]').style.setProperty('--preview-min', '600px');
             }''')
             post_selection(page, selection)
             frame.wait_for_function('''selection => {

@@ -70,7 +70,7 @@ def run(url, output, scales, routes=None):
             page.on('pageerror', lambda error: errors.append(str(error)))
             page.goto(urljoin(url, 'zh-CN/api/button/'))
             expect(page.locator('[data-component]')).to_have_attribute('data-live-state', 'ready', timeout=90000)
-            page.locator('[data-component]').evaluate("root => root.style.setProperty('--preview-height', '640px')")
+            page.locator('[data-component]').evaluate("root => root.style.setProperty('--preview-min', '640px')")
             iframe = page.locator('.live-stage iframe')
             frame = iframe.element_handle().content_frame()
             frame.wait_for_function('JSON.parse(document.documentElement.dataset.fluentQtComponentState || "{}").revision > 0')

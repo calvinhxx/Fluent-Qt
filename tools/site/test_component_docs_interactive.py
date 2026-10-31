@@ -35,6 +35,30 @@ def wait_example(page):
     return frame
 
 
+def check_preview_fits_sample(browser, url):
+    """The running example takes its sample's height, keeps it offscreen, and honors overlay minimums."""
+    context = browser.new_context(viewport={'width': 1440, 'height': 1000})
+    page = context.new_page()
+    for route in ('chart-view', 'data-grid', 'content-dialog'):
+        page.goto(urljoin(url, f'api/{route}/'))
+        frame = wait_example(page)
+        minimum = float(page.locator('[data-component]').evaluate("root => root.style.getPropertyValue('--preview-min')").removesuffix('px'))
+        page.wait_for_function("document.querySelector('[data-component]').style.getPropertyValue('--live-height')")
+        frame.wait_for_function("JSON.parse(document.documentElement.dataset.fluentQtComponentState).focusTargets.length > 0")
+        state = native_state(frame)
+        clipped = [target['name'] for target in state['focusTargets'] if not target['fullyVisible']]
+        assert not clipped, (route, clipped)
+        height = page.locator('.live-stage iframe').bounding_box()['height']
+        reported = float(page.locator('[data-component]').evaluate("root => root.style.getPropertyValue('--live-height')").removesuffix('px'))
+        assert abs(height - max(minimum, min(reported, 720))) <= 1, (route, height, reported, minimum)
+        page.locator('#api').scroll_into_view_if_needed()
+        frame.wait_for_timeout(400)
+        page.locator('#appearance').scroll_into_view_if_needed()
+        frame.wait_for_timeout(400)
+        assert abs(page.locator('.live-stage iframe').bounding_box()['height'] - height) <= 1, route
+    context.close()
+
+
 def check_radio_button_previews(browser, url, output):
     """Selection keeps geometry stable and rings clear at fractional pixel ratios."""
     for scale in (1, 1.25, 1.5, 2):
@@ -220,6 +244,8 @@ def main():
         checks.append('Unavailable runtime keeps the document readable; Retry starts the real example')
         check_radio_button_previews(browser, args.url, args.output)
         checks.append('RadioButton stable selection layout, clear edges, keyboard focus and exclusive grouping at 1x, 1.25x, 1.5x and 2x')
+        check_preview_fits_sample(browser, args.url)
+        checks.append('Running examples fit their sample height, keep it offscreen, and keep overlay minimums')
         # Check the homepage in a separate navigation context.
         home_context = browser.new_context(locale='en-US', viewport={'width': 1440, 'height': 960})
         landing = home_context.new_page()

@@ -7,6 +7,7 @@
 #include <QAbstractButton>
 #include <QApplication>
 #include <QDialog>
+#include <QEvent>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -14,6 +15,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <emscripten.h>
+#include <utility>
 
 namespace fluent::gallery::platform {
 namespace {
@@ -24,6 +26,27 @@ QJsonObject selection;
 int clicks = 0;
 int revision = 0;
 bool active = true;
+int reportedHeight = -1;
+bool geometryPending = false;
+bool windowResized = false;
+
+void reportPreferredHeight()
+{
+    // A hidden sample collapses its layout; keep the last height while offscreen.
+    // zh_CN: 隐藏的示例会让布局塌缩；离开视口时保留上次的高度。
+    if (!previewWindow || !sampleLayout || !sampleContent || !active)
+        return;
+    const int width = previewWindow->width();
+    const int height = sampleLayout->hasHeightForWidth()
+        ? sampleLayout->totalHeightForWidth(width)
+        : sampleLayout->totalSizeHint().height();
+    if (height <= 0 || height == reportedHeight)
+        return;
+    reportedHeight = height;
+    // clang-format off
+    EM_ASM({ window.fluentQtComponentResized?.($0); }, height);
+    // clang-format on
+}
 
 void publishState()
 {
@@ -82,6 +105,39 @@ void publishState()
     EM_ASM({ document.documentElement.dataset.fluentQtComponentState = UTF8ToString($0); }, json.constData());
     // clang-format on
 }
+
+void settleGeometry()
+{
+    geometryPending = false;
+    reportPreferredHeight();
+    if (std::exchange(windowResized, false))
+        publishState();
+}
+
+void scheduleGeometry(bool resized = false)
+{
+    windowResized = windowResized || resized;
+    if (geometryPending || !previewWindow)
+        return;
+    geometryPending = true;
+    QTimer::singleShot(0, previewWindow, settleGeometry);
+}
+
+// Layout and host width changes can change the needed height; a host resize also
+// moves every control, so the published geometry is refreshed once per turn.
+// zh_CN: 布局和宿主宽度变化会改变所需高度；宿主尺寸变化还会移动控件，因此每轮刷新一次几何信息。
+class PreviewGeometryObserver final : public QObject {
+public:
+    using QObject::QObject;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::LayoutRequest || event->type() == QEvent::Resize)
+            scheduleGeometry(event->type() == QEvent::Resize && watched == previewWindow);
+        return QObject::eventFilter(watched, event);
+    }
+};
 
 void applyTheme(QWidget* window, HostTheme host)
 {
@@ -172,6 +228,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryComponentActive(int visible)
     active = visible != 0;
     if (sampleContent)
         sampleContent->setVisible(active);
+    scheduleGeometry();
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryComponentMotion(int reduced)
@@ -200,6 +257,9 @@ QWidget* createComponentPreview()
     sampleLayout->setContentsMargins(16, 16, 16, 16);
     sampleLayout->setSizeConstraint(QLayout::SetMinimumSize);
     scroll->setWidget(stage);
+    auto* geometryObserver = new PreviewGeometryObserver(window);
+    stage->installEventFilter(geometryObserver);
+    window->installEventFilter(geometryObserver);
     applyTheme(window, hostTheme());
     setHostThemeChangedHandler(window, [window](HostTheme theme) { applyTheme(window, theme); });
     fluentQtGalleryComponentMotion(
