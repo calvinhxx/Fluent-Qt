@@ -739,62 +739,12 @@
     "after": "1.11.0",
     "related": [],
     "headers": [],
-    "changes": [],
-    "migrations": []
-  },
-  "roadmap": {
-    "source": "docs/development/technical-debt-roadmap.md",
-    "reviewed_on": "2026-10-30",
-    "phases": [
+    "changes": [
       {
-        "id": "TD-3",
-        "state": "Active",
-        "title": {
-          "en": "Visual regression coverage",
-          "zh": "视觉回归覆盖"
-        },
-        "body": {
-          "en": "Add geometry checks and reviewed screenshot baselines for the components most likely to break visually: overlays, collection views and windows.",
-          "zh": "为最容易出视觉问题的组件（浮层、集合视图和窗口）补充几何检查和经过人工确认的截图基线。"
-        }
-      },
-      {
-        "id": "TD-4",
-        "state": "Planned",
-        "title": {
-          "en": "Testing on real platforms",
-          "zh": "真实平台验收"
-        },
-        "body": {
-          "en": "Record how screen readers, input methods, window management, drag and drop, and touch behave on Windows, macOS and Linux. Simulated Qt input events do not count.",
-          "zh": "在 Windows、macOS 和 Linux 上实测并记录读屏、输入法、窗口管理、拖放和触摸行为。Qt 模拟的输入事件不算数。"
-        }
-      },
-      {
-        "id": "TD-5",
-        "state": "Deferred",
-        "title": {
-          "en": "Compatibility cleanup for 2.0",
-          "zh": "2.0 兼容层清理"
-        },
-        "body": {
-          "en": "List the aliases and ownership APIs kept for 1.x compatibility, each with its replacement and a release test, so they can be removed in 2.0. No date is set.",
-          "zh": "整理 1.x 为兼容保留的别名和所有权接口，为每一项写明替代方式和发布测试，以便在 2.0 中移除。暂无时间表。"
-        }
-      },
-      {
-        "id": "TD-2",
-        "state": "Complete",
-        "title": {
-          "en": "Public API drift checks",
-          "zh": "公开 API 漂移检查"
-        },
-        "body": {
-          "en": "Static checks in CTest and CI cover installed headers, catalog mappings and API naming conventions.",
-          "zh": "CTest 和 CI 中的静态检查覆盖安装头文件、目录映射和 API 命名约定。"
-        }
+        "en": "Project updates now live in Releases and migrations. The standalone roadmap is removed; its old URLs open the release history in the same language.",
+        "zh": "官网项目更新统一在“版本记录与迁移”查看。独立路线图页已移除，旧地址跳转到对应语言的版本记录。"
       }
     ],
-    "source_sha256": "db4818219cd228eab89431664d566e68c5917526e5dd7bf3332baed06b6844a2"
+    "migrations": []
   }
 }

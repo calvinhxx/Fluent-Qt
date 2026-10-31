@@ -22,7 +22,7 @@
     const query = (params.get('q') || '').trim();
     const match = documents.find(item => item.names.some(name => name.toLowerCase() === query.toLowerCase())) || documents[0];
     const target = new URL(match.urls[language], location.href);
-    if (query) target.searchParams.set('q', query);
+    if (query && match.filterDirectory !== false) target.searchParams.set('q', query);
     if (params.get('view') === 'headers') target.searchParams.set('view', 'headers');
     location.replace(target.href);
   </script>
