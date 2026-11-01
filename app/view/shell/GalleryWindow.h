@@ -32,6 +32,7 @@ class GalleryNavigationPane;
 class GalleryContentPage;
 class GalleryIntroTour;
 class GalleryNavigationItem;
+class GallerySearchService;
 class GallerySplashScreen;
 class GalleryTitleBarController;
 class GalleryTopNavigationPane;
@@ -60,12 +61,12 @@ public:
     QStringList visibleNavigationTitles() const;
     bool selectRoute(const QString& routeId);
     /**
-     * @brief Navigates to the route whose title best matches the search text.
-     * zh_CN: 跳转到标题与搜索文本最匹配的路由。
+     * @brief Navigates using known routes or the completed example index, without loading samples.
+     * zh_CN: 使用已知路由或完整示例索引导航，不加载示例。
      *
-     * Exact (case-insensitive) title matches win; otherwise the first title
-     * containing the text is used. Returns false when nothing matches.
-     * zh_CN: 优先大小写不敏感的精确匹配，其次取第一个包含该文本的标题；无匹配返回 false。
+     * Routes precede examples. Returns false when no indexed destination matches;
+     * the title-bar controller uses asynchronous requests for cold example queries.
+     * zh_CN: 路由优先于示例；已就绪索引中无匹配时返回 false。标题栏控制器对冷启动示例查询使用异步请求。
      */
     bool navigateToSearchResult(const QString& searchText);
     GalleryContentPage* currentContentPage() const;
@@ -120,6 +121,7 @@ private:
     GalleryTopNavigationPane* m_topFooterNavigationPane = nullptr;
     fluent::textfields::EditingCommandRouter* m_editingCommandRouter = nullptr;
     GalleryContentPresenter* m_contentPresenter = nullptr;
+    GallerySearchService* m_searchService = nullptr;
     GalleryTitleBarController* m_titleBar = nullptr;
     GalleryIntroTour* m_introTour = nullptr;
     QTimer* m_navigationCompactReleaseTimer = nullptr;

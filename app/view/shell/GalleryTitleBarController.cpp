@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QPoint>
 #include <QPropertyAnimation>
+#include <QStandardItemModel>
 #include <QTimer>
 #include <QVariantAnimation>
 
@@ -21,7 +22,7 @@
 #include "design/Animation.h"
 #include "design/Typography.h"
 #include "AppIcon.h"
-#include "GallerySearchRanking.h"
+#include "GallerySearchService.h"
 #include "GalleryWindowMetrics.h"
 #include "view/support/GalleryMotion.h"
 
@@ -35,6 +36,10 @@ constexpr char kButtonPressAnimationName[] = "galleryTitleBarButtonPressAnimatio
 constexpr qreal kButtonPressScale =
     0.86; // WinUI-like press depth for icon buttons. zh_CN: 仿 WinUI 的图标按钮按下缩放深度。
 constexpr qreal kInactiveChromeOpacity = 0.55;
+// Results per page of the asynchronous search; more arrive through the list's load-more action.
+// zh_CN: 异步搜索每页结果数；其余结果经列表的“加载更多”获取。
+constexpr int kSearchPageSize = 8;
+constexpr int kSearchDebounceMs = 150;
 
 int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
 {
@@ -51,8 +56,7 @@ void startButtonPress(fluent::basicinput::Button* button)
     if (!button || !button->isEnabled())
         return;
 
-    if (auto* current = button->findChild<QPropertyAnimation*>(
-            QString::fromLatin1(kButtonPressAnimationName))) {
+    if (auto* current = button->findChild<QPropertyAnimation*>(QString::fromLatin1(kButtonPressAnimationName))) {
         current->stop();
         current->deleteLater();
     }
@@ -66,21 +70,21 @@ void startButtonPress(fluent::basicinput::Button* button)
     animation->setStartValue(1.0);
     animation->setKeyValueAt(0.4, kButtonPressScale);
     animation->setEndValue(1.0);
-    QObject::connect(animation, &QPropertyAnimation::finished, button,
-                     [button]() { button->setIconScale(1.0); });
+    QObject::connect(animation, &QPropertyAnimation::finished, button, [button]() { button->setIconScale(1.0); });
     ::fluent::gallery::motion::startFiniteTransition(animation, motion.fast, true,
-                                                     QAbstractAnimation::DeleteWhenStopped);
+        QAbstractAnimation::DeleteWhenStopped);
 }
 
 } // namespace
 
 GalleryTitleBarController::GalleryTitleBarController(fluent::windowing::TitleBar* bar,
-                                                     const QStringList& searchTitles,
-                                                     Callbacks callbacks, QObject* parent)
-    : QObject(parent), m_bar(bar), m_callbacks(std::move(callbacks))
+    GallerySearchService* search,
+    Callbacks callbacks,
+    QObject* parent)
+    : QObject(parent), m_bar(bar), m_callbacks(std::move(callbacks)), m_search(search)
 {
     m_windowActive = bar && bar->isWindowActive();
-    build(searchTitles);
+    build();
 }
 
 GalleryTitleBarController::~GalleryTitleBarController()
@@ -122,7 +126,7 @@ fluent::basicinput::Button* GalleryTitleBarController::menuButton() const
     return qobject_cast<fluent::basicinput::Button*>(m_menuButton.data());
 }
 
-void GalleryTitleBarController::build(const QStringList& searchTitles)
+void GalleryTitleBarController::build()
 {
     auto* bar = titleBar();
     if (!bar)
@@ -193,12 +197,11 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     layout->addAnchoredWidget(backButton, backAnchors);
 
     connect(bar, &fluent::windowing::TitleBar::systemReservedLeadingWidthChanged, backButton,
-            [backButton, layout](int newWidth) {
-                backButton->anchors()->left.offset = newWidth > 0
-                                                         ? TitleBarMetrics::leadingOffset(newWidth)
-                                                         : TitleBarMetrics::HorizontalMargin;
-                layout->invalidate();
-            });
+        [backButton, layout](int newWidth) {
+            backButton->anchors()->left.offset =
+                newWidth > 0 ? TitleBarMetrics::leadingOffset(newWidth) : TitleBarMetrics::HorizontalMargin;
+            layout->invalidate();
+        });
 
     fluent::AnchorLayout::Anchors menuAnchors;
     menuAnchors.left = {backButton, Edge::Right, TitleBarMetrics::ItemGap};
@@ -215,43 +218,7 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     titleAnchors.verticalCenter = {bar, Edge::VCenter, 0};
     layout->addAnchoredWidget(title, titleAnchors);
 
-    auto* searchBox = new fluent::textfields::AutoSuggestBox(bar);
-    m_searchBox = searchBox;
-    searchBox->setObjectName(QStringLiteral("GalleryTitleBar.SearchBox"));
-    // Click-to-focus only: keep the search box OUT of the tab/auto-focus chain so it never becomes
-    // the focus fallback when an unrelated widget (e.g. a Settings combo) loses focus during a theme
-    // or layout refresh — which made focus jump up to the search box on every settings change.
-    // Clicking it still focuses it for typing. zh_CN: 仅点击聚焦：把搜索框移出 Tab/自动聚焦链，使其不会在无关控件
-    //（如设置页下拉框）于主题/布局刷新中丢焦点时成为回退目标——这正是每次改设置焦点都跳到搜索框的原因。点击它仍可聚焦输入。
-    searchBox->setFocusPolicy(Qt::ClickFocus);
-    searchBox->setPlaceholderText(QStringLiteral("Search components and examples..."));
-    searchBox->setSuggestions(searchTitles);
-    searchBox->setInputHeight(TitleBarMetrics::SearchHeight);
-    searchBox->setQueryButtonSize(TitleBarMetrics::ButtonSize);
-    searchBox->setClearButtonSize(TitleBarMetrics::ButtonSize);
-    // Height is fixed; width is driven by updateLayout() so the box can shrink to fit the free
-    // span between the leading group and the native caption controls. zh_CN: 高度固定，宽度由 updateLayout() 驱动。
-    searchBox->setFixedHeight(TitleBarMetrics::SearchHeight);
-    // AutoSuggestBox leaves filtering to the owner (WinUI semantics): token-AND, prefix-first.
-    // zh_CN: AutoSuggestBox 把过滤交给使用方：词元 AND 匹配、前缀优先。
-    connect(searchBox, &fluent::textfields::AutoSuggestBox::textChangedWithReason, searchBox,
-            [searchBox, searchTitles](const QString& text,
-                                      fluent::textfields::AutoSuggestBox::TextChangeReason reason) {
-                if (reason != fluent::textfields::AutoSuggestBox::TextChangeReason::UserInput)
-                    return;
-                searchBox->setSuggestions(search::rankedTitles(searchTitles, text));
-            });
-    connect(searchBox, &fluent::textfields::AutoSuggestBox::querySubmitted, this,
-            [this](const QString& queryText, const QVariant& chosenSuggestion) {
-                const QString chosen = chosenSuggestion.toString();
-                if (m_callbacks.onSearch)
-                    m_callbacks.onSearch(chosen.isEmpty() ? queryText : chosen);
-            });
-    connect(searchBox, &fluent::textfields::AutoSuggestBox::suggestionChosen, this,
-            [this](const QVariant& item) {
-                if (m_callbacks.onSearch)
-                    m_callbacks.onSearch(item.toString());
-            });
+    buildSearchBox(bar);
 
     // The search box is intentionally left out of the AnchorLayout: it needs a max width,
     // centering-with-clamp, and collapse behaviour the anchor model can't express, so updateLayout()
@@ -270,6 +237,118 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     applyBackButtonReveal(0.0);
     updateLayout();
     applyChromeOpacity();
+}
+
+void GalleryTitleBarController::buildSearchBox(fluent::windowing::TitleBar* bar)
+{
+    auto* searchBox = new fluent::textfields::AutoSuggestBox(bar);
+    m_searchBox = searchBox;
+    searchBox->setObjectName(QStringLiteral("GalleryTitleBar.SearchBox"));
+    // Click-to-focus only: keep the search box OUT of the tab/auto-focus chain so it never becomes
+    // the focus fallback when an unrelated widget (e.g. a Settings combo) loses focus during a theme
+    // or layout refresh — which made focus jump up to the search box on every settings change.
+    // Clicking it still focuses it for typing. zh_CN: 仅点击聚焦：把搜索框移出 Tab/自动聚焦链，使其不会在无关控件
+    //（如设置页下拉框）于主题/布局刷新中丢焦点时成为回退目标——这正是每次改设置焦点都跳到搜索框的原因。点击它仍可聚焦输入。
+    searchBox->setFocusPolicy(Qt::ClickFocus);
+    searchBox->setPlaceholderText(QStringLiteral("Search components and examples..."));
+    searchBox->setInputHeight(TitleBarMetrics::SearchHeight);
+    searchBox->setQueryButtonSize(TitleBarMetrics::ButtonSize);
+    searchBox->setClearButtonSize(TitleBarMetrics::ButtonSize);
+    // Height is fixed; width is driven by updateLayout() so the box can shrink to fit the free
+    // span between the leading group and the native caption controls. zh_CN: 高度固定，宽度由 updateLayout() 驱动。
+    searchBox->setFixedHeight(TitleBarMetrics::SearchHeight);
+
+    // Asynchronous mode: the box debounces typing and asks for one page at a time; the search
+    // service answers on a later turn. Rows carry their route id, so a chosen result navigates by
+    // id rather than by its visible text. zh_CN: 异步模式：输入框对输入防抖，每次请求一页；搜索服务在之后的事件循环中回复。
+    // 行数据携带路由 id，选中结果按 id 导航而不是按可见文本。
+    m_searchModel = new QStandardItemModel(this);
+    searchBox->setSuggestionModel(m_searchModel);
+    searchBox->setDebounceInterval(kSearchDebounceMs);
+    searchBox->setLoadingText(QStringLiteral("Searching components and examples…"));
+    searchBox->setEmptyText(QStringLiteral("No matches"));
+    searchBox->setEmptyDescription(QStringLiteral("Try a component, category, or example name."));
+    searchBox->setAsyncSuggestionsEnabled(true);
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::suggestionsRequested, this,
+        [this](const QString& query, quint64 requestId, bool append) {
+            if (m_submitNextRequest && !append)
+                m_submittedRequest = requestId;
+            if (m_search)
+                m_search->requestResults(requestId, query, append ? m_searchModel->rowCount() : 0, kSearchPageSize);
+        });
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::suggestionRequestCanceled, this, [this](quint64 requestId) {
+        if (m_submittedRequest == requestId)
+            m_submittedRequest = 0;
+    });
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::textChangedWithReason, this, [this]() {
+        m_submittedRequest = 0;
+        m_submitNextRequest = false;
+    });
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::suggestionListOpenChanged, this, [this](bool open) {
+        if (!open)
+            m_submittedRequest = 0;
+    });
+    if (m_search) {
+        connect(searchBox, &fluent::textfields::AutoSuggestBox::suggestionRequestCanceled, m_search.data(),
+            &GallerySearchService::cancelRequest);
+        connect(m_search.data(), &GallerySearchService::resultsReady, this,
+            [this](quint64 requestId, int offset, const QVector<search::Entry>& page, bool hasMore) {
+                // Check the token before touching the borrowed model. zh_CN: 修改借用模型前先检查 token。
+                if (!m_searchBox || !m_searchBox->isSuggestionRequestCurrent(requestId))
+                    return;
+                const QPointer<GalleryTitleBarController> guard(this);
+                const QPointer<fluent::textfields::AutoSuggestBox> box(m_searchBox);
+                if (offset == 0)
+                    m_searchModel->removeRows(0, m_searchModel->rowCount());
+                if (!guard || !box || !box->isSuggestionRequestCurrent(requestId))
+                    return;
+                for (const search::Entry& entry : page) {
+                    auto* item = new QStandardItem(entry.text());
+                    item->setData(entry.routeId, Qt::UserRole);
+                    m_searchModel->appendRow(item);
+                    if (!guard || !box || !box->isSuggestionRequestCurrent(requestId))
+                        return;
+                }
+                if (!box->completeSuggestionRequest(requestId, hasMore) || !guard || !box
+                    || m_submittedRequest != requestId)
+                    return;
+                m_submittedRequest = 0;
+                if (page.isEmpty())
+                    return;
+                const QString routeId = page.first().routeId;
+                const auto navigate = m_callbacks.onSearchResultChosen;
+                box->cancelSuggestions();
+                if (guard && navigate)
+                    navigate(routeId);
+            });
+    }
+    // Navigate only on submission: suggestionChosen also fires while arrow keys preview rows.
+    // zh_CN: 仅在提交时导航：方向键预览行时也会发出 suggestionChosen。
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::querySubmitted, this,
+        [this](const QString& queryText, const QVariant& chosenSuggestion) {
+            m_submittedRequest = 0;
+            const QString routeId = chosenSuggestion.toString();
+            if (!routeId.isEmpty()) {
+                if (m_callbacks.onSearchResultChosen)
+                    m_callbacks.onSearchResultChosen(routeId);
+                return;
+            }
+            if (!m_search || !m_searchBox || queryText.trimmed().isEmpty() || m_searchBox->text() != queryText)
+                return;
+            const QVector<search::Entry> known = m_search->rankedResults(queryText);
+            if (!known.isEmpty()) {
+                if (m_callbacks.onSearchResultChosen)
+                    m_callbacks.onSearchResultChosen(known.first().routeId);
+                return;
+            }
+            // Reuse the suggestion request's cancellation token for a cold example submission.
+            // zh_CN: 冷启动的示例提交复用建议请求的取消 token，索引就绪后才导航。
+            const QPointer<GalleryTitleBarController> guard(this);
+            m_submitNextRequest = true;
+            m_searchBox->requestSuggestions();
+            if (guard)
+                m_submitNextRequest = false;
+        });
 }
 
 bool GalleryTitleBarController::eventFilter(QObject* watched, QEvent* event)
@@ -341,10 +420,9 @@ void GalleryTitleBarController::updateLayout()
     if (auto* barLayout = bar->layout())
         barLayout->activate();
 
-    const int leftBound = TitleBarMetrics::searchLeftBound(
-        bar->systemReservedLeadingWidth(), showAppIcon, showTitle, m_backReveal, m_menuAvailable);
-    const int rightBound =
-        TitleBarMetrics::searchRightBound(bar->width(), bar->systemReservedTrailingWidth());
+    const int leftBound = TitleBarMetrics::searchLeftBound(bar->systemReservedLeadingWidth(), showAppIcon, showTitle,
+        m_backReveal, m_menuAvailable);
+    const int rightBound = TitleBarMetrics::searchRightBound(bar->width(), bar->systemReservedTrailingWidth());
     const int avail = TitleBarMetrics::searchAvailableWidth(leftBound, rightBound);
 
     const bool showSearch = m_chromeVisible && TitleBarMetrics::canShowSearch(avail);
@@ -398,19 +476,17 @@ void GalleryTitleBarController::setChromeVisible(bool visible, bool animated)
         // zh_CN: 统一进度值让所有标题栏元素同步淡入，并可与激活/失活透明度稳定叠加。
         if (!m_chromeRevealAnimation) {
             m_chromeRevealAnimation = new QVariantAnimation(this);
-            m_chromeRevealAnimation->setObjectName(
-                QStringLiteral("galleryTitleBarChromeRevealAnimation"));
-            connect(m_chromeRevealAnimation, &QVariantAnimation::valueChanged, this,
-                    [this](const QVariant& value) { setChromeRevealOpacity(value.toReal()); });
+            m_chromeRevealAnimation->setObjectName(QStringLiteral("galleryTitleBarChromeRevealAnimation"));
+            connect(m_chromeRevealAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+                setChromeRevealOpacity(value.toReal());
+            });
         }
         setChromeRevealOpacity(0.0);
         m_chromeRevealAnimation->setDuration(::Animation::Duration::Normal);
-        m_chromeRevealAnimation->setEasingCurve(
-            ::Animation::getEasing(::Animation::EasingType::Decelerate));
+        m_chromeRevealAnimation->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
         m_chromeRevealAnimation->setStartValue(0.0);
         m_chromeRevealAnimation->setEndValue(1.0);
-        ::fluent::gallery::motion::startFiniteTransition(m_chromeRevealAnimation,
-                                                         ::Animation::Duration::Normal);
+        ::fluent::gallery::motion::startFiniteTransition(m_chromeRevealAnimation, ::Animation::Duration::Normal);
     }
 
     // setVisible(true) above un-hides chrome uniformly; re-apply the adaptive rules so the
@@ -428,8 +504,7 @@ void GalleryTitleBarController::setMenuEnabled(bool enabled)
     if (auto* layout = bar ? qobject_cast<fluent::AnchorLayout*>(bar->layout()) : nullptr) {
         fluent::AnchorLayout::Anchors anchors;
         anchors.left = {enabled ? menu : backButton(), Edge::Right,
-                        enabled ? TitleBarMetrics::ItemGap
-                                : qRound(m_backReveal * TitleBarMetrics::ItemGap)};
+            enabled ? TitleBarMetrics::ItemGap : qRound(m_backReveal * TitleBarMetrics::ItemGap)};
         anchors.verticalCenter = {bar, Edge::VCenter, 0};
         layout->addAnchoredWidget(m_appIcon, anchors);
     }
@@ -524,8 +599,9 @@ void GalleryTitleBarController::setBackAvailable(bool available)
         m_backRevealAnimation = new QVariantAnimation(this);
         m_backRevealAnimation->setObjectName(QStringLiteral("galleryTitleBarBackRevealAnimation"));
         m_backRevealAnimation->setDuration(motion.normal);
-        connect(m_backRevealAnimation, &QVariantAnimation::valueChanged, this,
-                [this](const QVariant& value) { applyBackButtonReveal(value.toReal()); });
+        connect(m_backRevealAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+            applyBackButtonReveal(value.toReal());
+        });
     }
     m_backRevealAnimation->stop();
     // Ease out on the way in (decisive arrival), the standard curve on the way out.

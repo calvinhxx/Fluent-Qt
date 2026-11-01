@@ -5,10 +5,10 @@
 
 #include <QObject>
 #include <QPointer>
-#include <QStringList>
 
 class QEvent;
 class QLabel;
+class QStandardItemModel;
 class QVariantAnimation;
 class QWidget;
 
@@ -28,6 +28,8 @@ class ToolTip;
 
 namespace fluent::gallery {
 
+class GallerySearchService;
+
 /**
  * @brief Owns the gallery's custom title-bar chrome: back / menu buttons, app icon + title,
  * the search box, their Fluent tooltips, press feedback, the back-button reveal animation, and
@@ -46,15 +48,19 @@ public:
     struct Callbacks {
         std::function<void()> onBack;      ///< Back button clicked. zh_CN: 点击返回。
         std::function<void()> onToggleNav; ///< Menu button clicked. zh_CN: 点击菜单。
-        std::function<void(const QString&)>
-            onSearch; ///< Search submitted/chosen. zh_CN: 搜索提交/选中。
+        /// A search result was chosen; carries its route id. zh_CN: 选中了搜索结果，携带其路由 id。
+        std::function<void(const QString&)> onSearchResultChosen;
         /// True when the nav pane is in its minimal layout, where the app title/icon give way to
         /// the search box. zh_CN: 导航处于最小布局时为真，此时应用标题/图标让位给搜索框。
         std::function<bool()> isMinimalNavLayout;
     };
 
-    GalleryTitleBarController(fluent::windowing::TitleBar* bar, const QStringList& searchTitles,
-                              Callbacks callbacks, QObject* parent = nullptr);
+    /// The search service answers the search box's asynchronous requests and must outlive it.
+    /// zh_CN: 搜索服务回复搜索框的异步请求，生命周期须长于搜索框。
+    GalleryTitleBarController(fluent::windowing::TitleBar* bar,
+        GallerySearchService* search,
+        Callbacks callbacks,
+        QObject* parent = nullptr);
     ~GalleryTitleBarController() override;
 
     /// Reflows the leading group + search box for the current width / nav layout.
@@ -88,7 +94,8 @@ private:
     fluent::windowing::TitleBar* titleBar() const;
     fluent::basicinput::Button* backButton() const;
     fluent::basicinput::Button* menuButton() const;
-    void build(const QStringList& searchTitles);
+    void build();
+    void buildSearchBox(fluent::windowing::TitleBar* bar);
     void applyBackButtonReveal(qreal reveal);
     void applyChromeOpacity();
     void setChromeRevealOpacity(qreal opacity);
@@ -107,6 +114,10 @@ private:
     QPointer<QLabel> m_appIcon;
     QPointer<fluent::textfields::Label> m_title;
     QPointer<fluent::textfields::AutoSuggestBox> m_searchBox;
+    QPointer<GallerySearchService> m_search;
+    QStandardItemModel* m_searchModel = nullptr;
+    quint64 m_submittedRequest = 0;
+    bool m_submitNextRequest = false;
     QPointer<fluent::status_info::ToolTip> m_toolTip;
 
     QVariantAnimation* m_backRevealAnimation = nullptr;
