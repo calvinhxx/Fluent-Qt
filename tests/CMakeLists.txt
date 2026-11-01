@@ -75,6 +75,7 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_auto_suggest_box
     test_tag_input
     test_tree_select
+    test_range_slider
     test_list_view
     test_flip_view
     test_calendar_date_picker

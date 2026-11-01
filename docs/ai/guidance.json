@@ -517,6 +517,11 @@
           "avoid_when": "The option set is long, dynamic, or space constrained."
         },
         {
+          "component_id": "range-slider",
+          "choose_when": "Users choose a bounded lower and upper value, such as a filter or a time window, by direct relative adjustment.",
+          "avoid_when": "Only one value is needed; use Slider. When exact text entry is the main task, use NumberBox editors, optionally paired with the slider."
+        },
+        {
           "component_id": "rating-control",
           "choose_when": "Users view or set an ordered star-style rating.",
           "avoid_when": "The numeric value needs precise arbitrary input."

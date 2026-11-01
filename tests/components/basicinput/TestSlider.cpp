@@ -337,6 +337,33 @@ TEST(SliderContractTest, Contract_LightAndDarkRangeExtremesPaintDistinctly)
     FluentElement::setTheme(FluentElement::Light);
 }
 
+TEST(SliderContractTest, Contract_UnfilledTrackUsesStrongControlFill)
+{
+    // The shared slider painter draws the unfilled track with the strong control
+    // fill so the value stays readable on light surfaces.
+    // zh_CN: 共享滑块绘制器用强控件填充绘制未填充轨道，使数值在浅色表面上依然清晰。
+    const QColor background(250, 250, 250);
+    for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+        SCOPED_TRACE(::testing::Message() << "theme=" << theme);
+        Slider slider(Qt::Horizontal);
+        slider.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        slider.setRange(0, 100);
+        slider.setValue(20);
+        slider.resize(240, 40);
+        const QImage image = testutils::renderControlSurface(slider, 1.0, background);
+        const QColor track = slider.themeColors().strokeStrong;
+        const qreal alpha = track.alphaF();
+        const QColor expected = QColor::fromRgbF(track.redF() * alpha + background.redF() * (1.0 - alpha),
+            track.greenF() * alpha + background.greenF() * (1.0 - alpha),
+            track.blueF() * alpha + background.blueF() * (1.0 - alpha));
+        const QColor actual = image.pixelColor(210, 20);
+        EXPECT_LE(qAbs(actual.red() - expected.red()), 3);
+        EXPECT_LE(qAbs(actual.green() - expected.green()), 3);
+        EXPECT_LE(qAbs(actual.blue() - expected.blue()), 3);
+        EXPECT_EQ(image.pixelColor(30, 20), slider.themeColors().accentDefault);
+    }
+}
+
 TEST_F(SliderTest, VisualSliderGalleryLike)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {

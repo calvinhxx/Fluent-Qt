@@ -561,6 +561,11 @@
           "avoid_when": "The option set is long, dynamic, or space constrained."
         },
         {
+          "component_id": "range-slider",
+          "choose_when": "Users choose a bounded lower and upper value, such as a filter or a time window, by direct relative adjustment.",
+          "avoid_when": "Only one value is needed; use Slider. When exact text entry is the main task, use NumberBox editors, optionally paired with the slider."
+        },
+        {
           "component_id": "rating-control",
           "choose_when": "Users view or set an ordered star-style rating.",
           "avoid_when": "The numeric value needs precise arbitrary input."
@@ -1073,6 +1078,7 @@
         "multi-select-combobox",
         "radio-button",
         "tree-select",
+        "range-slider",
         "rating-control",
         "repeat-button",
         "slider",
@@ -2472,6 +2478,125 @@
           "description": "Search a team hierarchy and choose one owner or several collaborating teams. Chinese input and keyboard navigation use the native editor.",
           "cpp_snippet": "#ifndef GALLERY_TEAMSELECTIONSAMPLE_H\n#define GALLERY_TEAMSELECTIONSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QStandardItemModel>\n#include <QPointer>\n#include <QHBoxLayout>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\n// The application owns the directory. Keys distinguish teams with equal names.\n// zh_CN: 应用持有团队目录，稳定身份用于区分同名团队。\nclass TeamSelectionSample final : public QWidget {\npublic:\n    explicit TeamSelectionSample(QWidget* parent = nullptr) : QWidget(parent)\n    {\n        setObjectName(QStringLiteral(\"teamSelectionSample\"));\n        setMaximumWidth(392);\n        auto* body = new QVBoxLayout(this);\n        body->setContentsMargins(16, 16, 16, 16);\n        body->setSpacing(12);\n        auto* model = new QStandardItemModel(this);\n        auto team = [](const QString& key, const QString& name) {\n            auto* item = new QStandardItem(name);\n            item->setData(key, Qt::UserRole);\n            return item;\n        };\n        auto* product = team(QStringLiteral(\"product\"), QStringLiteral(\"Product engineering\"));\n        product->setSelectable(false);\n        product->appendRow(team(QStringLiteral(\"client\"), QStringLiteral(\"Client apps\")));\n        product->appendRow(team(QStringLiteral(\"platform\"), QStringLiteral(\"Platform services\")));\n        product->appendRow(team(QStringLiteral(\"product-design\"), QStringLiteral(\"Design\")));\n        auto* brand = team(QStringLiteral(\"brand\"), QStringLiteral(\"Brand and marketing\"));\n        brand->setSelectable(false);\n        brand->appendRow(team(QStringLiteral(\"content\"), QStringLiteral(\"Content\")));\n        brand->appendRow(team(QStringLiteral(\"brand-design\"), QStringLiteral(\"Design\")));\n        auto* archived = team(QStringLiteral(\"archived\"), QStringLiteral(\"Archived team\"));\n        archived->setEnabled(false);\n        model->appendRow(product);\n        model->appendRow(brand);\n        model->appendRow(archived);\n\n        auto* owner = new basicinput::TreeSelect(this);\n        owner->setObjectName(QStringLiteral(\"projectOwningTeam\"));\n        owner->setAccessibleName(QStringLiteral(\"Owning team\"));\n        owner->setModel(model);\n        owner->setPlaceholderText(QStringLiteral(\"Search teams…\"));\n        owner->setSelectedKeys({QStringLiteral(\"client\")});\n        auto* ownerField = new layout::Field(this);\n        ownerField->setLabelText(QStringLiteral(\"Owning team\"));\n        ownerField->setEditor(owner);\n        body->addWidget(ownerField);\n\n        auto* collaborators = new basicinput::TreeSelect(this);\n        collaborators->setObjectName(QStringLiteral(\"projectCollaboratingTeams\"));\n        collaborators->setAccessibleName(QStringLiteral(\"Collaborating teams\"));\n        collaborators->setModel(model);\n        collaborators->setSelectionMode(basicinput::TreeSelect::SelectionMode::Multiple);\n        collaborators->setPlaceholderText(QStringLiteral(\"Add teams…\"));\n        collaborators->setSelectedKeys({QStringLiteral(\"brand-design\")});\n        auto* collaboratorsField = new layout::Field(this);\n        collaboratorsField->setLabelText(QStringLiteral(\"Collaborating teams\"));\n        collaboratorsField->setEditor(collaborators);\n        collaboratorsField->setHelperText(QStringLiteral(\"Search by team or department. Select teams independently.\"));\n        body->addWidget(collaboratorsField);\n\n        auto* status = new textfields::Label(this);\n        status->setObjectName(QStringLiteral(\"teamSelectionStatus\"));\n        status->setWordWrap(true);\n        status->setFluentTypography(Typography::FontRole::Caption);\n        status->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        body->addWidget(status);\n        auto updateStatus =\n            [owner = QPointer<basicinput::TreeSelect>(owner),\n                collaborators = QPointer<basicinput::TreeSelect>(collaborators),\n                status = QPointer<textfields::Label>(status)] {\n                if (!owner || !collaborators || !status)\n                    return;\n                QStringList paths;\n                for (const auto& item : collaborators->selectedItems())\n                    paths.append(item.toMap().value(QStringLiteral(\"path\")).toString());\n                const QString primary = owner->selectedItems().isEmpty()\n                    ? QStringLiteral(\"Not assigned\")\n                    : owner->selectedItems().first().toMap().value(QStringLiteral(\"path\")).toString();\n                status->setText(QStringLiteral(\"Owner: %1\\nCollaborators: %2\")\n                        .arg(primary, paths.isEmpty() ? QStringLiteral(\"None\") : paths.join(QStringLiteral(\"; \"))));\n            };\n        QObject::connect(owner, &basicinput::TreeSelect::selectionChanged, status, updateStatus);\n        QObject::connect(collaborators, &basicinput::TreeSelect::selectionChanged, status, updateStatus);\n        auto* actions = new QHBoxLayout;\n        auto* readOnly = new basicinput::CheckBox(QStringLiteral(\"Read only\"), this);\n        readOnly->setObjectName(QStringLiteral(\"teamReadOnly\"));\n        QObject::connect(readOnly, &QAbstractButton::toggled, owner, &basicinput::TreeSelect::setReadOnly);\n        QObject::connect(readOnly, &QAbstractButton::toggled, collaborators, &basicinput::TreeSelect::setReadOnly);\n        actions->addWidget(readOnly);\n        actions->addStretch();\n        auto* clear = new basicinput::Button(QStringLiteral(\"Clear\"), this);\n        clear->setObjectName(QStringLiteral(\"teamClear\"));\n        QObject::connect(clear, &QAbstractButton::clicked, owner, &basicinput::TreeSelect::clearSelection);\n        QObject::connect(clear, &QAbstractButton::clicked, collaborators, &basicinput::TreeSelect::clearSelection);\n        QObject::connect(readOnly, &QAbstractButton::toggled, clear, [clear](bool checked) {\n            clear->setEnabled(!checked);\n        });\n        actions->addWidget(clear);\n        body->addLayout(actions);\n        updateStatus();\n    }\n};\n} // namespace fluent::gallery\n#endif\n",
           "fill_available_width": true
+        }
+      ]
+    },
+    {
+      "id": "range-slider",
+      "title": "RangeSlider",
+      "category_id": "basic-input",
+      "description": "Lets people select a lower and an upper value by dragging two thumbs along a track.",
+      "capabilities": [
+        "choices"
+      ],
+      "search_terms": [
+        "along",
+        "apart.",
+        "basic",
+        "both",
+        "boxes",
+        "choices",
+        "clamped",
+        "drag",
+        "dragging",
+        "each",
+        "editors",
+        "either",
+        "external",
+        "focused",
+        "input",
+        "keeps",
+        "keyboard",
+        "lets",
+        "live",
+        "lower",
+        "mark",
+        "minimum",
+        "mirror",
+        "move",
+        "number",
+        "numberbox",
+        "other",
+        "paired",
+        "people",
+        "range",
+        "range-slider",
+        "range-slider-live-values",
+        "range-slider-number-boxes",
+        "range-slider-steps-minimum-range",
+        "rangeslider",
+        "select",
+        "slider",
+        "stays",
+        "steps",
+        "stops",
+        "thumb",
+        "thumbs",
+        "ticks",
+        "track.",
+        "two",
+        "typed",
+        "ui.",
+        "update",
+        "upper",
+        "valid.",
+        "value",
+        "values"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "declaration": "src/components/basicinput/RangeSlider.h",
+        "qualified_type": "fluent::basicinput::RangeSlider",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "RangeSlider",
+        "import_statement": "from fluentqt.basicinput import RangeSlider"
+      },
+      "tests": [
+        {
+          "target": "test_range_slider",
+          "source": "tests/components/basicinput/TestRangeSlider.cpp",
+          "ctest_label": "test_range_slider"
+        }
+      ],
+      "gallery": {
+        "route_id": "range-slider",
+        "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
+        "control_image": "app/assets/control_images/basic-input/RangeSlider.png"
+      },
+      "samples": [
+        {
+          "id": "range-slider-live-values",
+          "title": "Range slider live values",
+          "description": "Drag either thumb to select a range and mirror both values in external UI.",
+          "cpp_snippet": "auto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setAccessibleName(\"Price range\");\nslider->setRange(0, 100);\nslider->setValues(20, 64);\nconnect(slider, &RangeSlider::valuesChanged,\n        status, [status](int lower, int upper) {\n            status->setText(QString(\"Range: %1 to %2\").arg(lower).arg(upper));\n        });",
+          "preview_layout": {
+            "orientation": "horizontal",
+            "spacing": 16
+          }
+        },
+        {
+          "id": "range-slider-steps-minimum-range",
+          "title": "Steps and minimum range",
+          "description": "Ticks mark the stops, keyboard steps move the focused thumb, and a minimum range keeps the thumbs apart.",
+          "cpp_snippet": "auto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setRange(0, 1000);\nslider->setSingleStep(50);\nslider->setPageStep(100);\nslider->setTickInterval(100);\nslider->setTickPosition(QSlider::TicksBelow);\nslider->setMinimumRange(100);\nslider->setValues(200, 600);",
+          "preview_layout": {
+            "orientation": "horizontal",
+            "spacing": 16
+          }
+        },
+        {
+          "id": "range-slider-number-boxes",
+          "title": "Paired number boxes",
+          "description": "NumberBox editors and the slider update each other; typed values are clamped so the range stays valid.",
+          "cpp_snippet": "auto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setRange(0, 1000);\nslider->setSingleStep(10);\nslider->setValues(120, 480);\n\nauto makeBox = [this](const QString& header, int value) {\n    auto* box = new NumberBox(this);\n    box->setHeader(header);\n    box->setRange(0, 1000);\n    box->setSmallChange(10);\n    box->setLargeChange(100);\n    box->setDisplayPrecision(0);\n    box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);\n    box->setValue(value);\n    return box;\n};\nauto* lowerBox = makeBox(\"Minimum\", slider->lowerValue());\nauto* upperBox = makeBox(\"Maximum\", slider->upperValue());\n\nconnect(slider, &RangeSlider::lowerValueChanged, lowerBox,\n        [lowerBox](int value) { lowerBox->setValue(value); });\nconnect(slider, &RangeSlider::upperValueChanged, upperBox,\n        [upperBox](int value) { upperBox->setValue(value); });\nconnect(lowerBox, &NumberBox::valueChanged, slider,\n        [slider, lowerBox](double value) {\n            if (std::isfinite(value))\n                slider->setLowerValue(qRound(value));\n            lowerBox->setValue(slider->lowerValue());\n        });\nconnect(upperBox, &NumberBox::valueChanged, slider,\n        [slider, upperBox](double value) {\n            if (std::isfinite(value))\n                slider->setUpperValue(qRound(value));\n            upperBox->setValue(slider->upperValue());\n        });",
+          "preview_layout": {
+            "orientation": "horizontal",
+            "spacing": 16
+          }
         }
       ]
     },
@@ -11467,6 +11592,15 @@
       "description": "Search a hierarchy and select one or more items while retaining their parent paths."
     },
     {
+      "id": "range-slider",
+      "title": "RangeSlider",
+      "kind": "component",
+      "parent_id": "basic-input",
+      "group": "Basic input",
+      "depth": 1,
+      "description": "Lets people select a lower and an upper value by dragging two thumbs along a track."
+    },
+    {
       "id": "rating-control",
       "title": "RatingControl",
       "kind": "component",
@@ -12325,12 +12459,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 122,
-    "component_count": 96,
-    "sample_count": 278,
+    "route_count": 123,
+    "component_count": 97,
+    "sample_count": 281,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,
-    "guided_component_count": 96
+    "guided_component_count": 97
   }
 }

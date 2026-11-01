@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>RangeSlider</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26b7ed" />
+      <stop offset="1" stop-color="#00427e" />
+    </linearGradient>
+  </defs>
+  <g id="artwork">
+    <rect x="2" y="30" width="68" height="12" rx="6" fill="#8b949c" opacity="1" />
+    <rect x="18" y="30" width="36" height="12" fill="url(#tile)" opacity="1" />
+    <rect x="6" y="51" width="2" height="7" rx="1" fill="#8b949c" opacity="1" />
+    <rect x="17" y="51" width="2" height="7" rx="1" fill="#087dce" opacity="1" />
+    <rect x="29" y="51" width="2" height="7" rx="1" fill="#087dce" opacity="1" />
+    <rect x="41" y="51" width="2" height="7" rx="1" fill="#087dce" opacity="1" />
+    <rect x="53" y="51" width="2" height="7" rx="1" fill="#087dce" opacity="1" />
+    <rect x="64" y="51" width="2" height="7" rx="1" fill="#8b949c" opacity="1" />
+    <circle cx="18" cy="36" r="9" fill="url(#tile)" opacity="1" stroke="#c7d3df" stroke-width="2" />
+    <circle cx="54" cy="36" r="9" fill="url(#tile)" opacity="1" stroke="#c7d3df" stroke-width="2" />
+    <rect x="44" y="10" width="20" height="13" rx="2" fill="#087dce" opacity="1" />
+    <rect x="8" y="10" width="20" height="13" rx="2" fill="#087dce" opacity="1" />
+  </g>
+</svg>

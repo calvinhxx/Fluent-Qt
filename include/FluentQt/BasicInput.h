@@ -12,6 +12,7 @@
 #include <components/basicinput/MultiSelectComboBox.h>
 #include <components/basicinput/TreeSelect.h>
 #include <components/basicinput/RadioButton.h>
+#include <components/basicinput/RangeSlider.h>
 #include <components/basicinput/RatingControl.h>
 #include <components/basicinput/RepeatButton.h>
 #include <components/basicinput/Slider.h>

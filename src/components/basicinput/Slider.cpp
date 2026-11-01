@@ -1,6 +1,7 @@
 #include "compatibility/InputEventCompat.h"
 #include "Slider.h"
 #include "compatibility/private/WidgetPlatformCompat_p.h"
+#include "components/basicinput/private/SliderPainter_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
@@ -309,86 +310,29 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     const int minimumX = valueToPixelPos(opt.minimum);
     QRectF filledRect(qMin(minimumX, handleX), cy - trackThickness / 2, qAbs(handleX - minimumX), trackThickness);
 
-    // 2. State colors. zh_CN: 确定状态颜色。
-    QColor trackBg = isEnabled() ? colors.controlAltSecondary : colors.controlDisabled;
-    QColor trackFg = isEnabled() ? colors.accentDefault : colors.accentDisabled;
+    // 2. Track background and filled portion. zh_CN: 绘制轨道背景与已填充部分。
+    detail::paintSliderBar(p, QRectF(trackRect), detail::sliderTrackColor(colors, isEnabled()));
+    detail::paintSliderBar(p, filledRect, detail::sliderFillColor(colors, isEnabled()));
 
-    // 3. Paint the track background (the inactive portion). zh_CN: 绘制轨道背景(未填充段)。
-    p.setPen(Qt::NoPen);
-    p.setBrush(trackBg);
-    p.drawRoundedRect(QRectF(trackRect), trackThickness / 2.0, trackThickness / 2.0);
+    // 3. Thumb. zh_CN: 绘制拇指。
+    detail::SliderThumbVisual thumb;
+    thumb.center = center;
+    thumb.diameter = m_handleSize;
+    thumb.hoverRatio = m_hoverRatio;
+    thumb.pressRatio = m_pressRatio;
+    thumb.keyboardFocused = hasFocus() && m_keyboardFocusVisible;
+    thumb.enabled = isEnabled();
+    detail::paintSliderThumb(p, colors, thumb);
 
-    // 4. Paint the filled track. zh_CN: 绘制已填充轨道。
-    if (filledRect.width() > 0.0) {
-        p.setBrush(trackFg);
-        p.drawRoundedRect(filledRect, trackThickness / 2.0, trackThickness / 2.0);
-    }
-
-    // 5. Animated thumb geometry. zh_CN: 拇指动画几何计算。
-    qreal baseRadius = m_handleSize / 2.0;
-
-    // Fluent thumb: white outer ring with an accent inner dot.
-    // zh_CN: 默认 Fluent,WinUI 拇指处理不变——白色外圈、强调色内圆点。
-    // Matches the horizontal painter: white outer ring, accent inner dot that
-    // grows from 0.45 (rest) to 0.7 (hover).
-    // zh_CN: 与水平绘制一致——白色外圈、蓝色内圈扩展，0.45（静止）→ 0.7（悬停）。
-    qreal innerScale = 0.45 + (0.25 * m_hoverRatio);
-    qreal innerRadius = baseRadius * innerScale;
-
-    // 6. Thumb colors. zh_CN: 确定拇指视觉颜色。
-    // Outer ring: bgSolid fill (white in light theme) erases the track behind it;
-    // painting a filled outer circle then the accent inner circle reads as a border.
-    // zh_CN: 外圈用 bgSolid 填充（亮色主题为白色）以遮住轨道；先画填充外圆、再画
-    // 蓝色实心内圆，视觉上即“边框”。
-
-    QColor outerFillColor = colors.bgSolid;        // White in the light theme. zh_CN: 亮色主题下为白色。
-    QColor outerBorderColor = colors.strokeStrong; // Thin light-grey ring. zh_CN: 浅灰色细环。
-    QColor innerColor = trackFg;                   // Accent color. zh_CN: Accent 颜色。
-
-    if (!isEnabled()) {
-        innerColor = colors.textDisabled;
-        outerBorderColor = colors.strokeDivider;
-    } else {
-        if (m_pressRatio > 0.5) {
-            innerColor = colors.accentTertiary;
-            outerBorderColor = colors.strokeStrong; // Keep the ring. zh_CN: 保持边框。
-        } else if (m_hoverRatio > 0.5) {
-            innerColor = colors.accentSecondary;
-        }
-    }
-
-    // 7. Paint the outer circle: filled container with a thin ring that masks
-    // the track behind, producing the "white border" look.
-    // zh_CN: 绘制外圆（白色填充带细边框），形成“白色外边框”遮罩，挡住背后的轨道。
-    p.setBrush(outerFillColor);
-    const bool keyboardFocused = isEnabled() && hasFocus() && m_keyboardFocusVisible;
-    p.setPen(QPen(keyboardFocused ? colors.accentDefault : outerBorderColor, keyboardFocused ? 2 : 1));
-    p.drawEllipse(center, baseRadius, baseRadius);
-
-    // 8. Paint the inner accent circle. zh_CN: 绘制内层圆形（蓝色中心）。
-    p.setBrush(innerColor);
-    p.setPen(Qt::NoPen);
-    p.drawEllipse(center, innerRadius, innerRadius);
-
-    // 9. Paint the ticks. zh_CN: 绘制刻度线。
+    // 4. Ticks. zh_CN: 绘制刻度线。
     if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
-        const qint64 range = static_cast<qint64>(opt.maximum) - opt.minimum;
-        qint64 interval = opt.tickInterval;
-        if (interval <= 0) {
-            interval = qMax(1, opt.singleStep);
-            if (range / interval >= 100 && opt.pageStep > 0)
-                interval = opt.pageStep;
-        }
-        const qint64 steps = range / interval;
-        if (steps > 0 && steps < 100) {
-            QColor tickColor = colors.textSecondary;
-            p.setPen(tickColor);
-            for (int i = 0; i <= steps; ++i) {
-                const int val = static_cast<int>(static_cast<qint64>(opt.minimum) + i * interval);
-                int x = valueToPixelPos(val);
-                int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4) : (trackRect.bottom() + 4);
-                p.drawLine(x, ty, x, ty + 2);
-            }
+        p.setPen(detail::sliderTickColor(colors));
+        const int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4) : (trackRect.bottom() + 4);
+        const QVector<int> ticks = detail::sliderTickValues(opt.minimum, opt.maximum, opt.tickInterval, opt.singleStep,
+            opt.pageStep);
+        for (const int val : ticks) {
+            const int x = valueToPixelPos(val);
+            p.drawLine(x, ty, x, ty + 2);
         }
     }
 }
@@ -411,57 +355,18 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
     const int minimumY = valueToPixelPos(opt.minimum);
     QRectF filledRect(cx - trackThickness / 2, qMin(minimumY, handleY), trackThickness, qAbs(handleY - minimumY));
 
-    // 2. State colors. zh_CN: 确定状态颜色。
-    QColor trackBg = isEnabled() ? colors.controlAltSecondary : colors.controlDisabled;
-    QColor trackFg = isEnabled() ? colors.accentDefault : colors.accentDisabled;
+    // 2. Track background and filled portion. zh_CN: 绘制轨道背景与已填充部分。
+    detail::paintSliderBar(p, QRectF(trackRect), detail::sliderTrackColor(colors, isEnabled()));
+    detail::paintSliderBar(p, filledRect, detail::sliderFillColor(colors, isEnabled()));
 
-    // 3. Paint the track background (the inactive portion). zh_CN: 绘制轨道背景(未填充段)。
-    p.setPen(Qt::NoPen);
-    p.setBrush(trackBg);
-    p.drawRoundedRect(QRectF(trackRect), trackThickness / 2.0, trackThickness / 2.0);
-
-    // 4. Paint the filled track. zh_CN: 绘制已填充轨道。
-    if (filledRect.height() > 0.0) {
-        p.setBrush(trackFg);
-        p.drawRoundedRect(filledRect, trackThickness / 2.0, trackThickness / 2.0);
-    }
-
-    // 5. Animated thumb geometry. zh_CN: 拇指动画几何计算。
-    qreal baseRadius = m_handleSize / 2.0;
-
-    // Fluent thumb treatment.
-    // zh_CN: Fluent 拇指样式。
-    // Matches the horizontal painter: white outer ring, accent inner dot that
-    // grows from 0.45 (rest) to 0.7 (hover).
-    // zh_CN: 与水平绘制一致——白色外圈、蓝色内圈扩展，0.45（静止）→ 0.7（悬停）。
-    qreal innerScale = 0.45 + (0.25 * m_hoverRatio);
-    qreal innerRadius = baseRadius * innerScale;
-
-    // 6. Thumb colors. zh_CN: 确定拇指视觉颜色。
-    QColor outerFillColor = colors.bgSolid;
-    QColor outerBorderColor = colors.strokeStrong;
-    QColor innerColor = trackFg;
-
-    if (!isEnabled()) {
-        innerColor = colors.textDisabled;
-        outerBorderColor = colors.strokeDivider;
-    } else {
-        if (m_pressRatio > 0.5) {
-            innerColor = colors.accentTertiary;
-        } else if (m_hoverRatio > 0.5) {
-            innerColor = colors.accentSecondary;
-        }
-    }
-
-    // 7. Paint the outer circle. zh_CN: 绘制外层圆形。
-    p.setBrush(outerFillColor);
-    const bool keyboardFocused = isEnabled() && hasFocus() && m_keyboardFocusVisible;
-    p.setPen(QPen(keyboardFocused ? colors.accentDefault : outerBorderColor, keyboardFocused ? 2 : 1));
-    p.drawEllipse(center, baseRadius, baseRadius);
-
-    // 8. Paint the inner circle. zh_CN: 绘制内层圆形。
-    p.setBrush(innerColor);
-    p.setPen(Qt::NoPen);
-    p.drawEllipse(center, innerRadius, innerRadius);
+    // 3. Thumb. zh_CN: 绘制拇指。
+    detail::SliderThumbVisual thumb;
+    thumb.center = center;
+    thumb.diameter = m_handleSize;
+    thumb.hoverRatio = m_hoverRatio;
+    thumb.pressRatio = m_pressRatio;
+    thumb.keyboardFocused = hasFocus() && m_keyboardFocusVisible;
+    thumb.enabled = isEnabled();
+    detail::paintSliderThumb(p, colors, thumb);
 }
 } // namespace fluent::basicinput

@@ -325,6 +325,14 @@ the painted handle at both endpoints plus at least one handle's width of drag
 travel. Focus and edge regression tests cover
 Light/Dark/High Contrast, both text directions and 1x/1.25x/1.5x/2x rendering.
 PySide6 exercises the same shared implementations.
+`RangeSlider` exposes a grouping root with one logical `Slider` child per
+thumb. Each child reports bounds that follow the other thumb and the minimum
+range, offers increase, decrease and set-focus actions, and receives its own
+value and focus events. Tab and Shift+Tab visit both thumbs before leaving
+the control, and the keyboard cue follows the active thumb. Contract tests
+cover Light/Dark/High Contrast painting, both text directions and
+1x/1.5x/2x focus rendering. Slider and RangeSlider share one painter, so
+their unfilled tracks use the same strong control fill.
 
 The [WebAssembly runtime](../../platforms/webassembly/Runtime.cpp) keeps Qt's HTML
 accessibility proxies readable and focusable without painting a second control

@@ -270,9 +270,9 @@ def main() -> int:
         raise AssertionError("Spatial composition samples are missing")
     summary = generated["summary"]
     if summary != {
-        "route_count": 122,
-        "component_count": 96,
-        "sample_count": 278,
+        "route_count": 123,
+        "component_count": 97,
+        "sample_count": 281,
     }:
         raise AssertionError("unexpected Gallery contract summary: {0!r}".format(summary))
     routes = {route["id"]: route for route in generated["routes"]}

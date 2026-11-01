@@ -23,15 +23,15 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 96,
-    "public_headers": 174,
+    "components": 97,
+    "public_headers": 175,
     "categories": 16
   },
   "categories": [
     {
       "id": "basic-input",
       "title": "Basic input",
-      "component_count": 18
+      "component_count": 19
     },
     {
       "id": "charts",
@@ -777,6 +777,67 @@
           },
           "dark": {
             "url": "../assets/component-previews/tree-select/basic-dark.png"
+          }
+        }
+      }
+    },
+    {
+      "id": "range-slider",
+      "title": "RangeSlider",
+      "category_id": "basic-input",
+      "description": "Lets people select a lower and an upper value by dragging two thumbs along a track.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/RangeSlider.h>",
+        "qualified_type": "fluent::basicinput::RangeSlider",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RangeSlider.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "RangeSlider",
+        "import_statement": "from fluentqt.basicinput import RangeSlider"
+      },
+      "gallery": {
+        "route_id": "range-slider",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=range-slider",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_range_slider",
+          "ctest_label": "test_range_slider",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestRangeSlider.cpp"
+        }
+      ],
+      "sample_count": 3,
+      "documentation": {
+        "name": {
+          "en": "RangeSlider",
+          "zh": "区间滑块"
+        },
+        "description": {
+          "en": "Lets people select a lower and an upper value by dragging two thumbs along a track.",
+          "zh": "拖动两个手柄选择下限和上限。"
+        },
+        "urls": {
+          "en": "range-slider/",
+          "zh": "../zh-CN/api/range-slider/"
+        },
+        "preview": {
+          "alt": {
+            "en": "RangeSlider: Range slider live values",
+            "zh": "区间滑块的真实 Gallery 示例"
+          },
+          "light": {
+            "url": "../assets/component-previews/range-slider/basic-light.png"
+          },
+          "dark": {
+            "url": "../assets/component-previews/range-slider/basic-dark.png"
           }
         }
       }
@@ -6514,6 +6575,17 @@
         "RadioButton"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RadioButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/RangeSlider.h>",
+      "source": "src/components/basicinput/RangeSlider.h",
+      "summary": "Fluent two-thumb slider that selects a lower and an upper value.",
+      "declarations": [
+        "RangeSlider",
+        "ThumbMotion",
+        "Thumb"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RangeSlider.h"
     },
     {
       "include": "<FluentQt/components/basicinput/RatingControl.h>",

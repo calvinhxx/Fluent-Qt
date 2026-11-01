@@ -34,6 +34,7 @@
 #include <components/basicinput/RadioButton.h>
 #include <components/basicinput/RatingControl.h>
 #include <components/basicinput/RepeatButton.h>
+#include <components/basicinput/RangeSlider.h>
 #include <components/basicinput/Slider.h>
 #include <components/basicinput/SplitButton.h>
 #include <components/basicinput/ToggleButton.h>

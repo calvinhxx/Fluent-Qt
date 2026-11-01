@@ -61,6 +61,12 @@
     "example": "从层级中选择",
     "usage": "setModel() 提供树形数据，条目的 Qt::UserRole 值作为选择键，setSelectedKeys() 设置选中项。不可选的分组只用于展开。"
   },
+  "range-slider": {
+    "name": "区间滑块",
+    "description": "拖动两个手柄选择下限和上限。",
+    "example": "实时显示区间",
+    "usage": "setRange() 设置范围，setValues() 同时设置下限和上限；拖动时 valuesChanged 给出当前区间。"
+  },
   "rating-control": {
     "name": "评分控件",
     "description": "查看、设置或清除星级评分。",

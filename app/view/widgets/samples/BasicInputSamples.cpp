@@ -2,8 +2,10 @@
 #include "BasicInputSamples.h"
 #include "TeamSelectionSample.h"
 #include <QFile>
+#include <cmath>
 #include "FilesSamples.h"
 
+#include <QBoxLayout>
 #include <QLayout>
 #include <QLineEdit>
 #include <QPoint>
@@ -23,6 +25,7 @@
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/basicinput/MultiSelectComboBox.h"
 #include "components/basicinput/RadioButton.h"
+#include "components/basicinput/RangeSlider.h"
 #include "components/basicinput/RatingControl.h"
 #include "components/basicinput/RepeatButton.h"
 #include "components/basicinput/Slider.h"
@@ -32,6 +35,7 @@
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/textfields/Label.h"
+#include "components/textfields/NumberBox.h"
 #include "design/Typography.h"
 
 namespace fluent::gallery {
@@ -46,6 +50,7 @@ using fluent::basicinput::DropDownButton;
 using fluent::basicinput::HyperlinkButton;
 using fluent::basicinput::MultiSelectComboBox;
 using fluent::basicinput::RadioButton;
+using fluent::basicinput::RangeSlider;
 using fluent::basicinput::RatingControl;
 using fluent::basicinput::RepeatButton;
 using fluent::basicinput::Slider;
@@ -55,6 +60,7 @@ using fluent::basicinput::ToggleSplitButton;
 using fluent::basicinput::ToggleSwitch;
 using fluent::menus_toolbars::FluentMenu;
 using fluent::textfields::Label;
+using fluent::textfields::NumberBox;
 using samples::horizontalGroup;
 using samples::makeSample;
 using samples::verticalGroup;
@@ -1229,6 +1235,159 @@ QVector<GallerySample> sliderSamples()
             })};
 }
 
+QVector<GallerySample> rangeSliderSamples()
+{
+    return {
+        makeSample(QStringLiteral("range-slider-live-values"), QStringLiteral("Range slider live values"),
+            QStringLiteral("Drag either thumb to select a range and mirror both values in external UI."),
+            QStringLiteral(
+                "auto* slider = new RangeSlider(Qt::Horizontal, this);\n"
+                "slider->setAccessibleName(\"Price range\");\n"
+                "slider->setRange(0, 100);\n"
+                "slider->setValues(20, 64);\n"
+                "connect(slider, &RangeSlider::valuesChanged,\n"
+                "        status, [status](int lower, int upper) {\n"
+                "            status->setText(QString(\"Range: %1 to %2\").arg(lower).arg(upper));\n"
+                "        });"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 16);
+                auto* slider = new RangeSlider(Qt::Horizontal, group);
+                slider->setAccessibleName(QStringLiteral("Price range"));
+                slider->setRange(0, 100);
+                slider->setValues(20, 64);
+                slider->setFixedWidth(260);
+                auto* status = makeValueLabel(group, QStringLiteral("Range: 20 to 64"));
+                setStableStatusWidth(status, QStringLiteral("Range: 100 to 100"));
+                QObject::connect(slider, &RangeSlider::valuesChanged, status, [status](int lower, int upper) {
+                    status->setText(QStringLiteral("Range: %1 to %2").arg(lower).arg(upper));
+                });
+                group->layout()->addWidget(slider);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("range-slider-steps-minimum-range"), QStringLiteral("Steps and minimum range"),
+            QStringLiteral("Ticks mark the stops, keyboard steps move the focused thumb, and a minimum range "
+                           "keeps the thumbs apart."),
+            QStringLiteral(
+                "auto* slider = new RangeSlider(Qt::Horizontal, this);\n"
+                "slider->setRange(0, 1000);\n"
+                "slider->setSingleStep(50);\n"
+                "slider->setPageStep(100);\n"
+                "slider->setTickInterval(100);\n"
+                "slider->setTickPosition(QSlider::TicksBelow);\n"
+                "slider->setMinimumRange(100);\n"
+                "slider->setValues(200, 600);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 16);
+                auto* slider = new RangeSlider(Qt::Horizontal, group);
+                slider->setAccessibleName(QStringLiteral("Budget"));
+                slider->setRange(0, 1000);
+                slider->setSingleStep(50);
+                slider->setPageStep(100);
+                slider->setTickInterval(100);
+                slider->setTickPosition(QSlider::TicksBelow);
+                slider->setMinimumRange(100);
+                slider->setValues(200, 600);
+                slider->setFixedWidth(260);
+                auto* status = makeValueLabel(group, QStringLiteral("Range: 200 to 600"));
+                setStableStatusWidth(status, QStringLiteral("Range: 1000 to 1000"));
+                QObject::connect(slider, &RangeSlider::valuesChanged, status, [status](int lower, int upper) {
+                    status->setText(QStringLiteral("Range: %1 to %2").arg(lower).arg(upper));
+                });
+                group->layout()->addWidget(slider);
+                group->layout()->addWidget(status);
+                return group;
+            }),
+        makeSample(QStringLiteral("range-slider-number-boxes"), QStringLiteral("Paired number boxes"),
+            QStringLiteral("NumberBox editors and the slider update each other; typed values are clamped "
+                           "so the range stays valid."),
+            QStringLiteral(
+                "auto* slider = new RangeSlider(Qt::Horizontal, this);\n"
+                "slider->setRange(0, 1000);\n"
+                "slider->setSingleStep(10);\n"
+                "slider->setValues(120, 480);\n\n"
+                "auto makeBox = [this](const QString& header, int value) {\n"
+                "    auto* box = new NumberBox(this);\n"
+                "    box->setHeader(header);\n"
+                "    box->setRange(0, 1000);\n"
+                "    box->setSmallChange(10);\n"
+                "    box->setLargeChange(100);\n"
+                "    box->setDisplayPrecision(0);\n"
+                "    box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);\n"
+                "    box->setValue(value);\n"
+                "    return box;\n"
+                "};\n"
+                "auto* lowerBox = makeBox(\"Minimum\", slider->lowerValue());\n"
+                "auto* upperBox = makeBox(\"Maximum\", slider->upperValue());\n\n"
+                "connect(slider, &RangeSlider::lowerValueChanged, lowerBox,\n"
+                "        [lowerBox](int value) { lowerBox->setValue(value); });\n"
+                "connect(slider, &RangeSlider::upperValueChanged, upperBox,\n"
+                "        [upperBox](int value) { upperBox->setValue(value); });\n"
+                "connect(lowerBox, &NumberBox::valueChanged, slider,\n"
+                "        [slider, lowerBox](double value) {\n"
+                "            if (std::isfinite(value))\n"
+                "                slider->setLowerValue(qRound(value));\n"
+                "            lowerBox->setValue(slider->lowerValue());\n"
+                "        });\n"
+                "connect(upperBox, &NumberBox::valueChanged, slider,\n"
+                "        [slider, upperBox](double value) {\n"
+                "            if (std::isfinite(value))\n"
+                "                slider->setUpperValue(qRound(value));\n"
+                "            upperBox->setValue(slider->upperValue());\n"
+                "        });"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 16);
+                auto* slider = new RangeSlider(Qt::Horizontal, group);
+                slider->setAccessibleName(QStringLiteral("Price range"));
+                slider->setRange(0, 1000);
+                slider->setSingleStep(10);
+                slider->setValues(120, 480);
+                slider->setFixedWidth(220);
+                // Match the NumberBox input height so the track centers on the editors.
+                // zh_CN: 与 NumberBox 输入框等高，使轨道与编辑框居中对齐。
+                slider->setFixedHeight(32);
+
+                const auto makeBox = [group](const QString& header, int value) {
+                    auto* box = new NumberBox(group);
+                    box->setHeader(header);
+                    box->setRange(0, 1000);
+                    box->setSmallChange(10);
+                    box->setLargeChange(100);
+                    box->setDisplayPrecision(0);
+                    box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);
+                    box->setFixedWidth(136);
+                    box->setValue(value);
+                    return box;
+                };
+                auto* lowerBox = makeBox(QStringLiteral("Minimum"), slider->lowerValue());
+                auto* upperBox = makeBox(QStringLiteral("Maximum"), slider->upperValue());
+
+                QObject::connect(slider, &RangeSlider::lowerValueChanged, lowerBox, [lowerBox](int value) {
+                    lowerBox->setValue(value);
+                });
+                QObject::connect(slider, &RangeSlider::upperValueChanged, upperBox, [upperBox](int value) {
+                    upperBox->setValue(value);
+                });
+                QObject::connect(lowerBox, &NumberBox::valueChanged, slider, [slider, lowerBox](double value) {
+                    if (std::isfinite(value))
+                        slider->setLowerValue(qRound(value));
+                    lowerBox->setValue(slider->lowerValue());
+                });
+                QObject::connect(upperBox, &NumberBox::valueChanged, slider, [slider, upperBox](double value) {
+                    if (std::isfinite(value))
+                        slider->setUpperValue(qRound(value));
+                    upperBox->setValue(slider->upperValue());
+                });
+
+                group->layout()->addWidget(lowerBox);
+                group->layout()->addWidget(slider);
+                group->layout()->addWidget(upperBox);
+                if (auto* box = qobject_cast<QBoxLayout*>(group->layout()))
+                    box->setAlignment(slider, Qt::AlignBottom);
+                return group;
+            })};
+}
+
 QVector<GallerySample> splitButtonSamples()
 {
     return {
@@ -1618,6 +1777,8 @@ QVector<GallerySample> basicInputSamples(const QString& routeId)
         return multiSelectComboBoxSamples();
     if (routeId == QStringLiteral("radio-button"))
         return radioButtonSamples();
+    if (routeId == QStringLiteral("range-slider"))
+        return rangeSliderSamples();
     if (routeId == QStringLiteral("rating-control"))
         return ratingControlSamples();
     if (routeId == QStringLiteral("repeat-button"))

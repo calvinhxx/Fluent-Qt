@@ -26,6 +26,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
                     Typography::Icons::SelectAll},
                 {QStringLiteral("radio-button"), QStringLiteral("RadioButton"), Typography::Icons::CheckmarkBadge12},
                 {QStringLiteral("tree-select"), QStringLiteral("TreeSelect"), Typography::Icons::ChevronDown},
+                {QStringLiteral("range-slider"), QStringLiteral("RangeSlider"), Typography::Icons::SelectAll},
                 {QStringLiteral("rating-control"), QStringLiteral("RatingControl"), Typography::Icons::FavoriteStar},
                 {QStringLiteral("repeat-button"), QStringLiteral("RepeatButton"), Typography::Icons::Refresh},
                 {QStringLiteral("slider"), QStringLiteral("Slider"), Typography::Icons::SelectAll},

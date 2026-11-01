@@ -731,6 +731,17 @@
       "gap": ""
     },
     {
+      "id": "range-slider",
+      "classification": "adapter",
+      "risk": "high",
+      "status": "covered",
+      "evidence": [
+        "src/components/basicinput/private/RangeSliderAccessibility_p.cpp",
+        "tests/components/basicinput/TestRangeSlider.cpp"
+      ],
+      "gap": ""
+    },
+    {
       "id": "rating-control",
       "classification": "adapter",
       "risk": "high",

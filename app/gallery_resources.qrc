@@ -26,6 +26,7 @@
         <file alias="assets/control_images/basic-input/RadioButton.svg">../tools/gallery/artwork/basic-input/RadioButton.svg</file>
         <file alias="assets/control_images/basic-input/RatingControl.svg">../tools/gallery/artwork/basic-input/RatingControl.svg</file>
         <file alias="assets/control_images/basic-input/RepeatButton.svg">../tools/gallery/artwork/basic-input/RepeatButton.svg</file>
+        <file alias="assets/control_images/basic-input/RangeSlider.svg">../tools/gallery/artwork/basic-input/RangeSlider.svg</file>
         <file alias="assets/control_images/basic-input/Slider.svg">../tools/gallery/artwork/basic-input/Slider.svg</file>
         <file alias="assets/control_images/basic-input/SplitButton.svg">../tools/gallery/artwork/basic-input/SplitButton.svg</file>
         <file alias="assets/control_images/basic-input/ToggleButton.svg">../tools/gallery/artwork/basic-input/ToggleButton.svg</file>

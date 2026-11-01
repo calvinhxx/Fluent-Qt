@@ -13,6 +13,7 @@ HyperlinkButton = _native.fluent.HyperlinkButton
 MultiSelectComboBox = _native.fluent.MultiSelectComboBox
 TreeSelect = _native.fluent.TreeSelect
 RadioButton = _native.fluent.RadioButton
+RangeSlider = _native.fluent.RangeSlider
 RatingControl = _native.fluent.RatingControl
 RepeatButton = _native.fluent.RepeatButton
 Slider = _native.fluent.Slider
@@ -73,6 +74,7 @@ __all__ = [
     "MultiSelectComboBox",
     "TreeSelect",
     "RadioButton",
+    "RangeSlider",
     "RatingControl",
     "RepeatButton",
     "Slider",
