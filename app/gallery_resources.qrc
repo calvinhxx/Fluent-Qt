@@ -82,6 +82,7 @@
         <file alias="assets/control_images/navigation/Stepper.svg">../tools/gallery/artwork/navigation/Stepper.svg</file>
         <file alias="assets/control_images/navigation/TabView.svg">../tools/gallery/artwork/navigation/TabView.svg</file>
         <file alias="assets/control_images/scrolling/AnnotatedScrollBar.svg">../tools/gallery/artwork/scrolling/AnnotatedScrollBar.svg</file>
+        <file alias="assets/control_images/scrolling/ImageViewer.svg">../tools/gallery/artwork/scrolling/ImageViewer.svg</file>
         <file alias="assets/control_images/scrolling/PipsPager.svg">../tools/gallery/artwork/scrolling/PipsPager.svg</file>
         <file alias="assets/control_images/scrolling/ScrollBar.svg">../tools/gallery/artwork/scrolling/ScrollBar.svg</file>
         <file alias="assets/control_images/scrolling/ScrollView.svg">../tools/gallery/artwork/scrolling/ScrollView.svg</file>

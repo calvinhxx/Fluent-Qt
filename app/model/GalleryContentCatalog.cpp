@@ -248,6 +248,9 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("annotated-scrollbar"),
             QStringLiteral("A scrollbar with labels that make long content easier "
                            "to navigate.")},
+        {QStringLiteral("image-viewer"),
+            QStringLiteral("Lets people zoom around the pointer and pan a single image, with fit and actual-size "
+                           "views.")},
         {QStringLiteral("pips-pager"), QStringLiteral("Dot-style pagination for moving through a small set of pages.")},
         {QStringLiteral("scrollbar"), QStringLiteral("A Fluent-styled scrollbar with hover expansion.")},
         {QStringLiteral("scroll-view"),

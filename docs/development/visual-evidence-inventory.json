@@ -133,6 +133,7 @@
         "flip-view",
         "flow-view",
         "grid-view",
+        "image-viewer",
         "list-view",
         "pips-pager",
         "scroll-view",
@@ -1008,6 +1009,58 @@
         "status": "manual-required",
         "coverage": "all-required-states",
         "surface": "gallery"
+      }
+    },
+    {
+      "id": "image-viewer",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ImageViewerContractTest.Contract_DeepReductionKeepsTheBottomOfOddSizedImages",
+          "states": [
+            "normal-light"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "ImageViewerContractTest.Contract_PaintsImageFrameAndSamplingModes",
+          "states": [
+            "normal-light"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "ImageViewerContractTest.Contract_ViewCenterClampsAndFittedAxesStayCentered",
+          "states": [
+            "scroll-end"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "ImageViewerContractTest.Contract_WheelZoomsAroundPointerAndPanModeHandsOff",
+          "states": [
+            "scroll-end"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "ImageViewerContractTest.Contract_ControlsFollowVisibilityAndViewState",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ImageViewerContractTest.VisualCheck"
       }
     },
     {

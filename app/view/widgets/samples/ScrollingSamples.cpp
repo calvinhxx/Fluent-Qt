@@ -4,8 +4,12 @@
 
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QLabel>
+#include <QLinearGradient>
+#include <QMetaEnum>
 #include <QPainter>
+#include <QPolygonF>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSizePolicy>
@@ -17,6 +21,7 @@
 #include "components/collections/FlipView.h"
 #include "components/foundation/FluentElement.h"
 #include "components/scrolling/AnnotatedScrollBar.h"
+#include "components/scrolling/ImageViewer.h"
 #include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/scrolling/ScrollView.h"
@@ -32,6 +37,7 @@ using fluent::basicinput::Slider;
 using fluent::collections::FlipView;
 using fluent::scrolling::AnnotatedScrollBar;
 using fluent::scrolling::AnnotatedScrollBarLabel;
+using fluent::scrolling::ImageViewer;
 using fluent::scrolling::PipsPager;
 using fluent::scrolling::ScrollBar;
 using fluent::scrolling::ScrollView;
@@ -1676,12 +1682,329 @@ QVector<GallerySample> scrollViewSamples()
             })};
 }
 
+// Generated scenes keep the samples self-contained; variants 0-2 are dusk, forest and coast.
+// zh_CN: 生成的场景让示例无需外部图片；变体 0-2 分别为黄昏、森林和海岸。
+QPixmap imageViewerScene(const QSize& size, int variant)
+{
+    struct ScenePalette {
+        QColor skyTop, skyBottom, sun, far, near, water;
+    };
+    static const ScenePalette palettes[] = {
+        {QColor(32, 64, 110), QColor(242, 195, 139), QColor(255, 226, 174), QColor(108, 122, 153), QColor(69, 83, 111),
+            QColor(22, 39, 63)},
+        {QColor(191, 217, 224), QColor(238, 243, 230), QColor(255, 250, 235), QColor(156, 194, 163),
+            QColor(94, 140, 106), QColor(53, 94, 70)},
+        {QColor(111, 168, 224), QColor(221, 235, 247), QColor(255, 244, 214), QColor(120, 160, 200),
+            QColor(70, 110, 150), QColor(13, 53, 88)},
+    };
+    const ScenePalette& palette = palettes[std::clamp(variant, 0, 2)];
+    const qreal w = size.width();
+    const qreal h = size.height();
+
+    QPixmap pixmap(size);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QLinearGradient sky(0, 0, 0, h * 0.7);
+    sky.setColorAt(0.0, palette.skyTop);
+    sky.setColorAt(1.0, palette.skyBottom);
+    painter.fillRect(QRectF(0, 0, w, h), sky);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(palette.sun);
+    painter.drawEllipse(QPointF(w * 0.71, h * 0.56), h * 0.085, h * 0.085);
+    painter.setBrush(palette.far);
+    painter.drawPolygon(QPolygonF({QPointF(0, h * 0.69), QPointF(w * 0.11, h * 0.47), QPointF(w * 0.21, h * 0.6),
+        QPointF(w * 0.33, h * 0.36), QPointF(w * 0.44, h * 0.56), QPointF(w * 0.52, h * 0.47),
+        QPointF(w * 0.63, h * 0.69)}));
+    painter.setBrush(palette.near);
+    painter.drawPolygon(QPolygonF({QPointF(w * 0.26, h * 0.7), QPointF(w * 0.43, h * 0.43), QPointF(w * 0.55, h * 0.62),
+        QPointF(w * 0.68, h * 0.44), QPointF(w * 0.81, h * 0.61), QPointF(w * 0.91, h * 0.5), QPointF(w, h * 0.6),
+        QPointF(w, h * 0.7)}));
+    QLinearGradient water(0, h * 0.69, 0, h);
+    water.setColorAt(0.0, palette.near.lighter(130));
+    water.setColorAt(1.0, palette.water);
+    painter.fillRect(QRectF(0, h * 0.69, w, h * 0.31), water);
+    QColor glint = palette.sun;
+    glint.setAlpha(140);
+    painter.setBrush(glint);
+    for (int row = 0; row < 4; ++row)
+        painter.drawEllipse(QPointF(w * 0.71, h * (0.74 + row * 0.04)), w * (0.075 - row * 0.015), h * 0.008);
+    painter.setBrush(palette.water.darker(140));
+    for (int tree = 0; tree < 5; ++tree) {
+        const qreal x = w * (0.02 + tree * 0.035);
+        painter.drawPolygon(QPolygonF({QPointF(x, h * 0.7), QPointF(x + w * 0.02, h * (0.58 - (tree % 2) * 0.03)),
+            QPointF(x + w * 0.04, h * 0.7)}));
+    }
+    return pixmap;
+}
+
+// A 32 x 20 pixel-art landscape for comparing sampling modes.
+// zh_CN: 用于对比采样方式的 32 x 20 像素风景图。
+QPixmap imageViewerPixelArt()
+{
+    QImage image(32, 20, QImage::Format_RGB32);
+    QPainter painter(&image);
+    painter.fillRect(0, 0, 32, 12, QColor(45, 93, 161));
+    painter.fillRect(0, 6, 32, 3, QColor(126, 121, 168));
+    painter.fillRect(0, 9, 32, 3, QColor(229, 154, 91));
+    painter.fillRect(22, 5, 4, 4, QColor(255, 224, 138));
+    painter.fillRect(21, 6, 6, 2, QColor(255, 224, 138));
+    const QColor ridge(74, 90, 120);
+    painter.fillRect(7, 7, 2, 1, ridge);
+    painter.fillRect(6, 8, 4, 1, ridge);
+    painter.fillRect(4, 9, 8, 1, ridge);
+    painter.fillRect(2, 10, 12, 2, ridge);
+    const QColor farRidge(54, 68, 94);
+    painter.fillRect(20, 8, 2, 1, farRidge);
+    painter.fillRect(18, 9, 6, 1, farRidge);
+    painter.fillRect(16, 10, 10, 1, farRidge);
+    painter.fillRect(13, 11, 16, 1, farRidge);
+    painter.fillRect(0, 12, 32, 8, QColor(30, 59, 92));
+    painter.fillRect(0, 12, 32, 1, QColor(44, 78, 115));
+    painter.fillRect(21, 14, 6, 1, QColor(255, 224, 138));
+    painter.fillRect(22, 16, 4, 1, QColor(201, 168, 106));
+    painter.fillRect(23, 18, 2, 1, QColor(143, 122, 85));
+    const QColor tree(27, 42, 36);
+    painter.fillRect(3, 9, 1, 3, tree);
+    painter.fillRect(2, 10, 3, 1, tree);
+    painter.fillRect(29, 8, 1, 4, tree);
+    painter.fillRect(28, 9, 3, 2, tree);
+    painter.end();
+    return QPixmap::fromImage(image);
+}
+
+QString imageViewerStatusText(const ImageViewer* viewer)
+{
+    const char* fitMode = QMetaEnum::fromType<ImageViewer::FitMode>().valueToKey(static_cast<int>(viewer->fitMode()));
+    return QStringLiteral("Zoom: %1% / Fit mode: %2")
+        .arg(qRound(viewer->zoomFactor() * 100.0))
+        .arg(QString::fromLatin1(fitMode));
+}
+
+void bindImageViewerStatus(ImageViewer* viewer, Label* status)
+{
+    auto updateStatus = [viewer, status]() { status->setText(imageViewerStatusText(viewer)); };
+    QObject::connect(viewer, &ImageViewer::zoomFactorChanged, status, [updateStatus](qreal) { updateStatus(); });
+    QObject::connect(viewer, &ImageViewer::fitModeChanged, status, [updateStatus](ImageViewer::FitMode) {
+        updateStatus();
+    });
+    updateStatus();
+}
+
+QVector<GallerySample> imageViewerSamples()
+{
+    return {
+        makeSample(QStringLiteral("image-viewer-basic"), QStringLiteral("Pan and zoom an image"),
+            QStringLiteral("The wheel, a pinch or Ctrl/Command + wheel zooms around the pointer, "
+                           "dragging pans, and the toolbar appears on hover."),
+            QStringLiteral(
+                "auto* viewer = new ImageViewer(this);\n"
+                "viewer->setFixedSize(460, 290);\n"
+                "viewer->setAccessibleName(QStringLiteral(\"Harbor at dusk\"));\n"
+                "viewer->setPixmap(imageViewerScene(QSize(1600, 1000), 0));\n"
+                "\n"
+                "// Double-click toggles 100%; after focus, + - 0 1 and the\n"
+                "// arrow keys zoom, reset and pan.\n"
+                "auto updateStatus = [viewer, status] {\n"
+                "    status->setText(imageViewerStatusText(viewer));\n"
+                "};\n"
+                "connect(viewer, &ImageViewer::zoomFactorChanged, status, updateStatus);\n"
+                "connect(viewer, &ImageViewer::fitModeChanged, status, updateStatus);"),
+            [](QWidget* parent) {
+                auto* surface = pipsSurface(parent);
+                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+
+                auto* viewer = new ImageViewer(surface);
+                viewer->setFixedSize(460, 290);
+                viewer->setAccessibleName(QStringLiteral("Harbor at dusk"));
+                viewer->setPixmap(imageViewerScene(QSize(1600, 1000), 0));
+
+                auto* status = makeStatusLabel(surface, QString());
+                bindImageViewerStatus(viewer, status);
+
+                layout->addWidget(viewer);
+                layout->addWidget(status);
+                return surface;
+            }),
+        makeSample(QStringLiteral("image-viewer-commands"), QStringLiteral("Fit, actual size and zoom commands"),
+            QStringLiteral("External commands animate the view. Fit enlarges a small image, while "
+                           "Reset returns to the initial view that keeps it at 100%."),
+            QStringLiteral(
+                "auto* viewer = new ImageViewer(this);\n"
+                "viewer->setFixedSize(460, 290);\n"
+                "viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\n"
+                "viewer->setAccessibleName(QStringLiteral(\"Forest ridge\"));\n"
+                "viewer->setPixmap(imageViewerScene(QSize(360, 225), 1));\n"
+                "\n"
+                "connect(fitButton, &QPushButton::clicked,\n"
+                "        viewer, [viewer] { viewer->fitToView(true); });\n"
+                "connect(actualButton, &QPushButton::clicked,\n"
+                "        viewer, [viewer] { viewer->zoomToActualSize(true); });\n"
+                "connect(zoomOutButton, &QPushButton::clicked,\n"
+                "        viewer, [viewer] { viewer->zoomOut(true); });\n"
+                "connect(zoomInButton, &QPushButton::clicked,\n"
+                "        viewer, [viewer] { viewer->zoomIn(true); });\n"
+                "connect(resetButton, &QPushButton::clicked,\n"
+                "        viewer, [viewer] { viewer->resetView(true); });"),
+            [](QWidget* parent) {
+                auto* surface = pipsSurface(parent);
+                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+
+                auto* controls = horizontalGroup(surface, 8);
+                auto* fit = sampleButton(controls, QStringLiteral("Fit"));
+                auto* actual = sampleButton(controls, QStringLiteral("100%"));
+                auto* zoomOut = sampleButton(controls, QStringLiteral("Zoom out"));
+                auto* zoomIn = sampleButton(controls, QStringLiteral("Zoom in"));
+                auto* reset = sampleButton(controls, QStringLiteral("Reset"));
+                for (Button* button : {fit, actual, zoomOut, zoomIn, reset})
+                    controls->layout()->addWidget(button);
+
+                auto* viewer = new ImageViewer(surface);
+                viewer->setFixedSize(460, 290);
+                viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);
+                viewer->setAccessibleName(QStringLiteral("Forest ridge"));
+                viewer->setPixmap(imageViewerScene(QSize(360, 225), 1));
+
+                auto* status = makeStatusLabel(surface, QString());
+                bindImageViewerStatus(viewer, status);
+
+                QObject::connect(fit, &QPushButton::clicked, viewer, [viewer] { viewer->fitToView(true); });
+                QObject::connect(actual, &QPushButton::clicked, viewer, [viewer] { viewer->zoomToActualSize(true); });
+                QObject::connect(zoomOut, &QPushButton::clicked, viewer, [viewer] { viewer->zoomOut(true); });
+                QObject::connect(zoomIn, &QPushButton::clicked, viewer, [viewer] { viewer->zoomIn(true); });
+                QObject::connect(reset, &QPushButton::clicked, viewer, [viewer] { viewer->resetView(true); });
+
+                layout->addWidget(controls);
+                layout->addWidget(viewer);
+                layout->addWidget(status);
+                return surface;
+            }),
+        makeSample(QStringLiteral("image-viewer-pixel-art"), QStringLiteral("Sharp pixels for small images"),
+            QStringLiteral("Fast transformation keeps every image pixel square when a small icon or "
+                           "screenshot is enlarged; Smooth suits photos."),
+            QStringLiteral(
+                "auto* viewer = new ImageViewer(this);\n"
+                "viewer->setFixedSize(460, 290);\n"
+                "viewer->setAccessibleName(QStringLiteral(\"Pixel-art landscape\"));\n"
+                "viewer->setPixmap(imageViewerPixelArt());\n"
+                "viewer->setTransformationMode(Qt::FastTransformation);\n"
+                "viewer->fitToView();\n"
+                "\n"
+                "connect(smoothButton, &QPushButton::clicked, viewer, [viewer] {\n"
+                "    viewer->setTransformationMode(Qt::SmoothTransformation);\n"
+                "});\n"
+                "connect(fastButton, &QPushButton::clicked, viewer, [viewer] {\n"
+                "    viewer->setTransformationMode(Qt::FastTransformation);\n"
+                "});"),
+            [](QWidget* parent) {
+                auto* surface = pipsSurface(parent);
+                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+
+                auto* controls = horizontalGroup(surface, 8);
+                auto* smooth = sampleButton(controls, QStringLiteral("Smooth"));
+                auto* fast = sampleButton(controls, QStringLiteral("Fast"));
+                controls->layout()->addWidget(smooth);
+                controls->layout()->addWidget(fast);
+
+                auto* viewer = new ImageViewer(surface);
+                viewer->setFixedSize(460, 290);
+                viewer->setAccessibleName(QStringLiteral("Pixel-art landscape"));
+                viewer->setPixmap(imageViewerPixelArt());
+                viewer->setTransformationMode(Qt::FastTransformation);
+                viewer->fitToView();
+
+                auto* status = makeStatusLabel(surface, QString());
+                bindImageViewerStatus(viewer, status);
+
+                auto setMode = [viewer, smooth, fast](Qt::TransformationMode mode) {
+                    viewer->setTransformationMode(mode);
+                    setButtonActive(smooth, mode == Qt::SmoothTransformation);
+                    setButtonActive(fast, mode == Qt::FastTransformation);
+                };
+                QObject::connect(smooth, &QPushButton::clicked, viewer, [setMode] {
+                    setMode(Qt::SmoothTransformation);
+                });
+                QObject::connect(fast, &QPushButton::clicked, viewer, [setMode] { setMode(Qt::FastTransformation); });
+                setMode(Qt::FastTransformation);
+
+                layout->addWidget(controls);
+                layout->addWidget(viewer);
+                layout->addWidget(status);
+                return surface;
+            }),
+        makeSample(QStringLiteral("image-viewer-flip-view"), QStringLiteral("Browse an album with FlipView"),
+            QStringLiteral("Each FlipView page hosts an ImageViewer. A fitted photo passes swipes, "
+                           "the wheel and arrow keys to FlipView; a zoomed photo pans instead."),
+            QStringLiteral(
+                "auto* album = new FlipView(this);\n"
+                "album->setFixedSize(460, 290);\n"
+                "const QStringList names = {QStringLiteral(\"Harbor at dusk\"),\n"
+                "                           QStringLiteral(\"Forest ridge\"),\n"
+                "                           QStringLiteral(\"Coastline\")};\n"
+                "for (int index = 0; index < names.size(); ++index) {\n"
+                "    auto* viewer = new ImageViewer;\n"
+                "    viewer->setFrameVisible(false);\n"
+                "    viewer->setWheelAction(ImageViewer::WheelAction::Pan);\n"
+                "    // FlipView owns the bottom edge; zoom feedback uses the indicator.\n"
+                "    viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\n"
+                "    viewer->setAccessibleName(names.at(index));\n"
+                "    viewer->setPixmap(imageViewerScene(QSize(1600, 1000), index));\n"
+                "    album->addPage(viewer);\n"
+                "}\n"
+                "\n"
+                "// The application decides that a page leaves zoom when the user flips away.\n"
+                "connect(album, &FlipView::currentIndexChanged, album,\n"
+                "        [album, previous = 0](int index) mutable {\n"
+                "            if (auto* viewer = qobject_cast<ImageViewer*>(album->pageAt(previous)))\n"
+                "                viewer->resetView();\n"
+                "            previous = index;\n"
+                "        });"),
+            [](QWidget* parent) {
+                auto* surface = pipsSurface(parent);
+                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+
+                auto* album = new FlipView(surface);
+                album->setFixedSize(460, 290);
+                const QStringList names = {QStringLiteral("Harbor at dusk"), QStringLiteral("Forest ridge"),
+                    QStringLiteral("Coastline")};
+                for (int index = 0; index < names.size(); ++index) {
+                    auto* viewer = new ImageViewer;
+                    viewer->setFrameVisible(false);
+                    viewer->setWheelAction(ImageViewer::WheelAction::Pan);
+                    viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);
+                    viewer->setAccessibleName(names.at(index));
+                    viewer->setPixmap(imageViewerScene(QSize(1600, 1000), index));
+                    album->addPage(viewer);
+                }
+
+                auto* status = makeStatusLabel(surface, QString());
+                auto updateStatus = [album, status, names](int index) {
+                    status->setText(
+                        QStringLiteral("Photo %1 of %2: %3").arg(index + 1).arg(names.size()).arg(names.value(index)));
+                };
+                QObject::connect(album, &FlipView::currentIndexChanged, album,
+                    [album, updateStatus, previous = 0](int index) mutable {
+                        if (auto* viewer = qobject_cast<ImageViewer*>(album->pageAt(previous)))
+                            viewer->resetView();
+                        previous = index;
+                        updateStatus(index);
+                    });
+                updateStatus(album->currentIndex());
+
+                layout->addWidget(album);
+                layout->addWidget(status);
+                return surface;
+            }),
+    };
+}
+
 } // namespace
 
 QVector<GallerySample> scrollingSamples(const QString& routeId)
 {
     if (routeId == QStringLiteral("annotated-scrollbar"))
         return annotatedScrollBarSamples();
+    if (routeId == QStringLiteral("image-viewer"))
+        return imageViewerSamples();
     if (routeId == QStringLiteral("pips-pager"))
         return pipsPagerSamples();
     if (routeId == QStringLiteral("scrollbar"))

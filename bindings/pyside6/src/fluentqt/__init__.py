@@ -159,6 +159,7 @@ from .navigation import (
 from .scrolling import (
     AnnotatedScrollBar,
     AnnotatedScrollBarLabel,
+    ImageViewer,
     PipsPager,
     ScrollBar,
     ScrollView,
@@ -365,6 +366,7 @@ __all__ = [
     "FluentWidget",
     "GridView",
     "HyperlinkButton",
+    "ImageViewer",
     "InfoBadge",
     "InfoBar",
     "Icons",

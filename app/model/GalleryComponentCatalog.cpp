@@ -127,6 +127,8 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
                 {QStringLiteral("tab-view"), QStringLiteral("TabView"), Typography::Icons::AllApps}}},
         {QStringLiteral("scrolling"), QStringLiteral("Scrolling"), QStringLiteral("scrolling"), Typography::Icons::Down,
             {{QStringLiteral("annotated-scrollbar"), QStringLiteral("AnnotatedScrollBar"), Typography::Icons::List},
+                {QStringLiteral("image-viewer"), QStringLiteral("ImageViewer"),
+                    Typography::Icons::glyph(QStringLiteral("ic_fluent_image_search_20_regular"))},
                 {QStringLiteral("pips-pager"), QStringLiteral("PipsPager"), Typography::Icons::More},
                 {QStringLiteral("scrollbar"), QStringLiteral("ScrollBar"), Typography::Icons::Down},
                 {QStringLiteral("scroll-view"), QStringLiteral("ScrollView"), Typography::Icons::Down}}},

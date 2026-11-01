@@ -2,9 +2,9 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 97,
+    "component_count": 98,
     "foundation_topic_count": 1,
-    "sample_count": 293
+    "sample_count": 297
   },
   "samples": [
     {
@@ -1197,6 +1197,26 @@
       "route_id": "annotated-scrollbar",
       "sample_id": "annotated-scrollbar-label-density",
       "source": "from PySide6.QtCore import Qt\n\nbar = fluentqt.AnnotatedScrollBar()\nbar.setRange(0, 1100)\nbar.setMinimumLabelSpacing(28)\nbar.setLabels(month_labels)\n\nheight_slider = fluentqt.Slider(Qt.Orientation.Horizontal)\nheight_slider.setRange(180, 360)\nheight_slider.valueChanged.connect(bar.setFixedHeight)\n"
+    },
+    {
+      "route_id": "image-viewer",
+      "sample_id": "image-viewer-basic",
+      "source": "from PySide6.QtCore import QSize\n\nviewer = fluentqt.ImageViewer()\nviewer.setFixedSize(460, 290)\nviewer.setAccessibleName('Harbor at dusk')\nviewer.setPixmap(image_viewer_scene(QSize(1600, 1000), 0))\ndef update_status(*_args):\n    status.setText(image_viewer_status_text(viewer))\nviewer.zoomFactorChanged.connect(update_status)\nviewer.fitModeChanged.connect(update_status)\n"
+    },
+    {
+      "route_id": "image-viewer",
+      "sample_id": "image-viewer-commands",
+      "source": "from PySide6.QtCore import QSize\n\nviewer = fluentqt.ImageViewer()\nviewer.setFixedSize(460, 290)\nviewer.setControlsVisibility(fluentqt.ImageViewer.ControlsVisibility.Hidden)\nviewer.setAccessibleName('Forest ridge')\nviewer.setPixmap(image_viewer_scene(QSize(360, 225), 1))\nfit.clicked.connect(lambda: viewer.fitToView(True))\nactual.clicked.connect(lambda: viewer.zoomToActualSize(True))\nzoom_out.clicked.connect(lambda: viewer.zoomOut(True))\nzoom_in.clicked.connect(lambda: viewer.zoomIn(True))\nreset.clicked.connect(lambda: viewer.resetView(True))\n"
+    },
+    {
+      "route_id": "image-viewer",
+      "sample_id": "image-viewer-pixel-art",
+      "source": "from PySide6.QtCore import Qt\n\nviewer = fluentqt.ImageViewer()\nviewer.setFixedSize(460, 290)\nviewer.setAccessibleName('Pixel-art landscape')\nviewer.setPixmap(image_viewer_pixel_art())\nviewer.setTransformationMode(Qt.TransformationMode.FastTransformation)\nviewer.fitToView()\ndef set_mode(mode):\n    viewer.setTransformationMode(mode)\nsmooth.clicked.connect(lambda: set_mode(Qt.TransformationMode.SmoothTransformation))\nfast.clicked.connect(lambda: set_mode(Qt.TransformationMode.FastTransformation))\n"
+    },
+    {
+      "route_id": "image-viewer",
+      "sample_id": "image-viewer-flip-view",
+      "source": "from PySide6.QtCore import QSize\n\nalbum = fluentqt.FlipView()\nalbum.setFixedSize(460, 290)\nnames = ('Harbor at dusk', 'Forest ridge', 'Coastline')\nfor index, name in enumerate(names):\n    viewer = fluentqt.ImageViewer()\n    viewer.setFrameVisible(False)\n    viewer.setWheelAction(fluentqt.ImageViewer.WheelAction.Pan)\n    viewer.setControlsVisibility(fluentqt.ImageViewer.ControlsVisibility.Hidden)\n    viewer.setAccessibleName(name)\n    viewer.setPixmap(image_viewer_scene(QSize(1600, 1000), index))\n    album.addOwnedPage(viewer)\nprevious = [0]\ndef update_status(index):\n    status.setText(\n        'Photo {0} of {1}: {2}'.format(index + 1, len(names), names[index])\n    )\ndef on_current_changed(index):\n    page = album.pageAt(previous[0])\n    if isinstance(page, fluentqt.ImageViewer):\n        page.resetView()\nalbum.currentIndexChanged.connect(on_current_changed)\n"
     },
     {
       "route_id": "pips-pager",

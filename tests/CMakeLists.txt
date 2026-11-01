@@ -81,6 +81,7 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_calendar_date_picker
     test_popup
     test_scroll_view
+    test_image_viewer
     test_navigation_view
     test_window
 )

@@ -663,6 +663,7 @@ reduced-motion behavior remain available in both compact and detailed layouts.
 | SplashScreen | Covered-host input and focus restoration, busy state and progress; cached painting preserves live child controls and motion-policy behavior | [SplashScreen](../../tests/components/status_info/TestSplashScreen.cpp) |
 | MultiSelectComboBox | Button-menu root, selected labels, expanded state, popup relation and named trigger/search/list | [Multi-selection](../../tests/components/basicinput/TestMultiSelectComboBox.cpp) |
 | ComboBox | Explicit fonts reach the field, editor and dropdown; rows grow with text. The popup list takes focus; arrows stage selection, Enter/Return commits once and Escape cancels with focus return. Disabled items and an unselected placeholder cannot activate | [ComboBox](../../tests/components/basicinput/TestComboBox.cpp) |
+| ImageViewer | Graphic root with caller-owned name; zoom percentage as its value with effective fit-inclusive bounds; increase/decrease zoom actions that disappear at a limit; a named toolbar of non-focusable buttons as its only child; value and action-change events only for real zoom changes | [ImageViewer](../../tests/components/scrolling/TestImageViewer.cpp) |
 
 `ToggleSwitch` keeps a minimum interactive height of 24 logical pixels.
 `visualScale` changes its graphics while the accessible rectangle continues to
