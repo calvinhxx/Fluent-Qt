@@ -1099,6 +1099,24 @@
       "automated_evidence": [
         {
           "kind": "geometry",
+          "test_case": "MenuTest.Contract_IconsKeepContentInsetAndCenterAcrossPaintScales",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "MenuTest.Contract_CheckedGlyphSharesIconColumnWithoutMovingLabel",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
           "test_case": "MenuTest.OpaquePopupSurfaceUsesRoundedWindowMask",
           "states": [
             "normal-light"

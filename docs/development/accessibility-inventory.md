@@ -448,6 +448,11 @@ keep their existing target sizes and keyboard focus outline. The menu surface
 tests cover Light/Dark theme refresh and reopening, and cascade geometry tests
 cover LTR, RTL, and screen-edge containment.
 
+FluentMenu icons and checkmarks share the content inset and a centered icon
+slot. `TestMenu.cpp` checks painted bounds across Light/Dark themes, enabled,
+active and disabled icons, and fractional/integer paint scales. Switching to a
+checkmark preserves the label position and row surface.
+
 `QmlView` is the optional QWidget host under **Plugins → QmlBridge**. It delegates
 input to its Quick scene; the application QML page supplies its own
 Accessible names, roles, actions, and keyboard order through Qt Quick semantics.

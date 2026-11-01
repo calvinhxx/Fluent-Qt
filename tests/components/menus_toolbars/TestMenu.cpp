@@ -5,6 +5,8 @@
 #include <QApplication>
 #include <QCursor>
 #include <QEnterEvent>
+#include <QImage>
+#include <QPainter>
 #include <QStyle>
 #include <QProxyStyle>
 #include <QScopeGuard>
@@ -81,6 +83,51 @@ public:
 private:
     compatibility::detail::RuntimePlatformCapabilities m_previous;
 };
+
+QImage renderMenu(FluentMenu& menu, qreal dpr)
+{
+    QImage image(QSize(qCeil(menu.width() * dpr), qCeil(menu.height() * dpr)), QImage::Format_ARGB32_Premultiplied);
+    image.setDevicePixelRatio(dpr);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    menu.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    return image;
+}
+
+QRect colorBounds(const QImage& image, const QColor& color)
+{
+    QRect bounds;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (image.pixelColor(x, y) == color)
+                bounds |= QRect(x, y, 1, 1);
+        }
+    }
+    return bounds;
+}
+
+QRect differenceBounds(const QImage& first, const QImage& second)
+{
+    QRect bounds;
+    for (int y = 0; y < first.height(); ++y) {
+        for (int x = 0; x < first.width(); ++x) {
+            if (first.pixel(x, y) != second.pixel(x, y))
+                bounds |= QRect(x, y, 1, 1);
+        }
+    }
+    return bounds;
+}
+
+QIcon solidMenuIcon()
+{
+    QIcon icon;
+    for (auto mode : {QIcon::Normal, QIcon::Active, QIcon::Disabled}) {
+        QPixmap pixmap(64, 64);
+        pixmap.fill(mode == QIcon::Active ? Qt::green : mode == QIcon::Disabled ? Qt::blue : Qt::magenta);
+        icon.addPixmap(pixmap, mode);
+    }
+    return icon;
+}
 
 } // namespace
 
@@ -238,6 +285,83 @@ TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint)
     const int minimumRowsHeight = 3 * Spacing::ControlHeight::Small + margins.top() + margins.bottom();
     EXPECT_GE(menu.sizeHint().height(), minimumRowsHeight)
         << "A multi-action popup must never collapse to a single WASM row";
+}
+
+TEST_F(MenuTest, Contract_IconsKeepContentInsetAndCenterAcrossPaintScales)
+{
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        SCOPED_TRACE(theme);
+        fluent::FluentElement::setTheme(theme);
+        for (auto role : {Typography::FontRole::Caption, Typography::FontRole::Body}) {
+            SCOPED_TRACE(static_cast<int>(role));
+            FluentMenu menu(QStringLiteral("Actions"));
+            menu.setFontStyle(role);
+            QAction* action = menu.addAction(solidMenuIcon(), QStringLiteral("Theme"));
+            menu.addAction(QStringLiteral("Settings"));
+            menu.ensurePolished();
+            menu.resize(menu.sizeHint());
+
+            for (auto mode : {QIcon::Normal, QIcon::Active, QIcon::Disabled}) {
+                SCOPED_TRACE(mode);
+                action->setEnabled(mode != QIcon::Disabled);
+                menu.setActiveAction(mode == QIcon::Active ? action : nullptr);
+                const QColor color = mode == QIcon::Active ? Qt::green
+                    : mode == QIcon::Disabled
+                    ? Qt::blue
+                    : Qt::magenta;
+                for (qreal dpr : {1.0, 1.25, 1.5, 2.0, 3.0}) {
+                    SCOPED_TRACE(dpr);
+                    const QImage image = renderMenu(menu, dpr);
+                    const QRect pixels = colorBounds(image, color);
+                    ASSERT_FALSE(pixels.isEmpty());
+                    const QRectF ink(QPointF(pixels.topLeft()) / dpr, QSizeF(pixels.size()) / dpr);
+                    const qreal pixelTolerance = 0.5 / dpr;
+                    EXPECT_NEAR(ink.left() - menu.contentsMargins().left(), Spacing::Padding::ControlHorizontal,
+                        pixelTolerance);
+                    EXPECT_NEAR(pixels.width(), Typography::IconSize::Standard * dpr, 1.0);
+                    EXPECT_NEAR(pixels.height(), Typography::IconSize::Standard * dpr, 1.0);
+                    // Odd row heights permit half a logical pixel of rounding, plus raster rounding.
+                    EXPECT_NEAR(ink.center().y(), QRectF(menu.actionGeometry(action)).center().y(),
+                        0.5 + pixelTolerance);
+                }
+            }
+        }
+    }
+}
+
+TEST_F(MenuTest, Contract_CheckedGlyphSharesIconColumnWithoutMovingLabel)
+{
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        SCOPED_TRACE(theme);
+        fluent::FluentElement::setTheme(theme);
+        FluentMenu menu(QStringLiteral("Actions"));
+        QAction* action = menu.addAction(solidMenuIcon(), QStringLiteral("Show details"));
+        action->setCheckable(true);
+        menu.ensurePolished();
+        menu.resize(menu.sizeHint());
+        QPixmap transparent(64, 64);
+        transparent.fill(Qt::transparent);
+        for (qreal dpr : {1.0, 1.25, 1.5, 2.0, 3.0}) {
+            SCOPED_TRACE(dpr);
+            // Retain an icon while clearing its ink so Qt keeps the same native row height.
+            action->setIcon(QIcon(transparent));
+            action->setChecked(false);
+            const QImage blank = renderMenu(menu, dpr);
+            action->setIcon(solidMenuIcon());
+            const QImage withIcon = renderMenu(menu, dpr);
+            const QRect iconPixels = colorBounds(withIcon, Qt::magenta);
+            ASSERT_FALSE(iconPixels.isEmpty());
+            action->setChecked(true);
+            const QImage checked = renderMenu(menu, dpr);
+            EXPECT_TRUE(colorBounds(checked, Qt::magenta).isEmpty());
+            ASSERT_EQ(blank.size(), checked.size());
+            const QRect glyphPixels = differenceBounds(blank, checked);
+            ASSERT_FALSE(glyphPixels.isEmpty());
+            EXPECT_NEAR(QRectF(glyphPixels).center().x() / dpr, QRectF(iconPixels).center().x() / dpr, 1.0);
+            // Only the leading slot changes: the label, row surface and menu size stay fixed.
+            EXPECT_TRUE(iconPixels.adjusted(-1, -1, 1, 1).contains(glyphPixels));
+        }
+    }
 }
 
 TEST_F(MenuTest, Contract_CascadeRowsAlignWithoutAccumulatingShadowOffsets)
