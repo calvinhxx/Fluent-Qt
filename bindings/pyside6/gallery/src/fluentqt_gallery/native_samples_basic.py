@@ -1153,6 +1153,120 @@ register_source_samples(
 
 
 register_source_samples(
+    "range-slider",
+    ("RangeSlider",),
+    {
+        "range-slider-live-values": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QHBoxLayout(root)
+                slider = fluentqt.RangeSlider(Qt.Orientation.Horizontal, root)
+                slider.setAccessibleName("Price range")
+                slider.setRange(0, 100)
+                slider.setValues(20, 64)
+                slider.setFixedWidth(260)
+                status = fluentqt.Label("Range: 20 to 64", root)
+                status.setFluentTypography(fluentqt.FontRole.Body)
+                status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
+                status.setMinimumWidth(status.fontMetrics().horizontalAdvance("Range: 100 to 100"))
+                slider.valuesChanged.connect(
+                    lambda lower, upper: status.setText(f"Range: {lower} to {upper}")
+                )
+                layout.addWidget(slider)
+                layout.addWidget(status)
+                """,
+                "from PySide6.QtCore import Qt\n" + _WIDGETS,
+            ),
+        ),
+        "range-slider-steps-minimum-range": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QHBoxLayout(root)
+                slider = fluentqt.RangeSlider(Qt.Orientation.Horizontal, root)
+                slider.setAccessibleName("Budget")
+                slider.setRange(0, 1000)
+                slider.setSingleStep(50)
+                slider.setPageStep(100)
+                slider.setTickInterval(100)
+                slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+                slider.setMinimumRange(100)
+                slider.setValues(200, 600)
+                slider.setFixedWidth(260)
+                status = fluentqt.Label("Range: 200 to 600", root)
+                status.setFluentTypography(fluentqt.FontRole.Body)
+                status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
+                status.setMinimumWidth(status.fontMetrics().horizontalAdvance("Range: 1000 to 1000"))
+                slider.valuesChanged.connect(
+                    lambda lower, upper: status.setText(f"Range: {lower} to {upper}")
+                )
+                layout.addWidget(slider)
+                layout.addWidget(status)
+                """,
+                "from PySide6.QtCore import Qt\n"
+                "from PySide6.QtWidgets import QHBoxLayout, QSlider, QWidget",
+            ),
+        ),
+        "range-slider-number-boxes": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QHBoxLayout(root)
+                slider = fluentqt.RangeSlider(Qt.Orientation.Horizontal, root)
+                slider.setAccessibleName("Price range")
+                slider.setRange(0, 1000)
+                slider.setSingleStep(10)
+                slider.setValues(120, 480)
+                # Match the NumberBox input height so the track centers on the editors.
+                slider.setFixedSize(220, 32)
+
+                def make_box(header, value):
+                    box = fluentqt.NumberBox(root)
+                    box.setHeader(header)
+                    box.setRange(0, 1000)
+                    box.setSmallChange(10)
+                    box.setLargeChange(100)
+                    box.setDisplayPrecision(0)
+                    box.setSpinButtonPlacementMode(
+                        fluentqt.NumberBox.SpinButtonPlacementMode.Inline
+                    )
+                    box.setFixedWidth(136)
+                    box.setValue(value)
+                    return box
+
+                lower_box = make_box("Minimum", slider.lowerValue())
+                upper_box = make_box("Maximum", slider.upperValue())
+                slider.lowerValueChanged.connect(lower_box.setValue)
+                slider.upperValueChanged.connect(upper_box.setValue)
+
+                def apply_lower(value):
+                    if math.isfinite(value):
+                        slider.setLowerValue(round(value))
+                    lower_box.setValue(slider.lowerValue())
+
+                def apply_upper(value):
+                    if math.isfinite(value):
+                        slider.setUpperValue(round(value))
+                    upper_box.setValue(slider.upperValue())
+
+                lower_box.valueChanged.connect(apply_lower)
+                upper_box.valueChanged.connect(apply_upper)
+                layout.addWidget(lower_box)
+                layout.addWidget(slider, 0, Qt.AlignmentFlag.AlignBottom)
+                layout.addWidget(upper_box)
+                """,
+                "import math\nfrom PySide6.QtCore import Qt\n" + _WIDGETS,
+            ),
+        ),
+    },
+)
+
+
+register_source_samples(
     "split-button",
     ("SplitButton", "FluentMenu"),
     {

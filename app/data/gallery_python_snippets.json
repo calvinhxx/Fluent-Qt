@@ -2,9 +2,9 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 96,
+    "component_count": 97,
     "foundation_topic_count": 1,
-    "sample_count": 290
+    "sample_count": 293
   },
   "samples": [
     {
@@ -179,6 +179,21 @@
           "usage_snippet": "# The application owns the hierarchical team model.\n# Column zero: DisplayRole labels and unique UserRole keys.\nowner = fluentqt.TreeSelect(self)\nowner.setModel(team_model)\nowner.setPlaceholderText(\"Search teams…\")\nowner.setSelectedKeys([\"client\"])\n\ncollaborators = fluentqt.TreeSelect(self)\ncollaborators.setModel(team_model)\ncollaborators.setSelectionMode(fluentqt.TreeSelect.SelectionMode.Multiple)\ncollaborators.setPlaceholderText(\"Add teams…\")\ncollaborators.setSelectedKeys([\"brand-design\"])\n# Read selectedItems() for key, text and full path.\n# The runnable model and form are in Full example.\n"
         }
       ]
+    },
+    {
+      "route_id": "range-slider",
+      "sample_id": "range-slider-live-values",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.RangeSlider(Qt.Orientation.Horizontal)\nslider.setAccessibleName('Price range')\nslider.setRange(0, 100)\nslider.setValues(20, 64)\nslider.valuesChanged.connect(\n    lambda lower, upper: status.setText(f\"Range: {lower} to {upper}\")\n)\n"
+    },
+    {
+      "route_id": "range-slider",
+      "sample_id": "range-slider-steps-minimum-range",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QSlider\n\nslider = fluentqt.RangeSlider(Qt.Orientation.Horizontal)\nslider.setRange(0, 1000)\nslider.setSingleStep(50)\nslider.setPageStep(100)\nslider.setTickInterval(100)\nslider.setTickPosition(QSlider.TickPosition.TicksBelow)\nslider.setMinimumRange(100)\nslider.setValues(200, 600)\nslider.valuesChanged.connect(\n    lambda lower, upper: status.setText(f\"Range: {lower} to {upper}\")\n)\n"
+    },
+    {
+      "route_id": "range-slider",
+      "sample_id": "range-slider-number-boxes",
+      "source": "from PySide6.QtCore import Qt\nimport math\n\nslider = fluentqt.RangeSlider(Qt.Orientation.Horizontal)\nslider.setRange(0, 1000)\nslider.setSingleStep(10)\nslider.setValues(120, 480)\ndef make_box(header, value):\n    box = fluentqt.NumberBox()\n    box.setHeader(header)\n    box.setRange(0, 1000)\n    box.setSmallChange(10)\n    box.setLargeChange(100)\n    box.setDisplayPrecision(0)\n    box.setSpinButtonPlacementMode(\n        fluentqt.NumberBox.SpinButtonPlacementMode.Inline\n    )\n    box.setValue(value)\nlower_box = make_box('Minimum', slider.lowerValue())\nupper_box = make_box('Maximum', slider.upperValue())\nslider.lowerValueChanged.connect(lower_box.setValue)\nslider.upperValueChanged.connect(upper_box.setValue)\ndef apply_lower(value):\n    if math.isfinite(value):\n        slider.setLowerValue(round(value))\n    lower_box.setValue(slider.lowerValue())\ndef apply_upper(value):\n    if math.isfinite(value):\n        slider.setUpperValue(round(value))\n    upper_box.setValue(slider.upperValue())\nlower_box.valueChanged.connect(apply_lower)\nupper_box.valueChanged.connect(apply_upper)\n"
     },
     {
       "route_id": "rating-control",

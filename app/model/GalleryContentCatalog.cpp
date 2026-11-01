@@ -122,6 +122,9 @@ const QHash<QString, QString>& routeDescriptions()
             QStringLiteral("Lets people select one option from a mutually exclusive group.")},
         {QStringLiteral("tree-select"),
             QStringLiteral("Search a hierarchy and select one or more items while retaining their parent paths.")},
+        {QStringLiteral("range-slider"),
+            QStringLiteral("Lets people select a lower and an upper value by dragging two thumbs along a "
+                           "track.")},
         {QStringLiteral("rating-control"), QStringLiteral("Lets people view, set, or clear star ratings.")},
         {QStringLiteral("repeat-button"),
             QStringLiteral("A button that raises its click event repeatedly while "

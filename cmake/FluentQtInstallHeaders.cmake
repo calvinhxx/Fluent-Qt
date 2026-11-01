@@ -50,6 +50,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/basicinput/MultiSelectComboBox.h
     src/components/basicinput/TreeSelect.h
     src/components/basicinput/RadioButton.h
+    src/components/basicinput/RangeSlider.h
     src/components/basicinput/RatingControl.h
     src/components/basicinput/RepeatButton.h
     src/components/basicinput/Slider.h

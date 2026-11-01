@@ -2214,6 +2214,28 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(toggle.minimumSizeHint(), QSize(80, 40))
         self.assertEqual(toggle.font(), original_font)
 
+    def test_range_slider_values_signals_and_thumbs(self):
+        slider = fluentqt.RangeSlider(Qt.Horizontal)
+        self.assertIsInstance(slider, QWidget)
+        slider.setRange(0, 100)
+        slider.setMinimumRange(10)
+
+        changes = []
+        slider.valuesChanged.connect(lambda lower, upper: changes.append((lower, upper)))
+        slider.setValues(80, 75)
+        self.assertEqual((slider.lowerValue(), slider.upperValue()), (75, 85))
+        self.assertEqual(changes, [(75, 85)])
+
+        slider.setValues(75, 85)
+        self.assertEqual(changes, [(75, 85)])
+
+        slider.setActiveThumb(fluentqt.RangeSlider.Thumb.Upper)
+        self.assertEqual(slider.activeThumb(), fluentqt.RangeSlider.Thumb.Upper)
+        slider.setTickPosition(QSlider.TicksBelow)
+        self.assertEqual(slider.tickPosition(), QSlider.TicksBelow)
+        slider.setTracking(False)
+        self.assertFalse(slider.hasTracking())
+
     def test_phase_one_component_properties_and_signals(self):
         radio = fluentqt.RadioButton("Option")
         radio.setChecked(True)

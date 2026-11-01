@@ -2296,7 +2296,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             for key, sample in SAMPLE_BY_KEY.items()
             if sample.preview_orientation is not None
         }
-        self.assertEqual(len(grouped_samples), 76)
+        self.assertEqual(len(grouped_samples), 79)
         expected_types = {
             "horizontal": QHBoxLayout,
             "vertical": QVBoxLayout,

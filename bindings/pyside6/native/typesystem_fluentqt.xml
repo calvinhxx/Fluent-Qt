@@ -379,6 +379,9 @@ if (!paletteGuard) {
             </object-type>
             <object-type name="HyperlinkButton"/>
             <object-type name="RadioButton"/>
+            <object-type name="RangeSlider">
+                <enum-type name="Thumb"/>
+            </object-type>
             <object-type name="RatingControl"/>
             <object-type name="RepeatButton"/>
             <object-type name="Slider"/>
