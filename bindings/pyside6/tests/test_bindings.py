@@ -2214,6 +2214,55 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(toggle.minimumSizeHint(), QSize(80, 40))
         self.assertEqual(toggle.font(), original_font)
 
+    def test_image_viewer_zoom_fit_and_signals(self):
+        viewer = fluentqt.ImageViewer()
+        self.assertIsInstance(viewer, QWidget)
+        viewer.resize(400, 300)
+        image = QImage(1600, 1000, QImage.Format_RGB32)
+        image.fill(QColor(32, 64, 110))
+
+        zooms = []
+        modes = []
+        viewer.zoomFactorChanged.connect(zooms.append)
+        viewer.fitModeChanged.connect(modes.append)
+        viewer.setImage(image)
+        self.assertEqual(viewer.imageSize(), QSizeF(1600, 1000))
+        self.assertAlmostEqual(viewer.zoomFactor(), 0.25)
+        self.assertAlmostEqual(viewer.fitZoomFactor(), 0.25)
+        self.assertEqual(viewer.fitMode(), fluentqt.ImageViewer.FitMode.ScaleDown)
+        self.assertEqual(viewer.viewCenter(), QPointF(800, 500))
+
+        viewer.zoomTo(1.0, QPointF(100, 80))
+        self.assertAlmostEqual(viewer.zoomFactor(), 1.0)
+        self.assertEqual(viewer.fitMode(), fluentqt.ImageViewer.FitMode.Manual)
+        self.assertEqual(viewer.mapToImage(QPointF(100, 80)), QPointF(400, 220))
+        viewer.setZoomFactor(1.0)
+        self.assertEqual(len(zooms), 2)
+        self.assertEqual(modes, [fluentqt.ImageViewer.FitMode.Manual])
+
+        viewer.panBy(48, 0)
+        self.assertEqual(viewer.viewCenter(), QPointF(548, 290))
+        viewer.zoomIn()
+        self.assertAlmostEqual(viewer.zoomFactor(), 1.5)
+        viewer.fitToView()
+        self.assertEqual(viewer.fitMode(), fluentqt.ImageViewer.FitMode.Contain)
+        viewer.resetView()
+        self.assertEqual(viewer.fitMode(), fluentqt.ImageViewer.FitMode.ScaleDown)
+
+        viewer.setWheelAction(fluentqt.ImageViewer.WheelAction.Pan)
+        viewer.setControlsVisibility(fluentqt.ImageViewer.ControlsVisibility.Visible)
+        viewer.setTransformationMode(Qt.FastTransformation)
+        viewer.setFrameVisible(False)
+        viewer.setZoomIndicatorEnabled(False)
+        self.assertEqual(viewer.wheelAction(), fluentqt.ImageViewer.WheelAction.Pan)
+        self.assertEqual(
+            viewer.controlsVisibility(),
+            fluentqt.ImageViewer.ControlsVisibility.Visible,
+        )
+        self.assertEqual(viewer.transformationMode(), Qt.FastTransformation)
+        self.assertFalse(viewer.isFrameVisible())
+        self.assertFalse(viewer.isZoomIndicatorEnabled())
+
     def test_range_slider_values_signals_and_thumbs(self):
         slider = fluentqt.RangeSlider(Qt.Horizontal)
         self.assertIsInstance(slider, QWidget)

@@ -5,6 +5,7 @@ from . import _fluentqt as _native
 
 _NativeAnnotatedScrollBar = _native.fluent.AnnotatedScrollBar
 AnnotatedScrollBarLabel = _native.fluent.AnnotatedScrollBarLabel
+ImageViewer = _native.fluent.ImageViewer
 PipsPager = _native.fluent.PipsPager
 ScrollBar = _native.fluent.ScrollBar
 WidgetOwnership = _native.fluent.WidgetOwnership
@@ -219,6 +220,7 @@ class ScrollView(_NativeScrollView):
 __all__ = [
     "AnnotatedScrollBar",
     "AnnotatedScrollBarLabel",
+    "ImageViewer",
     "PipsPager",
     "ScrollBar",
     "ScrollView",

@@ -89,6 +89,7 @@
 #include <components/navigation/StackContentHost.h>
 #include <components/navigation/TabView.h>
 #include <components/scrolling/AnnotatedScrollBar.h>
+#include <components/scrolling/ImageViewer.h>
 #include <components/scrolling/PipsPager.h>
 #include <components/scrolling/ScrollBar.h>
 #include <components/scrolling/ScrollView.h>

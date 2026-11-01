@@ -1521,3 +1521,310 @@ register_source_samples(
         ),
     },
 )
+
+
+_IMAGE_VIEWER_IMPORTS = (
+    _PAINTED_SCROLLING_IMPORTS
+    + "\nfrom PySide6.QtCore import QPointF"
+    + "\nfrom PySide6.QtGui import QImage, QPolygonF"
+)
+
+_IMAGE_VIEWER_HELPER = dedent(
+    """
+    # Generated scenes keep the samples self-contained; variants 0-2 are
+    # dusk, forest and coast.
+    _SCENE_PALETTES = (
+        ((32, 64, 110), (242, 195, 139), (255, 226, 174), (108, 122, 153),
+         (69, 83, 111), (22, 39, 63)),
+        ((191, 217, 224), (238, 243, 230), (255, 250, 235), (156, 194, 163),
+         (94, 140, 106), (53, 94, 70)),
+        ((111, 168, 224), (221, 235, 247), (255, 244, 214), (120, 160, 200),
+         (70, 110, 150), (13, 53, 88)),
+    )
+
+
+    def image_viewer_scene(size, variant):
+        sky_top, sky_bottom, sun, far, near, water_color = (
+            QColor(*rgb) for rgb in _SCENE_PALETTES[max(0, min(variant, 2))]
+        )
+        w = float(size.width())
+        h = float(size.height())
+        pixmap = QPixmap(size)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        sky = QLinearGradient(0, 0, 0, h * 0.7)
+        sky.setColorAt(0.0, sky_top)
+        sky.setColorAt(1.0, sky_bottom)
+        painter.fillRect(QRectF(0, 0, w, h), sky)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(sun)
+        painter.drawEllipse(QPointF(w * 0.71, h * 0.56), h * 0.085, h * 0.085)
+        painter.setBrush(far)
+        painter.drawPolygon(QPolygonF([
+            QPointF(0, h * 0.69), QPointF(w * 0.11, h * 0.47),
+            QPointF(w * 0.21, h * 0.6), QPointF(w * 0.33, h * 0.36),
+            QPointF(w * 0.44, h * 0.56), QPointF(w * 0.52, h * 0.47),
+            QPointF(w * 0.63, h * 0.69),
+        ]))
+        painter.setBrush(near)
+        painter.drawPolygon(QPolygonF([
+            QPointF(w * 0.26, h * 0.7), QPointF(w * 0.43, h * 0.43),
+            QPointF(w * 0.55, h * 0.62), QPointF(w * 0.68, h * 0.44),
+            QPointF(w * 0.81, h * 0.61), QPointF(w * 0.91, h * 0.5),
+            QPointF(w, h * 0.6), QPointF(w, h * 0.7),
+        ]))
+        water = QLinearGradient(0, h * 0.69, 0, h)
+        water.setColorAt(0.0, near.lighter(130))
+        water.setColorAt(1.0, water_color)
+        painter.fillRect(QRectF(0, h * 0.69, w, h * 0.31), water)
+        glint = QColor(sun)
+        glint.setAlpha(140)
+        painter.setBrush(glint)
+        for row in range(4):
+            painter.drawEllipse(
+                QPointF(w * 0.71, h * (0.74 + row * 0.04)),
+                w * (0.075 - row * 0.015),
+                h * 0.008,
+            )
+        painter.setBrush(water_color.darker(140))
+        for tree in range(5):
+            x = w * (0.02 + tree * 0.035)
+            painter.drawPolygon(QPolygonF([
+                QPointF(x, h * 0.7),
+                QPointF(x + w * 0.02, h * (0.58 - (tree % 2) * 0.03)),
+                QPointF(x + w * 0.04, h * 0.7),
+            ]))
+        painter.end()
+        return pixmap
+
+
+    # A 32 x 20 pixel-art landscape for comparing sampling modes.
+    def image_viewer_pixel_art():
+        image = QImage(32, 20, QImage.Format.Format_RGB32)
+        painter = QPainter(image)
+        fills = (
+            ((0, 0, 32, 12), (45, 93, 161)),
+            ((0, 6, 32, 3), (126, 121, 168)),
+            ((0, 9, 32, 3), (229, 154, 91)),
+            ((22, 5, 4, 4), (255, 224, 138)),
+            ((21, 6, 6, 2), (255, 224, 138)),
+            ((7, 7, 2, 1), (74, 90, 120)),
+            ((6, 8, 4, 1), (74, 90, 120)),
+            ((4, 9, 8, 1), (74, 90, 120)),
+            ((2, 10, 12, 2), (74, 90, 120)),
+            ((20, 8, 2, 1), (54, 68, 94)),
+            ((18, 9, 6, 1), (54, 68, 94)),
+            ((16, 10, 10, 1), (54, 68, 94)),
+            ((13, 11, 16, 1), (54, 68, 94)),
+            ((0, 12, 32, 8), (30, 59, 92)),
+            ((0, 12, 32, 1), (44, 78, 115)),
+            ((21, 14, 6, 1), (255, 224, 138)),
+            ((22, 16, 4, 1), (201, 168, 106)),
+            ((23, 18, 2, 1), (143, 122, 85)),
+            ((3, 9, 1, 3), (27, 42, 36)),
+            ((2, 10, 3, 1), (27, 42, 36)),
+            ((29, 8, 1, 4), (27, 42, 36)),
+            ((28, 9, 3, 2), (27, 42, 36)),
+        )
+        for (x, y, width, height), rgb in fills:
+            painter.fillRect(x, y, width, height, QColor(*rgb))
+        painter.end()
+        return QPixmap.fromImage(image)
+
+
+    def image_viewer_status_text(viewer):
+        return "Zoom: {0}% / Fit mode: {1}".format(
+            round(viewer.zoomFactor() * 100.0),
+            viewer.fitMode().name,
+        )
+
+
+    def bind_image_viewer_status(viewer, status):
+        def update_status(*_args):
+            status.setText(image_viewer_status_text(viewer))
+
+        viewer.zoomFactorChanged.connect(update_status)
+        viewer.fitModeChanged.connect(update_status)
+        update_status()
+    """
+)
+
+
+register_source_samples(
+    "image-viewer",
+    ("ImageViewer",),
+    {
+        "image-viewer-basic": (
+            "root",
+            _script(
+                _PAGER_PICTURE_HELPER
+                + _IMAGE_VIEWER_HELPER
+                + dedent("""
+                root = make_scrolling_surface(globals().get("gallery_parent"))
+                layout = root.layout()
+
+                viewer = fluentqt.ImageViewer(root)
+                viewer.setFixedSize(460, 290)
+                viewer.setAccessibleName("Harbor at dusk")
+                viewer.setPixmap(image_viewer_scene(QSize(1600, 1000), 0))
+
+                # Double-click toggles 100%; after focus, + - 0 1 and the
+                # arrow keys zoom, reset and pan.
+                status = make_status_label(root, "")
+
+                def update_status(*_args):
+                    status.setText(image_viewer_status_text(viewer))
+
+                viewer.zoomFactorChanged.connect(update_status)
+                viewer.fitModeChanged.connect(update_status)
+                update_status()
+
+                layout.addWidget(viewer)
+                layout.addWidget(status)
+                """),
+                _IMAGE_VIEWER_IMPORTS,
+            ),
+        ),
+        "image-viewer-commands": (
+            "root",
+            _script(
+                _PAGER_PICTURE_HELPER
+                + _IMAGE_VIEWER_HELPER
+                + dedent("""
+                root = make_scrolling_surface(globals().get("gallery_parent"))
+                layout = root.layout()
+
+                controls = horizontal_group(root, 8)
+                fit = make_sample_button(controls, "Fit")
+                actual = make_sample_button(controls, "100%")
+                zoom_out = make_sample_button(controls, "Zoom out")
+                zoom_in = make_sample_button(controls, "Zoom in")
+                reset = make_sample_button(controls, "Reset")
+                for button in (fit, actual, zoom_out, zoom_in, reset):
+                    controls.layout().addWidget(button)
+
+                viewer = fluentqt.ImageViewer(root)
+                viewer.setFixedSize(460, 290)
+                viewer.setControlsVisibility(
+                    fluentqt.ImageViewer.ControlsVisibility.Hidden
+                )
+                viewer.setAccessibleName("Forest ridge")
+                viewer.setPixmap(image_viewer_scene(QSize(360, 225), 1))
+
+                status = make_status_label(root, "")
+                bind_image_viewer_status(viewer, status)
+
+                fit.clicked.connect(lambda: viewer.fitToView(True))
+                actual.clicked.connect(lambda: viewer.zoomToActualSize(True))
+                zoom_out.clicked.connect(lambda: viewer.zoomOut(True))
+                zoom_in.clicked.connect(lambda: viewer.zoomIn(True))
+                reset.clicked.connect(lambda: viewer.resetView(True))
+
+                layout.addWidget(controls)
+                layout.addWidget(viewer)
+                layout.addWidget(status)
+                """),
+                _IMAGE_VIEWER_IMPORTS,
+            ),
+        ),
+        "image-viewer-pixel-art": (
+            "root",
+            _script(
+                _PAGER_PICTURE_HELPER
+                + _IMAGE_VIEWER_HELPER
+                + dedent("""
+                root = make_scrolling_surface(globals().get("gallery_parent"))
+                layout = root.layout()
+
+                controls = horizontal_group(root, 8)
+                smooth = make_sample_button(controls, "Smooth")
+                fast = make_sample_button(controls, "Fast")
+                controls.layout().addWidget(smooth)
+                controls.layout().addWidget(fast)
+
+                viewer = fluentqt.ImageViewer(root)
+                viewer.setFixedSize(460, 290)
+                viewer.setAccessibleName("Pixel-art landscape")
+                viewer.setPixmap(image_viewer_pixel_art())
+                viewer.setTransformationMode(Qt.TransformationMode.FastTransformation)
+                viewer.fitToView()
+
+                status = make_status_label(root, "")
+                bind_image_viewer_status(viewer, status)
+
+                def set_mode(mode):
+                    viewer.setTransformationMode(mode)
+                    set_button_active(
+                        smooth, mode == Qt.TransformationMode.SmoothTransformation
+                    )
+                    set_button_active(
+                        fast, mode == Qt.TransformationMode.FastTransformation
+                    )
+
+                smooth.clicked.connect(
+                    lambda: set_mode(Qt.TransformationMode.SmoothTransformation)
+                )
+                fast.clicked.connect(
+                    lambda: set_mode(Qt.TransformationMode.FastTransformation)
+                )
+                set_mode(Qt.TransformationMode.FastTransformation)
+
+                layout.addWidget(controls)
+                layout.addWidget(viewer)
+                layout.addWidget(status)
+                """),
+                _IMAGE_VIEWER_IMPORTS,
+            ),
+        ),
+        "image-viewer-flip-view": (
+            "root",
+            _script(
+                _PAGER_PICTURE_HELPER
+                + _IMAGE_VIEWER_HELPER
+                + dedent("""
+                root = make_scrolling_surface(globals().get("gallery_parent"))
+                layout = root.layout()
+
+                album = fluentqt.FlipView(root)
+                album.setFixedSize(460, 290)
+                names = ("Harbor at dusk", "Forest ridge", "Coastline")
+                for index, name in enumerate(names):
+                    viewer = fluentqt.ImageViewer()
+                    viewer.setFrameVisible(False)
+                    viewer.setWheelAction(fluentqt.ImageViewer.WheelAction.Pan)
+                    # FlipView owns the bottom edge; zoom feedback uses the indicator.
+                    viewer.setControlsVisibility(
+                        fluentqt.ImageViewer.ControlsVisibility.Hidden
+                    )
+                    viewer.setAccessibleName(name)
+                    viewer.setPixmap(image_viewer_scene(QSize(1600, 1000), index))
+                    album.addOwnedPage(viewer)
+
+                status = make_status_label(root, "")
+                previous = [0]
+
+                def update_status(index):
+                    status.setText(
+                        "Photo {0} of {1}: {2}".format(index + 1, len(names), names[index])
+                    )
+
+                # The application decides that a page leaves zoom when the
+                # user flips away.
+                def on_current_changed(index):
+                    page = album.pageAt(previous[0])
+                    if isinstance(page, fluentqt.ImageViewer):
+                        page.resetView()
+                    previous[0] = index
+                    update_status(index)
+
+                album.currentIndexChanged.connect(on_current_changed)
+                update_status(album.currentIndex())
+
+                layout.addWidget(album)
+                layout.addWidget(status)
+                """),
+                _IMAGE_VIEWER_IMPORTS,
+            ),
+        ),
+    },
+)

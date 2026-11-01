@@ -150,6 +150,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/qmlbridge/QmlView.h
 
     src/components/scrolling/AnnotatedScrollBar.h
+    src/components/scrolling/ImageViewer.h
     src/components/scrolling/PipsPager.h
     src/components/scrolling/ScrollBar.h
     src/components/scrolling/ScrollView.h

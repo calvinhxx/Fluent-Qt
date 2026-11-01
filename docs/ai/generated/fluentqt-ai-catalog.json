@@ -848,6 +848,11 @@
           "avoid_when": "A Qt item view already owns scrolling, or records can grow into an unbounded layout of child widgets."
         },
         {
+          "component_id": "image-viewer",
+          "choose_when": "Users inspect one image by zooming around the pointer, panning, and switching between fit and actual size, such as file previews, screenshots, or asset libraries.",
+          "avoid_when": "The content is a widget composition or a document; use ScrollView. For a sequence of images, host one ImageViewer per FlipView page instead of swapping pixmaps behind custom navigation."
+        },
+        {
           "component_id": "scrollbar",
           "choose_when": "A custom scrolling host needs a standalone Fluent scrollbar.",
           "avoid_when": "ScrollView or an item view can own the complete viewport."
@@ -1240,6 +1245,7 @@
       "plugin": false,
       "components": [
         "annotated-scrollbar",
+        "image-viewer",
         "pips-pager",
         "scrollbar",
         "scroll-view"
@@ -8944,6 +8950,141 @@
       ]
     },
     {
+      "id": "image-viewer",
+      "title": "ImageViewer",
+      "category_id": "scrolling",
+      "description": "Lets people zoom around the pointer and pan a single image, with fit and actual-size views.",
+      "capabilities": [
+        "scrolling-and-paging"
+      ],
+      "search_terms": [
+        "100",
+        "actual",
+        "actual-size",
+        "album",
+        "animate",
+        "appears",
+        "around",
+        "arrow",
+        "browse",
+        "command",
+        "commands",
+        "ctrl",
+        "dragging",
+        "each",
+        "enlarged",
+        "enlarges",
+        "every",
+        "external",
+        "fast",
+        "fit",
+        "fitted",
+        "flipview",
+        "hosts",
+        "hover.",
+        "icon",
+        "image",
+        "image-viewer",
+        "image-viewer-basic",
+        "image-viewer-commands",
+        "image-viewer-flip-view",
+        "image-viewer-pixel-art",
+        "images",
+        "imageviewer",
+        "imageviewer.",
+        "initial",
+        "instead.",
+        "keeps",
+        "keys",
+        "lets",
+        "page",
+        "pan",
+        "pans",
+        "passes",
+        "people",
+        "photo",
+        "photos.",
+        "pinch",
+        "pixel",
+        "pixels",
+        "pointer",
+        "reset",
+        "returns",
+        "screenshot",
+        "scrolling",
+        "scrolling-and-paging",
+        "sharp",
+        "single",
+        "size",
+        "small",
+        "smooth",
+        "square",
+        "suits",
+        "swipes",
+        "toolbar",
+        "transformation",
+        "view",
+        "view.",
+        "views.",
+        "wheel",
+        "when",
+        "while",
+        "zoom",
+        "zoomed",
+        "zooms"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Scrolling.h>",
+        "declaration": "src/components/scrolling/ImageViewer.h",
+        "qualified_type": "fluent::scrolling::ImageViewer",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.scrolling",
+        "type": "ImageViewer",
+        "import_statement": "from fluentqt.scrolling import ImageViewer"
+      },
+      "tests": [
+        {
+          "target": "test_image_viewer",
+          "source": "tests/components/scrolling/TestImageViewer.cpp",
+          "ctest_label": "test_image_viewer"
+        }
+      ],
+      "gallery": {
+        "route_id": "image-viewer",
+        "sample_source": "app/view/widgets/samples/ScrollingSamples.cpp",
+        "control_image": "app/assets/control_images/scrolling/ImageViewer.png"
+      },
+      "samples": [
+        {
+          "id": "image-viewer-basic",
+          "title": "Pan and zoom an image",
+          "description": "The wheel, a pinch or Ctrl/Command + wheel zooms around the pointer, dragging pans, and the toolbar appears on hover.",
+          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setFixedSize(460, 290);\nviewer->setAccessibleName(QStringLiteral(\"Harbor at dusk\"));\nviewer->setPixmap(imageViewerScene(QSize(1600, 1000), 0));\n\n// Double-click toggles 100%; after focus, + - 0 1 and the\n// arrow keys zoom, reset and pan.\nauto updateStatus = [viewer, status] {\n    status->setText(imageViewerStatusText(viewer));\n};\nconnect(viewer, &ImageViewer::zoomFactorChanged, status, updateStatus);\nconnect(viewer, &ImageViewer::fitModeChanged, status, updateStatus);"
+        },
+        {
+          "id": "image-viewer-commands",
+          "title": "Fit, actual size and zoom commands",
+          "description": "External commands animate the view. Fit enlarges a small image, while Reset returns to the initial view that keeps it at 100%.",
+          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setFixedSize(460, 290);\nviewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\nviewer->setAccessibleName(QStringLiteral(\"Forest ridge\"));\nviewer->setPixmap(imageViewerScene(QSize(360, 225), 1));\n\nconnect(fitButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->fitToView(true); });\nconnect(actualButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomToActualSize(true); });\nconnect(zoomOutButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomOut(true); });\nconnect(zoomInButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomIn(true); });\nconnect(resetButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->resetView(true); });"
+        },
+        {
+          "id": "image-viewer-pixel-art",
+          "title": "Sharp pixels for small images",
+          "description": "Fast transformation keeps every image pixel square when a small icon or screenshot is enlarged; Smooth suits photos.",
+          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setFixedSize(460, 290);\nviewer->setAccessibleName(QStringLiteral(\"Pixel-art landscape\"));\nviewer->setPixmap(imageViewerPixelArt());\nviewer->setTransformationMode(Qt::FastTransformation);\nviewer->fitToView();\n\nconnect(smoothButton, &QPushButton::clicked, viewer, [viewer] {\n    viewer->setTransformationMode(Qt::SmoothTransformation);\n});\nconnect(fastButton, &QPushButton::clicked, viewer, [viewer] {\n    viewer->setTransformationMode(Qt::FastTransformation);\n});"
+        },
+        {
+          "id": "image-viewer-flip-view",
+          "title": "Browse an album with FlipView",
+          "description": "Each FlipView page hosts an ImageViewer. A fitted photo passes swipes, the wheel and arrow keys to FlipView; a zoomed photo pans instead.",
+          "cpp_snippet": "auto* album = new FlipView(this);\nalbum->setFixedSize(460, 290);\nconst QStringList names = {QStringLiteral(\"Harbor at dusk\"),\n                           QStringLiteral(\"Forest ridge\"),\n                           QStringLiteral(\"Coastline\")};\nfor (int index = 0; index < names.size(); ++index) {\n    auto* viewer = new ImageViewer;\n    viewer->setFrameVisible(false);\n    viewer->setWheelAction(ImageViewer::WheelAction::Pan);\n    // FlipView owns the bottom edge; zoom feedback uses the indicator.\n    viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\n    viewer->setAccessibleName(names.at(index));\n    viewer->setPixmap(imageViewerScene(QSize(1600, 1000), index));\n    album->addPage(viewer);\n}\n\n// The application decides that a page leaves zoom when the user flips away.\nconnect(album, &FlipView::currentIndexChanged, album,\n        [album, previous = 0](int index) mutable {\n            if (auto* viewer = qobject_cast<ImageViewer*>(album->pageAt(previous)))\n                viewer->resetView();\n            previous = index;\n        });"
+        }
+      ]
+    },
+    {
       "id": "pips-pager",
       "title": "PipsPager",
       "category_id": "scrolling",
@@ -12195,6 +12336,15 @@
       "description": "A scrollbar with labels that make long content easier to navigate."
     },
     {
+      "id": "image-viewer",
+      "title": "ImageViewer",
+      "kind": "component",
+      "parent_id": "scrolling",
+      "group": "Scrolling",
+      "depth": 1,
+      "description": "Lets people zoom around the pointer and pan a single image, with fit and actual-size views."
+    },
+    {
       "id": "pips-pager",
       "title": "PipsPager",
       "kind": "component",
@@ -12459,12 +12609,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 123,
-    "component_count": 97,
-    "sample_count": 281,
+    "route_count": 124,
+    "component_count": 98,
+    "sample_count": 285,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,
-    "guided_component_count": 97
+    "guided_component_count": 98
   }
 }

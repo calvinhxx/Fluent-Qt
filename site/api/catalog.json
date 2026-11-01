@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 97,
-    "public_headers": 175,
+    "components": 98,
+    "public_headers": 176,
     "categories": 16
   },
   "categories": [
@@ -86,7 +86,7 @@
     {
       "id": "scrolling",
       "title": "Scrolling",
-      "component_count": 4
+      "component_count": 5
     },
     {
       "id": "status-info",
@@ -4813,6 +4813,67 @@
       }
     },
     {
+      "id": "image-viewer",
+      "title": "ImageViewer",
+      "category_id": "scrolling",
+      "description": "Lets people zoom around the pointer and pan a single image, with fit and actual-size views.",
+      "capabilities": [
+        "scrolling-and-paging"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Scrolling.h>",
+        "installed_declaration_header": "<FluentQt/components/scrolling/ImageViewer.h>",
+        "qualified_type": "fluent::scrolling::ImageViewer",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ImageViewer.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.scrolling",
+        "type": "ImageViewer",
+        "import_statement": "from fluentqt.scrolling import ImageViewer"
+      },
+      "gallery": {
+        "route_id": "image-viewer",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=image-viewer",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ScrollingSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_image_viewer",
+          "ctest_label": "test_image_viewer",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/scrolling/TestImageViewer.cpp"
+        }
+      ],
+      "sample_count": 4,
+      "documentation": {
+        "name": {
+          "en": "ImageViewer",
+          "zh": "图片查看器"
+        },
+        "description": {
+          "en": "Lets people zoom around the pointer and pan a single image, with fit and actual-size views.",
+          "zh": "围绕指针缩放、拖动平移单张图片，可切换适应窗口与原始比例。"
+        },
+        "urls": {
+          "en": "image-viewer/",
+          "zh": "../zh-CN/api/image-viewer/"
+        },
+        "preview": {
+          "alt": {
+            "en": "ImageViewer: Pan and zoom an image",
+            "zh": "图片查看器的真实 Gallery 示例"
+          },
+          "light": {
+            "url": "../assets/component-previews/image-viewer/basic-light.png"
+          },
+          "dark": {
+            "url": "../assets/component-previews/image-viewer/basic-dark.png"
+          }
+        }
+      }
+    },
+    {
       "id": "pips-pager",
       "title": "PipsPager",
       "category_id": "scrolling",
@@ -7514,6 +7575,20 @@
         "VisibleLabel"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/AnnotatedScrollBar.h"
+    },
+    {
+      "include": "<FluentQt/components/scrolling/ImageViewer.h>",
+      "source": "src/components/scrolling/ImageViewer.h",
+      "summary": "Pan-and-zoom viewer for a single image.",
+      "declarations": [
+        "ImageViewer",
+        "ViewState",
+        "FitMode",
+        "WheelAction",
+        "ControlsVisibility",
+        "ChangeSource"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ImageViewer.h"
     },
     {
       "include": "<FluentQt/components/scrolling/PipsPager.h>",

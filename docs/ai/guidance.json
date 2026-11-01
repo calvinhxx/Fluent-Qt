@@ -804,6 +804,11 @@
           "avoid_when": "A Qt item view already owns scrolling, or records can grow into an unbounded layout of child widgets."
         },
         {
+          "component_id": "image-viewer",
+          "choose_when": "Users inspect one image by zooming around the pointer, panning, and switching between fit and actual size, such as file previews, screenshots, or asset libraries.",
+          "avoid_when": "The content is a widget composition or a document; use ScrollView. For a sequence of images, host one ImageViewer per FlipView page instead of swapping pixmaps behind custom navigation."
+        },
+        {
           "component_id": "scrollbar",
           "choose_when": "A custom scrolling host needs a standalone Fluent scrollbar.",
           "avoid_when": "ScrollView or an item view can own the complete viewport."

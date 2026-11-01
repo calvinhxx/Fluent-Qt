@@ -1796,6 +1796,11 @@ if (resolvedOwner) {
                     </modify-argument>
                 </modify-function>
             </object-type>
+            <object-type name="ImageViewer">
+                <enum-type name="FitMode"/>
+                <enum-type name="WheelAction"/>
+                <enum-type name="ControlsVisibility"/>
+            </object-type>
             <object-type name="PipsPager">
                 <enum-type name="PipsPagerButtonVisibility"/>
             </object-type>

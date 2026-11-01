@@ -468,6 +468,17 @@
       "gap": ""
     },
     {
+      "id": "image-viewer",
+      "classification": "adapter",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/scrolling/private/ImageViewerAccessibility_p.cpp",
+        "tests/components/scrolling/TestImageViewer.cpp"
+      ],
+      "gap": ""
+    },
+    {
       "id": "info-badge",
       "classification": "adapter",
       "risk": "medium",
