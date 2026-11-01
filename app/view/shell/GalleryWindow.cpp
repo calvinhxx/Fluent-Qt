@@ -31,13 +31,14 @@
 #include "GalleryContentPresenter.h"
 #include "GalleryIntroTour.h"
 #include "GalleryNavigationPane.h"
-#include "GallerySearchRanking.h"
+#include "GallerySearchService.h"
 #include "GallerySplashScreen.h"
 #include "GalleryTitleBarController.h"
 #include "GalleryTopNavigationPane.h"
 #include "GalleryWindowMetrics.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/SettingsPage.h"
+#include "view/widgets/GallerySampleCatalog.h"
 #include "view/support/GalleryEditingCommands.h"
 #include "view/support/GalleryToast.h"
 
@@ -166,50 +167,22 @@ bool GalleryWindow::selectRoute(const QString& routeId)
 bool GalleryWindow::navigateToSearchResult(const QString& searchText)
 {
     const QString needle = searchText.trimmed();
-    if (needle.isEmpty())
+    if (needle.isEmpty() || !m_searchService)
         return false;
 
-    const QStringList tokens = search::splitTokens(needle);
-
-    // Rank candidates the same way the suggestion dropdown does so pressing Enter
-    // lands on its top result: exact title (0) > prefix (1) > any token subset (2),
-    // ties broken alphabetically (case-insensitive).
-    // zh_CN: 候选排序与建议下拉一致，使回车落到其首个结果：精确标题(0) > 前缀(1) >
-    // 任意词元子集(2)，同档按字母序（忽略大小写）。
-    QString bestRouteId;
-    QString bestTitle;
-    int bestScore = 3;
-    for (const GalleryNavigationItem& item : m_navigationViewModel.items()) {
-        if (item.kind == GalleryNavigationItem::Kind::SectionHeader)
-            continue;
-        if (!search::titleMatchesTokens(item.title, tokens))
-            continue;
-
-        int score = 2;
-        if (item.title.compare(needle, Qt::CaseInsensitive) == 0)
-            score = 0;
-        else if (item.title.startsWith(needle, Qt::CaseInsensitive))
-            score = 1;
-
-        if (score < bestScore || (score == bestScore && item.title.compare(bestTitle, Qt::CaseInsensitive) < 0)) {
-            bestScore = score;
-            bestRouteId = item.id;
-            bestTitle = item.title;
-        }
-        if (bestScore == 0)
-            break;
-    }
-
-    if (bestRouteId.isEmpty()) {
+    // Enter resolves through the ranking that orders the suggestion list, so it lands on the
+    // list's first result: routes before examples, then exact title > prefix > token match.
+    // zh_CN: 回车与建议列表共用同一排序，落到列表首个结果：路由先于示例，其次精确标题 > 前缀 > 词元匹配。
+    const QVector<search::Entry> ranked = m_searchService->rankedResults(needle);
+    if (ranked.isEmpty()) {
         LOG_DEBUG(QStringLiteral("GalleryWindow searchNavigate miss text=%1").arg(needle));
         return false;
     }
 
+    const search::Entry& best = ranked.first();
     LOG_DEBUG(QStringLiteral("GalleryWindow searchNavigate text=%1 routeId=%2 match=%3")
-            .arg(needle, bestRouteId,
-                bestScore == 0 ? QStringLiteral("exact")
-                               : (bestScore == 1 ? QStringLiteral("prefix") : QStringLiteral("token"))));
-    return selectRoute(bestRouteId);
+            .arg(needle, best.routeId, best.isExample() ? QStringLiteral("example") : QStringLiteral("route")));
+    return selectRoute(best.routeId);
 }
 
 void GalleryWindow::showInitialRouteContent()
@@ -573,20 +546,31 @@ void GalleryWindow::buildContentPresenter()
 
 void GalleryWindow::createTitleBarContent()
 {
-    // Every navigable title feeds the search box so it reaches the same routes as the pane.
-    // zh_CN: 把所有可导航标题作为搜索建议，使搜索可达范围与导航栏一致。
-    QStringList searchTitles;
+    // Every navigable route is searchable, so search reaches the same pages as the pane; the
+    // examples on those pages are indexed lazily once the user first searches.
+    // zh_CN: 所有可导航路由均可搜索，使搜索可达范围与导航栏一致；页面中的示例在首次搜索后惰性建立索引。
+    QVector<search::Entry> routes;
     for (const GalleryNavigationItem& item : m_navigationViewModel.items()) {
         if (item.kind != GalleryNavigationItem::Kind::SectionHeader)
-            searchTitles.append(item.title);
+            routes.append({item.id, item.title, QString()});
     }
-    searchTitles.sort(Qt::CaseInsensitive);
+    m_searchService = new GallerySearchService(
+        std::move(routes),
+        [](const search::Entry& route) {
+            QVector<search::Entry> examples;
+            for (const GallerySample& sample : gallerySamplesForRoute(route.routeId)) {
+                if (!sample.title.isEmpty())
+                    examples.append({route.routeId, sample.title, route.title});
+            }
+            return examples;
+        },
+        this);
 
     using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
     GalleryTitleBarController::Callbacks callbacks;
     callbacks.onBack = [this]() { navigateBack(); };
     callbacks.onToggleNav = [this]() { toggleNavigationDisplayMode(); };
-    callbacks.onSearch = [this](const QString& text) { navigateToSearchResult(text); };
+    callbacks.onSearchResultChosen = [this](const QString& routeId) { selectRoute(routeId); };
     callbacks.isMinimalNavLayout = [this]() {
         return m_navigationView && m_navigationView->effectiveDisplayMode() == DisplayMode::LeftMinimal;
     };
@@ -596,7 +580,7 @@ void GalleryWindow::createTitleBarContent()
     // host-window event filters while both watched objects are still valid.
     // zh_CN: 控制器必须先于标题栏的控件子对象析构。以 chrome 为父对象可建立
     // 该顺序，并让析构函数在两个监听对象仍有效时解除宿主窗口事件过滤器。
-    m_titleBar = new GalleryTitleBarController(chrome, searchTitles, std::move(callbacks), chrome);
+    m_titleBar = new GalleryTitleBarController(chrome, m_searchService, std::move(callbacks), chrome);
 }
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)

@@ -76,6 +76,7 @@
 #include "view/shell/GalleryNavigationPane.h"
 #include "view/shell/GalleryTopNavigationPane.h"
 #include "view/shell/GalleryPageSkeleton.h"
+#include "view/shell/GallerySearchService.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryTitleBarController.h"
 #include "view/shell/GalleryWindow.h"
@@ -1769,35 +1770,286 @@ TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
     EXPECT_FALSE(window.navigateToSearchResult(QStringLiteral("no-such-control")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("toast"));
 
-    // The title-bar search box suggests every navigable route title.
+    // The synchronous helper does not construct the cold example index.
+    EXPECT_FALSE(window.navigateToSearchResult(QStringLiteral("project directory")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("toast"));
+
+    // The title-bar search box answers asynchronously with one ranked page at a time.
     auto* searchBox = window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(searchBox, nullptr);
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("CheckBox")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Card")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Accordion")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Avatar")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("CompoundButton")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("FontIcon")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Scrolling")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Settings")));
+    EXPECT_TRUE(searchBox->isAsyncSuggestionsEnabled());
+    QAbstractItemModel* results = searchBox->suggestionModel();
+    ASSERT_NE(results, nullptr);
+    const auto rowText = [results](int row) { return results->index(row, 0).data(Qt::DisplayRole).toString(); };
+    const auto rowRoute = [results](int row) { return results->index(row, 0).data(Qt::UserRole).toString(); };
+    const auto searchFor = [&](const QString& query) {
+        searchBox->clear();
+        QTest::keyClicks(searchBox, query);
+        EXPECT_NE(searchBox->loadState(), AutoSuggestBox::LoadState::Ready) << "Typing must not answer synchronously";
+        return QTest::qWaitFor([&] { return searchBox->loadState() == AutoSuggestBox::LoadState::Ready; }, 5000);
+    };
 
-    // Typing narrows the suggestions to containing titles (owner-side filtering).
     window.show();
     QApplication::processEvents();
     searchBox->setFocus();
-    QTest::keyClicks(searchBox, QStringLiteral("progress"));
-    QApplication::processEvents();
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("ProgressBar")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("ProgressRing")));
-    EXPECT_FALSE(searchBox->suggestions().contains(QStringLiteral("CheckBox")));
+    ASSERT_TRUE(searchFor(QStringLiteral("progress")));
+    ASSERT_GE(results->rowCount(), 2);
+    EXPECT_EQ(rowText(0), QStringLiteral("ProgressBar"));
+    EXPECT_EQ(rowRoute(0), QStringLiteral("progress-bar"));
+    EXPECT_EQ(rowText(1), QStringLiteral("ProgressRing"));
+    for (int row = 0; row < results->rowCount(); ++row)
+        EXPECT_NE(rowRoute(row), QStringLiteral("checkbox"));
 
-    // Retyping re-filters against the full title list, not the narrowed one.
-    searchBox->clear();
-    QTest::keyClicks(searchBox, QStringLiteral("date"));
+    // Arrow keys only preview a row; submitting it navigates by the row's route id.
+    const QString routeBeforePreview = window.currentRouteId();
+    QTest::keyClick(searchBox, Qt::Key_Down);
     QApplication::processEvents();
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Date & time")));
-    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("DatePicker")));
-    EXPECT_FALSE(searchBox->suggestions().contains(QStringLiteral("ProgressBar")));
+    EXPECT_EQ(window.currentRouteId(), routeBeforePreview);
+    QTest::keyClick(searchBox, Qt::Key_Return);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.currentRouteId() == QStringLiteral("progress-bar"); }, 2000));
+
+    // Example rows name their page and carry that page's route.
+    searchBox->setFocus();
+    ASSERT_TRUE(searchFor(QStringLiteral("project directory")));
+    ASSERT_GE(results->rowCount(), 1);
+    EXPECT_EQ(rowText(0), QStringLiteral("Search a project directory · AutoSuggestBox"));
+    EXPECT_EQ(rowRoute(0), QStringLiteral("auto-suggest-box"));
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("project directory")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("auto-suggest-box"));
+
+    // Broad queries page their results through the list's load-more action.
+    ASSERT_TRUE(searchFor(QStringLiteral("button")));
+    EXPECT_EQ(results->rowCount(), 8);
+    EXPECT_TRUE(searchBox->hasMoreSuggestions());
+    EXPECT_EQ(rowText(0), QStringLiteral("Button"));
+    for (int row = 0; row < results->rowCount(); ++row)
+        EXPECT_FALSE(rowText(row).contains(QStringLiteral(" · ")))
+            << "Controls lead examples: " << rowText(row).toStdString();
+    const QString firstPageLast = rowText(7);
+    searchBox->loadMoreSuggestions();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return searchBox->loadState() == AutoSuggestBox::LoadState::Ready && results->rowCount() > 8; }, 5000));
+    EXPECT_EQ(rowText(0), QStringLiteral("Button"));
+    EXPECT_EQ(rowText(7), firstPageLast) << "A further page appends rather than replacing";
+
+    ASSERT_TRUE(searchFor(QStringLiteral("zzzz no such control")));
+    EXPECT_EQ(results->rowCount(), 0);
+    EXPECT_FALSE(searchBox->hasMoreSuggestions());
+    EXPECT_EQ(searchBox->emptyText(), QStringLiteral("No matches"));
+}
+
+TEST(GallerySearchServiceTest, AnswersLaterIndexesExamplesInBatchesAndPages)
+{
+    using fluent::gallery::GallerySearchService;
+    using fluent::gallery::search::Entry;
+    QVector<Entry> routes;
+    for (int index = 0; index < 10; ++index)
+        routes.append({QStringLiteral("route-%1").arg(index), QStringLiteral("Widget %1").arg(index), QString()});
+    int loads = 0;
+    GallerySearchService service(routes, [&loads](const Entry& route) {
+        ++loads;
+        return QVector<Entry>{{route.routeId, QStringLiteral("Sample for %1").arg(route.title), route.title}};
+    });
+    EXPECT_EQ(loads, 0) << "Examples are indexed only after the first request";
+    EXPECT_FALSE(service.isIndexComplete());
+
+    struct Reply {
+        quint64 token = 0;
+        int offset = 0;
+        QVector<Entry> page;
+        bool hasMore = false;
+    };
+    QVector<Reply> replies;
+    QObject::connect(&service, &GallerySearchService::resultsReady,
+        [&replies](quint64 token, int offset, const QVector<Entry>& page, bool hasMore) {
+            replies.append({token, offset, page, hasMore});
+        });
+
+    service.requestResults(1, QStringLiteral("widget"), 0, 4);
+    service.requestResults(2, QStringLiteral("sample"), 0, 4);
+    service.cancelRequest(2);
+    EXPECT_TRUE(replies.isEmpty()) << "Replies never arrive synchronously";
+    QCoreApplication::processEvents();
+    EXPECT_GT(loads, 0);
+    EXPECT_LT(loads, routes.size()) << "One turn indexes a single batch";
+    EXPECT_TRUE(replies.isEmpty()) << "Requests wait for the complete index";
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !replies.isEmpty(); }, 2000));
+    EXPECT_TRUE(service.isIndexComplete());
+    EXPECT_EQ(loads, routes.size());
+    ASSERT_EQ(replies.size(), 1) << "A canceled request is not answered";
+    EXPECT_EQ(replies.first().token, 1u);
+    ASSERT_EQ(replies.first().page.size(), 4);
+    EXPECT_TRUE(replies.first().hasMore);
+    EXPECT_EQ(replies.first().page.first().title, QStringLiteral("Widget 0"));
+    EXPECT_FALSE(replies.first().page.first().isExample()) << "Routes rank ahead of examples";
+
+    service.requestResults(3, QStringLiteral("widget"), 16, 8);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return replies.size() == 2; }, 2000));
+    EXPECT_EQ(replies.last().offset, 16);
+    EXPECT_EQ(replies.last().page.size(), 4);
+    EXPECT_FALSE(replies.last().hasMore);
+    for (const Entry& entry : replies.last().page)
+        EXPECT_TRUE(entry.isExample());
+
+    const QVector<Entry> ranked = service.rankedResults(QStringLiteral("widget 3"));
+    ASSERT_FALSE(ranked.isEmpty());
+    EXPECT_EQ(ranked.first().routeId, QStringLiteral("route-3"));
+    EXPECT_FALSE(ranked.first().isExample());
+    EXPECT_TRUE(service.rankedResults(QStringLiteral("   ")).isEmpty());
+}
+
+TEST(GallerySearchServiceTest, Contract_ColdLookupAndCancellationDoNotBuildExamples)
+{
+    using fluent::gallery::GallerySearchService;
+    using fluent::gallery::search::Entry;
+    QVector<Entry> routes;
+    for (int index = 0; index < 12; ++index)
+        routes.append({QString::number(index), QStringLiteral("Widget %1").arg(index), {}});
+    int loads = 0;
+    GallerySearchService service(routes, [&loads](const Entry& route) {
+        ++loads;
+        return QVector<Entry>{{route.routeId, QStringLiteral("Example"), route.title}};
+    });
+    const auto known = service.rankedResults(QStringLiteral("Widget 3"));
+    ASSERT_FALSE(known.isEmpty());
+    EXPECT_EQ(known.first().routeId, QStringLiteral("3"));
+    EXPECT_TRUE(service.rankedResults(QStringLiteral("Example")).isEmpty());
+    EXPECT_EQ(loads, 0) << "Synchronous lookup must not finish the example index";
+    EXPECT_FALSE(service.isIndexComplete());
+
+    service.requestResults(1, QStringLiteral("Example"), 0, 8);
+    service.cancelRequest(1);
+    QCoreApplication::processEvents();
+    EXPECT_EQ(loads, 0) << "Canceling the last request must stop scheduled indexing";
+}
+
+TEST(GallerySearchServiceTest, Contract_SlowRouteYieldsBeforeTheNextRoute)
+{
+    using fluent::gallery::GallerySearchService;
+    using fluent::gallery::search::Entry;
+    QVector<Entry> routes;
+    for (int index = 0; index < 12; ++index)
+        routes.append({QString::number(index), QStringLiteral("Widget %1").arg(index), {}});
+    int loads = 0;
+    GallerySearchService service(routes, [&loads](const Entry&) {
+        ++loads;
+        QTest::qSleep(8);
+        return QVector<Entry>{};
+    });
+    service.requestResults(1, QStringLiteral("Widget"), 0, 8);
+    QCoreApplication::processEvents();
+    EXPECT_EQ(loads, 1) << "A slow route must exhaust the time slice rather than loading four routes";
+    service.cancelRequest(1);
+    QTest::qWait(10);
+    EXPECT_EQ(loads, 1);
+}
+
+TEST(GallerySearchServiceTest, Contract_ReplyCallbacksCanCancelReplaceAndDestroy)
+{
+    using fluent::gallery::GallerySearchService;
+    using fluent::gallery::search::Entry;
+    const QVector<Entry> routes{{QStringLiteral("widget"), QStringLiteral("Widget"), {}}};
+    GallerySearchService service(routes, {});
+    QVector<quint64> replies;
+    QObject::connect(&service, &GallerySearchService::resultsReady, &service,
+        [&](quint64 token, int, const QVector<Entry>&, bool) {
+            replies.append(token);
+            if (token == 1) {
+                service.cancelRequest(2);
+                service.requestResults(2, QStringLiteral("Widget"), 0, 1);
+            }
+        });
+    service.requestResults(1, QStringLiteral("Widget"), 0, 1);
+    service.requestResults(2, QStringLiteral("Widget"), 0, 1);
+    QCoreApplication::processEvents();
+    EXPECT_EQ(replies, (QVector<quint64>{1})) << "A replacement request must wait for its own event-loop turn";
+    ASSERT_TRUE(QTest::qWaitFor([&] { return replies.size() == 2; }, 1000));
+    EXPECT_EQ(replies, (QVector<quint64>{1, 2}));
+
+    QPointer<GallerySearchService> transient = new GallerySearchService(routes, {});
+    int transientReplies = 0;
+    QObject::connect(transient, &GallerySearchService::resultsReady, &service, [&]() {
+        ++transientReplies;
+        delete transient.data();
+    });
+    transient->requestResults(1, QStringLiteral("Widget"), 0, 1);
+    transient->requestResults(2, QStringLiteral("Widget"), 0, 1);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return transient.isNull(); }, 1000));
+    EXPECT_EQ(transientReplies, 1);
+
+    QPointer<GallerySearchService> loaderOwned;
+    loaderOwned = new GallerySearchService(routes, [&](const Entry&) {
+        delete loaderOwned.data();
+        return QVector<Entry>{};
+    });
+    loaderOwned->requestResults(1, QStringLiteral("Widget"), 0, 1);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return loaderOwned.isNull(); }, 1000));
+}
+
+TEST_F(GalleryShellFrameworkTest, Contract_ColdSearchSubmissionIsDeferredAndCancelable)
+{
+    using fluent::gallery::GallerySearchService;
+    using fluent::gallery::GalleryTitleBarController;
+    using fluent::gallery::search::Entry;
+    fluent::windowing::Window host;
+    host.resize(1180, 760);
+    QVector<Entry> routes;
+    for (int index = 0; index < 20; ++index)
+        routes.append({QStringLiteral("route-%1").arg(index), QStringLiteral("Widget %1").arg(index), {}});
+    int loads = 0;
+    GallerySearchService search(routes, [&loads](const Entry& route) {
+        ++loads;
+        return QVector<Entry>{{route.routeId, QStringLiteral("Example %1").arg(route.routeId), route.title}};
+    });
+    QStringList navigation;
+    GalleryTitleBarController::Callbacks callbacks;
+    callbacks.onSearchResultChosen = [&](const QString& route) { navigation.append(route); };
+    GalleryTitleBarController controller(host.titleBar(), &search, callbacks, &host);
+    host.show();
+    host.activateWindow();
+    auto* box = host.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
+    ASSERT_NE(box, nullptr);
+    box->setFocus();
+    QApplication::processEvents();
+
+    // Routes are complete already, so submitting one needs no sample construction.
+    box->setText(QStringLiteral("Widget 3"));
+    QTest::keyClick(box, Qt::Key_Return);
+    EXPECT_EQ(navigation, (QStringList{QStringLiteral("route-3")}));
+    EXPECT_EQ(loads, 0);
+    navigation.clear();
+
+    box->setText(QStringLiteral("Example route-4"));
+    QTest::keyClick(box, Qt::Key_Return);
+    EXPECT_TRUE(navigation.isEmpty());
+    EXPECT_EQ(loads, 0) << "Return must not synchronously finish the index";
+    EXPECT_EQ(box->loadState(), AutoSuggestBox::LoadState::Loading);
+    box->clear();
+    QTest::qWait(20);
+    EXPECT_TRUE(navigation.isEmpty());
+    EXPECT_EQ(loads, 0) << "Clearing the submitted query cancels its indexing demand";
+
+    box->setText(QStringLiteral("Example route-4"));
+    QTest::keyClick(box, Qt::Key_Return);
+    QCoreApplication::processEvents();
+    EXPECT_LT(loads, routes.size());
+    QTest::keyClick(box, Qt::Key_Escape);
+    const int canceledLoads = loads;
+    QTest::qWait(20);
+    EXPECT_EQ(loads, canceledLoads);
+    EXPECT_TRUE(navigation.isEmpty());
+
+    // A new query invalidates the old navigation intent, including a rapid second Return.
+    box->setText(QStringLiteral("Example route-4"));
+    QTest::keyClick(box, Qt::Key_Return);
+    box->setText(QStringLiteral("Example route-9"));
+    QTest::keyClick(box, Qt::Key_Return);
+    EXPECT_TRUE(navigation.isEmpty());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !navigation.isEmpty(); }, 2000));
+    EXPECT_EQ(navigation, (QStringList{QStringLiteral("route-9")}));
+    EXPECT_TRUE(search.isIndexComplete());
+    EXPECT_FALSE(box->isSuggestionListOpen());
+    EXPECT_EQ(loads, routes.size());
 }
 
 TEST_F(GalleryShellFrameworkTest, BackButtonReturnsThroughNavigationHistory)
