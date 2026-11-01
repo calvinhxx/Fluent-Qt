@@ -790,7 +790,8 @@
       "status": "covered",
       "evidence": [
         "src/components/navigation/private/NavigationSelectionAccessibility_p.cpp",
-        "tests/components/navigation/TestNavigationAccessibility.cpp"
+        "tests/components/navigation/TestNavigationAccessibility.cpp",
+        "tests/components/navigation/TestSelectorBar.cpp"
       ],
       "gap": ""
     },
