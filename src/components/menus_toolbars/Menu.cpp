@@ -519,23 +519,21 @@ void FluentMenu::paintEvent(QPaintEvent* event)
         const QColor secondaryText = isEnabled ? colors.textSecondary : colors.textDisabled;
 
         if (leadingColumn > 0) {
-            const QRect leadingRect(itemRect.left() + itemInset,
-                itemRect.top() + (itemRect.height() - leadingColumn) / 2, leadingColumn, leadingColumn);
+            // The leading column holds a 16 px icon and an 8 px text gap after
+            // the shared content inset. Center by extent to avoid QRect's
+            // integer-center bias toward the top-left for even-sized icons.
+            // zh_CN: 前导列在统一内容边距后容纳 16 px 图标与 8 px 图文间距；
+            // 按尺寸差居中，避免 QRect 整数中心使偶数尺寸图标偏向左上。
+            const int iconSide = qMin(Typography::IconSize::Standard, leadingColumn);
+            const QRect iconRect(itemRect.left() + textPadding, itemRect.top() + (itemRect.height() - iconSide) / 2,
+                iconSide, iconSide);
             if (action->isCheckable() && action->isChecked()) {
                 p.setPen(primaryText);
-                Typography::Icons::paintGlyph(p, QRectF(leadingRect), Typography::Icons::CheckMark,
+                Typography::Icons::paintGlyph(p, QRectF(iconRect), Typography::Icons::CheckMark,
                     Typography::IconSize::Compact, Qt::AlignCenter);
             } else if (!action->icon().isNull()) {
                 const QIcon::Mode mode = !isEnabled ? QIcon::Disabled : (isActive ? QIcon::Active : QIcon::Normal);
                 const QIcon::State state = action->isChecked() ? QIcon::On : QIcon::Off;
-                // The leading column is 24 px for alignment, but WinUI menu
-                // command icons use a 16 px optical slot. Painting into the
-                // whole column lets QIcon upscale a 16 px source to 24 px,
-                // making editing glyphs visually dominate their labels.
-                const int iconSide = qMin(Typography::IconSize::Standard,
-                    qMin(leadingRect.width(), leadingRect.height()));
-                const QRect iconRect(leadingRect.center().x() - iconSide / 2, leadingRect.center().y() - iconSide / 2,
-                    iconSide, iconSide);
                 action->icon().paint(&p, iconRect, Qt::AlignCenter, mode, state);
             }
         }
