@@ -46,8 +46,7 @@ Label* makeStatusLabel(QWidget* parent, const QString& text)
     auto* label = new Label(text, parent);
     label->setFluentTypography(Typography::FontRole::Body);
     label->setWordWrap(true);
-    label->setTextColorRole(
-        Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
+    label->setTextColorRole(Label::TextColorRole::Primary); // QSS-proof on the styled preview surface
     return label;
 }
 
@@ -76,8 +75,7 @@ protected:
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setPen(themeColors().strokeCard);
         painter.setBrush(themeColors().bgCanvas);
-        painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1), themeRadius().overlay,
-                                themeRadius().overlay);
+        painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1), themeRadius().overlay, themeRadius().overlay);
     }
 
 private:
@@ -147,38 +145,30 @@ struct PagerPicturePage {
 const QVector<PagerPicturePage>& pagerPicturePages()
 {
     static const QVector<PagerPicturePage> pages = {
-        {QStringLiteral("Coastal route"), QColor(QStringLiteral("#375F90")),
-         QColor(QStringLiteral("#B9D7EA"))},
-        {QStringLiteral("Forest trail"), QColor(QStringLiteral("#3F7B52")),
-         QColor(QStringLiteral("#C8E3B4"))},
-        {QStringLiteral("Desert light"), QColor(QStringLiteral("#9A6339")),
-         QColor(QStringLiteral("#F0CF9A"))},
-        {QStringLiteral("Evening ridge"), QColor(QStringLiteral("#7B4F91")),
-         QColor(QStringLiteral("#D9C2EA"))},
-        {QStringLiteral("Harbor morning"), QColor(QStringLiteral("#4B6D73")),
-         QColor(QStringLiteral("#C7E6E4"))},
-        {QStringLiteral("Mountain dusk"), QColor(QStringLiteral("#8C4F4F")),
-         QColor(QStringLiteral("#E9C7C7"))}};
+        {QStringLiteral("Coastal route"), QColor(QStringLiteral("#375F90")), QColor(QStringLiteral("#B9D7EA"))},
+        {QStringLiteral("Forest trail"), QColor(QStringLiteral("#3F7B52")), QColor(QStringLiteral("#C8E3B4"))},
+        {QStringLiteral("Desert light"), QColor(QStringLiteral("#9A6339")), QColor(QStringLiteral("#F0CF9A"))},
+        {QStringLiteral("Evening ridge"), QColor(QStringLiteral("#7B4F91")), QColor(QStringLiteral("#D9C2EA"))},
+        {QStringLiteral("Harbor morning"), QColor(QStringLiteral("#4B6D73")), QColor(QStringLiteral("#C7E6E4"))},
+        {QStringLiteral("Mountain dusk"), QColor(QStringLiteral("#8C4F4F")), QColor(QStringLiteral("#E9C7C7"))}};
     return pages;
 }
 
-QLabel* makePagerPicture(QWidget* parent, const PagerPicturePage& page, int pageIndex,
-                         int pageCount, const QSize& size)
+QLabel* makePagerPicture(QWidget* parent, const PagerPicturePage& page, int pageIndex, int pageCount, const QSize& size)
 {
     auto* picture = new QLabel(parent);
     picture->setFixedSize(size);
-    picture->setPixmap(gradientPixmap(
-        size, page.from, page.to,
+    picture->setPixmap(gradientPixmap(size, page.from, page.to,
         QStringLiteral("%1  Page %2 of %3").arg(page.title).arg(pageIndex + 1).arg(pageCount)));
     return picture;
 }
 
-class ScrollViewDemoCanvas : public QWidget,
-                             public fluent::scrolling::ScrollViewZoomAware,
-                             public fluent::FluentElement {
+class ScrollViewDemoCanvas
+    : public QWidget,
+      public fluent::scrolling::ScrollViewZoomAware,
+      public fluent::FluentElement {
 public:
-    explicit ScrollViewDemoCanvas(const QSize& logicalSize, const QString& title,
-                                  QWidget* parent = nullptr)
+    explicit ScrollViewDemoCanvas(const QSize& logicalSize, const QString& title, QWidget* parent = nullptr)
         : QWidget(parent), m_logicalSize(logicalSize), m_title(title)
     {
         setFixedSize(logicalSize);
@@ -215,8 +205,8 @@ protected:
         for (int y = 0; y < m_logicalSize.height(); y += 48)
             painter.drawLine(0, y, m_logicalSize.width(), y);
 
-        const QVector<QColor> swatches = {colors.accentDefault, colors.systemSuccess,
-                                          colors.systemCaution, colors.systemInfo};
+        const QVector<QColor> swatches = {colors.accentDefault, colors.systemSuccess, colors.systemCaution,
+            colors.systemInfo};
         for (int index = 0; index < 18; ++index) {
             const int col = index % 6;
             const int row = index / 6;
@@ -232,18 +222,16 @@ protected:
         titleFont.setWeight(QFont::DemiBold);
         painter.setFont(titleFont);
         painter.setPen(colors.textPrimary);
-        painter.drawText(QRect(24, 20, m_logicalSize.width() - 48, 28),
-                         Qt::AlignLeft | Qt::AlignVCenter, m_title);
+        painter.drawText(QRect(24, 20, m_logicalSize.width() - 48, 28), Qt::AlignLeft | Qt::AlignVCenter, m_title);
 
         QFont bodyFont = themeFont(Typography::FontRole::Caption).toQFont();
         painter.setFont(bodyFont);
         painter.setPen(colors.textSecondary);
-        painter.drawText(QRect(24, 46, m_logicalSize.width() - 48, 22),
-                         Qt::AlignLeft | Qt::AlignVCenter,
-                         QStringLiteral("%1 x %2, zoom %3x")
-                             .arg(m_logicalSize.width())
-                             .arg(m_logicalSize.height())
-                             .arg(m_zoomFactor, 0, 'f', 1));
+        painter.drawText(QRect(24, 46, m_logicalSize.width() - 48, 22), Qt::AlignLeft | Qt::AlignVCenter,
+            QStringLiteral("%1 x %2, zoom %3x")
+                .arg(m_logicalSize.width())
+                .arg(m_logicalSize.height())
+                .arg(m_zoomFactor, 0, 'f', 1));
     }
 
 private:
@@ -258,9 +246,8 @@ QWidget* makeScrollViewStackContent(QWidget* parent, const QSize& imageSize = QS
     const auto& pages = pagerPicturePages();
     const int margin = 12;
     const int spacing = 10;
-    content->setFixedSize(imageSize.width() + margin * 2, margin * 2 +
-                                                              pages.size() * imageSize.height() +
-                                                              (pages.size() - 1) * spacing);
+    content->setFixedSize(imageSize.width() + margin * 2,
+        margin * 2 + pages.size() * imageSize.height() + (pages.size() - 1) * spacing);
 
     auto* layout = new QVBoxLayout(content);
     layout->setContentsMargins(margin, margin, margin, margin);
@@ -268,8 +255,7 @@ QWidget* makeScrollViewStackContent(QWidget* parent, const QSize& imageSize = QS
     layout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
 
     for (int index = 0; index < pages.size(); ++index) {
-        layout->addWidget(
-            makePagerPicture(content, pages.at(index), index, pages.size(), imageSize));
+        layout->addWidget(makePagerPicture(content, pages.at(index), index, pages.size(), imageSize));
     }
     return content;
 }
@@ -286,11 +272,10 @@ QString scrollViewOffsetText(const ScrollView* scrollView)
 
 void bindScrollViewStatus(ScrollView* scrollView, Label* status)
 {
-    auto updateStatus = [scrollView, status]() {
-        status->setText(scrollViewOffsetText(scrollView));
-    };
-    QObject::connect(scrollView, &ScrollView::scrollPositionChanged, status,
-                     [updateStatus](int, int) { updateStatus(); });
+    auto updateStatus = [scrollView, status]() { status->setText(scrollViewOffsetText(scrollView)); };
+    QObject::connect(scrollView, &ScrollView::scrollPositionChanged, status, [updateStatus](int, int) {
+        updateStatus();
+    });
     QObject::connect(scrollView, &ScrollView::zoomFactorChanged, status, updateStatus);
     updateStatus();
 }
@@ -300,8 +285,7 @@ QVector<AnnotatedScrollBarLabel> yearLabels()
     QVector<AnnotatedScrollBarLabel> labels;
     for (int year = 2023; year >= 2015; --year) {
         const int offset = (2023 - year) * 120;
-        labels.append(AnnotatedScrollBarLabel(QString::number(year), offset,
-                                              QStringLiteral("October %1").arg(year)));
+        labels.append(AnnotatedScrollBarLabel(QString::number(year), offset, QStringLiteral("October %1").arg(year)));
     }
     return labels;
 }
@@ -333,8 +317,7 @@ struct ColorSection {
 
 const QVector<ColorSection>& colorSections()
 {
-    static const QVector<ColorSection> sections = {
-        {QStringLiteral("Azure"), QColor(QStringLiteral("#0078D4")), 32},
+    static const QVector<ColorSection> sections = {{QStringLiteral("Azure"), QColor(QStringLiteral("#0078D4")), 32},
         {QStringLiteral("Crimson"), QColor(QStringLiteral("#DC143C")), 50},
         {QStringLiteral("Cyan"), QColor(QStringLiteral("#00B7C3")), 8},
         {QStringLiteral("Fuchsia"), QColor(QStringLiteral("#C239B3")), 70},
@@ -367,8 +350,7 @@ int offsetForItem(int itemIndex, int width)
 
 int colorContentHeightForWidth(int width)
 {
-    const int rows =
-        (totalColorItemCount() + itemsPerRowForWidth(width) - 1) / itemsPerRowForWidth(width);
+    const int rows = (totalColorItemCount() + itemsPerRowForWidth(width) - 1) / itemsPerRowForWidth(width);
     return rows * kAnnotatedItemHeight;
 }
 
@@ -377,8 +359,7 @@ QVector<AnnotatedScrollBarLabel> colorSectionLabels(int width)
     QVector<AnnotatedScrollBarLabel> labels;
     int firstItemIndex = 0;
     for (const ColorSection& section : colorSections()) {
-        labels.append(AnnotatedScrollBarLabel(section.name, offsetForItem(firstItemIndex, width),
-                                              section.name));
+        labels.append(AnnotatedScrollBarLabel(section.name, offsetForItem(firstItemIndex, width), section.name));
         firstItemIndex += section.count;
     }
     return labels;
@@ -401,15 +382,15 @@ QString colorSectionForOffset(int offset, int width)
 
 QVector<AnnotatedScrollBarLabel> monthLabels()
 {
-    static const QVector<QString> months = {
-        QStringLiteral("Jan"), QStringLiteral("Feb"), QStringLiteral("Mar"), QStringLiteral("Apr"),
-        QStringLiteral("May"), QStringLiteral("Jun"), QStringLiteral("Jul"), QStringLiteral("Aug"),
-        QStringLiteral("Sep"), QStringLiteral("Oct"), QStringLiteral("Nov"), QStringLiteral("Dec")};
+    static const QVector<QString> months = {QStringLiteral("Jan"), QStringLiteral("Feb"), QStringLiteral("Mar"),
+        QStringLiteral("Apr"), QStringLiteral("May"), QStringLiteral("Jun"), QStringLiteral("Jul"),
+        QStringLiteral("Aug"), QStringLiteral("Sep"), QStringLiteral("Oct"), QStringLiteral("Nov"),
+        QStringLiteral("Dec")};
 
     QVector<AnnotatedScrollBarLabel> labels;
     for (int index = 0; index < months.size(); ++index) {
-        labels.append(AnnotatedScrollBarLabel(months.at(index), index * 100,
-                                              QStringLiteral("%1 section").arg(months.at(index))));
+        labels.append(
+            AnnotatedScrollBarLabel(months.at(index), index * 100, QStringLiteral("%1 section").arg(months.at(index))));
     }
     return labels;
 }
@@ -443,8 +424,7 @@ public:
         auto* offsetLabel = makeStatusLabel(details, QStringLiteral("Offset: 0"));
         auto* currentLabel = makeStatusLabel(details, QStringLiteral("Current label: 2023"));
         auto* detailLabel = makeStatusLabel(details, QStringLiteral("Detail: October 2023"));
-        offsetLabel->setMinimumWidth(
-            offsetLabel->fontMetrics().horizontalAdvance(QStringLiteral("Offset: 8888")));
+        offsetLabel->setMinimumWidth(offsetLabel->fontMetrics().horizontalAdvance(QStringLiteral("Offset: 8888")));
         currentLabel->setMinimumWidth(
             currentLabel->fontMetrics().horizontalAdvance(QStringLiteral("Current label: 8888")));
         detailLabel->setMinimumWidth(
@@ -457,14 +437,13 @@ public:
 
         auto updateDetails = [labels, offsetLabel, currentLabel, detailLabel](int value) {
             offsetLabel->setText(QStringLiteral("Offset: %1").arg(value));
-            currentLabel->setText(
-                QStringLiteral("Current label: %1").arg(labelTextForOffset(labels, value)));
+            currentLabel->setText(QStringLiteral("Current label: %1").arg(labelTextForOffset(labels, value)));
             detailLabel->setText(QStringLiteral("Detail: %1").arg(yearDetailForOffset(value)));
         };
 
         QObject::connect(bar, &AnnotatedScrollBar::valueChanged, details, updateDetails);
         QObject::connect(bar, &AnnotatedScrollBar::labelActivated, details,
-                         [updateDetails](int offset, const QString&) { updateDetails(offset); });
+            [updateDetails](int offset, const QString&) { updateDetails(offset); });
 
         layout->addWidget(bar);
         layout->addWidget(details, 0, Qt::AlignTop);
@@ -503,8 +482,8 @@ protected:
             for (int indexInSection = 0; indexInSection < section.count; ++indexInSection) {
                 const int row = itemIndex / itemsPerRow;
                 const int column = itemIndex % itemsPerRow;
-                const QRect cell(column * kAnnotatedItemWidth, row * kAnnotatedItemHeight,
-                                 kAnnotatedItemWidth, kAnnotatedItemHeight);
+                const QRect cell(column * kAnnotatedItemWidth, row * kAnnotatedItemHeight, kAnnotatedItemWidth,
+                    kAnnotatedItemHeight);
                 const QRect itemRect = cell.adjusted(12, 10, -12, -10);
 
                 painter.setPen(Qt::NoPen);
@@ -513,8 +492,8 @@ protected:
 
                 if (indexInSection == 0) {
                     painter.setPen(QColor(255, 255, 255, 235));
-                    painter.drawText(itemRect.adjusted(6, 0, -6, 0),
-                                     Qt::AlignCenter | Qt::TextSingleLine, section.name);
+                    painter.drawText(itemRect.adjusted(6, 0, -6, 0), Qt::AlignCenter | Qt::TextSingleLine,
+                        section.name);
                 }
 
                 ++itemIndex;
@@ -553,26 +532,26 @@ public:
         bar->setIndicatorWidth(34);
         bar->setCaretSize(QSize(16, 18));
         bar->setLabels(colorSectionLabels(kAnnotatedContentWidth));
-        bar->setDetailLabelProvider(
-            [](int offset) { return colorSectionForOffset(offset, kAnnotatedContentWidth); });
+        bar->setDetailLabelProvider([](int offset) { return colorSectionForOffset(offset, kAnnotatedContentWidth); });
         bar->connectToScrollView(scrollView);
 
         rowLayout->addWidget(scrollView);
         rowLayout->addWidget(bar);
 
         auto* status = makeStatusLabel(this, QStringLiteral("Section: Azure - offset 0"));
-        status->setMinimumWidth(status->fontMetrics().horizontalAdvance(
-            QStringLiteral("Section: Fuchsia - offset 8888")));
+        status->setMinimumWidth(
+            status->fontMetrics().horizontalAdvance(QStringLiteral("Section: Fuchsia - offset 8888")));
 
         auto updateStatus = [status](int offset) {
             status->setText(QStringLiteral("Section: %1 - offset %2")
-                                .arg(colorSectionForOffset(offset, kAnnotatedContentWidth))
-                                .arg(offset));
+                    .arg(colorSectionForOffset(offset, kAnnotatedContentWidth))
+                    .arg(offset));
         };
         QObject::connect(scrollView, &ScrollView::scrollPositionChanged, status,
-                         [updateStatus](int, int verticalOffset) { updateStatus(verticalOffset); });
-        QObject::connect(bar, &AnnotatedScrollBar::labelActivated, status,
-                         [updateStatus](int offset, const QString&) { updateStatus(offset); });
+            [updateStatus](int, int verticalOffset) { updateStatus(verticalOffset); });
+        QObject::connect(bar, &AnnotatedScrollBar::labelActivated, status, [updateStatus](int offset, const QString&) {
+            updateStatus(offset);
+        });
 
         layout->addWidget(row);
         layout->addWidget(status);
@@ -609,10 +588,9 @@ public:
 
         auto* heightValue = makeStatusLabel(controls, QStringLiteral("Height: 360 px"));
         auto* visibleValue = makeStatusLabel(controls, QStringLiteral("Visible labels: 12 of 12"));
-        heightValue->setMinimumWidth(
-            heightValue->fontMetrics().horizontalAdvance(QStringLiteral("Height: 888 px")));
-        visibleValue->setMinimumWidth(visibleValue->fontMetrics().horizontalAdvance(
-            QStringLiteral("Visible labels: 88 of 88")));
+        heightValue->setMinimumWidth(heightValue->fontMetrics().horizontalAdvance(QStringLiteral("Height: 888 px")));
+        visibleValue->setMinimumWidth(
+            visibleValue->fontMetrics().horizontalAdvance(QStringLiteral("Visible labels: 88 of 88")));
 
         auto* slider = new Slider(Qt::Horizontal, controls);
         slider->setRange(180, 360);
@@ -623,9 +601,8 @@ public:
 
         auto updateSummary = [bar, heightValue, visibleValue]() {
             heightValue->setText(QStringLiteral("Height: %1 px").arg(bar->height()));
-            visibleValue->setText(QStringLiteral("Visible labels: %1 of %2")
-                                      .arg(bar->visibleLabelCount())
-                                      .arg(bar->labels().size()));
+            visibleValue->setText(
+                QStringLiteral("Visible labels: %1 of %2").arg(bar->visibleLabelCount()).arg(bar->labels().size()));
         };
 
         QObject::connect(slider, &Slider::valueChanged, controls, [bar, updateSummary](int value) {
@@ -650,86 +627,85 @@ public:
 QVector<GallerySample> annotatedScrollBarSamples()
 {
     return {
-        makeSample(QStringLiteral("annotated-scrollbar-basic"),
-                   QStringLiteral("Labeled scroll range with details"),
-                   QStringLiteral(
-                       "Labels mark notable offsets and the detail provider resolves hover text."),
-                   QStringLiteral("auto* bar = new AnnotatedScrollBar(this);\n"
-                                  "bar->setRange(0, 960);\n"
-                                  "bar->setPageStep(120);\n"
-                                  "bar->setLabels({\n"
-                                  "    {\"2023\", 0, \"October 2023\"},\n"
-                                  "    {\"2022\", 120, \"October 2022\"},\n"
-                                  "    {\"2021\", 240, \"October 2021\"},\n"
-                                  "    {\"2020\", 360, \"October 2020\"},\n"
-                                  "    {\"2019\", 480, \"October 2019\"},\n"
-                                  "    {\"2018\", 600, \"October 2018\"},\n"
-                                  "    {\"2017\", 720, \"October 2017\"},\n"
-                                  "    {\"2016\", 840, \"October 2016\"},\n"
-                                  "    {\"2015\", 960, \"October 2015\"}\n"
-                                  "});\n"
-                                  "bar->setDetailLabelProvider([](int offset) {\n"
-                                  "    const int year = 2023 - std::clamp(offset / 120, 0, 8);\n"
-                                  "    return QStringLiteral(\"October %1\").arg(year);\n"
-                                  "});"),
-                   [](QWidget* parent) { return new StandaloneAnnotatedScrollBarCard(parent); }),
-        makeSample(QStringLiteral("annotated-scrollbar-scrollview"),
-                   QStringLiteral("Annotated ScrollView controller"),
-                   QStringLiteral("A hidden vertical ScrollView bar is mirrored and driven by an "
-                                  "external AnnotatedScrollBar."),
-                   QStringLiteral("auto* scrollView = new ScrollView(this);\n"
-                                  "scrollView->setWidget(colorSectionsContent);\n"
-                                  "scrollView->setVerticalScrollBarVisibility(\n"
-                                  "    ScrollView::ScrollBarVisibility::Hidden);\n"
-                                  "\n"
-                                  "auto* bar = new AnnotatedScrollBar(this);\n"
-                                  "bar->setLabels({\n"
-                                  "    {\"Azure\", 0}, {\"Crimson\", 900}, {\"Cyan\", 2430},\n"
-                                  "    {\"Fuchsia\", 2700}, {\"Gold\", 4770}\n"
-                                  "});\n"
-                                  "bar->setDetailLabelProvider([](int offset) {\n"
-                                  "    return colorSectionForOffset(offset);\n"
-                                  "});\n"
-                                  "bar->connectToScrollView(scrollView);"),
-                   [](QWidget* parent) { return new LinkedAnnotatedScrollBarCard(parent); }),
+        makeSample(QStringLiteral("annotated-scrollbar-basic"), QStringLiteral("Labeled scroll range with details"),
+            QStringLiteral("Labels mark notable offsets and the detail provider resolves hover text."),
+            QStringLiteral(
+                "auto* bar = new AnnotatedScrollBar(this);\n"
+                "bar->setRange(0, 960);\n"
+                "bar->setPageStep(120);\n"
+                "bar->setLabels({\n"
+                "    {\"2023\", 0, \"October 2023\"},\n"
+                "    {\"2022\", 120, \"October 2022\"},\n"
+                "    {\"2021\", 240, \"October 2021\"},\n"
+                "    {\"2020\", 360, \"October 2020\"},\n"
+                "    {\"2019\", 480, \"October 2019\"},\n"
+                "    {\"2018\", 600, \"October 2018\"},\n"
+                "    {\"2017\", 720, \"October 2017\"},\n"
+                "    {\"2016\", 840, \"October 2016\"},\n"
+                "    {\"2015\", 960, \"October 2015\"}\n"
+                "});\n"
+                "bar->setDetailLabelProvider([](int offset) {\n"
+                "    const int year = 2023 - std::clamp(offset / 120, 0, 8);\n"
+                "    return QStringLiteral(\"October %1\").arg(year);\n"
+                "});"),
+            [](QWidget* parent) { return new StandaloneAnnotatedScrollBarCard(parent); }),
+        makeSample(QStringLiteral("annotated-scrollbar-scrollview"), QStringLiteral("Annotated ScrollView controller"),
+            QStringLiteral("A hidden vertical ScrollView bar is mirrored and driven by an "
+                           "external AnnotatedScrollBar."),
+            QStringLiteral(
+                "auto* scrollView = new ScrollView(this);\n"
+                "scrollView->setWidget(colorSectionsContent);\n"
+                "scrollView->setVerticalScrollBarVisibility(\n"
+                "    ScrollView::ScrollBarVisibility::Hidden);\n"
+                "\n"
+                "auto* bar = new AnnotatedScrollBar(this);\n"
+                "bar->setLabels({\n"
+                "    {\"Azure\", 0}, {\"Crimson\", 900}, {\"Cyan\", 2430},\n"
+                "    {\"Fuchsia\", 2700}, {\"Gold\", 4770}\n"
+                "});\n"
+                "bar->setDetailLabelProvider([](int offset) {\n"
+                "    return colorSectionForOffset(offset);\n"
+                "});\n"
+                "bar->connectToScrollView(scrollView);"),
+            [](QWidget* parent) { return new LinkedAnnotatedScrollBarCard(parent); }),
         makeSample(QStringLiteral("annotated-scrollbar-label-density"),
-                   QStringLiteral("Label density adapts to height"),
-                   QStringLiteral("Reducing the rail height hides colliding labels while keeping "
-                                  "the full label model intact."),
-                   QStringLiteral("auto* bar = new AnnotatedScrollBar(this);\n"
-                                  "bar->setRange(0, 1100);\n"
-                                  "bar->setMinimumLabelSpacing(28);\n"
-                                  "bar->setLabels(monthLabels);\n"
-                                  "\n"
-                                  "auto* heightSlider = new Slider(Qt::Horizontal, this);\n"
-                                  "heightSlider->setRange(180, 360);\n"
-                                  "connect(heightSlider, &Slider::valueChanged,\n"
-                                  "        bar, [bar](int height) {\n"
-                                  "            bar->setFixedHeight(height);\n"
-                                  "        });"),
-                   [](QWidget* parent) { return new AnnotatedScrollBarHeightCard(parent); })};
+            QStringLiteral("Label density adapts to height"),
+            QStringLiteral("Reducing the rail height hides colliding labels while keeping "
+                           "the full label model intact."),
+            QStringLiteral(
+                "auto* bar = new AnnotatedScrollBar(this);\n"
+                "bar->setRange(0, 1100);\n"
+                "bar->setMinimumLabelSpacing(28);\n"
+                "bar->setLabels(monthLabels);\n"
+                "\n"
+                "auto* heightSlider = new Slider(Qt::Horizontal, this);\n"
+                "heightSlider->setRange(180, 360);\n"
+                "connect(heightSlider, &Slider::valueChanged,\n"
+                "        bar, [bar](int height) {\n"
+                "            bar->setFixedHeight(height);\n"
+                "        });"),
+            [](QWidget* parent) { return new AnnotatedScrollBarHeightCard(parent); })};
 }
 
 QVector<GallerySample> pipsPagerSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("pips-pager-flipview"),
-            QStringLiteral("PipsPager integrated with FlipView"),
+        makeSample(QStringLiteral("pips-pager-flipview"), QStringLiteral("PipsPager integrated with FlipView"),
             QStringLiteral("The pager and FlipView keep their selected page indexes synchronized."),
-            QStringLiteral("auto* flipView = new FlipView(this);\n"
-                           "flipView->setShowPageIndicator(false);\n"
-                           "for (QWidget* page : pages)\n"
-                           "    flipView->addPage(page);\n"
-                           "\n"
-                           "auto* pager = new PipsPager(this);\n"
-                           "pager->setNumberOfPages(flipView->pageCount());\n"
-                           "pager->setMaxVisiblePips(5);\n"
-                           "\n"
-                           "connect(pager, &PipsPager::selectedPageIndexChanged,\n"
-                           "        flipView, &FlipView::setCurrentIndex);\n"
-                           "connect(flipView, &FlipView::currentIndexChanged,\n"
-                           "        pager, &PipsPager::setSelectedPageIndex);"),
+            QStringLiteral(
+                "auto* flipView = new FlipView(this);\n"
+                "flipView->setShowPageIndicator(false);\n"
+                "for (QWidget* page : pages)\n"
+                "    flipView->addPage(page);\n"
+                "\n"
+                "auto* pager = new PipsPager(this);\n"
+                "pager->setNumberOfPages(flipView->pageCount());\n"
+                "pager->setMaxVisiblePips(5);\n"
+                "\n"
+                "connect(pager, &PipsPager::selectedPageIndexChanged,\n"
+                "        flipView, &FlipView::setCurrentIndex);\n"
+                "connect(flipView, &FlipView::currentIndexChanged,\n"
+                "        pager, &PipsPager::setSelectedPageIndex);"),
             [](QWidget* parent) {
                 auto* surface = pipsSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
@@ -742,8 +718,7 @@ QVector<GallerySample> pipsPagerSamples()
                 flipView->setShowPageIndicator(false);
                 flipView->setShowNavigationButtons(true);
                 for (int index = 0; index < pages.size(); ++index) {
-                    flipView->addPage(
-                        makePagerPicture(flipView, pages.at(index), index, pages.size(), pageSize));
+                    flipView->addPage(makePagerPicture(flipView, pages.at(index), index, pages.size(), pageSize));
                 }
 
                 auto* pager = new PipsPager(surface);
@@ -751,19 +726,15 @@ QVector<GallerySample> pipsPagerSamples()
                 pager->setMaxVisiblePips(5);
                 refreshPagerFixedSize(pager);
 
-                auto* status =
-                    makeStatusLabel(surface, QStringLiteral("Selected page: Coastal route"));
+                auto* status = makeStatusLabel(surface, QStringLiteral("Selected page: Coastal route"));
                 auto updateStatus = [status](int index) {
                     const auto& pages = pagerPicturePages();
                     if (index >= 0 && index < pages.size())
-                        status->setText(
-                            QStringLiteral("Selected page: %1").arg(pages.at(index).title));
+                        status->setText(QStringLiteral("Selected page: %1").arg(pages.at(index).title));
                 };
 
-                QObject::connect(pager, &PipsPager::selectedPageIndexChanged, flipView,
-                                 &FlipView::setCurrentIndex);
-                QObject::connect(flipView, &FlipView::currentIndexChanged, pager,
-                                 &PipsPager::setSelectedPageIndex);
+                QObject::connect(pager, &PipsPager::selectedPageIndexChanged, flipView, &FlipView::setCurrentIndex);
+                QObject::connect(flipView, &FlipView::currentIndexChanged, pager, &PipsPager::setSelectedPageIndex);
                 QObject::connect(pager, &PipsPager::selectedPageIndexChanged, status, updateStatus);
 
                 layout->addWidget(flipView, 0, Qt::AlignHCenter);
@@ -771,8 +742,7 @@ QVector<GallerySample> pipsPagerSamples()
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("pips-pager-orientation"), QStringLiteral("Orientation"),
+        makeSample(QStringLiteral("pips-pager-orientation"), QStringLiteral("Orientation"),
             QStringLiteral("Switching orientation changes the pip layout and keyboard direction."),
             QStringLiteral(
                 "auto* pager = new PipsPager(this);\n"
@@ -813,37 +783,36 @@ QVector<GallerySample> pipsPagerSamples()
                 refreshPagerFixedSize(pager);
 
                 auto* status = makeStatusLabel(row, QStringLiteral("Orientation: Horizontal"));
-                status->setMinimumWidth(status->fontMetrics().horizontalAdvance(
-                    QStringLiteral("Orientation: Horizontal")));
+                status->setMinimumWidth(
+                    status->fontMetrics().horizontalAdvance(QStringLiteral("Orientation: Horizontal")));
                 row->setMinimumHeight(reservedRowHeight);
                 auto* rowLayout = static_cast<QHBoxLayout*>(row->layout());
                 rowLayout->addWidget(pager, 0, Qt::AlignCenter);
                 rowLayout->addWidget(status, 0, Qt::AlignCenter);
 
-                auto applyOrientation = [pager, status, horizontal,
-                                         vertical](Qt::Orientation orientation) {
+                auto applyOrientation = [pager, status, horizontal, vertical](Qt::Orientation orientation) {
                     pager->setOrientation(orientation);
                     refreshPagerFixedSize(pager);
                     const bool isHorizontal = orientation == Qt::Horizontal;
                     status->setText(QStringLiteral("Orientation: %1")
-                                        .arg(isHorizontal ? QStringLiteral("Horizontal")
-                                                          : QStringLiteral("Vertical")));
+                            .arg(isHorizontal ? QStringLiteral("Horizontal") : QStringLiteral("Vertical")));
                     setButtonActive(horizontal, isHorizontal);
                     setButtonActive(vertical, !isHorizontal);
                 };
 
-                QObject::connect(horizontal, &QPushButton::clicked, surface,
-                                 [applyOrientation] { applyOrientation(Qt::Horizontal); });
-                QObject::connect(vertical, &QPushButton::clicked, surface,
-                                 [applyOrientation] { applyOrientation(Qt::Vertical); });
+                QObject::connect(horizontal, &QPushButton::clicked, surface, [applyOrientation] {
+                    applyOrientation(Qt::Horizontal);
+                });
+                QObject::connect(vertical, &QPushButton::clicked, surface, [applyOrientation] {
+                    applyOrientation(Qt::Vertical);
+                });
                 applyOrientation(Qt::Horizontal);
 
                 layout->addWidget(controls);
                 layout->addWidget(row);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("pips-pager-button-visibility"), QStringLiteral("Button visibility"),
+        makeSample(QStringLiteral("pips-pager-button-visibility"), QStringLiteral("Button visibility"),
             QStringLiteral("Previous and next buttons can be collapsed, always visible, or visible "
                            "on pointer over."),
             QStringLiteral(
@@ -868,57 +837,55 @@ QVector<GallerySample> pipsPagerSamples()
                 auto* surface = pipsSurface(parent, 10);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
 
-                auto addVisibilityRow = [surface,
-                                         layout](const QString& title,
-                                                 PipsPager::PipsPagerButtonVisibility visibility) {
-                    auto* row = horizontalGroup(surface, 18);
-                    auto* label = makeStatusLabel(row, title);
-                    label->setMinimumWidth(label->fontMetrics().horizontalAdvance(
-                        QStringLiteral("VisibleOnPointerOver")));
+                auto addVisibilityRow =
+                    [surface, layout](const QString& title, PipsPager::PipsPagerButtonVisibility visibility) {
+                        auto* row = horizontalGroup(surface, 18);
+                        auto* label = makeStatusLabel(row, title);
+                        label->setMinimumWidth(
+                            label->fontMetrics().horizontalAdvance(QStringLiteral("VisibleOnPointerOver")));
 
-                    auto* pager = new PipsPager(row);
-                    pager->setNumberOfPages(7);
-                    pager->setSelectedPageIndex(3);
-                    pager->setPreviousButtonVisibility(visibility);
-                    pager->setNextButtonVisibility(visibility);
-                    refreshPagerFixedSize(pager);
+                        auto* pager = new PipsPager(row);
+                        pager->setNumberOfPages(7);
+                        pager->setSelectedPageIndex(3);
+                        pager->setPreviousButtonVisibility(visibility);
+                        pager->setNextButtonVisibility(visibility);
+                        refreshPagerFixedSize(pager);
 
-                    auto* rowLayout = static_cast<QHBoxLayout*>(row->layout());
-                    rowLayout->addWidget(label);
-                    rowLayout->addWidget(pager, 0, Qt::AlignCenter);
-                    rowLayout->addStretch(1);
-                    layout->addWidget(row);
-                };
+                        auto* rowLayout = static_cast<QHBoxLayout*>(row->layout());
+                        rowLayout->addWidget(label);
+                        rowLayout->addWidget(pager, 0, Qt::AlignCenter);
+                        rowLayout->addStretch(1);
+                        layout->addWidget(row);
+                    };
 
                 addVisibilityRow(visibilityName(PipsPager::PipsPagerButtonVisibility::Collapsed),
-                                 PipsPager::PipsPagerButtonVisibility::Collapsed);
+                    PipsPager::PipsPagerButtonVisibility::Collapsed);
                 addVisibilityRow(visibilityName(PipsPager::PipsPagerButtonVisibility::Visible),
-                                 PipsPager::PipsPagerButtonVisibility::Visible);
-                addVisibilityRow(
-                    visibilityName(PipsPager::PipsPagerButtonVisibility::VisibleOnPointerOver),
+                    PipsPager::PipsPagerButtonVisibility::Visible);
+                addVisibilityRow(visibilityName(PipsPager::PipsPagerButtonVisibility::VisibleOnPointerOver),
                     PipsPager::PipsPagerButtonVisibility::VisibleOnPointerOver);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("pips-pager-visible-window"), QStringLiteral("MaxVisiblePips window"),
+        makeSample(QStringLiteral("pips-pager-visible-window"), QStringLiteral("MaxVisiblePips window"),
             QStringLiteral("When there are more pages than visible pips, the visible window "
                            "recenters around the selection."),
-            QStringLiteral("auto* pager = new PipsPager(this);\n"
-                           "pager->setNumberOfPages(10);\n"
-                           "pager->setMaxVisiblePips(5);\n"
-                           "pager->setPreviousButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
-                           "pager->setNextButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
-                           "\n"
-                           "connect(firstButton, &QPushButton::clicked,\n"
-                           "        pager, [pager] { pager->setSelectedPageIndex(0); });\n"
-                           "connect(middleButton, &QPushButton::clicked,\n"
-                           "        pager, [pager] { pager->setSelectedPageIndex(4); });\n"
-                           "connect(lastButton, &QPushButton::clicked,\n"
-                           "        pager, [pager] { pager->setSelectedPageIndex(9); });\n"
-                           "\n"
-                           "const int firstVisible = pager->firstVisiblePage();"),
+            QStringLiteral(
+                "auto* pager = new PipsPager(this);\n"
+                "pager->setNumberOfPages(10);\n"
+                "pager->setMaxVisiblePips(5);\n"
+                "pager->setPreviousButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
+                "pager->setNextButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
+                "\n"
+                "connect(firstButton, &QPushButton::clicked,\n"
+                "        pager, [pager] { pager->setSelectedPageIndex(0); });\n"
+                "connect(middleButton, &QPushButton::clicked,\n"
+                "        pager, [pager] { pager->setSelectedPageIndex(4); });\n"
+                "connect(lastButton, &QPushButton::clicked,\n"
+                "        pager, [pager] { pager->setSelectedPageIndex(9); });\n"
+                "\n"
+                "const int firstVisible = pager->firstVisiblePage();"),
             [](QWidget* parent) {
                 auto* surface = pipsSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
@@ -941,21 +908,19 @@ QVector<GallerySample> pipsPagerSamples()
                 auto* status = makeStatusLabel(surface, QString());
                 auto updateStatus = [pager, status, first, middle, last]() {
                     status->setText(QStringLiteral("Selected: %1, first visible page: %2")
-                                        .arg(pager->selectedPageIndex())
-                                        .arg(pager->firstVisiblePage()));
+                            .arg(pager->selectedPageIndex())
+                            .arg(pager->firstVisiblePage()));
                     setButtonActive(first, pager->selectedPageIndex() == 0);
                     setButtonActive(middle, pager->selectedPageIndex() == 4);
                     setButtonActive(last, pager->selectedPageIndex() == 9);
                 };
 
-                QObject::connect(first, &QPushButton::clicked, surface,
-                                 [pager] { pager->setSelectedPageIndex(0); });
-                QObject::connect(middle, &QPushButton::clicked, surface,
-                                 [pager] { pager->setSelectedPageIndex(4); });
-                QObject::connect(last, &QPushButton::clicked, surface,
-                                 [pager] { pager->setSelectedPageIndex(9); });
-                QObject::connect(pager, &PipsPager::selectedPageIndexChanged, status,
-                                 [updateStatus](int) { updateStatus(); });
+                QObject::connect(first, &QPushButton::clicked, surface, [pager] { pager->setSelectedPageIndex(0); });
+                QObject::connect(middle, &QPushButton::clicked, surface, [pager] { pager->setSelectedPageIndex(4); });
+                QObject::connect(last, &QPushButton::clicked, surface, [pager] { pager->setSelectedPageIndex(9); });
+                QObject::connect(pager, &PipsPager::selectedPageIndexChanged, status, [updateStatus](int) {
+                    updateStatus();
+                });
                 updateStatus();
 
                 layout->addWidget(controls);
@@ -963,29 +928,28 @@ QVector<GallerySample> pipsPagerSamples()
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("pips-pager-metrics-animation"), QStringLiteral("Metrics and animation"),
+        makeSample(QStringLiteral("pips-pager-metrics-animation"), QStringLiteral("Metrics and animation"),
+            QStringLiteral("Pip, button, and animation metrics can be tuned without changing page logic."),
             QStringLiteral(
-                "Pip, button, and animation metrics can be tuned without changing page logic."),
-            QStringLiteral("auto* pager = new PipsPager(this);\n"
-                           "pager->setNumberOfPages(8);\n"
-                           "pager->setSelectedPageIndex(2);\n"
-                           "pager->setMaxVisiblePips(6);\n"
-                           "pager->setPipCellSize(16);\n"
-                           "pager->setInactivePipDiameter(6);\n"
-                           "pager->setSelectedPipDiameter(10);\n"
-                           "pager->setNavigationButtonSize(30);\n"
-                           "pager->setNavigationIconSize(12);\n"
-                           "pager->setSelectionAnimationDuration(420);\n"
-                           "pager->setPreviousButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
-                           "pager->setNextButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
-                           "\n"
-                           "connect(previousButton, &QPushButton::clicked,\n"
-                           "        pager, [pager] { pager->goToPreviousPage(); });\n"
-                           "connect(nextButton, &QPushButton::clicked,\n"
-                           "        pager, [pager] { pager->goToNextPage(); });"),
+                "auto* pager = new PipsPager(this);\n"
+                "pager->setNumberOfPages(8);\n"
+                "pager->setSelectedPageIndex(2);\n"
+                "pager->setMaxVisiblePips(6);\n"
+                "pager->setPipCellSize(16);\n"
+                "pager->setInactivePipDiameter(6);\n"
+                "pager->setSelectedPipDiameter(10);\n"
+                "pager->setNavigationButtonSize(30);\n"
+                "pager->setNavigationIconSize(12);\n"
+                "pager->setSelectionAnimationDuration(420);\n"
+                "pager->setPreviousButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
+                "pager->setNextButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
+                "\n"
+                "connect(previousButton, &QPushButton::clicked,\n"
+                "        pager, [pager] { pager->goToPreviousPage(); });\n"
+                "connect(nextButton, &QPushButton::clicked,\n"
+                "        pager, [pager] { pager->goToNextPage(); });"),
             [](QWidget* parent) {
                 auto* surface = pipsSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
@@ -1013,15 +977,14 @@ QVector<GallerySample> pipsPagerSamples()
                 auto* status = makeStatusLabel(surface, QString());
                 auto updateStatus = [pager, status]() {
                     status->setText(QStringLiteral("Page %1 of %2")
-                                        .arg(pager->selectedPageIndex() + 1)
-                                        .arg(pager->numberOfPages()));
+                            .arg(pager->selectedPageIndex() + 1)
+                            .arg(pager->numberOfPages()));
                 };
-                QObject::connect(previous, &QPushButton::clicked, surface,
-                                 [pager] { pager->goToPreviousPage(); });
-                QObject::connect(next, &QPushButton::clicked, surface,
-                                 [pager] { pager->goToNextPage(); });
-                QObject::connect(pager, &PipsPager::selectedPageIndexChanged, status,
-                                 [updateStatus](int) { updateStatus(); });
+                QObject::connect(previous, &QPushButton::clicked, surface, [pager] { pager->goToPreviousPage(); });
+                QObject::connect(next, &QPushButton::clicked, surface, [pager] { pager->goToNextPage(); });
+                QObject::connect(pager, &PipsPager::selectedPageIndexChanged, status, [updateStatus](int) {
+                    updateStatus();
+                });
                 updateStatus();
 
                 layout->addWidget(controls);
@@ -1029,26 +992,24 @@ QVector<GallerySample> pipsPagerSamples()
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("pips-pager-disabled-empty"),
-            QStringLiteral("Disabled and empty states"),
+        makeSample(QStringLiteral("pips-pager-disabled-empty"), QStringLiteral("Disabled and empty states"),
+            QStringLiteral("Disabled pagers ignore input; zero pages collapse the visible pip window."),
             QStringLiteral(
-                "Disabled pagers ignore input; zero pages collapse the visible pip window."),
-            QStringLiteral("auto* disabledPager = new PipsPager(this);\n"
-                           "disabledPager->setNumberOfPages(6);\n"
-                           "disabledPager->setSelectedPageIndex(2);\n"
-                           "disabledPager->setPreviousButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
-                           "disabledPager->setNextButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
-                           "disabledPager->setEnabled(false);\n"
-                           "\n"
-                           "auto* emptyPager = new PipsPager(this);\n"
-                           "emptyPager->setNumberOfPages(0);\n"
-                           "emptyPager->setPreviousButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
-                           "emptyPager->setNextButtonVisibility(\n"
-                           "    PipsPager::PipsPagerButtonVisibility::Visible);"),
+                "auto* disabledPager = new PipsPager(this);\n"
+                "disabledPager->setNumberOfPages(6);\n"
+                "disabledPager->setSelectedPageIndex(2);\n"
+                "disabledPager->setPreviousButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
+                "disabledPager->setNextButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
+                "disabledPager->setEnabled(false);\n"
+                "\n"
+                "auto* emptyPager = new PipsPager(this);\n"
+                "emptyPager->setNumberOfPages(0);\n"
+                "emptyPager->setPreviousButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);\n"
+                "emptyPager->setNextButtonVisibility(\n"
+                "    PipsPager::PipsPagerButtonVisibility::Visible);"),
             [](QWidget* parent) {
                 auto* surface = pipsSurface(parent, 10);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
@@ -1056,8 +1017,7 @@ QVector<GallerySample> pipsPagerSamples()
                 auto addStateRow = [surface, layout](const QString& title, PipsPager* pager) {
                     auto* row = horizontalGroup(surface, 18);
                     auto* label = makeStatusLabel(row, title);
-                    label->setMinimumWidth(
-                        label->fontMetrics().horizontalAdvance(QStringLiteral("Disabled")));
+                    label->setMinimumWidth(label->fontMetrics().horizontalAdvance(QStringLiteral("Disabled")));
                     auto* rowLayout = static_cast<QHBoxLayout*>(row->layout());
                     rowLayout->addWidget(label);
                     rowLayout->addWidget(pager, 0, Qt::AlignCenter);
@@ -1068,31 +1028,26 @@ QVector<GallerySample> pipsPagerSamples()
                 auto* disabledPager = new PipsPager(surface);
                 disabledPager->setNumberOfPages(6);
                 disabledPager->setSelectedPageIndex(2);
-                disabledPager->setPreviousButtonVisibility(
-                    PipsPager::PipsPagerButtonVisibility::Visible);
-                disabledPager->setNextButtonVisibility(
-                    PipsPager::PipsPagerButtonVisibility::Visible);
+                disabledPager->setPreviousButtonVisibility(PipsPager::PipsPagerButtonVisibility::Visible);
+                disabledPager->setNextButtonVisibility(PipsPager::PipsPagerButtonVisibility::Visible);
                 disabledPager->setEnabled(false);
                 refreshPagerFixedSize(disabledPager);
 
                 auto* emptyPager = new PipsPager(surface);
                 emptyPager->setNumberOfPages(0);
-                emptyPager->setPreviousButtonVisibility(
-                    PipsPager::PipsPagerButtonVisibility::Visible);
+                emptyPager->setPreviousButtonVisibility(PipsPager::PipsPagerButtonVisibility::Visible);
                 emptyPager->setNextButtonVisibility(PipsPager::PipsPagerButtonVisibility::Visible);
                 refreshPagerFixedSize(emptyPager);
 
                 addStateRow(QStringLiteral("Disabled"), disabledPager);
                 addStateRow(QStringLiteral("Empty"), emptyPager);
-                layout->addWidget(makeStatusLabel(
-                    surface,
-                    QStringLiteral("Empty state accessible description: No pages selected")));
+                layout->addWidget(
+                    makeStatusLabel(surface, QStringLiteral("Empty state accessible description: No pages selected")));
                 return surface;
             })};
 }
 
-void configureScrollBarForPreview(ScrollBar* scrollBar, int maximum, int pageStep, int value,
-                                  qreal opacity = 1.0)
+void configureScrollBarForPreview(ScrollBar* scrollBar, int maximum, int pageStep, int value, qreal opacity = 1.0)
 {
     scrollBar->setRange(0, maximum);
     scrollBar->setPageStep(pageStep);
@@ -1120,29 +1075,24 @@ public:
         configureScrollBarForPreview(horizontalBar, 1000, 100, 420);
 
         auto* status = makeStatusLabel(horizontalColumn, QStringLiteral("Value: 420"));
-        status->setMinimumWidth(
-            status->fontMetrics().horizontalAdvance(QStringLiteral("Value: 8888")));
+        status->setMinimumWidth(status->fontMetrics().horizontalAdvance(QStringLiteral("Value: 8888")));
 
         auto* verticalBar = new ScrollBar(Qt::Vertical, row);
         verticalBar->setFixedHeight(178);
         configureScrollBarForPreview(verticalBar, 1000, 100, 420);
 
-        auto updateStatus = [status](int value) {
-            status->setText(QStringLiteral("Value: %1").arg(value));
-        };
+        auto updateStatus = [status](int value) { status->setText(QStringLiteral("Value: %1").arg(value)); };
 
-        QObject::connect(horizontalBar, &ScrollBar::valueChanged, row,
-                         [verticalBar, updateStatus](int value) {
-                             if (verticalBar->value() != value)
-                                 verticalBar->setValue(value);
-                             updateStatus(value);
-                         });
-        QObject::connect(verticalBar, &ScrollBar::valueChanged, row,
-                         [horizontalBar, updateStatus](int value) {
-                             if (horizontalBar->value() != value)
-                                 horizontalBar->setValue(value);
-                             updateStatus(value);
-                         });
+        QObject::connect(horizontalBar, &ScrollBar::valueChanged, row, [verticalBar, updateStatus](int value) {
+            if (verticalBar->value() != value)
+                verticalBar->setValue(value);
+            updateStatus(value);
+        });
+        QObject::connect(verticalBar, &ScrollBar::valueChanged, row, [horizontalBar, updateStatus](int value) {
+            if (horizontalBar->value() != value)
+                horizontalBar->setValue(value);
+            updateStatus(value);
+        });
 
         horizontalColumnLayout->addWidget(horizontalBar);
         horizontalColumnLayout->addWidget(status);
@@ -1167,8 +1117,7 @@ public:
 
             auto* label = makeStatusLabel(row, labelText);
             label->setWordWrap(false);
-            label->setMinimumWidth(
-                label->fontMetrics().horizontalAdvance(QStringLiteral("Default 7 px")) + 4);
+            label->setMinimumWidth(label->fontMetrics().horizontalAdvance(QStringLiteral("Default 7 px")) + 4);
             label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
             auto* bar = new ScrollBar(Qt::Horizontal, row);
@@ -1202,8 +1151,7 @@ public:
 
             auto* label = makeStatusLabel(row, labelText);
             label->setWordWrap(false);
-            label->setMinimumWidth(
-                label->fontMetrics().horizontalAdvance(QStringLiteral("Opacity 0.45")) + 4);
+            label->setMinimumWidth(label->fontMetrics().horizontalAdvance(QStringLiteral("Opacity 0.45")) + 4);
             label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
             auto* bar = new ScrollBar(Qt::Horizontal, row);
@@ -1226,10 +1174,8 @@ public:
 QVector<GallerySample> scrollBarSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("scrollbar-basic"), QStringLiteral("Horizontal and vertical values"),
-            QStringLiteral(
-                "Both orientations keep QScrollBar range, page step, and value semantics."),
+        makeSample(QStringLiteral("scrollbar-basic"), QStringLiteral("Horizontal and vertical values"),
+            QStringLiteral("Both orientations keep QScrollBar range, page step, and value semantics."),
             QStringLiteral(
                 "auto* horizontalBar = new ScrollBar(Qt::Horizontal, this);\n"
                 "horizontalBar->setRange(0, 1000);\n"
@@ -1255,53 +1201,51 @@ QVector<GallerySample> scrollBarSamples()
                 "        });"),
             [](QWidget* parent) { return new ScrollBarOrientationCard(parent); }),
         makeSample(QStringLiteral("scrollbar-thickness"), QStringLiteral("Thickness"),
-                   QStringLiteral("The thickness property changes the occupied cross-axis size "
-                                  "without changing scroll range."),
-                   QStringLiteral("auto* thinBar = new ScrollBar(Qt::Horizontal, this);\n"
-                                  "thinBar->setRange(0, 1000);\n"
-                                  "thinBar->setPageStep(100);\n"
-                                  "thinBar->setValue(220);\n"
-                                  "thinBar->setThickness(6);\n"
-                                  "thinBar->setOpacity(1.0);\n"
-                                  "\n"
-                                  "auto* defaultBar = new ScrollBar(Qt::Horizontal, this);\n"
-                                  "defaultBar->setRange(0, 1000);\n"
-                                  "defaultBar->setPageStep(100);\n"
-                                  "defaultBar->setValue(420);\n"
-                                  "defaultBar->setThickness(7);\n"
-                                  "defaultBar->setOpacity(1.0);\n"
-                                  "\n"
-                                  "auto* largeBar = new ScrollBar(Qt::Horizontal, this);\n"
-                                  "largeBar->setRange(0, 1000);\n"
-                                  "largeBar->setPageStep(100);\n"
-                                  "largeBar->setValue(640);\n"
-                                  "largeBar->setThickness(24);\n"
-                                  "largeBar->setOpacity(1.0);"),
-                   [](QWidget* parent) { return new ScrollBarThicknessCard(parent); }),
-        makeSample(
-            QStringLiteral("scrollbar-opacity"), QStringLiteral("Pinned opacity"),
+            QStringLiteral("The thickness property changes the occupied cross-axis size "
+                           "without changing scroll range."),
             QStringLiteral(
-                "Opacity can keep a demo bar visible or show the same value in a subdued state."),
-            QStringLiteral("auto* visibleBar = new ScrollBar(Qt::Horizontal, this);\n"
-                           "visibleBar->setRange(0, 1000);\n"
-                           "visibleBar->setPageStep(100);\n"
-                           "visibleBar->setValue(420);\n"
-                           "visibleBar->setOpacity(1.0);\n"
-                           "\n"
-                           "auto* subduedBar = new ScrollBar(Qt::Horizontal, this);\n"
-                           "subduedBar->setRange(0, 1000);\n"
-                           "subduedBar->setPageStep(100);\n"
-                           "subduedBar->setValue(420);\n"
-                           "subduedBar->setOpacity(0.45);"),
+                "auto* thinBar = new ScrollBar(Qt::Horizontal, this);\n"
+                "thinBar->setRange(0, 1000);\n"
+                "thinBar->setPageStep(100);\n"
+                "thinBar->setValue(220);\n"
+                "thinBar->setThickness(6);\n"
+                "thinBar->setOpacity(1.0);\n"
+                "\n"
+                "auto* defaultBar = new ScrollBar(Qt::Horizontal, this);\n"
+                "defaultBar->setRange(0, 1000);\n"
+                "defaultBar->setPageStep(100);\n"
+                "defaultBar->setValue(420);\n"
+                "defaultBar->setThickness(7);\n"
+                "defaultBar->setOpacity(1.0);\n"
+                "\n"
+                "auto* largeBar = new ScrollBar(Qt::Horizontal, this);\n"
+                "largeBar->setRange(0, 1000);\n"
+                "largeBar->setPageStep(100);\n"
+                "largeBar->setValue(640);\n"
+                "largeBar->setThickness(24);\n"
+                "largeBar->setOpacity(1.0);"),
+            [](QWidget* parent) { return new ScrollBarThicknessCard(parent); }),
+        makeSample(QStringLiteral("scrollbar-opacity"), QStringLiteral("Pinned opacity"),
+            QStringLiteral("Opacity can keep a demo bar visible or show the same value in a subdued state."),
+            QStringLiteral(
+                "auto* visibleBar = new ScrollBar(Qt::Horizontal, this);\n"
+                "visibleBar->setRange(0, 1000);\n"
+                "visibleBar->setPageStep(100);\n"
+                "visibleBar->setValue(420);\n"
+                "visibleBar->setOpacity(1.0);\n"
+                "\n"
+                "auto* subduedBar = new ScrollBar(Qt::Horizontal, this);\n"
+                "subduedBar->setRange(0, 1000);\n"
+                "subduedBar->setPageStep(100);\n"
+                "subduedBar->setValue(420);\n"
+                "subduedBar->setOpacity(0.45);"),
             [](QWidget* parent) { return new ScrollBarOpacityCard(parent); })};
 }
 
 QVector<GallerySample> scrollViewSamples()
 {
     return {
-        makeSample(
-            QStringLiteral("scroll-view-content-zoom"),
-            QStringLiteral("Content scrolling and zoom"),
+        makeSample(QStringLiteral("scroll-view-content-zoom"), QStringLiteral("Content scrolling and zoom"),
             QStringLiteral("A large content surface can scroll in both directions and zoom within "
                            "configured bounds."),
             QStringLiteral(
@@ -1337,8 +1281,8 @@ QVector<GallerySample> scrollViewSamples()
 
                 auto* scrollView = new ScrollView(surface);
                 scrollView->setFixedSize(420, 240);
-                scrollView->setWidget(new ScrollViewDemoCanvas(
-                    QSize(760, 520), QStringLiteral("Content canvas"), scrollView));
+                scrollView->setWidget(
+                    new ScrollViewDemoCanvas(QSize(760, 520), QStringLiteral("Content canvas"), scrollView));
                 scrollView->setZoomMode(ScrollView::ZoomMode::Enabled);
                 scrollView->setMinZoomFactor(0.5);
                 scrollView->setMaxZoomFactor(2.0);
@@ -1348,21 +1292,22 @@ QVector<GallerySample> scrollViewSamples()
                 auto* status = makeStatusLabel(surface, QString());
                 bindScrollViewStatus(scrollView, status);
 
-                QObject::connect(zoomIn, &QPushButton::clicked, scrollView,
-                                 [scrollView] { scrollView->zoomBy(1.25, true); });
-                QObject::connect(zoomOut, &QPushButton::clicked, scrollView,
-                                 [scrollView] { scrollView->zoomBy(0.8, true); });
-                QObject::connect(reset, &QPushButton::clicked, scrollView,
-                                 [scrollView] { scrollView->resetZoom(true); });
+                QObject::connect(zoomIn, &QPushButton::clicked, scrollView, [scrollView] {
+                    scrollView->zoomBy(1.25, true);
+                });
+                QObject::connect(zoomOut, &QPushButton::clicked, scrollView, [scrollView] {
+                    scrollView->zoomBy(0.8, true);
+                });
+                QObject::connect(reset, &QPushButton::clicked, scrollView, [scrollView] {
+                    scrollView->resetZoom(true);
+                });
 
                 layout->addWidget(controls);
                 layout->addWidget(scrollView);
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("scroll-view-scrollbar-policies"),
-            QStringLiteral("Scroll modes and bar visibility"),
+        makeSample(QStringLiteral("scroll-view-scrollbar-policies"), QStringLiteral("Scroll modes and bar visibility"),
             QStringLiteral("Scroll modes gate interaction per axis, while bar visibility controls "
                            "the chrome."),
             QStringLiteral(
@@ -1411,13 +1356,12 @@ QVector<GallerySample> scrollViewSamples()
 
                 auto* scrollView = new ScrollView(surface);
                 scrollView->setFixedSize(420, 220);
-                scrollView->setWidget(new ScrollViewDemoCanvas(
-                    QSize(680, 420), QStringLiteral("Policy canvas"), scrollView));
+                scrollView->setWidget(
+                    new ScrollViewDemoCanvas(QSize(680, 420), QStringLiteral("Policy canvas"), scrollView));
 
                 auto* status = makeStatusLabel(surface, QString());
                 auto updateStatus = [scrollView, status](const QString& policy) {
-                    status->setText(
-                        QStringLiteral("%1 - %2").arg(policy, scrollViewOffsetText(scrollView)));
+                    status->setText(QStringLiteral("%1 - %2").arg(policy, scrollViewOffsetText(scrollView)));
                 };
 
                 auto resetButtons = [autoBars, visibleBars, hiddenHorizontal, verticalDisabled]() {
@@ -1430,10 +1374,8 @@ QVector<GallerySample> scrollViewSamples()
                 auto applyAutoBars = [scrollView, updateStatus, resetButtons, autoBars]() {
                     scrollView->setHorizontalScrollMode(ScrollView::ScrollMode::Auto);
                     scrollView->setVerticalScrollMode(ScrollView::ScrollMode::Auto);
-                    scrollView->setHorizontalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Auto);
-                    scrollView->setVerticalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Auto);
+                    scrollView->setHorizontalScrollBarVisibility(ScrollView::ScrollBarVisibility::Auto);
+                    scrollView->setVerticalScrollBarVisibility(ScrollView::ScrollBarVisibility::Auto);
                     scrollView->scrollTo(80, 80, false);
                     resetButtons();
                     setButtonActive(autoBars, true);
@@ -1443,38 +1385,30 @@ QVector<GallerySample> scrollViewSamples()
                 auto applyVisibleBars = [scrollView, updateStatus, resetButtons, visibleBars]() {
                     scrollView->setHorizontalScrollMode(ScrollView::ScrollMode::Enabled);
                     scrollView->setVerticalScrollMode(ScrollView::ScrollMode::Enabled);
-                    scrollView->setHorizontalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Visible);
-                    scrollView->setVerticalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Visible);
+                    scrollView->setHorizontalScrollBarVisibility(ScrollView::ScrollBarVisibility::Visible);
+                    scrollView->setVerticalScrollBarVisibility(ScrollView::ScrollBarVisibility::Visible);
                     scrollView->scrollTo(80, 80, false);
                     resetButtons();
                     setButtonActive(visibleBars, true);
                     updateStatus(QStringLiteral("Visible bars"));
                 };
 
-                auto applyHiddenHorizontal = [scrollView, updateStatus, resetButtons,
-                                              hiddenHorizontal]() {
+                auto applyHiddenHorizontal = [scrollView, updateStatus, resetButtons, hiddenHorizontal]() {
                     scrollView->setHorizontalScrollMode(ScrollView::ScrollMode::Enabled);
                     scrollView->setVerticalScrollMode(ScrollView::ScrollMode::Auto);
-                    scrollView->setHorizontalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Hidden);
-                    scrollView->setVerticalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Auto);
+                    scrollView->setHorizontalScrollBarVisibility(ScrollView::ScrollBarVisibility::Hidden);
+                    scrollView->setVerticalScrollBarVisibility(ScrollView::ScrollBarVisibility::Auto);
                     scrollView->scrollTo(160, 80, false);
                     resetButtons();
                     setButtonActive(hiddenHorizontal, true);
                     updateStatus(QStringLiteral("Hidden horizontal bar"));
                 };
 
-                auto applyVerticalDisabled = [scrollView, updateStatus, resetButtons,
-                                              verticalDisabled]() {
+                auto applyVerticalDisabled = [scrollView, updateStatus, resetButtons, verticalDisabled]() {
                     scrollView->setHorizontalScrollMode(ScrollView::ScrollMode::Auto);
                     scrollView->setVerticalScrollMode(ScrollView::ScrollMode::Disabled);
-                    scrollView->setHorizontalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Auto);
-                    scrollView->setVerticalScrollBarVisibility(
-                        ScrollView::ScrollBarVisibility::Disabled);
+                    scrollView->setHorizontalScrollBarVisibility(ScrollView::ScrollBarVisibility::Auto);
+                    scrollView->setVerticalScrollBarVisibility(ScrollView::ScrollBarVisibility::Disabled);
                     scrollView->scrollTo(120, 160, false);
                     resetButtons();
                     setButtonActive(verticalDisabled, true);
@@ -1483,14 +1417,10 @@ QVector<GallerySample> scrollViewSamples()
 
                 QObject::connect(autoBars, &QPushButton::clicked, surface, applyAutoBars);
                 QObject::connect(visibleBars, &QPushButton::clicked, surface, applyVisibleBars);
-                QObject::connect(hiddenHorizontal, &QPushButton::clicked, surface,
-                                 applyHiddenHorizontal);
-                QObject::connect(verticalDisabled, &QPushButton::clicked, surface,
-                                 applyVerticalDisabled);
+                QObject::connect(hiddenHorizontal, &QPushButton::clicked, surface, applyHiddenHorizontal);
+                QObject::connect(verticalDisabled, &QPushButton::clicked, surface, applyVerticalDisabled);
                 QObject::connect(scrollView, &ScrollView::scrollPositionChanged, status,
-                                 [scrollView, status](int, int) {
-                                     status->setText(scrollViewOffsetText(scrollView));
-                                 });
+                    [scrollView, status](int, int) { status->setText(scrollViewOffsetText(scrollView)); });
                 applyAutoBars();
 
                 layout->addWidget(controls);
@@ -1498,11 +1428,9 @@ QVector<GallerySample> scrollViewSamples()
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("scroll-view-programmatic-scroll"),
+        makeSample(QStringLiteral("scroll-view-programmatic-scroll"),
             QStringLiteral("Programmatic scroll with animation"),
-            QStringLiteral(
-                "Buttons call scrollTo or scrollBy and the view animates to the requested offset."),
+            QStringLiteral("Buttons call scrollTo or scrollBy and the view animates to the requested offset."),
             QStringLiteral(
                 "auto* scrollView = new ScrollView(this);\n"
                 "scrollView->setFixedSize(420, 250);\n"
@@ -1545,46 +1473,44 @@ QVector<GallerySample> scrollViewSamples()
                 auto* status = makeStatusLabel(surface, QString());
                 bindScrollViewStatus(scrollView, status);
 
-                QObject::connect(top, &QPushButton::clicked, scrollView,
-                                 [scrollView] { scrollView->scrollTo(0, 0, true); });
+                QObject::connect(top, &QPushButton::clicked, scrollView, [scrollView] {
+                    scrollView->scrollTo(0, 0, true);
+                });
                 QObject::connect(center, &QPushButton::clicked, scrollView, [scrollView] {
-                    scrollView->scrollTo(scrollView->scrollableWidth() / 2,
-                                         scrollView->scrollableHeight() / 2, true);
+                    scrollView->scrollTo(scrollView->scrollableWidth() / 2, scrollView->scrollableHeight() / 2, true);
                 });
                 QObject::connect(end, &QPushButton::clicked, scrollView, [scrollView] {
-                    scrollView->scrollTo(scrollView->scrollableWidth(),
-                                         scrollView->scrollableHeight(), true);
+                    scrollView->scrollTo(scrollView->scrollableWidth(), scrollView->scrollableHeight(), true);
                 });
-                QObject::connect(nudge, &QPushButton::clicked, scrollView,
-                                 [scrollView] { scrollView->scrollBy(0, 120, true); });
+                QObject::connect(nudge, &QPushButton::clicked, scrollView, [scrollView] {
+                    scrollView->scrollBy(0, 120, true);
+                });
 
                 layout->addWidget(controls);
                 layout->addWidget(scrollView);
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("scroll-view-constant-velocity"),
-            QStringLiteral("Constant velocity scrolling"),
+        makeSample(QStringLiteral("scroll-view-constant-velocity"), QStringLiteral("Constant velocity scrolling"),
+            QStringLiteral("A timer-driven velocity can keep the hosted content moving until stopped."),
             QStringLiteral(
-                "A timer-driven velocity can keep the hosted content moving until stopped."),
-            QStringLiteral("auto* scrollView = new ScrollView(this);\n"
-                           "scrollView->setWidget(makeScrollViewStackContent(scrollView));\n"
-                           "\n"
-                           "auto* velocityTimer = new QTimer(scrollView);\n"
-                           "velocityTimer->setInterval(50);\n"
-                           "velocityTimer->setProperty(\"velocity\", 0);\n"
-                           "connect(velocityTimer, &QTimer::timeout,\n"
-                           "        scrollView, [scrollView, velocityTimer] {\n"
-                           "            scrollView->scrollBy(0,\n"
-                           "                velocityTimer->property(\"velocity\").toInt(),\n"
-                           "                false);\n"
-                           "        });\n"
-                           "\n"
-                           "auto setVelocity = [velocityTimer](int velocity) {\n"
-                           "    velocityTimer->setProperty(\"velocity\", velocity);\n"
-                           "    velocity == 0 ? velocityTimer->stop() : velocityTimer->start();\n"
-                           "};"),
+                "auto* scrollView = new ScrollView(this);\n"
+                "scrollView->setWidget(makeScrollViewStackContent(scrollView));\n"
+                "\n"
+                "auto* velocityTimer = new QTimer(scrollView);\n"
+                "velocityTimer->setInterval(50);\n"
+                "velocityTimer->setProperty(\"velocity\", 0);\n"
+                "connect(velocityTimer, &QTimer::timeout,\n"
+                "        scrollView, [scrollView, velocityTimer] {\n"
+                "            scrollView->scrollBy(0,\n"
+                "                velocityTimer->property(\"velocity\").toInt(),\n"
+                "                false);\n"
+                "        });\n"
+                "\n"
+                "auto setVelocity = [velocityTimer](int velocity) {\n"
+                "    velocityTimer->setProperty(\"velocity\", velocity);\n"
+                "    velocity == 0 ? velocityTimer->stop() : velocityTimer->start();\n"
+                "};"),
             [](QWidget* parent) {
                 auto* surface = pipsSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
@@ -1611,11 +1537,12 @@ QVector<GallerySample> scrollViewSamples()
                 auto* status = makeStatusLabel(surface, QString());
                 auto updateStatus = [scrollView, status, timer]() {
                     status->setText(QStringLiteral("Velocity: %1 px/tick - %2")
-                                        .arg(timer->property("velocity").toInt())
-                                        .arg(scrollViewOffsetText(scrollView)));
+                            .arg(timer->property("velocity").toInt())
+                            .arg(scrollViewOffsetText(scrollView)));
                 };
-                QObject::connect(scrollView, &ScrollView::scrollPositionChanged, status,
-                                 [updateStatus](int, int) { updateStatus(); });
+                QObject::connect(scrollView, &ScrollView::scrollPositionChanged, status, [updateStatus](int, int) {
+                    updateStatus();
+                });
 
                 auto setVelocity = [timer, updateStatus, up, stop, down](int velocity) {
                     timer->setProperty("velocity", velocity);
@@ -1629,12 +1556,9 @@ QVector<GallerySample> scrollViewSamples()
                     updateStatus();
                 };
 
-                QObject::connect(up, &QPushButton::clicked, surface,
-                                 [setVelocity] { setVelocity(-12); });
-                QObject::connect(stop, &QPushButton::clicked, surface,
-                                 [setVelocity] { setVelocity(0); });
-                QObject::connect(down, &QPushButton::clicked, surface,
-                                 [setVelocity] { setVelocity(12); });
+                QObject::connect(up, &QPushButton::clicked, surface, [setVelocity] { setVelocity(-12); });
+                QObject::connect(stop, &QPushButton::clicked, surface, [setVelocity] { setVelocity(0); });
+                QObject::connect(down, &QPushButton::clicked, surface, [setVelocity] { setVelocity(12); });
                 setVelocity(0);
 
                 layout->addWidget(controls);
@@ -1642,19 +1566,19 @@ QVector<GallerySample> scrollViewSamples()
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(
-            QStringLiteral("scroll-view-scroll-chaining"), QStringLiteral("Scroll chaining"),
+        makeSample(QStringLiteral("scroll-view-scroll-chaining"), QStringLiteral("Scroll chaining"),
             QStringLiteral("Nested scrollers can keep boundary wheel input inside the inner view."),
-            QStringLiteral("auto* defaultView = new ScrollView(this);\n"
-                           "defaultView->setWidget(makeScrollViewStackContent(defaultView));\n"
-                           "defaultView->setScrollChainingEnabled(true);\n"
-                           "\n"
-                           "auto* containedView = new ScrollView(this);\n"
-                           "containedView->setWidget(makeScrollViewStackContent(containedView));\n"
-                           "containedView->setScrollChainingEnabled(false);\n"
-                           "\n"
-                           "// With chaining disabled, a boundary wheel is accepted by\n"
-                           "// the inner view when it still has scrollable range."),
+            QStringLiteral(
+                "auto* defaultView = new ScrollView(this);\n"
+                "defaultView->setWidget(makeScrollViewStackContent(defaultView));\n"
+                "defaultView->setScrollChainingEnabled(true);\n"
+                "\n"
+                "auto* containedView = new ScrollView(this);\n"
+                "containedView->setWidget(makeScrollViewStackContent(containedView));\n"
+                "containedView->setScrollChainingEnabled(false);\n"
+                "\n"
+                "// With chaining disabled, a boundary wheel is accepted by\n"
+                "// the inner view when it still has scrollable range."),
             [](QWidget* parent) {
                 auto* surface = pipsSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
@@ -1663,10 +1587,8 @@ QVector<GallerySample> scrollViewSamples()
                 auto* defaultColumn = verticalGroup(row, 6);
                 auto* containedColumn = verticalGroup(row, 6);
 
-                auto* defaultLabel =
-                    makeStatusLabel(defaultColumn, QStringLiteral("Default: chaining enabled"));
-                auto* containedLabel = makeStatusLabel(
-                    containedColumn, QStringLiteral("Contained: chaining disabled"));
+                auto* defaultLabel = makeStatusLabel(defaultColumn, QStringLiteral("Default: chaining enabled"));
+                auto* containedLabel = makeStatusLabel(containedColumn, QStringLiteral("Contained: chaining disabled"));
 
                 auto* defaultView = new ScrollView(defaultColumn);
                 defaultView->setFixedSize(220, 180);
@@ -1675,8 +1597,7 @@ QVector<GallerySample> scrollViewSamples()
 
                 auto* containedView = new ScrollView(containedColumn);
                 containedView->setFixedSize(220, 180);
-                containedView->setWidget(
-                    makeScrollViewStackContent(containedView, QSize(190, 100)));
+                containedView->setWidget(makeScrollViewStackContent(containedView, QSize(190, 100)));
                 containedView->setScrollChainingEnabled(false);
 
                 defaultColumn->layout()->addWidget(defaultLabel);
@@ -1687,77 +1608,72 @@ QVector<GallerySample> scrollViewSamples()
                 row->layout()->addWidget(containedColumn);
 
                 layout->addWidget(row);
-                layout->addWidget(makeStatusLabel(
-                    surface,
-                    QStringLiteral(
-                        "Scroll each inner view to an edge, then continue the wheel gesture.")));
+                layout->addWidget(makeStatusLabel(surface,
+                    QStringLiteral("Scroll each inner view to an edge, then continue the wheel gesture.")));
                 return surface;
             }),
-        makeSample(QStringLiteral("scroll-view-zoom-aware-content"),
-                   QStringLiteral("Zoom-aware content"),
-                   QStringLiteral("Content implementing ScrollViewZoomAware receives the logical "
-                                  "zoom factor separately from widget resizing."),
-                   QStringLiteral("class ZoomAwareCanvas : public QWidget,\n"
-                                  "                        public ScrollViewZoomAware {\n"
-                                  "public:\n"
-                                  "    QSizeF scrollViewUnscaledSize() const override\n"
-                                  "    {\n"
-                                  "        return QSizeF(560, 360);\n"
-                                  "    }\n"
-                                  "\n"
-                                  "    void setScrollViewZoomFactor(qreal factor) override\n"
-                                  "    {\n"
-                                  "        m_zoomFactor = factor;\n"
-                                  "        update();\n"
-                                  "    }\n"
-                                  "};\n"
-                                  "\n"
-                                  "auto* scrollView = new ScrollView(this);\n"
-                                  "scrollView->setZoomMode(ScrollView::ZoomMode::Enabled);\n"
-                                  "scrollView->setWidget(new ZoomAwareCanvas(scrollView));\n"
-                                  "scrollView->zoomTo(1.5, true);"),
-                   [](QWidget* parent) {
-                       auto* surface = pipsSurface(parent);
-                       auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+        makeSample(QStringLiteral("scroll-view-zoom-aware-content"), QStringLiteral("Zoom-aware content"),
+            QStringLiteral("Content implementing ScrollViewZoomAware receives the logical "
+                           "zoom factor separately from widget resizing."),
+            QStringLiteral(
+                "class ZoomAwareCanvas : public QWidget,\n"
+                "                        public ScrollViewZoomAware {\n"
+                "public:\n"
+                "    QSizeF scrollViewUnscaledSize() const override\n"
+                "    {\n"
+                "        return QSizeF(560, 360);\n"
+                "    }\n"
+                "\n"
+                "    void setScrollViewZoomFactor(qreal factor) override\n"
+                "    {\n"
+                "        m_zoomFactor = factor;\n"
+                "        update();\n"
+                "    }\n"
+                "};\n"
+                "\n"
+                "auto* scrollView = new ScrollView(this);\n"
+                "scrollView->setZoomMode(ScrollView::ZoomMode::Enabled);\n"
+                "scrollView->setWidget(new ZoomAwareCanvas(scrollView));\n"
+                "scrollView->zoomTo(1.5, true);"),
+            [](QWidget* parent) {
+                auto* surface = pipsSurface(parent);
+                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
 
-                       auto* controls = horizontalGroup(surface, 8);
-                       auto* zoom50 = sampleButton(controls, QStringLiteral("50%"));
-                       auto* zoom100 = sampleButton(controls, QStringLiteral("100%"));
-                       auto* zoom150 = sampleButton(controls, QStringLiteral("150%"));
-                       controls->layout()->addWidget(zoom50);
-                       controls->layout()->addWidget(zoom100);
-                       controls->layout()->addWidget(zoom150);
+                auto* controls = horizontalGroup(surface, 8);
+                auto* zoom50 = sampleButton(controls, QStringLiteral("50%"));
+                auto* zoom100 = sampleButton(controls, QStringLiteral("100%"));
+                auto* zoom150 = sampleButton(controls, QStringLiteral("150%"));
+                controls->layout()->addWidget(zoom50);
+                controls->layout()->addWidget(zoom100);
+                controls->layout()->addWidget(zoom150);
 
-                       auto* scrollView = new ScrollView(surface);
-                       scrollView->setFixedSize(420, 230);
-                       scrollView->setZoomMode(ScrollView::ZoomMode::Enabled);
-                       scrollView->setMinZoomFactor(0.5);
-                       scrollView->setMaxZoomFactor(2.0);
-                       scrollView->setWidget(new ScrollViewDemoCanvas(
-                           QSize(560, 360), QStringLiteral("Zoom-aware canvas"), scrollView));
+                auto* scrollView = new ScrollView(surface);
+                scrollView->setFixedSize(420, 230);
+                scrollView->setZoomMode(ScrollView::ZoomMode::Enabled);
+                scrollView->setMinZoomFactor(0.5);
+                scrollView->setMaxZoomFactor(2.0);
+                scrollView->setWidget(
+                    new ScrollViewDemoCanvas(QSize(560, 360), QStringLiteral("Zoom-aware canvas"), scrollView));
 
-                       auto* status = makeStatusLabel(surface, QString());
-                       bindScrollViewStatus(scrollView, status);
+                auto* status = makeStatusLabel(surface, QString());
+                bindScrollViewStatus(scrollView, status);
 
-                       auto setZoom = [scrollView, zoom50, zoom100, zoom150](qreal zoom) {
-                           scrollView->zoomTo(zoom, true);
-                           setButtonActive(zoom50, qFuzzyCompare(zoom, 0.5));
-                           setButtonActive(zoom100, qFuzzyCompare(zoom, 1.0));
-                           setButtonActive(zoom150, qFuzzyCompare(zoom, 1.5));
-                       };
-                       QObject::connect(zoom50, &QPushButton::clicked, surface,
-                                        [setZoom] { setZoom(0.5); });
-                       QObject::connect(zoom100, &QPushButton::clicked, surface,
-                                        [setZoom] { setZoom(1.0); });
-                       QObject::connect(zoom150, &QPushButton::clicked, surface,
-                                        [setZoom] { setZoom(1.5); });
-                       setZoom(1.0);
+                auto setZoom = [scrollView, zoom50, zoom100, zoom150](qreal zoom) {
+                    scrollView->zoomTo(zoom, true);
+                    setButtonActive(zoom50, qFuzzyCompare(zoom, 0.5));
+                    setButtonActive(zoom100, qFuzzyCompare(zoom, 1.0));
+                    setButtonActive(zoom150, qFuzzyCompare(zoom, 1.5));
+                };
+                QObject::connect(zoom50, &QPushButton::clicked, surface, [setZoom] { setZoom(0.5); });
+                QObject::connect(zoom100, &QPushButton::clicked, surface, [setZoom] { setZoom(1.0); });
+                QObject::connect(zoom150, &QPushButton::clicked, surface, [setZoom] { setZoom(1.5); });
+                setZoom(1.0);
 
-                       layout->addWidget(controls);
-                       layout->addWidget(scrollView);
-                       layout->addWidget(status);
-                       return surface;
-                   })};
+                layout->addWidget(controls);
+                layout->addWidget(scrollView);
+                layout->addWidget(status);
+                return surface;
+            })};
 }
 
 } // namespace
