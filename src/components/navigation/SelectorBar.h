@@ -86,8 +86,30 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 图标字符绘制使用的 iconfont 字体族。
      */
     Q_PROPERTY(QString iconFontFamily READ iconFontFamily WRITE setIconFontFamily NOTIFY iconFontFamilyChanged)
+    /**
+     * @brief Whether the bar paints its layer background.
+     * zh_CN: 是否绘制选择栏的图层背景。
+     *
+     * Disable it to let the bar blend into a host surface that already paints
+     * its own background, such as a navigation chrome or a custom title bar.
+     * zh_CN: 关闭后选择栏融入自带背景的宿主表面，例如导航 chrome 或自定义标题栏。
+     */
+    Q_PROPERTY(bool backgroundVisible
+        READ isBackgroundVisible
+        WRITE setBackgroundVisible
+        NOTIFY backgroundVisibleChanged)
 
 public:
+    /**
+     * @brief Presentation used when items exceed the available width.
+     * zh_CN: 条目超出可用宽度时的呈现方式。
+     *
+     * ScrollButtons pages a window of items. MoreButton keeps the leading items
+     * plus the selected and keyboard-focused items visible, and reports the rest
+     * through overflowActivated(). If both do not fit, the focused item takes priority.
+     * zh_CN: ScrollButtons 按窗口翻页。MoreButton 保持前导条目以及选中、键盘聚焦条目可见，
+     * 其余条目经 overflowActivated() 报告。空间不足以同时显示时，优先显示聚焦条目。
+     */
     enum class OverflowBehavior { ScrollButtons, MoreButton };
     Q_ENUM(OverflowBehavior)
 
@@ -125,6 +147,9 @@ public:
     void setItemFontRole(Typography::FontRole role);
     QString iconFontFamily() const { return m_iconFontFamily; }
     void setIconFontFamily(const QString& family);
+    bool isBackgroundVisible() const { return m_backgroundVisible; }
+    bool backgroundVisible() const { return isBackgroundVisible(); }
+    void setBackgroundVisible(bool visible);
 
     QRect selectorRowGeometry() const;
     QRect itemGeometry(int index) const;
@@ -143,12 +168,22 @@ signals:
     void itemCountChanged(int count);
     void itemsChanged();
     void itemActivated(int index, const SelectorBarItem& item);
+    /**
+     * @brief Emitted for every pointer, keyboard, or accessibility invocation, including the selected item.
+     * zh_CN: 每次指针、键盘或辅助功能调用条目时发出，包括再次调用已选中条目。
+     *
+     * It precedes itemActivated() and the selection signals, which fire only
+     * when the selection changes.
+     * zh_CN: 它先于 itemActivated() 与选择信号发出；后两者仅在选中变化时发出。
+     */
+    void itemInvoked(int index, const SelectorBarItem& item);
     void selectedIndexChanged(int index);
     void currentChanged(int index);
     void selectionChanged(int index, const SelectorBarItem& item);
     void overflowBehaviorChanged(OverflowBehavior behavior);
     void itemFontRoleChanged(Typography::FontRole role);
     void iconFontFamilyChanged(const QString& family);
+    void backgroundVisibleChanged(bool visible);
     void overflowActivated(const QVector<int>& hiddenIndexes);
 
 protected:
@@ -212,6 +247,8 @@ private:
         int availableWidth,
         const QVector<int>& widths,
         bool overflow) const;
+    QVector<int>
+    computePinnedVisibleIndexes(const QVector<int>& candidates, int availableWidth, const QVector<int>& widths) const;
     void ensureIndexVisible(int index);
     int nearestSelectableIndex(int preferredIndex) const;
     int firstSelectableIndex() const;
@@ -259,6 +296,8 @@ private:
     OverflowBehavior m_overflowBehavior = OverflowBehavior::ScrollButtons;
     Typography::FontRole m_itemFontRole = Typography::FontRole::Body;
     QString m_iconFontFamily;
+    bool m_backgroundVisible = true;
+    bool m_keyboardFocusVisible = false;
     HitRecord m_hoveredHit;
     HitRecord m_pressedHit;
     QRect m_animatedIndicatorRect;

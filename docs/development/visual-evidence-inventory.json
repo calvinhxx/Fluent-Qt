@@ -1291,8 +1291,37 @@
       "automated_evidence": [
         {
           "kind": "geometry",
+          "test_case": "SelectorBarTest.Contract_KeyboardFocusCueDoesNotPersistForMouseInput",
+          "states": [
+            "normal-light",
+            "normal-dark",
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "SelectorBarTest.Contract_AccessibilityMoreButtonKeepsNarrowFocusReachable",
+          "states": [
+            "keyboard-focus",
+            "narrow",
+            "rtl"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
           "test_case": "SelectorBarTest.LayoutOverflowAndGeometryAreDeterministic",
           "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "SelectorBarTest.MoreButtonOverflowKeepsLeadingAndSelectedItems",
+          "states": [
+            "selection",
             "narrow"
           ],
           "execution": "registered-only"

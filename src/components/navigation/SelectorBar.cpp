@@ -348,6 +348,15 @@ void SelectorBar::setIconFontFamily(const QString& family)
     emit iconFontFamilyChanged(m_iconFontFamily);
 }
 
+void SelectorBar::setBackgroundVisible(bool visible)
+{
+    if (m_backgroundVisible == visible)
+        return;
+    m_backgroundVisible = visible;
+    update();
+    emit backgroundVisibleChanged(visible);
+}
+
 QRect SelectorBar::selectorRowGeometry() const
 {
     ensureLayout();
@@ -475,6 +484,8 @@ void SelectorBar::mousePressEvent(QMouseEvent* event)
         return;
     }
 
+    m_keyboardFocusVisible = false;
+    update();
     setFocus(Qt::MouseFocusReason);
     const HitRecord hit = hitTest(fluentMousePos(event));
     if (isInteractiveHit(hit)) {
@@ -523,6 +534,8 @@ void SelectorBar::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    m_keyboardFocusVisible = true;
+    update();
     switch (event->key()) {
     case Qt::Key_Left:
         focusItem(nextSelectableIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
@@ -561,6 +574,18 @@ void SelectorBar::keyPressEvent(QKeyEvent* event)
 void SelectorBar::focusInEvent(QFocusEvent* event)
 {
     QWidget::focusInEvent(event);
+    if (event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason
+        || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
+    else if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    if (m_overflowBehavior == OverflowBehavior::MoreButton) {
+        // Pointer focus must keep the selected layout under the pointer, not reveal an old keyboard target.
+        // zh_CN: 指针获得焦点时保留指针下的选中布局，不让旧键盘目标挤走正在点击的条目。
+        if (event->reason() == Qt::MouseFocusReason)
+            m_focusedIndex = m_selectedIndex;
+        invalidateLayout(false);
+    }
     if (!isSelectableIndex(m_focusedIndex)) {
         focusItem(m_selectedIndex >= 0 ? m_selectedIndex : firstSelectableIndex());
     } else {
@@ -573,6 +598,10 @@ void SelectorBar::focusOutEvent(QFocusEvent* event)
 {
     QWidget::focusOutEvent(event);
     clearPressedHit();
+    // MoreButton overflow pins the focused item only while focus is inside.
+    // zh_CN: MoreButton 溢出仅在拥有焦点时固定聚焦条目。
+    if (m_overflowBehavior == OverflowBehavior::MoreButton && m_focusedIndex != m_selectedIndex)
+        invalidateLayout(false);
     update();
 }
 
@@ -668,16 +697,15 @@ void SelectorBar::updateLayout()
         m_firstVisibleIndex = candidates.value(0, 0);
     }
 
-    m_visibleIndexes = computeVisibleIndexes(candidates, availableForItems, widths, overflow);
-    if (overflow && isValidIndex(m_selectedIndex) && m_items.at(m_selectedIndex).visible
-        && !m_visibleIndexes.contains(m_selectedIndex)) {
-        m_firstVisibleIndex = m_selectedIndex;
+    if (overflow && m_overflowBehavior == OverflowBehavior::MoreButton) {
+        m_visibleIndexes = computePinnedVisibleIndexes(candidates, availableForItems, widths);
+    } else {
         m_visibleIndexes = computeVisibleIndexes(candidates, availableForItems, widths, overflow);
-    }
-
-    for (int index = 0; index < m_items.size(); ++index) {
-        if (!m_visibleIndexes.contains(index))
-            m_hiddenIndexes.append(index);
+        if (overflow && isValidIndex(m_selectedIndex) && m_items.at(m_selectedIndex).visible
+            && !m_visibleIndexes.contains(m_selectedIndex)) {
+            m_firstVisibleIndex = m_selectedIndex;
+            m_visibleIndexes = computeVisibleIndexes(candidates, availableForItems, widths, overflow);
+        }
     }
 
     int x = m_rowRect.left();
@@ -722,12 +750,24 @@ void SelectorBar::updateLayout()
         x += recordWidth;
     }
 
+    // Only items with an actual hit region are visible, including at forced tiny widths.
+    // zh_CN: 只有实际获得命中区域的条目才算可见，即使宿主强制使用极小宽度也不遗漏溢出项。
+    m_visibleIndexes.clear();
+    for (const ItemRecord& record : std::as_const(m_itemRecords))
+        m_visibleIndexes.append(record.itemIndex);
+    for (int index = 0; index < m_items.size(); ++index) {
+        if (!m_visibleIndexes.contains(index))
+            m_hiddenIndexes.append(index);
+    }
+
     if (overflow && m_overflowBehavior == OverflowBehavior::ScrollButtons) {
         m_overflowForwardRect = QRect(m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth,
             m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
             currentMetrics.overflowButtonWidth, currentMetrics.itemVisualHeight);
     } else if (overflow) {
-        m_overflowMoreRect = QRect(m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth,
+        // More follows the last visible item, so it stays next to the items it extends.
+        // zh_CN: “更多”紧随最后一个可见条目，与其扩展的条目保持相邻。
+        m_overflowMoreRect = QRect(qMin(x, m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth),
             m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
             currentMetrics.overflowButtonWidth, currentMetrics.itemVisualHeight);
     }
@@ -799,6 +839,60 @@ QVector<int> SelectorBar::computeVisibleIndexes(const QVector<int>& candidates,
     }
     if (result.isEmpty())
         result.append(candidates.at(startPosition));
+    return result;
+}
+
+QVector<int> SelectorBar::computePinnedVisibleIndexes(const QVector<int>& candidates,
+    int availableWidth,
+    const QVector<int>& widths) const
+{
+    if (availableWidth <= 0)
+        return {};
+    // The More button lists every hidden item, so there is no window to page: keep reading order
+    // from the first item and reserve room for the selected and keyboard-focused items, which
+    // replace trailing items instead of scrolling the leading ones away.
+    // zh_CN: More 按钮会列出全部隐藏条目，无需翻页窗口：从首项起保持阅读顺序，并为选中与键盘聚焦条目
+    // 预留空间；它们替换末尾条目，而不是把前导条目滚出视野。
+    QVector<int> pinned;
+    const auto pin = [this, &pinned](int index) {
+        if (isValidIndex(index) && m_items.at(index).visible && !pinned.contains(index))
+            pinned.append(index);
+    };
+    pin(m_selectedIndex);
+    if (hasFocus())
+        pin(m_focusedIndex);
+
+    const int minimumWidth = metrics().minItemWidth;
+    int reserved = 0;
+    for (int index : std::as_const(pinned))
+        reserved += widths.value(index, minimumWidth);
+
+    // Keep one usable item instead of allocating two records that cannot both be painted.
+    // zh_CN: 空间不足时保留一个可用条目，避免把无法绘制的第二项误报为可见。
+    if (reserved > availableWidth) {
+        const int priority = hasFocus() && pinned.contains(m_focusedIndex) ? m_focusedIndex : m_selectedIndex;
+        return {priority};
+    }
+
+    QVector<int> result;
+    int used = 0;
+    int position = 0;
+    for (; position < candidates.size(); ++position) {
+        const int index = candidates.at(position);
+        const int width = widths.value(index, minimumWidth);
+        if (pinned.contains(index))
+            reserved -= width;
+        else if (used + width + reserved > availableWidth)
+            break;
+        result.append(index);
+        used += width;
+    }
+    for (; position < candidates.size(); ++position) {
+        if (pinned.contains(candidates.at(position)))
+            result.append(candidates.at(position));
+    }
+    if (result.isEmpty() && !candidates.isEmpty())
+        result.append(candidates.first());
     return result;
 }
 
@@ -1034,6 +1128,8 @@ void SelectorBar::focusItem(int index)
     if (m_focusedIndex == index && m_visibleIndexes.contains(index))
         return;
     m_focusedIndex = index;
+    if (m_overflowBehavior == OverflowBehavior::MoreButton)
+        invalidateLayout(false);
     ensureIndexVisible(index);
     if (hasFocus()) {
         fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(this, m_focusedIndex);
@@ -1065,9 +1161,14 @@ void SelectorBar::activateHit(const HitRecord& hit)
 
 void SelectorBar::activateItem(int index)
 {
-    if (!isSelectableIndex(index) || m_selectedIndex == index)
+    if (!isSelectableIndex(index))
         return;
     QPointer<SelectorBar> guard(this);
+    emit itemInvoked(index, m_items.at(index));
+    // An itemInvoked() handler may select, mutate, or delete the bar.
+    // zh_CN: itemInvoked() 处理器可能选中、修改或删除选择栏。
+    if (!guard || !isSelectableIndex(index) || m_selectedIndex == index)
+        return;
     emit itemActivated(index, m_items.at(index));
     if (guard)
         guard->setSelectedIndexInternal(index, true);
@@ -1088,7 +1189,8 @@ void SelectorBar::scrollOverflow(int direction)
 
 void SelectorBar::paintBackground(QPainter& painter) const
 {
-    painter.fillRect(rect(), themeColorsRef().bgLayer);
+    if (m_backgroundVisible)
+        painter.fillRect(rect(), themeColorsRef().bgLayer);
 }
 
 void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
@@ -1113,8 +1215,20 @@ void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
 
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
+    const QString text = painter.fontMetrics().elidedText(m_items.at(record.itemIndex).text, Qt::ElideRight,
+        record.textRect.width());
     painter.drawText(record.textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
-        m_items.at(record.itemIndex).text);
+        text);
+
+    if (isEnabled() && hasFocus() && m_keyboardFocusVisible && record.itemIndex == m_focusedIndex) {
+        const QRect focusRect = record.rect.adjusted(1, 1, -1, -1);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(themeColorsRef().strokeFocusOuter, 1));
+        painter.drawRoundedRect(focusRect, ::CornerRadius::Control, ::CornerRadius::Control);
+        painter.setPen(QPen(themeColorsRef().strokeFocusInner, 1));
+        painter.drawRoundedRect(focusRect.adjusted(1, 1, -1, -1), qMax(0, ::CornerRadius::Control - 1),
+            qMax(0, ::CornerRadius::Control - 1));
+    }
 
     painter.restore();
 }
