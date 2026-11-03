@@ -57,7 +57,10 @@ struct GalleryPreviewSelection {
     bool isValid() const { return error.isEmpty(); }
 };
 
-/** @brief Parses preview arguments without changing normal Gallery startup. */
+/** @brief Detects preview mode before a QCoreApplication exists. */
+bool galleryPreviewRequested(const QStringList& arguments);
+
+/** @brief Parses preview arguments after constructing QCoreApplication. */
 GalleryPreviewParseResult parseGalleryPreviewArguments(const QStringList& arguments);
 
 /** @brief Resolves one real Gallery sample factory for a preview request. */
