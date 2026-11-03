@@ -409,6 +409,11 @@ add_dependencies(test_visual_comparison fluent_qt_visual_compare)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
 if(Python3_Interpreter_FOUND)
+    add_test(NAME WslWorkspace.Contract_IncrementalSync
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/dev/test_fluent_qt_wsl.py)
+    set_tests_properties(WslWorkspace.Contract_IncrementalSync PROPERTIES
+        LABELS "quality;contract;ci_fast;ci_full;local_full" TIMEOUT 60)
+
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.21)
         add_test(
             NAME SdkRuntime.Contract_Configuration

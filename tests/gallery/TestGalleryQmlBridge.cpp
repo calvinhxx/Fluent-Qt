@@ -34,6 +34,7 @@
 #include <QScrollBar>
 #include <QScreen>
 #include <QTest>
+#include <QVariant>
 #include <QVBoxLayout>
 #include <QXmlStreamReader>
 
@@ -308,6 +309,10 @@ protected:
     static void SetUpTestSuite() { QmlSession::prepareApplication(); }
     void SetUp() override
     {
+        // Exercise rendering contracts independently of the slow-presentation policy.
+        // zh_CN: 渲染契约与慢呈现降级策略分开验证，沿用 Gallery Spatial 测试的初始化约定。
+        m_keepSlowPresentation = qApp->property("fluentqtGalleryKeepSlowPresentation");
+        qApp->setProperty("fluentqtGalleryKeepSlowPresentation", true);
         auto& settings = GallerySettings::instance();
         m_theme = settings.themeMode();
         m_motion = settings.motionMode();
@@ -335,6 +340,7 @@ protected:
         settings.setSpatialModeEnabled(m_spatial);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QApplication::processEvents();
+        qApp->setProperty("fluentqtGalleryKeepSlowPresentation", m_keepSlowPresentation);
     }
 
 private:
@@ -342,6 +348,7 @@ private:
     GallerySettings::MotionMode m_motion;
     bool m_spatial, m_intro, m_available, m_pending;
     QString m_reason;
+    QVariant m_keepSlowPresentation;
 };
 } // namespace
 
@@ -840,10 +847,12 @@ TEST_F(GalleryQmlBridgeTest, Contract_NativeCornersFollowPreviewTheme)
     ASSERT_TRUE(QTest::qWaitFor([&] { return load->status() == QmlView::Ready && theme->status() == QmlView::Ready; }));
     const QPointer<QObject> loadRoot(load->rootObject());
     const QPointer<QObject> themeRoot(theme->rootObject());
-    const QString evidence =
+    const QString evidenceRoot = qEnvironmentVariable("FLUENTQT_QMLBRIDGE_NATIVE_EVIDENCE_DIR",
         QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath())
-            .absoluteFilePath(QStringLiteral("../../build/qmlview-corner-validation/"))
-        + QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-HHmmss-zzz"));
+            .absoluteFilePath(QStringLiteral("../../build/qmlview-corner-validation/")));
+    const QString evidence =
+        QDir(evidenceRoot)
+            .absoluteFilePath(QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-HHmmss-zzz")));
     ASSERT_TRUE(QDir().mkpath(evidence));
     SCOPED_TRACE(evidence.toStdString());
     const auto rgbDifference = [](const QColor& a, const QColor& b) {
