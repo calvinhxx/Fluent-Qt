@@ -148,6 +148,35 @@ class DrawerProxyLifetimeTest(unittest.TestCase):
         self.assertEqual(DRAWER_LIFECYCLE_CYCLES, 5)
 
 
+class GallerySearchPaginationTest(unittest.TestCase):
+    def test_accepts_appended_results_after_scrolling_to_the_next_page(self):
+        from wasm_auto_suggest import validate_gallery_search_pagination
+        validate_gallery_search_pagination(
+            8, [{"size": 16, "position": position} for position in range(11, 17)])
+
+    def test_rejects_scrolling_only_the_initial_eight_results(self):
+        from wasm_auto_suggest import validate_gallery_search_pagination
+        # Six rows fit in the popup. Scrolling exposes rows 7 and 8 even when
+        # Load more did nothing, so changed visible text cannot prove paging.
+        with self.assertRaisesRegex(RuntimeError, "did not append"):
+            validate_gallery_search_pagination(
+                8, [{"size": 8, "position": position} for position in range(3, 9)])
+
+    def test_requires_a_visible_row_from_the_appended_page(self):
+        from wasm_auto_suggest import validate_gallery_search_pagination
+        with self.assertRaisesRegex(RuntimeError, "no visible row beyond"):
+            validate_gallery_search_pagination(
+                8, [{"size": 16, "position": position} for position in range(1, 7)])
+
+    def test_rejects_missing_or_invalid_accessibility_metadata(self):
+        from wasm_auto_suggest import validate_gallery_search_pagination
+        for rows in ([], [{}], [{"size": 16, "position": 17}],
+                     [{"size": 16, "position": 0}], [{"size": 16, "position": None}],
+                     [{"size": 16.5, "position": 9}], [{"size": 16, "position": True}]):
+            with self.subTest(rows=rows), self.assertRaises(RuntimeError):
+                validate_gallery_search_pagination(8, rows)
+
+
 class PagesSpatialPayloadTest(unittest.TestCase):
     def stage_fixture(self, directory):
         source = directory / "source"
