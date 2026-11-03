@@ -108,6 +108,12 @@ bool requestPlatformForegroundActivation(QWidget* window)
     return false;
 }
 
+bool restorePlatformMaximizedFrame(QWidget* window)
+{
+    Q_UNUSED(window);
+    return false;
+}
+
 bool platformSupportsSystemBackdrop()
 {
     return false;

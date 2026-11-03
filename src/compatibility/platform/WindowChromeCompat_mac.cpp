@@ -146,6 +146,12 @@ BOOL sendBool(id receiver, const char* name)
     return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
 }
 
+CGFloat sendCGFloat(id receiver, const char* name)
+{
+    using Send = CGFloat (*)(id, SEL);
+    return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
+}
+
 id sendUnsignedLongReturnsId(id receiver, const char* name, unsigned long value)
 {
     using Send = id (*)(id, SEL, unsigned long);
@@ -233,6 +239,29 @@ id nativeWindowFor(QWidget* window)
     return nil;
 }
 
+// The frame AppKit zooms to: the delegate's standard frame for the visible screen area.
+// zh_CN: AppKit 缩放到的框架：委托针对屏幕可见区域给出的标准框架。
+CGRect standardZoomFrame(id nsWindow)
+{
+    id screen = respondsTo(nsWindow, selector("screen")) ? sendId(nsWindow, "screen") : nil;
+    if (!screen)
+        return CGRectNull;
+    const CGRect visible = sendRect(screen, "visibleFrame");
+    static constexpr const char* StandardFrame = "windowWillUseStandardFrame:defaultFrame:";
+    id delegate = respondsTo(nsWindow, selector("delegate")) ? sendId(nsWindow, "delegate") : nil;
+    if (!delegate || !respondsTo(delegate, selector(StandardFrame)))
+        return visible;
+#if defined(__x86_64__)
+    CGRect frame = CGRectNull;
+    using Send = void (*)(CGRect*, id, SEL, id, CGRect);
+    reinterpret_cast<Send>(objc_msgSend_stret)(&frame, delegate, selector(StandardFrame), nsWindow, visible);
+    return frame;
+#else
+    using Send = CGRect (*)(id, SEL, id, CGRect);
+    return reinterpret_cast<Send>(objc_msgSend)(delegate, selector(StandardFrame), nsWindow, visible);
+#endif
+}
+
 id createSystemMoveMouseDownEvent(id nsWindow)
 {
     static constexpr const char* MouseEventFactory =
@@ -253,7 +282,22 @@ id createSystemMoveMouseDownEvent(id nsWindow)
         location, 0UL, 0.0, windowNumber, nil, 0L, 1L, 1.0f);
 }
 
-void centerTrafficLights(id nsWindow, const QRect& titleBarRect = QRect())
+// Qt logical pixels equal Cocoa points only while Qt applies no extra scale
+// factor. QT_SCALE_FACTOR or an application zoom makes Qt's DPR differ from the
+// backing scale; their ratio converts logical pixels to points.
+// zh_CN: 仅当 Qt 未叠加额外缩放时，Qt 逻辑像素才等于 Cocoa point。QT_SCALE_FACTOR
+// zh_CN: 或应用缩放会让 Qt DPR 与 backing scale 不同，二者之比即逻辑像素到 point 的换算。
+qreal pointsPerLogicalPixel(QWidget* window, id nsWindow)
+{
+    const QWindow* handle = window ? window->windowHandle() : nullptr;
+    if (!handle || !respondsTo(nsWindow, selector("backingScaleFactor")))
+        return 1.0;
+    const qreal backingScale = sendCGFloat(nsWindow, "backingScaleFactor");
+    const qreal qtScale = handle->devicePixelRatio();
+    return backingScale > 0.0 && qtScale > 0.0 ? qtScale / backingScale : 1.0;
+}
+
+void centerTrafficLights(id nsWindow, const QRect& titleBarRect, qreal pointsPerLogical)
 {
     if (!respondsTo(nsWindow, selector("standardWindowButton:")))
         return;
@@ -280,7 +324,7 @@ void centerTrafficLights(id nsWindow, const QRect& titleBarRect = QRect())
             // convert the QWidget title-bar center while respecting flipped views.
             // zh_CN: Cocoa 按钮 frame 使用 superview 坐标系；这里将 QWidget 标题栏中心
             // zh_CN: 转换过去，并处理 flipped view。
-            const CGFloat titleBarCenterFromTop = titleBarRect.y() + titleBarRect.height() / 2.0;
+            const CGFloat titleBarCenterFromTop = (titleBarRect.y() + titleBarRect.height() / 2.0) * pointsPerLogical;
             const bool flipped = respondsTo(superview, selector("isFlipped")) && sendBool(superview, "isFlipped");
             targetCenterY = flipped ? titleBarCenterFromTop : bounds.size.height - titleBarCenterFromTop;
         }
@@ -299,7 +343,7 @@ void syncUnifiedTitleBarGeometry(QWidget* window, const WindowChromeOptions& opt
     if (!nsWindow)
         return;
 
-    centerTrafficLights(nsWindow, options.titleBarRect);
+    centerTrafficLights(nsWindow, options.titleBarRect, pointsPerLogicalPixel(window, nsWindow));
 }
 
 void syncUnifiedTitleBarAppearance(id nsWindow)
@@ -895,11 +939,12 @@ int nativeTitleBarLeadingInset(QWidget* window)
     if (frame.size.width <= 0)
         return 0;
 
-    // frame is in Cocoa points which map 1:1 to Qt logical pixel coordinates.
-    // Add an 8-point gap after the rightmost button.
-    // zh_CN: Cocoa points 与 Qt 逻辑像素 1:1 对应，末尾留 8pt 间距。
+    // frame is in Cocoa points; convert it to Qt logical pixels and add an
+    // 8-pixel gap after the rightmost button.
+    // zh_CN: frame 使用 Cocoa point，换算为 Qt 逻辑像素后在末尾留 8px 间距。
     constexpr int kTrailingGap = 8;
-    return static_cast<int>(std::ceil(frame.origin.x + frame.size.width)) + kTrailingGap;
+    const qreal pointsPerLogical = pointsPerLogicalPixel(window, nsWindow);
+    return static_cast<int>(std::ceil((frame.origin.x + frame.size.width) / pointsPerLogical)) + kTrailingGap;
 }
 
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options)
@@ -932,6 +977,25 @@ bool requestPlatformForegroundActivation(QWidget* window)
 {
     Q_UNUSED(window);
     return false;
+}
+
+bool restorePlatformMaximizedFrame(QWidget* window)
+{
+    // Qt zooms a maximized window before ordering it in. Stage Manager then fits the
+    // ordered-in frame into its stage, so the window is no longer zoomed. Reapply the
+    // standard frame without animation; AppKit keeps the restore frame from Qt's zoom.
+    // zh_CN: Qt 在窗口入列前执行缩放；台前调度随后把入列框架收进舞台区域，窗口不再处于缩放状态。
+    // 无动画地重新应用标准框架；AppKit 保留 Qt 缩放时记录的还原框架。
+    id nsWindow = nativeWindowFor(window);
+    if (!nsWindow || !respondsTo(nsWindow, selector("isZoomed")) || sendBool(nsWindow, "isZoomed")
+        || !respondsTo(nsWindow, selector("setFrame:display:animate:")))
+        return false;
+    const CGRect frame = standardZoomFrame(nsWindow);
+    if (CGRectIsNull(frame) || CGRectIsEmpty(frame))
+        return false;
+    using Send = void (*)(id, SEL, CGRect, BOOL, BOOL);
+    reinterpret_cast<Send>(objc_msgSend)(nsWindow, selector("setFrame:display:animate:"), frame, YES, NO);
+    return true;
 }
 
 bool platformSupportsSystemBackdrop()

@@ -688,6 +688,12 @@ bool requestPlatformForegroundActivation(QWidget* window)
     return hwnd && SetForegroundWindow(hwnd) != FALSE;
 }
 
+bool restorePlatformMaximizedFrame(QWidget* window)
+{
+    Q_UNUSED(window);
+    return false;
+}
+
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options)
 {
     if (!options.useCustomWindowChrome)
