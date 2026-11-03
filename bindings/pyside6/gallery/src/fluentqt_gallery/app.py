@@ -346,6 +346,15 @@ def _prepare_qml_bridge_application() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    from .interface_zoom import supports_live_interface_zoom
+    if not supports_live_interface_zoom():
+        print(
+            "FluentQt Gallery requires a FluentQt binding built with matching Qt "
+            "private development headers and live zoom support. Rebuild with "
+            "FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON, or install the matching Gallery wheel.",
+            file=sys.stderr,
+        )
+        return 1
     # Match the C++/WASM Gallery without changing the library's locale policy.
     QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
     automated = bool(
@@ -358,6 +367,10 @@ def main(argv: list[str] | None = None) -> int:
     QCoreApplication.setApplicationName(APPLICATION_NAME)
     QCoreApplication.setOrganizationName(ORGANIZATION_NAME)
     QCoreApplication.setApplicationVersion(fluentqt.__version__)
+    from .interface_zoom import prepare_interface_zoom
+    from .settings import stored_interface_zoom_percent
+    if QApplication.instance() is None:
+        prepare_interface_zoom(1.0 if automated else stored_interface_zoom_percent() / 100.0)
     fluentqt.prepare_high_dpi_application()
     app = QApplication.instance() or QApplication(sys.argv[:1])
     _prepare_qml_bridge_application()
@@ -393,6 +406,7 @@ def main(argv: list[str] | None = None) -> int:
     # Gallery module graph first.
     from .application_controller import GalleryApplicationController
     from .catalog import ENTRIES
+    from .interface_zoom import DEFAULT_PERCENT
     from .settings import (
         CloseBehavior,
         NavigationStyle,
@@ -417,6 +431,7 @@ def main(argv: list[str] | None = None) -> int:
         settings.navigation_style = NavigationStyle.Auto
         settings.window_effect = 1
         settings.close_behavior = CloseBehavior.Tray
+        settings.interface_zoom_percent = DEFAULT_PERCENT
         settings.apply_user_theme()
     if args.theme == "light":
         settings.theme_mode = ThemeMode.Light
@@ -456,10 +471,9 @@ def main(argv: list[str] | None = None) -> int:
     failures = runtime_catalog_errors()
     visited_routes = 0
 
+    window.show()
     if restore_maximized and args.window_size is None:
         window.showMaximized()
-    else:
-        window.show()
 
     try:
         window.navigate(route, record_history=route != "home")

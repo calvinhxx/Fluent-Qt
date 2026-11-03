@@ -26,10 +26,13 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     application_controller.py
     app.py
     catalog.py
+    commands.py
     foundation_pages.py
     qmlplus_samples.py
     glyph_paint_device.py
     identity.py
+    interface_zoom.py
+    interface_zoom_controller.py
     intro_tour.py
     metrics.py
     motion.py

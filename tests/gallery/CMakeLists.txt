@@ -36,6 +36,66 @@ target_include_directories(FluentQtGalleryTestPlatform
     PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_link_libraries(FluentQtGalleryTestPlatform
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+fluent_qt_add_interface_zoom_support(FluentQtGalleryTestPlatform)
+
+if(Python3_Interpreter_FOUND)
+    add_test(NAME InterfaceZoomConfiguration.Contract
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/TestInterfaceZoomConfiguration.py")
+    set_tests_properties(InterfaceZoomConfiguration.Contract PROPERTIES
+        ENVIRONMENT "CMAKE_COMMAND=${CMAKE_COMMAND}"
+        LABELS "gallery;test_interface_zoom;cmake;local_full;ci_full"
+        TIMEOUT 90)
+endif()
+
+add_executable(test_interface_zoom_startup_probe InterfaceZoomStartupProbe.cpp)
+fluent_qt_configure_cpp_target(test_interface_zoom_startup_probe)
+target_include_directories(test_interface_zoom_startup_probe PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(test_interface_zoom_startup_probe PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+fluent_qt_add_interface_zoom_support(test_interface_zoom_startup_probe RESTART_ONLY)
+
+set(_interface_zoom_test_sources TestInterfaceZoom.cpp)
+if(APPLE)
+    list(APPEND _interface_zoom_test_sources TestInterfaceZoomBackdropMac.cpp)
+endif()
+add_qt_test_module(test_interface_zoom ${_interface_zoom_test_sources})
+fluent_qt_add_interface_zoom_support(test_interface_zoom)
+if(APPLE)
+    set_tests_properties(InterfaceZoomBackdropTest.NativeHalfDprCommitsOpaqueMaterialRemoval PROPERTIES
+        ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=cocoa"
+        LABELS "qt;unit;gallery;test_interface_zoom;platform_macos;local_desktop;native_window"
+        RUN_SERIAL TRUE TIMEOUT 30)
+endif()
+set_tests_properties(InterfaceZoomRepaintTest.NativePartialRepaintsMatchACompleteFrame
+    InterfaceZoomRepaintTest.NativeHalfDprSparsePatchesMatchACompleteFrame
+    InterfaceZoomRepaintTest.HalfDprWaitsForTheNativeBackingStore
+    InterfaceZoomRepaintTest.HalfDprKeepsDamageRaisedDuringEffectPainting
+    InterfaceZoomRepaintTest.HalfDprGpuFramesAvoidReadbackAndRecoverAfterCompositorUnlock
+    InterfaceZoomRepaintTest.HalfDprPreservesNativeEffectsAndOverlaySnapshots
+    PROPERTIES RUN_SERIAL TRUE)
+if(TARGET FluentQtSpatial)
+    # Exercise the GPU-backed QWidget window used by the real Gallery shell.
+    target_compile_definitions(test_interface_zoom PRIVATE FLUENT_QT_ZOOM_TEST_HAS_OPENGL_WIDGET=1)
+    if(QT_VERSION_MAJOR EQUAL 6)
+        target_link_libraries(test_interface_zoom PRIVATE Qt6::OpenGLWidgets)
+    endif()
+endif()
+target_compile_definitions(test_interface_zoom PRIVATE
+    FLUENT_QT_ZOOM_STARTUP_PROBE="$<TARGET_FILE:test_interface_zoom_startup_probe>")
+add_dependencies(test_interface_zoom test_interface_zoom_startup_probe)
+
+# Deliberately compile the restart-only backend independently of the live lane.
+add_library(FluentQtGalleryRestartTestPlatform OBJECT
+    ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
+    ${_gallery_test_resource_sources})
+fluent_qt_configure_cpp_target(FluentQtGalleryRestartTestPlatform)
+fluent_qt_enable_sanitizers(FluentQtGalleryRestartTestPlatform)
+target_include_directories(FluentQtGalleryRestartTestPlatform PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(FluentQtGalleryRestartTestPlatform PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+fluent_qt_add_interface_zoom_support(FluentQtGalleryRestartTestPlatform RESTART_ONLY)
+add_qt_test_module(test_gallery_zoom_restart TestGalleryZoomRestart.cpp)
+target_include_directories(test_gallery_zoom_restart PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_zoom_restart PRIVATE FluentQtGalleryCore
+    FluentQtGalleryRestartTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
 
 add_executable(test_gallery_single_instance_probe
     GallerySingleInstanceProbe.cpp
@@ -160,6 +220,7 @@ endforeach()
 
 if(WIN32)
     foreach(_gallery_test_target
+            test_gallery_zoom_restart
             test_gallery_single_instance_probe
             test_gallery_single_instance
             test_gallery_shell_framework
@@ -173,7 +234,7 @@ if(WIN32)
 endif()
 
 if(TARGET FluentQtSpatial)
-    foreach(_spatial_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
+    foreach(_spatial_gallery_test test_gallery_zoom_restart test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
         target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQtSpatialRenderer FluentQt::Spatial)
     endforeach()
 endif()
@@ -218,7 +279,7 @@ if(TARGET FluentQtQmlBridge)
             endif()
         endif()
     endforeach()
-    foreach(_qml_gallery_test test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
+    foreach(_qml_gallery_test test_gallery_zoom_restart test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
         if(TARGET ${_qml_gallery_test})
             target_link_libraries(${_qml_gallery_test} PRIVATE FluentQt::QmlBridge)
         endif()
@@ -229,7 +290,7 @@ endif()
 # particle module and its feature definition directly.
 if(TARGET FluentQtParticles)
     foreach(_particles_gallery_test
-            test_gallery_shell_framework test_gallery_shell_motion_policy
+            test_gallery_zoom_restart test_gallery_shell_framework test_gallery_shell_motion_policy
             test_gallery_spatial test_gallery_content_pages test_gallery_qml_bridge)
         if(TARGET ${_particles_gallery_test})
             target_link_libraries(${_particles_gallery_test} PRIVATE FluentQt::Particles)

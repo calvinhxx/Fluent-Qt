@@ -10,6 +10,7 @@ from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QScreen
 from PySide6.QtWidgets import QApplication, QWidget
 
+from .interface_zoom import DEFAULT_PERCENT, applied_zoom_percent
 from .settings import GallerySettings
 from .visual import _single_shot
 
@@ -51,13 +52,29 @@ def _proportional_extent(
     )
 
 
-def effective_minimum_size(available_size: QSize) -> QSize:
-    if not available_size.isValid() or available_size.isEmpty():
-        return QSize(MIN_WIDTH, MIN_HEIGHT)
-    return QSize(
-        min(MIN_WIDTH, available_size.width()),
-        min(MIN_HEIGHT, available_size.height()),
+def app_window_minimum_size(
+    available_size: QSize, zoom_percent: int = DEFAULT_PERCENT
+) -> QSize:
+    """Return the logical minimum for a native minimum fixed across zoom.
+
+    A larger interface zoom leaves the native minimum fewer logical pixels,
+    as in a browser window; the minimum never exceeds the screen.
+    """
+
+    percent = max(1, int(zoom_percent))
+    minimum = QSize(
+        (MIN_WIDTH * 100 + percent - 1) // percent,
+        (MIN_HEIGHT * 100 + percent - 1) // percent,
     )
+    if not available_size.isValid() or available_size.isEmpty():
+        return minimum
+    return minimum.boundedTo(available_size)
+
+
+def effective_minimum_size(
+    available_size: QSize, zoom_percent: int = DEFAULT_PERCENT
+) -> QSize:
+    return app_window_minimum_size(available_size, zoom_percent)
 
 
 def recommended_initial_size(available_size: QSize) -> QSize:
@@ -116,6 +133,10 @@ def constrain_geometry(
     )
 
 
+def _placement_zoom_percent(settings: GallerySettings | None) -> int:
+    return applied_zoom_percent()
+
+
 def _centered_initial_geometry(available: QRect, size: QSize) -> QRect:
     horizontal_slack = max(0, available.width() - size.width())
     vertical_slack = max(0, available.height() - size.height())
@@ -136,9 +157,11 @@ def restored_geometry(
     available: QRect,
     minimum_size: QSize,
 ) -> QRect:
+    # Geometry rounds to nearest, but minimum bounds round up after scaling.
+    # Preserve a valid placement that misses the minimum by one logical pixel.
     saved_size_is_usable = (
-        saved_geometry.width() >= minimum_size.width()
-        and saved_geometry.height() >= minimum_size.height()
+        saved_geometry.width() >= minimum_size.width() - 1
+        and saved_geometry.height() >= minimum_size.height() - 1
     )
     if (
         saved_geometry.isValid()
@@ -164,7 +187,9 @@ class GalleryWindowPlacement(QObject):
         super().__init__(parent)
         self._window = window
         self._settings = settings
-        self._last_normal_geometry = QRect()
+        self._last_normal_geometry = QRect(window.normalGeometry())
+        self._normal_zoom_percent = applied_zoom_percent()
+        self._normal_screen_origin = window.screen().geometry().topLeft() if window.screen() else QPoint()
         self._screen_tracking_connected = False
         self._restoring = False
         self._save_timer = QTimer(self)
@@ -195,15 +220,16 @@ class GalleryWindowPlacement(QObject):
             self._restoring = False
             return self._settings.window_maximized
         available = screen.availableGeometry()
-        minimum = effective_minimum_size(available.size())
-        self._window.setMinimumSize(minimum)
-        target = restored_geometry(
-            self._settings.window_normal_geometry,
-            available,
-            minimum,
+        minimum = effective_minimum_size(
+            available.size(), _placement_zoom_percent(self._settings)
         )
+        self._window.setMinimumSize(minimum)
+        saved = self._settings.window_normal_geometry
+        ratio = self._settings.window_geometry_zoom_percent / applied_zoom_percent()
+        origin = screen.geometry().topLeft()
+        target = restored_geometry(self._scaled_geometry(saved, origin, ratio), available, minimum)
         self._window.setGeometry(target)
-        self._last_normal_geometry = QRect(target)
+        self._remember_normal_geometry(target)
         self._restoring = False
         return self._settings.window_maximized
 
@@ -211,31 +237,42 @@ class GalleryWindowPlacement(QObject):
         if self._restoring:
             return
         state = self._window.windowState()
-        if not (state & Qt.WindowMinimized or state & Qt.WindowFullScreen):
-            candidate = (
-                self._window.normalGeometry()
-                if state & Qt.WindowMaximized
-                else self._window.geometry()
-            )
-            if candidate.isValid() and not candidate.isEmpty():
-                self._last_normal_geometry = QRect(candidate)
-        if (
-            not self._last_normal_geometry.isValid()
-            or self._last_normal_geometry.isEmpty()
-        ):
-            self._last_normal_geometry = self._window.geometry()
+        if self._is_normal(state):
+            self._remember_normal_geometry(self._window.geometry())
+        if not self._last_normal_geometry.isValid():
+            self._remember_normal_geometry(self._window.geometry())
+        geometry = self._scaled_geometry(self._last_normal_geometry, self._normal_screen_origin,
+                                         self._normal_zoom_percent / applied_zoom_percent())
         screen = self._window.screen()
         if screen is None:
             screen = QGuiApplication.screenAt(
-                self._last_normal_geometry.center()
+                geometry.center()
             )
         if screen is None:
             screen = QGuiApplication.primaryScreen()
         self._settings.set_window_placement(
-            self._last_normal_geometry,
+            geometry,
             screen.name() if screen is not None else "",
             bool(state & Qt.WindowMaximized),
         )
+
+    @staticmethod
+    def _is_normal(state) -> bool:
+        return not (state & (Qt.WindowMaximized | Qt.WindowMinimized | Qt.WindowFullScreen))
+
+    @staticmethod
+    def _scaled_geometry(geometry: QRect, origin: QPoint, ratio: float) -> QRect:
+        offset = geometry.topLeft() - origin
+        return QRect(origin + QPoint(_qround(offset.x() * ratio), _qround(offset.y() * ratio)),
+                     QSize(_qround(geometry.width() * ratio), _qround(geometry.height() * ratio)))
+
+    def _remember_normal_geometry(self, geometry: QRect) -> None:
+        if not geometry.isValid() or geometry.isEmpty():
+            return
+        self._last_normal_geometry = QRect(geometry)
+        self._normal_zoom_percent = applied_zoom_percent()
+        screen = self._window.screen()
+        self._normal_screen_origin = screen.geometry().topLeft() if screen else QPoint()
 
     def _connect_screen_tracking(self) -> None:
         handle = self._window.windowHandle()
@@ -256,7 +293,9 @@ class GalleryWindowPlacement(QObject):
         if screen is None:
             return
         available = screen.availableGeometry()
-        minimum = effective_minimum_size(available.size())
+        minimum = effective_minimum_size(
+            available.size(), _placement_zoom_percent(self._settings)
+        )
         self._window.setMinimumSize(minimum)
         state = self._window.windowState()
         if (
@@ -273,7 +312,7 @@ class GalleryWindowPlacement(QObject):
         if constrained != self._window.geometry():
             self._restoring = True
             self._window.setGeometry(constrained)
-            self._last_normal_geometry = QRect(constrained)
+            self._remember_normal_geometry(constrained)
             self._restoring = False
         self._schedule_save()
 
@@ -287,12 +326,21 @@ class GalleryWindowPlacement(QObject):
         event_type = event.type()
         if event_type == QEvent.Type.Show:
             self._connect_screen_tracking()
+            if self._is_normal(self._window.windowState()):
+                self._remember_normal_geometry(self._window.geometry())
             self._schedule_save()
         elif event_type in (
             QEvent.Type.Move,
             QEvent.Type.Resize,
-            QEvent.Type.WindowStateChange,
         ):
+            if self._is_normal(self._window.windowState()):
+                self._remember_normal_geometry(self._window.geometry())
+            self._schedule_save()
+        elif event_type == QEvent.Type.WindowStateChange:
+            if self._is_normal(event.oldState()):
+                self._remember_normal_geometry(self._window.normalGeometry())
+            elif self._is_normal(self._window.windowState()):
+                self._remember_normal_geometry(self._window.geometry())
             self._schedule_save()
         elif is_display_scale_change_event(event):
             _single_shot(
@@ -307,6 +355,7 @@ class GalleryWindowPlacement(QObject):
 
 __all__ = [
     "GalleryWindowPlacement",
+    "app_window_minimum_size",
     "constrain_geometry",
     "effective_minimum_size",
     "recommended_initial_size",

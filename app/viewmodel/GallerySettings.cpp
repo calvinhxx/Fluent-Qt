@@ -29,6 +29,8 @@ constexpr char kWindowMaximizedKey[] = "window/maximized";
 constexpr char kIntroCompletedKey[] = "intro/completed";
 constexpr char kLastHomeParticleEffectKey[] = "home/lastParticleEffect";
 constexpr char kHomeParticlesEnabledKey[] = "home/particlesEnabled";
+constexpr char kInterfaceZoomPercentKey[] = "settings/interfaceZoomPercent";
+constexpr char kWindowGeometryZoomPercentKey[] = "window/zoomPercent";
 constexpr char kSpatialModeEnabledKey[] = "settings/spatialModeEnabled";
 
 using BackdropEffect = fluent::windowing::BackdropEffect;
@@ -177,6 +179,29 @@ void GallerySettings::setHomeParticlesEnabled(bool enabled)
     emit homeParticlesEnabledChanged(enabled);
 }
 
+void GallerySettings::setInterfaceZoomPercent(int percent)
+{
+    percent = interfacezoom::nearestLevel(percent);
+    if (m_interfaceZoomPercent == percent)
+        return;
+    m_interfaceZoomPercent = percent;
+    if (platform::persistenceAvailable()) {
+        auto settings = platform::createSettings();
+        settings.setValue(QString::fromLatin1(kInterfaceZoomPercentKey), percent);
+        settings.sync();
+    }
+    emit interfaceZoomPercentChanged(percent);
+}
+
+int GallerySettings::storedInterfaceZoomPercent()
+{
+    if (!platform::persistenceAvailable())
+        return interfacezoom::DefaultPercent;
+    return interfacezoom::nearestLevel(platform::createSettings()
+            .value(QString::fromLatin1(kInterfaceZoomPercentKey), interfacezoom::DefaultPercent)
+            .toInt());
+}
+
 void GallerySettings::setLastHomeParticleEffect(const QString& effect)
 {
     if (m_lastHomeParticleEffect == effect)
@@ -312,14 +337,16 @@ void GallerySettings::setCloseBehavior(CloseBehavior behavior)
 
 void GallerySettings::setWindowPlacement(const QRect& normalGeometry, const QString& screenName, bool maximized)
 {
-    if (m_windowNormalGeometry == normalGeometry && m_windowScreenName == screenName
-        && m_windowMaximized == maximized) {
+    const int zoomPercent = qRound(platform::appliedInterfaceZoom() * 100);
+    if (m_windowNormalGeometry == normalGeometry && m_windowScreenName == screenName && m_windowMaximized == maximized
+        && m_windowGeometryZoomPercent == zoomPercent) {
         return;
     }
 
     m_windowNormalGeometry = normalGeometry;
     m_windowScreenName = screenName;
     m_windowMaximized = maximized;
+    m_windowGeometryZoomPercent = zoomPercent;
     if (!platform::capabilities().persistsWindowPlacement)
         return;
     if (!platform::persistenceAvailable())
@@ -329,6 +356,7 @@ void GallerySettings::setWindowPlacement(const QRect& normalGeometry, const QStr
     settings.setValue(QString::fromLatin1(kWindowNormalGeometryKey), normalGeometry);
     settings.setValue(QString::fromLatin1(kWindowScreenNameKey), screenName);
     settings.setValue(QString::fromLatin1(kWindowMaximizedKey), maximized);
+    settings.setValue(QString::fromLatin1(kWindowGeometryZoomPercentKey), zoomPercent);
 }
 
 void GallerySettings::setCloseBehaviorConfirmed(bool confirmed)
@@ -408,6 +436,13 @@ void GallerySettings::load()
     m_introCompleted = settings.value(QString::fromLatin1(kIntroCompletedKey), false).toBool();
     m_lastHomeParticleEffect = settings.value(QString::fromLatin1(kLastHomeParticleEffectKey)).toString();
     m_homeParticlesEnabled = settings.value(QString::fromLatin1(kHomeParticlesEnabledKey), true).toBool();
+    m_interfaceZoomPercent = interfacezoom::nearestLevel(
+        settings.value(QString::fromLatin1(kInterfaceZoomPercentKey), interfacezoom::DefaultPercent).toInt());
+    // Placement always writes this key with the geometry; without it the
+    // geometry predates interface zoom and was saved at 100%.
+    // zh_CN: 位置信息总会连同此键一起写入；缺少此键说明几何来自缩放功能之前，按 100% 保存。
+    m_windowGeometryZoomPercent = interfacezoom::nearestLevel(
+        settings.value(QString::fromLatin1(kWindowGeometryZoomPercentKey), interfacezoom::DefaultPercent).toInt());
     m_spatialModeEnabled = m_motionMode == MotionMode::Full && m_themeMode != ThemeMode::HighContrast
         && settings.value(QString::fromLatin1(kSpatialModeEnabledKey), m_spatialModeEnabled).toBool();
 }

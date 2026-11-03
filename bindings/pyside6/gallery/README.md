@@ -46,6 +46,38 @@ python -m fluentqt_gallery
 
 Use `--verify-catalog --walk-routes` for deterministic headless acceptance.
 
+## Interface zoom
+
+Ctrl/Cmd + `+`, `-`, or `0` and the command palette control Gallery zoom from
+50% to 200%. Like a browser, each change briefly shows a bubble below the
+trailing title bar with zoom out, the level, zoom in, and Reset; it stays open
+while hovered or focused. The C++ and Python applications share the native
+backend. Matching Qt private development headers are required; existing windows
+keep their native dimensions while the contents relayout at the new scale.
+Qt 5.15 and Qt 6.2 use screen-change notifications; newer Qt kits use the DPR
+notification API when CMake detects it.
+
+Startup combines the saved level with the caller's
+`QT_SCALE_FACTOR` before constructing QApplication. Window placement records its
+applied level separately, including the normal bounds of a maximized window.
+Preview and automated capture processes start at 100%.
+
+On macOS, fractional scales also need paint damage aligned to native points to
+avoid thin stale or transparent lines in Retina buffers. When Qt exposes its
+pending damage, the backend expands only those regions. Qt 5.15/6.2 and mixed
+raster/GPU windows preserve local repainting; pure GPU updates do not repaint
+the window bitmap. Integer native-point scales with DPR at least 1 keep Qt's
+normal repaint path. The adapter is shared by both Galleries and stays outside
+the SDK. Opening the zoom bubble does not temporarily move editor focus.
+
+Keep `FLUENT_QT_INTERFACE_ZOOM_LIVE=ON`. Gallery configuration fails with
+installation guidance if matching Core/Gui/Widgets private headers or repaint
+interfaces are missing. The Python entry point also rejects a binding built
+without this backend, before creating windows or changing saved settings.
+Ordinary Python binding builds and the Widgets library do not require these
+private headers. The base library's Qt 5.15+/6.2+ requirements are unchanged.
+WebAssembly uses the browser's zoom controls.
+
 ## QML+ foundation
 
 **Foundation → QML+** contains twelve atomic examples for direct/computed

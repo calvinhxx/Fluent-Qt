@@ -322,6 +322,30 @@ capture includes the nearest source pixel required by Qt and clips that extra
 area away during composition. Explicit widget masks remain in force, and the
 retained blur image stays downsampled.
 
+Gallery's matching-kit zoom adapter captures at unit density when the effective
+DPR is below 1. This avoids the minimum painter DPR in Qt 5.15/6.2 and effect
+filters that assume a density of at least 1. The Widgets library keeps its normal
+capture path without a private-header dependency. Native low-DPR repainting uses
+bounded dirty regions; pure GPU frames retain their texture-only path, and mixed
+frames reuse GPU textures without framebuffer readback. DPR 1 and above retain
+the existing painting path. Explicit raster caches use `FluentRasterCachePainter`
+from `PaintCompat.h` so older Qt versions preserve their sub-unit scale without
+changing stored DPR metadata. Explicit GPU targets normalize the paint-device
+DPR and apply the remaining scale once; framebuffer sizes and cache strips stay
+unchanged. `fluentDrawPixmapAt` and `fluentDrawImageAt` preserve the logical size
+of sub-unit-DPR caches when Qt's untransformed raster fast path would ignore it.
+These paint helpers have no private Qt or OpenGL dependency; Python Gallery uses
+the equivalent private `_qt_painting` helpers.
+
+Desktop Gallery requires matching Core, Gui and Widgets private headers and
+repaint interfaces at configuration time. It does not fall back to whole-window
+repainting or unsupported low-DPR drawing when these are missing. Library-only
+and ordinary binding builds retain their independent dependency contract.
+Low-DPR native tiles publish paint completion only after their pixels reach
+the backing store; ordinary snapshots cannot complete a native material change.
+Sparse distant patches use separate tiles to avoid allocating and clearing the
+large empty space between them.
+
 Capture and filtering happen on opening, resize,
 theme or radius changes, and an explicit `refreshBackdrop()` call. Content is
 frozen between those updates; applications with changing background content

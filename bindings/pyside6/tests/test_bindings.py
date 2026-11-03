@@ -1224,6 +1224,7 @@ class FluentQtBindingTest(unittest.TestCase):
             "_setThemeSource",
             "_addLightDismissPassthrough",
             "_clearLightDismissPassthrough",
+            "_setFocusOnOpenEnabled",
         ):
             self.assertTrue(hasattr(native.fluent.Popup, method_name))
         for method_name in (
@@ -1484,6 +1485,31 @@ class FluentQtBindingTest(unittest.TestCase):
         )
         self.assertEqual(info["qt_compile_version"], qVersion())
         self.assertEqual(info["qt_runtime_version"], qVersion())
+
+    def test_interface_zoom_helper_stays_private_to_the_gallery(self):
+        self.assertFalse(hasattr(fluentqt, "supportsInterfaceZoomForBinding"))
+        self.assertFalse(hasattr(fluentqt, "applyInterfaceZoomForBinding"))
+        self.assertIsInstance(native.supportsInterfaceZoomForBinding(), bool)
+        self.assertFalse(native.applyInterfaceZoomForBinding(0.0))
+        self.assertFalse(native.applyInterfaceZoomForBinding(-1.0))
+        if not native.supportsInterfaceZoomForBinding():
+            self.assertFalse(native.applyInterfaceZoomForBinding(1.25))
+            return
+        widget = QWidget()
+        widget.resize(400, 300)
+        widget.show()
+        QApplication.processEvents()
+        try:
+            dpr = widget.windowHandle().devicePixelRatio()
+            self.assertTrue(native.applyInterfaceZoomForBinding(1.25))
+            self.assertAlmostEqual(
+                widget.windowHandle().devicePixelRatio(), dpr * 1.25, places=3
+            )
+            self.assertEqual(widget.size(), QSize(320, 240))
+        finally:
+            self.assertTrue(native.applyInterfaceZoomForBinding(1.0))
+            self.assertEqual(widget.size(), QSize(400, 300))
+            delete_qobject(widget)
 
     def test_cpp_mixins_are_not_published_as_python_api(self):
         self.assertNotIn("FluentElement", dir(native.fluent))

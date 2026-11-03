@@ -2,6 +2,7 @@
 #define GALLERYWINDOWMETRICS_H
 
 #include <QMargins>
+#include <QSize>
 #include <QtGlobal>
 
 #include "design/Breakpoints.h"
@@ -21,6 +22,18 @@ struct AppWindow {
     static constexpr int InitialMaxWidth = 1440;
     static constexpr int InitialMaxHeight = 900;
     static constexpr int LeftPanelReserve = 160;
+
+    // The minimum is fixed in native pixels, so a larger interface zoom leaves
+    // it fewer logical pixels, as in a browser window; it never exceeds the screen.
+    // zh_CN: 最小尺寸以原生像素固定，界面缩放越大对应的逻辑像素越少，与浏览器窗口一致；不超过屏幕可用区域。
+    static QSize minimumSize(const QSize& availableSize, int zoomPercent)
+    {
+        const int percent = qMax(1, zoomPercent);
+        const QSize minimum((MinWidth * 100 + percent - 1) / percent, (MinHeight * 100 + percent - 1) / percent);
+        if (!availableSize.isValid() || availableSize.isEmpty())
+            return minimum;
+        return minimum.boundedTo(availableSize);
+    }
 };
 
 struct Navigation {

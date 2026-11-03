@@ -375,6 +375,16 @@ name from a private-use glyph; the caller supplies meaningful names and labels
 on the containing control. `TestFontIcon.cpp` covers family notifications,
 restoring the bundled mode, raw supplementary glyphs, and fractional/high DPI.
 
+Desktop Gallery zoom commands show a transient bubble with named decrease,
+increase, and reset buttons. Shortcuts and the command palette use the same
+commands; opening the bubble preserves the active editor's focus without a
+temporary focus-out or an `editingFinished` notification. C++ and Python share the
+50–200% levels. Desktop Gallery requires the matching Qt development interfaces
+at build time; it does not silently downgrade the zoom controls or repaint path.
+Saved window geometry records the applied level. Focus and limit-state
+contracts are covered by the Gallery shell and Python Gallery
+tests; native screen-reader announcements still require human verification.
+
 `CommandPalette` composes the native accessible search editor and model-backed
 `ListView` rows inside a same-window `Popup`. Row names include the command group
 and shortcut; enabled and checked states follow the borrowed `QAction`.
@@ -402,6 +412,10 @@ Backdrop capture preserves external effect shadows, including when only the
 shadow intersects the scrim. The shared snapshot adapter retains widget masks,
 geometry, visibility, effect state and focus; `OverlayScrimTest` covers these
 contracts without changing modal input routing or accessible widget bounds.
+Gallery's `InterfaceZoomRepaintTest` also covers effective DPR 0.5: native effect
+colors, half-transparent content, unchanged widget/effect state, local repainting,
+and GPU captures and compositor unlocks. The compatibility adapter changes paint
+density, not layout coordinates, focus ownership, or accessible bounds.
 Modal surfaces default to a subtle 4 px content blur unless explicitly configured;
 non-modal surfaces remain clear by default. High Contrast suppresses blur without
 weakening modal input containment.

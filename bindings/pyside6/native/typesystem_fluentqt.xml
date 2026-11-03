@@ -100,6 +100,10 @@ if (!paletteGuard) {
                function-name="^setItems$"/>
 
     <function signature="prepareHighDpiApplication()"/>
+    <function signature="supportsInterfaceZoomForBinding()"/>
+    <function signature="applyInterfaceZoomForBinding(qreal)"/>
+    <function signature="prepareInterfaceZoomForBinding(qreal)"/>
+    <function signature="appliedInterfaceZoomForBinding()"/>
     <function signature="initializeResources()"/>
     <function signature="fontForRole(Typography::FontRole)"/>
     <function signature="setTheme(fluent::binding::Theme)"/>
@@ -542,6 +546,9 @@ if (!paletteGuard) {
                                  rename="_addLightDismissPassthrough"/>
                 <modify-function signature="clearLightDismissPassthrough()"
                                  rename="_clearLightDismissPassthrough"/>
+                <!-- Gallery command bubbles share the C++ no-focus open path. -->
+                <modify-function signature="setFocusOnOpenEnabled(bool)"
+                                 rename="_setFocusOnOpenEnabled"/>
                 <!-- These hooks exist for C++ overlay subclasses, not for
                      application-level Python Popup customization. -->
                 <modify-function signature="onThemeUpdated()"
@@ -551,8 +558,6 @@ if (!paletteGuard) {
                 <modify-function signature="automaticPositionAnchor()const"
                                  remove="all"/>
                 <modify-function signature="shouldDismissOnOutsidePress(const QPoint&amp;)const"
-                                 remove="all"/>
-                <modify-function signature="setFocusOnOpenEnabled(bool)"
                                  remove="all"/>
             </object-type>
             <object-type name="Flyout">

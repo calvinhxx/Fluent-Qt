@@ -19,6 +19,16 @@ Python 3, vcpkg, and a supported desktop Qt Widgets kit (5.15+ or 6.2+). The
 Gallery and test dependencies are selected by the preset's vcpkg features;
 Qt is discovered from your installed kit.
 
+Desktop C++ Gallery and `FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON` require the
+matching Qt Core, Gui, and Widgets private development headers. These SDK
+files let Gallery preserve local repainting and support effective DPR below 1;
+configuration fails with installation guidance if the interfaces are missing.
+Keep `FLUENT_QT_INTERFACE_ZOOM_LIVE=ON`. Debian/Ubuntu packages are
+`qtbase5-private-dev` for Qt 5 or `qt6-base-private-dev` for Qt 6, matching the
+selected Qt kit. Library-only Widgets and ordinary Python binding builds do
+not acquire this requirement. Qt 5.15+/6.2+ remain supported; WebAssembly uses
+browser zoom.
+
 Enabling `FLUENT_QT_BUILD_QML_BRIDGE` with Qt 6.2–6.5 also requires the matching
 Qt Quick private development headers for its embedded keyboard-focus adapter.
 Qt 6.6+, Qt 5, and builds without QmlBridge do not need this additional dependency;

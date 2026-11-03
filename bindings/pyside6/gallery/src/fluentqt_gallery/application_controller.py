@@ -298,13 +298,16 @@ class GalleryApplicationController(QObject):
         menu.setObjectName("galleryStatusAreaMenu")
         open_action = menu.addAction("Open Fluent-Qt Gallery")
         settings_action = menu.addAction("Settings")
+        shortcuts_action = menu.addAction("Keyboard Shortcuts")
         menu.addSeparator()
         quit_action = menu.addAction("Quit Fluent-Qt Gallery")
         open_action.setObjectName("galleryStatusOpenAction")
         settings_action.setObjectName("galleryStatusSettingsAction")
+        shortcuts_action.setObjectName("galleryStatusShortcutsAction")
         quit_action.setObjectName("galleryStatusQuitAction")
         open_action.triggered.connect(self.restore_window)
         settings_action.triggered.connect(self.open_settings)
+        shortcuts_action.triggered.connect(self.open_keyboard_shortcuts)
         quit_action.triggered.connect(self.request_quit)
         icon.activated.connect(self._status_icon_activated)
         icon.setContextMenu(menu)
@@ -512,6 +515,12 @@ class GalleryApplicationController(QObject):
     def open_settings(self) -> None:
         self.restore_window()
         self._window.navigate("settings")
+
+    def open_keyboard_shortcuts(self) -> None:
+        self.restore_window()
+        # Let a restored window finish showing before the palette sizes itself
+        # against it.
+        _single_shot(0, self, self._window.show_command_palette)
 
     def arm_application_quit(self) -> None:
         if self._exit_requested:

@@ -9,6 +9,9 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QWidget>
+#include <QWindow>
+
+#include "support/interfacezoom/InterfaceZoom.h"
 
 #ifndef FLUENT_QT_GALLERY_DISPLAY_NAME
 #define FLUENT_QT_GALLERY_DISPLAY_NAME "Fluent-Qt Gallery"
@@ -85,10 +88,44 @@ void showTopLevelWindow(QWidget* window, const QRect& normalGeometry, bool maxim
     if (!window)
         return;
     window->setGeometry(normalGeometry);
-    if (maximized)
-        window->showMaximized();
-    else
+    if (!maximized) {
         window->show();
+        return;
+    }
+    // A hidden widget can already own a native surface whose size has not
+    // followed setGeometry(). Give that surface the normal geometry as its
+    // restore target, then map it maximized without a normal-size first frame.
+    // zh_CN: 隐藏控件可能已创建原生表面，但其尺寸尚未跟随 setGeometry()。
+    // 先把普通尺寸设为原生窗口的还原目标，再直接以最大化状态显示，避免先闪现普通尺寸。
+    if (QWindow* handle = window->windowHandle())
+        handle->setGeometry(normalGeometry);
+    window->setWindowState(window->windowState() | Qt::WindowMaximized);
+    window->show();
+}
+
+bool supportsInterfaceZoom()
+{
+    return true;
+}
+
+bool supportsLiveInterfaceZoom()
+{
+    return support::interfacezoom::isSupported();
+}
+
+qreal appliedInterfaceZoom()
+{
+    return support::interfacezoom::appliedZoom();
+}
+
+bool prepareInterfaceZoom(qreal zoom)
+{
+    return support::interfacezoom::prepareStartup(zoom);
+}
+
+bool applyInterfaceZoom(qreal zoom)
+{
+    return support::interfacezoom::apply(zoom);
 }
 
 } // namespace fluent::gallery::platform
