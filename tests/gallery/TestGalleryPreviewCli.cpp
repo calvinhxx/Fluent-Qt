@@ -14,6 +14,33 @@
 
 namespace {
 
+TEST(GalleryPreviewCliTest, HelpAndInvalidArgumentsExitWithoutStartingTheGallery)
+{
+    for (const auto& option : {QStringLiteral("--help"), QStringLiteral("--unknown-preview-option")}) {
+        SCOPED_TRACE(option.toStdString());
+        QProcess process;
+        auto environment = QProcessEnvironment::systemEnvironment();
+        environment.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("offscreen"));
+        process.setProcessEnvironment(environment);
+        process.setProgram(QString::fromUtf8(FLUENT_QT_GALLERY_PREVIEW_PATH));
+        process.setArguments({QStringLiteral("--preview"), option});
+        process.start();
+        ASSERT_TRUE(process.waitForStarted(10000));
+        ASSERT_TRUE(process.waitForFinished(30000));
+        EXPECT_EQ(process.exitStatus(), QProcess::NormalExit);
+        const QByteArray output = process.readAllStandardOutput();
+        const QByteArray error = process.readAllStandardError();
+        EXPECT_FALSE(error.contains("QCoreApplication::arguments")) << error.toStdString();
+        if (option == QStringLiteral("--help")) {
+            EXPECT_EQ(process.exitCode(), 0) << error.toStdString();
+            EXPECT_TRUE(output.contains("--preview"));
+        } else {
+            EXPECT_EQ(process.exitCode(), 2) << error.toStdString();
+            EXPECT_TRUE(error.contains("unknown-preview-option"));
+        }
+    }
+}
+
 TEST(GalleryPreviewCliTest, CapturesNamedContentAndRejectsMissingTargets)
 {
     QTemporaryDir directory;
@@ -63,7 +90,8 @@ TEST(GalleryPreviewCliTest, RendersTargetedSampleAndPrintsJsonReport)
     process.setArguments({QStringLiteral("--preview"), QStringLiteral("--route"), QStringLiteral("button"),
         QStringLiteral("--sample"), QStringLiteral("button-styles"), QStringLiteral("--theme"), QStringLiteral("dark"),
         QStringLiteral("--rtl"), QStringLiteral("--size"), QStringLiteral("720x540"), QStringLiteral("--settle-ms"),
-        QStringLiteral("0"), QStringLiteral("--report"), QStringLiteral("-")});
+        QStringLiteral("0"), QStringLiteral("--report"), QStringLiteral("-"), QStringLiteral("-platform"),
+        QStringLiteral("offscreen")});
 
     process.start();
     ASSERT_TRUE(process.waitForStarted(10000)) << process.errorString().toStdString();

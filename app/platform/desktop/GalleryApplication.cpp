@@ -37,11 +37,14 @@ int runApplication(int argc, char** argv)
     QStringList arguments;
     for (int index = 0; index < argc; ++index)
         arguments.append(QString::fromLocal8Bit(argv[index]));
-    const GalleryPreviewParseResult preview = parseGalleryPreviewArguments(arguments);
-    if (!preview.options.requested)
+    if (!galleryPreviewRequested(arguments))
         prepareInterfaceZoom(GallerySettings::storedInterfaceZoomPercent() / 100.0);
     fluent::prepareHighDpiApplication();
     QApplication app(argc, argv);
+    // Qt's parser help uses application arguments; defer full parsing until the
+    // application exists and has consumed its own platform options.
+    // zh_CN: Qt 的帮助文本会读取应用参数；创建应用并消费平台参数后再做完整解析。
+    const GalleryPreviewParseResult preview = parseGalleryPreviewArguments(app.arguments());
 #if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
     using QmlSession = fluent::qmlbridge::QmlSession;
     auto graphicsApi = QmlSession::GraphicsApi::OpenGL;

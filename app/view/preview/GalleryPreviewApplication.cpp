@@ -438,10 +438,15 @@ void writeStandardError(const QString& message)
 
 } // namespace
 
+bool galleryPreviewRequested(const QStringList& arguments)
+{
+    return arguments.contains(QStringLiteral("--preview"));
+}
+
 GalleryPreviewParseResult parseGalleryPreviewArguments(const QStringList& arguments)
 {
     GalleryPreviewParseResult result;
-    const bool requested = arguments.contains(QStringLiteral("--preview"));
+    const bool requested = galleryPreviewRequested(arguments);
     result.options.requested = requested;
     if (!requested)
         return result;
