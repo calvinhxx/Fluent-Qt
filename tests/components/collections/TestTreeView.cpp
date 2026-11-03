@@ -326,39 +326,36 @@ TEST_F(TreeViewTest, EmptyTreeView)
 // Selection
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, DefaultSelectionMode)
-{
-    TreeView* tv = new TreeView(window);
-    EXPECT_EQ(tv->selectionMode(), SelectionMode::Single);
-}
-
 TEST_F(TreeViewTest, SelectionModeSwitch)
 {
-    TreeView* tv = new TreeView(window);
-    attachSampleModel(tv);
-
-    QSignalSpy spy(tv, &TreeView::selectionModeChanged);
-
-    tv->setSelectionMode(SelectionMode::Multiple);
-    EXPECT_EQ(tv->selectionMode(), SelectionMode::Multiple);
-    EXPECT_EQ(spy.count(), 1);
-
-    tv->setSelectionMode(SelectionMode::None);
-    EXPECT_EQ(tv->selectionMode(), SelectionMode::None);
-    EXPECT_EQ(spy.count(), 2);
-
-    tv->setSelectionMode(SelectionMode::Extended);
-    EXPECT_EQ(tv->selectionMode(), SelectionMode::Extended);
-    EXPECT_EQ(spy.count(), 3);
-}
-
-TEST_F(TreeViewTest, SelectionModeDuplicateIgnored)
-{
-    TreeView* tv = new TreeView(window);
-    QSignalSpy spy(tv, &TreeView::selectionModeChanged);
-
-    tv->setSelectionMode(SelectionMode::Single);
+    struct Mapping {
+        SelectionMode mode;
+        QAbstractItemView::SelectionMode qtMode;
+    };
+    const Mapping modes[] = {
+        {SelectionMode::Multiple, QAbstractItemView::MultiSelection},
+        {SelectionMode::None, QAbstractItemView::NoSelection},
+        {SelectionMode::Extended, QAbstractItemView::ExtendedSelection},
+        {SelectionMode::Single, QAbstractItemView::SingleSelection},
+    };
+    TreeView view(window);
+    attachSampleModel(&view);
+    EXPECT_EQ(view.selectionMode(), SelectionMode::Single);
+    QSignalSpy spy(&view, &TreeView::selectionModeChanged);
+    view.setSelectionMode(SelectionMode::Single);
     EXPECT_EQ(spy.count(), 0);
+
+    int expectedSignals = 0;
+    for (const auto& mode : modes) {
+        SCOPED_TRACE(static_cast<int>(mode.mode));
+        ++expectedSignals;
+        view.setSelectionMode(mode.mode);
+        EXPECT_EQ(view.selectionMode(), mode.mode);
+        EXPECT_EQ(static_cast<QAbstractItemView*>(&view)->selectionMode(), mode.qtMode);
+        EXPECT_EQ(spy.count(), expectedSignals);
+        view.setSelectionMode(mode.mode);
+        EXPECT_EQ(spy.count(), expectedSignals);
+    }
 }
 
 TEST_F(TreeViewTest, SetSelectedItem)
@@ -1060,16 +1057,11 @@ TEST_F(TreeViewTest, CollapseStopsExpandAnimation)
 // Appearance Properties
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, DefaultBorderVisible)
+TEST_F(TreeViewTest, SetBorderVisible)
 {
     TreeView* tv = new TreeView(window);
     EXPECT_TRUE(tv->borderVisible());
     EXPECT_TRUE(tv->isBorderVisible());
-}
-
-TEST_F(TreeViewTest, SetBorderVisible)
-{
-    TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::borderVisibleChanged);
 
     tv->setBorderVisible(false);
@@ -1081,16 +1073,11 @@ TEST_F(TreeViewTest, SetBorderVisible)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, DefaultBackgroundVisible)
+TEST_F(TreeViewTest, SetBackgroundVisible)
 {
     TreeView* tv = new TreeView(window);
     EXPECT_TRUE(tv->backgroundVisible());
     EXPECT_TRUE(tv->isBackgroundVisible());
-}
-
-TEST_F(TreeViewTest, SetBackgroundVisible)
-{
-    TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::backgroundVisibleChanged);
 
     tv->setBackgroundVisible(false);
@@ -1451,27 +1438,16 @@ TEST_F(TreeViewTest, ChevronRotationApi)
 // Drag reorder (file-manager style)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, DefaultCanReorderItems)
-{
-    TreeView* tv = new TreeView(window);
-    EXPECT_FALSE(tv->canReorderItems());
-}
-
 TEST_F(TreeViewTest, SetCanReorderItems)
 {
     TreeView* tv = new TreeView(window);
+    EXPECT_FALSE(tv->canReorderItems());
     QSignalSpy spy(tv, &TreeView::canReorderItemsChanged);
     tv->setCanReorderItems(true);
     EXPECT_TRUE(tv->canReorderItems());
     EXPECT_EQ(spy.count(), 1);
-}
 
-TEST_F(TreeViewTest, CanReorderItemsSignalNotDuplicate)
-{
-    TreeView* tv = new TreeView(window);
-    QSignalSpy spy(tv, &TreeView::canReorderItemsChanged);
     tv->setCanReorderItems(true);
-    tv->setCanReorderItems(true); // same
     EXPECT_EQ(spy.count(), 1);
 }
 

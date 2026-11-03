@@ -34,87 +34,6 @@ protected:
         window->setFixedSize(600, 600);
         window->setWindowTitle("Fluent ToggleButton Visual Test");
 
-        auto* layout = new QVBoxLayout(window);
-        layout->setContentsMargins(40, 40, 40, 40);
-        layout->setSpacing(20);
-
-        // 1. Basic ToggleButton
-        layout->addWidget(new QLabel("1. Basic ToggleButton:", window));
-        auto* hLayout1 = new QHBoxLayout();
-        auto* toggle1 = new ToggleButton("ToggleButton", window);
-        auto* label1 = new QLabel("Output: Off", window);
-
-        QObject::connect(toggle1, &ToggleButton::toggled, [label1](bool checked) {
-            label1->setText(QString("Output: %1").arg(checked ? "On" : "Off"));
-        });
-
-        hLayout1->addWidget(toggle1);
-        hLayout1->addWidget(label1);
-        hLayout1->addStretch();
-        layout->addLayout(hLayout1);
-
-        // 2. Disabled ToggleButton
-        layout->addWidget(new QLabel("2. Disabled ToggleButton:", window));
-        auto* hLayout2 = new QHBoxLayout();
-        auto* toggle2 = new ToggleButton("Disabled Off", window);
-        toggle2->setEnabled(false);
-        auto* toggle3 = new ToggleButton("Disabled On", window);
-        toggle3->setChecked(true);
-        toggle3->setEnabled(false);
-        hLayout2->addWidget(toggle2);
-        hLayout2->addWidget(toggle3);
-        hLayout2->addStretch();
-        layout->addLayout(hLayout2);
-
-        // 3. Different Sizes
-        layout->addWidget(new QLabel("3. Different Sizes:", window));
-        auto* hLayout3 = new QHBoxLayout();
-        auto* small = new ToggleButton("Small", window);
-        small->setFluentSize(Button::Small);
-        auto* normal = new ToggleButton("Standard", window);
-        normal->setFluentSize(Button::StandardSize);
-        auto* large = new ToggleButton("Large", window);
-        large->setFluentSize(Button::Large);
-        hLayout3->addWidget(small);
-        hLayout3->addWidget(normal);
-        hLayout3->addWidget(large);
-        hLayout3->addStretch();
-        layout->addLayout(hLayout3);
-
-        // 4. ThreeState ToggleButton
-        layout->addWidget(new QLabel(
-            "4. ThreeState ToggleButton (Unchecked -> Checked -> Indeterminate):", window));
-        auto* hLayout4 = new QHBoxLayout();
-        auto* toggle4 = new ToggleButton("ThreeState", window);
-        toggle4->setThreeState(true);
-        auto* label4 = new QLabel("State: Unchecked", window);
-
-        QObject::connect(toggle4, &ToggleButton::checkStateChanged, [label4](Qt::CheckState state) {
-            QString stateStr = "Unchecked";
-            if (state == Qt::Checked)
-                stateStr = "Checked";
-            else if (state == Qt::PartiallyChecked)
-                stateStr = "Indeterminate";
-            label4->setText(QString("State: %1").arg(stateStr));
-        });
-
-        hLayout4->addWidget(toggle4);
-        hLayout4->addWidget(label4);
-        hLayout4->addStretch();
-        layout->addLayout(hLayout4);
-
-        layout->addStretch();
-
-        // Theme switch button
-        auto* themeBtn = new QPushButton("Switch Theme", window);
-        layout->addWidget(themeBtn);
-        QObject::connect(themeBtn, &QPushButton::clicked, []() {
-            fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                    fluent::FluentElement::Light
-                                                ? fluent::FluentElement::Dark
-                                                : fluent::FluentElement::Light);
-        });
-
         window->onThemeUpdated();
     }
 
@@ -168,8 +87,7 @@ TEST_F(ToggleButtonTest, Contract_ToggledCallbackCanDeleteButton)
     auto* toggle = new ToggleButton(QStringLiteral("Toggle"));
     QPointer<ToggleButton> guard(toggle);
     int checkStateNotifications = 0;
-    QObject::connect(toggle, &ToggleButton::checkStateChanged, window,
-                     [&] { ++checkStateNotifications; });
+    QObject::connect(toggle, &ToggleButton::checkStateChanged, window, [&] { ++checkStateNotifications; });
     QObject::connect(toggle, &QPushButton::toggled, window, [toggle] { delete toggle; });
 
     toggle->setCheckState(Qt::Checked);
@@ -208,12 +126,11 @@ TEST_F(ToggleButtonTest, Contract_ClickToggledCallbackCanDeleteButton)
         toggle->setThreeState(threeState);
         QPointer<ToggleButton> guard(toggle);
         int notifications = 0;
-        QObject::connect(toggle, &QPushButton::toggled, window,
-                         [toggle, &notifications](bool checked) {
-                             EXPECT_TRUE(checked);
-                             ++notifications;
-                             delete toggle;
-                         });
+        QObject::connect(toggle, &QPushButton::toggled, window, [toggle, &notifications](bool checked) {
+            EXPECT_TRUE(checked);
+            ++notifications;
+            delete toggle;
+        });
 
         toggle->click();
 
@@ -226,8 +143,7 @@ TEST_F(ToggleButtonTest, Contract_CheckStateCallbackCanDeleteButton)
 {
     auto* toggle = new ToggleButton(QStringLiteral("Toggle"));
     QPointer<ToggleButton> guard(toggle);
-    QObject::connect(toggle, &ToggleButton::checkStateChanged, window,
-                     [toggle](Qt::CheckState) { delete toggle; });
+    QObject::connect(toggle, &ToggleButton::checkStateChanged, window, [toggle](Qt::CheckState) { delete toggle; });
 
     toggle->setCheckState(Qt::Checked);
 
@@ -299,12 +215,12 @@ TEST_F(ToggleButtonTest, Contract_GroupNotificationOrderAndReentryArePreserved)
     toggle.setCheckState(Qt::Checked);
 
     EXPECT_EQ(toggle.checkState(), Qt::PartiallyChecked);
-    EXPECT_EQ(events, (QStringList{QStringLiteral("toggled:on"), QStringLiteral("group:on"),
-                                   QStringLiteral("state:1")}));
+    EXPECT_EQ(events,
+        (QStringList{QStringLiteral("toggled:on"), QStringLiteral("group:on"), QStringLiteral("state:1")}));
     events.clear();
     toggle.setCheckState(Qt::Unchecked);
-    EXPECT_EQ(events, (QStringList{QStringLiteral("toggled:off"), QStringLiteral("group:off"),
-                                   QStringLiteral("state:0")}));
+    EXPECT_EQ(events,
+        (QStringList{QStringLiteral("toggled:off"), QStringLiteral("group:off"), QStringLiteral("state:0")}));
 }
 
 TEST_F(ToggleButtonTest, Contract_ExclusiveButtonsKeepQtSelectionRules)
@@ -386,6 +302,85 @@ TEST_F(ToggleButtonTest, VisualCheck)
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
+
+    auto* layout = new QVBoxLayout(window);
+    layout->setContentsMargins(40, 40, 40, 40);
+    layout->setSpacing(20);
+
+    // 1. Basic ToggleButton
+    layout->addWidget(new QLabel("1. Basic ToggleButton:", window));
+    auto* hLayout1 = new QHBoxLayout();
+    auto* toggle1 = new ToggleButton("ToggleButton", window);
+    auto* label1 = new QLabel("Output: Off", window);
+
+    QObject::connect(toggle1, &ToggleButton::toggled, [label1](bool checked) {
+        label1->setText(QString("Output: %1").arg(checked ? "On" : "Off"));
+    });
+
+    hLayout1->addWidget(toggle1);
+    hLayout1->addWidget(label1);
+    hLayout1->addStretch();
+    layout->addLayout(hLayout1);
+
+    // 2. Disabled ToggleButton
+    layout->addWidget(new QLabel("2. Disabled ToggleButton:", window));
+    auto* hLayout2 = new QHBoxLayout();
+    auto* toggle2 = new ToggleButton("Disabled Off", window);
+    toggle2->setEnabled(false);
+    auto* toggle3 = new ToggleButton("Disabled On", window);
+    toggle3->setChecked(true);
+    toggle3->setEnabled(false);
+    hLayout2->addWidget(toggle2);
+    hLayout2->addWidget(toggle3);
+    hLayout2->addStretch();
+    layout->addLayout(hLayout2);
+
+    // 3. Different Sizes
+    layout->addWidget(new QLabel("3. Different Sizes:", window));
+    auto* hLayout3 = new QHBoxLayout();
+    auto* small = new ToggleButton("Small", window);
+    small->setFluentSize(Button::Small);
+    auto* normal = new ToggleButton("Standard", window);
+    normal->setFluentSize(Button::StandardSize);
+    auto* large = new ToggleButton("Large", window);
+    large->setFluentSize(Button::Large);
+    hLayout3->addWidget(small);
+    hLayout3->addWidget(normal);
+    hLayout3->addWidget(large);
+    hLayout3->addStretch();
+    layout->addLayout(hLayout3);
+
+    // 4. ThreeState ToggleButton
+    layout->addWidget(new QLabel("4. ThreeState ToggleButton (Unchecked -> Checked -> Indeterminate):", window));
+    auto* hLayout4 = new QHBoxLayout();
+    auto* toggle4 = new ToggleButton("ThreeState", window);
+    toggle4->setThreeState(true);
+    auto* label4 = new QLabel("State: Unchecked", window);
+
+    QObject::connect(toggle4, &ToggleButton::checkStateChanged, [label4](Qt::CheckState state) {
+        QString stateStr = "Unchecked";
+        if (state == Qt::Checked)
+            stateStr = "Checked";
+        else if (state == Qt::PartiallyChecked)
+            stateStr = "Indeterminate";
+        label4->setText(QString("State: %1").arg(stateStr));
+    });
+
+    hLayout4->addWidget(toggle4);
+    hLayout4->addWidget(label4);
+    hLayout4->addStretch();
+    layout->addLayout(hLayout4);
+
+    layout->addStretch();
+
+    // Theme switch button
+    auto* themeBtn = new QPushButton("Switch Theme", window);
+    layout->addWidget(themeBtn);
+    QObject::connect(themeBtn, &QPushButton::clicked, []() {
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
+    });
 
     window->show();
     qApp->exec();

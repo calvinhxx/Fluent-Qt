@@ -73,6 +73,11 @@ synchronization, use [Testing Workflow](testing-workflow.md).
 - Group defaults, value transitions and duplicate-signal checks for one property
   in one test. Use table-driven rows with `SCOPED_TRACE` for equivalent mappings;
   preserve independent cases for different ownership or event-loop behavior.
+- Model/view tests must assert the Fluent view's behavior. Do not retain cases
+  that only call test-local model helpers and read the same Qt model back.
+  Keep selection, model lifetime, geometry and input regressions independent.
+- Build manual demonstration controls inside the guarded `VisualCheck` body,
+  not in fixture `SetUp()`, so automated cases do not construct an unused demo.
 - Register component tests with `add_qt_test_module(test_<name> Test<Name>.cpp
   [extra sources...])`.
 - Test binaries share Qt setup through `tests/support/QtGTestMain.cpp`; do not

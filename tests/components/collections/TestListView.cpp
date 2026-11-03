@@ -69,46 +69,6 @@ QString itemText(ListView* lv, int index)
     return m->index(index, 0).data(Qt::DisplayRole).toString();
 }
 
-void addItem(ListView* lv, const QString& text)
-{
-    auto* slm = qobject_cast<QStringListModel*>(lv->model());
-    ASSERT_NE(slm, nullptr);
-    QStringList list = slm->stringList();
-    list.append(text);
-    slm->setStringList(list);
-}
-
-void addItems(ListView* lv, const QStringList& texts)
-{
-    auto* slm = qobject_cast<QStringListModel*>(lv->model());
-    ASSERT_NE(slm, nullptr);
-    QStringList list = slm->stringList();
-    list.append(texts);
-    slm->setStringList(list);
-}
-
-void insertItem(ListView* lv, int index, const QString& text)
-{
-    auto* slm = qobject_cast<QStringListModel*>(lv->model());
-    ASSERT_NE(slm, nullptr);
-    QStringList list = slm->stringList();
-    ASSERT_GE(index, 0);
-    ASSERT_LE(index, list.size());
-    list.insert(index, text);
-    slm->setStringList(list);
-}
-
-void removeItem(ListView* lv, int index)
-{
-    auto* slm = qobject_cast<QStringListModel*>(lv->model());
-    ASSERT_NE(slm, nullptr);
-    QStringList list = slm->stringList();
-    ASSERT_GE(index, 0);
-    ASSERT_LT(index, list.size());
-    list.removeAt(index);
-    slm->setStringList(list);
-}
-
 void clearItems(ListView* lv)
 {
     auto* slm = qobject_cast<QStringListModel*>(lv->model());
@@ -253,64 +213,42 @@ TEST_F(ListViewTest, Contract_ReshowPreservesScrollUnlessSelectionChangedWhileHi
         static_cast<QAbstractItemView*>(list)->visualRect(list->model()->index(90, 0))));
 }
 
-TEST_F(ListViewTest, AddAndRemoveItems)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv);
-
-    addItem(lv, "Apple");
-    addItem(lv, "Banana");
-    addItem(lv, "Cherry");
-    EXPECT_EQ(itemCount(lv), 3);
-    EXPECT_EQ(itemText(lv, 0), "Apple");
-    EXPECT_EQ(itemText(lv, 1), "Banana");
-    EXPECT_EQ(itemText(lv, 2), "Cherry");
-
-    removeItem(lv, 1);
-    EXPECT_EQ(itemCount(lv), 2);
-    EXPECT_EQ(itemText(lv, 0), "Apple");
-    EXPECT_EQ(itemText(lv, 1), "Cherry");
-
-    clearItems(lv);
-    EXPECT_EQ(itemCount(lv), 0);
-}
-
-TEST_F(ListViewTest, AddItemsBatch)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv);
-    addItems(lv, {"A", "B", "C", "D"});
-    EXPECT_EQ(itemCount(lv), 4);
-    EXPECT_EQ(itemText(lv, 3), "D");
-}
-
-TEST_F(ListViewTest, InsertItem)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv);
-    addItems(lv, {"A", "C"});
-    insertItem(lv, 1, "B");
-    EXPECT_EQ(itemCount(lv), 3);
-    EXPECT_EQ(itemText(lv, 0), "A");
-    EXPECT_EQ(itemText(lv, 1), "B");
-    EXPECT_EQ(itemText(lv, 2), "C");
-}
-
-TEST_F(ListViewTest, ItemTextOutOfRange)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv);
-    addItem(lv, "Only");
-    EXPECT_EQ(itemText(lv, -1), "");
-    EXPECT_EQ(itemText(lv, 1), "");
-}
-
 // ── 视图：选择模式 ────────────────────────────────────────────────────────────
 
-TEST_F(ListViewTest, DefaultSelectionMode)
+TEST_F(ListViewTest, SelectionModeChangesOnlyOnTransitions)
 {
-    ListView* lv = new ListView(window);
-    EXPECT_EQ(lv->selectionMode(), SelectionMode::Single);
+    struct Mapping {
+        SelectionMode mode;
+        QAbstractItemView::SelectionMode qtMode;
+    };
+    const Mapping modes[] = {
+        {SelectionMode::None, QAbstractItemView::NoSelection},
+        {SelectionMode::Single, QAbstractItemView::SingleSelection},
+        {SelectionMode::Multiple, QAbstractItemView::MultiSelection},
+        {SelectionMode::Extended, QAbstractItemView::ExtendedSelection},
+    };
+    for (const auto& mode : modes) {
+        SCOPED_TRACE(static_cast<int>(mode.mode));
+        ListView view(window);
+        attachStringListModel(&view, {"A", "B", "C"});
+        EXPECT_EQ(view.selectionMode(), SelectionMode::Single);
+        QSignalSpy spy(&view, &ListView::selectionModeChanged);
+        view.setSelectionMode(SelectionMode::Single);
+        EXPECT_EQ(spy.count(), 0);
+
+        const int changes = mode.mode == SelectionMode::Single ? 0 : 1;
+        view.setSelectionMode(mode.mode);
+        EXPECT_EQ(view.selectionMode(), mode.mode);
+        EXPECT_EQ(static_cast<QAbstractItemView*>(&view)->selectionMode(), mode.qtMode);
+        EXPECT_EQ(spy.count(), changes);
+        view.setSelectionMode(mode.mode);
+        EXPECT_EQ(spy.count(), changes);
+
+        view.setSelectionMode(SelectionMode::Single);
+        EXPECT_EQ(view.selectionMode(), SelectionMode::Single);
+        EXPECT_EQ(static_cast<QAbstractItemView*>(&view)->selectionMode(), QAbstractItemView::SingleSelection);
+        EXPECT_EQ(spy.count(), 2 * changes);
+    }
 }
 
 TEST_F(ListViewTest, DefaultEditTriggersDisabled)
@@ -327,33 +265,6 @@ TEST_F(ListViewTest, SelectionModeRegisteredInMetaObject)
     EXPECT_STREQ(me.key(1), "Single");
     EXPECT_STREQ(me.key(2), "Multiple");
     EXPECT_STREQ(me.key(3), "Extended");
-}
-
-TEST_F(ListViewTest, SelectionModeNone)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv, {"A", "B", "C"});
-    lv->setSelectionMode(SelectionMode::None);
-    EXPECT_EQ(lv->selectionMode(), SelectionMode::None);
-}
-
-TEST_F(ListViewTest, SelectionModeMultiple)
-{
-    ListView* lv = new ListView(window);
-    QSignalSpy spy(lv, SIGNAL(selectionModeChanged()));
-    lv->setSelectionMode(SelectionMode::Multiple);
-    EXPECT_EQ(lv->selectionMode(), SelectionMode::Multiple);
-    EXPECT_EQ(spy.count(), 1);
-
-    lv->setSelectionMode(SelectionMode::Multiple);
-    EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(ListViewTest, SelectionModeExtended)
-{
-    ListView* lv = new ListView(window);
-    lv->setSelectionMode(SelectionMode::Extended);
-    EXPECT_EQ(lv->selectionMode(), SelectionMode::Extended);
 }
 
 // ── 选中 API（依赖已 setModel）────────────────────────────────────────────────
@@ -420,37 +331,12 @@ TEST_F(ListViewTest, ViewportHoveredSignal)
     EXPECT_EQ(spy.count(), 2);
 }
 
-// ── 视图默认属性 / 业务 delegate 行高 ──────────────────────────────────────────
-
-TEST_F(ListViewTest, DefaultFontRole)
-{
-    ListView* lv = new ListView(window);
-    EXPECT_EQ(lv->fontRole(), Typography::FontRole::Body);
-}
-
-TEST_F(ListViewTest, FluentDelegateDefaultRowHeight)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv);
-    auto* del = qobject_cast<listview_test::FluentListItemDelegate*>(lv->itemDelegate());
-    ASSERT_NE(del, nullptr);
-    EXPECT_EQ(del->rowHeight(), defaultListRowHeight());
-}
-
-TEST_F(ListViewTest, FluentDelegateSetRowHeight)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv);
-    auto* del = qobject_cast<listview_test::FluentListItemDelegate*>(lv->itemDelegate());
-    ASSERT_NE(del, nullptr);
-    del->setRowHeight(48);
-    lv->doItemsLayout();
-    EXPECT_EQ(del->rowHeight(), 48);
-}
+// ── Typography ───────────────────────────────────────────────────────────────
 
 TEST_F(ListViewTest, SetFontRole)
 {
     ListView* lv = new ListView(window);
+    EXPECT_EQ(lv->fontRole(), Typography::FontRole::Body);
     QSignalSpy spy(lv, SIGNAL(fontRoleChanged()));
     lv->setFontRole(Typography::FontRole::Subtitle);
     EXPECT_EQ(lv->fontRole(), Typography::FontRole::Subtitle);
@@ -638,16 +524,11 @@ TEST_F(ListViewTest, ViewDoesNotProvideModelByDefault)
 
 // ── 新增属性: borderVisible / headerText / placeholderText ────────────────────
 
-TEST_F(ListViewTest, DefaultBorderVisible)
+TEST_F(ListViewTest, SetBorderVisible)
 {
     ListView* lv = new ListView(window);
     EXPECT_TRUE(lv->borderVisible());
     EXPECT_TRUE(lv->isBorderVisible());
-}
-
-TEST_F(ListViewTest, SetBorderVisible)
-{
-    ListView* lv = new ListView(window);
     QSignalSpy spy(lv, &ListView::borderVisibleChanged);
     lv->setBorderVisible(false);
     EXPECT_FALSE(lv->borderVisible());
@@ -659,15 +540,10 @@ TEST_F(ListViewTest, SetBorderVisible)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ListViewTest, DefaultHeaderText)
-{
-    ListView* lv = new ListView(window);
-    EXPECT_TRUE(lv->headerText().isEmpty());
-}
-
 TEST_F(ListViewTest, SetHeaderText)
 {
     ListView* lv = new ListView(window);
+    EXPECT_TRUE(lv->headerText().isEmpty());
     QSignalSpy spy(lv, &ListView::headerTextChanged);
     lv->setHeaderText("My Header");
     EXPECT_EQ(lv->headerText(), "My Header");
@@ -678,15 +554,10 @@ TEST_F(ListViewTest, SetHeaderText)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ListViewTest, DefaultPlaceholderText)
-{
-    ListView* lv = new ListView(window);
-    EXPECT_TRUE(lv->placeholderText().isEmpty());
-}
-
 TEST_F(ListViewTest, SetPlaceholderText)
 {
     ListView* lv = new ListView(window);
+    EXPECT_TRUE(lv->placeholderText().isEmpty());
     QSignalSpy spy(lv, &ListView::placeholderTextChanged);
     lv->setPlaceholderText("No items");
     EXPECT_EQ(lv->placeholderText(), "No items");
@@ -774,31 +645,20 @@ TEST_F(ListViewTest, SetHeaderReplacesTextHeader)
 
 // ── Flow 属性 ─────────────────────────────────────────────────────────────────
 
-TEST_F(ListViewTest, DefaultFlowIsTopToBottom)
+TEST_F(ListViewTest, FlowChangesOnlyOnTransitions)
 {
-    ListView* lv = new ListView(window);
-    EXPECT_EQ(lv->flow(), QListView::TopToBottom);
-}
-
-TEST_F(ListViewTest, SetFlowLeftToRight)
-{
-    ListView* lv = new ListView(window);
-    QSignalSpy spy(lv, &ListView::flowChanged);
-    lv->setFlow(QListView::LeftToRight);
-    EXPECT_EQ(lv->flow(), QListView::LeftToRight);
-    EXPECT_EQ(spy.count(), 1);
-
-    // 重复设置不触发信号
-    lv->setFlow(QListView::LeftToRight);
-    EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(ListViewTest, SetFlowBackToTopToBottom)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setFlow(QListView::TopToBottom);
-    EXPECT_EQ(lv->flow(), QListView::TopToBottom);
+    ListView view(window);
+    EXPECT_EQ(view.flow(), QListView::TopToBottom);
+    QSignalSpy spy(&view, &ListView::flowChanged);
+    int expectedSignals = 0;
+    for (const auto flow :
+        {QListView::TopToBottom, QListView::LeftToRight, QListView::LeftToRight, QListView::TopToBottom}) {
+        SCOPED_TRACE(static_cast<int>(flow));
+        expectedSignals += view.flow() != flow;
+        view.setFlow(flow);
+        EXPECT_EQ(view.flow(), flow);
+        EXPECT_EQ(spy.count(), expectedSignals);
+    }
 }
 
 TEST_F(ListViewTest, HorizontalFluentScrollBarExists)
@@ -815,21 +675,6 @@ TEST_F(ListViewTest, HorizontalFlowSelection)
     lv->setSelectedIndex(2);
     EXPECT_EQ(lv->selectedIndex(), 2);
     EXPECT_EQ(itemText(lv, 2), "C");
-}
-
-TEST_F(ListViewTest, HorizontalFlowAddRemoveItems)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    attachStringListModel(lv);
-
-    addItems(lv, {"X", "Y", "Z"});
-    EXPECT_EQ(itemCount(lv), 3);
-
-    removeItem(lv, 1);
-    EXPECT_EQ(itemCount(lv), 2);
-    EXPECT_EQ(itemText(lv, 0), "X");
-    EXPECT_EQ(itemText(lv, 1), "Z");
 }
 
 TEST_F(ListViewTest, HorizontalFlowMultipleSelection)
@@ -977,28 +822,6 @@ TEST_F(ListViewTest, FlowChangeRefreshesScrollBars)
     // Switch back — should not crash
     lv->setFlow(QListView::TopToBottom);
     QTest::qWait(50);
-}
-
-TEST_F(ListViewTest, HorizontalFlowInsertItem)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    attachStringListModel(lv, {"A", "C"});
-    insertItem(lv, 1, "B");
-    EXPECT_EQ(itemCount(lv), 3);
-    EXPECT_EQ(itemText(lv, 0), "A");
-    EXPECT_EQ(itemText(lv, 1), "B");
-    EXPECT_EQ(itemText(lv, 2), "C");
-}
-
-TEST_F(ListViewTest, HorizontalFlowClearItems)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    attachStringListModel(lv, {"A", "B", "C"});
-    EXPECT_EQ(itemCount(lv), 3);
-    clearItems(lv);
-    EXPECT_EQ(itemCount(lv), 0);
 }
 
 TEST_F(ListViewTest, HorizontalFlowPlaceholder)
@@ -1517,18 +1340,16 @@ TEST_F(ListViewTest, SelectedIndicatorSettlesAfterDragReorder)
 
 // ── Footer tests ──────────────────────────────────────────────────────────────
 
-TEST_F(ListViewTest, DefaultFooterText)
-{
-    ListView* lv = new ListView(window);
-    EXPECT_TRUE(lv->footerText().isEmpty());
-}
-
 TEST_F(ListViewTest, SetFooterText)
 {
     ListView* lv = new ListView(window);
+    EXPECT_TRUE(lv->footerText().isEmpty());
     QSignalSpy spy(lv, &ListView::footerTextChanged);
     lv->setFooterText("Total: 5 items");
     EXPECT_EQ(lv->footerText(), "Total: 5 items");
+    EXPECT_EQ(spy.count(), 1);
+
+    lv->setFooterText("Total: 5 items");
     EXPECT_EQ(spy.count(), 1);
 }
 
@@ -1559,15 +1380,6 @@ TEST_F(ListViewTest, FooterHiddenWhenTextEmpty)
     EXPECT_EQ(lv->footer(), nullptr);
 }
 
-TEST_F(ListViewTest, FooterSignalNotDuplicate)
-{
-    ListView* lv = new ListView(window);
-    QSignalSpy spy(lv, &ListView::footerTextChanged);
-    lv->setFooterText("A");
-    lv->setFooterText("A"); // same value → no signal
-    EXPECT_EQ(spy.count(), 1);
-}
-
 // ── Drag reorder tests ────────────────────────────────────────────────────────
 
 TEST_F(ListViewTest, CanReorderItemsChangesOnlyOnTransitions)
@@ -1587,27 +1399,16 @@ TEST_F(ListViewTest, CanReorderItemsChangesOnlyOnTransitions)
 
 // ── Section tests ─────────────────────────────────────────────────────────────
 
-TEST_F(ListViewTest, DefaultSectionEnabled)
-{
-    ListView* lv = new ListView(window);
-    EXPECT_FALSE(lv->sectionEnabled());
-}
-
 TEST_F(ListViewTest, SetSectionEnabled)
 {
     ListView* lv = new ListView(window);
+    EXPECT_FALSE(lv->sectionEnabled());
     QSignalSpy spy(lv, &ListView::sectionEnabledChanged);
     lv->setSectionEnabled(true);
     EXPECT_TRUE(lv->sectionEnabled());
     EXPECT_EQ(spy.count(), 1);
-}
 
-TEST_F(ListViewTest, SectionEnabledSignalNotDuplicate)
-{
-    ListView* lv = new ListView(window);
-    QSignalSpy spy(lv, &ListView::sectionEnabledChanged);
     lv->setSectionEnabled(true);
-    lv->setSectionEnabled(true); // same
     EXPECT_EQ(spy.count(), 1);
 }
 
