@@ -16,6 +16,10 @@ bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& g
 bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options);
 bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos);
 bool requestPlatformForegroundActivation(QWidget* window);
+// Reapplies the maximized frame after the window manager constrained a window
+// shown maximized; returns true when the frame changed.
+// zh_CN: 窗口管理器约束了以最大化显示的窗口后，重新应用最大化框架；框架改变时返回 true。
+bool restorePlatformMaximizedFrame(QWidget* window);
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options);
 int nativeTitleBarLeadingInset(QWidget* window);
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options);

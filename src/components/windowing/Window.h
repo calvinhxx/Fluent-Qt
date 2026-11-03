@@ -90,6 +90,16 @@ public:
     void reapplySystemBackdrop();
 
     /**
+     * @brief Shows or hides the window; a window shown maximized stays maximized.
+     * zh_CN: 显示或隐藏窗口；以最大化状态显示的窗口保持最大化。
+     *
+     * macOS Stage Manager fits a window that is ordered in already zoomed into its
+     * stage. The platform adapter restores the maximized frame before the first frame.
+     * zh_CN: macOS 台前调度会把已缩放后才入列的窗口收进舞台区域；平台适配层在首帧前恢复最大化框架。
+     */
+    void setVisible(bool visible) override;
+
+    /**
      * @brief Reasserts native chrome while a hidden window is prepared for restore.
      * zh_CN: 在隐藏窗口准备恢复显示时重新声明原生窗口边框配置。
      */

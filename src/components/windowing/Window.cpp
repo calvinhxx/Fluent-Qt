@@ -768,6 +768,16 @@ void Window::resizeEvent(QResizeEvent* event)
     updateChromeOptions();
 }
 
+void Window::setVisible(bool visible)
+{
+    const Qt::WindowStates state = windowState();
+    const bool showingMaximized = visible && isWindow() && !isVisible() && state.testFlag(Qt::WindowMaximized)
+        && !(state & (Qt::WindowMinimized | Qt::WindowFullScreen));
+    QWidget::setVisible(visible);
+    if (showingMaximized && isVisible())
+        compatibility::detail::restorePlatformMaximizedFrame(this);
+}
+
 void Window::showEvent(QShowEvent* event)
 {
     prepareBackdropSurface();

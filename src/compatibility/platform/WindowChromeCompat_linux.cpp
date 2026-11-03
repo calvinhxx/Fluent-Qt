@@ -784,6 +784,12 @@ bool requestPlatformForegroundActivation(QWidget* window)
     return mappedSuccessfully && raisedSuccessfully && focusedSuccessfully;
 }
 
+bool restorePlatformMaximizedFrame(QWidget* window)
+{
+    Q_UNUSED(window);
+    return false;
+}
+
 bool platformSupportsSystemBackdrop()
 {
     return platformBackdropCapabilities().compositorBlur;

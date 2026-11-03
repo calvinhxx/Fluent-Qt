@@ -645,6 +645,24 @@ TEST_F(WindowTest, TopLevelShowSmoke)
     window.close();
 }
 
+TEST_F(WindowTest, HiddenWindowShownMaximizedStaysMaximizedAndRestoresItsSize)
+{
+    Window window;
+    const QRect available = QGuiApplication::primaryScreen()->availableGeometry();
+    window.resize(640, 520);
+    window.move(available.center() - QPoint(window.width() / 2, window.height() / 2));
+    const QSize normalSize = window.size();
+    // macOS Stage Manager fits a window ordered in already zoomed into its stage.
+    window.showMaximized();
+    ASSERT_TRUE(window.isVisible());
+    EXPECT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 2000));
+
+    window.showNormal();
+    EXPECT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized() && window.size() == normalSize; }, 2000))
+        << "restored size " << window.width() << "x" << window.height();
+    window.close();
+}
+
 TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface)
 {
     Window window;

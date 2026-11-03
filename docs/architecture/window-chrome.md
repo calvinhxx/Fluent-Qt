@@ -206,6 +206,12 @@ restoring an iconified Linux Gallery window, the app performs a controlled
 unmap/map before refreshing the UILib frame; this handles WSLg/X11 sessions where
 Qt clears `WindowMinimized` before the outer shell surface is actually restored.
 
+On macOS, Qt zooms a window shown maximized before ordering it in. With Stage
+Manager, AppKit then fits the ordered-in frame into the stage, so the window
+appears unmaximized and later restores to that clipped frame. `Window` reapplies
+the standard zoom frame through the window adapter right after showing, without
+animation, so AppKit keeps the restore frame recorded by Qt's zoom.
+
 While KWin Acrylic blur is active, a low-frequency capability probe detects compositor
 or blur-effect shutdown even when Qt emits no window event. Loss disables the
 native hint and asks `Window` to re-resolve to `PaintedOpaque`; surface, screen,
