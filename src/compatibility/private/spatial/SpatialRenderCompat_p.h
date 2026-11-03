@@ -28,9 +28,12 @@ inline SpatialRenderCapabilities spatialRenderCapabilities(qreal nativeDpr = 1)
     // A failed QOpenGLWidget can leave the whole native window unable to compose.
     // Check desktop drivers before exposing a GPU child, including Windows ARM VMs.
     result.probeBeforeExposure = windows || linuxDesktop || cocoa;
-    // Keep the measured font paths: Windows low-DPI and integer Linux need
-    // native coverage; fractional Linux/Cocoa already preserve their coverage.
-    result.nativeGlyphCoverage = (windows && nativeDpr >= 1 && nativeDpr < 2)
+    // Windows needs the same native coverage across the whole zoom range.
+    // Switching to OpenGL glyphs below 1x or at 2x changes stroke weight even
+    // when the font and pen stay unchanged. Other measured paths are retained.
+    // zh_CN: Windows 各缩放倍率统一使用原生字形覆盖率；低于 1 或达到 2 时切换到 OpenGL
+    // 会在字体和画笔未变时改变笔画重量。其余平台保留已验证的路径。
+    result.nativeGlyphCoverage = (windows && qIsFinite(nativeDpr) && nativeDpr > 0)
         || (linuxDesktop && qFuzzyCompare(nativeDpr, 1.));
     return result;
 }

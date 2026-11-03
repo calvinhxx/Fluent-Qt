@@ -15,8 +15,8 @@
 
 namespace fluent::gallery::spatial_render {
 
-// Use Qt's rasterizer for low-DPI shaped text; geometry and composition stay on the GPU.
-// zh_CN: 低 DPI 已排版字形由 Qt 栅格化，几何与合成仍由 GPU 完成。
+// Use Qt's rasterizer where native glyph coverage is needed; geometry and composition stay on the GPU.
+// zh_CN: 需要原生字形覆盖率时由 Qt 栅格化已排版文字，几何与合成仍由 GPU 完成。
 inline bool needsNativeGlyphCoverage(qreal nativeDpr)
 {
     return spatial::SpatialRuntime::needsNativeGlyphCoverage(nativeDpr);
