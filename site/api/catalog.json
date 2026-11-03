@@ -6473,8 +6473,10 @@
     {
       "include": "<FluentQt/compatibility/PaintCompat.h>",
       "source": "src/compatibility/PaintCompat.h",
-      "summary": "Effective device pixel ratio for the painter's current paint device.",
-      "declarations": [],
+      "summary": "Painter for explicit image/pixmap caches, including DPR below 1 on older Qt.",
+      "declarations": [
+        "FluentRasterCachePainter"
+      ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/PaintCompat.h"
     },
     {

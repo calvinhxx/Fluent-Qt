@@ -25,6 +25,7 @@
 #include "compatibility/WindowChromeCompat.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "compatibility/private/WindowBackdropTransition_p.h"
+#include "compatibility/private/NativePaintDeviceCompat_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
@@ -983,6 +984,25 @@ TEST_F(WindowTest, CacheRenderDoesNotMarkNativeSurfacePainted)
         EXPECT_TRUE(compatibility::detail::windowBackdropSurfaceWasPainted(&window))
             << "Effect and theme changes must preserve the already-painted native surface";
         window.close();
+    }
+}
+
+TEST_F(WindowTest, IntermediateNativePaintIsPublishedOnlyOnCommit)
+{
+    Window window;
+    window.setBackdropEffect(BackdropEffect::Solid);
+    window.resize(320, 240);
+    window.winId();
+    QImage tile(window.size(), QImage::Format_ARGB32_Premultiplied);
+    tile.fill(Qt::transparent);
+    for (const bool committed : {false, true}) {
+        compatibility::detail::ScopedNativeRasterDevice nativeTile(&tile);
+        window.render(&tile);
+        EXPECT_FALSE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+        if (committed) {
+            nativeTile.commit();
+            EXPECT_TRUE(compatibility::detail::windowBackdropSurfaceWasPainted(&window));
+        }
     }
 }
 

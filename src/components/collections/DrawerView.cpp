@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "compatibility/InputEventCompat.h"
 #include "DrawerView.h"
 
@@ -47,7 +48,7 @@ protected:
         QPoint offset;
         const QPixmap pixmap = sourcePixmap(Qt::LogicalCoordinates, &offset);
         if (!pixmap.isNull())
-            painter->drawPixmap(offset, pixmap);
+            fluentDrawPixmapAt(*painter, offset, pixmap);
     }
 };
 } // namespace

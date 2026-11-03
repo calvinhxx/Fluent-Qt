@@ -11,6 +11,7 @@ import struct
 import fluentqt
 from fluentqt.particles import ParticleBackdrop
 from fluentqt._qt_compat import delete_qobject
+from fluentqt._qt_painting import apply_render_target_scale, set_render_target_device_pixel_ratio
 from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSize, QSizeF, Qt, Signal, Slot
 from PySide6.QtGui import QOpenGLContext, QPainter, QRegion, QSurfaceFormat, QVector2D, QVector4D
 from PySide6.QtOpenGL import (
@@ -443,10 +444,11 @@ class GalleryParticleCompositor(QObject):
                 gl.glClearColor(0, 0, 0, 0)
                 gl.glClear(0x4000 | 0x0400)
                 device = QOpenGLPaintDevice(QSize(pixels.width(), paint_height))
-                device.setDevicePixelRatio(self.cache_dpr)
+                set_render_target_device_pixel_ratio(device, self.cache_dpr)
                 origin = QPointF(layer["clip"].topLeft()) + QPointF(0, paint_top / self.cache_dpr)
                 glyph_device = GlyphPaintDevice(device, self.native_dpr, origin)
                 painter = QPainter(glyph_device if needs_native_glyph_coverage(self.native_dpr) else device)
+                apply_render_target_scale(painter, self.cache_dpr)
                 painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
                 painter.translate(-origin)
                 strip = QRectF(origin, QSizeF(layer["clip"].width(), paint_height / self.cache_dpr))

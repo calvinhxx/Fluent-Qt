@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "GallerySpatialController.h"
 #include "compatibility/QtCompat.h"
 #include "components/foundation/MotionPolicy.h"
@@ -404,7 +405,7 @@ protected:
     void paintLayer(QPainter* painter, int index, const QRegion& region) override
     {
         if (index == 0) {
-            painter->drawPixmap(QPointF(), m_scene->backdrop);
+            fluentDrawPixmapAt(*painter, QPointF(), m_scene->backdrop);
         } else if (m_scene->renderWidgets) {
             const bool nav = index == 2;
             const QPoint origin = nav ? QPoint() : m_scene->content.source.topLeft().toPoint();
@@ -1249,12 +1250,13 @@ private:
             gl->glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
             gl->glDisable(GL_SCISSOR_TEST);
             QOpenGLPaintDevice device(QSize(paintWidth, paintRows));
-            device.setDevicePixelRatio(paintDpr);
+            fluentSetRenderTargetDevicePixelRatio(device, paintDpr);
             spatial_render::GalleryGlyphPaintDevice glyphDevice(device, devicePixelRatioF(),
                 QPointF(0, paintTop / paintDpr), &m_glyphImages);
             QPainter painter(spatial_render::needsNativeGlyphCoverage(devicePixelRatioF())
                     ? static_cast<QPaintDevice*>(&glyphDevice)
                     : &device);
+            fluentApplyRenderTargetScale(painter, paintDpr);
             painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
             const QRectF stripRect(0, paintTop / paintDpr, source.width(), paintRows / paintDpr);
             painter.setClipRect(QRectF(0, 0, source.width(), paintRows / paintDpr));
@@ -1537,9 +1539,10 @@ struct GallerySpatialController::Private {
             if (!windowing::windowBackdropRequiresTransparentClear(window)) {
                 const qreal dpr = window->devicePixelRatioF();
                 scene.backdrop = QPixmap(bounds.size() * dpr);
-                scene.backdrop.setDevicePixelRatio(dpr);
+                fluentSetRenderTargetDevicePixelRatio(scene.backdrop, dpr);
                 scene.backdrop.fill(Qt::transparent);
                 QPainter painter(&scene.backdrop);
+                fluentApplyRenderTargetScale(painter, dpr);
                 painter.translate(-bounds.topLeft());
                 // The backdrop excludes both panels; rendering it is not a panel change.
                 // zh_CN: 背景不含两块面板，渲染背景不应使面板纹理失效。
@@ -1547,6 +1550,8 @@ struct GallerySpatialController::Private {
                 QScopedValueRollback<bool>
                     contentComposing(contentCapture ? contentCapture->composing : unusedContentComposing, true);
                 window->render(&painter, QPoint(), QRegion(), QWidget::RenderFlags());
+                painter.end();
+                scene.backdrop.setDevicePixelRatio(dpr);
             }
         }
     }

@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/PaintCompat.h"
 #include "ParticleBackdrop.h"
 #include "ParticleBackdrop_p.h"
 
@@ -238,7 +239,7 @@ public:
                 dotSprites[hue] = QPixmap(QSize(qCeil(32 * dpr), qCeil(32 * dpr)));
                 dotSprites[hue].setDevicePixelRatio(dpr);
                 dotSprites[hue].fill(Qt::transparent);
-                QPainter sprite(&dotSprites[hue]);
+                FluentRasterCachePainter sprite(&dotSprites[hue]);
                 QRadialGradient glow(QPointF(16, 16), 16);
                 glow.setColorAt(0, alpha(hues[hue], .85));
                 glow.setColorAt(.10, alpha(hues[hue], .65));
@@ -252,7 +253,7 @@ public:
             backdrop = QPixmap(pixels);
             backdrop.setDevicePixelRatio(dpr);
             backdrop.fill(background);
-            QPainter painter(&backdrop);
+            FluentRasterCachePainter painter(&backdrop);
             QRadialGradient glow(QPointF(width() * .76, height() * .42), width() * .52);
             glow.setColorAt(0, alpha(hues[1], dark ? .12 : .08));
             glow.setColorAt(1, Qt::transparent);
@@ -271,7 +272,7 @@ public:
             fades[edge] = QPixmap(tilePixels);
             fades[edge].setDevicePixelRatio(dpr);
             fades[edge].fill(Qt::transparent);
-            QPainter painter(&fades[edge]);
+            FluentRasterCachePainter painter(&fades[edge]);
             const qreal length = horizontal ? bounds.width() : bounds.height();
             QLinearGradient fade(QPointF(0, 0), horizontal ? QPointF(length, 0) : QPointF(0, length));
             const bool reverse = edge >= 2;
@@ -301,7 +302,7 @@ public:
             hues[i] = QColor::fromHsvF(std::fmod(hue + offsets[i] + 1, 1.0), dark ? .60 : .78, dark ? .95 : .66);
         ensureCache(colors.bgSolid, hues, dark, isolated);
         if (backgroundMode == ParticleBackdrop::Solid) {
-            painter.drawPixmap(0, 0, backdrop);
+            fluentDrawPixmapAt(painter, QPointF(), backdrop);
             draw(painter, hues);
             applyFades(painter);
         } else if (isolated && hasFade()) {
@@ -315,12 +316,12 @@ public:
         } else if (!layer.isNull()) {
             // Mask only this isolated image, never the parent's shared backing-store pixels.
             layer.fill(Qt::transparent);
-            QPainter effect(&layer);
+            FluentRasterCachePainter effect(&layer);
             draw(effect, hues);
             effect.setCompositionMode(QPainter::CompositionMode_DestinationIn);
             applyFades(effect);
             effect.end();
-            painter.drawImage(0, 0, layer);
+            fluentDrawImageAt(painter, QPointF(), layer);
         } else {
             draw(painter, hues);
         }

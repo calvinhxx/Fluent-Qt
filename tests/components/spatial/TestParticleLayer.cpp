@@ -96,40 +96,44 @@ TEST(ParticleLayerTest, Contract_NativeGpuPreservesStateReusesFramesAndReleasesO
 
     for (auto effect :
         {ParticleBackdrop::FlowingRibbons, ParticleBackdrop::FloatingDots, ParticleBackdrop::Starfield}) {
-        layer.release();
-        backdrop.setEffect(effect);
-        const QImage before = cpuFrame(backdrop);
-        contextHost.makeCurrent();
-        const quint64 estimate = ParticleLayer::estimatedBytes(backdrop.size(), 1);
-        ASSERT_GT(estimate, 0u);
-        ASSERT_TRUE(layer.render(1));
-        EXPECT_TRUE(layer.isActive());
-        EXPECT_NE(layer.textureId(), 0u);
-        EXPECT_EQ(layer.textureSize(), backdrop.size());
-        EXPECT_GT(layer.allocatedBytes(), 0u);
-        EXPECT_EQ(layer.allocatedBytes(), estimate);
-        const QImage gpu = textureFrame(layer);
-        const double cpuEnergy = alphaEnergy(before);
-        ASSERT_GT(cpuEnergy, 0);
-        EXPECT_GT(alphaEnergy(gpu), cpuEnergy * .65);
-        EXPECT_LT(alphaEnergy(gpu), cpuEnergy * 1.4);
-        EXPECT_LE(gpu.pixelColor(0, 0).alpha(), 1);
-        const quint64 count = layer.renderedFrameCount();
-        ASSERT_TRUE(layer.render(1));
-        EXPECT_EQ(layer.renderedFrameCount(), count);
-        EXPECT_EQ(QOpenGLContext::currentContext()->functions()->glGetError(), GLenum(GL_NO_ERROR));
-        EXPECT_FALSE(layer.render(1, 1)); // Fail closed before over-budget allocation.
-        EXPECT_FALSE(layer.isActive());
-        EXPECT_EQ(layer.textureId(), 0u);
-        EXPECT_EQ(layer.allocatedBytes(), 0u);
-        contextHost.doneCurrent();
-        EXPECT_EQ(cpuFrame(backdrop), before);
-        EXPECT_EQ(backdrop.effect(), effect);
-        EXPECT_EQ(backdrop.particleCount(), 240);
-        EXPECT_EQ(backdrop.speed(), .6);
-        EXPECT_FALSE(backdrop.isAnimationEnabled());
+        for (qreal dpr : {0.5, 1.0}) {
+            SCOPED_TRACE(dpr);
+            layer.release();
+            backdrop.setEffect(effect);
+            const QImage before = cpuFrame(backdrop);
+            contextHost.makeCurrent();
+            const quint64 estimate = ParticleLayer::estimatedBytes(backdrop.size(), dpr);
+            ASSERT_GT(estimate, 0u);
+            ASSERT_TRUE(layer.render(dpr));
+            EXPECT_TRUE(layer.isActive());
+            EXPECT_NE(layer.textureId(), 0u);
+            EXPECT_EQ(layer.textureSize(), backdrop.size() * dpr);
+            EXPECT_GT(layer.allocatedBytes(), 0u);
+            EXPECT_EQ(layer.allocatedBytes(), estimate);
+            const QImage gpu = textureFrame(layer);
+            const double cpuEnergy = alphaEnergy(
+                before.scaled(gpu.size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+            ASSERT_GT(cpuEnergy, 0);
+            EXPECT_GT(alphaEnergy(gpu), cpuEnergy * .65);
+            EXPECT_LT(alphaEnergy(gpu), cpuEnergy * 1.4);
+            EXPECT_LE(gpu.pixelColor(0, 0).alpha(), 1);
+            const quint64 count = layer.renderedFrameCount();
+            ASSERT_TRUE(layer.render(dpr));
+            EXPECT_EQ(layer.renderedFrameCount(), count);
+            EXPECT_EQ(QOpenGLContext::currentContext()->functions()->glGetError(), GLenum(GL_NO_ERROR));
+            EXPECT_FALSE(layer.render(dpr, 1)); // Fail closed before over-budget allocation.
+            EXPECT_FALSE(layer.isActive());
+            EXPECT_EQ(layer.textureId(), 0u);
+            EXPECT_EQ(layer.allocatedBytes(), 0u);
+            contextHost.doneCurrent();
+            EXPECT_EQ(cpuFrame(backdrop), before);
+            EXPECT_EQ(backdrop.effect(), effect);
+            EXPECT_EQ(backdrop.particleCount(), 240);
+            EXPECT_EQ(backdrop.speed(), .6);
+            EXPECT_FALSE(backdrop.isAnimationEnabled());
+        }
     }
-    EXPECT_EQ(active.count(), 6);
+    EXPECT_EQ(active.count(), 12);
 }
 
 TEST(ParticleLayerTest, Contract_SourceDestructionWithoutCurrentContextIsSafe)

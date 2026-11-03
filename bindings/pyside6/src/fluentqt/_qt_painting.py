@@ -2,7 +2,7 @@
 
 import math
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QFont, QPaintDevice, QPaintEngine
 
 __all__ = [
@@ -13,7 +13,42 @@ __all__ = [
     "forwarding_paint_engine_features",
     "image_device_pixel_ratio",
     "region_rects",
+    "set_render_target_device_pixel_ratio",
+    "apply_render_target_scale",
+    "draw_pixmap_at",
+    "draw_image_at",
 ]
+
+
+def set_render_target_device_pixel_ratio(device, dpr):
+    """Normalize an explicit render target; pair with apply_render_target_scale."""
+    device.setDevicePixelRatio(max(1.0, dpr))
+
+
+def apply_render_target_scale(painter, dpr):
+    """Apply once before drawing to a normalized explicit render target."""
+    if 0 < dpr < 1:
+        painter.scale(dpr, dpr)
+
+
+def draw_pixmap_at(painter, position, pixmap):
+    """Preserve sub-unit source DPR in Qt's untransformed raster path."""
+    dpr = pixmap.devicePixelRatioF()
+    if 0 < dpr < 1:
+        painter.drawPixmap(QRectF(QPointF(position), QSizeF(pixmap.size()) / dpr),
+                           pixmap, QRectF(pixmap.rect()))
+    else:
+        painter.drawPixmap(position, pixmap)
+
+
+def draw_image_at(painter, position, image):
+    """Mirror fluentDrawImageAt for Gallery-owned bitmap caches."""
+    dpr = image.devicePixelRatioF()
+    if 0 < dpr < 1:
+        painter.drawImage(QRectF(QPointF(position), QSizeF(image.size()) / dpr),
+                          image, QRectF(image.rect()))
+    else:
+        painter.drawImage(position, image)
 
 
 def font_style_strategy(*strategies: QFont.StyleStrategy) -> QFont.StyleStrategy:

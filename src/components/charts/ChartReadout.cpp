@@ -1,4 +1,5 @@
 #include "ChartReadout_p.h"
+#include "compatibility/PaintCompat.h"
 #include "ChartView.h"
 
 #include <QEvent>
@@ -74,7 +75,7 @@ void ChartReadout::present(const QString& heading, const QVector<ReadoutRow>& ro
             QPixmap marker(QSize(qRound(8 * dpr), qRound(8 * dpr)));
             marker.setDevicePixelRatio(dpr);
             marker.fill(Qt::transparent);
-            QPainter painter(&marker);
+            FluentRasterCachePainter painter(&marker);
             painter.setRenderHint(QPainter::Antialiasing);
             painter.setPen(Qt::NoPen);
             painter.setBrush(data.color);

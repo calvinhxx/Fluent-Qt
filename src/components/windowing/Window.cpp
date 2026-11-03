@@ -1,4 +1,5 @@
 #include "compatibility/ApplicationCompat.h"
+#include "compatibility/PaintCompat.h"
 #include "compatibility/InputEventCompat.h"
 #include "Window.h"
 #include "compatibility/private/WindowPlatformCompat_p.h"
@@ -24,6 +25,8 @@
 #include "WindowChromeFrame.h"
 #include "compatibility/private/WindowBackdropEvents_p.h"
 #include "compatibility/private/WindowBackdropTransition_p.h"
+#include "compatibility/private/NativePaintDeviceCompat_p.h"
+#include "compatibility/private/WindowChromeBackend_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
@@ -644,7 +647,7 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
         auto cache = std::make_unique<QPixmap>(pixelSize);
         cache->setDevicePixelRatio(dpr);
         cache->fill(Qt::transparent);
-        QPainter cachePainter(cache.get());
+        FluentRasterCachePainter cachePainter(cache.get());
         renderSurface(cachePainter);
         cachePainter.end();
 
@@ -655,7 +658,7 @@ void Window::paintPaintedSurface(QPainter& painter, bool includeClientFrame)
         setProperty("fluentPaintedSurfaceCacheGeneration", property("fluentPaintedSurfaceCacheGeneration").toInt() + 1);
     }
 
-    painter.drawPixmap(QPointF(0.0, 0.0), *m_paintedSurfaceCache);
+    fluentDrawPixmapAt(painter, QPointF(), *m_paintedSurfaceCache);
 }
 
 void Window::paintEvent(QPaintEvent*)
@@ -667,19 +670,28 @@ void Window::paintEvent(QPaintEvent*)
     // zh_CN: 原生句柄可能早于后备图像创建；缓存绘制不能读取空设备，也不能计为原生绘制。
     const bool paintsNativeSurface = !QWidget::sharedPainter() && store && !store->size().isEmpty()
         && painter.paintEngine() && painter.paintEngine()->paintDevice() == store->paintDevice();
-    if (paintsNativeSurface)
-        compatibility::detail::markWindowBackdropSurfacePainted(this);
-    if (m_backdropDisablePending && !m_backdropOpaqueFramePainted
-        && m_backdropState.surfaceMode != BackdropSurfaceMode::CompositedTransparent
-        && m_backdropCommitWinId == internalWinId() && paintsNativeSurface) {
-        // Cache captures via QWidget::render() are not presentation. Only an
-        // opaque paint into the real backing store can release the old material.
-        // Exposure can paint without an UpdateRequest, so also finish after this
-        // paint and its child/GL composition have unwound.
-        // zh_CN: QWidget::render 缓存不是屏幕提交；仅真实后备缓冲的不透明绘制
-        // 可解除旧材质。Expose 可能不经过 UpdateRequest，故本轮合成结束后也检查。
-        m_backdropOpaqueFramePainted = true;
-        QTimer::singleShot(0, this, &Window::finishPendingBackdropChange);
+    if (m_backdropDisablePending || !compatibility::detail::windowBackdropSurfaceWasPainted(this)) {
+        const auto painted =
+            [this, nativeId = internalWinId(),
+                opaque = m_backdropState.surfaceMode != BackdropSurfaceMode::CompositedTransparent] {
+                if (nativeId != internalWinId())
+                    return;
+                compatibility::detail::markWindowBackdropSurfacePainted(this);
+                if (opaque && m_backdropDisablePending && !m_backdropOpaqueFramePainted
+                    && m_backdropState.surfaceMode != BackdropSurfaceMode::CompositedTransparent
+                    && m_backdropCommitWinId == nativeId) {
+                    m_backdropOpaqueFramePainted = true;
+                    QTimer::singleShot(0, this, &Window::finishPendingBackdropChange);
+                }
+            };
+        if (paintsNativeSurface) {
+            painted();
+        } else if (painter.paintEngine()) {
+            // A low-DPR tile counts only after it reaches the backing store.
+            // Ordinary render()/grab() captures never publish native paint.
+            // zh_CN: 低 DPR 图块写回后备缓冲后才计入原生绘制；普通抓图不公布绘制证据。
+            compatibility::detail::afterNativeRasterCommit(painter.paintEngine()->paintDevice(), this, painted);
+        }
     }
 
     const int frameMargin = activeClientSideFrameMargin();

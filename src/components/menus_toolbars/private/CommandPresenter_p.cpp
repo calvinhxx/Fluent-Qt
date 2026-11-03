@@ -351,7 +351,7 @@ void CommandPresenter::paintOverflowContent()
             const QSize logicalSize = fluentPixmapLogicalSize(pixmap);
             const QPoint topLeft(target.center().x() - logicalSize.width() / 2,
                 target.center().y() - logicalSize.height() / 2);
-            painter.drawPixmap(topLeft, pixmap);
+            fluentDrawPixmapAt(painter, topLeft, pixmap);
         }
     }
 

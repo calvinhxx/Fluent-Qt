@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/private/WidgetSnapshotCompat_p.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 
 #include <QMouseEvent>
@@ -150,8 +151,10 @@ void OverlayScrim::refreshBackdrop()
         for (QWidget* child : siblings) {
             if (child == m_overlay)
                 break;
-            if (child != this && !child->isHidden() && !child->isWindow())
-                child->render(&painter, child->pos(), QRegion(), QWidget::DrawWindowBackground | QWidget::DrawChildren);
+            if (child != this && !child->isHidden() && !child->isWindow()) {
+                const QRect visible = geometry().translated(-child->pos());
+                ::compatibility::detail::renderWidgetSnapshot(painter, child, child->pos(), visible);
+            }
         }
         // Native vibrancy is not part of QWidget rendering. Fill only its transparent
         // areas with the Fluent surface token before filtering the application content.

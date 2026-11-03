@@ -324,7 +324,7 @@ register_source_samples(
                         icon.hide()
                         icon.setIconSize(size)
                         icon.resize(size, size)
-                        dpr = self.devicePixelRatioF()
+                        dpr = max(1.0, self.devicePixelRatioF())
                         pixmap = QPixmap(round(size * dpr), round(size * dpr))
                         pixmap.setDevicePixelRatio(dpr)
                         pixmap.fill(Qt.transparent)

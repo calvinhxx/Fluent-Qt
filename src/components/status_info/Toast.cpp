@@ -1,4 +1,5 @@
 #include "compatibility/AccessibilityCompat.h"
+#include "compatibility/PaintCompat.h"
 #include "compatibility/InputEventCompat.h"
 #include "components/status_info/Toast.h"
 
@@ -683,7 +684,7 @@ void Toast::paintEvent(QPaintEvent* event)
         m_surfaceCache = QPixmap(pixels);
         m_surfaceCache.setDevicePixelRatio(scale);
         m_surfaceCache.fill(Qt::transparent);
-        QPainter surface(&m_surfaceCache);
+        FluentRasterCachePainter surface(&m_surfaceCache);
         surface.setRenderHint(QPainter::Antialiasing);
         surface.setPen(Qt::NoPen);
         const QRect cardRect = overlay::visibleCardRect(rect(), kShadowMargin);
@@ -699,7 +700,7 @@ void Toast::paintEvent(QPaintEvent* event)
             {m_surfaceColor, m_borderColor, 1.0, toast_tokens::cornerRadius});
     }
     QPainter painter(this);
-    painter.drawPixmap(QPoint(0, 0), m_surfaceCache);
+    fluentDrawPixmapAt(painter, QPointF(), m_surfaceCache);
 }
 
 bool Toast::isTopPlacement() const

@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "GallerySplashScreen.h"
 
 #include <QGraphicsEffect>
@@ -54,7 +55,7 @@ protected:
     void draw(QPainter* painter) override
     {
         prepare(painter->device()->devicePixelRatioF());
-        painter->drawPixmap(m_offset, m_frame);
+        fluentDrawPixmapAt(*painter, m_offset, m_frame);
     }
 
 private:

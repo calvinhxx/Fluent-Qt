@@ -16,6 +16,7 @@ from fluentqt.particles import ParticleBackdrop
 import shiboken6
 from fluentqt._qt_compat import single_shot as _single_shot
 from fluentqt._qt_painting import font_style_strategy as _font_style_strategy
+from fluentqt._qt_painting import draw_image_at, draw_pixmap_at
 from PySide6.QtCore import (
     QCoreApplication,
     QEasingCurve,
@@ -1031,7 +1032,7 @@ class _StartupContentEffect(QGraphicsEffect):
                 Qt.LogicalCoordinates, self._offset, QGraphicsEffect.NoPad
             )
             self._bounds, self._dpr, self._theme = bounds, dpr, theme
-        painter.drawPixmap(self._offset, self._frame)
+        draw_pixmap_at(painter, self._offset, self._frame)
 
 
 class _StartupContentCache:
@@ -1682,7 +1683,7 @@ class GalleryHomeHero(QWidget):
         cache_key = (self.width(), self.height(), dpr, fluentqt.theme_revision(), backdrop)
         if cache_key == self._artwork_key:
             target = QPainter(self)
-            target.drawImage(QPointF(0, 0), self._artwork)
+            draw_image_at(target, QPointF(0, 0), self._artwork)
             target.end()
             return
         artwork = QImage(
@@ -1840,7 +1841,7 @@ class GalleryHomeHero(QWidget):
         self._artwork = artwork
         self._artwork_key = cache_key
         target = QPainter(self)
-        target.drawImage(QPointF(0, 0), artwork)
+        draw_image_at(target, QPointF(0, 0), artwork)
         target.end()
 
     def refresh_theme(self) -> None:

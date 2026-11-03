@@ -945,7 +945,7 @@ QPixmap ListView::renderItemPixmap(int row) const
     pix.setDevicePixelRatio(dpr);
     pix.fill(surroundingSurfaceColor(this, themeColorsRef().bgLayer));
 
-    QPainter p(&pix);
+    FluentRasterCachePainter p(&pix);
     p.setRenderHint(QPainter::Antialiasing);
     QStyleOptionViewItem opt;
     FLUENT_INIT_VIEW_ITEM_OPTION(&opt);
@@ -1084,7 +1084,7 @@ void ListView::paintEvent(QPaintEvent* event)
         fp.setOpacity(0.85);
         const int pixH = qRound(m_dragPixmap.height() / m_dragPixmap.devicePixelRatio());
         QPoint pixPos(0, m_dragCurrentPos.y() - pixH / 2);
-        fp.drawPixmap(pixPos, m_dragPixmap);
+        fluentDrawPixmapAt(fp, pixPos, m_dragPixmap);
         fp.end();
     }
 

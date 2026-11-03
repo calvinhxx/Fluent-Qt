@@ -9,6 +9,9 @@
 #include <QShortcut>
 #include <QSignalSpy>
 #include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
+#include <QGraphicsDropShadowEffect>
+#include <QDir>
 #include <QPainter>
 #include <QScopeGuard>
 #include <QTest>
@@ -285,6 +288,202 @@ TEST(OverlayScrimTest, InitialShowKeepsPreparedBackdropUntilExplicitRefresh)
     EXPECT_GT(sample().red(), sample().green());
     scrim.refreshBackdrop();
     EXPECT_GT(sample().green(), sample().red());
+}
+
+TEST(OverlayScrimTest, EffectSnapshotsPreservePositionOpacityAndWidgetState)
+{
+    class ColorBlock : public QWidget {
+    public:
+        ColorBlock(const QColor& color, QWidget* parent = nullptr) : QWidget(parent), color(color) {}
+        QColor color;
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter painter(this);
+            painter.fillRect(rect(), color);
+        }
+    };
+    const auto oldTheme = fluent::FluentElement::currentTheme();
+    const auto restoreTheme = qScopeGuard([&] { fluent::FluentElement::setTheme(oldTheme); });
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        const QColor background = theme == fluent::FluentElement::Light ? QColor(240, 240, 240) : QColor(30, 40, 50);
+        for (bool nested : {false, true}) {
+            for (qreal opacity : {1.0, 0.5}) {
+                SCOPED_TRACE(
+                    ::testing::Message() << "theme=" << theme << " nested=" << nested << " opacity=" << opacity);
+                ColorBlock host(background);
+                host.resize(680, 500);
+                ColorBlock layer(nested ? background : QColor(200, 60, 40), &host);
+                // Exercise clipping when a sibling extends beyond the scrim.
+                layer.setGeometry(theme == fluent::FluentElement::Light ? 90 : -20, 70, 240, 160);
+                layer.setMask(QRegion(0, 0, 220, 140));
+                ColorBlock marker(QColor(200, 60, 40), &layer);
+                marker.setGeometry(30, 20, 140, 100);
+                auto* effect = new QGraphicsOpacityEffect;
+                QWidget* faded = nested ? static_cast<QWidget*>(&marker) : &layer;
+                faded->setGraphicsEffect(effect);
+                effect->setOpacity(opacity);
+                QSignalSpy enabled(effect, &QGraphicsEffect::enabledChanged);
+                QSignalSpy changed(effect, &QGraphicsOpacityEffect::opacityChanged);
+                QWidget surface(&host);
+                surface.setGeometry(400, 300, 160, 100);
+                OverlayScrim scrim(&host);
+                scrim.setGeometry(20, 10, 620, 460);
+                scrim.setModalAndDim(false, false);
+                host.show();
+                ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+                scrim.raise();
+                surface.raise();
+                const QRect original = layer.geometry();
+                QWidget* focus = QApplication::focusWidget();
+                scrim.setBackdrop(&surface, 2);
+                const auto image = scrim.grab().toImage();
+                const QPoint sample = marker.mapTo(&host, marker.rect().center()) - scrim.pos();
+                const auto pixel = [&](const QPoint& position) {
+                    return image.pixelColor(position * image.devicePixelRatio());
+                };
+                const QColor expected(qRound(200 * opacity + background.red() * (1 - opacity)),
+                    qRound(60 * opacity + background.green() * (1 - opacity)),
+                    qRound(40 * opacity + background.blue() * (1 - opacity)));
+                const QColor masked = pixel(layer.mapTo(&host, QPoint(230, 80)) - scrim.pos());
+                EXPECT_NEAR(masked.red(), background.red(), 3);
+                EXPECT_NEAR(masked.green(), background.green(), 3);
+                EXPECT_NEAR(masked.blue(), background.blue(), 3);
+                const QColor actual = pixel(sample);
+                EXPECT_NEAR(actual.red(), expected.red(), 3);
+                EXPECT_NEAR(actual.green(), expected.green(), 3);
+                EXPECT_NEAR(actual.blue(), expected.blue(), 3);
+                // A duplicate translated copy must not appear in the lower right.
+                const QColor empty = pixel(QPoint(400, 300));
+                EXPECT_NEAR(empty.red(), background.red(), 3);
+                EXPECT_NEAR(empty.green(), background.green(), 3);
+                EXPECT_NEAR(empty.blue(), background.blue(), 3);
+                EXPECT_EQ(layer.geometry(), original);
+                EXPECT_TRUE(layer.isVisible());
+                EXPECT_TRUE(effect->isEnabled());
+                EXPECT_DOUBLE_EQ(effect->opacity(), opacity);
+                EXPECT_EQ(enabled.count(), 0);
+                EXPECT_EQ(changed.count(), 0);
+                EXPECT_EQ(QApplication::focusWidget(), focus);
+            }
+        }
+    }
+}
+
+TEST(OverlayScrimTest, ExternalShadowsSurviveIncludingWhenOnlyTheShadowIntersects)
+{
+    class ColorBlock : public QWidget {
+    public:
+        ColorBlock(const QColor& color, QWidget* parent = nullptr) : QWidget(parent), color(color) {}
+        QColor color;
+
+    protected:
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter painter(this);
+            painter.fillRect(rect(), color);
+        }
+    };
+    const auto oldTheme = fluent::FluentElement::currentTheme();
+    const auto restoreTheme = qScopeGuard([&] { fluent::FluentElement::setTheme(oldTheme); });
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        const QColor background = theme == fluent::FluentElement::Light ? QColor(240, 240, 240) : QColor(30, 40, 50);
+        for (const QPoint& offset : {QPoint(96, 0), QPoint(-96, 0), QPoint(0, 80), QPoint(0, -80)}) {
+            for (bool shadowOnly : {false, true}) {
+                SCOPED_TRACE(::testing::Message()
+                    << "theme=" << theme << " offset=" << offset.x() << ',' << offset.y()
+                    << " shadowOnly=" << shadowOnly);
+                ColorBlock host(background);
+                host.resize(900, 600);
+                ColorBlock block(QColor(200, 50, 40), &host);
+                block.setGeometry(400, 280, 80, 60);
+                auto* effect = new QGraphicsDropShadowEffect(&block);
+                effect->setOffset(offset);
+                effect->setBlurRadius(4);
+                effect->setColor(QColor(20, 80, 200));
+                block.setGraphicsEffect(effect);
+                host.show();
+                ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+
+                // Use the real parent rendering as the oracle, including the
+                // platform's DPR treatment of effect offsets.
+                // zh_CN: 用真实父控件的绘制作对照，包含平台对特效偏移的 DPR 处理。
+                const QImage reference = host.grab().toImage();
+                const QString captures = qEnvironmentVariable("FLUENT_QT_SHADOW_CAPTURE_DIR");
+                const QString captureName =
+                    QStringLiteral("%1-%2-%3-%4").arg(int(theme)).arg(offset.x()).arg(offset.y()).arg(shadowOnly);
+                if (!captures.isEmpty()) {
+                    QDir().mkpath(captures);
+                    reference.save(captures + '/' + captureName + QStringLiteral("-reference.png"));
+                }
+                const qreal dpr = reference.devicePixelRatioF();
+                const QRect bodyPixels(QRectF(QPointF(block.pos()) * dpr, QSizeF(block.size()) * dpr).toAlignedRect());
+                QRect shadowPixels;
+                for (int y = 0; y < reference.height(); ++y) {
+                    for (int x = 0; x < reference.width(); ++x) {
+                        if (bodyPixels.contains(x, y))
+                            continue;
+                        const QColor color = reference.pixelColor(x, y);
+                        if (qAbs(color.red() - background.red()) > 40 || qAbs(color.green() - background.green()) > 40
+                            || qAbs(color.blue() - background.blue()) > 40)
+                            shadowPixels |= QRect(x, y, 1, 1);
+                    }
+                }
+                ASSERT_FALSE(shadowPixels.isEmpty());
+                const QPoint sample = (QPointF(shadowPixels.center()) / dpr).toPoint();
+                const QRect shadowClip(sample - QPoint(8, 8), QSize(16, 16));
+                ASSERT_FALSE(shadowClip.intersects(block.geometry()));
+                const QColor expected = reference.pixelColor((QPointF(sample) * dpr).toPoint());
+                // Capture with a dirty source instead of relying on the effect's cached image.
+                // zh_CN: 使源图失效，避免测试只验证特效已有缓存时的抓图。
+                block.update();
+
+                QWidget surface(&host);
+                surface.setGeometry(10, 10, 10, 10);
+                OverlayScrim scrim(&host);
+                scrim.setGeometry(shadowOnly ? shadowClip : host.rect().adjusted(20, 20, -20, -20));
+                scrim.setModalAndDim(false, false);
+                scrim.show();
+                surface.show();
+                scrim.raise();
+                surface.raise();
+                const QRect originalGeometry = block.geometry();
+                QWidget* originalFocus = QApplication::focusWidget();
+                QSignalSpy enabled(effect, &QGraphicsEffect::enabledChanged);
+                QSignalSpy moved(effect, &QGraphicsDropShadowEffect::offsetChanged);
+                scrim.setBackdrop(&surface, 1);
+                const auto sampleBackdrop = [&]() {
+                    const QImage image = scrim.grab().toImage();
+                    if (!captures.isEmpty())
+                        image.save(captures + '/' + captureName
+                            + (effect->isEnabled()
+                                    ? QStringLiteral("-backdrop.png")
+                                    : QStringLiteral("-disabled.png")));
+                    return image.pixelColor((QPointF(sample - scrim.pos()) * image.devicePixelRatioF()).toPoint());
+                };
+                const QColor actual = sampleBackdrop();
+                EXPECT_NEAR(actual.red(), expected.red(), 3);
+                EXPECT_NEAR(actual.green(), expected.green(), 3);
+                EXPECT_NEAR(actual.blue(), expected.blue(), 3);
+                EXPECT_EQ(block.geometry(), originalGeometry);
+                EXPECT_TRUE(block.isVisible());
+                EXPECT_EQ(QApplication::focusWidget(), originalFocus);
+                EXPECT_TRUE(effect->isEnabled());
+                EXPECT_EQ(enabled.count(), 0);
+                EXPECT_EQ(moved.count(), 0);
+
+                effect->setEnabled(false);
+                scrim.refreshBackdrop();
+                const QColor disabled = sampleBackdrop();
+                EXPECT_NEAR(disabled.red(), background.red(), 3);
+                EXPECT_NEAR(disabled.green(), background.green(), 3);
+                EXPECT_NEAR(disabled.blue(), background.blue(), 3);
+            }
+        }
+    }
 }
 
 TYPED_TEST(OverlayContractTest, ModalBlurDefaultsRespectExplicitChoices)

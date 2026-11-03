@@ -3,9 +3,58 @@
 // Pixmap sizing, device-pixel-ratio handling, and color components.
 
 #include <QIcon>
+#include <QImage>
 #include <QPainter>
 #include <QPixmap>
 #include <QWindow>
+
+// Explicit bitmap caches retain their requested DPR metadata. Compensate only
+// when the painter ignored a sub-unit DPR; newer Qt already has the right matrix.
+// zh_CN: 显式位图缓存保留原 DPR 元数据；仅在画笔忽略小于 1 的 DPR 时补偿，新 Qt 的矩阵保持不变。
+/**
+ * @brief Painter for explicit image/pixmap caches, including DPR below 1 on older Qt.
+ * zh_CN: 用于显式图像缓存的画笔，兼容旧 Qt 上小于 1 的 DPR。
+ *
+ * Construct with the cache device after setting its DPR. Do not use for QWidget
+ * painting or restart with begin(); the compensation belongs to this paint session.
+ * zh_CN: 先设置缓存 DPR 再构造画笔；不用于 QWidget 或通过 begin() 重启绘制。
+ */
+class FluentRasterCachePainter final : public QPainter {
+public:
+    explicit FluentRasterCachePainter(QPaintDevice* target) : QPainter(target)
+    {
+        if (!isActive() || !target || (target->devType() != QInternal::Image && target->devType() != QInternal::Pixmap))
+            return;
+        const qreal dpr = target->devicePixelRatioF();
+        const QTransform matrix = deviceTransform();
+        if (dpr > 0.0 && dpr < 1.0 && qFuzzyCompare(matrix.m11(), 1.0) && qFuzzyCompare(matrix.m22(), 1.0))
+            scale(dpr, dpr);
+    }
+};
+
+// Qt 5.15/6.2 clamp a paint device's DPR to 1. Qt effect filters also assume
+// at least unit density. Keep explicit render targets at >= 1 and apply the
+// remaining scale in the painter; allocation and dirty tiles stay unchanged.
+// zh_CN: Qt 5.15/6.2 将画布 DPR 钳制到 1，特效滤镜也假定至少单位密度。
+// 显式渲染目标保持 DPR >= 1，剩余缩放交给画笔；不扩大分配尺寸或脏图块。
+/**
+ * @brief Sets an explicit render target DPR; pair with fluentApplyRenderTargetScale().
+ * zh_CN: 设置显式渲染目标的 DPR；配合 fluentApplyRenderTargetScale() 使用。
+ */
+template <class Device> inline void fluentSetRenderTargetDevicePixelRatio(Device& device, qreal dpr)
+{
+    device.setDevicePixelRatio(qMax(qreal(1), dpr));
+}
+
+/**
+ * @brief Applies the remaining scale to a normalized explicit render target.
+ * zh_CN: 对已归一化的显式渲染目标补充剩余缩放；每次绘制开始时调用一次。
+ */
+inline void fluentApplyRenderTargetScale(QPainter& painter, qreal dpr)
+{
+    if (dpr > 0.0 && dpr < 1.0)
+        painter.scale(dpr, dpr);
+}
 
 inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap)
 {
@@ -17,13 +66,41 @@ inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap)
 #endif
 }
 
+/**
+ * @brief Draws a pixmap at its logical size, including DPR below 1.
+ * zh_CN: 按逻辑尺寸绘制位图，包含小于 1 的 DPR。
+ */
+inline void fluentDrawPixmapAt(QPainter& painter, const QPointF& position, const QPixmap& pixmap)
+{
+    const qreal dpr = pixmap.devicePixelRatioF();
+    // Qt's untransformed raster fast path ignores source DPR below 1.
+    // zh_CN: Qt 无缩放矩阵时的位图快速路径会忽略小于 1 的源 DPR。
+    if (dpr > 0.0 && dpr < 1.0)
+        painter.drawPixmap(QRectF(position, QSizeF(pixmap.size()) / dpr), pixmap, QRectF(pixmap.rect()));
+    else
+        painter.drawPixmap(position, pixmap);
+}
+
+/**
+ * @brief Draws an image at its logical size, including DPR below 1.
+ * zh_CN: 按逻辑尺寸绘制图像，包含小于 1 的 DPR。
+ */
+inline void fluentDrawImageAt(QPainter& painter, const QPointF& position, const QImage& image)
+{
+    const qreal dpr = image.devicePixelRatioF();
+    if (dpr > 0.0 && dpr < 1.0)
+        painter.drawImage(QRectF(position, QSizeF(image.size()) / dpr), image, QRectF(image.rect()));
+    else
+        painter.drawImage(position, image);
+}
+
 inline QRectF fluentPixmapSourceRectForDraw(const QRectF& logicalSource, const QPixmap& pixmap)
 {
     // QPainter::drawPixmap source rectangles are in pixmap pixel coordinates on
     // both Qt 5 and Qt 6, including when devicePixelRatio != 1.
     // zh_CN: Qt 5/6 的 drawPixmap 源矩形都使用 pixmap 像素坐标，即使
     // devicePixelRatio != 1 也如此。
-    const qreal dpr = qMax<qreal>(1.0, pixmap.devicePixelRatioF());
+    const qreal dpr = qMax<qreal>(1.0e-6, pixmap.devicePixelRatioF());
     return QRectF(logicalSource.left() * dpr, logicalSource.top() * dpr, logicalSource.width() * dpr,
         logicalSource.height() * dpr);
 }

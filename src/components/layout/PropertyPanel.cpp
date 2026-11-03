@@ -1,4 +1,5 @@
 #include "PropertyPanel.h"
+#include "compatibility/PaintCompat.h"
 
 #include <QHBoxLayout>
 #include <QJsonObject>
@@ -67,7 +68,7 @@ void updateColorButton(basicinput::Button* button, const QColor& color)
     QPixmap swatch(qRound(20 * dpr), qRound(20 * dpr));
     swatch.setDevicePixelRatio(dpr);
     swatch.fill(Qt::transparent);
-    QPainter painter(&swatch);
+    FluentRasterCachePainter painter(&swatch);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(button->themeColorsRef().strokeDefault);
     painter.setBrush(color);

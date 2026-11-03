@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "ParticleLayer.h"
 #include "components/particles/ParticleBackdrop.h"
 #include "components/particles/ParticleBackdrop_p.h"
@@ -195,8 +196,9 @@ bool ParticleLayer::render(qreal devicePixelRatio, quint64 maximumBytes)
     gl->glClearColor(0, 0, 0, 0);
     gl->glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     QOpenGLPaintDevice device(pixels);
-    device.setDevicePixelRatio(devicePixelRatio);
+    fluentSetRenderTargetDevicePixelRatio(device, devicePixelRatio);
     QPainter painter(&device);
+    fluentApplyRenderTargetScale(painter, devicePixelRatio);
     if (!painter.isActive()) {
         release();
         return false;

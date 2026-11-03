@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/PaintCompat.h"
 #include "compatibility/WidgetCompat.h"
 #include "FlowView.h"
 
@@ -481,7 +482,7 @@ void FlowView::paintEvent(QPaintEvent* event)
         const qreal dpr = m_dragPixmap.devicePixelRatio();
         const QPoint pixPos = m_dragCurrentPos
             - QPoint(qRound(m_dragPixmap.width() / (2 * dpr)), qRound(m_dragPixmap.height() / (2 * dpr)));
-        painter.drawPixmap(pixPos, m_dragPixmap);
+        fluentDrawPixmapAt(painter, pixPos, m_dragPixmap);
         painter.setOpacity(1.0);
     }
 
@@ -1509,7 +1510,7 @@ QPixmap FlowView::renderItemPixmap(int row) const
     pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(Qt::transparent);
 
-    QPainter painter(&pixmap);
+    FluentRasterCachePainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing);
     QStyleOptionViewItem option = optionForIndex(index, QRect(QPoint(0, 0), size));
     itemDelegate()->paint(&painter, option, index);
@@ -1536,7 +1537,7 @@ QPixmap FlowView::renderDragPixmap() const
     composite.setDevicePixelRatio(dpr);
     composite.fill(Qt::transparent);
 
-    QPainter painter(&composite);
+    FluentRasterCachePainter painter(&composite);
     painter.setRenderHint(QPainter::Antialiasing);
     for (int layer = maxStack - 1; layer >= 0; --layer) {
         const int sourceRow = layer == 0 ? m_dragSourceIndex : m_dragSourceIndices.value(layer, m_dragSourceIndex);
@@ -1544,7 +1545,7 @@ QPixmap FlowView::renderDragPixmap() const
         if (pixmap.isNull())
             continue;
         painter.setOpacity(layer > 0 ? 0.6 : 1.0);
-        painter.drawPixmap(stackOffset * layer, stackOffset * layer, pixmap);
+        fluentDrawPixmapAt(painter, QPointF(stackOffset * layer, stackOffset * layer), pixmap);
     }
 
     painter.setOpacity(1.0);

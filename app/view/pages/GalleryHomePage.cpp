@@ -1,4 +1,5 @@
 #include "GalleryHomePage.h"
+#include "compatibility/PaintCompat.h"
 
 #include <array>
 
@@ -188,7 +189,7 @@ void drawCenteredPixmap(QPainter& painter,
     // The pixmap is dpr-tagged, so its logical size = physical / dpr; centre it in the icon box.
     const QSizeF logical = QSizeF(source.size()) / source.devicePixelRatioF();
     const QPointF topLeft(rect.center().x() - logical.width() / 2.0, rect.center().y() - logical.height() / 2.0);
-    painter.drawPixmap(topLeft, source);
+    fluentDrawPixmapAt(painter, topLeft, source);
 }
 
 // A small, deterministic grayscale-noise tile, painted at very low opacity over the card to give the
@@ -726,7 +727,7 @@ protected:
             QPainter target(this);
             target.setCompositionMode(
                 composited ? QPainter::CompositionMode_Source : QPainter::CompositionMode_SourceOver);
-            target.drawImage(QPointF(0, 0), m_artwork);
+            fluentDrawImageAt(target, QPointF(), m_artwork);
             return;
         }
         QImage artwork(qMax(1, qRound(width() * dpr)), qMax(1, qRound(height() * dpr)),
@@ -734,7 +735,7 @@ protected:
         artwork.setDevicePixelRatio(dpr);
         artwork.fill(Qt::transparent);
 
-        QPainter painter(&artwork);
+        FluentRasterCachePainter painter(&artwork);
         // QPainter already maps logical coordinates through QImage's device pixel
         // ratio. Scaling again makes Retina output 4x in device space: the bottom
         // dissolve lands outside the image and the top-left radius doubles.
@@ -882,7 +883,7 @@ protected:
         target.setCompositionMode(usesCompositedWindowBackdrop(this)
                 ? QPainter::CompositionMode_Source
                 : QPainter::CompositionMode_SourceOver);
-        target.drawImage(QPointF(0, 0), artwork);
+        fluentDrawImageAt(target, QPointF(), artwork);
     }
 
 private:

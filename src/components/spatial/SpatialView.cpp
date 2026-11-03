@@ -1,3 +1,5 @@
+#include "compatibility/PaintCompat.h"
+#include "compatibility/private/spatial/GraphicsViewPaintCompat_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "SpatialView.h"
 #include "SpatialRuntime.h"
@@ -55,6 +57,10 @@ bool finite(const QPointF& p)
 class SpatialViewport final : public QOpenGLWidget {
 public:
     explicit SpatialViewport(QGraphicsView* view) : m_view(view) {}
+    bool paintAtDeviceScale()
+    {
+        return ::compatibility::detail::paintLowDprOpenGLViewport(this, [this] { paintGL(); });
+    }
 
 protected:
     bool event(QEvent* event) override
@@ -80,8 +86,9 @@ protected:
         // Paint outside QWidget's stale system clip after an ancestor has scrolled.
         // zh_CN: 祖先滚动后绕过 QWidget 的旧系统裁剪，恢复完整 FBO 而非仅原可见区域。
         QOpenGLPaintDevice target(size() * devicePixelRatioF());
-        target.setDevicePixelRatio(devicePixelRatioF());
+        fluentSetRenderTargetDevicePixelRatio(target, devicePixelRatioF());
         QPainter painter(&target);
+        fluentApplyRenderTargetScale(painter, devicePixelRatioF());
         painter.setRenderHints(m_view->renderHints());
         painter.fillRect(rect(), m_view->backgroundBrush());
         // The paint device already applies DPR; render in logical viewport coordinates.
@@ -152,6 +159,14 @@ public:
     std::function<void()> resized, nativeRequested;
 
 protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        auto* gl = dynamic_cast<SpatialViewport*>(viewport());
+        if (gl && gl->paintAtDeviceScale())
+            return;
+        QGraphicsView::paintEvent(event);
+    }
+
     void resizeEvent(QResizeEvent* e) override
     {
         QGraphicsView::resizeEvent(e);

@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/PaintCompat.h"
 #include "compatibility/WidgetCompat.h"
 #include "GridView.h"
 
@@ -417,7 +418,7 @@ void GridView::paintEvent(QPaintEvent* event)
         QPoint pixPos = m_dragCurrentPos
             - QPoint(m_dragPixmap.width() / (2 * m_dragPixmap.devicePixelRatio()),
                 m_dragPixmap.height() / (2 * m_dragPixmap.devicePixelRatio()));
-        fp.drawPixmap(pixPos, m_dragPixmap);
+        fluentDrawPixmapAt(fp, pixPos, m_dragPixmap);
         fp.end();
     }
 
@@ -818,7 +819,7 @@ QPixmap GridView::renderItemPixmap(int row) const
     pix.setDevicePixelRatio(dpr);
     pix.fill(Qt::transparent);
 
-    QPainter p(&pix);
+    FluentRasterCachePainter p(&pix);
     p.setRenderHint(QPainter::Antialiasing);
     QStyleOptionViewItem opt;
     FLUENT_INIT_VIEW_ITEM_OPTION(&opt);
@@ -859,7 +860,7 @@ QPixmap GridView::renderDragPixmap() const
     composite.setDevicePixelRatio(dpr);
     composite.fill(Qt::transparent);
 
-    QPainter p(&composite);
+    FluentRasterCachePainter p(&composite);
     p.setRenderHint(QPainter::Antialiasing);
 
     // Draw back-to-front: farthest stack layer first
@@ -891,7 +892,7 @@ QPixmap GridView::renderDragPixmap() const
             p.setOpacity(0.6);
         else
             p.setOpacity(1.0);
-        p.drawPixmap(x, y, layerPix);
+        fluentDrawPixmapAt(p, QPointF(x, y), layerPix);
     }
 
     // Draw count badge at top-right
