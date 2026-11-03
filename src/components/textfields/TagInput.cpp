@@ -304,7 +304,7 @@ void TagInput::layoutTags()
         return;
     QPointer<TagInput> guard(this);
     m_layouting = true;
-    const int edge = 8;
+    const int edge = ::Spacing::Padding::TextFieldHorizontal;
     const int gap = 4;
     const int rowHeight = qMax(28, fontMetrics().height() + 8);
     const int query = isQueryIconVisible() ? queryButtonSize() + 6 : 0;

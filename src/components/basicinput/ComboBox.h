@@ -197,7 +197,7 @@ private:
     bool m_hasExplicitFont = false;
     bool m_applyingFontRole = false;
     int m_autoHeight = ::Spacing::ControlHeight::Standard;
-    int m_contentPaddingH = ::Spacing::Padding::ComboBoxHorizontal;
+    int m_contentPaddingH = ::Spacing::Padding::TextFieldHorizontal;
     int m_contentPaddingV = ::Spacing::Padding::ComboBoxVertical;
     QString m_chevronGlyph = Typography::Icons::ChevronDownMed;
     int m_chevronSize = Typography::IconSize::Compact;

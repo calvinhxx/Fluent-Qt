@@ -1,3 +1,4 @@
+#include "compatibility/TextPaintCompat.h"
 #include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/PaintCompat.h"
 #include "compatibility/private/WidgetPlatformCompat_p.h"
@@ -566,7 +567,8 @@ void Button::paintButton(InteractionState state)
     if (m_layout == IconAfter) {
         // Text first, icon after. zh_CN: 文本在前，图标在后。
         if (!txt.isEmpty()) {
-            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), Qt::AlignCenter, txt);
+            fluent::painting::drawVerticallyCenteredText(painter,
+                QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), txt, Qt::AlignHCenter);
             startX += txtWidth + gap;
         }
         if (hasIconFont) {
@@ -594,7 +596,8 @@ void Button::paintButton(InteractionState state)
             startX += iconWidth + gap;
         }
         if (!txt.isEmpty()) {
-            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), Qt::AlignCenter, txt);
+            fluent::painting::drawVerticallyCenteredText(painter,
+                QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), txt, Qt::AlignHCenter);
         }
     }
 }

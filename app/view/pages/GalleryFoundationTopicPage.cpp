@@ -755,7 +755,7 @@ void GalleryFoundationTopicPage::buildSpacing()
         {QStringLiteral("Control vertical"), QStringLiteral("Spacing::Padding::ControlVertical"),
             ::Spacing::Padding::ControlVertical, QStringLiteral("Generic controls")},
         {QStringLiteral("ComboBox horizontal"), QStringLiteral("Spacing::Padding::ComboBoxHorizontal"),
-            ::Spacing::Padding::ComboBoxHorizontal, QStringLiteral("ComboBox content")},
+            ::Spacing::Padding::ComboBoxHorizontal, QStringLiteral("ComboBox chevron inset")},
         {QStringLiteral("ComboBox vertical"), QStringLiteral("Spacing::Padding::ComboBoxVertical"),
             ::Spacing::Padding::ComboBoxVertical, QStringLiteral("ComboBox content")},
         {QStringLiteral("Text field horizontal"), QStringLiteral("Spacing::Padding::TextFieldHorizontal"),

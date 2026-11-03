@@ -118,6 +118,15 @@ size policies; do not patch each Gallery sample with fixed heights. Small/Large
 buttons, multiline labels, headers, explicit AutoSuggestBox input heights and
 wrapping tags keep their documented size semantics.
 
+Unadorned editors and selection fields share `Spacing::Padding::TextFieldHorizontal`
+(9 pixels) as their visible horizontal text inset. `ComboBoxHorizontal` keeps
+the 11-pixel selector chrome inset that positions the ComboBox chevron.
+`contentMargins` horizontal values include the native editor's internal padding;
+`LineEditMetricsCompat_p.h` owns that compensation, including zero margins. Additional inherited `QLineEdit::textMargins()` remain caller-owned.
+`FieldTextGeometry_p.h` owns the logical field rectangle, while native editor
+geometry is adapted without replacing Qt text, cursor, selection or IME painting.
+Leading icons, tags and segmented date/time fields retain their explicit spaces.
+
 Derived text inputs must honor LineEdit's `frameVisible` surface contract.
 NumberBox exposes `commitInput()` for consumers that must read the numeric value
 before focus-out, including item delegates. Keep model commits in the delegate:

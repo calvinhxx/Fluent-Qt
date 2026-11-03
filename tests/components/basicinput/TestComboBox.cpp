@@ -27,7 +27,6 @@
 #include <QtMath>
 #include <QtTest/QTest>
 
-#include "compatibility/TextPaintCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/collections/ListView.h"
@@ -205,7 +204,7 @@ TEST_F(ComboBoxTest, DefaultProperties)
     ComboBox cb(window);
     EXPECT_GE(cb.metaObject()->indexOfProperty("pressProgress"), 0);
     EXPECT_EQ(cb.fontRole(), Typography::FontRole::Body);
-    EXPECT_EQ(cb.contentPaddingH(), Spacing::Padding::ComboBoxHorizontal);
+    EXPECT_EQ(cb.contentPaddingH(), Spacing::Padding::TextFieldHorizontal);
     EXPECT_EQ(cb.contentPaddingV(), Spacing::Padding::ComboBoxVertical);
     EXPECT_EQ(cb.chevronGlyph(), Typography::Icons::ChevronDownMed);
     EXPECT_EQ(cb.chevronSize(), Typography::IconSize::Compact);
@@ -550,6 +549,24 @@ TEST_F(ComboBoxTest, EditableFieldGeometryMirrorsInRightToLeftLayouts)
     EXPECT_EQ(leftToRight.size(), rightToLeft.size());
     EXPECT_LT(leftToRight.center().x(), rightToLeft.center().x());
     EXPECT_EQ(leftToRight.left() + rightToLeft.right(), cb.width() - 1);
+}
+
+TEST_F(ComboBoxTest, EditableEditorLeavesTheChevronHitArea)
+{
+    ComboBox cb(window);
+    cb.setEditable(true);
+    cb.resize(220, Spacing::ControlHeight::Standard);
+    window->show();
+    cb.show();
+    QApplication::processEvents();
+    ASSERT_NE(cb.lineEdit(), nullptr);
+    const int chevronArea = cb.chevronOffset().x() + cb.chevronSize() + Spacing::Gap::Tight;
+    // A press beside the chevron reaches the ComboBox and opens the list, not the editor.
+    EXPECT_LE(cb.lineEdit()->geometry().right(), cb.width() - 1 - chevronArea);
+
+    cb.setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    EXPECT_GE(cb.lineEdit()->geometry().left(), chevronArea);
 }
 
 TEST_F(ComboBoxTest, DisabledState)
@@ -1414,43 +1431,23 @@ TEST_F(ComboBoxTest, PopupSelectedIndicatorPaintsSinglePill)
            "both ListView and the item delegate";
 }
 
-TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline)
+TEST_F(ComboBoxTest, PopupIndicatorStaysCenteredForLabelsWithDescenders)
 {
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
-    cb->addItems({"Auto", "Left", "Top"});
-    cb->setCurrentIndex(0);
-
-    auto* popup = openPopupFor(cb, window);
-    ASSERT_NE(popup, nullptr);
-    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
-    ASSERT_NE(listView, nullptr);
-    listView->setSelectedIndicatorAnimationEnabled(false);
-    QApplication::processEvents();
-
-    const QModelIndex index = listView->model()->index(0, 0);
-    const QRectF rowRect = static_cast<QListView*>(listView)->visualRect(index);
-    const QRectF textSlot = rowRect.adjusted(5, 3, -5, -3);
-    const QFontMetricsF metrics(listView->font());
-    const QString text = index.data(Qt::DisplayRole).toString();
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
-    const qreal textInkCenter = fluent::painting::alignedTextInkCenterY(textRect, metrics, text);
-
-    constexpr qreal kOpticalCenterTolerance = 0.01;
-    EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), textInkCenter, kOpticalCenterTolerance);
-}
-
-TEST_F(ComboBoxTest, TextInkCenteringAdaptsToRepresentativeGlyphProfiles)
-{
-    const QRectF textSlot(0.0, 0.0, 180.0, Spacing::ControlHeight::Large);
-    const QFontMetricsF metrics(window->font());
-    const QStringList samples{QStringLiteral("Mica"), QStringLiteral("gyp"), QStringLiteral("2026"),
-        QString::fromUtf8("中文")};
-
-    for (const QString& text : samples) {
-        SCOPED_TRACE(text.toStdString());
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text);
-        EXPECT_NEAR(textSlot.center().y(), fluent::painting::alignedTextInkCenterY(textRect, metrics, text), 0.01);
+    cb->addItems({"Home", "Settings", "Scrolling"});
+    for (int row = 0; row < cb->count(); ++row) {
+        cb->setCurrentIndex(row);
+        auto* popup = openPopupFor(cb, window);
+        ASSERT_NE(popup, nullptr);
+        auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+        ASSERT_NE(listView, nullptr);
+        listView->setSelectedIndicatorAnimationEnabled(false);
+        QApplication::processEvents();
+        const QModelIndex index = listView->model()->index(row, 0);
+        const QRectF rowRect = static_cast<QListView*>(listView)->visualRect(index);
+        EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), rowRect.center().y(), 0.5);
+        cb->hidePopup();
     }
 }
 

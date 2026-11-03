@@ -161,8 +161,8 @@ public:
         p->setPen(visual.foreground);
         const QFontMetricsF metrics(p->font());
         const auto text = metrics.elidedText(index.data().toString(), Qt::ElideRight, textSlot.width());
-        p->drawText(fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, text),
-            QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter), text);
+        fluent::painting::drawVerticallyCenteredText(*p, textSlot, text,
+            QStyle::visualAlignment(option.direction, Qt::AlignLeft));
         p->restore();
     }
     bool editorEvent(QEvent* event, QAbstractItemModel*, const QStyleOptionViewItem& option, const QModelIndex& index)

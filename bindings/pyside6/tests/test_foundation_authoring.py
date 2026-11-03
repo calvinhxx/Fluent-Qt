@@ -47,6 +47,41 @@ class FoundationAuthoringTest(unittest.TestCase):
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         QApplication.processEvents()
 
+    def test_input_fields_share_native_text_insets(self):
+        fluentqt.set_theme(fluentqt.Theme.Light)
+        host = QWidget()
+        combo = fluentqt.ComboBox(host)
+        combo.addItem("1280")
+        editable = fluentqt.ComboBox(host)
+        editable.addItem("1280")
+        editable.setEditable(True)
+        edit = fluentqt.LineEdit(host)
+        edit.setText("1280")
+        self.assertEqual(edit.contentMargins().left(), fluentqt.Spacing.Padding.TextFieldHorizontal)
+        self.assertEqual(edit.contentMargins().left(), combo.contentPaddingH())
+
+        def text_start(widget):
+            image = widget.grab().toImage()
+            dpr = image.devicePixelRatio()
+            pixels = [
+                x
+                for y in range(round(4 * dpr), round((widget.height() - 4) * dpr))
+                for x in range(round(3 * dpr), round(70 * dpr))
+                if max(image.pixelColor(x, y).getRgb()[:3]) < 140
+            ]
+            self.assertTrue(pixels)
+            return min(pixels), dpr
+
+        try:
+            for row, widget in enumerate((combo, editable, edit)):
+                widget.setGeometry(0, row * 40, 160, 32)
+            expected, _ = text_start(combo)
+            for widget in (editable, edit):
+                actual, _ = text_start(widget)
+                self.assertLessEqual(abs(actual - expected), 1)
+        finally:
+            delete_qobject_immediately(host)
+
     def test_design_namespaces_match_the_cpp_token_sources(self):
         aliases_path = (
             Path(__file__).resolve().parents[3]
@@ -74,6 +109,7 @@ class FoundationAuthoringTest(unittest.TestCase):
 
         self.assertEqual(fluentqt.Spacing.BaseUnit, 4)
         self.assertEqual(fluentqt.Spacing.Padding.ComboBoxHorizontal, 11)
+        self.assertEqual(fluentqt.Spacing.Padding.TextFieldHorizontal, 9)
         self.assertEqual(fluentqt.Spacing.Border.Focused, 2)
         self.assertEqual(fluentqt.Spacing.Gap.Section, 24)
         self.assertEqual(fluentqt.Spacing.ControlHeight.Standard, 32)

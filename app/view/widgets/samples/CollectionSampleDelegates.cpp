@@ -307,8 +307,7 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     painter->setFont(font);
     const QFontMetricsF metrics(painter->font());
     const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
-    painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedText);
+    fluent::painting::drawVerticallyCenteredText(*painter, textSlot, elidedText);
 
     painter->restore();
 }
@@ -528,8 +527,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     const QString text = index.data(Qt::DisplayRole).toString();
     const QFontMetricsF metrics(painter->font());
     const QString elidedText = metrics.elidedText(text, rtl ? Qt::ElideLeft : Qt::ElideRight, qRound(textSlot.width()));
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
-    painter->drawText(textRect, (rtl ? Qt::AlignRight : Qt::AlignLeft) | Qt::AlignVCenter, elidedText);
+    fluent::painting::drawVerticallyCenteredText(*painter, textSlot, elidedText, rtl ? Qt::AlignRight : Qt::AlignLeft);
 
     painter->restore();
 }

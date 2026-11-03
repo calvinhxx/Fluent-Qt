@@ -664,9 +664,9 @@ _SPACING_GROUPS = (
     ("Component padding", (
         MeasureRow("Control horizontal", "Spacing::Padding::ControlHorizontal", 12, "Generic controls"),
         MeasureRow("Control vertical", "Spacing::Padding::ControlVertical", 8, "Generic controls"),
-        MeasureRow("ComboBox horizontal", "Spacing::Padding::ComboBoxHorizontal", 11, "ComboBox content"),
+        MeasureRow("ComboBox horizontal", "Spacing::Padding::ComboBoxHorizontal", 11, "ComboBox chevron inset"),
         MeasureRow("ComboBox vertical", "Spacing::Padding::ComboBoxVertical", 4, "ComboBox content"),
-        MeasureRow("Text field horizontal", "Spacing::Padding::TextFieldHorizontal", 8, "LineEdit and text inputs"),
+        MeasureRow("Text field horizontal", "Spacing::Padding::TextFieldHorizontal", fluentqt.Spacing.Padding.TextFieldHorizontal, "LineEdit and text inputs"),
         MeasureRow("Text field vertical", "Spacing::Padding::TextFieldVertical", 4, "LineEdit and text inputs"),
         MeasureRow("List item horizontal", "Spacing::Padding::ListItemHorizontal", 12, "Collection rows"),
         MeasureRow("List item vertical", "Spacing::Padding::ListItemVertical", 8, "Collection rows"),

@@ -19,6 +19,7 @@ if(FLUENT_QT_BUILD_GALLERY)
 endif()
 
 set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
+    test_typography
     test_chart_model
     test_chart_view
     test_field
