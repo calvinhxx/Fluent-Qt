@@ -16,13 +16,15 @@ from unittest.mock import Mock, patch
 import fluentqt
 from fluentqt.particles import ParticleBackdrop
 from fluentqt._qt_compat import delete_qobject as delete
+from fluentqt._qt_painting import apply_render_target_scale, set_render_target_device_pixel_ratio
 from PySide6.QtCore import QAbstractAnimation, QEvent, QEventLoop, QObject, QPoint, QPointF, QRect, QRectF, QSettings, QSize, QSizeF, QTimer, Qt, qVersion
-from PySide6.QtGui import QCursor, QMouseEvent, QPainter, QPolygonF, QTransform, QWindow, qGray
+from PySide6.QtGui import QCursor, QMouseEvent, QPainter, QPixmap, QPolygonF, QRegion, QTransform, QWindow, qGray
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication, QGraphicsOpacityEffect, QGraphicsView, QLineEdit, QMenu, QScrollArea, QWidget
 from shiboken6 import isValid
 
 from fluentqt_gallery.catalog import ENTRIES
+from fluentqt_gallery.interface_zoom import prepare_interface_zoom
 from fluentqt_gallery.native_samples import build_native_sample
 from fluentqt_gallery.settings import NavigationStyle, ThemeMode, gallery_settings
 from fluentqt_gallery.spatial_support import SPATIAL_AVAILABLE
@@ -39,6 +41,8 @@ def _qwait(milliseconds):
 class GallerySpatialTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if QApplication.instance() is None and not prepare_interface_zoom(1.0):
+            raise RuntimeError("Gallery Spatial tests require the Gallery zoom startup contract")
         cls.app = QApplication.instance() or QApplication([])
         if os.environ.get("FLUENTQT_REQUIRE_NATIVE_TEST") == "1":
             if cls.app.platformName() in ("offscreen", "minimal", "vnc"):
@@ -2003,6 +2007,7 @@ print("2D-only Gallery: no OpenGL imports")
             menu.addAction("First")
             submenu = menu.addMenu("Children")
             submenu.addAction("Child")
+            menu.setFixedWidth(129)
             button.setMenu(menu)
             self.settings.set_spatial_mode_enabled(True)
             controller.settle()
@@ -2016,7 +2021,13 @@ print("2D-only Gallery: no OpenGL imports")
             self.settings.set_spatial_mode_enabled(False)
             controller.settle()
             _qwait(20)
-            self.assertEqual(menu.pos(), button.mapToGlobal(button.rect().bottomLeft()))
+            # Below DPR 1 the requested logical point can fall between native
+            # pixels. Require exact alignment on the menu screen's pixel grid.
+            origin = menu.screen().geometry().topLeft()
+            dpr = menu.windowHandle().devicePixelRatio()
+            to_native = QTransform.fromScale(dpr, dpr)
+            expected_2d = button.mapToGlobal(button.rect().bottomLeft())
+            self.assertEqual(to_native.map(menu.pos() - origin), to_native.map(expected_2d - origin))
             self.settings.set_spatial_mode_enabled(True)
             controller.settle()
             _qwait(20)
@@ -2036,7 +2047,8 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertTrue(available.contains(menu.frameGeometry()))
             window.move(window.pos() + QPoint(80, 80))
             _qwait(60)
-            self.assertTrue(not menu.isVisible() or available.contains(menu.frameGeometry()))
+            self.assertTrue(not menu.isVisible() or available.contains(menu.frameGeometry()),
+                            (available, menu.frameGeometry(), menu.devicePixelRatioF()))
             menu.hide()
         finally:
             delete(window)
@@ -2225,7 +2237,18 @@ print("2D-only Gallery: no OpenGL imports")
             self.assertTrue(QTest.qWaitForWindowExposed(window))
             _qwait(200)
             toggle.setFocus(Qt.TabFocusReason)
-            reference = content.grab().toImage()
+            # Use the existing explicit-target adapter: Qt 6.2 grab() paints
+            # sub-unit snapshots at unit coordinates. DPR 1 stays pixel-identical.
+            reference_dpr = content.devicePixelRatioF()
+            reference_pixmap = QPixmap(content.size() * reference_dpr)
+            reference_pixmap.fill(Qt.transparent)
+            set_render_target_device_pixel_ratio(reference_pixmap, reference_dpr)
+            painter = QPainter(reference_pixmap)
+            apply_render_target_scale(painter, reference_dpr)
+            content.render(painter, QPoint(), QRegion(), QWidget.DrawWindowBackground | QWidget.DrawChildren)
+            painter.end()
+            reference_pixmap.setDevicePixelRatio(reference_dpr)
+            reference = reference_pixmap.toImage()
             self.settings.set_spatial_mode_enabled(True)
             for _ in range(60):
                 if controller.canvas.property("presenting"):

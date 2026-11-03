@@ -322,7 +322,7 @@ or standalone SpatialView GPU child, so an unavailable driver cannot break the
 parent window's 2D painting. SpatialView reuses a successful probe across temporary
 clipping changes and probes again after an explicit rendering-policy change.
 Qt 6.4+ desktop windows need hidden surface
-preparation. Measured low-DPI font-coverage adapters differ by QPA/DPR. These
+preparation. Measured font-coverage adapters differ by QPA/DPR. These
 are implementation capabilities behind the same business flow, not separate
 macOS/Windows/Linux Gallery policies.
 
@@ -377,7 +377,7 @@ adjust edge coverage under perspective. This avoids independently filtering a
 cached rounded mask and a second transformed border, which can create a broken
 or doubled thin edge. It does not change the panel geometry or cache density.
 
-On Windows at output DPR 1 to below 2, and Linux at DPR 1, the Gallery uses Qt's raster glyph
+On Windows at every positive output DPR, and Linux at DPR 1, the Gallery uses Qt's raster glyph
 coverage with a private paint-device adapter. It rasterizes Qt's already-shaped
 text items into bounded, transparent tiles during dirty-cache updates, including
 particle-layer foreground text. Unhinted fonts use the actual panel-cache density
@@ -387,13 +387,15 @@ contrast do not change. This private policy uses each shaped item's font, not an
 application-wide font or a new platform branch. Shaping,
 fallback fonts and bidi ordering are not repeated. Geometry and images still
 paint through OpenGL; transformed or patterned text retains Qt's original path.
-The low-DPI OpenGL Gallery surface (`GpuSurface` in C++, `_Surface` in Python)
+The OpenGL Gallery surface with native glyph coverage (`GpuSurface` in C++, `_Surface` in Python)
 retains exact raster tiles in a bounded image cache so Qt can reuse their texture
 keys. The RHI surface does not use this cache. The key covers raster pixels, dimensions and
 density, with an exact image comparison before reuse; Qt's existing text pipeline
 retains shaping and fallback-font selection. The cache is released when
 leaving 3D or losing the GL context. There is no whole-window CPU capture. Cocoa,
-WebAssembly, Linux fractional DPR and output DPR 2 or higher keep the original glyph path.
+WebAssembly and Linux fractional or high DPR keep the original glyph path.
+Windows keeps one glyph path across zoom changes, including below DPR 1 and at
+DPR 2 or higher, so changing the scale does not switch to heavier OpenGL glyphs.
 The adapter reuses an unchanged device-space clip across drawing primitives;
 clip or transform changes invalidate it while retaining the caller's painter
 state. This avoids repeated stencil setup in Debug without caching shaped text.
@@ -470,7 +472,7 @@ shorter shared target; only children intersecting each strip are rendered. Only
 the used width and height of each strip are resolved, including narrow navigation
 panels and the last partial strip. This keeps the antialiasing buffer within
 budget without reducing the selected text density. The
-low-DPI native glyph adapter also reserves 512 KiB for one bounded CPU tile and
+native glyph adapter also reserves 512 KiB for one bounded CPU tile and
 its upload. The OpenGL retained-image cache has a hard 2 MiB CPU limit, including
 a fixed metadata charge for each admitted image. A further 2 MiB is a conservative
 planner reservation for texture copies, not an enforced limit on Qt's texture

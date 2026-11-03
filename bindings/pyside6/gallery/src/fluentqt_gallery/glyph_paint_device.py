@@ -1,4 +1,4 @@
-"""Private glyph coverage adapter for the low-DPI GL panel cache.
+"""Private native glyph coverage adapter for the GL panel cache.
 
 Qt has already shaped each QTextItem. Unhinted outlines use the cache density;
 hinted fonts retain the display's pixel grid. Geometry, images, panel resolution

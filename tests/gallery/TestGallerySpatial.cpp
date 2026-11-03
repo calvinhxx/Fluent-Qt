@@ -4007,6 +4007,120 @@ TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjecti
     surface.doneCurrent();
 }
 
+TEST_F(GallerySpatialTest, Contract_WindowsScaledTypographyLimitsInkWithoutLosingContrast)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("windows"))
+        GTEST_SKIP() << "Requires native Windows font and OpenGL rendering";
+    class TextContent final : public QWidget {
+    public:
+        static void paintText(QPainter& painter)
+        {
+            QFont text = Typography::Styles::Body.toQFont();
+            for (int row = 0; row < 6; ++row) {
+                const bool dark = row >= 3;
+                painter.setPen(dark ? Qt::white : Qt::black);
+                text.setPixelSize(std::array<int, 3>{14, 18, 28}[row % 3]);
+                painter.setFont(text);
+                painter.drawText(QPoint(40, 50 + row * 60), QString::fromUtf8("Gallery 设置与组件 0123456789"));
+            }
+        }
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter painter(this);
+            painter.fillRect(rect(), Qt::white);
+            painter.fillRect(QRect(0, 180, width(), 180), Qt::black);
+            paintText(painter);
+        }
+    };
+    QWidget window;
+    window.resize(900, 400);
+    auto* navigation = new navigation::NavigationView(&window);
+    navigation->resize(window.size());
+    auto* content = new TextContent;
+    GallerySpatialController controller(&window, navigation);
+    navigation->contentHost()->insertPage(0, content);
+    navigation->contentHost()->setCurrentIndex(0, 0, false);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    QTest::qWait(200);
+    const QImage reference = content->grab().toImage();
+    // Transparent text must use Qt's transparent-text oracle. Native opaque
+    // Windows text uses different edge coverage: at 7 physical pixels it has
+    // less black ink even without OpenGL or panel resampling. Keep that native
+    // snapshot as the contrast oracle, and compare ink to untransformed Qt
+    // glyphs composited at the display density, independently of our adapter.
+    // zh_CN: 透明文字的墨迹基准应来自 Qt 原生透明字形。Windows 不透明文字的边缘覆盖不同，
+    // 7 物理像素小字即使不经过 OpenGL 也会更淡。原生快照仍约束笔画对比度，
+    // 墨迹则对照独立于适配器、按显示密度直接合成的 Qt 字形。
+    QImage glyphs(reference.size(), QImage::Format_ARGB32_Premultiplied);
+    glyphs.setDevicePixelRatio(content->devicePixelRatioF());
+    glyphs.fill(Qt::transparent);
+    {
+        QPainter painter(&glyphs);
+        TextContent::paintText(painter);
+    }
+    QImage transparentReference(glyphs.size(), glyphs.format());
+    transparentReference.setDevicePixelRatio(glyphs.devicePixelRatio());
+    transparentReference.fill(Qt::white);
+    {
+        QPainter painter(&transparentReference);
+        painter.fillRect(QRect(0, 180, content->width(), 180), Qt::black);
+        painter.drawImage(QPoint(), glyphs);
+    }
+    GallerySettings::instance().setSpatialModeEnabled(true);
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(surface, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 3000));
+    controller.cancelTransition();
+    auto* motion = controller.findChild<QVariantAnimation*>("galleryAssemblyAnimation");
+    ASSERT_NE(motion, nullptr);
+    motion->setStartValue(0.0);
+    motion->setEndValue(1.0);
+    motion->setCurrentTime(motion->duration() / 2);
+    motion->setCurrentTime(0);
+    QTest::qWait(200);
+    const qreal dpr = surface->devicePixelRatioF();
+    const QPoint origin = surface->mapFrom(&window, controller.projectedPosition(content, {}));
+    const QImage actual = surface->grabFramebuffer().copy(QRect(origin * dpr, reference.size()));
+    const QString evidence = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+    if (!evidence.isEmpty()) {
+        QDir().mkpath(evidence);
+        reference.save(evidence + "/typography-2d.png");
+        transparentReference.save(evidence + "/typography-transparent.png");
+        actual.save(evidence + "/typography-gpu.png");
+    }
+    for (int row = 0; row < 6; ++row) {
+        const QRect region(30, 15 + row * 60, 700, 45);
+        const QRect pixels(region.topLeft() * dpr, region.size() * dpr);
+        const auto measure = [&](const QImage& image) {
+            qint64 coverage = 0;
+            qreal energy = 0;
+            for (int y = pixels.top(); y <= pixels.bottom(); ++y) {
+                for (int x = pixels.left(); x <= pixels.right(); ++x) {
+                    const int value = qGray(image.pixel(x, y));
+                    coverage += row >= 3 ? value : 255 - value;
+                    if (x > pixels.left() && y > pixels.top())
+                        energy += qPow(value - qGray(image.pixel(x - 1, y)), 2)
+                            + qPow(value - qGray(image.pixel(x, y - 1)), 2);
+                }
+            }
+            return qMakePair(coverage, coverage > 0 ? energy / coverage : 0);
+        };
+        const auto expected = measure(reference), transparent = measure(transparentReference),
+                   rendered = measure(actual);
+        ASSERT_GT(expected.first, 0);
+        ASSERT_GT(transparent.first, 0);
+        ASSERT_GT(rendered.first, 0);
+        ASSERT_GT(expected.second, 20);
+        const qreal ratio = qreal(rendered.first) / transparent.first;
+        std::cout
+            << "SPATIAL_INK dpr=" << dpr << " row=" << row << " ratio=" << ratio << " opaqueRatio="
+            << qreal(rendered.first) / expected.first << " contrast=" << rendered.second / expected.second << std::endl;
+        EXPECT_GE(rendered.second, expected.second * .9) << "Text must retain native stroke contrast";
+        EXPECT_NEAR(ratio, 1., .1) << "Changing the paint backend must preserve native transparent glyph ink";
+    }
+}
+
 TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
 {
     if (tests::support::isHeadlessPlatform())
@@ -4087,7 +4201,7 @@ TEST_F(GallerySpatialTest, GpuCachePreservesHighDpiControlDetail)
                     stats["cacheDpr"].toDouble()))
                 << "The production cache must preserve each font's hinting policy";
         else
-            EXPECT_EQ(content->glyphDpr, 0) << "Preserve Cocoa, WebAssembly and high-DPI glyph paths";
+            EXPECT_EQ(content->glyphDpr, 0) << "Preserve the other platforms' delegated glyph paths";
         if (windowSize.width() == 1500 && window.devicePixelRatioF() == 2) {
             EXPECT_EQ(stats["cacheDpr"].toDouble(), 3);
             EXPECT_LT(stats["paintTargetHeight"].toInt(), content->height() * 3);

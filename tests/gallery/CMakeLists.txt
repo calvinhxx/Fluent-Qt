@@ -157,6 +157,21 @@ if(QT_VERSION_MAJOR EQUAL 6)
     target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
 endif()
 
+if(WIN32)
+    # Keep the affected zoom ranges in the desktop test inventory, rather than
+    # relying on the normal offscreen run or the desktop's default scale.
+    foreach(_typography_scale IN ITEMS 0.5 0.75 1 1.25 1.5 2)
+        set(_typography_test "GallerySpatialTest.NativeWindowsScaledTypography_${_typography_scale}")
+        add_test(NAME "${_typography_test}"
+            COMMAND $<TARGET_FILE:test_gallery_spatial>
+                --gtest_filter=GallerySpatialTest.Contract_WindowsScaledTypographyLimitsInkWithoutLosingContrast)
+        set_tests_properties("${_typography_test}" PROPERTIES
+            ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=windows;QT_SCALE_FACTOR=${_typography_scale}"
+            LABELS "qt;unit;gallery;gallery_spatial;test_gallery_spatial;platform_windows;local_desktop;native_window"
+            RUN_SERIAL TRUE TIMEOUT 60)
+    endforeach()
+endif()
+
 if(APPLE)
     add_test(NAME GallerySpatialTest.NativeGalleryAssemblyPreservesMaterial
         COMMAND $<TARGET_FILE:test_gallery_spatial>
