@@ -365,8 +365,7 @@ set(FLUENTQT_PYSIDE6_GENERATOR_ARGUMENTS
     --language-level=c++17
     --clang-option=-DFLUENTQT_PYSIDE6_GENERATOR
     "${FLUENTQT_PYSIDE6_GENERATOR_INCLUDE_ARGUMENTS}"
-    "-T${FLUENTQT_PYSIDE6_TYPESYSTEM_DIR}"
-    "--output-directory=${FLUENTQT_PYSIDE6_GENERATED_ROOT}")
+    "-T${FLUENTQT_PYSIDE6_TYPESYSTEM_DIR}")
 if(WIN32)
     # Shiboken's Clang must use the UCRT builtin offsetof when Qt plugin
     # metadata evaluates offsets in a constant expression (LLVM #59689).
@@ -383,20 +382,27 @@ endif()
 file(GLOB_RECURSE FLUENTQT_PYSIDE6_INPUT_HEADERS CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/include/FluentQt/*.h"
     "${PROJECT_SOURCE_DIR}/src/*.h")
+if(TARGET FluentQtSpatial)
+    list(APPEND FLUENTQT_PYSIDE6_INPUT_HEADERS "${PROJECT_SOURCE_DIR}/support/spatial/SpatialTextureHost.h")
+endif()
 set(FLUENTQT_PYSIDE6_GENERATION_STAMP
     "${FLUENTQT_PYSIDE6_GENERATED_ROOT}/generation.stamp")
+set(FLUENTQT_PYSIDE6_HEADER_STAMP "${FLUENTQT_PYSIDE6_GENERATED_ROOT}/headers.sha256")
 add_custom_command(
     OUTPUT "${FLUENTQT_PYSIDE6_GENERATION_STAMP}"
-    BYPRODUCTS ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
+    BYPRODUCTS ${FLUENTQT_PYSIDE6_GENERATED_SOURCES} "${FLUENTQT_PYSIDE6_HEADER_STAMP}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory
         "${FLUENTQT_PYSIDE6_GENERATED_ROOT}"
-    COMMAND "${FLUENTQT_SHIBOKEN6_GENERATOR}"
+    COMMAND "${Python_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_bindings.py"
+        "--output-directory=${FLUENTQT_PYSIDE6_GENERATED_ROOT}"
+        -- "${FLUENTQT_SHIBOKEN6_GENERATOR}"
         ${FLUENTQT_PYSIDE6_GENERATOR_ARGUMENTS}
         "${FLUENTQT_PYSIDE6_BINDING_HEADER}"
         "${FLUENTQT_PYSIDE6_TYPESYSTEM}"
     COMMAND "${CMAKE_COMMAND}" -E touch
         "${FLUENTQT_PYSIDE6_GENERATION_STAMP}"
     DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_bindings.py"
         "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/native/PluginBindingApi.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/native/typesystem_fluentqt.xml"
@@ -409,6 +415,10 @@ add_custom_target(fluentqt_pyside6_generate
     DEPENDS "${FLUENTQT_PYSIDE6_GENERATION_STAMP}")
 set_source_files_properties(
     ${FLUENTQT_PYSIDE6_GENERATED_SOURCES} PROPERTIES GENERATED TRUE)
+# Make/Ninja need an explicit edge for header-only generator changes in the
+# same build. IDE generators use their compiler's include dependency tracking.
+set_property(SOURCE ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
+    APPEND PROPERTY OBJECT_DEPENDS "${FLUENTQT_PYSIDE6_HEADER_STAMP}")
 
 add_library(_fluentqt MODULE
     ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
@@ -1284,6 +1294,12 @@ if(BUILD_TESTING)
             LABELS "pyside;unit;ci_fast"
             TIMEOUT 30)
     endif()
+
+    add_test(NAME test_pyside6_binding_generator
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_binding_generator.py")
+    set_tests_properties(test_pyside6_binding_generator PROPERTIES
+        LABELS "pyside;unit;ci_fast" TIMEOUT 30)
 
     add_test(
         NAME test_pyside6_wheel_builder
