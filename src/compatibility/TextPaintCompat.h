@@ -2,10 +2,13 @@
 #define FLUENTTEXTPAINTCOMPAT_H
 
 #include <QFontMetricsF>
+#include <QGlyphRun>
 #include <QPaintDevice>
 #include <QPainter>
+#include <QRawFont>
 #include <QRectF>
 #include <QString>
+#include <QTextLayout>
 #include <QtMath>
 
 namespace fluent::painting {
@@ -94,9 +97,11 @@ verticallyCenteredTextInkOffset(const QRectF& targetRect, const QFontMetricsF& m
     if (!ink.isValid() || ink.isEmpty())
         return 0.0;
 
-    const qreal alignedBaseline = verticallyCenteredTextBaseline(targetRect, metrics);
-    const qreal alignedInkCenter = alignedBaseline + ink.center().y();
-    return targetRect.center().y() - alignedInkCenter;
+    // QPainter centers the shaped line, whose fallback fonts can be taller than
+    // the primary font. Measure that line instead of using the primary ascent.
+    // zh_CN: QPainter 居中的是塑形后的行框，回退字体可能更高；应测量该行而非仅用主字体上升部。
+    const QRectF line = metrics.boundingRect(text);
+    return line.center().y() - ink.center().y();
 }
 
 /**
@@ -109,13 +114,54 @@ inline QRectF verticallyCenteredTextInkRect(const QRectF& targetRect, const QFon
 }
 
 /**
+ * @brief Centers shaped glyph ink, including text that combines fallback fonts.
+ * zh_CN: 按塑形后的字形墨迹居中，支持同一段文字混用回退字体。
+ */
+inline QRectF verticallyCenteredTextInkRect(const QRectF& targetRect, const QPainter& painter, const QString& text)
+{
+    if (!targetRect.isValid() || targetRect.isEmpty() || text.isEmpty())
+        return targetRect;
+
+    QTextLayout layout(text, painter.font(), painter.device());
+    QTextOption option;
+    option.setWrapMode(QTextOption::NoWrap);
+    layout.setTextOption(option);
+    layout.beginLayout();
+    const QTextLine line = layout.createLine();
+    layout.endLayout();
+    if (!line.isValid())
+        return targetRect;
+
+    // Metrics-only tight bounds can omit descenders when a fallback run raises
+    // the line ascent. Keep each shaped glyph's position and actual font.
+    // zh_CN: 回退字形抬高行上升部时，纯字体度量可能漏掉下伸部；保留每个塑形字形的位置和实际字体。
+    QRectF ink;
+    for (const QGlyphRun& run : layout.glyphRuns()) {
+        const QRawFont font = run.rawFont();
+        const auto glyphs = run.glyphIndexes();
+        const auto positions = run.positions();
+        for (int index = 0; index < glyphs.size(); ++index) {
+            const QRectF bounds = font.boundingRect(glyphs[index]).translated(positions[index]);
+            if (!bounds.isEmpty())
+                ink |= bounds;
+        }
+    }
+    if (!ink.isValid() || ink.isEmpty())
+        return targetRect;
+    return targetRect.translated(0.0, (line.ascent() + line.descent()) / 2.0 - ink.center().y());
+}
+
+/**
  * @brief Returns the visible glyph-ink center for text drawn with vertical-center alignment.
  * zh_CN: 返回使用垂直居中对齐绘制文本时的可见字形墨迹中心。
  */
 inline qreal alignedTextInkCenterY(const QRectF& alignedRect, const QFontMetricsF& metrics, const QString& text)
 {
     const QRectF ink = metrics.tightBoundingRect(text);
-    const qreal baseline = verticallyCenteredTextBaseline(alignedRect, metrics);
+    const QRectF line = metrics.boundingRect(text);
+    const qreal baseline = line.isValid()
+        ? alignedRect.center().y() - line.center().y()
+        : verticallyCenteredTextBaseline(alignedRect, metrics);
     return baseline + ink.center().y();
 }
 

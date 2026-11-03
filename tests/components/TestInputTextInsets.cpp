@@ -4,6 +4,7 @@
 #include <QImage>
 #include <QLineEdit>
 #include <QPainter>
+#include <QtMath>
 #include <QStandardItemModel>
 #include <QTest>
 

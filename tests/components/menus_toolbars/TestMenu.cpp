@@ -7,6 +7,7 @@
 #include <QEnterEvent>
 #include <QImage>
 #include <QPainter>
+#include <QtMath>
 #include <QStyle>
 #include <QProxyStyle>
 #include <QScopeGuard>
