@@ -2,6 +2,108 @@
   "schema_version": 1,
   "versions": [
     {
+      "version": "1.11.1",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "98ae8140d20282e53244e45d0e612fb7ecd297696b054a402b9c2bc44b52eb88",
+      "summary": {
+        "en": "Adds RangeSlider and ImageViewer, saved desktop Gallery zoom and paged search, with fixes for text alignment, overlays, and low-scale rendering.",
+        "zh": "新增 RangeSlider 和 ImageViewer，桌面 Gallery 支持保存界面缩放和分页搜索，并修复文字对齐、浮层和低倍率绘制问题。"
+      },
+      "related": [
+        "range-slider",
+        "slider",
+        "image-viewer",
+        "flip-view",
+        "auto-suggest-box",
+        "command-palette",
+        "selector-bar",
+        "menu",
+        "combobox",
+        "line-edit",
+        "dialog",
+        "popup",
+        "window",
+        "module-spatial"
+      ],
+      "headers": [
+        "src/components/basicinput/RangeSlider.h",
+        "src/components/scrolling/ImageViewer.h",
+        "src/compatibility/PaintCompat.h",
+        "src/compatibility/TextPaintCompat.h",
+        "src/compatibility/WindowGeometryCompat.h"
+      ],
+      "changes": [
+        {
+          "en": "RangeSlider provides two values, minimum spacing, keyboard steps and accessible thumbs; it shares the Slider appearance.",
+          "zh": "RangeSlider 提供上下限、最小间距、键盘步长和可访问的双手柄，与 Slider 共用外观。"
+        },
+        {
+          "en": "ImageViewer adds pointer-centered zoom, panning, fit modes, keyboard and pinch input, and cached thumbnails, including use inside FlipView.",
+          "zh": "ImageViewer 支持围绕指针缩放、平移、适应视口、键盘与捏合操作和缩略图缓存，也可用于 FlipView。"
+        },
+        {
+          "en": "Desktop Gallery saves 50%–200% interface zoom, preserves the native window frame and restored placement, and keeps editor focus when showing zoom controls.",
+          "zh": "桌面 Gallery 可保存 50%–200% 的界面缩放，保持原生窗口外框和恢复位置，显示缩放控件时保留编辑器焦点。"
+        },
+        {
+          "en": "Fractional and low-DPR rendering repairs preserve local paint regions. GPU-only frames do not force a full-window widget repaint.",
+          "zh": "分数倍率和低 DPR 绘制修复保留局部刷新，纯 GPU 帧不会强制触发整窗控件重绘。"
+        },
+        {
+          "en": "Gallery search pages component and example results, cancels stale requests, and keeps browser accessibility geometry current.",
+          "zh": "Gallery 分页显示组件和示例搜索结果，取消过期请求，并同步浏览器无障碍几何信息。"
+        },
+        {
+          "en": "Text and editable-field alignment, menu icon placement, SelectorBar overflow focus, popup effect captures, and native window geometry are corrected.",
+          "zh": "修正文字与可编辑输入框对齐、菜单图标位置、SelectorBar 溢出焦点、浮层效果截图和原生窗口几何。"
+        },
+        {
+          "en": "Desktop Gallery source builds require matching Qt private development headers; the base Widgets library still supports Qt 5.15+ and 6.2+ without this dependency.",
+          "zh": "从源码构建桌面 Gallery 需要与 Qt 配套的内部开发头文件；基础 Widgets 库仍支持 Qt 5.15+ 和 6.2+，不增加该依赖。"
+        },
+        {
+          "en": "Preview tools handle UTF-8 consistently, unchanged generated Python wrappers keep their timestamps, and local WSL validation reuses Linux-native workspaces.",
+          "zh": "预览工具统一使用 UTF-8，未变化的 Python 生成封装保留时间戳，本地 WSL 验证复用 Linux 原生工作目录。"
+        },
+        {
+          "en": "Project updates now live in Releases and migrations. The standalone roadmap is removed; its old URLs open the release history in the same language.",
+          "zh": "官网项目更新统一在“版本记录与迁移”查看。独立路线图页已移除，旧地址跳转到对应语言的版本记录。"
+        },
+        {
+          "en": "The documentation sidebar now groups component categories under Components, icons under Foundations, and each extension guide with its components. Search expands matching branches and restores your expanded sections when cleared.",
+          "zh": "文档侧栏按层级组织：控件分类归入“组件”，图标归入“基础能力”，扩展模块的概述与组件放在一起。搜索自动展开匹配分支，清空后恢复原来的展开状态。"
+        },
+        {
+          "en": "Live component examples now take the height their sample needs, so tall charts, grids and pickers no longer scroll inside a short frame. Dialog, menu and window examples keep extra room for their overlays.",
+          "zh": "组件文档里的实时示例会按示例内容自动调整高度，图表、表格和选择器不再挤在过矮的窗口里滚动。对话框、菜单和窗口类示例仍保留浮层所需的空间。"
+        },
+        {
+          "en": "The GitHub Sponsor button now lists a short link for each support tier. Each opens the homepage in your browser's language with that tier already selected.",
+          "zh": "GitHub 的 Sponsor 小爱心现在为每个投喂档位列出一个短链接，点开后按浏览器语言打开官网，并自动选好对应档位。"
+        }
+      ],
+      "migrations": [
+        {
+          "id": "gallery-private-qt-headers",
+          "title": {
+            "en": "Install matching Qt private headers for desktop Gallery",
+            "zh": "构建桌面 Gallery 时安装配套 Qt 内部开发头文件"
+          },
+          "impact": {
+            "en": "A desktop Gallery source build without the matching private development headers now fails configuration. Base-library and ordinary binding consumers are unaffected.",
+            "zh": "桌面 Gallery 源码构建缺少匹配的内部开发头文件时会在配置阶段报错；基础库和普通绑定使用方不受影响。"
+          },
+          "action": {
+            "en": "Install qtbase5-private-dev or qt6-base-private-dev matching the selected Qt kit, or disable both Gallery build options for library-only use.",
+            "zh": "安装与当前 Qt 配套的 qtbase5-private-dev 或 qt6-base-private-dev；只构建库时可关闭两个 Gallery 构建选项。"
+          },
+          "before": "Desktop Gallery with public Qt development headers only",
+          "after": "# Debian / Ubuntu, matching the selected Qt version:\nsudo apt install qtbase5-private-dev\n# or:\nsudo apt install qt6-base-private-dev\n# Library-only alternative:\n-DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=OFF"
+        }
+      ]
+    },
+    {
       "related": [
         "font-icon",
         "foundation-iconography",

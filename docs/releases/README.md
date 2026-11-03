@@ -12,8 +12,7 @@ The website provides [English release summaries and migrations](https://calvinhx
 and [Chinese release summaries and migrations](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/releases/).
 Use the version and component filters before an upgrade. Changes after the
 latest stable release appear separately under **Unreleased**, without an
-assigned release number. The [website roadmap](https://calvinhxx.github.io/Fluent-Qt/api/roadmap/)
-tracks current maintenance priorities rather than promising delivery dates.
+assigned release number. Former roadmap URLs redirect to the release history.
 
 API pages describe current source. They are not archived API snapshots for
 every historical binary; each release note and comparison remains available
@@ -21,7 +20,7 @@ from its version entry.
 
 | Series | Releases |
 |---|---|
-| 1.11 | [1.11.0](v1.11.0.md) |
+| 1.11 | [1.11.1](v1.11.1.md) · [1.11.0](v1.11.0.md) |
 | 1.10 | [1.10.3](v1.10.3.md) · [1.10.2](v1.10.2.md) · [1.10.1](v1.10.1.md) · [1.10.0](v1.10.0.md) |
 | 1.9 | [1.9.3](v1.9.3.md) · [1.9.2](v1.9.2.md) · [1.9.1](v1.9.1.md) · [1.9.0](v1.9.0.md) |
 | 1.8 | [1.8.5](v1.8.5.md) · [1.8.4](v1.8.4.md) · [1.8.3](v1.8.3.md) · [1.8.2](v1.8.2.md) · [1.8.1](v1.8.1.md) · [1.8.0](v1.8.0.md) |
