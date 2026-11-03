@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "components/foundation/overlay/OverlayScrim.h"
 #include <QApplication>
 #include <QBackingStore>
 #include <QElapsedTimer>
@@ -29,7 +30,6 @@
 #include "support/interfacezoom/InterfaceZoom.h"
 #include "src/compatibility/private/InterfaceZoomRepaintCompat_p.h"
 #include "src/compatibility/private/WidgetSnapshotCompat_p.h"
-#include "components/foundation/overlay/OverlayScrim.h"
 #include "compatibility/PaintCompat.h"
 #ifdef FLUENT_QT_INTERFACE_ZOOM_HAS_REPAINT_QUEUES
 #include "src/compatibility/private/InterfaceZoomLowDprCompat_p.h"

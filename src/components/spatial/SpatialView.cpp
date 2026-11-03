@@ -1,7 +1,7 @@
+#include "SpatialView.h"
 #include "compatibility/PaintCompat.h"
 #include "compatibility/private/spatial/GraphicsViewPaintCompat_p.h"
 #include "compatibility/InputEventCompat.h"
-#include "SpatialView.h"
 #include "SpatialRuntime.h"
 #include "SpatialSurface_p.h"
 
