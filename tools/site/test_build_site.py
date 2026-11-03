@@ -30,14 +30,14 @@ class SiteArtifactTest(unittest.TestCase):
         for name in self.files:
             path = self.site / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("current " + name)
+            path.write_text("current " + name, encoding="utf-8")
         for relative, canonical in build_site.COPIED_ASSETS.items():
             source = self.root / canonical
             source.parent.mkdir(parents=True, exist_ok=True)
             source.write_bytes(b"canonical artwork " + canonical.encode())
         build_site.copy_assets(self.site, self.root)
         self.receipt = {"schema_version": 1, "commit": "current-sha", "files": build_site.checksums(self.site)}
-        (self.site / build_site.RECEIPT).write_text(json.dumps(self.receipt))
+        (self.site / build_site.RECEIPT).write_text(json.dumps(self.receipt), encoding="utf-8")
 
     def test_artifact_must_match_commit_and_all_contents(self):
         build_site.verify(self.site, "current-sha")
@@ -52,7 +52,7 @@ class SiteArtifactTest(unittest.TestCase):
         (self.site / "api/button/index.html").unlink()
         with self.assertRaisesRegex(ValueError, "contents differ"):
             build_site.verify(self.site, "current-sha")
-        (self.site / "extra.html").write_text("unexpected page")
+        (self.site / "extra.html").write_text("unexpected page", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "contents differ"):
             build_site.verify(self.site, "current-sha")
 
@@ -60,8 +60,12 @@ class SiteArtifactTest(unittest.TestCase):
         path = self.site / "index.html"
         path.unlink()
         target = self.root / "outside.html"
-        target.write_text("current index.html")
-        path.symlink_to(target)
+        target.write_text("current index.html", encoding="utf-8")
+        try:
+            path.symlink_to(target)
+        except OSError as error:
+            # Windows grants symlink creation only with Developer Mode or elevation.
+            self.skipTest(f"symlinks are unavailable: {error}")
         with self.assertRaisesRegex(ValueError, "symlinks"):
             build_site.verify(self.site, "current-sha")
 
@@ -71,7 +75,7 @@ class SiteArtifactTest(unittest.TestCase):
                      "assets/component-previews/retired/light.png", "gallery/local-only.wasm"):
             path = self.site / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("obsolete")
+            path.write_text("obsolete", encoding="utf-8")
         manifest = {"input_digest": "digest", "images": [{"path": self.files[-1]}]}
         pages = {name: "html" for name in self.files if name.endswith(".html")}
         output = self.root / "build/site-pages"
@@ -114,13 +118,13 @@ class SiteGenerationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "Button.cpp"
-            source.write_text("old rendering")
+            source.write_text("old rendering", encoding="utf-8")
             recipe = [{"id": "button", "previews": [{"sample": "basic", "id": "basic"}]}]
             with patch.object(previews, "ROOT", root), \
                  patch.object(previews, "capture_inputs", return_value=["Button.cpp"]), \
                  patch.object(previews, "config", return_value=recipe):
                 before = previews.capture_digest()
-                source.write_text("new rendering")
+                source.write_text("new rendering", encoding="utf-8")
                 self.assertNotEqual(before, previews.capture_digest())
                 before = previews.capture_digest()
                 recipe[0]["previews"][0]["sample"] = "another"
@@ -142,16 +146,16 @@ class SiteGenerationTest(unittest.TestCase):
             for name in sources:
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text("original")
+                path.write_text("original", encoding="utf-8")
             recipe = [{"id": "button", "previews": [{"id": "basic", "sample": "basic"}]}]
             with patch.object(previews, "ROOT", root), patch.object(previews, "config", return_value=recipe):
                 original = previews.capture_digest()
                 for name in sources:
                     with self.subTest(path=name):
-                        (root / name).write_text("changed")
+                        (root / name).write_text("changed", encoding="utf-8")
                         self.assertNotEqual(original, previews.capture_digest())
-                        (root / name).write_text("original")
-                (root / "README.md").write_text("prose only")
+                        (root / name).write_text("original", encoding="utf-8")
+                (root / "README.md").write_text("prose only", encoding="utf-8")
                 self.assertEqual(original, previews.capture_digest())
                 with patch.dict(os.environ, {"QT_VERSION": "6.9.3", "QT_SCALE_FACTOR": "2",
                                              "QT_QPA_PLATFORM": "xcb", "LIBGL_ALWAYS_SOFTWARE": "1"}):
@@ -200,7 +204,7 @@ class SiteGenerationTest(unittest.TestCase):
             with patch.object(previews.subprocess, "run", return_value=crashed) as run:
                 self.assertFalse(previews.run_capture(["gallery"], log))
             self.assertEqual(run.call_count, 2)
-            self.assertEqual(log.read_text(), "crash")
+            self.assertEqual(log.read_text(encoding="utf-8"), "crash")
 
     def test_fresh_previews_skip_native_capture_but_regenerate_documents(self):
         self.build()

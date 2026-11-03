@@ -120,7 +120,7 @@ def run(url, output, scales, routes=None):
             context.close()
         browser.close()
     result = {'status': 'pass', 'components': len(documents), 'scales': scales, 'cases': records, 'errors': errors}
-    (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+    (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(f'{len(documents)} components passed {len(records)} theme/scale cases.')
 
 

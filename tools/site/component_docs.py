@@ -112,9 +112,9 @@ def icon(name):
 def collect(catalog, capture=None):
     capture = capture or available_previews()
     components = {c["id"]: c for c in catalog["components"]}
-    canonical = json.loads((ROOT / "docs/ai/generated/fluentqt-ai-catalog.json").read_text())
+    canonical = json.loads((ROOT / "docs/ai/generated/fluentqt-ai-catalog.json").read_text(encoding="utf-8"))
     samples = {(c["id"], s["id"]): s for c in canonical["components"] for s in c["samples"]}
-    python = json.loads((ROOT / "app/data/gallery_python_snippets.json").read_text())
+    python = json.loads((ROOT / "app/data/gallery_python_snippets.json").read_text(encoding="utf-8"))
     python = {(s["route_id"], s["sample_id"]): s["source"] for s in python["samples"]}
     images = {(s["component"], s["state"], s["theme"]): s for s in capture["images"]}
     documents = []
@@ -277,7 +277,7 @@ def render_shell(doc, documents, page, language, title, description, body, toc, 
         'version_notice': document_notice(doc['id'], doc.get('source'), page, language),
         'body': body, 'page_navigation': ''.join(f'<a href="#{id}">{escape(label)}</a>' for id, label in toc)}
     values.update(words)
-    return Template((ROOT / 'tools/site/component.template.html').read_text()).substitute(values)
+    return Template((ROOT / 'tools/site/component.template.html').read_text(encoding="utf-8")).substitute(values)
 
 
 def render_document(doc, documents, language):
@@ -305,7 +305,7 @@ def render_document(doc, documents, language):
         'preview_min': minimum, 'preview_height': min(720, max(minimum,
             max(p['images']['light']['logical_size'][1] for p in doc['previews']) + 32)),
         'state_tabs_hidden': ' hidden' if len(doc['previews']) == 1 else '', 'tabs': ''.join(tabs), 'panels': ''.join(panels)}
-    body = Template((ROOT / 'tools/site/component-preview.template.html').read_text()).substitute(preview_values)
+    body = Template((ROOT / 'tools/site/component-preview.template.html').read_text(encoding="utf-8")).substitute(preview_values)
     examples = []
     for i, example in enumerate(doc['examples']):
         examples.append(f'<section class="usage-example" aria-labelledby="example-title-{i}"><h3 id="example-title-{i}">{escape(example["name"][language])}</h3><p>{escape(example["description"][language])}</p>'
@@ -375,7 +375,7 @@ def generated_outputs(documents):
         redirects.append({'names': ['releases', '版本记录', '更新日志', 'Changelog', 'roadmap', '路线图'],
                           'urls': {lang: relative_url(release_page_path('releases', lang), entry) for lang in ('en', 'zh')},
                           'filterDirectory': False})
-        outputs[entry] = Template((ROOT / 'tools/site/api-entry.template.html').read_text()).substitute(
+        outputs[entry] = Template((ROOT / 'tools/site/api-entry.template.html').read_text(encoding="utf-8")).substitute(
             lang='zh-CN' if language == 'zh' else 'en', default_language=language,
             canonical=BASE_URL + guide_path('foundation', language).removesuffix('index.html'),
             documents=json.dumps(redirects, ensure_ascii=False).replace('<', '\\u003c'),

@@ -203,13 +203,13 @@ def main():
                     actions = staging / f"{key}-actions.json"
                     actions.write_text(json.dumps({"schema_version": 1, "steps": preview["actions"]}), encoding="utf-8")
                     command += ["--actions", str(actions)]
-                if not (png.exists() and report.exists() and stamp.exists() and stamp.read_text() == recipe):
+                if not (png.exists() and report.exists() and stamp.exists() and stamp.read_text(encoding="utf-8") == recipe):
                     log = staging / f"{key}.log"
                     if not run_capture(command, log):
                         failures.append(key)
                         print(f"Capture failed: {key}; see {log}", flush=True)
                         continue
-                data = json.loads(report.read_text())
+                data = json.loads(report.read_text(encoding="utf-8"))
                 environment = data["environment"]
                 if data["status"] != "ok" or environment["platform_plugin"] in ("offscreen", "minimal", "vnc"):
                     raise ValueError(f"A successful native capture is required: {key}")
@@ -220,7 +220,7 @@ def main():
                 dpr = environment["device_pixel_ratio"]
                 if data["artifacts"]["snapshot"]["target"] != "gallerySamplePreviewWidget":
                     raise ValueError(f"Capture must contain the real sample: {key}")
-                stamp.write_text(recipe)
+                stamp.write_text(recipe, encoding="utf-8")
                 images.append({"component": component["id"], "state": preview["id"], "sample": preview["sample"],
                                "theme": theme, "path": preview_path(component["id"], preview["id"], theme),
                                "sha256": hashlib.sha256(png.read_bytes()).hexdigest(), "pixel_size": [width, height],

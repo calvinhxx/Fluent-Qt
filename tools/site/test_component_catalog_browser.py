@@ -216,7 +216,7 @@ def main():
         context.close()
         browser.close()
     (args.output / 'result.json').write_text(json.dumps({'status': 'pass', 'pages': len(documents) * 2,
-        'documents': routes, 'previews': records, 'dialog_open_close': True, 'page_errors': errors}, indent=2) + '\n')
+        'documents': routes, 'previews': records, 'dialog_open_close': True, 'page_errors': errors}, indent=2) + '\n', encoding='utf-8')
     print(f'All {len(documents)} real component factories and {len(routes)} localized documents passed navigation and isolated-theme checks.')
 
 
