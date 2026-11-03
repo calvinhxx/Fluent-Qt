@@ -3,7 +3,7 @@
   "qt_version": "6.9.3",
   "emscripten_version": "3.1.70",
   "qtbase_commit": "be09b211db70e1b0155d05c18668ad76e7e3df51",
-  "description": "Qt Wasm DOM elements retire before cached accessible interfaces are deleted; original Qt class layouts and source licenses are retained.",
+  "description": "Qt Wasm DOM elements retire before cached accessible interfaces are deleted and follow active widget geometry; original Qt class layouts and source licenses are retained.",
   "files": {
     "src/plugins/platforms/wasm/qwasmaccessibility.h": {
       "url": "https://raw.githubusercontent.com/qt/qtbase/be09b211db70e1b0155d05c18668ad76e7e3df51/src/plugins/platforms/wasm/qwasmaccessibility.h",
@@ -94,7 +94,7 @@
     },
     "src/plugins/platforms/wasm/qwasmaccessibility.cpp": {
       "file": "qwasmaccessibility.cpp.patch",
-      "sha256": "8a1ebfd888a0d682a614237556a9758ac2afff7dc2c4e533560cd2a430ca7f2b"
+      "sha256": "eaa6d76513a9bd7aea7b37b5d02c55f864a61b0ec6005ec73f56456941848f40"
     }
   }
 }

@@ -21,7 +21,7 @@ from wasm_command_palette import run_command_palette_contract
 from wasm_form import run_form_contract
 from wasm_list_detail import run_list_detail_contract
 from wasm_data_grid import run_data_grid_contract
-from wasm_auto_suggest import run_auto_suggest_contract
+from wasm_auto_suggest import run_auto_suggest_contract, run_gallery_search_contract
 from wasm_tag_input import run_tag_input_contract
 from wasm_tree_select import run_tree_select_contract
 from wasm_chart_workbench import run_chart_workbench_contract
@@ -1053,6 +1053,7 @@ def run_smoke(
                 run_list_detail_contract(browser, base_url, root / "list-detail-validation")
                 run_data_grid_contract(browser, base_url, root / "data-grid-validation")
                 run_auto_suggest_contract(browser, base_url, root / "auto-suggest-validation")
+                run_gallery_search_contract(browser, base_url, root / "gallery-search-validation")
                 run_tag_input_contract(browser, base_url, root / "tag-input-validation")
                 run_tree_select_contract(browser, base_url, root / "tree-select-validation")
                 run_chart_workbench_contract(browser, base_url, root / "chart-workbench-validation")

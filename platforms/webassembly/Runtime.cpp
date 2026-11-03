@@ -86,8 +86,8 @@ void configureAccessibleProxyPresentation()
             style.textContent = '.qt-window-a11y-container { overflow: clip; }'
                 + '.qt-window-a11y-container > [id]:not(' + '.hidden-visually-read-by-screen-reader) { opacity: 0; }';
             shadow.appendChild(style);
-            // Qt 6.9.3's enable button populates the DOM without notifying
-            // QAccessible::ActivationObserver. Refresh after that handler runs.
+            // Refresh presentation slots after Qt's enable handler finishes
+            // populating the DOM, including when the patched backend is active.
             shadow.addEventListener('click', event => {
                 if (event.target?.matches('button.hidden-visually-read-by-screen-reader'))
                     queueMicrotask(() => Module['_fluentqt_refresh_accessible_views']());

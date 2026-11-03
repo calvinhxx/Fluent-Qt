@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 
@@ -242,6 +243,130 @@ def run_auto_suggest_contract(browser: object, base_url: str, artifact_dir: Path
                 """nodes => nodes.map(n => ({id: n.id, role: n.getAttribute('role'),
                     text: n.textContent, value: n.value, label: n.getAttribute('aria-label')}))"""
             ), indent=2), encoding="utf-8")
+        raise
+    finally:
+        page.close()
+
+
+def validate_gallery_search_pagination(before: int, rows: list[dict]) -> None:
+    """Require a larger result set and a visible row beyond the original page."""
+    if type(before) is not int or before < 1 or not rows:
+        raise RuntimeError("Missing Gallery search pagination metadata")
+    for row in rows:
+        size, position = row.get("size"), row.get("position")
+        if (type(size) is not int or type(position) is not int
+                or size <= before or not 1 <= position <= size):
+            raise RuntimeError(f"Gallery search did not append valid results: {rows}")
+    if not any(row["position"] > before for row in rows):
+        raise RuntimeError(f"Gallery search has no visible row beyond the first {before} results")
+
+
+def run_gallery_search_contract(browser: object, base_url: str, artifact_dir: Path) -> None:
+    """Exercise the title-bar search's async paging and moving footer proxies."""
+    from playwright.sync_api import expect
+
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    page = browser.new_page(viewport={"width": 1280, "height": 800}, device_scale_factor=2)
+    errors, checks = [], []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    search = page.locator('input[id$=".GalleryTitleBar.SearchBox"][aria-hidden="false"]')
+    cells = page.locator('[id*=".fluentWasmVisibleListCell_"][aria-hidden="false"]')
+    more = page.locator('[id$=".AutoSuggestBoxStatusAction"][aria-hidden="false"]')
+
+    def click(target: object) -> None:
+        expect(target).to_be_visible()
+        bounds = target.bounding_box()
+        if bounds is None:
+            raise RuntimeError("Missing search control bounds")
+        page.mouse.click(bounds["x"] + bounds["width"] / 2, bounds["y"] + bounds["height"] / 2)
+
+    def query(text: str) -> None:
+        click(search)
+        page.keyboard.press("ControlOrMeta+A")
+        page.keyboard.insert_text(text)
+
+    def footer_after_rows() -> None:
+        # The footer is shown before asynchronous results move its parent.
+        # A stale DOM rectangle would click a result instead of Load more.
+        page.wait_for_function("""() => {
+            const root = document.querySelector('#qt-shadow-container').shadowRoot;
+            const rows = [...root.querySelectorAll('[id*=".fluentWasmVisibleListCell_"][aria-hidden="false"]')];
+            const action = root.querySelector('[id$=".AutoSuggestBoxStatusAction"][aria-hidden="false"]');
+            return rows.length && action && action.getBoundingClientRect().top >=
+                Math.max(...rows.map(row => row.getBoundingClientRect().bottom));
+        }""", timeout=10_000)
+
+    try:
+        page.goto(f"{base_url}/app/index.html?route=home&wasm-smoke=interaction-state",
+                  wait_until="domcontentloaded")
+        page.wait_for_function("document.documentElement.dataset.fluentQtLoaded === 'true'", timeout=120_000)
+        wait_for_gallery_ready(page)
+        activation = page.locator(
+            "#qt-shadow-container .qt-window-a11y-container:visible "
+            "> button.hidden-visually-read-by-screen-reader"
+        ).first
+        activation.focus()
+        page.keyboard.press("Enter")
+        query("button")
+        expect(cells.first).to_be_visible()
+        expect(more).to_have_text("Load more")
+        footer_after_rows()
+        expect(cells.first).to_have_attribute("aria-setsize", re.compile(r"^[1-9][0-9]*$"))
+        first_size = int(cells.first.get_attribute("aria-setsize"))
+        page.screenshot(path=str(artifact_dir / "first-page.png"))
+        click(more)
+        # Qt 6.9 publishes field edits in proxy text rather than input.value.
+        expect(search).to_have_text("button")
+        page.wait_for_function("""before => [...document.querySelector('#qt-shadow-container').shadowRoot
+            .querySelectorAll('[id*=".fluentWasmVisibleListCell_"][aria-hidden="false"]')]
+            .some(row => {
+                const size = Number(row.getAttribute('aria-setsize'));
+                return Number.isInteger(size) && size > before;
+            })""", arg=first_size, timeout=10_000)
+        expect(cells.first).to_be_visible()
+        box = cells.last.bounding_box()
+        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        page.mouse.wheel(0, 600)
+        # The first page already has offscreen rows. New text alone only proves
+        # scrolling; the visible position must cross the original result count.
+        page.wait_for_function("""before => [...document.querySelector('#qt-shadow-container').shadowRoot
+            .querySelectorAll('[id*=".fluentWasmVisibleListCell_"][aria-hidden="false"]')]
+            .some(row => {
+                const size = Number(row.getAttribute('aria-setsize'));
+                const position = Number(row.getAttribute('aria-posinset'));
+                return Number.isInteger(size) && Number.isInteger(position)
+                    && size > before && position > before && position <= size;
+            })""", arg=first_size, timeout=10_000)
+        validate_gallery_search_pagination(first_size, cells.evaluate_all("""rows => rows.map(row => ({
+            size: Number(row.getAttribute('aria-setsize')),
+            position: Number(row.getAttribute('aria-posinset'))
+        }))"""))
+        checks.append("footer-geometry-and-real-pointer-pagination")
+        page.screenshot(path=str(artifact_dir / "next-page.png"))
+
+        query("RangeSlider")
+        query("ImageViewer")
+        expect(cells).to_have_count(5)
+        expect(cells.filter(has_text="Pan and zoom an image")).to_have_count(1)
+        if any("ImageViewer" not in name for name in cells.all_text_contents()):
+            raise RuntimeError("An older query replaced the ImageViewer results")
+        click(search)
+        page.keyboard.press("Enter")
+        expect(page.locator('[id$=".fluent::scrolling::ImageViewer"][aria-hidden="false"]').first).to_be_visible()
+        checks.append("latest-query-enter-navigation")
+        page.screenshot(path=str(artifact_dir / "image-viewer.png"))
+        if errors:
+            raise RuntimeError("Browser errors: " + "; ".join(errors))
+        (artifact_dir / "result.json").write_text(json.dumps({
+            "status": "pass", "checks": checks, "page_errors": errors,
+        }, indent=2) + "\n", encoding="utf-8")
+    except Exception as error:
+        (artifact_dir / "result.json").write_text(json.dumps({
+            "status": "fail", "error": str(error), "checks": checks, "page_errors": errors,
+        }, indent=2) + "\n", encoding="utf-8")
+        page.screenshot(path=str(artifact_dir / "failure.png"))
+        (artifact_dir / "failure-tree.txt").write_text(
+            page.locator("#qt-shadow-container").aria_snapshot(), encoding="utf-8")
         raise
     finally:
         page.close()

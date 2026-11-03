@@ -265,6 +265,14 @@ construction-time nodes, before the next opening. It waits for that lifecycle
 condition without a fixed delay or selecting the first duplicate. Results and
 snapshots are under `command-palette-validation/drawer-lifecycle/`.
 
+The full browser smoke also exercises Gallery title-bar search pagination with
+real pointer input. It verifies that the Load more accessibility proxy follows
+its footer after results change the popup layout, then checks query replacement
+and Enter navigation. Results and screenshots are under
+`gallery-search-validation/`. The pinned Qt adapter enables accessibility
+notifications and coalesces geometry refreshes for already published visible
+proxies; it does not create additional model-cell interfaces.
+
 ### Spatial WebGL validation
 
 With `FLUENT_QT_BUILD_SPATIAL=ON` (included in the `wasm` preset), the Gallery's

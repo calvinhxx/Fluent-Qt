@@ -41,28 +41,9 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
 
     def click(button: object) -> None:
         expect_visible(button)
-        bounds = button.evaluate("""element => {
-            const rect = element.getBoundingClientRect();
-            const dialog = [...element.getRootNode().querySelectorAll('dialog[id]')]
-                .find(owner => element.id.startsWith(owner.id + '.'));
-            // Qt 6.9.3 emits a closed HTML dialog proxy for a visible child
-            // QDialog. Its sibling control proxies use dialog-local geometry.
-            // Read that origin without changing proxies or application state.
-            let dx = dialog && !dialog.open ? parseFloat(dialog.style.left) || 0 : 0;
-            const dy = dialog && !dialog.open ? parseFloat(dialog.style.top) || 0 : 0;
-            const drawer = element.getRootNode().querySelector('[id$=".Gallery.Drawer.Effects"]');
-            if (drawer && element.id.startsWith(drawer.id + '.')) {
-                // Qt only refreshes proxy geometry on ObjectShow, so an
-                // animated drawer retains its closed origin. The sample
-                // declares a right edge: locate its settled panel from the
-                // host width and reported drawer width, keeping real input.
-                const host = element.closest('.qt-window-a11y-container');
-                const origin = parseFloat(drawer.style.left) || 0;
-                const settled = host.clientWidth - parseFloat(drawer.style.width);
-                dx += Math.min(origin, settled) - origin;
-            }
-            return {x: rect.x + dx, y: rect.y + dy, width: rect.width, height: rect.height};
-        }""")
+        # The pinned backend follows LocationChanged for parents and children.
+        # Use the actual proxy rectangle, including dialogs and moving drawers.
+        bounds = button.bounding_box()
         if bounds is None:
             raise RuntimeError("Command palette sample has no button geometry")
         y = bounds["y"] + bounds["height"] / 2
@@ -133,7 +114,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         text_is("0 notes")
         expect_absent(search)
         # Toggle the same checked action from the toolbar and restore the
-        # sample's initial geometry before using cached Qt AX child bounds.
+        # sample before continuing through its navigation commands.
         click(page.get_by_role("button", name="Show details", exact=True))
         expect_absent(page.locator('[id$=".Gallery.CommandPalette.Status"][aria-hidden="false"]'))
         for destination in ("Inbox", "Home"):
@@ -142,8 +123,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
             page.keyboard.press("Enter")
             text_is(destination)
             expect_absent(search)
-        # Both samples fit in this viewport; keep the real page stationary so
-        # Qt's cached AX child coordinates remain valid throughout focus changes.
+        # Both samples fit in this viewport, including the editing commands.
         edit_button = page.get_by_role("button", name="Search editing commands", exact=True)
         click(edit_button)
         expect_visible(search)
@@ -198,7 +178,6 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
             if route == "drawer-view":
                 page.wait_for_timeout(350)
             def adjust_slider(suffix: str, expected: str) -> None:
-                # Drawer proxies retain the closed position during animation.
                 # Wait for real input to reach the settled control instead of
                 # assuming that one fixed delay covers slow browser frames.
                 for attempt in range(5):

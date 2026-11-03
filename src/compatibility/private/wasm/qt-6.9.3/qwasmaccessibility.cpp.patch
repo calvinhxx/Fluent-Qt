@@ -1,19 +1,24 @@
 --- a/src/plugins/platforms/wasm/qwasmaccessibility.cpp
 +++ b/src/plugins/platforms/wasm/qwasmaccessibility.cpp
-@@ -14,0 +15,4 @@
+@@ -8,0 +9,2 @@
++#include <QtCore/qcoreapplication.h>
++#include <QtCore/qtimer.h>
+@@ -14,0 +17,4 @@
 +
 +QT_BEGIN_NAMESPACE
 +void fluentQtSetWasmInterfaceDeletionCallback(void (*callback)(QAccessibleInterface *));
 +QT_END_NAMESPACE
-@@ -29,0 +34,4 @@
+@@ -29,0 +36,4 @@
 +    QT_PREPEND_NAMESPACE(fluentQtSetWasmInterfaceDeletionCallback)([](QAccessibleInterface *iface) {
 +        if (QWasmAccessibility *accessibility = QWasmAccessibility::get())
 +            accessibility->destroyHtmlElement(iface);
 +    });
-@@ -33,0 +42,2 @@
+@@ -33,0 +44,2 @@
 +    QT_PREPEND_NAMESPACE(fluentQtSetWasmInterfaceDeletionCallback)(nullptr);
 +    cleanup();
-@@ -305,2 +315,8 @@
+@@ -90,0 +103 @@
++    setActive(true);
+@@ -305,2 +318,8 @@
 -    Q_UNUSED(iface);
 -    qCDebug(lcQpaAccessibility) << "TODO destroyHtmlElement";
 +    auto it = m_elements.find(iface);
@@ -24,7 +29,30 @@
 +    emscripten::val parent = element["parentNode"];
 +    if (!parent.isNull() && !parent.isUndefined())
 +        parent.call<void>("removeChild", element);
-@@ -781 +797,2 @@
+@@ -714,0 +734,22 @@
++    case QAccessible::LocationChanged: {
++        // A parent move changes descendant screen rectangles without moving
++        // those widgets locally. Coalesce layout notifications and update only
++        // already published interfaces; never create model-cell interfaces.
++        static bool pending = false;
++        if (!pending) {
++            pending = true;
++            QTimer::singleShot(0, QCoreApplication::instance(), [] {
++                pending = false;
++                QWasmAccessibility *accessibility = QWasmAccessibility::get();
++                if (!accessibility)
++                    return;
++                for (auto it = accessibility->m_elements.cbegin();
++                     it != accessibility->m_elements.cend(); ++it) {
++                    QAccessibleInterface *existing = it.key();
++                    if (existing->isValid() && !existing->state().invisible)
++                        accessibility->setHtmlElementGeometry(existing);
++                }
++            });
++        }
++        return;
++    }
+@@ -781 +822,2 @@
 -
 +    while (!m_elements.isEmpty())
 +        destroyHtmlElement(m_elements.constBegin().key());
