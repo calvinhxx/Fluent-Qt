@@ -51,6 +51,95 @@ Windows tools can still open the WSL checkout through:
 This layout guidance affects development performance only. Runtime behavior and
 build configuration are the same as on a native Linux installation.
 
+### Repeated validation from a Windows checkout
+
+If `.fluentqt-wsl.json` already exists on the device, reuse it with
+`tools/dev/fluent_qt_wsl.py`. Keep one persistent Linux workspace and separate
+Qt5, Qt6, and PySide build profiles. New report directories do not require new
+build trees. Use CMake/CTest 3.25+ for this runner. The local JSON is ignored by
+Git and stays outside `build/` so ordinary build cleanup does not remove it.
+SDK, compiler, Python environment,
+dependencies, and build directories should all reside in Linux storage.
+
+Run from PowerShell in the Windows checkout:
+
+```powershell
+python tools/dev/fluent_qt_wsl.py --profile qt6 --target test_range_slider --test-label '^test_range_slider$'
+python tools/dev/fluent_qt_wsl.py --profile qt5 --target test_range_slider --test-label '^test_range_slider$'
+python tools/dev/fluent_qt_wsl.py --profile pyside --target fluentqt_pyside6_stubs --test-regex '^test_pyside6_bindings$'
+```
+
+The launcher enters the configured WSL distribution. It synchronizes tracked
+files and untracked, non-ignored source files, including working-tree deletions.
+Windows scans its own checkout and passes the content manifest to the worker;
+WSL only reads changed files across the mount. Executable bits follow the Git
+index, so stage a new executable script's mode before relying on direct execution.
+Identical files retain their destination timestamps. It only deletes files that
+its prior manifest owns, rejects edits made directly in the snapshot, and locks
+the workspace across sync, build, and test. Unknown snapshot files also block
+validation without being deleted; keep notes and build artifacts outside
+`source/`. Python bytecode under `__pycache__/` is allowed for repeated tool runs.
+The runner directs native QmlBridge evidence to its run log directory through
+`FLUENTQT_QMLBRIDGE_NATIVE_EVIDENCE_DIR`, unless explicitly overridden.
+Make source edits in the original checkout. A source change during validation
+makes the run fail instead of claiming that an older snapshot validates the
+current working tree.
+
+The first run configures a profile. Later runs reuse that configuration and let
+Ninja handle changed CMake inputs. Use `--configure` to explicitly reconfigure,
+or `--sync-only` to prepare the source without building. A different Qt kit,
+Python environment, compiler or toolchain requires a fresh `build_dir` or profile.
+The runner retains the Release Qt default and uses the adaptive build wrapper;
+`--jobs` is an optional override. Always select the owning `--target` explicitly.
+The worker removes inherited Windows drive entries (`/mnt/c/...`, `/mnt/d/...`)
+from its child processes' `PATH`. Otherwise a missing optional package can make
+CMake search Windows directories even when the build itself is on ext4. Linux
+and WSLg paths are retained; explicit `environment.PATH` values override this
+default. The effective path participates in configuration reuse. This does not
+change the user's shell, Windows environment, or WSL configuration.
+
+Minimal local configuration (replace the paths with installed tools):
+
+```json
+{
+  "version": 1,
+  "distribution": "Ubuntu-22.04",
+  "workspace": "/home/<user>/.cache/fluentqt-wsl/main",
+  "cmake": "/home/<user>/.local/bin/cmake",
+  "ctest": "/home/<user>/.local/bin/ctest",
+  "environment": {"VCPKG_ROOT": "/home/<user>/vcpkg"},
+  "profiles": {
+    "qt6": {
+      "cmake_args": [
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_TOOLCHAIN_FILE=/home/<user>/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "-DVCPKG_TARGET_TRIPLET=x64-linux",
+        "-DVCPKG_MANIFEST_FEATURES=tests",
+        "-DFLUENT_QT_BUILD_GALLERY=OFF",
+        "-DFLUENT_QT_BUILD_TESTS=ON",
+        "-DBUILD_TESTING=ON"
+      ]
+    }
+  }
+}
+```
+
+Profiles may specify `build_dir`, `python`, and additional `environment` values.
+Without `build_dir`, builds live under `<workspace>/build/<profile>`. To reuse an
+existing identical source snapshot, pass `--adopt-source` once; changed or unknown
+files prevent adoption. The runner does not install or upgrade dependencies.
+
+Each run writes commands, durations, sync changes, source digest and exit codes
+to `<workspace>/logs/`. The Windows launcher's final source check and overall
+result are in `build/wsl-validation/last-run.json`; a worker's `passed-snapshot`
+record alone does not validate the latest Windows working tree. Direct Linux
+runs perform that source check in the worker. Tests always
+execute when selected; successful results are not cached. Manual/native desktop
+labels are excluded unless `--desktop` is supplied. That flag does not turn a
+skip or an offscreen run into native visual approval. Stabilize shared header and
+sample edits before the final multi-profile build to avoid repeated binding
+generation and resource relinks.
+
 ## Optional Apple Silicon Lima Layout
 
 On an ARM64 Mac, Lima provides a lightweight native ARM64 Linux VM with a
