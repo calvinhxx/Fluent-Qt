@@ -98,7 +98,7 @@ def run(url, output):
             assert not errors, errors
         finally:
             browser.close()
-    (output / 'result.json').write_text(json.dumps({'checks': records, 'page_errors': errors}, indent=2) + '\n')
+    (output / 'result.json').write_text(json.dumps({'checks': records, 'page_errors': errors}, indent=2) + '\n', encoding='utf-8')
     print(f'PASS: {len(records)} Spatial document cases; local 3D mode, WebGL, themes, motion policy and teardown')
 
 

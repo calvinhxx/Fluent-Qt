@@ -191,7 +191,7 @@ def main():
               "homepage language inheritance", "two-link header", "shared theme including high contrast and system preferences",
               "390px layout and directory", "legacy entry redirects", "no-JavaScript reading", "offline runtime fallback",
               "document assets under 300 KB without runtime", "active text contrast"], "loading": loading, "page_errors": errors}
-    (args.output / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    (args.output / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("Static component documentation browser acceptance passed")
 
 

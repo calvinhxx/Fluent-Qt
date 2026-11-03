@@ -88,7 +88,7 @@ class PropertyReferenceTest(unittest.TestCase):
                         self.assertEqual(generate_api_reference.main(), 1)
                     with patch.object(sys, 'argv', ['generator', '--catalog-only']):
                         self.assertEqual(generate_api_reference.main(), 0)
-                    self.assertIn(marker, output.read_text())
+                    self.assertIn(marker, output.read_text(encoding='utf-8'))
                     with patch.object(sys, 'argv', ['generator', '--check']):
                         self.assertEqual(generate_api_reference.main(), 0)
 
@@ -373,7 +373,7 @@ class PreviewManifestTest(unittest.TestCase):
 
     def write_manifest(self):
         self.manifest.write_text(json.dumps({'input_digest': 'current', 'images': self.images,
-                                            'capture_settings': previews.capture_settings()}))
+                                            'capture_settings': previews.capture_settings()}), encoding='utf-8')
 
     def test_different_capture_environment_is_not_reused(self):
         previews.validated_manifest()

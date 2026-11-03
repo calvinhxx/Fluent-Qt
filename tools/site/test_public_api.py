@@ -52,14 +52,14 @@ template <class T> T identity(T value) { return value; }
         self.assertEqual(next(m for m in members if m['name'] == 'oldSetter')['deprecated'], 'Use setValue')
 
     def test_every_installed_component_resolves_and_properties_are_covered(self):
-        catalog = json.loads((ROOT / 'docs/ai/generated/fluentqt-ai-catalog.json').read_text())
+        catalog = json.loads((ROOT / 'docs/ai/generated/fluentqt-ai-catalog.json').read_text(encoding='utf-8'))
         records = inventory()
         for component in catalog['components']:
             record = resolve_type(component['cpp']['qualified_type'])
             self.assertIsNotNone(record, component['id'])
             source = component['cpp']['declaration']
             properties = [m for t in records if t['source'] == source for m in t['members'] if m['kind'] == 'properties']
-            count = len(re.findall(r'\bQ_PROPERTY\(', (ROOT / source).read_text()))
+            count = len(re.findall(r'\bQ_PROPERTY\(', (ROOT / source).read_text(encoding='utf-8')))
             self.assertEqual(len(properties), count, source)
         self.assertFalse(any(m['access'] == 'private' for t in records for m in t['members']))
 

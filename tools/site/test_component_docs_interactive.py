@@ -285,7 +285,7 @@ def main():
         assert not errors, errors
         browser.close()
     result = {'status': 'pass', 'checks': checks, 'page_errors': errors}
-    (args.output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+    (args.output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print('Website journey and real Qt WASM interaction passed')
 
 

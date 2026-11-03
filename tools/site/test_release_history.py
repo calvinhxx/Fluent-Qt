@@ -22,10 +22,10 @@ class ReleaseHistoryTest(unittest.TestCase):
         for source in (history.ROOT / 'docs/releases').glob('v*.md'):
             shutil.copyfile(source, self.root / 'docs/releases' / source.name)
         shutil.copyfile(history.ROOT / history.SOURCE, self.root / history.SOURCE)
-        self.data = json.loads((self.root / history.SOURCE).read_text())
+        self.data = json.loads((self.root / history.SOURCE).read_text(encoding='utf-8'))
 
     def write(self):
-        (self.root / history.SOURCE).write_text(json.dumps(self.data))
+        (self.root / history.SOURCE).write_text(json.dumps(self.data), encoding='utf-8')
         history.load_history.cache_clear()
 
     def test_each_release_has_a_reviewed_translation_and_real_publication_state(self):
@@ -37,12 +37,12 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_a_new_note_or_stale_translation_blocks_generation(self):
         note = self.root / 'docs/releases/v9.0.0.md'
-        note.write_text('# A new release\n\nA new feature.\n')
+        note.write_text('# A new release\n\nA new feature.\n', encoding='utf-8')
         with self.assertRaisesRegex(ValueError, 'each release note'):
             history.load_history(self.root)
         note.unlink()
         note = self.root / 'docs/releases/v1.10.3.md'
-        note.write_text(note.read_text() + '\nChanged behavior.\n')
+        note.write_text(note.read_text(encoding='utf-8') + '\nChanged behavior.\n', encoding='utf-8')
         with self.assertRaisesRegex(ValueError, 'Review the bilingual summary'):
             history.load_history(self.root)
 
@@ -56,7 +56,7 @@ class ReleaseHistoryTest(unittest.TestCase):
         self.write()
         with self.assertRaisesRegex(ValueError, 'bilingual'):
             history.load_history(self.root)
-        self.data = json.loads((history.ROOT / history.SOURCE).read_text())
+        self.data = json.loads((history.ROOT / history.SOURCE).read_text(encoding='utf-8'))
         next(v for v in self.data['versions'] if v['version'] == '1.7.0')['migrations'] = []
         self.write()
         with self.assertRaisesRegex(ValueError, 'migration record'):
@@ -70,7 +70,7 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_only_explicit_breaking_headings_require_migrations(self):
         note = self.root / 'docs/releases/v1.10.2.md'
-        original = note.read_text()
+        original = note.read_text(encoding='utf-8')
         record = next(v for v in self.data['versions'] if v['version'] == '1.10.2')
         for heading, breaking in (
             ('Non-breaking changes', False), ('Nonbreaking updates', False),
@@ -78,8 +78,8 @@ class ReleaseHistoryTest(unittest.TestCase):
             ('Breaking migration from 1.10', True), ('BREAKING CHANGES', True),
         ):
             with self.subTest(heading=heading):
-                note.write_text(original + f'\n## {heading}\n\nA change.\n')
-                record['source_sha256'] = history.note_digest(note.read_text())
+                note.write_text(original + f'\n## {heading}\n\nA change.\n', encoding='utf-8')
+                record['source_sha256'] = history.note_digest(note.read_text(encoding='utf-8'))
                 self.write()
                 if breaking:
                     with self.assertRaisesRegex(ValueError, 'needs a bilingual migration record'):

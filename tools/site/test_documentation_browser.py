@@ -145,7 +145,7 @@ def main():
             context.close()
         browser.close()
     assert not errors, errors
-    (args.output / 'result.json').write_text(json.dumps({'status': 'pass', 'cases': records, 'errors': errors}, indent=2) + '\n')
+    (args.output / 'result.json').write_text(json.dumps({'status': 'pass', 'cases': records, 'errors': errors}, indent=2) + '\n', encoding='utf-8')
     print('Documentation layout, API filtering, code copying and foundation navigation passed.')
 
 
