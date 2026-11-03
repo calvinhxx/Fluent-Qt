@@ -14,6 +14,7 @@ packages=(
     libfontconfig1
     libfreetype6
     libgl1-mesa-dev
+    libvulkan-dev
     libx11-xcb1
     libxcb-cursor0
     libxcb-icccm4
@@ -27,6 +28,7 @@ packages=(
     libxcb-xinerama0
     libxcb-xinput0
     libxcb-xkb1
+    libxkbcommon-dev
     libxkbcommon-x11-0
     xvfb
 )
