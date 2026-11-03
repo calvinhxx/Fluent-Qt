@@ -25,9 +25,11 @@
 
 namespace fluent::gallery {
 
-void drawPhotoCaption(QPainter* painter, const QRectF& card,
-                      const QString& title, const QString& subtitle,
-                      const QFont& baseFont)
+void drawPhotoCaption(QPainter* painter,
+    const QRectF& card,
+    const QString& title,
+    const QString& subtitle,
+    const QFont& baseFont)
 {
     if (!painter || title.isEmpty())
         return;
@@ -43,11 +45,9 @@ void drawPhotoCaption(QPainter* painter, const QRectF& card,
     const QFontMetricsF titleMetrics(titleFont);
     const QFontMetricsF subtitleMetrics(subtitleFont);
     const qreal gap = subtitle.isEmpty() ? 0.0 : 1.0;
-    const qreal textHeight = titleMetrics.height()
-        + (subtitle.isEmpty() ? 0.0 : subtitleMetrics.height() + gap);
+    const qreal textHeight = titleMetrics.height() + (subtitle.isEmpty() ? 0.0 : subtitleMetrics.height() + gap);
     const qreal barHeight = qMin(card.height(), qMax<qreal>(48.0, textHeight + 10.0));
-    const QRectF labelBar(card.left(), card.bottom() - barHeight,
-                          card.width(), barHeight);
+    const QRectF labelBar(card.left(), card.bottom() - barHeight, card.width(), barHeight);
 
     QLinearGradient scrim(labelBar.topLeft(), labelBar.bottomLeft());
     scrim.setColorAt(0.0, QColor(0, 0, 0, 20));
@@ -55,24 +55,20 @@ void drawPhotoCaption(QPainter* painter, const QRectF& card,
     painter->fillRect(labelBar, scrim);
 
     const qreal textTop = labelBar.top() + (labelBar.height() - textHeight) / 2.0;
-    const QRectF titleRect(labelBar.left() + 10.0, textTop,
-                           qMax<qreal>(0.0, labelBar.width() - 20.0),
-                           titleMetrics.height());
+    const QRectF titleRect(labelBar.left() + 10.0, textTop, qMax<qreal>(0.0, labelBar.width() - 20.0),
+        titleMetrics.height());
     painter->setFont(titleFont);
     painter->setPen(QColor(255, 255, 255, 240));
     painter->drawText(titleRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
-                      titleMetrics.elidedText(title, Qt::ElideRight,
-                                              qRound(titleRect.width())));
+        titleMetrics.elidedText(title, Qt::ElideRight, qRound(titleRect.width())));
 
     if (!subtitle.isEmpty()) {
-        const QRectF subtitleRect(titleRect.left(), titleRect.bottom() + gap,
-                                  titleRect.width(), subtitleMetrics.height());
+        const QRectF subtitleRect(titleRect.left(), titleRect.bottom() + gap, titleRect.width(),
+            subtitleMetrics.height());
         painter->setFont(subtitleFont);
         painter->setPen(QColor(255, 255, 255, 205));
-        painter->drawText(subtitleRect,
-                          Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
-                          subtitleMetrics.elidedText(subtitle, Qt::ElideRight,
-                                                     qRound(subtitleRect.width())));
+        painter->drawText(subtitleRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+            subtitleMetrics.elidedText(subtitle, Qt::ElideRight, qRound(subtitleRect.width())));
     }
 }
 
@@ -102,14 +98,9 @@ qreal painterDevicePixelRatio(const QPainter* painter)
 
 QPixmap iconPixmapForExtent(const QIcon& icon, const QSize& extent, const QPainter* painter)
 {
-    QWidget* targetWidget = painter && painter->device()
-        ? dynamic_cast<QWidget*>(painter->device())
-        : nullptr;
-    QWindow* targetWindow = targetWidget && targetWidget->window()
-        ? targetWidget->window()->windowHandle()
-        : nullptr;
-    return fluentIconPixmapForLogicalExtent(
-        icon, extent, painterDevicePixelRatio(painter), targetWindow);
+    QWidget* targetWidget = painter && painter->device() ? dynamic_cast<QWidget*>(painter->device()) : nullptr;
+    QWindow* targetWindow = targetWidget && targetWidget->window() ? targetWidget->window()->windowHandle() : nullptr;
+    return fluentIconPixmapForLogicalExtent(icon, extent, painterDevicePixelRatio(painter), targetWindow);
 }
 
 void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pixmap)
@@ -131,8 +122,7 @@ void fillRoundedBackground(QPainter* painter, const QRectF& rect, const QColor& 
     painter->drawPath(path);
 }
 
-QColor rowSelectionFill(const QStyleOptionViewItem& option,
-                        const fluent::FluentElement::Colors& colors)
+QColor rowSelectionFill(const QStyleOptionViewItem& option, const fluent::FluentElement::Colors& colors)
 {
     if (!(option.state & QStyle::State_Enabled))
         return Qt::transparent;
@@ -153,14 +143,11 @@ QColor rowSelectionFill(const QStyleOptionViewItem& option,
 // GridPhotoDelegate
 // ════════════════════════════════════════════════════════════════════════════
 
-GridPhotoDelegate::GridPhotoDelegate(fluent::FluentElement* themeHost, GridView* view,
-                                     QObject* parent)
+GridPhotoDelegate::GridPhotoDelegate(fluent::FluentElement* themeHost, GridView* view, QObject* parent)
     : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view)
-{
-}
+{}
 
-void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                              const QModelIndex& index) const
+void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (!index.isValid())
         return;
@@ -170,8 +157,7 @@ void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opt
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
     painter->setRenderHint(QPainter::TextAntialiasing);
 
-    const fluent::FluentElement::Colors& colors =
-        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
+    const fluent::FluentElement::Colors& colors = m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     const QColor layer = colors.bgLayerAlt.isValid() ? colors.bgLayerAlt : QColor(250, 250, 250);
     const QColor stroke = colors.strokeDefault.isValid() ? colors.strokeDefault : QColor(220, 220, 220);
     const QColor accent = colors.accentDefault.isValid() ? colors.accentDefault : QColor(0, 120, 212);
@@ -213,11 +199,9 @@ void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opt
     painter->restore();
 }
 
-void GridPhotoDelegate::drawCheckOverlay(QPainter* painter, const QRectF& card,
-                                         bool selected, bool enabled) const
+void GridPhotoDelegate::drawCheckOverlay(QPainter* painter, const QRectF& card, bool selected, bool enabled) const
 {
-    const fluent::FluentElement::Colors& colors =
-        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
+    const fluent::FluentElement::Colors& colors = m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     const QColor accent = colors.accentDefault.isValid() ? colors.accentDefault : QColor(0, 120, 212);
 
     constexpr qreal kSize = 22.0;
@@ -243,8 +227,7 @@ void GridPhotoDelegate::drawCheckOverlay(QPainter* painter, const QRectF& card,
     painter->restore();
 }
 
-QSize GridPhotoDelegate::sizeHint(const QStyleOptionViewItem& option,
-                                  const QModelIndex& index) const
+QSize GridPhotoDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (m_view)
         return m_view->gridSize();
@@ -258,14 +241,11 @@ QSize GridPhotoDelegate::sizeHint(const QStyleOptionViewItem& option,
 // ListRowDelegate
 // ════════════════════════════════════════════════════════════════════════════
 
-ListRowDelegate::ListRowDelegate(fluent::FluentElement* themeHost, ListView* view,
-                                 QObject* parent)
+ListRowDelegate::ListRowDelegate(fluent::FluentElement* themeHost, ListView* view, QObject* parent)
     : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view)
-{
-}
+{}
 
-void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                            const QModelIndex& index) const
+void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (!index.isValid())
         return;
@@ -274,8 +254,7 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     painter->setRenderHint(QPainter::Antialiasing);
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
 
-    const fluent::FluentElement::Colors& colors =
-        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
+    const fluent::FluentElement::Colors& colors = m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     fluent::FluentElement::Radius radius{};
     if (m_themeHost)
         radius = m_themeHost->themeRadius();
@@ -312,8 +291,8 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
             iconPixmap = iconPixmapForExtent(icon, extent, painter);
     }
     if (!iconPixmap.isNull()) {
-        const QRect iconRect(qRound(cursorX), qRound(bgRect.center().y() - extent.height() / 2.0),
-                             extent.width(), extent.height());
+        const QRect iconRect(qRound(cursorX), qRound(bgRect.center().y() - extent.height() / 2.0), extent.width(),
+            extent.height());
         painter->drawPixmap(iconRect, iconPixmap);
         cursorX = iconRect.right() + 12.0;
     }
@@ -327,18 +306,14 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         font.setWeight(QFont::DemiBold);
     painter->setFont(font);
     const QFontMetricsF metrics(painter->font());
-    const QString elidedText = metrics.elidedText(
-        text, Qt::ElideRight, qRound(textSlot.width()));
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-        textSlot, metrics, elidedText);
-    painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter,
-                      elidedText);
+    const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
+    painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedText);
 
     painter->restore();
 }
 
-QSize ListRowDelegate::sizeHint(const QStyleOptionViewItem& option,
-                                const QModelIndex& index) const
+QSize ListRowDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     QSize hint = QStyledItemDelegate::sizeHint(option, index);
     const int minRow = Spacing::ControlHeight::Standard + Spacing::Gap::Tight;
@@ -361,27 +336,20 @@ constexpr qreal kCursorStart = 12.0;
 
 qreal treeRowLeadingEdge(const QStyleOptionViewItem& option)
 {
-    return option.direction == Qt::RightToLeft
-        ? qreal(option.rect.x() + option.rect.width())
-        : qreal(option.rect.x());
+    return option.direction == Qt::RightToLeft ? qreal(option.rect.x() + option.rect.width()) : qreal(option.rect.x());
 }
 
-QRectF treeRowRectFromLeading(const QStyleOptionViewItem& option, qreal offset,
-                              qreal width, qreal top, qreal height)
+QRectF treeRowRectFromLeading(const QStyleOptionViewItem& option, qreal offset, qreal width, qreal top, qreal height)
 {
     const qreal leading = treeRowLeadingEdge(option);
-    const qreal x = option.direction == Qt::RightToLeft
-        ? leading - offset - width
-        : leading + offset;
+    const qreal x = option.direction == Qt::RightToLeft ? leading - offset - width : leading + offset;
     return QRectF(x, top, width, height);
 }
 } // namespace
 
-TreeRowDelegate::TreeRowDelegate(fluent::FluentElement* themeHost, int rowHeight,
-                                 TreeView* view, QObject* parent)
+TreeRowDelegate::TreeRowDelegate(fluent::FluentElement* themeHost, int rowHeight, TreeView* view, QObject* parent)
     : QStyledItemDelegate(parent), m_themeHost(themeHost), m_rowHeight(rowHeight), m_view(view)
-{
-}
+{}
 
 QRectF TreeRowDelegate::bgRectForOption(const QStyleOptionViewItem& option) const
 {
@@ -408,21 +376,17 @@ QRectF TreeRowDelegate::checkBoxRectForOption(const QStyleOptionViewItem& option
     if (!m_checkBoxVisible)
         return {};
     const QRectF bg = bgRectForOption(option);
-    return treeRowRectFromLeading(option, kCursorStart, kCheckBoxAreaW,
-                                  bg.top(), bg.height());
+    return treeRowRectFromLeading(option, kCursorStart, kCheckBoxAreaW, bg.top(), bg.height());
 }
 
 QRectF TreeRowDelegate::chevronRectForOption(const QStyleOptionViewItem& option) const
 {
     const QRectF bg = bgRectForOption(option);
-    const qreal offset = kCursorStart
-        + (m_checkBoxVisible ? kCheckBoxAreaW + kGap : 0.0);
-    return treeRowRectFromLeading(option, offset, kChevronAreaW,
-                                  bg.top(), bg.height());
+    const qreal offset = kCursorStart + (m_checkBoxVisible ? kCheckBoxAreaW + kGap : 0.0);
+    return treeRowRectFromLeading(option, offset, kChevronAreaW, bg.top(), bg.height());
 }
 
-void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                            const QModelIndex& index) const
+void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (!index.isValid())
         return;
@@ -430,8 +394,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
 
-    const fluent::FluentElement::Colors& colors =
-        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
+    const fluent::FluentElement::Colors& colors = m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     fluent::FluentElement::Radius radius{};
     if (m_themeHost)
         radius = m_themeHost->themeRadius();
@@ -452,21 +415,20 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     // Animated accent indicator (single-select). When TreeView owns the overlay
     // indicator, skip the delegate bar so examples do not show two indicators.
     const bool treeOverlayIndicatorVisible = m_view && m_view->selectionIndicatorVisible();
-    if (!treeOverlayIndicatorVisible && !m_checkBoxVisible && isSelected
-        && isEnabled && colors.accentDefault.isValid()) {
+    if (!treeOverlayIndicatorVisible && !m_checkBoxVisible && isSelected && isEnabled
+        && colors.accentDefault.isValid()) {
         const qreal accentT = m_view ? qBound(0.0, m_view->selectedIndicatorProgress(index), 1.0) : 1.0;
         const bool activeMotion = m_view && m_view->isIndicatorMotionActiveForIndex(index);
-        const auto direction = activeMotion ? m_view->indicatorMotionDirection()
-                                            : TreeView::IndicatorVerticalDirection::None;
-        const auto hierarchy = activeMotion ? m_view->indicatorHierarchyTransition()
-                                            : TreeView::IndicatorHierarchyTransition::None;
+        const auto direction =
+            activeMotion ? m_view->indicatorMotionDirection() : TreeView::IndicatorVerticalDirection::None;
+        const auto hierarchy =
+            activeMotion ? m_view->indicatorHierarchyTransition() : TreeView::IndicatorHierarchyTransition::None;
         const qreal indicatorW = 3.0;
         const qreal fullH = 16.0;
         const qreal indicatorH = fullH * (0.35 + 0.65 * accentT);
         const bool rtl = option.direction == Qt::RightToLeft;
-        const qreal settledX = rtl
-            ? qreal(option.rect.x() + option.rect.width()) - 4.0 - indicatorW
-            : qreal(option.rect.left()) + 4.0;
+        const qreal settledX =
+            rtl ? qreal(option.rect.x() + option.rect.width()) - 4.0 - indicatorW : qreal(option.rect.left()) + 4.0;
         const qreal settledY = bgRect.center().y() - fullH / 2.0;
         const qreal remaining = 1.0 - accentT;
 
@@ -483,8 +445,8 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
             indicatorY = settledY + (fullH - indicatorH) + remaining * 6.0;
 
         QPainterPath indicatorPath;
-        indicatorPath.addRoundedRect(QRectF(indicatorX, indicatorY, indicatorW, indicatorH),
-                                     indicatorW / 2.0, indicatorW / 2.0);
+        indicatorPath.addRoundedRect(QRectF(indicatorX, indicatorY, indicatorW, indicatorH), indicatorW / 2.0,
+            indicatorW / 2.0);
         QColor ac = colors.accentDefault;
         ac.setAlphaF(ac.alphaF() * accentT);
         painter->setPen(Qt::NoPen);
@@ -505,8 +467,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     if (m_checkBoxVisible) {
         const QRectF cbArea = takeLeadingRect(kCheckBoxAreaW);
         const QVariant checkData = index.data(Qt::CheckStateRole);
-        const auto state = checkData.isValid() ? static_cast<Qt::CheckState>(checkData.toInt())
-                                               : Qt::Unchecked;
+        const auto state = checkData.isValid() ? static_cast<Qt::CheckState>(checkData.toInt()) : Qt::Unchecked;
         const qreal box = 18.0;
         const QRectF boxRect(cbArea.center().x() - box / 2.0, cbArea.center().y() - box / 2.0, box, box);
         QPainterPath boxPath;
@@ -519,8 +480,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
             painter->setFont(glyphFont);
             painter->setPen(Qt::white);
             painter->drawText(boxRect, Qt::AlignCenter,
-                              state == Qt::Checked ? Typography::Icons::CheckMark
-                                                   : Typography::Icons::Hyphen);
+                state == Qt::Checked ? Typography::Icons::CheckMark : Typography::Icons::Hyphen);
         } else {
             painter->setPen(QPen(colors.strokeDefault, 1.5));
             painter->setBrush(Qt::NoBrush);
@@ -542,8 +502,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         painter->rotate((rtl ? -1.0 : 1.0) * rotation * 90.0);
         painter->translate(-chevronRect.center());
         painter->drawText(chevronRect, Qt::AlignCenter,
-                          rtl ? Typography::Icons::ChevronLeftMed
-                              : Typography::Icons::ChevronRightMed);
+            rtl ? Typography::Icons::ChevronLeftMed : Typography::Icons::ChevronRightMed);
         painter->restore();
     }
 
@@ -562,32 +521,28 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
 
     // Text.
     const QRectF textSlot = rtl
-        ? QRectF(bgRect.left() + 8.0, bgRect.top(),
-                 qMax<qreal>(0.0, cursorX - bgRect.left() - 8.0), bgRect.height())
-        : QRectF(cursorX, bgRect.top(),
-                 qMax<qreal>(0.0, bgRect.right() - cursorX - 8.0), bgRect.height());
+        ? QRectF(bgRect.left() + 8.0, bgRect.top(), qMax<qreal>(0.0, cursorX - bgRect.left() - 8.0), bgRect.height())
+        : QRectF(cursorX, bgRect.top(), qMax<qreal>(0.0, bgRect.right() - cursorX - 8.0), bgRect.height());
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();
     const QFontMetricsF metrics(painter->font());
-    const QString elidedText = metrics.elidedText(
-        text, rtl ? Qt::ElideLeft : Qt::ElideRight, qRound(textSlot.width()));
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-        textSlot, metrics, elidedText);
-    painter->drawText(textRect,
-                      (rtl ? Qt::AlignRight : Qt::AlignLeft) | Qt::AlignVCenter,
-                      elidedText);
+    const QString elidedText = metrics.elidedText(text, rtl ? Qt::ElideLeft : Qt::ElideRight, qRound(textSlot.width()));
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
+    painter->drawText(textRect, (rtl ? Qt::AlignRight : Qt::AlignLeft) | Qt::AlignVCenter, elidedText);
 
     painter->restore();
 }
 
-bool TreeRowDelegate::editorEvent(QEvent* event, QAbstractItemModel* model,
-                                  const QStyleOptionViewItem& option, const QModelIndex& index)
+bool TreeRowDelegate::editorEvent(QEvent* event,
+    QAbstractItemModel* model,
+    const QStyleOptionViewItem& option,
+    const QModelIndex& index)
 {
     if (event->type() == QEvent::MouseButtonPress && m_checkBoxVisible) {
         auto* me = static_cast<QMouseEvent*>(event);
         if (checkBoxRectForOption(option).contains(fluentMousePos(me)))
-            return true;  // Swallow press so the row doesn't also select.
+            return true; // Swallow press so the row doesn't also select.
     }
 
     if (event->type() == QEvent::MouseButtonRelease) {
@@ -596,8 +551,7 @@ bool TreeRowDelegate::editorEvent(QEvent* event, QAbstractItemModel* model,
 
         if (m_checkBoxVisible && checkBoxRectForOption(option).contains(pos)) {
             const QVariant checkData = index.data(Qt::CheckStateRole);
-            const auto cur = checkData.isValid() ? static_cast<Qt::CheckState>(checkData.toInt())
-                                                 : Qt::Unchecked;
+            const auto cur = checkData.isValid() ? static_cast<Qt::CheckState>(checkData.toInt()) : Qt::Unchecked;
             const Qt::CheckState next = (cur == Qt::Checked) ? Qt::Unchecked : Qt::Checked;
 
             model->setData(index, next, Qt::CheckStateRole);
@@ -641,8 +595,7 @@ bool TreeRowDelegate::editorEvent(QEvent* event, QAbstractItemModel* model,
         // matching file-explorer behavior. Leaf rows fall through to normal selection; the
         // checkbox area was already handled above, and a real reorder drag is consumed by
         // TreeView before it reaches the delegate, so this only fires on genuine clicks.
-        if (index.model() && index.model()->hasChildren(index)
-            && bgRectForOption(option).contains(pos)) {
+        if (index.model() && index.model()->hasChildren(index) && bgRectForOption(option).contains(pos)) {
             if (m_view)
                 m_view->toggleExpanded(index);
             return true;
@@ -652,8 +605,7 @@ bool TreeRowDelegate::editorEvent(QEvent* event, QAbstractItemModel* model,
     return QStyledItemDelegate::editorEvent(event, model, option, index);
 }
 
-QSize TreeRowDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
-                                const QModelIndex& /*index*/) const
+QSize TreeRowDelegate::sizeHint(const QStyleOptionViewItem& /*option*/, const QModelIndex& /*index*/) const
 {
     return QSize(0, m_rowHeight);
 }

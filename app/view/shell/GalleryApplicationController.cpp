@@ -31,10 +31,8 @@ constexpr int LinuxMinimizedRemapDelayMs = 100;
 
 } // namespace
 
-GalleryApplicationController::GalleryApplicationController(GalleryWindow* window,
-                                                           QObject* parent)
-    : QObject(parent)
-    , m_window(window)
+GalleryApplicationController::GalleryApplicationController(GalleryWindow* window, QObject* parent)
+    : QObject(parent), m_window(window)
 {
     setObjectName(QStringLiteral("galleryApplicationController"));
     if (m_window)
@@ -76,19 +74,17 @@ void GalleryApplicationController::setupStatusItem()
     connect(openAction, &QAction::triggered, this, [this]() { restoreWindow(); });
     connect(settingsAction, &QAction::triggered, this, [this]() { openSettings(); });
     connect(quitAction, &QAction::triggered, this, [this]() { requestQuit(); });
-    connect(m_statusIcon, &QSystemTrayIcon::activated, this,
-            [this](QSystemTrayIcon::ActivationReason reason) {
-                if (reason == QSystemTrayIcon::Trigger
-                    || reason == QSystemTrayIcon::DoubleClick) {
-                    restoreWindow();
-                }
-            });
+    connect(m_statusIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
+        if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
+            restoreWindow();
+        }
+    });
 
     m_statusIcon->setContextMenu(m_statusMenu);
     m_statusIcon->show();
     LOG_INFO(QStringLiteral("GalleryApplicationController statusArea initialized available=%1 area=%2")
-                 .arg(m_statusAreaAvailable)
-                 .arg(closebehaviorui::statusAreaName()));
+            .arg(m_statusAreaAvailable)
+            .arg(closebehaviorui::statusAreaName()));
 }
 
 bool GalleryApplicationController::eventFilter(QObject* watched, QEvent* event)
@@ -119,8 +115,8 @@ bool GalleryApplicationController::eventFilter(QObject* watched, QEvent* event)
     }
 
 #ifdef Q_OS_MACOS
-    if (watched == qApp && event->type() == QEvent::ApplicationActivate
-        && m_window && !m_window->isVisible() && !m_exitRequested && !m_closePromptOpen) {
+    if (watched == qApp && event->type() == QEvent::ApplicationActivate && m_window && !m_window->isVisible()
+        && !m_exitRequested && !m_closePromptOpen) {
         QTimer::singleShot(0, this, [this]() { restoreWindow(); });
     }
 #endif
@@ -167,19 +163,18 @@ void GalleryApplicationController::showCloseBehaviorDialog()
     const bool restoreChromeInteractive = m_window->isChromeInteractive();
     m_window->setChromeInteractive(false);
 
-    connect(dialog, &QDialog::finished, this,
-            [this, dialog, content, restoreChromeInteractive](int result) {
-                m_closePromptOpen = false;
-                if (m_window)
-                    m_window->setChromeInteractive(restoreChromeInteractive);
-                if (result == fluent::dialogs_flyouts::ContentDialog::ResultPrimary) {
-                    auto& currentSettings = GallerySettings::instance();
-                    currentSettings.setCloseBehavior(content->selectedBehavior());
-                    currentSettings.setCloseBehaviorConfirmed(true);
-                    applyConfiguredCloseBehavior();
-                }
-                dialog->deleteLater();
-            });
+    connect(dialog, &QDialog::finished, this, [this, dialog, content, restoreChromeInteractive](int result) {
+        m_closePromptOpen = false;
+        if (m_window)
+            m_window->setChromeInteractive(restoreChromeInteractive);
+        if (result == fluent::dialogs_flyouts::ContentDialog::ResultPrimary) {
+            auto& currentSettings = GallerySettings::instance();
+            currentSettings.setCloseBehavior(content->selectedBehavior());
+            currentSettings.setCloseBehaviorConfirmed(true);
+            applyConfiguredCloseBehavior();
+        }
+        dialog->deleteLater();
+    });
     dialog->open();
 }
 
@@ -198,8 +193,8 @@ void GalleryApplicationController::applyConfiguredCloseBehavior()
         return;
 
     const auto behavior = GallerySettings::instance().closeBehavior();
-    LOG_INFO(QStringLiteral("GalleryApplicationController applyCloseBehavior behavior=%1")
-                 .arg(static_cast<int>(behavior)));
+    LOG_INFO(
+        QStringLiteral("GalleryApplicationController applyCloseBehavior behavior=%1").arg(static_cast<int>(behavior)));
     switch (behavior) {
     case GallerySettings::CloseBehavior::Minimize:
         captureRestoreState();
@@ -228,8 +223,7 @@ void GalleryApplicationController::restoreWindow()
     const bool wasHidden = !m_window->isVisible();
     const bool wasMinimized = m_window->windowState().testFlag(Qt::WindowMinimized);
     const bool wasActive = m_window->isActiveWindow();
-    const bool isWayland = QGuiApplication::platformName().startsWith(
-        QStringLiteral("wayland"), Qt::CaseInsensitive);
+    const bool isWayland = QGuiApplication::platformName().startsWith(QStringLiteral("wayland"), Qt::CaseInsensitive);
     // Qt 5 Wayland can leave QWidget::windowState() at WindowNoState after the
     // compositor has minimized the surface. A secondary-launch activation for
     // an inactive Wayland window must therefore remap even when Qt reports it as
@@ -240,13 +234,14 @@ void GalleryApplicationController::restoreWindow()
     const bool waylandStateFallback = isWayland && !wasActive;
     const bool needsRestore = wasHidden || wasMinimized || waylandStateFallback;
     const std::uint64_t generation = ++m_restoreGeneration;
-    LOG_INFO(QStringLiteral("GalleryApplicationController restore requested generation=%1 hidden=%2 minimized=%3 active=%4 waylandFallback=%5 platform=%6")
-                 .arg(static_cast<qulonglong>(generation))
-                 .arg(wasHidden)
-                 .arg(wasMinimized)
-                 .arg(wasActive)
-                 .arg(waylandStateFallback)
-                 .arg(QGuiApplication::platformName()));
+    LOG_INFO(QStringLiteral(
+        "GalleryApplicationController restore requested generation=%1 hidden=%2 minimized=%3 active=%4 waylandFallback=%5 platform=%6")
+            .arg(static_cast<qulonglong>(generation))
+            .arg(wasHidden)
+            .arg(wasMinimized)
+            .arg(wasActive)
+            .arg(waylandStateFallback)
+            .arg(QGuiApplication::platformName()));
     if (needsRestore) {
         // A tray-hidden window uses the state captured immediately before hiding.
         // A manually minimized window uses its current native state so an older
@@ -276,14 +271,11 @@ void GalleryApplicationController::restoreWindow()
             // zh_CN: 在原生表面未映射时重新声明客户端边框；Qt 5/X11 若在显示后
             // 再修改窗口标志，可能一直残留第二条系统标题栏直到下次状态切换。
             m_window->prepareForNativeRestore();
-            const int remapDelayMs = (wasMinimized || waylandStateFallback)
-                ? LinuxMinimizedRemapDelayMs
-                : 0;
+            const int remapDelayMs = (wasMinimized || waylandStateFallback) ? LinuxMinimizedRemapDelayMs : 0;
             LOG_INFO(QStringLiteral("GalleryApplicationController Linux surface unmapped generation=%1 remapDelayMs=%2")
-                         .arg(static_cast<qulonglong>(generation))
-                         .arg(remapDelayMs));
-            QTimer::singleShot(remapDelayMs, this,
-                               [this, generation, targetState, wasHidden, wasMinimized]() {
+                    .arg(static_cast<qulonglong>(generation))
+                    .arg(remapDelayMs));
+            QTimer::singleShot(remapDelayMs, this, [this, generation, targetState, wasHidden, wasMinimized]() {
                 showRestoredWindow(generation, targetState, wasHidden, wasMinimized);
             });
         } else {
@@ -294,16 +286,17 @@ void GalleryApplicationController::restoreWindow()
         completeWindowRestore(generation, /*refreshNativeFrame*/ false);
     QTimer::singleShot(250, this, [this, generation]() {
         if (generation == m_restoreGeneration && m_window && !m_window->isActiveWindow()) {
-            LOG_DEBUG(QStringLiteral("GalleryApplicationController foreground activation deferred to platform attention"));
+            LOG_DEBUG(
+                QStringLiteral("GalleryApplicationController foreground activation deferred to platform attention"));
             QApplication::alert(m_window, 3000);
         }
     });
 }
 
 void GalleryApplicationController::showRestoredWindow(std::uint64_t generation,
-                                                       Qt::WindowStates targetState,
-                                                       bool wasHidden,
-                                                       bool wasMinimized)
+    Qt::WindowStates targetState,
+    bool wasHidden,
+    bool wasMinimized)
 {
     if (generation != m_restoreGeneration || !m_window || m_exitRequested)
         return;
@@ -323,9 +316,9 @@ void GalleryApplicationController::showRestoredWindow(std::uint64_t generation,
         m_window->showNormal();
 
     LOG_INFO(QStringLiteral("GalleryApplicationController surface remapped generation=%1 visible=%2 state=%3")
-                 .arg(static_cast<qulonglong>(generation))
-                 .arg(m_window->isVisible())
-                 .arg(static_cast<int>(m_window->windowState())));
+            .arg(static_cast<qulonglong>(generation))
+            .arg(m_window->isVisible())
+            .arg(static_cast<int>(m_window->windowState())));
 
     // Window-state transitions are asynchronous. Refresh and request activation
     // only after the remapped surface has been submitted to the compositor; the
@@ -340,8 +333,7 @@ void GalleryApplicationController::showRestoredWindow(std::uint64_t generation,
     });
 }
 
-void GalleryApplicationController::completeWindowRestore(std::uint64_t generation,
-                                                         bool refreshNativeFrame)
+void GalleryApplicationController::completeWindowRestore(std::uint64_t generation, bool refreshNativeFrame)
 {
     if (generation != m_restoreGeneration || !m_window || m_exitRequested)
         return;

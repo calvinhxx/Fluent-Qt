@@ -22,10 +22,7 @@ using AppWindowMetrics = metrics::AppWindow;
 
 constexpr int kPlacementSaveDelayMs = 250;
 
-int proportionalExtent(int available,
-                       int percentage,
-                       int preferredMinimum,
-                       int preferredMaximum)
+int proportionalExtent(int available, int percentage, int preferredMinimum, int preferredMaximum)
 {
     if (available <= 0)
         return 0;
@@ -39,8 +36,7 @@ QRect centeredInitialGeometry(const QRect& available, const QSize& size)
     const int horizontalSlack = qMax(0, available.width() - size.width());
     const int verticalSlack = qMax(0, available.height() - size.height());
     const int leftReserve = qMin(AppWindowMetrics::LeftPanelReserve, horizontalSlack);
-    const int x = available.x() + leftReserve
-        + (horizontalSlack - leftReserve) / 2;
+    const int x = available.x() + leftReserve + (horizontalSlack - leftReserve) / 2;
     const int y = available.y() + verticalSlack / 2;
     return QRect(QPoint(x, y), size);
 }
@@ -54,36 +50,27 @@ QSize effectiveMinimumSize(const QSize& availableSize)
     if (!availableSize.isValid() || availableSize.isEmpty())
         return QSize(AppWindowMetrics::MinWidth, AppWindowMetrics::MinHeight);
     return QSize(qMin(AppWindowMetrics::MinWidth, availableSize.width()),
-                 qMin(AppWindowMetrics::MinHeight, availableSize.height()));
+        qMin(AppWindowMetrics::MinHeight, availableSize.height()));
 }
 
 QSize recommendedInitialSize(const QSize& availableSize)
 {
     if (!availableSize.isValid() || availableSize.isEmpty()) {
-        return QSize(AppWindowMetrics::InitialWidth,
-                     AppWindowMetrics::InitialHeight);
+        return QSize(AppWindowMetrics::InitialWidth, AppWindowMetrics::InitialHeight);
     }
 
-    return QSize(
-        proportionalExtent(availableSize.width(),
-                           AppWindowMetrics::InitialWidthPercent,
-                           AppWindowMetrics::InitialMinWidth,
-                           AppWindowMetrics::InitialMaxWidth),
-        proportionalExtent(availableSize.height(),
-                           AppWindowMetrics::InitialHeightPercent,
-                           AppWindowMetrics::InitialMinHeight,
-                           AppWindowMetrics::InitialMaxHeight));
+    return QSize(proportionalExtent(availableSize.width(), AppWindowMetrics::InitialWidthPercent,
+                     AppWindowMetrics::InitialMinWidth, AppWindowMetrics::InitialMaxWidth),
+        proportionalExtent(availableSize.height(), AppWindowMetrics::InitialHeightPercent,
+            AppWindowMetrics::InitialMinHeight, AppWindowMetrics::InitialMaxHeight));
 }
 
-QRect constrainGeometry(const QRect& requested,
-                        const QRect& available,
-                        const QSize& minimumSize)
+QRect constrainGeometry(const QRect& requested, const QRect& available, const QSize& minimumSize)
 {
     if (!available.isValid() || available.isEmpty())
         return requested;
 
-    const QSize effectiveMinimum(
-        qMin(qMax(1, minimumSize.width()), available.width()),
+    const QSize effectiveMinimum(qMin(qMax(1, minimumSize.width()), available.width()),
         qMin(qMax(1, minimumSize.height()), available.height()));
     QSize size = requested.size();
     if (!size.isValid() || size.isEmpty())
@@ -98,30 +85,21 @@ QRect constrainGeometry(const QRect& requested,
     return QRect(QPoint(x, y), size);
 }
 
-QRect restoredGeometry(const QRect& savedGeometry,
-                       const QRect& available,
-                       const QSize& minimumSize)
+QRect restoredGeometry(const QRect& savedGeometry, const QRect& available, const QSize& minimumSize)
 {
     const bool savedSizeIsUsable = savedGeometry.width() >= minimumSize.width()
         && savedGeometry.height() >= minimumSize.height();
-    if (savedGeometry.isValid() && !savedGeometry.isEmpty()
-        && savedSizeIsUsable) {
+    if (savedGeometry.isValid() && !savedGeometry.isEmpty() && savedSizeIsUsable) {
         return constrainGeometry(savedGeometry, available, minimumSize);
     }
 
-    return centeredInitialGeometry(available,
-        recommendedInitialSize(available.size()));
+    return centeredInitialGeometry(available, recommendedInitialSize(available.size()));
 }
 
 } // namespace windowplacement
 
-GalleryWindowPlacement::GalleryWindowPlacement(GalleryWindow* window,
-                                               GallerySettings* settings,
-                                               QObject* parent)
-    : QObject(parent)
-    , m_window(window)
-    , m_settings(settings)
-    , m_saveTimer(new QTimer(this))
+GalleryWindowPlacement::GalleryWindowPlacement(GalleryWindow* window, GallerySettings* settings, QObject* parent)
+    : QObject(parent), m_window(window), m_settings(settings), m_saveTimer(new QTimer(this))
 {
     m_saveTimer->setSingleShot(true);
     m_saveTimer->setInterval(kPlacementSaveDelayMs);
@@ -150,18 +128,18 @@ bool GalleryWindowPlacement::restore()
     const QSize minimum = windowplacement::effectiveMinimumSize(available.size());
     m_window->setMinimumSize(minimum);
 
-    const QRect target = windowplacement::restoredGeometry(
-        m_settings->windowNormalGeometry(),
-        available,
-        minimum);
+    const QRect target = windowplacement::restoredGeometry(m_settings->windowNormalGeometry(), available, minimum);
 
     m_window->setGeometry(target);
     m_lastNormalGeometry = target;
     m_restoring = false;
     LOG_INFO(QStringLiteral("GalleryWindowPlacement restored geometry=%1,%2 %3x%4 screen=%5 maximized=%6")
-                 .arg(target.x()).arg(target.y()).arg(target.width()).arg(target.height())
-                 .arg(screen->name())
-                 .arg(m_settings->windowMaximized()));
+            .arg(target.x())
+            .arg(target.y())
+            .arg(target.width())
+            .arg(target.height())
+            .arg(screen->name())
+            .arg(m_settings->windowMaximized()));
     return m_settings->windowMaximized();
 }
 
@@ -171,16 +149,13 @@ void GalleryWindowPlacement::saveNow()
         return;
 
     const Qt::WindowStates state = m_window->windowState();
-    if (!state.testFlag(Qt::WindowMinimized)
-        && !state.testFlag(Qt::WindowFullScreen)) {
+    if (!state.testFlag(Qt::WindowMinimized) && !state.testFlag(Qt::WindowFullScreen)) {
         // On Wayland/WSLg QWidget::normalGeometry() can remain at Qt's
         // pre-show 640x480 placeholder while a normal window is visibly much
         // larger. Persist the live geometry for a normal window and reserve
         // normalGeometry() for the maximized state where it is actually the
         // restore target.
-        const QRect candidate = state.testFlag(Qt::WindowMaximized)
-            ? m_window->normalGeometry()
-            : m_window->geometry();
+        const QRect candidate = state.testFlag(Qt::WindowMaximized) ? m_window->normalGeometry() : m_window->geometry();
         if (candidate.isValid() && !candidate.isEmpty())
             m_lastNormalGeometry = candidate;
     }
@@ -192,9 +167,7 @@ void GalleryWindowPlacement::saveNow()
         screen = QGuiApplication::screenAt(m_lastNormalGeometry.center());
     if (!screen)
         screen = QGuiApplication::primaryScreen();
-    m_settings->setWindowPlacement(
-        m_lastNormalGeometry,
-        screen ? screen->name() : QString(),
+    m_settings->setWindowPlacement(m_lastNormalGeometry, screen ? screen->name() : QString(),
         state.testFlag(Qt::WindowMaximized));
 }
 
@@ -249,8 +222,9 @@ void GalleryWindowPlacement::connectScreenTracking()
     if (m_screenTrackingConnected || !m_window || !m_window->windowHandle())
         return;
     m_screenTrackingConnected = true;
-    connect(m_window->windowHandle(), &QWindow::screenChanged, this,
-            [this](QScreen* screen) { applyScreenConstraints(screen, true); });
+    connect(m_window->windowHandle(), &QWindow::screenChanged, this, [this](QScreen* screen) {
+        applyScreenConstraints(screen, true);
+    });
 }
 
 void GalleryWindowPlacement::applyScreenConstraints(QScreen* screen, bool constrainWindow)
@@ -266,15 +240,13 @@ void GalleryWindowPlacement::applyScreenConstraints(QScreen* screen, bool constr
     const QSize minimum = windowplacement::effectiveMinimumSize(available.size());
     m_window->setMinimumSize(minimum);
     const Qt::WindowStates state = m_window->windowState();
-    if (!constrainWindow || state.testFlag(Qt::WindowMaximized)
-        || state.testFlag(Qt::WindowMinimized)
+    if (!constrainWindow || state.testFlag(Qt::WindowMaximized) || state.testFlag(Qt::WindowMinimized)
         || state.testFlag(Qt::WindowFullScreen)) {
         scheduleSave();
         return;
     }
 
-    const QRect constrained = windowplacement::constrainGeometry(
-        m_window->geometry(), available, minimum);
+    const QRect constrained = windowplacement::constrainGeometry(m_window->geometry(), available, minimum);
     if (constrained != m_window->geometry()) {
         m_restoring = true;
         m_window->setGeometry(constrained);
