@@ -98,8 +98,7 @@ QRect GalleryEntryGrid::cardRect(int index) const
     const int column = index % cols;
     const int cardWidth = columnWidth();
     const int x = column * (cardWidth + kGridSpacing);
-    const int y =
-        row < m_rowTops.size() ? m_rowTops.at(row) : row * (kMinCardHeight + kGridSpacing);
+    const int y = row < m_rowTops.size() ? m_rowTops.at(row) : row * (kMinCardHeight + kGridSpacing);
     const int height = row < m_rowHeights.size() ? m_rowHeights.at(row) : kMinCardHeight;
     return QRect(x, y, cardWidth, height);
 }
@@ -193,14 +192,12 @@ bool GalleryEntryGrid::recalculateRowLayout()
             const Entry& entry = m_entries.at(index);
             int textHeight = titleMetrics.height();
             if (!entry.description.isEmpty()) {
-                const QRect descriptionBounds = descMetrics.boundingRect(
-                    QRect(0, 0, textWidth, QWIDGETSIZE_MAX),
+                const QRect descriptionBounds = descMetrics.boundingRect(QRect(0, 0, textWidth, QWIDGETSIZE_MAX),
                     Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, entry.description);
                 textHeight += kTitleDescGap + descriptionBounds.height();
             }
             const int row = index / cols;
-            rowHeights[row] = qMax(rowHeights.at(row),
-                                   depthInset + 2 * kCardPadding + qMax(kIconSize, textHeight));
+            rowHeights[row] = qMax(rowHeights.at(row), depthInset + 2 * kCardPadding + qMax(kIconSize, textHeight));
         }
     }
 
@@ -256,8 +253,8 @@ void GalleryEntryGrid::mouseMoveEvent(QMouseEvent* event)
         const QRectF bounds = cardRect(m_hoveredIndex);
         const QPointF offset = QPointF(event->pos()) - bounds.center();
         animateTilt(QPointF(qBound(-1.0, offset.x() * 2 / bounds.width(), 1.0) * 5.0,
-                            qBound(-1.0, -offset.y() * 2 / bounds.height(), 1.0) * 4.0),
-                    3.5);
+                        qBound(-1.0, -offset.y() * 2 / bounds.height(), 1.0) * 4.0),
+            3.5);
     }
     QWidget::mouseMoveEvent(event);
 }
@@ -286,8 +283,8 @@ void GalleryEntryGrid::onThemeUpdated()
 
 bool GalleryEntryGrid::event(QEvent* event)
 {
-    if (event->type() == depth::changeEvent() || event->type() == QEvent::Show ||
-        event->type() == QEvent::ParentChange) {
+    if (event->type() == depth::changeEvent() || event->type() == QEvent::Show
+        || event->type() == QEvent::ParentChange) {
         resetDepthMotion();
         recalculateRowLayout();
         updateGeometry();
@@ -323,13 +320,13 @@ void GalleryEntryGrid::animateTilt(const QPointF& target, qreal lift)
     m_depthMotion.setStartValue(0.0);
     m_depthMotion.setEndValue(1.0);
     connect(&m_depthMotion, &QVariantAnimation::valueChanged, this,
-            [this, from, fromLift, target, lift](const QVariant& value) {
-                const qreal t = value.toReal();
-                m_tilt = from + (target - from) * t;
-                m_lift = fromLift + (lift - fromLift) * t;
-                if (m_animatedIndex >= 0)
-                    update(cardRect(m_animatedIndex).adjusted(-16, -16, 16, 16));
-            });
+        [this, from, fromLift, target, lift](const QVariant& value) {
+            const qreal t = value.toReal();
+            m_tilt = from + (target - from) * t;
+            m_lift = fromLift + (lift - fromLift) * t;
+            if (m_animatedIndex >= 0)
+                update(cardRect(m_animatedIndex).adjusted(-16, -16, 16, 16));
+        });
     connect(&m_depthMotion, &QVariantAnimation::finished, this, [this, lift] {
         if (qFuzzyIsNull(lift)) {
             const int previous = m_animatedIndex;
@@ -345,8 +342,8 @@ void GalleryEntryGrid::animateTilt(const QPointF& target, qreal lift)
 QTransform GalleryEntryGrid::cardTransform(int index) const
 {
     return index == m_animatedIndex && depth::enabled(this)
-               ? depth::projection(cardRect(index), m_tilt, m_lift)
-               : QTransform();
+        ? depth::projection(cardRect(index), m_tilt, m_lift)
+        : QTransform();
 }
 
 void GalleryEntryGrid::paintEvent(QPaintEvent* event)
@@ -369,8 +366,8 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
         if (spatial && index == m_animatedIndex) {
             const qreal dpr = devicePixelRatioF();
             const QSize pixels(qCeil(bounds.width() * dpr), qCeil(bounds.height() * dpr));
-            if (m_hoverFrame.isNull() || m_hoverFrame.size() != pixels ||
-                m_hoverFrame.devicePixelRatioF() != dpr || m_frameTheme != themeGeneration()) {
+            if (m_hoverFrame.isNull() || m_hoverFrame.size() != pixels || m_hoverFrame.devicePixelRatioF() != dpr
+                || m_frameTheme != themeGeneration()) {
                 m_hoverFrame = QPixmap(pixels);
                 m_hoverFrame.setDevicePixelRatio(dpr);
                 m_hoverFrame.fill(Qt::transparent);
@@ -390,8 +387,7 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
     }
 }
 
-void GalleryEntryGrid::paintEntry(QPainter& painter, int index, const QRect& rect,
-                                  bool hovered) const
+void GalleryEntryGrid::paintEntry(QPainter& painter, int index, const QRect& rect, bool hovered) const
 {
     const Colors colors = themeColors();
     const QFont titleFont = themeFont(Typography::FontRole::BodyStrong).toQFont();
@@ -409,8 +405,7 @@ void GalleryEntryGrid::paintEntry(QPainter& painter, int index, const QRect& rec
         painter.drawRoundedRect(body, ::CornerRadius::Overlay, ::CornerRadius::Overlay);
     }
 
-    const QRect iconRect(rect.left() + kCardPadding, rect.top() + kCardPadding, kIconSize,
-                         kIconSize);
+    const QRect iconRect(rect.left() + kCardPadding, rect.top() + kCardPadding, kIconSize, kIconSize);
     if (!entry.iconGlyph.isEmpty()) {
         // Glyph variant (used by category cards): a tinted tile with an icon-font glyph,
         // matching GalleryIconTile. zh_CN: 字形变体（分类卡片用）：着色圆角块 + 图标字体字形，对齐 GalleryIconTile。
@@ -420,12 +415,10 @@ void GalleryEntryGrid::paintEntry(QPainter& painter, int index, const QRect& rec
         const int glyphSize = Typography::IconSize::Large;
         painter.setFont(Typography::Icons::font(glyphSize));
         painter.setPen(colors.textPrimary);
-        painter.drawText(iconRect, Qt::AlignCenter,
-                         Typography::Icons::glyphForSize(entry.iconGlyph, glyphSize));
+        painter.drawText(iconRect, Qt::AlignCenter, Typography::Icons::glyphForSize(entry.iconGlyph, glyphSize));
     } else if (!entry.imageResource.isEmpty()) {
         const int inset = (kIconSize - kControlImageSize) / 2;
-        drawGalleryArtwork(painter, iconRect.adjusted(inset, inset, -inset, -inset),
-                           entry.imageResource);
+        drawGalleryArtwork(painter, iconRect.adjusted(inset, inset, -inset, -inset), entry.imageResource);
     }
 
     const int textLeft = iconRect.right() + 1 + kIconTextGap;
@@ -436,9 +429,8 @@ void GalleryEntryGrid::paintEntry(QPainter& painter, int index, const QRect& rec
     const int titleY = rect.top() + kCardPadding;
     painter.setFont(titleFont);
     painter.setPen(colors.textPrimary);
-    painter.drawText(QRect(textLeft, titleY, textWidth, titleMetrics.height()),
-                     Qt::AlignLeft | Qt::AlignVCenter,
-                     titleMetrics.elidedText(entry.title, Qt::ElideRight, textWidth));
+    painter.drawText(QRect(textLeft, titleY, textWidth, titleMetrics.height()), Qt::AlignLeft | Qt::AlignVCenter,
+        titleMetrics.elidedText(entry.title, Qt::ElideRight, textWidth));
 
     if (!entry.description.isEmpty()) {
         const int descY = titleY + titleMetrics.height() + kTitleDescGap;
@@ -446,8 +438,7 @@ void GalleryEntryGrid::paintEntry(QPainter& painter, int index, const QRect& rec
         const QRect descRect(textLeft, descY, textWidth, qMax(0, descBottom - descY + 1));
         painter.setFont(descFont);
         painter.setPen(colors.textSecondary);
-        painter.drawText(descRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
-                         entry.description);
+        painter.drawText(descRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, entry.description);
     }
 }
 

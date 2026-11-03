@@ -18,12 +18,8 @@ namespace windowplacement {
 
 QSize effectiveMinimumSize(const QSize& availableSize);
 QSize recommendedInitialSize(const QSize& availableSize);
-QRect constrainGeometry(const QRect& requested,
-                        const QRect& available,
-                        const QSize& minimumSize);
-QRect restoredGeometry(const QRect& savedGeometry,
-                       const QRect& available,
-                       const QSize& minimumSize);
+QRect constrainGeometry(const QRect& requested, const QRect& available, const QSize& minimumSize);
+QRect restoredGeometry(const QRect& savedGeometry, const QRect& available, const QSize& minimumSize);
 
 } // namespace windowplacement
 
@@ -33,9 +29,7 @@ QRect restoredGeometry(const QRect& savedGeometry,
  */
 class GalleryWindowPlacement final : public QObject {
 public:
-    explicit GalleryWindowPlacement(GalleryWindow* window,
-                                    GallerySettings* settings,
-                                    QObject* parent = nullptr);
+    explicit GalleryWindowPlacement(GalleryWindow* window, GallerySettings* settings, QObject* parent = nullptr);
 
     bool restore();
     void saveNow();

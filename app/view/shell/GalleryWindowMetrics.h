@@ -47,15 +47,16 @@ struct TitleBar {
 
     static int leadingOffset(int systemReservedLeadingWidth)
     {
-        return systemReservedLeadingWidth > 0 ? systemReservedLeadingWidth + HorizontalMargin
-                                              : HorizontalMargin;
+        return systemReservedLeadingWidth > 0 ? systemReservedLeadingWidth + HorizontalMargin : HorizontalMargin;
     }
 
-    static int leadingChromeRight(int systemReservedLeadingWidth, bool showAppIcon, bool showTitle,
-                                  qreal backReveal, bool showMenu = true)
+    static int leadingChromeRight(int systemReservedLeadingWidth,
+        bool showAppIcon,
+        bool showTitle,
+        qreal backReveal,
+        bool showMenu = true)
     {
-        int right =
-            leadingOffset(systemReservedLeadingWidth) + qRound(backReveal * (ButtonSize + ItemGap));
+        int right = leadingOffset(systemReservedLeadingWidth) + qRound(backReveal * (ButtonSize + ItemGap));
         if (showMenu)
             right += ButtonSize;
         if (showAppIcon)
@@ -65,12 +66,13 @@ struct TitleBar {
         return right;
     }
 
-    static int searchLeftBound(int systemReservedLeadingWidth, bool showAppIcon, bool showTitle,
-                               qreal backReveal, bool showMenu = true)
+    static int searchLeftBound(int systemReservedLeadingWidth,
+        bool showAppIcon,
+        bool showTitle,
+        qreal backReveal,
+        bool showMenu = true)
     {
-        return leadingChromeRight(systemReservedLeadingWidth, showAppIcon, showTitle, backReveal,
-                                  showMenu) +
-               ItemGap;
+        return leadingChromeRight(systemReservedLeadingWidth, showAppIcon, showTitle, backReveal, showMenu) + ItemGap;
     }
 
     static int searchRightBound(int barWidth, int systemReservedTrailingWidth)
@@ -78,10 +80,7 @@ struct TitleBar {
         return barWidth - systemReservedTrailingWidth - HorizontalMargin;
     }
 
-    static int searchAvailableWidth(int leftBound, int rightBound)
-    {
-        return rightBound - leftBound;
-    }
+    static int searchAvailableWidth(int leftBound, int rightBound) { return rightBound - leftBound; }
 
     static bool canShowSearch(int availableWidth) { return availableWidth >= SearchMinWidth; }
 

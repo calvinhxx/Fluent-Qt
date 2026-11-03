@@ -48,14 +48,13 @@ int runApplication(int argc, char** argv)
     }
     // Resolve the real QPA first, preserving any explicit Quick backend choice.
     // zh_CN: 先确定实际 QPA，并保留显式指定的 Quick 后端。
-    if (qEnvironmentVariableIsEmpty("QSG_RHI_BACKEND") &&
-        qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND") &&
-        qEnvironmentVariableIsEmpty("QMLSCENE_DEVICE"))
+    if (qEnvironmentVariableIsEmpty("QSG_RHI_BACKEND") && qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND")
+        && qEnvironmentVariableIsEmpty("QMLSCENE_DEVICE"))
         QmlSession::prepareApplication(graphicsApi);
     if (!QmlSession::isGraphicsApiCompatible(graphicsApi))
         app.setProperty("fluentqtGalleryGraphicsBackendFailure",
-                        QObject::tr("The selected Qt Quick and 3D backends cannot share a window. "
-                                    "Using the 2D Gallery."));
+            QObject::tr("The selected Qt Quick and 3D backends cannot share a window. "
+                        "Using the 2D Gallery."));
 #endif
 #ifdef Q_OS_LINUX
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
@@ -93,23 +92,21 @@ int runApplication(int argc, char** argv)
     loggingOptions.logFilePath = fluent::support::logging::defaultLogFilePath();
     fluent::support::logging::initialize(loggingOptions);
     LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2 logFile=%3")
-                 .arg(QApplication::applicationName(), QApplication::organizationName(),
-                      loggingOptions.logFilePath));
+            .arg(QApplication::applicationName(), QApplication::organizationName(), loggingOptions.logFilePath));
     GallerySingleInstance singleInstance(QStringLiteral(FLUENT_QT_GALLERY_APP_ID), &app);
     const auto instanceResult = singleInstance.start();
     if (instanceResult == GallerySingleInstance::StartResult::ExistingInstanceNotified)
         return 0;
     if (instanceResult == GallerySingleInstance::StartResult::Error) {
-        LOG_CRITICAL(QStringLiteral("Gallery single-instance startup failed: %1")
-                         .arg(singleInstance.errorString()));
+        LOG_CRITICAL(QStringLiteral("Gallery single-instance startup failed: %1").arg(singleInstance.errorString()));
         return 1;
     }
 
     GalleryWindow window;
     GalleryWindowPlacement placement(&window, &settings);
     GalleryApplicationController applicationController(&window, &app);
-    QObject::connect(&singleInstance, &GallerySingleInstance::activationRequested,
-                     &applicationController, &GalleryApplicationController::restoreWindow);
+    QObject::connect(&singleInstance, &GallerySingleInstance::activationRequested, &applicationController,
+        &GalleryApplicationController::restoreWindow);
 
     if (placement.restore())
         window.showMaximized();
