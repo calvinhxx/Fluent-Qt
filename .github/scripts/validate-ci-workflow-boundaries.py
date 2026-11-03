@@ -122,6 +122,7 @@ SOURCE_PACKAGE_CMAKE_ENTRIES = (
     "plugin/QmlBridge/CMakeLists.txt",
     "cmake/FluentQtPlugins.cmake",
     "cmake/FluentQtSpatial.cmake",
+    "cmake/FluentQtInterfaceZoom.cmake",
     "cmake/FluentQtQmlBridge.cmake",
     "cmake/FluentQtRuntime.cmake",
     "cmake/FluentQtHelloWorldExamples.cmake",

@@ -785,10 +785,11 @@ jobs:
             -P cmake/CreateSourcePackage.cmake
           archive="$output/FluentQt-ci-source.zip"
           test -f "$archive"
-          # The native Python binding builds the shared texture host from source.
-          # Keep only that support subtree; Gallery, tests and logging stay out.
+          # The native Python binding builds the shared texture host and the
+          # Gallery interface-zoom backend from source. Keep only those support
+          # subtrees; Gallery, tests and logging stay out.
           if unzip -Z1 "$archive" | grep -E '^[^/]+/(app|tests|support)/' | \
-              grep -Ev '^[^/]+/support/(spatial(/.*)?)?$'; then
+              grep -Ev '^[^/]+/support/((spatial|interfacezoom)(/.*)?)?$'; then
             echo "::error::Non-library files leaked into the FluentQt source package."
             exit 1
           fi
@@ -807,6 +808,7 @@ jobs:
               cmake/FluentQtPlugins.cmake \
               cmake/FluentQtRuntime.cmake \
               cmake/FluentQtSpatial.cmake \
+              cmake/FluentQtInterfaceZoom.cmake \
               cmake/FluentQtQmlBridge.cmake \
               cmake/FluentQtHelloWorldExamples.cmake \
               cmake/FluentQtPluginExtensionExample.cmake \
@@ -819,6 +821,8 @@ jobs:
               support/spatial/shaders/spatial_rhi.qrc \
               support/spatial/shaders/panel.vert.qsb \
               support/spatial/shaders/panel.frag.qsb \
+              support/interfacezoom/InterfaceZoom.cpp \
+              support/interfacezoom/InterfaceZoom.h \
               .agents/skills/build-fluentqt-gui/SKILL.md \
               .agents/skills/build-fluentqt-gui/LICENSE.txt \
               .agents/skills/build-fluentqt-gui/agents/openai.yaml \

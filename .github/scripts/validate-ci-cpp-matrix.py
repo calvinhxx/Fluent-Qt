@@ -144,6 +144,9 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(f"{context}.mode must be fast or full")
         if scenario.get("qt_source") not in {"apt", "aqt"}:
             errors.append(f"{context}.qt_source must be apt or aqt")
+        zoom_args = scenario.get("configure_args", "")
+        if not isinstance(zoom_args, str) or "-DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON" not in zoom_args.split():
+            errors.append(f"{context}.configure_args must require live Gallery zoom")
         archives = scenario.get("qt_archives")
         if isinstance(archives, str) and archives and "qtsvg" not in archives.split():
             errors.append(f"{context}.qt_archives must include qtsvg for Gallery")
