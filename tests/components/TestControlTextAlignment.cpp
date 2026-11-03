@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QImage>
 #include <QPainter>
+#include <QtMath>
 #include <QScopeGuard>
 #include <QStandardItemModel>
 #include <QStyleOptionViewItem>
@@ -236,31 +237,50 @@ TEST(ControlTextAlignment, OptionAndSuggestionDelegatesKeepOneBaselineAcrossLabe
         QStringLiteral("suggestions"));
 }
 
-TEST(ControlTextAlignment, IsolatedBadgesCenterInkAtDifferentPixelRatios)
+namespace {
+void expectCenteredBadgeInk(const QStringList& texts, bool shaped)
 {
     const QFont font = Typography::fontStyle(Typography::FontRole::Body).toQFont();
     for (qreal dpr : {1.0, 1.34, 2.0}) {
-        for (const QString& text : {QStringLiteral("27"), QStringLiteral("gyp"), QString::fromUtf8("中文")}) {
+        for (const QString& text : texts) {
             SCOPED_TRACE(::testing::Message() << text.toStdString() << " DPR=" << dpr);
             QImage image = canvas(QSize(120, 40), dpr);
             {
                 QPainter painter(&image);
                 painter.setFont(font);
                 painter.setPen(Qt::black);
-                painter.drawText(
-                    fluent::painting::verticallyCenteredTextInkRect(QRectF(0, 0, 120, 40),
-                        QFontMetricsF(painter.font(), painter.device()), text),
-                    Qt::AlignHCenter | Qt::AlignVCenter, text);
+                const QRectF target(0, 0, 120, 40);
+                const QRectF centered = shaped
+                    ? fluent::painting::verticallyCenteredTextInkRect(target, painter, text)
+                    : fluent::painting::verticallyCenteredTextInkRect(target,
+                          QFontMetricsF(painter.font(), painter.device()), text);
+                painter.drawText(centered, Qt::AlignHCenter | Qt::AlignVCenter, text);
             }
             QRect ink;
             for (int y = 0; y < image.height(); ++y) {
                 const auto* pixels = reinterpret_cast<const QRgb*>(image.constScanLine(y));
                 for (int x = 0; x < image.width(); ++x)
-                    if (isTextPixel(pixels[x]))
+                    // This canvas contains only black text on white. Include
+                    // subpixel edge coverage: the chroma filter used for the
+                    // colorful controls above would discard valid fallback ink.
+                    // zh_CN: 此画布只有白底黑字，须纳入子像素边缘；上方彩色控件的色度过滤会丢失有效回退字形。
+                    if (qGray(pixels[x]) < 100)
                         ink |= QRect(x, y, 1, 1);
             }
             ASSERT_FALSE(ink.isEmpty());
             EXPECT_NEAR((ink.top() + ink.bottom() + 1) / 2.0, 20 * image.devicePixelRatioF(), 1.0);
         }
     }
+}
+} // namespace
+
+TEST(ControlTextAlignment, IsolatedBadgesCenterInkAtDifferentPixelRatios)
+{
+    expectCenteredBadgeInk({QStringLiteral("27"), QStringLiteral("gyp"), QString::fromUtf8("中文")}, false);
+}
+
+TEST(ControlTextAlignment, ShapedBadgesCenterMixedFallbackInkAtDifferentPixelRatios)
+{
+    expectCenteredBadgeInk(
+        {QStringLiteral("27"), QStringLiteral("gyp"), QString::fromUtf8("中文"), QString::fromUtf8("A中g")}, true);
 }

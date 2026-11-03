@@ -161,9 +161,7 @@ protected:
                 -kSummaryBadgeHorizontalPadding, 0);
             const QString elided = metrics.elidedText(text, Qt::ElideRight, qMax(0, badgeTextRect.width()));
             painter.setPen(textColor);
-            painter.drawText(
-                fluent::painting::verticallyCenteredTextInkRect(QRectF(badgeTextRect),
-                    QFontMetricsF(painter.font(), painter.device()), elided),
+            painter.drawText(fluent::painting::verticallyCenteredTextInkRect(QRectF(badgeTextRect), painter, elided),
                 Qt::AlignHCenter | Qt::AlignVCenter, elided);
         } else {
             painter.setPen(textColor);
