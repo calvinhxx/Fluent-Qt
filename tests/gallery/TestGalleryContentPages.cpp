@@ -27,6 +27,7 @@
 #include <QKeySequence>
 #include <QLabel>
 #include <QLayout>
+#include <QLayoutItem>
 #include <QLineEdit>
 #include <QMargins>
 #include <QPoint>
@@ -64,6 +65,7 @@
 #include "components/basicinput/CompoundButton.h"
 #include "components/basicinput/MultiSelectComboBox.h"
 #include "components/basicinput/Slider.h"
+#include "components/basicinput/RangeSlider.h"
 #include "components/basicinput/ToggleButton.h"
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/date_time/DateTimeRangePicker.h"
@@ -86,6 +88,7 @@
 #include "components/navigation/SelectorBar.h"
 #include "components/scrolling/AnnotatedScrollBar.h"
 #include "components/scrolling/PipsPager.h"
+#include "components/scrolling/ImageViewer.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/Avatar.h"
 #include "components/status_info/InfoBadge.h"
@@ -2610,6 +2613,94 @@ TEST_F(GalleryContentPagesTest, AnnotatedScrollDensityKeepsPreviewGeometryStable
     EXPECT_EQ(bar->y(), 0);
     EXPECT_EQ(card.height(), cardHeight);
     EXPECT_EQ(card.codeBlock()->y(), codeBlockTop);
+}
+
+TEST_F(GalleryContentPagesTest, Contract_RangeSliderAndImageViewerSamplesFitNarrowPreviews)
+{
+    const std::function<void(QWidget*)> expectContainedRows = [&](QWidget* parent) {
+        auto* box = qobject_cast<QBoxLayout*>(parent->layout());
+        if (!box)
+            return;
+        QList<QWidget*> children;
+        for (int index = 0; index < box->count(); ++index) {
+            QWidget* child = box->itemAt(index)->widget();
+            if (!child || child->isHidden())
+                continue;
+            EXPECT_TRUE(parent->rect().contains(child->geometry()))
+                << child->metaObject()->className() << " exceeds its sample row";
+            for (QWidget* previous : children) {
+                EXPECT_FALSE(previous->geometry().intersects(child->geometry()))
+                    << previous->metaObject()->className() << " overlaps " << child->metaObject()->className();
+            }
+            children.append(child);
+            expectContainedRows(child);
+        }
+    };
+
+    for (const QString& route : {QStringLiteral("range-slider"), QStringLiteral("image-viewer")}) {
+        const auto samples = fluent::gallery::gallerySamplesForRoute(route);
+        ASSERT_EQ(samples.size(), route == QStringLiteral("range-slider") ? 3 : 4);
+        for (const auto& sample : samples) {
+            QWidget host;
+            GallerySampleCard card(sample, &host);
+            for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+                card.setPreviewThemeOverride(theme);
+                for (const int width : {420, 920}) {
+                    SCOPED_TRACE(
+                        ::testing::Message() << sample.id.toStdString() << " width=" << width << " theme=" << theme);
+                    host.resize(width, 900);
+                    card.setGeometry(16, 16, width - 32, card.sizeHint().height());
+                    host.show();
+                    card.show();
+                    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+                    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+                    QApplication::processEvents();
+                    QWidget* preview = card.previewWidget();
+                    ASSERT_NE(preview, nullptr);
+                    QWidgetItem previewItem(preview);
+                    const QMargins margins = preview->parentWidget()->layout()->contentsMargins();
+                    const int availableWidth = preview->parentWidget()->contentsRect().width() - margins.left()
+                        - margins.right();
+                    EXPECT_LE(previewItem.minimumSize().width(), availableWidth)
+                        << "The declared layout minimum must allow the sample to shrink";
+                    EXPECT_TRUE(preview->parentWidget()->rect().contains(preview->geometry()));
+                    expectContainedRows(preview);
+
+                    if (auto* slider = preview->findChild<fluent::basicinput::RangeSlider*>()) {
+                        const int span = slider->maximum() - slider->minimum();
+                        const int lower = slider->minimum() + span / 4;
+                        const int upper = slider->minimum() + span * 3 / 4;
+                        slider->setValues(lower, upper);
+                        EXPECT_EQ(slider->lowerValue(), lower);
+                        EXPECT_EQ(slider->upperValue(), upper);
+                        const auto boxes = preview->findChildren<fluent::textfields::NumberBox*>();
+                        if (!boxes.isEmpty()) {
+                            ASSERT_EQ(boxes.size(), 2);
+                            EXPECT_DOUBLE_EQ(boxes[0]->value(), lower);
+                            EXPECT_DOUBLE_EQ(boxes[1]->value(), upper);
+                            boxes[0]->setValue(lower + slider->singleStep());
+                            EXPECT_EQ(slider->lowerValue(), lower + slider->singleStep());
+                        } else {
+                            auto* status = preview->findChild<fluent::textfields::Label*>();
+                            ASSERT_NE(status, nullptr);
+                            EXPECT_EQ(status->text(), QStringLiteral("Range: %1 to %2").arg(lower).arg(upper));
+                        }
+                    }
+                    const auto viewers = preview->findChildren<fluent::scrolling::ImageViewer*>();
+                    for (auto* viewer : viewers) {
+                        if (!viewer->isVisibleTo(preview))
+                            continue;
+                        viewer->zoomToActualSize();
+                        EXPECT_DOUBLE_EQ(viewer->zoomFactor(), 1.0);
+                        viewer->fitToView();
+                        const QRectF fitted(viewer->mapFromImage(QPointF()),
+                            viewer->mapFromImage(QPointF(viewer->imageSize().width(), viewer->imageSize().height())));
+                        EXPECT_TRUE(QRectF(viewer->rect()).adjusted(-1, -1, 1, 1).contains(fitted));
+                    }
+                }
+            }
+        }
+    }
 }
 
 TEST_F(GalleryContentPagesTest, HorizontalSampleGroupUsesRequestedSpacing)

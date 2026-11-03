@@ -491,7 +491,8 @@
     "name": "图片查看器",
     "description": "围绕指针缩放、拖动平移单张图片，可切换适应窗口与原始比例。",
     "example": "平移和缩放图片",
-    "usage": "setPixmap() 或 setImage() 设置图片，视图自动回到 ScaleDown；fitToView()、zoomToActualSize()、resetView() 切换视图，zoomFactorChanged 报告当前比例。"
+    "usage": "setPixmap() 或 setImage() 设置图片，视图自动回到 ScaleDown；fitToView()、zoomToActualSize()、resetView() 切换视图，zoomFactorChanged 报告当前比例。",
+    "capture_size": "920x640"
   },
   "pips-pager": {
     "name": "圆点分页器",

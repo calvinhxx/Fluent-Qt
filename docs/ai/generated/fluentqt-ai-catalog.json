@@ -2578,30 +2578,30 @@
           "id": "range-slider-live-values",
           "title": "Range slider live values",
           "description": "Drag either thumb to select a range and mirror both values in external UI.",
-          "cpp_snippet": "auto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setAccessibleName(\"Price range\");\nslider->setRange(0, 100);\nslider->setValues(20, 64);\nconnect(slider, &RangeSlider::valuesChanged,\n        status, [status](int lower, int upper) {\n            status->setText(QString(\"Range: %1 to %2\").arg(lower).arg(upper));\n        });",
+          "cpp_snippet": "auto* layout = new QVBoxLayout(this);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(8);\nauto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setAccessibleName(\"Price range\");\nslider->setRange(0, 100);\nslider->setValues(20, 64);\nslider->setMaximumWidth(260);\nauto* status = new Label(\"Range: 20 to 64\", this);\nlayout->addWidget(slider);\nlayout->addWidget(status);\nconnect(slider, &RangeSlider::valuesChanged,\n        status, [status](int lower, int upper) {\n            status->setText(QString(\"Range: %1 to %2\").arg(lower).arg(upper));\n        });",
           "preview_layout": {
-            "orientation": "horizontal",
-            "spacing": 16
+            "orientation": "vertical",
+            "spacing": 8
           }
         },
         {
           "id": "range-slider-steps-minimum-range",
           "title": "Steps and minimum range",
           "description": "Ticks mark the stops, keyboard steps move the focused thumb, and a minimum range keeps the thumbs apart.",
-          "cpp_snippet": "auto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setRange(0, 1000);\nslider->setSingleStep(50);\nslider->setPageStep(100);\nslider->setTickInterval(100);\nslider->setTickPosition(QSlider::TicksBelow);\nslider->setMinimumRange(100);\nslider->setValues(200, 600);",
+          "cpp_snippet": "auto* layout = new QVBoxLayout(this);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(8);\nauto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setRange(0, 1000);\nslider->setSingleStep(50);\nslider->setPageStep(100);\nslider->setTickInterval(100);\nslider->setTickPosition(QSlider::TicksBelow);\nslider->setMinimumRange(100);\nslider->setValues(200, 600);\nslider->setMaximumWidth(260);\nauto* status = new Label(\"Range: 200 to 600\", this);\nlayout->addWidget(slider);\nlayout->addWidget(status);\nconnect(slider, &RangeSlider::valuesChanged,\n        status, [status](int lower, int upper) {\n            status->setText(QString(\"Range: %1 to %2\").arg(lower).arg(upper));\n        });",
           "preview_layout": {
-            "orientation": "horizontal",
-            "spacing": 16
+            "orientation": "vertical",
+            "spacing": 8
           }
         },
         {
           "id": "range-slider-number-boxes",
           "title": "Paired number boxes",
           "description": "NumberBox editors and the slider update each other; typed values are clamped so the range stays valid.",
-          "cpp_snippet": "auto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setRange(0, 1000);\nslider->setSingleStep(10);\nslider->setValues(120, 480);\n\nauto makeBox = [this](const QString& header, int value) {\n    auto* box = new NumberBox(this);\n    box->setHeader(header);\n    box->setRange(0, 1000);\n    box->setSmallChange(10);\n    box->setLargeChange(100);\n    box->setDisplayPrecision(0);\n    box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);\n    box->setValue(value);\n    return box;\n};\nauto* lowerBox = makeBox(\"Minimum\", slider->lowerValue());\nauto* upperBox = makeBox(\"Maximum\", slider->upperValue());\n\nconnect(slider, &RangeSlider::lowerValueChanged, lowerBox,\n        [lowerBox](int value) { lowerBox->setValue(value); });\nconnect(slider, &RangeSlider::upperValueChanged, upperBox,\n        [upperBox](int value) { upperBox->setValue(value); });\nconnect(lowerBox, &NumberBox::valueChanged, slider,\n        [slider, lowerBox](double value) {\n            if (std::isfinite(value))\n                slider->setLowerValue(qRound(value));\n            lowerBox->setValue(slider->lowerValue());\n        });\nconnect(upperBox, &NumberBox::valueChanged, slider,\n        [slider, upperBox](double value) {\n            if (std::isfinite(value))\n                slider->setUpperValue(qRound(value));\n            upperBox->setValue(slider->upperValue());\n        });",
+          "cpp_snippet": "auto* layout = new QVBoxLayout(this);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(12);\nauto* slider = new RangeSlider(Qt::Horizontal, this);\nslider->setRange(0, 1000);\nslider->setSingleStep(10);\nslider->setValues(120, 480);\nslider->setMaximumWidth(288);\nslider->setFixedHeight(32);\n\nauto* editors = new QWidget(this);\nauto* editorLayout = new QHBoxLayout(editors);\neditorLayout->setContentsMargins(0, 0, 0, 0);\neditorLayout->setSpacing(16);\nauto makeBox = [editors](const QString& header, int value) {\n    auto* box = new NumberBox(editors);\n    box->setHeader(header);\n    box->setRange(0, 1000);\n    box->setSmallChange(10);\n    box->setLargeChange(100);\n    box->setDisplayPrecision(0);\n    box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);\n    box->setFixedWidth(136);\n    box->setValue(value);\n    return box;\n};\nauto* lowerBox = makeBox(\"Minimum\", slider->lowerValue());\nauto* upperBox = makeBox(\"Maximum\", slider->upperValue());\neditorLayout->addWidget(lowerBox);\neditorLayout->addWidget(upperBox);\nlayout->addWidget(slider);\nlayout->addWidget(editors);\n\nconnect(slider, &RangeSlider::lowerValueChanged, lowerBox,\n        [lowerBox](int value) { lowerBox->setValue(value); });\nconnect(slider, &RangeSlider::upperValueChanged, upperBox,\n        [upperBox](int value) { upperBox->setValue(value); });\nconnect(lowerBox, &NumberBox::valueChanged, slider,\n        [slider, lowerBox](double value) {\n            if (std::isfinite(value))\n                slider->setLowerValue(qRound(value));\n            lowerBox->setValue(slider->lowerValue());\n        });\nconnect(upperBox, &NumberBox::valueChanged, slider,\n        [slider, upperBox](double value) {\n            if (std::isfinite(value))\n                slider->setUpperValue(qRound(value));\n            upperBox->setValue(slider->upperValue());\n        });",
           "preview_layout": {
-            "orientation": "horizontal",
-            "spacing": 16
+            "orientation": "vertical",
+            "spacing": 12
           }
         }
       ]
@@ -8958,7 +8958,6 @@
         "scrolling-and-paging"
       ],
       "search_terms": [
-        "100",
         "actual",
         "actual-size",
         "album",
@@ -8969,16 +8968,17 @@
         "browse",
         "command",
         "commands",
+        "compare",
         "ctrl",
         "dragging",
         "each",
         "enlarged",
-        "enlarges",
         "every",
         "external",
         "fast",
         "fit",
         "fitted",
+        "fitting",
         "flipview",
         "hosts",
         "hover.",
@@ -9008,8 +9008,8 @@
         "pixel",
         "pixels",
         "pointer",
-        "reset",
-        "returns",
+        "resetting",
+        "scale-down",
         "screenshot",
         "scrolling",
         "scrolling-and-paging",
@@ -9019,16 +9019,16 @@
         "small",
         "smooth",
         "square",
+        "steps",
         "suits",
         "swipes",
         "toolbar",
         "transformation",
-        "view",
         "view.",
+        "viewport",
         "views.",
         "wheel",
         "when",
-        "while",
         "zoom",
         "zoomed",
         "zooms"
@@ -9062,25 +9062,25 @@
           "id": "image-viewer-basic",
           "title": "Pan and zoom an image",
           "description": "The wheel, a pinch or Ctrl/Command + wheel zooms around the pointer, dragging pans, and the toolbar appears on hover.",
-          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setFixedSize(460, 290);\nviewer->setAccessibleName(QStringLiteral(\"Harbor at dusk\"));\nviewer->setPixmap(imageViewerScene(QSize(1600, 1000), 0));\n\n// Double-click toggles 100%; after focus, + - 0 1 and the\n// arrow keys zoom, reset and pan.\nauto updateStatus = [viewer, status] {\n    status->setText(imageViewerStatusText(viewer));\n};\nconnect(viewer, &ImageViewer::zoomFactorChanged, status, updateStatus);\nconnect(viewer, &ImageViewer::fitModeChanged, status, updateStatus);"
+          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setMaximumWidth(460);\nviewer->setFixedHeight(290);\nviewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\nviewer->setAccessibleName(QStringLiteral(\"Harbor at dusk\"));\nviewer->setPixmap(imageViewerScene(QSize(1600, 1000), 0));\n\n// Double-click toggles 100%; after focus, + - 0 1 and the\n// arrow keys zoom, reset and pan.\nauto updateStatus = [viewer, status] {\n    status->setText(imageViewerStatusText(viewer));\n};\nconnect(viewer, &ImageViewer::zoomFactorChanged, status, updateStatus);\nconnect(viewer, &ImageViewer::fitModeChanged, status, updateStatus);"
         },
         {
           "id": "image-viewer-commands",
           "title": "Fit, actual size and zoom commands",
-          "description": "External commands animate the view. Fit enlarges a small image, while Reset returns to the initial view that keeps it at 100%.",
-          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setFixedSize(460, 290);\nviewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\nviewer->setAccessibleName(QStringLiteral(\"Forest ridge\"));\nviewer->setPixmap(imageViewerScene(QSize(360, 225), 1));\n\nconnect(fitButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->fitToView(true); });\nconnect(actualButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomToActualSize(true); });\nconnect(zoomOutButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomOut(true); });\nconnect(zoomInButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomIn(true); });\nconnect(resetButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->resetView(true); });"
+          "description": "External commands animate the view. Compare fitting the viewport, actual size, zoom steps and resetting the initial scale-down view.",
+          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setMaximumWidth(460);\nviewer->setFixedHeight(290);\nviewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\nviewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\nviewer->setAccessibleName(QStringLiteral(\"Forest ridge\"));\nviewer->setPixmap(imageViewerScene(QSize(360, 225), 1));\n\nconnect(fitButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->fitToView(true); });\nconnect(actualButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomToActualSize(true); });\nconnect(zoomOutButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomOut(true); });\nconnect(zoomInButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->zoomIn(true); });\nconnect(resetButton, &QPushButton::clicked,\n        viewer, [viewer] { viewer->resetView(true); });"
         },
         {
           "id": "image-viewer-pixel-art",
           "title": "Sharp pixels for small images",
           "description": "Fast transformation keeps every image pixel square when a small icon or screenshot is enlarged; Smooth suits photos.",
-          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setFixedSize(460, 290);\nviewer->setAccessibleName(QStringLiteral(\"Pixel-art landscape\"));\nviewer->setPixmap(imageViewerPixelArt());\nviewer->setTransformationMode(Qt::FastTransformation);\nviewer->fitToView();\n\nconnect(smoothButton, &QPushButton::clicked, viewer, [viewer] {\n    viewer->setTransformationMode(Qt::SmoothTransformation);\n});\nconnect(fastButton, &QPushButton::clicked, viewer, [viewer] {\n    viewer->setTransformationMode(Qt::FastTransformation);\n});"
+          "cpp_snippet": "auto* viewer = new ImageViewer(this);\nviewer->setMaximumWidth(460);\nviewer->setFixedHeight(290);\nviewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\nviewer->setAccessibleName(QStringLiteral(\"Pixel-art landscape\"));\nviewer->setPixmap(imageViewerPixelArt());\nviewer->setTransformationMode(Qt::FastTransformation);\nviewer->fitToView();\n\nconnect(smoothButton, &QPushButton::clicked, viewer, [viewer] {\n    viewer->setTransformationMode(Qt::SmoothTransformation);\n});\nconnect(fastButton, &QPushButton::clicked, viewer, [viewer] {\n    viewer->setTransformationMode(Qt::FastTransformation);\n});"
         },
         {
           "id": "image-viewer-flip-view",
           "title": "Browse an album with FlipView",
           "description": "Each FlipView page hosts an ImageViewer. A fitted photo passes swipes, the wheel and arrow keys to FlipView; a zoomed photo pans instead.",
-          "cpp_snippet": "auto* album = new FlipView(this);\nalbum->setFixedSize(460, 290);\nconst QStringList names = {QStringLiteral(\"Harbor at dusk\"),\n                           QStringLiteral(\"Forest ridge\"),\n                           QStringLiteral(\"Coastline\")};\nfor (int index = 0; index < names.size(); ++index) {\n    auto* viewer = new ImageViewer;\n    viewer->setFrameVisible(false);\n    viewer->setWheelAction(ImageViewer::WheelAction::Pan);\n    // FlipView owns the bottom edge; zoom feedback uses the indicator.\n    viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\n    viewer->setAccessibleName(names.at(index));\n    viewer->setPixmap(imageViewerScene(QSize(1600, 1000), index));\n    album->addPage(viewer);\n}\n\n// The application decides that a page leaves zoom when the user flips away.\nconnect(album, &FlipView::currentIndexChanged, album,\n        [album, previous = 0](int index) mutable {\n            if (auto* viewer = qobject_cast<ImageViewer*>(album->pageAt(previous)))\n                viewer->resetView();\n            previous = index;\n        });"
+          "cpp_snippet": "auto* album = new FlipView(this);\nalbum->setMaximumWidth(460);\nalbum->setFixedHeight(290);\nalbum->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\nconst QStringList names = {QStringLiteral(\"Harbor at dusk\"),\n                           QStringLiteral(\"Forest ridge\"),\n                           QStringLiteral(\"Coastline\")};\nfor (int index = 0; index < names.size(); ++index) {\n    auto* viewer = new ImageViewer;\n    viewer->setFrameVisible(false);\n    viewer->setWheelAction(ImageViewer::WheelAction::Pan);\n    // FlipView owns the bottom edge; zoom feedback uses the indicator.\n    viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\n    viewer->setAccessibleName(names.at(index));\n    viewer->setPixmap(imageViewerScene(QSize(1600, 1000), index));\n    album->addPage(viewer);\n}\n\n// The application decides that a page leaves zoom when the user flips away.\nconnect(album, &FlipView::currentIndexChanged, album,\n        [album, previous = 0](int index) mutable {\n            if (auto* viewer = qobject_cast<ImageViewer*>(album->pageAt(previous)))\n                viewer->resetView();\n            previous = index;\n        });"
         }
       ]
     },

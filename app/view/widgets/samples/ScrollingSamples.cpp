@@ -103,6 +103,17 @@ QWidget* pipsSurface(QWidget* parent, int spacing = 12)
     return surface;
 }
 
+// Narrow cards shrink the 460 px image viewer; wide cards stop at that width
+// plus the surface's 16 px side margins.
+// zh_CN: 窄卡片中图片查看器随宽度收缩；宽卡片中不超过 460 px 加表面两侧各 16 px 边距。
+QWidget* imageViewerSurface(QWidget* parent)
+{
+    auto* surface = pipsSurface(parent);
+    surface->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    surface->setMaximumWidth(460 + 2 * 16);
+    return surface;
+}
+
 Button* pipsButton(QWidget* parent, const QString& text)
 {
     auto* button = new Button(text, parent);
@@ -1798,7 +1809,9 @@ QVector<GallerySample> imageViewerSamples()
                            "dragging pans, and the toolbar appears on hover."),
             QStringLiteral(
                 "auto* viewer = new ImageViewer(this);\n"
-                "viewer->setFixedSize(460, 290);\n"
+                "viewer->setMaximumWidth(460);\n"
+                "viewer->setFixedHeight(290);\n"
+                "viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
                 "viewer->setAccessibleName(QStringLiteral(\"Harbor at dusk\"));\n"
                 "viewer->setPixmap(imageViewerScene(QSize(1600, 1000), 0));\n"
                 "\n"
@@ -1810,11 +1823,13 @@ QVector<GallerySample> imageViewerSamples()
                 "connect(viewer, &ImageViewer::zoomFactorChanged, status, updateStatus);\n"
                 "connect(viewer, &ImageViewer::fitModeChanged, status, updateStatus);"),
             [](QWidget* parent) {
-                auto* surface = pipsSurface(parent);
+                auto* surface = imageViewerSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
 
                 auto* viewer = new ImageViewer(surface);
-                viewer->setFixedSize(460, 290);
+                viewer->setMaximumWidth(460);
+                viewer->setFixedHeight(290);
+                viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                 viewer->setAccessibleName(QStringLiteral("Harbor at dusk"));
                 viewer->setPixmap(imageViewerScene(QSize(1600, 1000), 0));
 
@@ -1826,11 +1841,13 @@ QVector<GallerySample> imageViewerSamples()
                 return surface;
             }),
         makeSample(QStringLiteral("image-viewer-commands"), QStringLiteral("Fit, actual size and zoom commands"),
-            QStringLiteral("External commands animate the view. Fit enlarges a small image, while "
-                           "Reset returns to the initial view that keeps it at 100%."),
+            QStringLiteral("External commands animate the view. Compare fitting the viewport, actual size, "
+                           "zoom steps and resetting the initial scale-down view."),
             QStringLiteral(
                 "auto* viewer = new ImageViewer(this);\n"
-                "viewer->setFixedSize(460, 290);\n"
+                "viewer->setMaximumWidth(460);\n"
+                "viewer->setFixedHeight(290);\n"
+                "viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
                 "viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);\n"
                 "viewer->setAccessibleName(QStringLiteral(\"Forest ridge\"));\n"
                 "viewer->setPixmap(imageViewerScene(QSize(360, 225), 1));\n"
@@ -1846,20 +1863,28 @@ QVector<GallerySample> imageViewerSamples()
                 "connect(resetButton, &QPushButton::clicked,\n"
                 "        viewer, [viewer] { viewer->resetView(true); });"),
             [](QWidget* parent) {
-                auto* surface = pipsSurface(parent);
+                auto* surface = imageViewerSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
 
-                auto* controls = horizontalGroup(surface, 8);
-                auto* fit = sampleButton(controls, QStringLiteral("Fit"));
-                auto* actual = sampleButton(controls, QStringLiteral("100%"));
-                auto* zoomOut = sampleButton(controls, QStringLiteral("Zoom out"));
-                auto* zoomIn = sampleButton(controls, QStringLiteral("Zoom in"));
-                auto* reset = sampleButton(controls, QStringLiteral("Reset"));
-                for (Button* button : {fit, actual, zoomOut, zoomIn, reset})
-                    controls->layout()->addWidget(button);
+                auto* controls = verticalGroup(surface, 8);
+                auto* fitCommands = horizontalGroup(controls, 8);
+                auto* zoomCommands = horizontalGroup(controls, 8);
+                auto* fit = sampleButton(fitCommands, QStringLiteral("Fit"));
+                auto* actual = sampleButton(fitCommands, QStringLiteral("100%"));
+                auto* reset = sampleButton(fitCommands, QStringLiteral("Reset"));
+                auto* zoomOut = sampleButton(zoomCommands, QStringLiteral("Zoom out"));
+                auto* zoomIn = sampleButton(zoomCommands, QStringLiteral("Zoom in"));
+                for (Button* button : {fit, actual, reset})
+                    fitCommands->layout()->addWidget(button);
+                for (Button* button : {zoomOut, zoomIn})
+                    zoomCommands->layout()->addWidget(button);
+                controls->layout()->addWidget(fitCommands);
+                controls->layout()->addWidget(zoomCommands);
 
                 auto* viewer = new ImageViewer(surface);
-                viewer->setFixedSize(460, 290);
+                viewer->setMaximumWidth(460);
+                viewer->setFixedHeight(290);
+                viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                 viewer->setControlsVisibility(ImageViewer::ControlsVisibility::Hidden);
                 viewer->setAccessibleName(QStringLiteral("Forest ridge"));
                 viewer->setPixmap(imageViewerScene(QSize(360, 225), 1));
@@ -1883,7 +1908,9 @@ QVector<GallerySample> imageViewerSamples()
                            "screenshot is enlarged; Smooth suits photos."),
             QStringLiteral(
                 "auto* viewer = new ImageViewer(this);\n"
-                "viewer->setFixedSize(460, 290);\n"
+                "viewer->setMaximumWidth(460);\n"
+                "viewer->setFixedHeight(290);\n"
+                "viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
                 "viewer->setAccessibleName(QStringLiteral(\"Pixel-art landscape\"));\n"
                 "viewer->setPixmap(imageViewerPixelArt());\n"
                 "viewer->setTransformationMode(Qt::FastTransformation);\n"
@@ -1896,7 +1923,7 @@ QVector<GallerySample> imageViewerSamples()
                 "    viewer->setTransformationMode(Qt::FastTransformation);\n"
                 "});"),
             [](QWidget* parent) {
-                auto* surface = pipsSurface(parent);
+                auto* surface = imageViewerSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
 
                 auto* controls = horizontalGroup(surface, 8);
@@ -1906,7 +1933,9 @@ QVector<GallerySample> imageViewerSamples()
                 controls->layout()->addWidget(fast);
 
                 auto* viewer = new ImageViewer(surface);
-                viewer->setFixedSize(460, 290);
+                viewer->setMaximumWidth(460);
+                viewer->setFixedHeight(290);
+                viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                 viewer->setAccessibleName(QStringLiteral("Pixel-art landscape"));
                 viewer->setPixmap(imageViewerPixelArt());
                 viewer->setTransformationMode(Qt::FastTransformation);
@@ -1936,7 +1965,9 @@ QVector<GallerySample> imageViewerSamples()
                            "the wheel and arrow keys to FlipView; a zoomed photo pans instead."),
             QStringLiteral(
                 "auto* album = new FlipView(this);\n"
-                "album->setFixedSize(460, 290);\n"
+                "album->setMaximumWidth(460);\n"
+                "album->setFixedHeight(290);\n"
+                "album->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
                 "const QStringList names = {QStringLiteral(\"Harbor at dusk\"),\n"
                 "                           QStringLiteral(\"Forest ridge\"),\n"
                 "                           QStringLiteral(\"Coastline\")};\n"
@@ -1959,11 +1990,13 @@ QVector<GallerySample> imageViewerSamples()
                 "            previous = index;\n"
                 "        });"),
             [](QWidget* parent) {
-                auto* surface = pipsSurface(parent);
+                auto* surface = imageViewerSurface(parent);
                 auto* layout = static_cast<QVBoxLayout*>(surface->layout());
 
                 auto* album = new FlipView(surface);
-                album->setFixedSize(460, 290);
+                album->setMaximumWidth(460);
+                album->setFixedHeight(290);
+                album->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                 const QStringList names = {QStringLiteral("Harbor at dusk"), QStringLiteral("Forest ridge"),
                     QStringLiteral("Coastline")};
                 for (int index = 0; index < names.size(); ++index) {

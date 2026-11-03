@@ -1161,12 +1161,12 @@ register_source_samples(
             _script(
                 """
                 root = QWidget()
-                layout = QHBoxLayout(root)
+                layout = QVBoxLayout(root)
                 slider = fluentqt.RangeSlider(Qt.Orientation.Horizontal, root)
                 slider.setAccessibleName("Price range")
                 slider.setRange(0, 100)
                 slider.setValues(20, 64)
-                slider.setFixedWidth(260)
+                slider.setMaximumWidth(260)
                 status = fluentqt.Label("Range: 20 to 64", root)
                 status.setFluentTypography(fluentqt.FontRole.Body)
                 status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
@@ -1185,7 +1185,7 @@ register_source_samples(
             _script(
                 """
                 root = QWidget()
-                layout = QHBoxLayout(root)
+                layout = QVBoxLayout(root)
                 slider = fluentqt.RangeSlider(Qt.Orientation.Horizontal, root)
                 slider.setAccessibleName("Budget")
                 slider.setRange(0, 1000)
@@ -1195,7 +1195,7 @@ register_source_samples(
                 slider.setTickPosition(QSlider.TickPosition.TicksBelow)
                 slider.setMinimumRange(100)
                 slider.setValues(200, 600)
-                slider.setFixedWidth(260)
+                slider.setMaximumWidth(260)
                 status = fluentqt.Label("Range: 200 to 600", root)
                 status.setFluentTypography(fluentqt.FontRole.Body)
                 status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
@@ -1207,7 +1207,7 @@ register_source_samples(
                 layout.addWidget(status)
                 """,
                 "from PySide6.QtCore import Qt\n"
-                "from PySide6.QtWidgets import QHBoxLayout, QSlider, QWidget",
+                "from PySide6.QtWidgets import QVBoxLayout, QSlider, QWidget",
             ),
         ),
         "range-slider-number-boxes": (
@@ -1215,17 +1215,22 @@ register_source_samples(
             _script(
                 """
                 root = QWidget()
-                layout = QHBoxLayout(root)
+                layout = QVBoxLayout(root)
                 slider = fluentqt.RangeSlider(Qt.Orientation.Horizontal, root)
                 slider.setAccessibleName("Price range")
                 slider.setRange(0, 1000)
                 slider.setSingleStep(10)
                 slider.setValues(120, 480)
-                # Match the NumberBox input height so the track centers on the editors.
-                slider.setFixedSize(220, 32)
+                slider.setMaximumWidth(288)
+                slider.setFixedHeight(32)
+                editors = QWidget(root)
+                editors_layout = QHBoxLayout(editors)
+                editors_layout.setContentsMargins(0, 0, 0, 0)
+                editors_layout.setSpacing(16)
+                editors_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
                 def make_box(header, value):
-                    box = fluentqt.NumberBox(root)
+                    box = fluentqt.NumberBox(editors)
                     box.setHeader(header)
                     box.setRange(0, 1000)
                     box.setSmallChange(10)
@@ -1255,9 +1260,10 @@ register_source_samples(
 
                 lower_box.valueChanged.connect(apply_lower)
                 upper_box.valueChanged.connect(apply_upper)
-                layout.addWidget(lower_box)
-                layout.addWidget(slider, 0, Qt.AlignmentFlag.AlignBottom)
-                layout.addWidget(upper_box)
+                editors_layout.addWidget(lower_box)
+                editors_layout.addWidget(upper_box)
+                layout.addWidget(slider)
+                layout.addWidget(editors)
                 """,
                 "import math\nfrom PySide6.QtCore import Qt\n" + _WIDGETS,
             ),

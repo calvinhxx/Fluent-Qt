@@ -76,6 +76,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QVBoxLayout,
     QWidget,
+    QWidgetItem,
 )
 
 from fluentqt_gallery.app import (
@@ -2034,6 +2035,61 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         expected = _contract_sample_keys()
         self.assertTrue(expected)
         self.assertEqual(ported_sample_keys(), expected)
+
+    def test_range_slider_and_image_viewer_samples_fit_narrow_previews(self):
+        cases = (
+            ("range-slider", "range-slider-live-values", ("slider", "status")),
+            ("range-slider", "range-slider-steps-minimum-range", ("slider", "status")),
+            ("range-slider", "range-slider-number-boxes", ("slider", "lower_box", "upper_box")),
+            ("image-viewer", "image-viewer-basic", ("viewer", "status")),
+            ("image-viewer", "image-viewer-commands", ("viewer", "status", "fit", "actual", "reset", "zoom_out", "zoom_in")),
+            ("image-viewer", "image-viewer-pixel-art", ("viewer", "status", "smooth", "fast")),
+            ("image-viewer", "image-viewer-flip-view", ("album", "status")),
+        )
+        for route, sample, names in cases:
+            with self.subTest(sample=sample):
+                host = QWidget()
+                layout = QVBoxLayout(host)
+                layout.setContentsMargins(0, 0, 0, 0)
+                try:
+                    result = build_sample(route, sample, host)
+                    root = result.widget
+                    layout.addWidget(root)
+                    namespace = root._fluentqt_gallery_source_namespace
+                    for width in (360, 640):
+                        host.setFixedWidth(width)
+                        host.adjustSize()
+                        host.show()
+                        self.assertTrue(QTest.qWaitForWindowExposed(host))
+                        QApplication.processEvents()
+                        self.assertLessEqual(QWidgetItem(root).minimumSize().width(), width, sample)
+                        self.assertTrue(host.rect().contains(root.geometry()), (sample, width, root.geometry()))
+                        bounds = [QRect(namespace[name].mapTo(root, QPoint()), namespace[name].size())
+                                  for name in names]
+                        for name, rect in zip(names, bounds):
+                            self.assertTrue(root.rect().contains(rect), (sample, width, name, root.rect(), rect))
+                        for index, first in enumerate(bounds):
+                            for second in bounds[index + 1:]:
+                                self.assertFalse(first.intersects(second), (sample, width, first, second))
+                finally:
+                    host.close()
+                    delete_qobject(host)
+
+    def test_image_viewer_status_uses_readable_fit_mode_names(self):
+        for sample in ("image-viewer-basic", "image-viewer-commands", "image-viewer-pixel-art"):
+            result = build_sample("image-viewer", sample)
+            try:
+                namespace = result.widget._fluentqt_gallery_source_namespace
+                viewer, status = namespace["viewer"], namespace["status"]
+                for mode, name in ((fluentqt.ImageViewer.FitMode.Manual, "Manual"),
+                                   (fluentqt.ImageViewer.FitMode.Contain, "Contain"),
+                                   (fluentqt.ImageViewer.FitMode.ScaleDown, "ScaleDown")):
+                    with self.subTest(sample=sample, mode=name):
+                        viewer.setFitMode(mode)
+                        self.assertRegex(status.text(), r"^Zoom: [0-9]+% / Fit mode: " + name + r"$")
+            finally:
+                result.widget.close()
+                delete_qobject(result.widget)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding is not installed")
     def test_spatial_calendar_preview_keeps_the_selected_month_independent_of_today(self):

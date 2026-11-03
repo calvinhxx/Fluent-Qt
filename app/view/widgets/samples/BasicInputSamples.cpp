@@ -1241,21 +1241,28 @@ QVector<GallerySample> rangeSliderSamples()
         makeSample(QStringLiteral("range-slider-live-values"), QStringLiteral("Range slider live values"),
             QStringLiteral("Drag either thumb to select a range and mirror both values in external UI."),
             QStringLiteral(
+                "auto* layout = new QVBoxLayout(this);\n"
+                "layout->setContentsMargins(0, 0, 0, 0);\n"
+                "layout->setSpacing(8);\n"
                 "auto* slider = new RangeSlider(Qt::Horizontal, this);\n"
                 "slider->setAccessibleName(\"Price range\");\n"
                 "slider->setRange(0, 100);\n"
                 "slider->setValues(20, 64);\n"
+                "slider->setMaximumWidth(260);\n"
+                "auto* status = new Label(\"Range: 20 to 64\", this);\n"
+                "layout->addWidget(slider);\n"
+                "layout->addWidget(status);\n"
                 "connect(slider, &RangeSlider::valuesChanged,\n"
                 "        status, [status](int lower, int upper) {\n"
                 "            status->setText(QString(\"Range: %1 to %2\").arg(lower).arg(upper));\n"
                 "        });"),
             [](QWidget* parent) {
-                QWidget* group = horizontalGroup(parent, 16);
+                QWidget* group = verticalGroup(parent, 8);
                 auto* slider = new RangeSlider(Qt::Horizontal, group);
                 slider->setAccessibleName(QStringLiteral("Price range"));
                 slider->setRange(0, 100);
                 slider->setValues(20, 64);
-                slider->setFixedWidth(260);
+                slider->setMaximumWidth(260);
                 auto* status = makeValueLabel(group, QStringLiteral("Range: 20 to 64"));
                 setStableStatusWidth(status, QStringLiteral("Range: 100 to 100"));
                 QObject::connect(slider, &RangeSlider::valuesChanged, status, [status](int lower, int upper) {
@@ -1269,6 +1276,9 @@ QVector<GallerySample> rangeSliderSamples()
             QStringLiteral("Ticks mark the stops, keyboard steps move the focused thumb, and a minimum range "
                            "keeps the thumbs apart."),
             QStringLiteral(
+                "auto* layout = new QVBoxLayout(this);\n"
+                "layout->setContentsMargins(0, 0, 0, 0);\n"
+                "layout->setSpacing(8);\n"
                 "auto* slider = new RangeSlider(Qt::Horizontal, this);\n"
                 "slider->setRange(0, 1000);\n"
                 "slider->setSingleStep(50);\n"
@@ -1276,9 +1286,17 @@ QVector<GallerySample> rangeSliderSamples()
                 "slider->setTickInterval(100);\n"
                 "slider->setTickPosition(QSlider::TicksBelow);\n"
                 "slider->setMinimumRange(100);\n"
-                "slider->setValues(200, 600);"),
+                "slider->setValues(200, 600);\n"
+                "slider->setMaximumWidth(260);\n"
+                "auto* status = new Label(\"Range: 200 to 600\", this);\n"
+                "layout->addWidget(slider);\n"
+                "layout->addWidget(status);\n"
+                "connect(slider, &RangeSlider::valuesChanged,\n"
+                "        status, [status](int lower, int upper) {\n"
+                "            status->setText(QString(\"Range: %1 to %2\").arg(lower).arg(upper));\n"
+                "        });"),
             [](QWidget* parent) {
-                QWidget* group = horizontalGroup(parent, 16);
+                QWidget* group = verticalGroup(parent, 8);
                 auto* slider = new RangeSlider(Qt::Horizontal, group);
                 slider->setAccessibleName(QStringLiteral("Budget"));
                 slider->setRange(0, 1000);
@@ -1288,7 +1306,7 @@ QVector<GallerySample> rangeSliderSamples()
                 slider->setTickPosition(QSlider::TicksBelow);
                 slider->setMinimumRange(100);
                 slider->setValues(200, 600);
-                slider->setFixedWidth(260);
+                slider->setMaximumWidth(260);
                 auto* status = makeValueLabel(group, QStringLiteral("Range: 200 to 600"));
                 setStableStatusWidth(status, QStringLiteral("Range: 1000 to 1000"));
                 QObject::connect(slider, &RangeSlider::valuesChanged, status, [status](int lower, int upper) {
@@ -1302,23 +1320,37 @@ QVector<GallerySample> rangeSliderSamples()
             QStringLiteral("NumberBox editors and the slider update each other; typed values are clamped "
                            "so the range stays valid."),
             QStringLiteral(
+                "auto* layout = new QVBoxLayout(this);\n"
+                "layout->setContentsMargins(0, 0, 0, 0);\n"
+                "layout->setSpacing(12);\n"
                 "auto* slider = new RangeSlider(Qt::Horizontal, this);\n"
                 "slider->setRange(0, 1000);\n"
                 "slider->setSingleStep(10);\n"
-                "slider->setValues(120, 480);\n\n"
-                "auto makeBox = [this](const QString& header, int value) {\n"
-                "    auto* box = new NumberBox(this);\n"
+                "slider->setValues(120, 480);\n"
+                "slider->setMaximumWidth(288);\n"
+                "slider->setFixedHeight(32);\n\n"
+                "auto* editors = new QWidget(this);\n"
+                "auto* editorLayout = new QHBoxLayout(editors);\n"
+                "editorLayout->setContentsMargins(0, 0, 0, 0);\n"
+                "editorLayout->setSpacing(16);\n"
+                "auto makeBox = [editors](const QString& header, int value) {\n"
+                "    auto* box = new NumberBox(editors);\n"
                 "    box->setHeader(header);\n"
                 "    box->setRange(0, 1000);\n"
                 "    box->setSmallChange(10);\n"
                 "    box->setLargeChange(100);\n"
                 "    box->setDisplayPrecision(0);\n"
                 "    box->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);\n"
+                "    box->setFixedWidth(136);\n"
                 "    box->setValue(value);\n"
                 "    return box;\n"
                 "};\n"
                 "auto* lowerBox = makeBox(\"Minimum\", slider->lowerValue());\n"
-                "auto* upperBox = makeBox(\"Maximum\", slider->upperValue());\n\n"
+                "auto* upperBox = makeBox(\"Maximum\", slider->upperValue());\n"
+                "editorLayout->addWidget(lowerBox);\n"
+                "editorLayout->addWidget(upperBox);\n"
+                "layout->addWidget(slider);\n"
+                "layout->addWidget(editors);\n\n"
                 "connect(slider, &RangeSlider::lowerValueChanged, lowerBox,\n"
                 "        [lowerBox](int value) { lowerBox->setValue(value); });\n"
                 "connect(slider, &RangeSlider::upperValueChanged, upperBox,\n"
@@ -1336,19 +1368,18 @@ QVector<GallerySample> rangeSliderSamples()
                 "            upperBox->setValue(slider->upperValue());\n"
                 "        });"),
             [](QWidget* parent) {
-                QWidget* group = horizontalGroup(parent, 16);
+                QWidget* group = verticalGroup(parent, 12);
                 auto* slider = new RangeSlider(Qt::Horizontal, group);
                 slider->setAccessibleName(QStringLiteral("Price range"));
                 slider->setRange(0, 1000);
                 slider->setSingleStep(10);
                 slider->setValues(120, 480);
-                slider->setFixedWidth(220);
-                // Match the NumberBox input height so the track centers on the editors.
-                // zh_CN: 与 NumberBox 输入框等高，使轨道与编辑框居中对齐。
+                slider->setMaximumWidth(288);
                 slider->setFixedHeight(32);
 
-                const auto makeBox = [group](const QString& header, int value) {
-                    auto* box = new NumberBox(group);
+                QWidget* editors = horizontalGroup(group, 16);
+                const auto makeBox = [editors](const QString& header, int value) {
+                    auto* box = new NumberBox(editors);
                     box->setHeader(header);
                     box->setRange(0, 1000);
                     box->setSmallChange(10);
@@ -1379,11 +1410,10 @@ QVector<GallerySample> rangeSliderSamples()
                     upperBox->setValue(slider->upperValue());
                 });
 
-                group->layout()->addWidget(lowerBox);
                 group->layout()->addWidget(slider);
-                group->layout()->addWidget(upperBox);
-                if (auto* box = qobject_cast<QBoxLayout*>(group->layout()))
-                    box->setAlignment(slider, Qt::AlignBottom);
+                editors->layout()->addWidget(lowerBox);
+                editors->layout()->addWidget(upperBox);
+                group->layout()->addWidget(editors);
                 return group;
             })};
 }

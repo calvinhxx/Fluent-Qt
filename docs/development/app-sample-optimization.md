@@ -166,6 +166,10 @@ Each `GallerySample` card should satisfy all of these requirements:
   variables such as `painter` or `controlRect`, the Python block may assume the
   equivalent context too. Do not wrap it in a complete widget subclass, event
   override, and runnable setup merely to make that one block executable.
+- Put preview-surface sizing in a named sample helper on both sides, such as
+  `imageViewerSurface()` and `make_image_viewer_surface()`, so it stays out of
+  both teaching snippets. A focused PySide6 helper keeps its `return`, as the
+  C++ lambda returns the configured control to its caller.
 - PySide6 icon examples use semantic constants such as
   `fluentqt.Typography.Icons.Add`. Never expose private-use font codepoints such
   as `"\uE710"` in a teaching snippet. Direct catalog names remain a supported

@@ -1525,6 +1525,7 @@ register_source_samples(
 
 _IMAGE_VIEWER_IMPORTS = (
     _PAINTED_SCROLLING_IMPORTS
+    + "\nfrom fluentqt._qt_widgets import enum_name"
     + "\nfrom PySide6.QtCore import QPointF"
     + "\nfrom PySide6.QtGui import QImage, QPolygonF"
 )
@@ -1632,10 +1633,19 @@ _IMAGE_VIEWER_HELPER = dedent(
         return QPixmap.fromImage(image)
 
 
+    def make_image_viewer_surface(parent=None):
+        # Narrow cards shrink the 460 px viewer; wide cards stop at that width
+        # plus the surface's 16 px side margins.
+        surface = make_scrolling_surface(parent)
+        surface.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        surface.setMaximumWidth(460 + 2 * 16)
+        return surface
+
+
     def image_viewer_status_text(viewer):
         return "Zoom: {0}% / Fit mode: {1}".format(
             round(viewer.zoomFactor() * 100.0),
-            viewer.fitMode().name,
+            enum_name(viewer.fitMode()),
         )
 
 
@@ -1660,11 +1670,13 @@ register_source_samples(
                 _PAGER_PICTURE_HELPER
                 + _IMAGE_VIEWER_HELPER
                 + dedent("""
-                root = make_scrolling_surface(globals().get("gallery_parent"))
+                root = make_image_viewer_surface(globals().get("gallery_parent"))
                 layout = root.layout()
 
                 viewer = fluentqt.ImageViewer(root)
-                viewer.setFixedSize(460, 290)
+                viewer.setMaximumWidth(460)
+                viewer.setFixedHeight(290)
+                viewer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
                 viewer.setAccessibleName("Harbor at dusk")
                 viewer.setPixmap(image_viewer_scene(QSize(1600, 1000), 0))
 
@@ -1691,20 +1703,28 @@ register_source_samples(
                 _PAGER_PICTURE_HELPER
                 + _IMAGE_VIEWER_HELPER
                 + dedent("""
-                root = make_scrolling_surface(globals().get("gallery_parent"))
+                root = make_image_viewer_surface(globals().get("gallery_parent"))
                 layout = root.layout()
 
-                controls = horizontal_group(root, 8)
-                fit = make_sample_button(controls, "Fit")
-                actual = make_sample_button(controls, "100%")
-                zoom_out = make_sample_button(controls, "Zoom out")
-                zoom_in = make_sample_button(controls, "Zoom in")
-                reset = make_sample_button(controls, "Reset")
-                for button in (fit, actual, zoom_out, zoom_in, reset):
-                    controls.layout().addWidget(button)
+                controls = vertical_group(root, 8)
+                view_commands = horizontal_group(controls, 8)
+                zoom_commands = horizontal_group(controls, 8)
+                fit = make_sample_button(view_commands, "Fit")
+                actual = make_sample_button(view_commands, "100%")
+                zoom_out = make_sample_button(zoom_commands, "Zoom out")
+                zoom_in = make_sample_button(zoom_commands, "Zoom in")
+                reset = make_sample_button(view_commands, "Reset")
+                for button in (fit, actual, reset):
+                    view_commands.layout().addWidget(button)
+                for button in (zoom_out, zoom_in):
+                    zoom_commands.layout().addWidget(button)
+                controls.layout().addWidget(view_commands)
+                controls.layout().addWidget(zoom_commands)
 
                 viewer = fluentqt.ImageViewer(root)
-                viewer.setFixedSize(460, 290)
+                viewer.setMaximumWidth(460)
+                viewer.setFixedHeight(290)
+                viewer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
                 viewer.setControlsVisibility(
                     fluentqt.ImageViewer.ControlsVisibility.Hidden
                 )
@@ -1733,7 +1753,7 @@ register_source_samples(
                 _PAGER_PICTURE_HELPER
                 + _IMAGE_VIEWER_HELPER
                 + dedent("""
-                root = make_scrolling_surface(globals().get("gallery_parent"))
+                root = make_image_viewer_surface(globals().get("gallery_parent"))
                 layout = root.layout()
 
                 controls = horizontal_group(root, 8)
@@ -1743,7 +1763,9 @@ register_source_samples(
                 controls.layout().addWidget(fast)
 
                 viewer = fluentqt.ImageViewer(root)
-                viewer.setFixedSize(460, 290)
+                viewer.setMaximumWidth(460)
+                viewer.setFixedHeight(290)
+                viewer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
                 viewer.setAccessibleName("Pixel-art landscape")
                 viewer.setPixmap(image_viewer_pixel_art())
                 viewer.setTransformationMode(Qt.TransformationMode.FastTransformation)
@@ -1782,11 +1804,13 @@ register_source_samples(
                 _PAGER_PICTURE_HELPER
                 + _IMAGE_VIEWER_HELPER
                 + dedent("""
-                root = make_scrolling_surface(globals().get("gallery_parent"))
+                root = make_image_viewer_surface(globals().get("gallery_parent"))
                 layout = root.layout()
 
                 album = fluentqt.FlipView(root)
-                album.setFixedSize(460, 290)
+                album.setMaximumWidth(460)
+                album.setFixedHeight(290)
+                album.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
                 names = ("Harbor at dusk", "Forest ridge", "Coastline")
                 for index, name in enumerate(names):
                     viewer = fluentqt.ImageViewer()
