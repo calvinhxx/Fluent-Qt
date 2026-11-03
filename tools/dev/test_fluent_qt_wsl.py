@@ -202,8 +202,8 @@ class SnapshotTest(unittest.TestCase):
                 patch.object(WSL.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
             self.assertEqual(WSL.run_linux(args, config), 0)
         evidence = Path(run.call_args.kwargs["env"]["FLUENTQT_QMLBRIDGE_NATIVE_EVIDENCE_DIR"])
-        self.assertEqual(evidence, workspace / "logs/native-evidence/qmlbridge-native")
-        self.assertFalse(evidence.is_relative_to(self.target))
+        self.assertEqual(evidence.resolve(), (workspace / "logs/native-evidence/qmlbridge-native").resolve())
+        self.assertFalse(evidence.resolve().is_relative_to(self.target.resolve()))
 
     def test_launcher_rejects_source_changes_even_when_worker_passes(self):
         args = SimpleNamespace(project_root=self.source, config=self.source / "settings.json", profile="qt6")
