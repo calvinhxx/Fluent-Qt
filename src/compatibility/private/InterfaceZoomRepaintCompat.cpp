@@ -169,6 +169,10 @@ private:
         const QRect pixels = pixelBounds(region.boundingRect(), window->devicePixelRatioF()).adjusted(-1, -1, 1, 1)
             & image.rect();
         QImage copy = image.copy(pixels);
+        // Platform captures can retain the native screen DPR instead of Gallery's
+        // effective DPR. Restoration below addresses physical pixels directly.
+        // zh_CN: 平台抓图可能保留屏幕原生 DPR，而非 Gallery 的有效 DPR；下方恢复直接使用物理像素。
+        copy.setDevicePixelRatio(1.0);
         copy.setOffset(pixels.topLeft());
         return copy;
     }
