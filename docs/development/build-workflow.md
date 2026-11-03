@@ -125,6 +125,19 @@ python3 tools/dev/fluent_qt_build.py \
   --target FluentQt
 ```
 
+PySide generation keeps its complete header dependency set. Shiboken writes to
+a temporary directory; only changed generated files replace the previous outputs.
+An unrelated header can still trigger generation, but identical wrappers retain
+their timestamps and do not force recompilation. Generator failures leave the
+last successful outputs in place and fail the build. The generator process uses
+a deterministic Qt hash seed, sorts Shiboken's unordered `Extra includes` block,
+and places adjacent nonvirtual protected-access helpers before their matching
+overrides. Virtual-method order, declarations, bodies, and other includes are preserved.
+A generated-header digest makes header-only changes invalidate wrapper objects
+in the same Make/Ninja build. Application hash settings remain unchanged. See the
+[persistent WSL workflow](linux-workflow.md#repeated-validation-from-a-windows-checkout)
+when validating a Windows checkout on Linux repeatedly.
+
 ## IDE project tree
 
 The root build adds three module directories: `app`, `uilib`, and `plugin`.
