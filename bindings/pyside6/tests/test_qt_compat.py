@@ -6,9 +6,9 @@ import threading
 import unittest
 from unittest.mock import Mock, patch
 
-from PySide6.QtCore import QEvent, QObject, QPointF, QRect, QTimer, Qt
-from PySide6.QtGui import QColor, QFont, QImage, QPaintDevice, QPainter, QPixmap, QRegion
-from PySide6.QtTest import QSignalSpy
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRect, QSize, QTimer, Qt
+from PySide6.QtGui import QColor, QFont, QImage, QPaintDevice, QPainter, QPixmap, QRegion, QTransform
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from shiboken6 import isValid
 
@@ -28,6 +28,77 @@ from fluentqt._fluentqt import objectHasCurrentThreadAffinityForBinding
 
 create_owned_widget = partial(_qt_widgets.create_owned_widget,
                               affinity=objectHasCurrentThreadAffinityForBinding)
+
+
+class QtPopupGeometryCompatTest(unittest.TestCase):
+    def test_fractional_scale_keeps_all_frame_pixels_inside_screen(self):
+        for dpr in (0.5, 0.75, 1.0, 1.25, 1.5, 2.0):
+            for origin in (QPoint(), QPoint(-3840, -120)):
+                with self.subTest(dpr=dpr, origin=origin):
+                    available = QRect(origin + QPoint(0, 40), QRect(0, 0, 3840, 2024).size())
+                    screen = SimpleNamespace(availableGeometry=lambda: available,
+                                             geometry=lambda: QRect(origin.x(), origin.y(), 3840, 2160),
+                                             devicePixelRatio=lambda: dpr)
+                    popup = SimpleNamespace(frameGeometry=lambda: QRect(100, 100, 129, 57),
+                                            pos=lambda: QPoint(104, 106))
+                    transform = QTransform.fromScale(dpr, dpr)
+                    frame_offset = QPoint(-4, -6)
+                    for requested in (origin - QPoint(100, 100), origin + QPoint(4000, 2200)):
+                        position = _qt_widgets.clamp_popup_position(popup, requested, screen)
+                        native_top_left = transform.map(position + frame_offset - origin)
+                        native_size = transform.map(QPoint(129, 57))
+                        native_frame = QRect(native_top_left.x(), native_top_left.y(),
+                                             native_size.x(), native_size.y())
+                        native_available = transform.mapRect(available.translated(-origin))
+                        self.assertTrue(native_available.contains(native_frame),
+                                        (native_available, native_frame))
+                    interior = origin + QPoint(200, 250)
+                    self.assertEqual(_qt_widgets.clamp_popup_position(popup, interior, screen), interior)
+
+    def test_half_scale_rounding_does_not_push_right_edge_outside(self):
+        screen = SimpleNamespace(availableGeometry=lambda: QRect(0, 0, 3840, 2064),
+                                 geometry=lambda: QRect(0, 0, 3840, 2160),
+                                 devicePixelRatio=lambda: 0.5)
+        popup = SimpleNamespace(frameGeometry=lambda: QRect(0, 0, 129, 56),
+                                pos=lambda: QPoint())
+        self.assertEqual(_qt_widgets.clamp_popup_position(popup, QPoint(3900, 1942), screen),
+                         QPoint(3710, 1942))
+
+
+class QtWindowGeometryCompatTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def test_prepared_window_maps_maximized_and_restores_its_normal_size(self):
+        window = QWidget()
+        self.addCleanup(delete_qobject, window)
+        self.addCleanup(window.close)
+        available = window.screen().availableGeometry()
+        geometry = QRect(available.topLeft() + QPoint(40, 30), QSize(420, 300))
+        first_show_states = []
+
+        class FirstShow(QObject):
+            def eventFilter(self, watched, event):
+                if event.type() == QEvent.Type.Show and not first_show_states:
+                    first_show_states.append(watched.windowState())
+                return False
+
+        probe = FirstShow(window)
+        window.installEventFilter(probe)
+        _qt_widgets.prepare_window_normal_geometry(window, geometry)
+        self.assertIsNotNone(window.windowHandle())
+        self.assertEqual(window.geometry(), geometry)
+        window.setWindowState(window.windowState() | Qt.WindowState.WindowMaximized)
+        window.show()
+        # The first frame is maximized; the prepared geometry is the restore target.
+        self.assertTrue(first_show_states and first_show_states[0] & Qt.WindowState.WindowMaximized)
+        window.showNormal()
+        for _ in range(100):
+            if not window.isMaximized() and window.size() == geometry.size():
+                break
+            QTest.qWait(20)
+        self.assertEqual(window.size(), geometry.size())
 
 
 class QtLifetimeCompatTest(unittest.TestCase):

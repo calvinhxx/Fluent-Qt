@@ -1,15 +1,61 @@
 """Private widget and generated-wrapper adaptations for supported PySide6 versions."""
 
+import math
+
 from PySide6 import QtGui as _QtGui
 from PySide6 import __version_info__ as _PYSIDE_VERSION_INFO
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QAccessible, QAccessibleEvent, QAction, QGuiApplication, QIcon, QKeySequence
 from PySide6.QtWidgets import QApplication
 from shiboken6 import isValid
 from ._qt_compat import delete_qobject
 
 __all__ = ["application_is_saving_session", "enforce_final_type", "install_legacy_callable_add_action",
-           "send_accessible_announcement", "system_color_scheme", "create_owned_widget"]
+           "send_accessible_announcement", "system_color_scheme", "create_owned_widget",
+           "clamp_popup_position", "enum_name", "prepare_window_normal_geometry"]
+
+
+def enum_name(value):
+    """Return a text key for both legacy and current Shiboken enums."""
+    name = value.name
+    return name.decode("ascii") if isinstance(name, bytes) else str(name)
+
+
+def clamp_popup_position(popup, position, screen):
+    """Keep a native popup's complete frame inside the screen's pixel grid."""
+    available = screen.availableGeometry()
+    origin = screen.geometry().topLeft()
+    frame = popup.frameGeometry()
+    frame_offset = frame.topLeft() - popup.pos()
+    frame_position = position + frame_offset
+    dpr = screen.devicePixelRatio()
+
+    def clamp_axis(value, start, extent, size, screen_start):
+        # Qt rounds native positions and sizes separately. A logical right-edge
+        # clamp can therefore place the final physical pixel outside the screen.
+        first = math.ceil((start - screen_start) * dpr)
+        last = math.floor((start - screen_start + extent) * dpr) - math.ceil(size * dpr)
+        minimum = screen_start + math.ceil(first / dpr)
+        maximum = screen_start + math.floor(last / dpr)
+        return max(minimum, min(value, maximum))
+
+    return QPoint(
+        clamp_axis(frame_position.x(), available.x(), available.width(), frame.width(), origin.x()),
+        clamp_axis(frame_position.y(), available.y(), available.height(), frame.height(), origin.y()),
+    ) - frame_offset
+
+
+def prepare_window_normal_geometry(window, geometry):
+    """Give a hidden window its restore target before it is shown maximized."""
+    window.setGeometry(geometry)
+    # Create the unmapped surface, then resubmit its geometry. On Qt 6.2 xcb a
+    # surface created while hidden otherwise restores to its maximized size;
+    # Qt 6.7+ resize() returns early when the platform already applied it.
+    window.winId()
+    handle = window.windowHandle()
+    if handle is not None:
+        handle.setGeometry(geometry)
+        handle.resize(geometry.size())
 
 
 def create_owned_widget(owner, factory, is_active, attach, parent=None, *, affinity):

@@ -1,4 +1,5 @@
 #include "platform/GalleryPlatform.h"
+#include "compatibility/WindowGeometryCompat.h"
 
 #include <QCoreApplication>
 #include <QGuiApplication>
@@ -92,13 +93,7 @@ void showTopLevelWindow(QWidget* window, const QRect& normalGeometry, bool maxim
         window->show();
         return;
     }
-    // A hidden widget can already own a native surface whose size has not
-    // followed setGeometry(). Give that surface the normal geometry as its
-    // restore target, then map it maximized without a normal-size first frame.
-    // zh_CN: 隐藏控件可能已创建原生表面，但其尺寸尚未跟随 setGeometry()。
-    // 先把普通尺寸设为原生窗口的还原目标，再直接以最大化状态显示，避免先闪现普通尺寸。
-    if (QWindow* handle = window->windowHandle())
-        handle->setGeometry(normalGeometry);
+    fluentPrepareWindowNormalGeometry(window, normalGeometry);
     window->setWindowState(window->windowState() | Qt::WindowMaximized);
     window->show();
 }

@@ -338,7 +338,11 @@ class GalleryWindowPlacement(QObject):
             self._schedule_save()
         elif event_type == QEvent.Type.WindowStateChange:
             if self._is_normal(event.oldState()):
-                self._remember_normal_geometry(self._window.normalGeometry())
+                # Visible client bounds were recorded by show/move/resize.
+                # Qt may adjust normalGeometry for the frame during a state
+                # change. Only hidden windows can still have pending geometry.
+                if not self._window.isVisible() or not self._last_normal_geometry.isValid():
+                    self._remember_normal_geometry(self._window.normalGeometry())
             elif self._is_normal(self._window.windowState()):
                 self._remember_normal_geometry(self._window.geometry())
             self._schedule_save()

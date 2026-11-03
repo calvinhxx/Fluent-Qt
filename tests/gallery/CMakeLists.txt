@@ -33,7 +33,7 @@ add_library(FluentQtGalleryTestPlatform OBJECT
 fluent_qt_configure_cpp_target(FluentQtGalleryTestPlatform)
 fluent_qt_enable_sanitizers(FluentQtGalleryTestPlatform)
 target_include_directories(FluentQtGalleryTestPlatform
-    PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+    PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(FluentQtGalleryTestPlatform
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 fluent_qt_add_interface_zoom_support(FluentQtGalleryTestPlatform)
@@ -68,6 +68,7 @@ endif()
 set_tests_properties(InterfaceZoomRepaintTest.NativePartialRepaintsMatchACompleteFrame
     InterfaceZoomRepaintTest.NativeHalfDprSparsePatchesMatchACompleteFrame
     InterfaceZoomRepaintTest.HalfDprWaitsForTheNativeBackingStore
+    InterfaceZoomRepaintTest.HalfDprTranslucentWindowNeverFlushesAClearedFrame
     InterfaceZoomRepaintTest.HalfDprKeepsDamageRaisedDuringEffectPainting
     InterfaceZoomRepaintTest.HalfDprGpuFramesAvoidReadbackAndRecoverAfterCompositorUnlock
     InterfaceZoomRepaintTest.HalfDprPreservesNativeEffectsAndOverlaySnapshots
@@ -89,7 +90,8 @@ add_library(FluentQtGalleryRestartTestPlatform OBJECT
     ${_gallery_test_resource_sources})
 fluent_qt_configure_cpp_target(FluentQtGalleryRestartTestPlatform)
 fluent_qt_enable_sanitizers(FluentQtGalleryRestartTestPlatform)
-target_include_directories(FluentQtGalleryRestartTestPlatform PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_include_directories(FluentQtGalleryRestartTestPlatform
+    PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(FluentQtGalleryRestartTestPlatform PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 fluent_qt_add_interface_zoom_support(FluentQtGalleryRestartTestPlatform RESTART_ONLY)
 add_qt_test_module(test_gallery_zoom_restart TestGalleryZoomRestart.cpp)

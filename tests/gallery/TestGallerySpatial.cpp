@@ -3532,6 +3532,10 @@ TEST_F(GallerySpatialTest, NativeMenusMapOnceAndKeepSubmenusInNativeCoordinates)
     menu.addAction("First");
     auto* submenu = menu.addMenu("Children");
     submenu->addAction("Child");
+    // An odd logical width exercises independent native position/size rounding
+    // when the application is zoomed below 100%.
+    // zh_CN: 奇数逻辑宽度覆盖低于 100% 缩放时原生位置与尺寸分别取整的边界。
+    menu.setFixedWidth(129);
     button->setMenu(&menu);
     GallerySpatialController controller(&window, navigation);
     window.show();
@@ -3560,7 +3564,17 @@ TEST_F(GallerySpatialTest, NativeMenusMapOnceAndKeepSubmenusInNativeCoordinates)
     submenu->hide();
     GallerySettings::instance().setSpatialModeEnabled(false);
     controller.cancelTransition();
-    ASSERT_TRUE(QTest::qWaitFor([&] { return menu.pos() == button->mapToGlobal(sourcePoint); }, 1000));
+    const auto screenPixelPosition = [&window](const QPoint& point) {
+        const QPoint offset = point - window.screen()->geometry().topLeft();
+        const qreal dpr = window.screen()->devicePixelRatio();
+        return QPoint(qRound(offset.x() * dpr), qRound(offset.y() * dpr));
+    };
+    // Native positions round to screen pixels. At 50% a one-unit logical
+    // difference can denote the same physical pixel; keep exact pixel equality.
+    // zh_CN: 原生位置按屏幕像素取整，50% 时相差一个逻辑单位可对应同一像素；仍严格比较物理像素。
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return screenPixelPosition(menu.pos()) == screenPixelPosition(button->mapToGlobal(sourcePoint)); },
+        1000));
     menu.hide();
     GallerySettings::instance().setSpatialModeEnabled(true);
     controller.cancelTransition();

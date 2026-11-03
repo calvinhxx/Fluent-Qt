@@ -37,6 +37,7 @@ from shiboken6 import VoidPtr, invalidate, isValid
 from fluentqt._qt_painting import (
     apply_render_target_scale, draw_pixmap_at, region_rects, set_render_target_device_pixel_ratio,
 )
+from fluentqt._qt_widgets import clamp_popup_position
 
 from .settings import gallery_settings
 from .glyph_paint_device import (
@@ -1990,14 +1991,7 @@ class GallerySpatialController(QObject):
             position = presented + offset
             screen = QGuiApplication.screenAt(presented) or popup.screen()
             if screen:
-                available = screen.availableGeometry()
-                frame = popup.frameGeometry()
-                frame_offset = frame.topLeft() - popup.pos()
-                frame_position = position + frame_offset
-                position = QPoint(
-                    max(available.left(), min(frame_position.x(), available.right() - frame.width() + 1)),
-                    max(available.top(), min(frame_position.y(), available.bottom() - frame.height() + 1)),
-                ) - frame_offset
+                position = clamp_popup_position(popup, position, screen)
             was_forwarding = self.forwarding
             self.forwarding = True
             try:

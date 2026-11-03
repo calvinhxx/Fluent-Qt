@@ -3,12 +3,36 @@
 #include <QApplication>
 #include <QEvent>
 #include <QMouseEvent>
+#include <QScreen>
 #include <QWidget>
 #include <QWindow>
+#include <QtMath>
 
 #include "compatibility/InputEventCompat.h"
 
 namespace compatibility::detail {
+
+QPoint clampPopupPosition(const QWidget* popup, const QPoint& position, const QScreen* screen)
+{
+    if (!popup || !screen)
+        return position;
+    const QRect available = screen->availableGeometry();
+    const QPoint origin = screen->geometry().topLeft();
+    const QRect frame = popup->frameGeometry();
+    const QPoint frameOffset = frame.topLeft() - popup->pos();
+    const QPoint framePosition = position + frameOffset;
+    const qreal dpr = screen->devicePixelRatio();
+    const auto clampAxis = [dpr](int value, int start, int extent, int size, int screenStart) {
+        const int first = qCeil((start - screenStart) * dpr);
+        const int last = qFloor((start - screenStart + extent) * dpr) - qCeil(size * dpr);
+        const int minimum = screenStart + qCeil(first / dpr);
+        const int maximum = screenStart + qFloor(last / dpr);
+        return qBound(minimum, value, qMax(minimum, maximum));
+    };
+    return QPoint(clampAxis(framePosition.x(), available.x(), available.width(), frame.width(), origin.x()),
+               clampAxis(framePosition.y(), available.y(), available.height(), frame.height(), origin.y()))
+        - frameOffset;
+}
 
 PopupWindowHost::PopupWindowHost(QWidget* popup)
     : m_window(popup ? popup->windowHandle() : nullptr),

@@ -304,6 +304,79 @@ TEST(WindowsWindowBackdropTest, HiddenPreparedWindowKeepsRequestedGeometryDuring
 #endif
 }
 
+TEST(WindowsWindowGeometryTest, FirstShowKeepsRequestedClientSizeAndLaterSystemSizes)
+{
+    if (QGuiApplication::platformName() != QLatin1String("windows"))
+        GTEST_SKIP() << "Native client geometry requires the Windows desktop platform";
+
+    const QRect available = QGuiApplication::primaryScreen()->availableGeometry();
+    // Sizes stay above Window's minimum and inside a 1080p screen at 2x, so any
+    // change comes from the platform rather than a size constraint.
+    // zh_CN: 尺寸大于 Window 最小尺寸且在 2 倍 1080p 屏幕内，任何变化都来自平台而非尺寸约束。
+    const QSize change(41, -3);
+    for (const bool customChrome : {true, false}) {
+        for (const QSize requested : {QSize(640, 503), QSize(723, 511)}) {
+            if (requested.width() + change.width() > available.width() || requested.height() > available.height())
+                GTEST_SKIP() << "The primary screen's available area is too small at this scale";
+            for (const bool maximized : {false, true}) {
+                SCOPED_TRACE(::testing::Message()
+                    << "customChrome=" << customChrome << " size=" << requested.width() << "x" << requested.height()
+                    << " maximized=" << maximized);
+                Window window;
+                ASSERT_TRUE(window.customWindowChromeEnabled());
+                // Disabling custom chrome restores the native caption and frame flags it replaced.
+                // zh_CN: 关闭自定义 chrome 会恢复其替换的原生标题栏与边框标志。
+                window.setCustomWindowChromeEnabled(customChrome);
+                if (customChrome)
+                    EXPECT_TRUE(window.windowFlags().testFlag(Qt::CustomizeWindowHint));
+                else
+                    EXPECT_EQ(window.windowFlags(), QWidget().windowFlags());
+                window.resize(requested);
+                window.move(available.center() - QPoint(requested.width() / 2, requested.height() / 2));
+                // Both first-show paths create the native surface. Neither may
+                // keep a client extent enlarged by the system frame.
+                // zh_CN: 两种首次显示都会创建原生表面，均不能保留计入系统边框后放大的客户区。
+                if (maximized) {
+                    window.showMaximized();
+                    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 2000));
+                    window.showNormal();
+                } else {
+                    window.show();
+                }
+                ASSERT_TRUE(QTest::qWaitForWindowExposed(&window, 2000));
+                ASSERT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized(); }, 2000));
+                QTest::qWait(100);
+                EXPECT_EQ(window.size(), requested) << "first-show size " << window.width() << "x" << window.height();
+                const auto hwnd = reinterpret_cast<HWND>(window.winId());
+                EXPECT_EQ((GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_CAPTION) == WS_CAPTION, !customChrome);
+                const qreal dpr = window.windowHandle()->devicePixelRatio();
+                RECT client{};
+                ASSERT_TRUE(GetClientRect(hwnd, &client));
+                EXPECT_NEAR(client.right, requested.width() * dpr, 1.0);
+                EXPECT_NEAR(client.bottom, requested.height() * dpr, 1.0);
+
+                // The creation correction is one-shot: a later system resize of
+                // the visible window must reach QWidget unchanged.
+                // zh_CN: 创建期修正只生效一次；可见窗口之后的系统缩放须原样到达 QWidget。
+                RECT outer{};
+                ASSERT_TRUE(GetWindowRect(hwnd, &outer));
+                const QSize later = requested + change;
+                const int frameWidth = (outer.right - outer.left) - client.right;
+                const int frameHeight = (outer.bottom - outer.top) - client.bottom;
+                ASSERT_TRUE(SetWindowPos(hwnd, nullptr, 0, 0, qRound(later.width() * dpr) + frameWidth,
+                    qRound(later.height() * dpr) + frameHeight, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE));
+                EXPECT_TRUE(QTest::qWaitFor(
+                    [&] {
+                        return qAbs(window.width() - later.width()) <= 1 && qAbs(window.height() - later.height()) <= 1;
+                    },
+                    2000))
+                    << "system size " << window.width() << "x" << window.height();
+                window.close();
+            }
+        }
+    }
+}
+
 TEST(WindowsWindowBackdropTest, SolidFirstShowPreparesNativeThemeBackground)
 {
     if (QGuiApplication::platformName() != QLatin1String("windows"))

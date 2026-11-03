@@ -1,9 +1,11 @@
 #pragma once
 
 #include <QPointer>
+#include <QPoint>
 
 class QEvent;
 class QObject;
+class QScreen;
 class QWidget;
 class QWindow;
 
@@ -38,5 +40,10 @@ bool eventReceiverBelongsToWindow(QObject* receiver, QWidget* host);
 // zh_CN: 统一原生弹窗抓取，不改变组件关闭策略；仅弹窗整条链外的按下可归属宿主。
 bool popupGrabPressBelongsToWindow(QObject* receiver, QEvent* event, QWidget* host);
 bool popupContainsEvent(QWidget* popup, QObject* receiver, QEvent* event);
+
+// Keep the full native frame inside the screen after independent position/size
+// rounding, including application zoom below 100%.
+// zh_CN: 位置和尺寸分别取整后，仍把完整原生窗框限制在屏幕内，包含低于 100% 的应用缩放。
+QPoint clampPopupPosition(const QWidget* popup, const QPoint& position, const QScreen* screen);
 
 } // namespace compatibility::detail

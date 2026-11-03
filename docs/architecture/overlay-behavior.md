@@ -343,6 +343,9 @@ repainting or unsupported low-DPR drawing when these are missing. Library-only
 and ordinary binding builds retain their independent dependency contract.
 Low-DPR native tiles publish paint completion only after their pixels reach
 the backing store; ordinary snapshots cannot complete a native material change.
+Qt's own sync before each tile still clears an alpha backing store and flushes
+it, so the adapter restores the already-presented pixels of the raster regions
+that pass skips; a translucent window never presents a cleared frame.
 Sparse distant patches use separate tiles to avoid allocating and clearing the
 large empty space between them.
 

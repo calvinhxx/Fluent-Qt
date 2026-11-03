@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <QApplication>
 #include <QBackingStore>
+#include <QElapsedTimer>
 #include <QGraphicsDropShadowEffect>
 #include <QGraphicsOpacityEffect>
 #include <QJsonDocument>
@@ -205,6 +206,65 @@ protected:
 };
 #endif
 } // namespace
+
+#ifdef FLUENT_QT_INTERFACE_ZOOM_HAS_REPAINT_QUEUES
+TEST(InterfaceZoomRepaintTest, AlignedDamageIncludesOpaqueChildrenAndKeepsUnrelatedPixelsClean)
+{
+    QWidget window;
+    window.resize(360, 140);
+    PartialPaintProbe first(&window), second(&window), unrelated(&window);
+    first.setGeometry(10, 20, 70, 80);
+    second.setGeometry(100, 20, 70, 80);
+    unrelated.setGeometry(260, 20, 70, 80);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return first.paints && second.paints && unrelated.paints; }));
+    // Native exposure/activation can queue another complete paint after the
+    // first one. Start partial-damage assertions only when those paints settle.
+    // zh_CN: 原生显示和激活可在首帧后追加整窗绘制；待其稳定后再断言局部重绘。
+    int previousPaints = first.paints + second.paints + unrelated.paints;
+    QElapsedTimer quiet;
+    quiet.start();
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const int paints = first.paints + second.paints + unrelated.paints;
+            if (paints != previousPaints) {
+                previousPaints = paints;
+                quiet.restart();
+            }
+            return quiet.elapsed() >= 100;
+        },
+        2000));
+    const int firstBefore = first.paints;
+    const int secondBefore = second.paints;
+    const int unrelatedBefore = unrelated.paints;
+    first.update(QRect(5, 5, 6, 6));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return first.paints > firstBefore; }));
+    ASSERT_EQ(second.paints, secondBefore);
+    ASSERT_EQ(unrelated.paints, unrelatedBefore);
+
+    class AlignPendingDamage final : public QObject {
+    public:
+        bool applied = false;
+
+    protected:
+        bool eventFilter(QObject* object, QEvent* event) override
+        {
+            if (!applied && event->type() == QEvent::UpdateRequest) {
+                applied = true;
+                compatibility::detail::invalidateInterfaceZoomRasterDamage(static_cast<QWidget*>(object),
+                    QRegion(QRect(0, 0, 190, 120)));
+            }
+            return false;
+        }
+    } align;
+    window.installEventFilter(&align);
+    first.update(QRect(5, 5, 6, 6));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return align.applied && second.paints > secondBefore; }));
+    EXPECT_EQ(second.lastDamageArea, qint64(second.width()) * second.height());
+    EXPECT_EQ(unrelated.paints, unrelatedBefore);
+}
+#endif
 
 TEST(InterfaceZoomRepaintTest, NativePartialRepaintsMatchACompleteFrame)
 {
@@ -414,6 +474,86 @@ TEST(InterfaceZoomRepaintTest, HalfDprWaitsForTheNativeBackingStore)
     const int paints = window.paints;
     EXPECT_FALSE(compatibility::detail::repaintLowDprRegion(&window, window.rect()));
     EXPECT_EQ(window.paints, paints);
+#endif
+}
+
+TEST(InterfaceZoomRepaintTest, HalfDprTranslucentWindowNeverFlushesAClearedFrame)
+{
+    if (QGuiApplication::platformName() == QStringLiteral("offscreen")
+        || QGuiApplication::platformName() == QStringLiteral("minimal"))
+        GTEST_SKIP() << "Requires native window initialization.";
+    ASSERT_TRUE(zoom::isSupported());
+#ifdef FLUENT_QT_INTERFACE_ZOOM_HAS_REPAINT_QUEUES
+    ASSERT_TRUE(zoom::apply(1.0));
+    struct Restore {
+        ~Restore() { zoom::apply(1.0); }
+    } restore;
+    // Mica windows have an alpha backing store, which Qt clears before painting.
+    // zh_CN: Mica 窗口使用带 alpha 的后备缓冲，Qt 绘制前会将其清为透明。
+    QWidget window;
+    window.setAttribute(Qt::WA_TranslucentBackground);
+    window.resize(360, 240);
+    auto* content = new PartialPaintProbe(&window);
+    ASSERT_NE(window.winId(), 0u);
+    ASSERT_TRUE(zoom::apply(0.5 / window.devicePixelRatioF()));
+    // Zoom keeps the native size, so the logical window grew; cover all of it.
+    // zh_CN: 缩放保持原生尺寸，逻辑窗口随之变大；内容需覆盖整个窗口。
+    content->setGeometry(window.rect());
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return content->paints > 0; }));
+    QTest::qWait(100);
+
+    // The adapter eats the outer request and re-sends it for Qt's own sync, which
+    // flushes before the unit-density tile is drawn. Inspect the platform buffer
+    // at that flush: it must hold the presented pixels, not a transparent hole.
+    // zh_CN: 适配器拦截外层请求后重新发送给 Qt 同步，Qt 在单位密度图块绘制前提交。
+    // 在该次提交时检查平台缓冲区：应保留已显示的像素，而不是透明空洞。
+    class FlushProbe final : public QObject {
+    public:
+        explicit FlushProbe(PartialPaintProbe* content) : m_content(content) {}
+        bool inspected = false;
+        int paintsDuringSync = -1;
+        int transparentBefore = -1;
+        int transparentPixels = -1;
+
+    protected:
+        bool eventFilter(QObject* object, QEvent* event) override
+        {
+            if (inspected || event->type() != QEvent::UpdateRequest)
+                return false;
+            inspected = true;
+            auto* window = static_cast<QWidget*>(object);
+            const int paints = m_content->paints;
+            transparentBefore = transparentPixelCount(window);
+            static_cast<QObject*>(object)->event(event);
+            paintsDuringSync = m_content->paints - paints;
+            transparentPixels = transparentPixelCount(window);
+            return true;
+        }
+
+    private:
+        static int transparentPixelCount(QWidget* window)
+        {
+            const QImage image = window->backingStore()->handle()->toImage();
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x)
+                    count += qAlpha(image.pixel(x, y)) == 0;
+            }
+            return count;
+        }
+
+        PartialPaintProbe* m_content;
+    } probe(content);
+    window.installEventFilter(&probe);
+    content->update();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return probe.inspected; }));
+    window.removeEventFilter(&probe);
+    EXPECT_EQ(probe.paintsDuringSync, 0) << "Expected the adapter's native pass, which skips raster painting";
+    ASSERT_EQ(probe.transparentBefore, 0) << "The presented frame must be opaque before the sync";
+    EXPECT_EQ(probe.transparentPixels, 0);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return content->paints > 1; }));
 #endif
 }
 

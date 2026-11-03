@@ -210,11 +210,16 @@ bool GalleryWindowPlacement::eventFilter(QObject* watched, QEvent* event)
         scheduleSave();
         break;
     case QEvent::WindowStateChange:
-        // Capture the departure from normal state even before the save debounce runs.
-        // zh_CN: 即使保存防抖尚未触发，也在离开普通状态时记录还原位置。
-        if (isNormalWindowState(static_cast<QWindowStateChangeEvent*>(event)->oldState()))
-            rememberNormalGeometry(m_window->normalGeometry());
-        else if (isNormalWindowState(m_window->windowState()))
+        // Show/move/resize already recorded a visible window's client bounds.
+        // Keep that snapshot: Qt's state transition can replace normalGeometry()
+        // with frame-adjusted bounds. Hidden windows may still have pending
+        // geometry events, so capture their normal target here.
+        // zh_CN: 显示/移动/缩放已记录可见窗口的客户区，保留该快照，避免状态切换时 Qt 的窗框换算改写它；
+        // 隐藏窗口可能仍有待投递的几何事件，在此捕获其普通窗口目标。
+        if (isNormalWindowState(static_cast<QWindowStateChangeEvent*>(event)->oldState())) {
+            if (!m_window->isVisible() || !m_lastNormalGeometry.isValid())
+                rememberNormalGeometry(m_window->normalGeometry());
+        } else if (isNormalWindowState(m_window->windowState()))
             rememberNormalGeometry(m_window->geometry());
         scheduleSave();
         break;
