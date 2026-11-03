@@ -29,6 +29,12 @@ selected Qt kit. Library-only Widgets and ordinary Python binding builds do
 not acquire this requirement. Qt 5.15+/6.2+ remain supported; WebAssembly uses
 browser zoom.
 
+Linux builds using an official Qt SDK also need the system development
+dependencies exposed by Qt's private GUI interfaces. On Debian/Ubuntu, install
+`libxkbcommon-dev` and `libvulkan-dev`; runtime-only XKB/Vulkan packages are not
+enough. Keep the Qt private headers from the selected SDK rather than mixing
+them with a different distribution Qt version.
+
 Enabling `FLUENT_QT_BUILD_QML_BRIDGE` with Qt 6.2–6.5 also requires the matching
 Qt Quick private development headers for its embedded keyboard-focus adapter.
 Qt 6.6+, Qt 5, and builds without QmlBridge do not need this additional dependency;
