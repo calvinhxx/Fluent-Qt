@@ -99,6 +99,11 @@ membership in `FLUENT_QT_CI_FAST_TARGETS`, `FLUENT_QT_CI_FULL_TARGETS`, or the
 local-only set. `fluent_qt_all_tests` and `fluent_qt_contract_tests` serve local
 host and focused contract validation.
 
+Build `fluent_qt_ci_full_tests` when selecting `^ci_full$`. Compiling
+`fluent_qt_all_tests` for that selection adds local-only binaries that the job
+never runs. Exhaustive local builds remain available through `fluent_qt_all_tests`;
+the sanitizer lane still builds its separate contract aggregate.
+
 CI may pin build parallelism to its measured runner capacity. Local builds and
 matrix builds without an explicit job count use the
 [adaptive wrapper](build-workflow.md).

@@ -87,7 +87,7 @@
       "vcpkg_triplet": "x64-linux",
       "build": true,
       "test": true,
-      "build_targets": "fluent_qt_all_tests fluent_qt_gallery",
+      "build_targets": "fluent_qt_ci_full_tests fluent_qt_gallery",
       "build_parallel": "4",
       "test_labels": "^ci_full$",
       "exclude_labels": "^(manual_visual|local_desktop)$",
