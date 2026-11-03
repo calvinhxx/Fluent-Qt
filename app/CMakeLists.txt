@@ -82,6 +82,7 @@ list(FILTER _fluent_qt_gallery_grouped_sources INCLUDE REGEX "^${CMAKE_CURRENT_S
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${_fluent_qt_gallery_grouped_sources})
 
 set(FLUENT_QT_GALLERY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
+
 set(FLUENT_QT_GALLERY_RESOURCES ${FLUENT_QT_GALLERY_RESOURCES} PARENT_SCOPE)
 set(FLUENT_QT_GALLERY_WEB_RESOURCES ${FLUENT_QT_GALLERY_WEB_RESOURCES} PARENT_SCOPE)
 
@@ -163,6 +164,7 @@ else()
     target_sources(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/platform/desktop/GalleryApplication.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp")
+    fluent_qt_add_interface_zoom_support(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} REQUIRED)
 endif()
 target_include_directories(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

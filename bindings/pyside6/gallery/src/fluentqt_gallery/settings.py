@@ -22,6 +22,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 
 from .identity import APPLICATION_NAME, ORGANIZATION_NAME
+from .interface_zoom import DEFAULT_PERCENT, LEVELS, nearest_level, applied_zoom_percent
 from .spatial_support import SPATIAL_AVAILABLE
 
 
@@ -53,6 +54,7 @@ _ACCENT_KEY = "appearance/accent/fluent"
 _LEGACY_ACCENT_KEY = "settings/accent/0"
 _LAST_HOME_PARTICLE_EFFECT_KEY = "home/lastParticleEffect"
 _HOME_PARTICLES_ENABLED_KEY = "home/particlesEnabled"
+_INTERFACE_ZOOM_PERCENT_KEY = "settings/interfaceZoomPercent"
 # Stable on-disk identifiers, independent of Shiboken's enum representation.
 HOME_PARTICLE_EFFECT_IDS = ("FlowingRibbons", "FloatingDots", "Starfield")
 
@@ -141,6 +143,13 @@ def _system_theme() -> fluentqt.Theme:
     return fluentqt.Theme.Light
 
 
+def stored_interface_zoom_percent() -> int:
+    if not persistence_available():
+        return DEFAULT_PERCENT
+    return nearest_level(_bounded(_config_settings().value(_INTERFACE_ZOOM_PERCENT_KEY, DEFAULT_PERCENT),
+                                  LEVELS[0], LEVELS[-1], DEFAULT_PERCENT))
+
+
 class GallerySettings(QObject):
     themeModeChanged = Signal(int)
     motionModeChanged = Signal(int)
@@ -149,6 +158,7 @@ class GallerySettings(QObject):
     windowEffectChanged = Signal(int)
     closeBehaviorChanged = Signal(int)
     homeParticlesEnabledChanged = Signal(bool)
+    interfaceZoomPercentChanged = Signal(int)
     spatialModeEnabledChanged = Signal(bool)
     spatialAvailabilityChanged = Signal()
 
@@ -160,12 +170,15 @@ class GallerySettings(QObject):
         self.window_effect = 1
         self.close_behavior = CloseBehavior.Tray
         self.window_normal_geometry = QRect()
+        self.window_geometry_zoom_percent = DEFAULT_PERCENT
         self.window_screen_name = ""
         self.window_maximized = False
         self.close_behavior_confirmed = False
         self.intro_completed = False
         self.last_home_particle_effect = ""
         self.home_particles_enabled = True
+        # Browser-style whole-interface zoom, snapped to interface_zoom.LEVELS.
+        self.interface_zoom_percent = DEFAULT_PERCENT
         self.spatial_mode_enabled = SPATIAL_AVAILABLE
         self.spatial_available = False
         self.spatial_availability_pending = True
@@ -242,6 +255,19 @@ class GallerySettings(QObject):
         self.home_particles_enabled = bool(
             settings.value(_HOME_PARTICLES_ENABLED_KEY, True, type=bool)
         )
+        self.interface_zoom_percent = nearest_level(
+            _bounded(
+                settings.value(_INTERFACE_ZOOM_PERCENT_KEY, DEFAULT_PERCENT),
+                LEVELS[0],
+                LEVELS[-1],
+                DEFAULT_PERCENT,
+            )
+        )
+        self.window_geometry_zoom_percent = nearest_level(_bounded(
+            # Placement writes this key with the geometry; without it the
+            # geometry predates interface zoom and was saved at 100%.
+            settings.value("window/zoomPercent", DEFAULT_PERCENT),
+            LEVELS[0], LEVELS[-1], DEFAULT_PERCENT))
         self.spatial_mode_enabled = (
             self.motion_mode == MotionMode.Full
             and self.theme_mode != ThemeMode.HighContrast
@@ -389,6 +415,18 @@ class GallerySettings(QObject):
             settings.sync()
         self.homeParticlesEnabledChanged.emit(enabled)
 
+    def set_interface_zoom_percent(self, percent: int) -> None:
+        percent = nearest_level(
+            _bounded(percent, LEVELS[0], LEVELS[-1], DEFAULT_PERCENT)
+        )
+        if self.interface_zoom_percent == percent:
+            return
+        self.interface_zoom_percent = percent
+        if persistence_available():
+            settings = _config_settings()
+            settings.setValue(_INTERFACE_ZOOM_PERCENT_KEY, percent)
+            settings.sync()
+        self.interfaceZoomPercentChanged.emit(percent)
 
     def set_spatial_availability(self, available: bool, reason: str = "") -> None:
         reason = "" if available else reason
@@ -428,12 +466,14 @@ class GallerySettings(QObject):
         self.window_normal_geometry = QRect(geometry)
         self.window_screen_name = str(screen_name)
         self.window_maximized = bool(maximized)
+        self.window_geometry_zoom_percent = applied_zoom_percent()
         if not persistence_available():
             return
         settings = _config_settings()
         settings.setValue("window/normalGeometry", self.window_normal_geometry)
         settings.setValue("window/screenName", self.window_screen_name)
         settings.setValue("window/maximized", self.window_maximized)
+        settings.setValue("window/zoomPercent", self.window_geometry_zoom_percent)
 
     def _poll_system_theme(self) -> None:
         if self.theme_mode == ThemeMode.System:

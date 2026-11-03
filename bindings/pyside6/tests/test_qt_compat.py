@@ -294,6 +294,30 @@ class QtAdapterCompatTest(unittest.TestCase):
             ):
                 self.assertEqual(_qt_widgets.system_color_scheme(), expected)
 
+    def test_accessible_announcement_uses_available_event_shape(self):
+        self.app = QApplication.instance() or QApplication([])
+        target = QWidget()
+        sent = []
+        try:
+            with patch.object(_qt_widgets.QAccessible, "updateAccessibility", sent.append):
+                _qt_widgets.send_accessible_announcement(None, "Zoom 110%")
+                _qt_widgets.send_accessible_announcement(target, "")
+                self.assertEqual(sent, [])
+                with patch.object(_qt_widgets, "_QtGui", SimpleNamespace()):
+                    _qt_widgets.send_accessible_announcement(target, "Zoom 110%")
+                self.assertEqual(sent[-1].type(), _qt_widgets.QAccessible.Event.Alert)
+                announcement = getattr(_qt_widgets._QtGui, "QAccessibleAnnouncementEvent", None)
+                if announcement is not None:
+                    politeness = _qt_widgets.QAccessible.AnnouncementPoliteness
+                    _qt_widgets.send_accessible_announcement(target, "Zoom 125%")
+                    self.assertIsInstance(sent[-1], announcement)
+                    self.assertEqual(sent[-1].message(), "Zoom 125%")
+                    self.assertEqual(sent[-1].politeness(), politeness.Polite)
+                    _qt_widgets.send_accessible_announcement(target, "Zoom 150%", assertive=True)
+                    self.assertEqual(sent[-1].politeness(), politeness.Assertive)
+        finally:
+            delete_qobject(target)
+
     def test_paint_array_forwarding_keeps_legacy_pointer_and_count(self):
         calls = []
         pointer = object()

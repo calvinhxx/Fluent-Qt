@@ -8,6 +8,7 @@
 
 #include "components/foundation/MotionPolicy.h"
 #include "components/windowing/WindowBackdrop.h"
+#include "viewmodel/GalleryInterfaceZoom.h"
 
 class QEvent;
 
@@ -73,6 +74,13 @@ public:
     bool homeParticlesEnabled() const { return m_homeParticlesEnabled; }
     void setHomeParticlesEnabled(bool enabled);
 
+    // Browser-style whole-interface zoom, snapped to interfacezoom::Levels.
+    // zh_CN: 浏览器式整体界面缩放百分比，取值对齐 interfacezoom::Levels。
+    int interfaceZoomPercent() const { return m_interfaceZoomPercent; }
+    static int storedInterfaceZoomPercent();
+    void setInterfaceZoomPercent(int percent);
+    int windowGeometryZoomPercent() const { return m_windowGeometryZoomPercent; }
+
     // One mode for Gallery shell/cards and every Spatial example.
     // Spatial builds default to 3D; a saved choice takes precedence.
     // Reduced motion and high contrast use 2D.
@@ -96,6 +104,7 @@ signals:
     void windowEffectChanged(fluent::windowing::BackdropEffect effect);
     void closeBehaviorChanged(CloseBehavior behavior);
     void homeParticlesEnabledChanged(bool enabled);
+    void interfaceZoomPercentChanged(int percent);
     void spatialModeEnabledChanged(bool enabled);
     void spatialAvailabilityChanged();
 
@@ -120,6 +129,8 @@ private:
     bool m_introCompleted = false;
     QString m_lastHomeParticleEffect;
     bool m_homeParticlesEnabled = true;
+    int m_interfaceZoomPercent = interfacezoom::DefaultPercent;
+    int m_windowGeometryZoomPercent = interfacezoom::DefaultPercent;
     bool m_spatialModeEnabled = false;
     bool m_spatialAvailable = false;
     bool m_spatialAvailabilityPending = true;

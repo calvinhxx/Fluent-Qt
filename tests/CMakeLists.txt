@@ -15,7 +15,7 @@ if(TARGET FluentQtSpatial)
     list(APPEND FLUENT_QT_CI_FAST_TARGETS test_spatial_view test_spatial_texture_backend_fallback)
 endif()
 if(FLUENT_QT_BUILD_GALLERY)
-    list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance)
+    list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance test_interface_zoom)
 endif()
 
 set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
@@ -86,6 +86,9 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_navigation_view
     test_window
 )
+if(FLUENT_QT_BUILD_GALLERY)
+    list(APPEND FLUENT_QT_CI_FULL_TARGETS test_gallery_shell_framework test_gallery_zoom_restart)
+endif()
 if(TARGET FluentQtSpatial)
     list(APPEND FLUENT_QT_CI_FULL_TARGETS test_spatial_runtime test_spatial_plugin test_particle_layer)
 endif()
@@ -118,6 +121,7 @@ set(FLUENT_QT_MANUAL_VISUAL_TESTS
 )
 
 set(FLUENT_QT_LOCAL_DESKTOP_TESTS
+    InterfaceZoomRepaintTest.NativePartialRepaintsMatchACompleteFrame
     MenuBarTest.AccessKeysAndShortcutsRemainInvokable
     MenuBarTest.FluentMenuContentPatternsExposeDeterministicGeometry
     TabViewTest.PointerAddCloseSelectDisabledAndReorderBehavior

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import io
 from collections.abc import Callable
 import json
 import os
@@ -23,6 +24,7 @@ from _test_font_environment import initialize_headless_test_fixed_font
 import fluentqt_gallery.application_controller as application_controller_module
 import fluentqt_gallery.settings as gallery_settings_module
 import fluentqt_gallery.single_instance as single_instance_module
+import fluentqt_gallery.window as gallery_window_module
 import shiboken6
 
 fluentqt.prepare_high_dpi_application()
@@ -54,6 +56,7 @@ from PySide6.QtGui import (
     QHelpEvent,
     QIcon,
     QImage,
+    QKeySequence,
     QMouseEvent,
     QPalette,
     QPainter,
@@ -68,6 +71,7 @@ from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -118,6 +122,17 @@ from fluentqt_gallery.identity import (
     APPLICATION_ID,
     APPLICATION_NAME,
     ORGANIZATION_NAME,
+)
+from fluentqt_gallery.interface_zoom import (
+    DEFAULT_PERCENT,
+    LEVELS,
+    apply_interface_zoom,
+    nearest_level,
+    supports_interface_zoom,
+    supports_live_interface_zoom,
+    applied_zoom_percent,
+    zoomed_in,
+    zoomed_out,
 )
 from fluentqt_gallery.metrics import (
     TITLE_BAR_HEIGHT,
@@ -1106,6 +1121,17 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(
             effective_minimum_size(QSize(640, 360)), QSize(460, 360)
         )
+        # Interface zoom keeps the native minimum: 460 x 500 at 150% is
+        # 307 x 334 logical pixels.
+        self.assertEqual(
+            effective_minimum_size(QSize(1920, 1080), 150), QSize(307, 334)
+        )
+        self.assertEqual(
+            effective_minimum_size(QSize(1920, 1080), 50), QSize(920, 1000)
+        )
+        self.assertEqual(
+            effective_minimum_size(QSize(800, 600), 50), QSize(800, 600)
+        )
         self.assertEqual(
             recommended_initial_size(QSize(3840, 2160)), QSize(1440, 900)
         )
@@ -1147,6 +1173,501 @@ class PythonGalleryTest(unittest.TestCase):
             ),
             QRect(349, 119, 1382, 842),
         )
+
+    def test_interface_zoom_steps_through_browser_levels(self):
+        self.assertEqual(
+            LEVELS, (50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200)
+        )
+        self.assertEqual(nearest_level(DEFAULT_PERCENT), 100)
+        self.assertEqual(nearest_level(112), 110)
+        self.assertEqual(nearest_level(0), LEVELS[0])
+        self.assertEqual(nearest_level(1000), LEVELS[-1])
+        self.assertEqual(zoomed_in(100), 110)
+        self.assertEqual(zoomed_in(112), 125)
+        self.assertEqual(zoomed_in(LEVELS[-1]), LEVELS[-1])
+        self.assertEqual(zoomed_out(100), 90)
+        self.assertEqual(zoomed_out(LEVELS[0]), LEVELS[0])
+
+    def test_interface_zoom_setting_snaps_persists_and_reloads(self):
+        with TemporaryDirectory() as temporary_dir:
+            path = Path(temporary_dir) / "config.ini"
+            with (
+                patch.object(
+                    gallery_settings_module,
+                    "persistence_available",
+                    return_value=True,
+                ),
+                patch.object(
+                    gallery_settings_module,
+                    "config_file_path",
+                    return_value=path,
+                ),
+            ):
+                persisted = QSettings(str(path), QSettings.IniFormat)
+                persisted.clear()
+                persisted.setValue("settings/interfaceZoomPercent", 130)
+                persisted.sync()
+
+                first = gallery_settings_module.GallerySettings()
+                emitted: list[int] = []
+                first.interfaceZoomPercentChanged.connect(emitted.append)
+                try:
+                    self.assertEqual(first.interface_zoom_percent, 125)
+                    first.set_interface_zoom_percent(125)
+                    self.assertEqual(emitted, [])
+                    first.set_interface_zoom_percent(112)
+                    self.assertEqual(first.interface_zoom_percent, 110)
+                    self.assertEqual(emitted, [110])
+                    persisted.sync()
+                    self.assertEqual(
+                        int(persisted.value("settings/interfaceZoomPercent")),
+                        110,
+                    )
+                finally:
+                    first._system_theme_poll.stop()
+                    first.deleteLater()
+                    QApplication.processEvents()
+
+                reloaded = gallery_settings_module.GallerySettings()
+                try:
+                    self.assertEqual(reloaded.interface_zoom_percent, 110)
+                finally:
+                    reloaded._system_theme_poll.stop()
+                    reloaded.deleteLater()
+                    QApplication.processEvents()
+
+    def test_interface_zoom_restart_reuses_geometry_at_its_applied_scale(self):
+        script = r'''
+import json, sys
+from pathlib import Path
+from unittest.mock import patch
+from PySide6.QtCore import QCoreApplication, QStandardPaths
+from PySide6.QtWidgets import QApplication, QWidget
+import fluentqt
+from fluentqt_gallery import settings as settings_module
+from fluentqt_gallery.identity import APPLICATION_NAME, ORGANIZATION_NAME
+from fluentqt_gallery.interface_zoom import prepare_interface_zoom, applied_zoom_percent
+from fluentqt_gallery.window_placement import GalleryWindowPlacement
+QStandardPaths.setTestModeEnabled(True)
+QCoreApplication.setApplicationName(APPLICATION_NAME)
+QCoreApplication.setOrganizationName(ORGANIZATION_NAME)
+with patch.object(settings_module, 'config_file_path', return_value=Path(sys.argv[1])):
+    assert prepare_interface_zoom(settings_module.stored_interface_zoom_percent() / 100.0)
+    fluentqt.prepare_high_dpi_application()
+    app = QApplication([])
+    settings = settings_module.GallerySettings()
+    window = QWidget()
+    placement = GalleryWindowPlacement(window, settings, window)
+    placement.restore()
+    settings.set_interface_zoom_percent(int(sys.argv[2]))
+    placement.save_now()
+    print(json.dumps({'applied': applied_zoom_percent(),
+                      'saved_scale': settings.window_geometry_zoom_percent,
+                      'width': window.width(), 'height': window.height()}))
+'''
+        with TemporaryDirectory() as temporary:
+            path = Path(temporary) / "config.ini"
+            storage = QSettings(str(path), QSettings.IniFormat)
+            storage.setValue("settings/interfaceZoomPercent", 150)
+            storage.setValue("window/normalGeometry", QRect(40, 40, 640, 500))
+            storage.setValue("window/zoomPercent", 100)
+            storage.sync()
+            for applied, pending in ((150, 200), (200, 100), (100, 100)):
+                result = subprocess.run(
+                    [sys.executable, "-c", script, str(path), str(pending)],
+                    env=dict(os.environ, QT_SCALE_FACTOR="1"),
+                    capture_output=True, text=True, timeout=30, check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                report = json.loads(result.stdout)
+                self.assertEqual(report["applied"], applied)
+                self.assertEqual(report["saved_scale"], applied)
+                self.assertAlmostEqual(report["width"] * applied / 100.0, 640, delta=2)
+                self.assertAlmostEqual(report["height"] * applied / 100.0, 500, delta=2)
+
+    def test_interface_zoom_rescales_content_without_resizing_native_window(self):
+        self.assertTrue(supports_live_interface_zoom(),
+                        "The live zoom lane requires matching Qt private headers.")
+
+        settings = gallery_settings_module.gallery_settings()
+        saved_percent = settings.interface_zoom_percent
+        settings.set_interface_zoom_percent(DEFAULT_PERCENT)
+
+        def restore_zoom():
+            apply_interface_zoom(1.0)
+            settings.set_interface_zoom_percent(saved_percent)
+
+        self.addCleanup(restore_zoom)
+        window = GalleryWindow(startup_visuals=False)
+        self.addCleanup(window.deleteLater)
+        self.addCleanup(window.close)
+        window.resize(1000, 700)
+        window.show()
+        self.assertTrue(QTest.qWaitForWindowExposed(window))
+        self.assertEqual(window.minimumSize(), QSize(460, 500))
+
+        zoom_in = window.findChild(QAction, "galleryZoomInAction")
+        actual_size = window.findChild(QAction, "galleryActualSizeAction")
+        self.assertIsNotNone(zoom_in)
+        self.assertIsNotNone(actual_size)
+        self.assertIn(
+            QKeySequence(Qt.CTRL | Qt.Key_Equal), zoom_in.shortcuts()
+        )
+
+        dpr = window.windowHandle().devicePixelRatio()
+        logical = window.size()
+        device = QSize(
+            round(logical.width() * dpr), round(logical.height() * dpr)
+        )
+
+        zoom_in.trigger()
+        self.assertEqual(settings.interface_zoom_percent, 110)
+        self.assertAlmostEqual(
+            window.windowHandle().devicePixelRatio(), dpr * 1.1, places=3
+        )
+        self.assertTrue(
+            _wait_until(lambda: window.width() < logical.width())
+        )
+        zoomed_dpr = window.windowHandle().devicePixelRatio()
+        self.assertLessEqual(
+            abs(window.width() * zoomed_dpr - device.width()), zoomed_dpr
+        )
+        self.assertLessEqual(
+            abs(window.height() * zoomed_dpr - device.height()), zoomed_dpr
+        )
+        # 460 x 500 native pixels at 110%: ceil(460 / 1.1) x ceil(500 / 1.1).
+        self.assertEqual(window.minimumSize(), QSize(419, 455))
+
+        # A zoom command opens the transient zoom bubble without taking focus
+        # or adding a title-bar chip.
+        self.assertIsNone(window.findChild(QWidget, "GalleryTitleBar.ZoomButton"))
+        bubble = window.findChild(QWidget, "galleryInterfaceZoomBubble")
+        self.assertIsNotNone(bubble)
+        self.assertTrue(bubble.isOpen())
+        focused = QApplication.focusWidget()
+        self.assertFalse(focused is bubble or (focused is not None and bubble.isAncestorOf(focused)))
+        level = bubble.findChild(QWidget, "galleryZoomLevelLabel")
+        zoom_in_button = bubble.findChild(QWidget, "galleryZoomInButton")
+        reset = bubble.findChild(QWidget, "galleryZoomResetButton")
+        self.assertEqual(level.text(), "110%")
+        self.assertTrue(reset.isEnabled())
+        self.assertTrue(bubble.findChild(QWidget, "galleryZoomRestartHint").isHidden())
+        # The visible card sits below the title bar at the trailing edge.
+        margins = bubble.contentsMargins()
+        card_top_left = bubble.mapTo(window, QPoint(margins.left(), margins.top()))
+        card_width = bubble.width() - margins.left() - margins.right()
+        self.assertEqual(card_top_left.y(), TITLE_BAR_HEIGHT + 4)
+        self.assertEqual(card_top_left.x() + card_width, window.width() - 12)
+
+        zoom_in_button.click()
+        self.assertEqual(settings.interface_zoom_percent, 125)
+        self.assertEqual(level.text(), "125%")
+        reset.click()
+        self.assertEqual(settings.interface_zoom_percent, 100)
+        self.assertAlmostEqual(
+            window.windowHandle().devicePixelRatio(), dpr, places=3
+        )
+        self.assertTrue(_wait_until(lambda: window.size() == logical))
+        self.assertEqual(window.minimumSize(), QSize(460, 500))
+        self.assertEqual(level.text(), "100%")
+        self.assertFalse(reset.isEnabled())
+
+        actual_size.trigger()
+        self.assertEqual(settings.interface_zoom_percent, 100)
+        self.assertTrue(bubble.isOpen())
+        # The bubble closes on its own once zooming stops.
+        self.assertTrue(_wait_until(lambda: not bubble.isOpen(), 5000))
+
+    def test_gallery_rejects_a_binding_without_live_zoom_before_startup(self):
+        from fluentqt_gallery import app as app_module
+        from fluentqt_gallery import interface_zoom as zoom_module
+
+        error = io.StringIO()
+        with patch.object(zoom_module, "supports_live_interface_zoom", return_value=False), \
+                patch.object(app_module, "QApplication") as application, \
+                patch("sys.stderr", error):
+            self.assertEqual(app_module.main(["--verify-catalog"]), 1)
+        application.assert_not_called()
+        self.assertIn("matching Qt private development headers", error.getvalue())
+        self.assertIn("FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON", error.getvalue())
+
+    def test_interface_zoom_bubble_never_commits_the_active_editor(self):
+        from fluentqt_gallery.interface_zoom_controller import GalleryInterfaceZoomController
+
+        class Editor(fluentqt.LineEdit):
+            focus_outs = 0
+
+            def focusOutEvent(self, event):
+                self.focus_outs += 1
+                super().focusOutEvent(event)
+
+        settings = gallery_settings_module.gallery_settings()
+        saved_percent = settings.interface_zoom_percent
+        self.addCleanup(lambda: settings.set_interface_zoom_percent(saved_percent))
+        self.addCleanup(lambda: apply_interface_zoom(1.0))
+        settings.set_interface_zoom_percent(DEFAULT_PERCENT)
+        window = QWidget()
+        self.addCleanup(window.deleteLater)
+        self.addCleanup(window.close)
+        editor = Editor(window)
+        layout = QVBoxLayout(window)
+        layout.addWidget(editor)
+        controller = GalleryInterfaceZoomController(window, settings)
+        window.show()
+        window.activateWindow()
+        editor.setFocus()
+        self.assertTrue(_wait_until(lambda: QApplication.focusWidget() is editor))
+        QTest.keyClicks(editor, "unfinished value")
+        finished = QSignalSpy(editor.editingFinished)
+        editor.focus_outs = 0
+        for command in (controller.reset_zoom, controller.zoom_in, controller.zoom_out):
+            command()
+            QTest.qWait(30)
+            self.assertIs(QApplication.focusWidget(), editor)
+            self.assertEqual(editor.focus_outs, 0)
+            self.assertEqual(finished.count(), 0)
+            controller._bubble.setAnimationEnabled(False)
+            controller._bubble.close()
+        self.assertEqual(editor.text(), "unfinished value")
+        self.assertEqual(editor.focus_outs, 0)
+        self.assertEqual(finished.count(), 0)
+
+    def test_interface_zoom_bubble_follows_limits(self):
+        self.assertTrue(supports_live_interface_zoom(),
+                        "The live zoom lane requires matching Qt private headers.")
+
+        settings = gallery_settings_module.gallery_settings()
+        saved_percent = settings.interface_zoom_percent
+        settings.set_interface_zoom_percent(DEFAULT_PERCENT)
+
+        def restore_zoom():
+            apply_interface_zoom(1.0)
+            settings.set_interface_zoom_percent(saved_percent)
+
+        self.addCleanup(restore_zoom)
+        window = GalleryWindow(startup_visuals=False)
+        self.addCleanup(window.deleteLater)
+        self.addCleanup(window.close)
+        window.resize(1000, 700)
+        window.show()
+        self.assertTrue(QTest.qWaitForWindowExposed(window))
+
+        # Zooming past either end keeps the limit, still shows it, and
+        # disables the step toward that end.
+        settings.set_interface_zoom_percent(LEVELS[-1])
+        window.findChild(QAction, "galleryZoomInAction").trigger()
+        self.assertEqual(settings.interface_zoom_percent, LEVELS[-1])
+        bubble = window.findChild(QWidget, "galleryInterfaceZoomBubble")
+        level = bubble.findChild(QWidget, "galleryZoomLevelLabel")
+        self.assertEqual(level.text(), "{0}%".format(LEVELS[-1]))
+        self.assertFalse(bubble.findChild(QWidget, "galleryZoomInButton").isEnabled())
+        self.assertTrue(bubble.findChild(QWidget, "galleryZoomResetButton").isEnabled())
+
+        settings.set_interface_zoom_percent(LEVELS[0])
+        window.findChild(QAction, "galleryZoomOutAction").trigger()
+        self.assertEqual(settings.interface_zoom_percent, LEVELS[0])
+        self.assertEqual(level.text(), "{0}%".format(LEVELS[0]))
+        self.assertFalse(bubble.findChild(QWidget, "galleryZoomOutButton").isEnabled())
+        self.assertTrue(bubble.findChild(QWidget, "galleryZoomInButton").isEnabled())
+        settings.set_interface_zoom_percent(DEFAULT_PERCENT)
+
+    def test_interface_zoom_without_private_headers_is_pending_until_restart(self):
+        from fluentqt_gallery import interface_zoom_controller as controller_module
+        settings = gallery_settings_module.gallery_settings()
+        saved_percent = settings.interface_zoom_percent
+        settings.set_interface_zoom_percent(100)
+        apply_interface_zoom(1.0)
+        with patch.object(controller_module, "supports_live_interface_zoom", return_value=False), \
+                patch.object(controller_module, "apply_interface_zoom") as live_apply:
+            window = GalleryWindow(startup_visuals=False)
+            try:
+                window.resize(700, 600)
+                window.show()
+                self.assertTrue(QTest.qWaitForWindowExposed(window))
+                size, minimum = window.size(), window.minimumSize()
+                dpr = window.windowHandle().devicePixelRatio()
+                window.findChild(QAction, "galleryZoomInAction").trigger()
+                self.assertEqual(settings.interface_zoom_percent, 110)
+                self.assertEqual(applied_zoom_percent(), 100)
+                self.assertEqual(window.size(), size)
+                self.assertEqual(window.minimumSize(), minimum)
+                self.assertEqual(window.windowHandle().devicePixelRatio(), dpr)
+                bubble = window.findChild(QWidget, "galleryInterfaceZoomBubble")
+                self.assertTrue(bubble.isOpen())
+                level = bubble.findChild(QWidget, "galleryZoomLevelLabel")
+                hint = bubble.findChild(QWidget, "galleryZoomRestartHint")
+                self.assertEqual(level.text(), "110%")
+                self.assertFalse(hint.isHidden())
+                settings.set_window_placement(window.geometry(), window.screen().name(), False)
+                self.assertEqual(settings.window_geometry_zoom_percent, 100)
+                window.findChild(QAction, "galleryActualSizeAction").trigger()
+                self.assertEqual(level.text(), "100%")
+                self.assertTrue(hint.isHidden())
+                live_apply.assert_not_called()
+            finally:
+                window.close()
+                with patch.object(sys, "excepthook") as unhandled:
+                    delete_qobject(window)
+                unhandled.assert_not_called()
+                settings.set_interface_zoom_percent(saved_percent)
+
+    def test_zoomed_maximized_window_saves_scaled_restore_geometry(self):
+        from fluentqt_gallery.window_placement import GalleryWindowPlacement
+        self.assertTrue(supports_live_interface_zoom())
+        settings = gallery_settings_module.GallerySettings()
+        window = QWidget()
+        placement = GalleryWindowPlacement(window, settings, window)
+        try:
+            apply_interface_zoom(1.0)
+            window.resize(640, 600)
+            window.show()
+            self.assertTrue(QTest.qWaitForWindowExposed(window))
+            normal_size = window.size()
+            window.showMaximized()
+            QApplication.processEvents()
+            self.assertTrue(window.isMaximized())
+            self.assertTrue(apply_interface_zoom(2.0))
+            QApplication.processEvents()
+            placement.save_now()
+            self.assertEqual(settings.window_normal_geometry.size(), normal_size / 2)
+            self.assertEqual(settings.window_geometry_zoom_percent, 200)
+            self.assertTrue(settings.window_maximized)
+        finally:
+            window.close()
+            delete_qobject(window)
+            apply_interface_zoom(1.0)
+            settings._system_theme_poll.stop()
+            delete_qobject(settings)
+
+    def test_window_commands_are_listed_with_their_shortcuts(self):
+        window = GalleryWindow(startup_visuals=False)
+        self.addCleanup(window.deleteLater)
+        self.addCleanup(window.close)
+        window.resize(1180, 760)
+        window.show()
+        self.assertTrue(QTest.qWaitForWindowExposed(window))
+
+        palette = window.findChild(QWidget, "galleryCommandPalette")
+        self.assertIsNotNone(palette)
+        listed = [action.objectName() for action in palette.commands()]
+        for name in (
+            "galleryToggleNavigationAction",
+            "galleryBackAction",
+            "gallerySearchAction",
+            "galleryHomeAction",
+            "gallerySettingsAction",
+            "galleryKeyboardShortcutsAction",
+        ):
+            with self.subTest(command=name):
+                self.assertIn(name, listed)
+                action = window.findChild(QAction, name)
+                self.assertIsNotNone(action)
+                self.assertIn(action, window.actions())
+        if supports_interface_zoom():
+            for name in (
+                "galleryZoomInAction",
+                "galleryZoomOutAction",
+                "galleryActualSizeAction",
+            ):
+                self.assertIn(name, listed)
+
+        back = window.findChild(QAction, "galleryBackAction")
+        self.assertFalse(back.isEnabled())
+        self.assertNotIn(QKeySequence(Qt.Key_Backspace), back.shortcuts())
+        self.assertTrue(
+            window.findChild(QAction, "galleryToggleNavigationAction").isEnabled()
+        )
+        self.assertIn(
+            QKeySequence(Qt.CTRL | Qt.Key_K),
+            window.findChild(QAction, "gallerySearchAction").shortcuts(),
+        )
+        settings_command = window.findChild(QAction, "gallerySettingsAction")
+        self.assertEqual(
+            settings_command.menuRole(), QAction.MenuRole.PreferencesRole
+        )
+        self.assertEqual(
+            settings_command.shortcut(), QKeySequence(Qt.CTRL | Qt.Key_Comma)
+        )
+
+        if sys.platform == "darwin":
+            menu_bars = [
+                widget
+                for widget in QApplication.topLevelWidgets()
+                if widget.objectName() == "galleryMenuBar"
+                and widget is window._commands._menu_bar
+            ]
+            self.assertEqual(len(menu_bars), 1)
+            menu_bar = menu_bars[0]
+            self.assertEqual(
+                [menu.text() for menu in menu_bar.actions()],
+                ["View", "Go", "Help"],
+            )
+            help_menu = menu_bar.findChild(QMenu, "galleryMenuHelp")
+            self.assertIsNotNone(help_menu)
+            self.assertIn(
+                window.findChild(QAction, "galleryKeyboardShortcutsAction"),
+                help_menu.actions(),
+            )
+
+        window.navigate("button")
+        self.assertTrue(back.isEnabled())
+        back.trigger()
+        self.assertFalse(back.isEnabled())
+
+        window.findChild(QAction, "gallerySearchAction").trigger()
+        self.assertIs(
+            window.focusWidget(),
+            window.findChild(QWidget, "GalleryTitleBar.SearchBox"),
+        )
+
+        window.findChild(QAction, "galleryKeyboardShortcutsAction").trigger()
+        self.assertTrue(palette.isOpen())
+        palette.close()
+
+    def test_status_menu_opens_keyboard_shortcuts_after_restoring(self):
+        window = GalleryWindow(startup_visuals=False)
+        controller = GalleryApplicationController(
+            window, window._settings, window, setup_status_item=False
+        )
+        calls: list[str] = []
+        try:
+            with (
+                patch.object(
+                    application_controller_module.QSystemTrayIcon,
+                    "show",
+                    lambda _icon: None,
+                ),
+                patch.object(
+                    controller, "restore_window", lambda: calls.append("restore")
+                ),
+                patch.object(
+                    window,
+                    "show_command_palette",
+                    lambda: calls.append("palette"),
+                ),
+            ):
+                controller._setup_status_item()
+                menu = controller._status_menu
+                self.assertEqual(
+                    [action.objectName() for action in menu.actions()
+                     if not action.isSeparator()],
+                    [
+                        "galleryStatusOpenAction",
+                        "galleryStatusSettingsAction",
+                        "galleryStatusShortcutsAction",
+                        "galleryStatusQuitAction",
+                    ],
+                )
+                shortcuts = menu.findChild(QAction, "galleryStatusShortcutsAction")
+                self.assertEqual(shortcuts.text(), "Keyboard Shortcuts")
+                shortcuts.trigger()
+                # The palette waits for the restored window's next event-loop turn.
+                self.assertEqual(calls, ["restore"])
+                self.assertTrue(_wait_until(lambda: calls == ["restore", "palette"]))
+        finally:
+            controller._status_icon.hide()
+            window.close()
+            window.deleteLater()
 
     def test_first_close_prompt_matches_native_content_dialog(self):
         content = CloseBehaviorPromptContent(CloseBehavior.Tray)

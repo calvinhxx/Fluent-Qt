@@ -8,8 +8,10 @@
 #include <QScreen>
 #include <QTimer>
 #include <QWindow>
+#include <QWindowStateChangeEvent>
 
 #include "compatibility/QtCompat.h"
+#include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryWindowMetrics.h"
@@ -41,16 +43,26 @@ QRect centeredInitialGeometry(const QRect& available, const QSize& size)
     return QRect(QPoint(x, y), size);
 }
 
+// Geometry uses the applied scale; a pending restart must not change it.
+// zh_CN: 几何换算使用已生效倍率，等待重启的设置不得改变几何。
+int placementZoomPercent(const GallerySettings* settings)
+{
+    Q_UNUSED(settings);
+    return qRound(platform::appliedInterfaceZoom() * 100);
+}
+
+bool isNormalWindowState(Qt::WindowStates state)
+{
+    return !(state & (Qt::WindowMaximized | Qt::WindowMinimized | Qt::WindowFullScreen));
+}
+
 } // namespace
 
 namespace windowplacement {
 
-QSize effectiveMinimumSize(const QSize& availableSize)
+QSize effectiveMinimumSize(const QSize& availableSize, int zoomPercent)
 {
-    if (!availableSize.isValid() || availableSize.isEmpty())
-        return QSize(AppWindowMetrics::MinWidth, AppWindowMetrics::MinHeight);
-    return QSize(qMin(AppWindowMetrics::MinWidth, availableSize.width()),
-        qMin(AppWindowMetrics::MinHeight, availableSize.height()));
+    return AppWindowMetrics::minimumSize(availableSize, zoomPercent);
 }
 
 QSize recommendedInitialSize(const QSize& availableSize)
@@ -87,8 +99,11 @@ QRect constrainGeometry(const QRect& requested, const QRect& available, const QS
 
 QRect restoredGeometry(const QRect& savedGeometry, const QRect& available, const QSize& minimumSize)
 {
-    const bool savedSizeIsUsable = savedGeometry.width() >= minimumSize.width()
-        && savedGeometry.height() >= minimumSize.height();
+    // Scale conversion rounds geometry, while minimum bounds round upwards.
+    // A one-pixel difference must clamp the saved bounds, not discard placement.
+    // zh_CN: 几何换算四舍五入，而最小尺寸向上取整；一像素误差应钳制，不应丢弃位置。
+    const bool savedSizeIsUsable = savedGeometry.width() >= minimumSize.width() - 1
+        && savedGeometry.height() >= minimumSize.height() - 1;
     if (savedGeometry.isValid() && !savedGeometry.isEmpty() && savedSizeIsUsable) {
         return constrainGeometry(savedGeometry, available, minimumSize);
     }
@@ -104,8 +119,10 @@ GalleryWindowPlacement::GalleryWindowPlacement(GalleryWindow* window, GallerySet
     m_saveTimer->setSingleShot(true);
     m_saveTimer->setInterval(kPlacementSaveDelayMs);
     connect(m_saveTimer, &QTimer::timeout, this, &GalleryWindowPlacement::saveNow);
-    if (m_window)
+    if (m_window) {
         m_window->installEventFilter(this);
+        rememberNormalGeometry(m_window->normalGeometry());
+    }
     if (qApp)
         connect(qApp, &QCoreApplication::aboutToQuit, this, &GalleryWindowPlacement::saveNow);
 }
@@ -125,13 +142,19 @@ bool GalleryWindowPlacement::restore()
     }
 
     const QRect available = screen->availableGeometry();
-    const QSize minimum = windowplacement::effectiveMinimumSize(available.size());
+    const QSize minimum = windowplacement::effectiveMinimumSize(available.size(), placementZoomPercent(m_settings));
     m_window->setMinimumSize(minimum);
 
-    const QRect target = windowplacement::restoredGeometry(m_settings->windowNormalGeometry(), available, minimum);
+    const QRect saved = m_settings->windowNormalGeometry();
+    const qreal ratio = qreal(m_settings->windowGeometryZoomPercent()) / placementZoomPercent(m_settings);
+    const QPoint origin = screen->geometry().topLeft();
+    const QPoint offset = saved.topLeft() - origin;
+    const QRect scaled(origin + QPoint(qRound(offset.x() * ratio), qRound(offset.y() * ratio)),
+        QSize(qRound(saved.width() * ratio), qRound(saved.height() * ratio)));
+    const QRect target = windowplacement::restoredGeometry(scaled, available, minimum);
 
     m_window->setGeometry(target);
-    m_lastNormalGeometry = target;
+    rememberNormalGeometry(target);
     m_restoring = false;
     LOG_INFO(QStringLiteral("GalleryWindowPlacement restored geometry=%1,%2 %3x%4 screen=%5 maximized=%6")
             .arg(target.x())
@@ -149,26 +172,23 @@ void GalleryWindowPlacement::saveNow()
         return;
 
     const Qt::WindowStates state = m_window->windowState();
-    if (!state.testFlag(Qt::WindowMinimized) && !state.testFlag(Qt::WindowFullScreen)) {
-        // On Wayland/WSLg QWidget::normalGeometry() can remain at Qt's
-        // pre-show 640x480 placeholder while a normal window is visibly much
-        // larger. Persist the live geometry for a normal window and reserve
-        // normalGeometry() for the maximized state where it is actually the
-        // restore target.
-        const QRect candidate = state.testFlag(Qt::WindowMaximized) ? m_window->normalGeometry() : m_window->geometry();
-        if (candidate.isValid() && !candidate.isEmpty())
-            m_lastNormalGeometry = candidate;
-    }
+    // Qt keeps normalGeometry() at its old scale while maximized. Track normal
+    // placement ourselves and convert only when saving, avoiding cumulative rounding.
+    // zh_CN: 最大化时 Qt 的 normalGeometry() 仍使用旧倍率。独立记录普通窗口位置，
+    // 仅在保存时换算，避免连续缩放累积舍入误差。
+    if (isNormalWindowState(state))
+        rememberNormalGeometry(m_window->geometry());
     if (!m_lastNormalGeometry.isValid() || m_lastNormalGeometry.isEmpty())
-        m_lastNormalGeometry = m_window->geometry();
+        rememberNormalGeometry(m_window->geometry());
+
+    const QRect geometry = normalGeometryAtCurrentZoom();
 
     QScreen* screen = m_window->screen();
     if (!screen)
-        screen = QGuiApplication::screenAt(m_lastNormalGeometry.center());
+        screen = QGuiApplication::screenAt(geometry.center());
     if (!screen)
         screen = QGuiApplication::primaryScreen();
-    m_settings->setWindowPlacement(m_lastNormalGeometry, screen ? screen->name() : QString(),
-        state.testFlag(Qt::WindowMaximized));
+    m_settings->setWindowPlacement(geometry, screen ? screen->name() : QString(), state.testFlag(Qt::WindowMaximized));
 }
 
 bool GalleryWindowPlacement::eventFilter(QObject* watched, QEvent* event)
@@ -179,11 +199,23 @@ bool GalleryWindowPlacement::eventFilter(QObject* watched, QEvent* event)
     switch (event->type()) {
     case QEvent::Show:
         connectScreenTracking();
+        if (isNormalWindowState(m_window->windowState()))
+            rememberNormalGeometry(m_window->geometry());
         scheduleSave();
         break;
     case QEvent::Move:
     case QEvent::Resize:
+        if (isNormalWindowState(m_window->windowState()))
+            rememberNormalGeometry(m_window->geometry());
+        scheduleSave();
+        break;
     case QEvent::WindowStateChange:
+        // Capture the departure from normal state even before the save debounce runs.
+        // zh_CN: 即使保存防抖尚未触发，也在离开普通状态时记录还原位置。
+        if (isNormalWindowState(static_cast<QWindowStateChangeEvent*>(event)->oldState()))
+            rememberNormalGeometry(m_window->normalGeometry());
+        else if (isNormalWindowState(m_window->windowState()))
+            rememberNormalGeometry(m_window->geometry());
         scheduleSave();
         break;
     default:
@@ -196,6 +228,26 @@ bool GalleryWindowPlacement::eventFilter(QObject* watched, QEvent* event)
         break;
     }
     return QObject::eventFilter(watched, event);
+}
+
+void GalleryWindowPlacement::rememberNormalGeometry(const QRect& geometry)
+{
+    if (!geometry.isValid() || geometry.isEmpty())
+        return;
+    m_lastNormalGeometry = geometry;
+    m_normalGeometryZoomPercent = placementZoomPercent(m_settings);
+    const QScreen* screen = m_window ? m_window->screen() : nullptr;
+    m_normalGeometryScreenOrigin = screen ? screen->geometry().topLeft() : QPoint();
+}
+
+QRect GalleryWindowPlacement::normalGeometryAtCurrentZoom() const
+{
+    const qreal ratio = qreal(m_normalGeometryZoomPercent) / placementZoomPercent(m_settings);
+    const QPoint offset = m_lastNormalGeometry.topLeft() - m_normalGeometryScreenOrigin;
+    // Global Qt scaling preserves each screen's origin; scale coordinates relative to it.
+    // zh_CN: Qt 全局缩放保留各屏幕原点，位置需相对该原点换算。
+    return QRect(m_normalGeometryScreenOrigin + QPoint(qRound(offset.x() * ratio), qRound(offset.y() * ratio)),
+        QSize(qRound(m_lastNormalGeometry.width() * ratio), qRound(m_lastNormalGeometry.height() * ratio)));
 }
 
 QScreen* GalleryWindowPlacement::restoredScreen() const
@@ -237,7 +289,7 @@ void GalleryWindowPlacement::applyScreenConstraints(QScreen* screen, bool constr
         return;
 
     const QRect available = screen->availableGeometry();
-    const QSize minimum = windowplacement::effectiveMinimumSize(available.size());
+    const QSize minimum = windowplacement::effectiveMinimumSize(available.size(), placementZoomPercent(m_settings));
     m_window->setMinimumSize(minimum);
     const Qt::WindowStates state = m_window->windowState();
     if (!constrainWindow || state.testFlag(Qt::WindowMaximized) || state.testFlag(Qt::WindowMinimized)
@@ -250,7 +302,7 @@ void GalleryWindowPlacement::applyScreenConstraints(QScreen* screen, bool constr
     if (constrained != m_window->geometry()) {
         m_restoring = true;
         m_window->setGeometry(constrained);
-        m_lastNormalGeometry = constrained;
+        rememberNormalGeometry(constrained);
         m_restoring = false;
     }
     scheduleSave();

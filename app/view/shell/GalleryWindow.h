@@ -10,6 +10,7 @@
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
 
+class QAction;
 class QMoveEvent;
 class QHideEvent;
 class QResizeEvent;
@@ -27,6 +28,7 @@ class EditingCommandRouter;
 
 namespace fluent::gallery {
 
+class GalleryCommands;
 class GalleryContentPresenter;
 class GalleryNavigationPane;
 class GalleryContentPage;
@@ -71,6 +73,9 @@ public:
     bool navigateToSearchResult(const QString& searchText);
     GalleryContentPage* currentContentPage() const;
     SettingsPage* currentSettingsPage() const;
+    /// Opens the searchable list of window commands and their shortcuts.
+    /// zh_CN: 打开可搜索的窗口命令及其快捷键列表。
+    void showCommandPalette();
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -86,6 +91,8 @@ private:
     enum class AppWindowWidthState { Expanded, Compact, Minimal };
 
     void createTitleBarContent();
+    void installCommands();
+    void focusSearch();
     void buildNavigationShell();
     void buildContentPresenter();
     void installSplashScreen();
@@ -123,6 +130,9 @@ private:
     GalleryContentPresenter* m_contentPresenter = nullptr;
     GallerySearchService* m_searchService = nullptr;
     GalleryTitleBarController* m_titleBar = nullptr;
+    GalleryCommands* m_commands = nullptr;
+    QAction* m_backCommand = nullptr;
+    QAction* m_toggleNavigationCommand = nullptr;
     GalleryIntroTour* m_introTour = nullptr;
     QTimer* m_navigationCompactReleaseTimer = nullptr;
     QTimer* m_prewarmResumeTimer = nullptr; // Idle debounce that resumes prewarm after interaction.

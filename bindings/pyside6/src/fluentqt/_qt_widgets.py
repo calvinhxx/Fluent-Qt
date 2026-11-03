@@ -1,14 +1,15 @@
 """Private widget and generated-wrapper adaptations for supported PySide6 versions."""
 
+from PySide6 import QtGui as _QtGui
 from PySide6 import __version_info__ as _PYSIDE_VERSION_INFO
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QGuiApplication, QIcon, QKeySequence
+from PySide6.QtGui import QAccessible, QAccessibleEvent, QAction, QGuiApplication, QIcon, QKeySequence
 from PySide6.QtWidgets import QApplication
 from shiboken6 import isValid
 from ._qt_compat import delete_qobject
 
 __all__ = ["application_is_saving_session", "enforce_final_type", "install_legacy_callable_add_action",
-           "system_color_scheme", "create_owned_widget"]
+           "send_accessible_announcement", "system_color_scheme", "create_owned_widget"]
 
 
 def create_owned_widget(owner, factory, is_active, attach, parent=None, *, affinity):
@@ -61,6 +62,24 @@ def system_color_scheme() -> str | None:
     if scheme == scheme_type.Light:
         return "light"
     return None
+
+
+def send_accessible_announcement(target, message: str, assertive: bool = False) -> None:
+    """Announce ``message`` from ``target`` like ``fluentSendAccessibleAnnouncement``.
+
+    Qt 6.8 added announcement events with a politeness; earlier runtimes raise
+    an accessible alert from ``target`` instead.
+    """
+    if target is None or not message:
+        return
+    announcement = getattr(_QtGui, "QAccessibleAnnouncementEvent", None)
+    if announcement is None:
+        event = QAccessibleEvent(target, QAccessible.Event.Alert)
+    else:
+        event = announcement(target, message)
+        politeness = QAccessible.AnnouncementPoliteness
+        event.setPoliteness(politeness.Assertive if assertive else politeness.Polite)
+    QAccessible.updateAccessibility(event)
 
 
 def application_is_saving_session(app) -> bool:

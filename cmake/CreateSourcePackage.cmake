@@ -45,7 +45,10 @@ file(COPY "${FLUENT_QT_SOURCE_DIR}/third_party" DESTINATION "${_package_root}"
     PATTERN "*.ttf" EXCLUDE
     PATTERN "*.otf" EXCLUDE
     PATTERN "FluentSystemIcons-Regular.json" EXCLUDE)
-file(COPY "${FLUENT_QT_SOURCE_DIR}/support/spatial" DESTINATION "${_package_root}/support")
+file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/support/spatial"
+    "${FLUENT_QT_SOURCE_DIR}/support/interfacezoom"
+    DESTINATION "${_package_root}/support")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/.github/scripts/setup-shiboken-clang.py"
     DESTINATION "${_package_root}/.github/scripts")
@@ -88,6 +91,7 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtConfig.cmake.in"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInstallHeaders.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSpatial.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInterfaceZoom.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtPlugins.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtParticles.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtQmlBridge.cmake"

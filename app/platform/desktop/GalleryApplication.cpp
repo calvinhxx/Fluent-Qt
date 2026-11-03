@@ -34,6 +34,12 @@ int runApplication(int argc, char** argv)
     QCoreApplication::setApplicationName(capabilities().applicationName);
     QCoreApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
     QCoreApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
+    QStringList arguments;
+    for (int index = 0; index < argc; ++index)
+        arguments.append(QString::fromLocal8Bit(argv[index]));
+    const GalleryPreviewParseResult preview = parseGalleryPreviewArguments(arguments);
+    if (!preview.options.requested)
+        prepareInterfaceZoom(GallerySettings::storedInterfaceZoomPercent() / 100.0);
     fluent::prepareHighDpiApplication();
     QApplication app(argc, argv);
 #if defined(FLUENT_QT_HAS_QML_BRIDGE) && defined(FLUENT_QT_HAS_SPATIAL)
@@ -60,7 +66,6 @@ int runApplication(int argc, char** argv)
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
 #endif
 
-    const GalleryPreviewParseResult preview = parseGalleryPreviewArguments(app.arguments());
     if (preview.options.requested && preview.options.helpRequested) {
         const QByteArray help = preview.helpText.toLocal8Bit();
         std::fputs(help.constData(), stdout);
@@ -108,10 +113,8 @@ int runApplication(int argc, char** argv)
     QObject::connect(&singleInstance, &GallerySingleInstance::activationRequested, &applicationController,
         &GalleryApplicationController::restoreWindow);
 
-    if (placement.restore())
-        window.showMaximized();
-    else
-        window.show();
+    const bool maximized = placement.restore();
+    showTopLevelWindow(&window, window.geometry(), maximized);
 
     const int exitCode = app.exec();
     placement.saveNow();

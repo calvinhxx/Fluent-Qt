@@ -80,6 +80,35 @@ QString graphicsRendererOverride();
 HostTheme hostTheme();
 void setHostThemeChangedHandler(QObject* context, HostThemeChangedHandler handler);
 void showTopLevelWindow(QWidget* window, const QRect& normalGeometry, bool maximized = false);
+
+/**
+ * @brief Reports whether Gallery offers interface zoom commands.
+ * zh_CN: 报告画廊是否提供界面缩放命令。
+ *
+ * Browser hosts keep their own page zoom, so their adapter reports false.
+ * zh_CN: 浏览器宿主保留自身的页面缩放，因此其适配层返回 false。
+ */
+bool supportsInterfaceZoom();
+/** @brief Reports whether zoom applies without restarting.
+ * zh_CN: 报告缩放是否无需重启即可生效。 */
+bool supportsLiveInterfaceZoom();
+/** @brief Returns the multiplier currently used by window geometry.
+ * zh_CN: 返回窗口几何当前使用的倍率。 */
+qreal appliedInterfaceZoom();
+/** @brief Applies the saved multiplier before QApplication construction.
+ * zh_CN: 在构造 QApplication 前应用保存的倍率。 */
+bool prepareInterfaceZoom(qreal zoom);
+
+/**
+ * @brief Rescales every window by @p zoom while keeping each native window size.
+ * zh_CN: 按 @p zoom 缩放所有窗口，同时保持各原生窗口尺寸不变。
+ *
+ * Widgets receive the smaller or larger logical size and relayout, as a web
+ * page does under browser zoom. Returns false when the runtime cannot zoom.
+ * zh_CN: 控件获得更小或更大的逻辑尺寸并重新布局，与网页在浏览器缩放下的表现一致；
+ * 运行时不支持缩放时返回 false。
+ */
+bool applyInterfaceZoom(qreal zoom);
 int runApplication(int argc, char** argv);
 
 } // namespace fluent::gallery::platform

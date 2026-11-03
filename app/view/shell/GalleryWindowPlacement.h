@@ -5,6 +5,8 @@
 #include <QRect>
 #include <QSize>
 
+#include "viewmodel/GalleryInterfaceZoom.h"
+
 class QEvent;
 class QScreen;
 class QTimer;
@@ -16,7 +18,8 @@ class GalleryWindow;
 
 namespace windowplacement {
 
-QSize effectiveMinimumSize(const QSize& availableSize);
+// See metrics::AppWindow::minimumSize(). zh_CN: 规则见 metrics::AppWindow::minimumSize()。
+QSize effectiveMinimumSize(const QSize& availableSize, int zoomPercent = interfacezoom::DefaultPercent);
 QSize recommendedInitialSize(const QSize& availableSize);
 QRect constrainGeometry(const QRect& requested, const QRect& available, const QSize& minimumSize);
 QRect restoredGeometry(const QRect& savedGeometry, const QRect& available, const QSize& minimumSize);
@@ -38,6 +41,8 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    void rememberNormalGeometry(const QRect& geometry);
+    QRect normalGeometryAtCurrentZoom() const;
     QScreen* restoredScreen() const;
     void connectScreenTracking();
     void applyScreenConstraints(QScreen* screen, bool constrainWindow);
@@ -47,6 +52,8 @@ private:
     GallerySettings* m_settings = nullptr;
     QTimer* m_saveTimer = nullptr;
     QRect m_lastNormalGeometry;
+    QPoint m_normalGeometryScreenOrigin;
+    int m_normalGeometryZoomPercent = interfacezoom::DefaultPercent;
     bool m_screenTrackingConnected = false;
     bool m_restoring = false;
 };

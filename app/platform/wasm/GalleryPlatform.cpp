@@ -151,4 +151,31 @@ void showTopLevelWindow(QWidget* window, const QRect& normalGeometry, bool maxim
                   : fluent::webassembly::WindowPresentation::Windowed);
 }
 
+// Browsers already zoom the page with these shortcuts, so the Gallery leaves
+// them to the browser. zh_CN: 浏览器本身已用这些快捷键缩放页面，Gallery 不接管。
+bool supportsInterfaceZoom()
+{
+    return false;
+}
+
+bool supportsLiveInterfaceZoom()
+{
+    return false;
+}
+qreal appliedInterfaceZoom()
+{
+    return 1.0;
+}
+bool prepareInterfaceZoom(qreal zoom)
+{
+    Q_UNUSED(zoom);
+    return false;
+}
+
+bool applyInterfaceZoom(qreal zoom)
+{
+    Q_UNUSED(zoom);
+    return false;
+}
+
 } // namespace fluent::gallery::platform

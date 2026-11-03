@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <QAbstractItemView>
+#include <QAction>
 #include <QAccessible>
 #include <QApplication>
 #include <QDir>
@@ -12,8 +13,11 @@
 #include <QGraphicsOpacityEffect>
 #include <QHelpEvent>
 #include <QImage>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLockFile>
+#include <QMenu>
+#include <QMenuBar>
 #include <QPainter>
 #include <QPixmap>
 #include <QPointer>
@@ -23,6 +27,7 @@
 #include <QRect>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QScreen>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QSizePolicy>
@@ -32,6 +37,7 @@
 #include <QUrl>
 #include <QUuid>
 #include <QVector>
+#include <QWindow>
 #include <QtGlobal>
 
 #include "VisualGeometryTestUtils.h"
@@ -43,6 +49,7 @@
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
+#include "components/menus_toolbars/CommandPalette.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/basicinput/ToggleSwitch.h"
@@ -85,6 +92,7 @@
 #include "view/support/GalleryCloseBehaviorPrompt.h"
 #include "view/widgets/GalleryEntryGrid.h"
 #include "view/widgets/samples/WindowingSamples.h"
+#include "viewmodel/GalleryInterfaceZoom.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
 #include "viewmodel/GalleryUserTheme.h"
@@ -106,6 +114,7 @@ using fluent::gallery::GalleryPageSkeleton;
 using fluent::gallery::GallerySettings;
 using fluent::gallery::GallerySingleInstance;
 using fluent::gallery::GalleryWindow;
+using fluent::gallery::GalleryWindowPlacement;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
 using fluent::navigation::StackContentHost;
@@ -146,6 +155,30 @@ private:
     GallerySettings::CloseBehavior m_closeBehavior;
     bool m_closeBehaviorConfirmed = false;
     bool m_homeParticlesEnabled = true;
+};
+
+class GalleryZoomPlacementRestorer {
+public:
+    GalleryZoomPlacementRestorer()
+        : m_percent(GallerySettings::instance().interfaceZoomPercent()),
+          m_geometry(GallerySettings::instance().windowNormalGeometry()),
+          m_screenName(GallerySettings::instance().windowScreenName()),
+          m_maximized(GallerySettings::instance().windowMaximized())
+    {}
+
+    ~GalleryZoomPlacementRestorer()
+    {
+        fluent::gallery::platform::applyInterfaceZoom(m_percent / 100.0);
+        auto& settings = GallerySettings::instance();
+        settings.setInterfaceZoomPercent(m_percent);
+        settings.setWindowPlacement(m_geometry, m_screenName, m_maximized);
+    }
+
+private:
+    int m_percent;
+    QRect m_geometry;
+    QString m_screenName;
+    bool m_maximized;
 };
 
 bool containsAll(const QStringList& values, const QStringList& expectedValues)
@@ -963,6 +996,287 @@ TEST_F(GalleryShellFrameworkTest, TitleBarAppIconRefreshesAfterDisplayScaleChang
     EXPECT_EQ(fluentPixmapLogicalSize(refreshed), QSize(18, 18));
     EXPECT_NEAR(refreshed.devicePixelRatioF(), dpr, 0.01);
     EXPECT_EQ(refreshed.size(), QSize(qRound(18 * dpr), qRound(18 * dpr)));
+}
+
+TEST(GalleryInterfaceZoomLevelsTest, StepsThroughBrowserLevels)
+{
+    namespace zoom = fluent::gallery::interfacezoom;
+    EXPECT_EQ(zoom::nearestLevel(zoom::DefaultPercent), 100);
+    EXPECT_EQ(zoom::nearestLevel(112), 110);
+    EXPECT_EQ(zoom::nearestLevel(0), zoom::Levels.front());
+    EXPECT_EQ(zoom::nearestLevel(1000), zoom::Levels.back());
+    EXPECT_EQ(zoom::zoomedIn(100), 110);
+    EXPECT_EQ(zoom::zoomedIn(112), 125);
+    EXPECT_EQ(zoom::zoomedIn(zoom::Levels.back()), zoom::Levels.back());
+    EXPECT_EQ(zoom::zoomedOut(100), 90);
+    EXPECT_EQ(zoom::zoomedOut(zoom::Levels.front()), zoom::Levels.front());
+}
+
+TEST_F(GalleryShellFrameworkTest, InterfaceZoomRescalesContentWithoutResizingNativeWindow)
+{
+    ASSERT_TRUE(fluent::gallery::platform::supportsLiveInterfaceZoom())
+        << "The live zoom test lane requires matching Qt private headers.";
+
+    auto& settings = GallerySettings::instance();
+    const int savedPercent = settings.interfaceZoomPercent();
+    settings.setInterfaceZoomPercent(fluent::gallery::interfacezoom::DefaultPercent);
+    struct ZoomRestorer {
+        int percent;
+        ~ZoomRestorer()
+        {
+            fluent::gallery::platform::applyInterfaceZoom(1.0);
+            GallerySettings::instance().setInterfaceZoomPercent(percent);
+        }
+    } restorer{savedPercent};
+
+    GalleryWindow window;
+    window.resize(1000, 700);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr; }, 60000));
+    EXPECT_EQ(window.minimumSize(), QSize(460, 500));
+
+    auto* zoomIn = window.findChild<QAction*>(QStringLiteral("galleryZoomInAction"));
+    auto* actualSize = window.findChild<QAction*>(QStringLiteral("galleryActualSizeAction"));
+    ASSERT_NE(zoomIn, nullptr);
+    ASSERT_NE(actualSize, nullptr);
+    EXPECT_TRUE(zoomIn->shortcuts().contains(QKeySequence(Qt::CTRL | Qt::Key_Equal)));
+
+    const qreal dpr = window.windowHandle()->devicePixelRatio();
+    const QSize logical = window.size();
+    const QSize device(qRound(logical.width() * dpr), qRound(logical.height() * dpr));
+
+    zoomIn->trigger();
+    EXPECT_EQ(settings.interfaceZoomPercent(), 110);
+    EXPECT_NEAR(window.windowHandle()->devicePixelRatio(), dpr * 1.1, 0.001);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.width() < logical.width(); }, 2000));
+    const qreal zoomedDpr = window.windowHandle()->devicePixelRatio();
+    EXPECT_NEAR(window.width() * zoomedDpr, device.width(), zoomedDpr);
+    EXPECT_NEAR(window.height() * zoomedDpr, device.height(), zoomedDpr);
+    // 460 x 500 native pixels at 110%: ceil(460 / 1.1) x ceil(500 / 1.1).
+    EXPECT_EQ(window.minimumSize(), QSize(419, 455));
+
+    // A zoom command opens the transient zoom bubble without taking focus or adding a title-bar chip.
+    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("GalleryTitleBar.ZoomButton")), nullptr);
+    auto* bubble = window.findChild<fluent::dialogs_flyouts::Popup*>(QStringLiteral("galleryInterfaceZoomBubble"));
+    ASSERT_NE(bubble, nullptr);
+    EXPECT_TRUE(bubble->isOpen());
+    EXPECT_FALSE(bubble->isAncestorOf(QApplication::focusWidget()));
+    auto* level = bubble->findChild<fluent::textfields::Label*>(QStringLiteral("galleryZoomLevelLabel"));
+    auto* zoomInButton = bubble->findChild<Button*>(QStringLiteral("galleryZoomInButton"));
+    auto* reset = bubble->findChild<Button*>(QStringLiteral("galleryZoomResetButton"));
+    ASSERT_NE(level, nullptr);
+    ASSERT_NE(zoomInButton, nullptr);
+    ASSERT_NE(reset, nullptr);
+    EXPECT_EQ(level->text(), QStringLiteral("110%"));
+    EXPECT_TRUE(reset->isEnabled());
+    EXPECT_TRUE(bubble->findChild<QWidget*>(QStringLiteral("galleryZoomRestartHint"))->isHidden());
+    // The visible card sits below the title bar at the trailing edge.
+    const QSize card = ::fluent::overlay::visibleCardSize(bubble->size());
+    const QPoint cardTopLeft = bubble->mapTo(&window,
+        QPoint(bubble->contentsMargins().left(), bubble->contentsMargins().top()));
+    EXPECT_EQ(cardTopLeft.y(), fluent::gallery::metrics::TitleBar::Height + 4);
+    EXPECT_EQ(cardTopLeft.x() + card.width(), window.width() - 12);
+
+    zoomInButton->click();
+    EXPECT_EQ(settings.interfaceZoomPercent(), 125);
+    EXPECT_EQ(level->text(), QStringLiteral("125%"));
+    reset->click();
+    EXPECT_EQ(settings.interfaceZoomPercent(), 100);
+    EXPECT_NEAR(window.windowHandle()->devicePixelRatio(), dpr, 0.001);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.size() == logical; }, 2000));
+    EXPECT_EQ(window.minimumSize(), QSize(460, 500));
+    EXPECT_EQ(level->text(), QStringLiteral("100%"));
+    EXPECT_FALSE(reset->isEnabled());
+
+    actualSize->trigger();
+    EXPECT_EQ(settings.interfaceZoomPercent(), 100);
+    EXPECT_TRUE(bubble->isOpen());
+    // The bubble closes on its own once zooming stops.
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !bubble->isOpen(); }, 5000));
+}
+
+TEST_F(GalleryShellFrameworkTest, InterfaceZoomPreservesMaximizedPlacementAfterRecreation)
+{
+    ASSERT_TRUE(fluent::gallery::platform::supportsLiveInterfaceZoom())
+        << "The live zoom test lane requires matching Qt private headers.";
+
+    GalleryZoomPlacementRestorer restore;
+    auto& settings = GallerySettings::instance();
+    settings.setInterfaceZoomPercent(100);
+    ASSERT_TRUE(fluent::gallery::platform::applyInterfaceZoom(1.0));
+    settings.setMotionMode(GallerySettings::MotionMode::Disabled);
+
+    QRect normalGeometry;
+    qreal originalDpr = 1.0;
+    QPoint screenOrigin;
+    {
+        GalleryWindow window;
+        GalleryWindowPlacement placement(&window, &settings);
+        const QRect available = window.screen()->availableGeometry();
+        window.setGeometry(
+            QRect(available.topLeft() + QPoint(30, 30), QSize(800, 600).boundedTo(available.size() - QSize(60, 60))));
+        window.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+        ASSERT_TRUE(
+            QTest::qWaitFor([&] { return !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")); }, 5000));
+        normalGeometry = window.geometry();
+        originalDpr = window.windowHandle()->devicePixelRatio();
+        screenOrigin = window.screen()->geometry().topLeft();
+
+        // Maximize before the placement save timer fires: the last normal size must already be known.
+        window.showMaximized();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 2000));
+        for (int percent : {200, 67, 150, 100, 200}) {
+            SCOPED_TRACE(percent);
+            settings.setInterfaceZoomPercent(percent);
+            placement.saveNow();
+            const QRect saved = settings.windowNormalGeometry();
+            const qreal ratio = percent / 100.0;
+            EXPECT_NEAR(saved.width() * ratio, normalGeometry.width(), 1.0);
+            EXPECT_NEAR(saved.height() * ratio, normalGeometry.height(), 1.0);
+            EXPECT_NEAR((saved.x() - screenOrigin.x()) * ratio, normalGeometry.x() - screenOrigin.x(), 1.0);
+            EXPECT_NEAR((saved.y() - screenOrigin.y()) * ratio, normalGeometry.y() - screenOrigin.y(), 1.0);
+            EXPECT_TRUE(settings.windowMaximized());
+        }
+    }
+
+    // Recreate from saved placement at the new process scale, then restore the normal window.
+    GalleryWindow reopened;
+    GalleryWindowPlacement placement(&reopened, &settings);
+    ASSERT_TRUE(placement.restore());
+    // The first frame must already be maximized rather than flashing the normal size.
+    struct FirstShowState final : QObject {
+        Qt::WindowStates state;
+        bool seen = false;
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() == QEvent::Show && !seen) {
+                seen = true;
+                state = static_cast<QWidget*>(watched)->windowState();
+            }
+            return false;
+        }
+    } firstShow;
+    reopened.installEventFilter(&firstShow);
+    fluent::gallery::platform::showTopLevelWindow(&reopened, reopened.geometry(), true);
+    reopened.removeEventFilter(&firstShow);
+    ASSERT_TRUE(firstShow.seen);
+    EXPECT_TRUE(firstShow.state.testFlag(Qt::WindowMaximized));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&reopened));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return reopened.isMaximized(); }, 2000));
+    reopened.showNormal();
+    EXPECT_TRUE(QTest::qWaitFor(
+        [&] {
+            return !reopened.isMaximized() && qAbs(reopened.width() - normalGeometry.width() / 2.0) <= 1.0
+                && qAbs(reopened.height() - normalGeometry.height() / 2.0) <= 1.0;
+        },
+        2000));
+    const qreal newDpr = reopened.windowHandle()->devicePixelRatio();
+    EXPECT_NEAR(reopened.width() * newDpr, normalGeometry.width() * originalDpr, newDpr);
+    EXPECT_NEAR(reopened.height() * newDpr, normalGeometry.height() * originalDpr, newDpr);
+
+    // A subsequent normal resize becomes the next restore target rather than retaining the old cache.
+    reopened.resize(reopened.size() + QSize(20, 10));
+    const QSize resized = reopened.size();
+    reopened.showMaximized();
+    settings.setInterfaceZoomPercent(100);
+    placement.saveNow();
+    EXPECT_NEAR(settings.windowNormalGeometry().width(), resized.width() * 2.0, 1.0);
+    EXPECT_NEAR(settings.windowNormalGeometry().height(), resized.height() * 2.0, 1.0);
+}
+
+TEST_F(GalleryShellFrameworkTest, InterfaceZoomPreservesPlacementWhileMinimizedOrFullScreen)
+{
+    ASSERT_TRUE(fluent::gallery::platform::supportsLiveInterfaceZoom())
+        << "The live zoom test lane requires matching Qt private headers.";
+
+    auto& settings = GallerySettings::instance();
+    settings.setMotionMode(GallerySettings::MotionMode::Disabled);
+    for (const auto state : {Qt::WindowMinimized, Qt::WindowFullScreen}) {
+        SCOPED_TRACE(static_cast<int>(state));
+        GalleryZoomPlacementRestorer restore;
+        settings.setInterfaceZoomPercent(100);
+        ASSERT_TRUE(fluent::gallery::platform::applyInterfaceZoom(1.0));
+        GalleryWindow window;
+        GalleryWindowPlacement placement(&window, &settings);
+        window.resize(700, 600);
+        window.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+        const QSize normalSize = window.size();
+        window.setWindowState(state);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return window.windowState().testFlag(state); }, 2000));
+        settings.setInterfaceZoomPercent(200);
+        placement.saveNow();
+        EXPECT_EQ(settings.windowNormalGeometry().size(), normalSize / 2);
+        placement.saveNow();
+        EXPECT_EQ(settings.windowNormalGeometry().size(), normalSize / 2);
+    }
+}
+
+TEST_F(GalleryShellFrameworkTest, WindowCommandsAreListedWithTheirShortcuts)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr; }, 60000));
+
+    auto* palette = window.findChild<fluent::menus_toolbars::CommandPalette*>(QStringLiteral("galleryCommandPalette"));
+    ASSERT_NE(palette, nullptr);
+    QStringList listed;
+    for (QAction* action : palette->commands())
+        listed.append(action->objectName());
+    for (const QString& name : {QStringLiteral("galleryToggleNavigationAction"), QStringLiteral("galleryBackAction"),
+             QStringLiteral("gallerySearchAction"), QStringLiteral("galleryHomeAction"),
+             QStringLiteral("gallerySettingsAction"), QStringLiteral("galleryKeyboardShortcutsAction")}) {
+        EXPECT_TRUE(listed.contains(name)) << name.toStdString();
+        auto* action = window.findChild<QAction*>(name);
+        ASSERT_NE(action, nullptr) << name.toStdString();
+        EXPECT_TRUE(window.actions().contains(action)) << name.toStdString();
+    }
+    if (fluent::gallery::platform::supportsInterfaceZoom()) {
+        for (const QString& name : {QStringLiteral("galleryZoomInAction"), QStringLiteral("galleryZoomOutAction"),
+                 QStringLiteral("galleryActualSizeAction")})
+            EXPECT_TRUE(listed.contains(name)) << name.toStdString();
+    }
+
+    auto* back = window.findChild<QAction*>(QStringLiteral("galleryBackAction"));
+    EXPECT_FALSE(back->isEnabled());
+    EXPECT_FALSE(back->shortcuts().contains(QKeySequence(Qt::Key_Backspace)));
+    EXPECT_TRUE(window.findChild<QAction*>(QStringLiteral("galleryToggleNavigationAction"))->isEnabled());
+    EXPECT_TRUE(window.findChild<QAction*>(QStringLiteral("gallerySearchAction"))
+            ->shortcuts()
+            .contains(QKeySequence(Qt::CTRL | Qt::Key_K)));
+    auto* settingsCommand = window.findChild<QAction*>(QStringLiteral("gallerySettingsAction"));
+    EXPECT_EQ(settingsCommand->menuRole(), QAction::PreferencesRole);
+    EXPECT_EQ(settingsCommand->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_Comma));
+
+    if (compatibility::WindowChromeCompat::currentPlatform() == compatibility::WindowChromeCompat::Platform::MacOS) {
+        QMenuBar* menuBar = nullptr;
+        for (QWidget* widget : QApplication::topLevelWidgets()) {
+            if (widget->objectName() == QStringLiteral("galleryMenuBar"))
+                menuBar = qobject_cast<QMenuBar*>(widget);
+        }
+        ASSERT_NE(menuBar, nullptr);
+        QStringList titles;
+        for (QAction* menu : menuBar->actions())
+            titles.append(menu->text());
+        EXPECT_EQ(titles, QStringList({QStringLiteral("View"), QStringLiteral("Go"), QStringLiteral("Help")}));
+        auto* help = menuBar->findChild<QMenu*>(QStringLiteral("galleryMenuHelp"));
+        ASSERT_NE(help, nullptr);
+        EXPECT_TRUE(
+            help->actions().contains(window.findChild<QAction*>(QStringLiteral("galleryKeyboardShortcutsAction"))));
+    }
+
+    window.findChild<QAction*>(QStringLiteral("gallerySearchAction"))->trigger();
+    EXPECT_EQ(window.focusWidget(), window.findChild<QWidget*>(QStringLiteral("GalleryTitleBar.SearchBox")));
+
+    window.findChild<QAction*>(QStringLiteral("galleryKeyboardShortcutsAction"))->trigger();
+    EXPECT_TRUE(palette->isOpen());
+    palette->close();
 }
 
 TEST_F(GalleryShellFrameworkTest, TitleBarForegroundTracksWindowActivationWithoutReflow)
@@ -2167,6 +2481,10 @@ TEST_F(GalleryShellFrameworkTest, WindowPlacementUsesLogicalScreenBounds)
 
     EXPECT_EQ(effectiveMinimumSize(QSize(1920, 1080)), QSize(460, 500));
     EXPECT_EQ(effectiveMinimumSize(QSize(640, 360)), QSize(460, 360));
+    // Interface zoom keeps the native minimum: 460 x 500 at 150% is 307 x 334 logical pixels.
+    EXPECT_EQ(effectiveMinimumSize(QSize(1920, 1080), 150), QSize(307, 334));
+    EXPECT_EQ(effectiveMinimumSize(QSize(1920, 1080), 50), QSize(920, 1000));
+    EXPECT_EQ(effectiveMinimumSize(QSize(800, 600), 50), QSize(800, 600));
     EXPECT_EQ(recommendedInitialSize(QSize(3840, 2160)), QSize(1440, 900));
     EXPECT_EQ(recommendedInitialSize(QSize(1920, 1080)), QSize(1382, 842));
     EXPECT_EQ(recommendedInitialSize(QSize(1280, 720)), QSize(922, 600));
@@ -2177,6 +2495,10 @@ TEST_F(GalleryShellFrameworkTest, WindowPlacementUsesLogicalScreenBounds)
 
     const QRect saved(100, 80, 900, 600);
     EXPECT_EQ(restoredGeometry(saved, available, QSize(460, 500)), saved);
+    // A 500-pixel native minimum becomes 333 rounded geometry pixels but a
+    // 334-pixel logical minimum at 150%; keep its position and clamp one pixel.
+    EXPECT_EQ(restoredGeometry(QRect(40, 40, 427, 333), QRect(0, 0, 853, 480), QSize(307, 334)),
+        QRect(40, 40, 427, 334));
 
     // Qt/Wayland can report its 640x480 pre-show placeholder as
     // normalGeometry(). A value below the current usable minimum is not a

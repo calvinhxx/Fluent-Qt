@@ -413,6 +413,7 @@ set_source_files_properties(
 add_library(_fluentqt MODULE
     ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
     "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/InterfaceZoomBinding.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/PluginBindingApi.cpp")
 add_dependencies(_fluentqt fluentqt_pyside6_generate)
 set_target_properties(_fluentqt PROPERTIES
@@ -486,6 +487,14 @@ if(TARGET FluentQtParticles)
 endif()
 if(TARGET FluentQtQmlBridge)
     target_link_libraries(_fluentqt PRIVATE FluentQt::QmlBridge)
+endif()
+# The Python Gallery reaches the shared interface-zoom support through private
+# binding helpers. Only Gallery packaging requires the full repaint backend;
+# ordinary binding consumers keep the core library's dependency boundary.
+if(FLUENT_QT_BUILD_PYSIDE6_GALLERY)
+    fluent_qt_add_interface_zoom_support(_fluentqt REQUIRED)
+else()
+    fluent_qt_add_interface_zoom_support(_fluentqt)
 endif()
 if(WIN32 AND FLUENT_QT_PYSIDE6_STABLE_ABI)
     # A stable-ABI module must import python3.dll, never python3XY.dll.

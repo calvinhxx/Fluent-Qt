@@ -7,7 +7,10 @@
 
 #include <algorithm>
 
+#include <QAction>
 #include <QApplication>
+#include <QKeySequence>
+#include <QLineEdit>
 #include <QMoveEvent>
 #include <QHideEvent>
 #include <QResizeEvent>
@@ -28,7 +31,9 @@
 #include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
 #include "AppIcon.h"
+#include "GalleryCommands.h"
 #include "GalleryContentPresenter.h"
+#include "GalleryInterfaceZoomController.h"
 #include "GalleryIntroTour.h"
 #include "GalleryNavigationPane.h"
 #include "GallerySearchService.h"
@@ -119,6 +124,7 @@ GalleryWindow::GalleryWindow(QWidget* parent) : fluent::windowing::Window(parent
     createTitleBarContent();
     buildNavigationShell();
     buildContentPresenter();
+    installCommands();
     installSplashScreen();
     new GallerySpatialController(this, m_navigationView);
     showInitialRouteContent();
@@ -583,6 +589,67 @@ void GalleryWindow::createTitleBarContent()
     m_titleBar = new GalleryTitleBarController(chrome, m_searchService, std::move(callbacks), chrome);
 }
 
+void GalleryWindow::installCommands()
+{
+    using Group = GalleryCommands::Group;
+    m_commands = new GalleryCommands(this);
+
+    if (platform::supportsInterfaceZoom()) {
+        auto* zoom = new GalleryInterfaceZoomController(this);
+        for (QAction* action : zoom->commands())
+            m_commands->addCommand(Group::View, action);
+    }
+    m_toggleNavigationCommand = m_commands->addCommand(Group::View, QStringLiteral("galleryToggleNavigationAction"),
+        QStringLiteral("Toggle Navigation Pane"));
+    connect(m_toggleNavigationCommand, &QAction::triggered, this, &GalleryWindow::toggleNavigationDisplayMode);
+
+    // Platform Back bindings, without Backspace: a bare Backspace would leave the page whenever
+    // focus is outside a text field. zh_CN: 使用平台后退快捷键但排除 Backspace，避免焦点不在输入框时误离开页面。
+    QList<QKeySequence> backKeys;
+    for (const QKeySequence& key : QKeySequence::keyBindings(QKeySequence::Back)) {
+        if (key != QKeySequence(Qt::Key_Backspace))
+            backKeys.append(key);
+    }
+    m_backCommand = m_commands->addCommand(Group::Go, QStringLiteral("galleryBackAction"), QStringLiteral("Back"),
+        backKeys);
+    connect(m_backCommand, &QAction::triggered, this, [this]() { navigateBack(); });
+    QAction* search = m_commands->addCommand(Group::Go, QStringLiteral("gallerySearchAction"), QStringLiteral("Search"),
+        {QKeySequence(Qt::CTRL | Qt::Key_K)});
+    connect(search, &QAction::triggered, this, &GalleryWindow::focusSearch);
+    QAction* home = m_commands->addCommand(Group::Go, QStringLiteral("galleryHomeAction"), QStringLiteral("Home"));
+    connect(home, &QAction::triggered, this, [this]() { selectRoute(m_navigationViewModel.defaultRouteId()); });
+    QAction* settings = m_commands->addCommand(Group::Go, QStringLiteral("gallerySettingsAction"),
+        QStringLiteral("Settings"), {QKeySequence(Qt::CTRL | Qt::Key_Comma)});
+    // macOS moves this command to the application menu, where Settings belongs.
+    // zh_CN: macOS 会把该命令移到应用菜单中 Settings 的标准位置。
+    settings->setMenuRole(QAction::PreferencesRole);
+    connect(settings, &QAction::triggered, this, [this]() { selectRoute(QStringLiteral("settings")); });
+
+    QAction* shortcuts = m_commands->addCommand(Group::Help, QStringLiteral("galleryKeyboardShortcutsAction"),
+        QStringLiteral("Keyboard Shortcuts"),
+        {QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P), QKeySequence(Qt::CTRL | Qt::Key_Slash)});
+    connect(shortcuts, &QAction::triggered, this, &GalleryWindow::showCommandPalette);
+    updateNavigationCommands();
+}
+
+void GalleryWindow::showCommandPalette()
+{
+    if (m_commands)
+        m_commands->showPalette();
+}
+
+void GalleryWindow::focusSearch()
+{
+    QWidget* searchBox = m_titleBar ? m_titleBar->searchBox() : nullptr;
+    if (!searchBox || !searchBox->isVisible()) {
+        LOG_DEBUG(QStringLiteral("GalleryWindow focusSearch skipped reason=search-hidden"));
+        return;
+    }
+    searchBox->setFocus(Qt::ShortcutFocusReason);
+    if (auto* edit = qobject_cast<QLineEdit*>(searchBox))
+        edit->selectAll();
+}
+
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
 {
     if (m_splashScreen)
@@ -803,11 +870,17 @@ void GalleryWindow::setNavigationPanesCompact(bool compact)
 
 void GalleryWindow::updateNavigationCommands()
 {
+    const bool backAvailable = !m_backRouteStack.isEmpty();
+    const bool sidePaneAvailable = m_navigationView
+        && m_navigationView->effectiveDisplayMode() != fluent::navigation::NavigationView::DisplayMode::Top;
     if (m_titleBar) {
-        m_titleBar->setBackAvailable(!m_backRouteStack.isEmpty());
-        m_titleBar->setMenuEnabled(m_navigationView
-            && m_navigationView->effectiveDisplayMode() != fluent::navigation::NavigationView::DisplayMode::Top);
+        m_titleBar->setBackAvailable(backAvailable);
+        m_titleBar->setMenuEnabled(sidePaneAvailable);
     }
+    if (m_backCommand)
+        m_backCommand->setEnabled(backAvailable);
+    if (m_toggleNavigationCommand)
+        m_toggleNavigationCommand->setEnabled(sidePaneAvailable);
 }
 
 } // namespace fluent::gallery

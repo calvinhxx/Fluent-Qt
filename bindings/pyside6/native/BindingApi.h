@@ -220,6 +220,27 @@ private:
 } // namespace fluent::binding
 
 void prepareHighDpiApplication();
+
+/** @brief Python Gallery entry to support::interfacezoom::isSupported().
+ * zh_CN: Python Gallery 调用 support::interfacezoom::isSupported() 的入口。
+ *
+ * Application infrastructure, not public API: live zoom needs matching private GUI headers.
+ * zh_CN: 属于应用基础设施而非公开 API：实时缩放需要匹配的私有 GUI 头文件。
+ */
+bool supportsInterfaceZoomForBinding();
+
+/** @brief Python Gallery entry to support::interfacezoom::apply().
+ * zh_CN: Python Gallery 调用 support::interfacezoom::apply() 的入口。
+ */
+bool applyInterfaceZoomForBinding(qreal zoom);
+/** @brief Prepares saved Gallery zoom before QApplication construction.
+ * zh_CN: 创建 QApplication 前准备 Gallery 已保存倍率。
+ */
+bool prepareInterfaceZoomForBinding(qreal zoom);
+/** @brief Returns the Gallery zoom actually applied in this process.
+ * zh_CN: 返回本进程实际生效的 Gallery 倍率。
+ */
+qreal appliedInterfaceZoomForBinding();
 bool initializeResources();
 QFont fontForRole(Typography::FontRole role);
 void setTheme(fluent::binding::Theme theme);

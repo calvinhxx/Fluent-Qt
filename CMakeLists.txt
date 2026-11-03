@@ -67,6 +67,8 @@ file(GLOB_RECURSE SRC CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(SORT SRC)
+# This adapter belongs to Gallery's optional zoom support, not the Widgets SDK.
+list(FILTER SRC EXCLUDE REGEX "/compatibility/private/InterfaceZoomRepaintCompat\\.cpp$")
 set(FLUENT_QT_SPATIAL_SOURCES ${SRC})
 list(FILTER FLUENT_QT_SPATIAL_SOURCES INCLUDE REGEX "/(components/spatial|compatibility/private/spatial)/")
 set(FLUENT_QT_SPATIAL_RENDERER_SOURCES ${FLUENT_QT_SPATIAL_SOURCES})
@@ -107,6 +109,7 @@ endif()
 include(cmake/FluentQtPlugins.cmake)
 include(cmake/FluentQtParticles.cmake)
 include(cmake/FluentQtSpatial.cmake)
+include(cmake/FluentQtInterfaceZoom.cmake)
 include(cmake/FluentQtQmlBridge.cmake)
 # Imported Qt targets must be visible to sibling app, bindings, and tests.
 if(FLUENT_QT_BUILD_SPATIAL)

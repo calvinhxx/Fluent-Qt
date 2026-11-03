@@ -29,9 +29,11 @@ from PySide6.QtCore import (
     QVariantAnimation,
 )
 from PySide6.QtGui import (
+    QAction,
     QColor,
     QDesktopServices,
     QFontMetrics,
+    QKeySequence,
     QPalette,
     QPainter,
     QPainterPath,
@@ -46,6 +48,7 @@ from PySide6.QtWidgets import (
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -64,7 +67,10 @@ from .catalog import (
     GallerySampleEntry,
     entries_for_category,
 )
+from .commands import CommandGroup, GalleryCommands
 from .foundation_pages import populate_foundation_topic_page
+from .interface_zoom import supports_interface_zoom
+from .interface_zoom_controller import GalleryInterfaceZoomController
 from .intro_tour import GalleryIntroTour, TourStep
 from .metrics import TITLE_BAR_HEIGHT
 from .motion import start_finite_transition
@@ -2332,6 +2338,10 @@ class GalleryWindow(fluentqt.Window):
         self.setWindowIcon(app_icon())
         self.resize(1180, 760)
         self.setMinimumSize(460, 500)
+        self._commands: GalleryCommands | None = None
+        self._interface_zoom_controller: GalleryInterfaceZoomController | None = None
+        self._back_command: QAction | None = None
+        self._toggle_navigation_command: QAction | None = None
         use_custom_chrome = sys.platform.startswith(("win", "linux"))
         self.setCustomWindowChromeEnabled(use_custom_chrome)
         self.setChromeInteractive(True)
@@ -2396,6 +2406,7 @@ class GalleryWindow(fluentqt.Window):
         self._build_title_bar()
         self._build_navigation_shell()
         self._apply_navigation_style(self._settings.navigation_style)
+        self._install_commands()
         if self._startup_visuals:
             self._start_startup()
         self.navigate("home", record_history=False)
@@ -2738,6 +2749,90 @@ class GalleryWindow(fluentqt.Window):
         self._menu_button = content._menu
         self._search = content.search_box
 
+    def _install_commands(self) -> None:
+        commands = GalleryCommands(self)
+        self._commands = commands
+        if supports_interface_zoom():
+            zoom = GalleryInterfaceZoomController(self, self._settings)
+            self._interface_zoom_controller = zoom
+            for action in zoom.commands():
+                commands.add_action(CommandGroup.View, action)
+        toggle = commands.add_command(
+            CommandGroup.View,
+            "galleryToggleNavigationAction",
+            "Toggle Navigation Pane",
+        )
+        toggle.triggered.connect(self._toggle_navigation_pane)
+        self._toggle_navigation_command = toggle
+
+        # Platform Back bindings, without Backspace: a bare Backspace would
+        # leave the page whenever focus is outside a text field.
+        back_keys = [
+            key
+            for key in QKeySequence.keyBindings(QKeySequence.StandardKey.Back)
+            if key != QKeySequence(Qt.Key_Backspace)
+        ]
+        back = commands.add_command(
+            CommandGroup.Go, "galleryBackAction", "Back", back_keys
+        )
+        back.triggered.connect(self.navigate_back)
+        self._back_command = back
+        search = commands.add_command(
+            CommandGroup.Go,
+            "gallerySearchAction",
+            "Search",
+            (
+                QKeySequence(Qt.CTRL | Qt.Key_K),
+            ),
+        )
+        search.triggered.connect(self._focus_search)
+        home = commands.add_command(CommandGroup.Go, "galleryHomeAction", "Home")
+        home.triggered.connect(lambda: self.navigate("home"))
+        settings = commands.add_command(
+            CommandGroup.Go,
+            "gallerySettingsAction",
+            "Settings",
+            (QKeySequence(Qt.CTRL | Qt.Key_Comma),),
+        )
+        # macOS moves this command to the application menu, where Settings belongs.
+        settings.setMenuRole(QAction.MenuRole.PreferencesRole)
+        settings.triggered.connect(lambda: self.navigate("settings"))
+
+        shortcuts = commands.add_command(
+            CommandGroup.Help,
+            "galleryKeyboardShortcutsAction",
+            "Keyboard Shortcuts",
+            (
+                QKeySequence(Qt.CTRL | Qt.SHIFT | Qt.Key_P),
+                QKeySequence(Qt.CTRL | Qt.Key_Slash),
+            ),
+        )
+        shortcuts.triggered.connect(self.show_command_palette)
+        self._update_navigation_commands()
+
+    def show_command_palette(self) -> None:
+        """Open the searchable list of window commands and their shortcuts."""
+
+        if self._commands is not None:
+            self._commands.show_palette()
+
+    def _focus_search(self) -> None:
+        search = self._search
+        if search is None or not search.isVisible():
+            return
+        search.setFocus(Qt.ShortcutFocusReason)
+        if isinstance(search, QLineEdit):
+            search.selectAll()
+
+    def _update_navigation_commands(self) -> None:
+        if self._back_command is not None:
+            self._back_command.setEnabled(bool(self._history))
+        if self._toggle_navigation_command is not None:
+            self._toggle_navigation_command.setEnabled(
+                self._navigation_view.effectiveDisplayMode()
+                != fluentqt.NavigationView.DisplayMode.Top
+            )
+
     def _build_navigation_shell(self) -> None:
         nav = fluentqt.NavigationView()
         nav.setObjectName("galleryNavigationView")
@@ -2977,6 +3072,7 @@ class GalleryWindow(fluentqt.Window):
         self._navigation_request_id += 1
         request_id = self._navigation_request_id
         self._title_content.set_back_available(bool(self._history))
+        self._update_navigation_commands()
         self._sync_navigation_selection(route_id)
         display_mode = self._navigation_view.effectiveDisplayMode()
         route_kind = ROUTE_BY_ID[route_id].kind
@@ -3039,6 +3135,7 @@ class GalleryWindow(fluentqt.Window):
         route_id = self._history.pop()
         self.navigate(route_id, record_history=False)
         self._title_content.set_back_available(bool(self._history))
+        self._update_navigation_commands()
 
     def visit_all_routes(self, process_events: bool = True) -> list[str]:
         failures = []
@@ -3125,6 +3222,7 @@ class GalleryWindow(fluentqt.Window):
         )
         self._apply_navigation_pane_density()
         self._title_content._update_geometry()
+        self._update_navigation_commands()
 
     def _navigation_pane_changed(self, opened: bool) -> None:
         del opened
@@ -3257,6 +3355,7 @@ class GalleryWindow(fluentqt.Window):
         )
         self._apply_navigation_pane_density()
         self._title_content._update_geometry()
+        self._update_navigation_commands()
 
     def _set_top_navigation_chrome(self, top: bool) -> None:
         navigation = self._navigation_view

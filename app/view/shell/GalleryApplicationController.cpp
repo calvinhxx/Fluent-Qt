@@ -65,14 +65,25 @@ void GalleryApplicationController::setupStatusItem()
     m_statusMenu->setObjectName(QStringLiteral("galleryStatusAreaMenu"));
     auto* openAction = m_statusMenu->addAction(QStringLiteral("Open Fluent-Qt Gallery"));
     auto* settingsAction = m_statusMenu->addAction(QStringLiteral("Settings"));
+    auto* shortcutsAction = m_statusMenu->addAction(QStringLiteral("Keyboard Shortcuts"));
     m_statusMenu->addSeparator();
     auto* quitAction = m_statusMenu->addAction(QStringLiteral("Quit Fluent-Qt Gallery"));
     openAction->setObjectName(QStringLiteral("galleryStatusOpenAction"));
     settingsAction->setObjectName(QStringLiteral("galleryStatusSettingsAction"));
+    shortcutsAction->setObjectName(QStringLiteral("galleryStatusShortcutsAction"));
     quitAction->setObjectName(QStringLiteral("galleryStatusQuitAction"));
 
     connect(openAction, &QAction::triggered, this, [this]() { restoreWindow(); });
     connect(settingsAction, &QAction::triggered, this, [this]() { openSettings(); });
+    connect(shortcutsAction, &QAction::triggered, this, [this]() {
+        restoreWindow();
+        // Let a restored window finish showing before the palette sizes itself against it.
+        // zh_CN: 等恢复的窗口显示完成后再打开命令面板，使其按窗口尺寸布局。
+        QTimer::singleShot(0, this, [this]() {
+            if (m_window)
+                m_window->showCommandPalette();
+        });
+    });
     connect(quitAction, &QAction::triggered, this, [this]() { requestQuit(); });
     connect(m_statusIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
