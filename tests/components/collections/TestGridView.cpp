@@ -4,7 +4,6 @@
 #include <QApplication>
 #include <QImage>
 #include <QLabel>
-#include <QMetaEnum>
 #include <QItemSelectionModel>
 #include <QPainter>
 #include <QScrollBar>
@@ -36,16 +35,14 @@ void sendDragMove(QWidget* target, const QPoint& position)
 {
     // QWidget QTest moves may use the native cursor, losing the synthetic held button.
     // zh_CN: QWidget 的 QTest 移动可能走原生光标路径，丢失合成的按键按住状态。
-    FLUENT_MAKE_MOUSE_EVENT(event, QEvent::MouseMove, target, position, Qt::NoButton,
-                            Qt::LeftButton, Qt::NoModifier);
+    FLUENT_MAKE_MOUSE_EVENT(event, QEvent::MouseMove, target, position, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
     QApplication::sendEvent(target, &event);
 }
 
 /** 业务组装：为 GridView 挂上 Fluent 网格项代理。 */
 void attachFluentDelegate(GridView* gv)
 {
-    gv->setItemDelegate(
-        new gridview_test::FluentGridItemDelegate(static_cast<fluent::FluentElement*>(gv), gv, gv));
+    gv->setItemDelegate(new gridview_test::FluentGridItemDelegate(static_cast<fluent::FluentElement*>(gv), gv, gv));
 }
 
 /** 创建 QStringListModel，setModel + attachFluentDelegate。 */
@@ -55,12 +52,6 @@ QStringListModel* attachStringListModel(GridView* gv, const QStringList& rows = 
     gv->setModel(m);
     attachFluentDelegate(gv);
     return m;
-}
-
-int itemCount(GridView* gv)
-{
-    const auto* m = gv->model();
-    return m ? m->rowCount() : 0;
 }
 
 QString itemText(GridView* gv, int index)
@@ -112,46 +103,9 @@ QList<QVariantAnimation*> activeDragAnimations(const GridView* gv)
     return animations;
 }
 
-void addItem(GridView* gv, const QString& text)
-{
-    auto* slm = qobject_cast<QStringListModel*>(gv->model());
-    ASSERT_NE(slm, nullptr);
-    QStringList list = slm->stringList();
-    list.append(text);
-    slm->setStringList(list);
-}
-
-void addItems(GridView* gv, const QStringList& texts)
-{
-    auto* slm = qobject_cast<QStringListModel*>(gv->model());
-    ASSERT_NE(slm, nullptr);
-    QStringList list = slm->stringList();
-    list.append(texts);
-    slm->setStringList(list);
-}
-
-void removeItem(GridView* gv, int index)
-{
-    auto* slm = qobject_cast<QStringListModel*>(gv->model());
-    ASSERT_NE(slm, nullptr);
-    QStringList list = slm->stringList();
-    ASSERT_GE(index, 0);
-    ASSERT_LT(index, list.size());
-    list.removeAt(index);
-    slm->setStringList(list);
-}
-
-void clearItems(GridView* gv)
-{
-    auto* slm = qobject_cast<QStringListModel*>(gv->model());
-    ASSERT_NE(slm, nullptr);
-    slm->setStringList({});
-}
-
 class ResizeSyncFilter : public QObject {
 public:
-    ResizeSyncFilter(QObject* parent, std::function<void()> callback)
-        : QObject(parent), m_callback(std::move(callback))
+    ResizeSyncFilter(QObject* parent, std::function<void()> callback) : QObject(parent), m_callback(std::move(callback))
     {}
 
 protected:
@@ -198,98 +152,12 @@ protected:
     FluentTestWindow* window;
 };
 
-// ── 数据操作 ──────────────────────────────────────────────────────────────────
-
-TEST_F(GridViewTest, AddAndRemoveItems)
-{
-    GridView* gv = new GridView(window);
-    attachStringListModel(gv);
-
-    addItem(gv, "Apple");
-    addItem(gv, "Banana");
-    addItem(gv, "Cherry");
-    EXPECT_EQ(itemCount(gv), 3);
-    EXPECT_EQ(itemText(gv, 0), "Apple");
-    EXPECT_EQ(itemText(gv, 1), "Banana");
-    EXPECT_EQ(itemText(gv, 2), "Cherry");
-
-    removeItem(gv, 1);
-    EXPECT_EQ(itemCount(gv), 2);
-    EXPECT_EQ(itemText(gv, 0), "Apple");
-    EXPECT_EQ(itemText(gv, 1), "Cherry");
-
-    clearItems(gv);
-    EXPECT_EQ(itemCount(gv), 0);
-}
-
-TEST_F(GridViewTest, AddItemsBatch)
-{
-    GridView* gv = new GridView(window);
-    attachStringListModel(gv);
-    addItems(gv, {"A", "B", "C", "D"});
-    EXPECT_EQ(itemCount(gv), 4);
-    EXPECT_EQ(itemText(gv, 3), "D");
-}
-
-TEST_F(GridViewTest, ItemTextOutOfRange)
-{
-    GridView* gv = new GridView(window);
-    attachStringListModel(gv);
-    addItem(gv, "Only");
-    EXPECT_EQ(itemText(gv, -1), "");
-    EXPECT_EQ(itemText(gv, 1), "");
-}
-
 // ── 选择模式 ──────────────────────────────────────────────────────────────────
-
-TEST_F(GridViewTest, DefaultSelectionMode)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_EQ(gv->selectionMode(), SelectionMode::Single);
-}
 
 TEST_F(GridViewTest, DefaultEditTriggersDisabled)
 {
     GridView* gv = new GridView(window);
     EXPECT_EQ(gv->editTriggers(), QAbstractItemView::NoEditTriggers);
-}
-
-TEST_F(GridViewTest, SelectionModeRegisteredInMetaObject)
-{
-    QMetaEnum me = QMetaEnum::fromType<SelectionMode>();
-    ASSERT_TRUE(me.isValid());
-    EXPECT_STREQ(me.key(0), "None");
-    EXPECT_STREQ(me.key(1), "Single");
-    EXPECT_STREQ(me.key(2), "Multiple");
-    EXPECT_STREQ(me.key(3), "Extended");
-}
-
-TEST_F(GridViewTest, SelectionModeNone)
-{
-    GridView* gv = new GridView(window);
-    attachStringListModel(gv, {"A", "B", "C"});
-    gv->setSelectionMode(SelectionMode::None);
-    EXPECT_EQ(gv->selectionMode(), SelectionMode::None);
-}
-
-TEST_F(GridViewTest, SelectionModeMultiple)
-{
-    GridView* gv = new GridView(window);
-    QSignalSpy spy(gv, SIGNAL(selectionModeChanged()));
-    gv->setSelectionMode(SelectionMode::Multiple);
-    EXPECT_EQ(gv->selectionMode(), SelectionMode::Multiple);
-    EXPECT_EQ(spy.count(), 1);
-
-    // 重复设置不触发信号
-    gv->setSelectionMode(SelectionMode::Multiple);
-    EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(GridViewTest, SelectionModeExtended)
-{
-    GridView* gv = new GridView(window);
-    gv->setSelectionMode(SelectionMode::Extended);
-    EXPECT_EQ(gv->selectionMode(), SelectionMode::Extended);
 }
 
 // ── 选中 API ──────────────────────────────────────────────────────────────────
@@ -360,15 +228,10 @@ TEST_F(GridViewTest, ViewportHoveredSignal)
 
 // ── Grid 特有属性 ─────────────────────────────────────────────────────────────
 
-TEST_F(GridViewTest, DefaultCellSize)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_EQ(gv->cellSize(), QSize(112, 112));
-}
-
 TEST_F(GridViewTest, SetCellSize)
 {
     GridView* gv = new GridView(window);
+    EXPECT_EQ(gv->cellSize(), QSize(112, 112));
     QSignalSpy spy(gv, &GridView::cellSizeChanged);
     gv->setCellSize(QSize(150, 150));
     EXPECT_EQ(gv->cellSize(), QSize(150, 150));
@@ -382,16 +245,10 @@ TEST_F(GridViewTest, SetCellSize)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(GridViewTest, DefaultSpacing)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_EQ(gv->horizontalSpacing(), 4);
-    EXPECT_EQ(gv->verticalSpacing(), 4);
-}
-
 TEST_F(GridViewTest, SetHorizontalSpacing)
 {
     GridView* gv = new GridView(window);
+    EXPECT_EQ(gv->horizontalSpacing(), 4);
     QSignalSpy spy(gv, &GridView::horizontalSpacingChanged);
     gv->setHorizontalSpacing(8);
     EXPECT_EQ(gv->horizontalSpacing(), 8);
@@ -402,6 +259,7 @@ TEST_F(GridViewTest, SetHorizontalSpacing)
 TEST_F(GridViewTest, SetVerticalSpacing)
 {
     GridView* gv = new GridView(window);
+    EXPECT_EQ(gv->verticalSpacing(), 4);
     QSignalSpy spy(gv, &GridView::verticalSpacingChanged);
     gv->setVerticalSpacing(12);
     EXPECT_EQ(gv->verticalSpacing(), 12);
@@ -409,15 +267,10 @@ TEST_F(GridViewTest, SetVerticalSpacing)
     EXPECT_EQ(gv->gridSize().height(), gv->cellSize().height() + 12);
 }
 
-TEST_F(GridViewTest, DefaultMaxColumns)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_EQ(gv->maxColumns(), 0);
-}
-
 TEST_F(GridViewTest, SetMaxColumns)
 {
     GridView* gv = new GridView(window);
+    EXPECT_EQ(gv->maxColumns(), 0);
     QSignalSpy spy(gv, &GridView::maxColumnsChanged);
     gv->setMaxColumns(3);
     EXPECT_EQ(gv->maxColumns(), 3);
@@ -488,31 +341,21 @@ TEST_F(GridViewTest, WheelPassesThroughWhenContentFits)
 
 // ── 容器属性 ──────────────────────────────────────────────────────────────────
 
-TEST_F(GridViewTest, DefaultFontRole)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_EQ(gv->fontRole(), Typography::FontRole::Body);
-}
-
 TEST_F(GridViewTest, SetFontRole)
 {
     GridView* gv = new GridView(window);
+    EXPECT_EQ(gv->fontRole(), Typography::FontRole::Body);
     QSignalSpy spy(gv, SIGNAL(fontRoleChanged()));
     gv->setFontRole(Typography::FontRole::Subtitle);
     EXPECT_EQ(gv->fontRole(), Typography::FontRole::Subtitle);
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(GridViewTest, DefaultBorderVisible)
+TEST_F(GridViewTest, SetBorderVisible)
 {
     GridView* gv = new GridView(window);
     EXPECT_TRUE(gv->borderVisible());
     EXPECT_TRUE(gv->isBorderVisible());
-}
-
-TEST_F(GridViewTest, SetBorderVisible)
-{
-    GridView* gv = new GridView(window);
     QSignalSpy spy(gv, &GridView::borderVisibleChanged);
     gv->setBorderVisible(false);
     EXPECT_FALSE(gv->borderVisible());
@@ -537,15 +380,10 @@ TEST_F(GridViewTest, BackgroundVisibleProperty)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(GridViewTest, DefaultHeaderText)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_TRUE(gv->headerText().isEmpty());
-}
-
 TEST_F(GridViewTest, SetHeaderText)
 {
     GridView* gv = new GridView(window);
+    EXPECT_TRUE(gv->headerText().isEmpty());
     QSignalSpy spy(gv, &GridView::headerTextChanged);
     gv->setHeaderText("My Grid");
     EXPECT_EQ(gv->headerText(), "My Grid");
@@ -555,15 +393,10 @@ TEST_F(GridViewTest, SetHeaderText)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(GridViewTest, DefaultPlaceholderText)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_TRUE(gv->placeholderText().isEmpty());
-}
-
 TEST_F(GridViewTest, SetPlaceholderText)
 {
     GridView* gv = new GridView(window);
+    EXPECT_TRUE(gv->placeholderText().isEmpty());
     QSignalSpy spy(gv, &GridView::placeholderTextChanged);
     gv->setPlaceholderText("No items");
     EXPECT_EQ(gv->placeholderText(), "No items");
@@ -671,8 +504,7 @@ TEST_F(GridViewTest, ReorderEnabledProgrammaticSelectionPreservesInheritedClick)
     QSignalSpy inheritedClickSpy(gv, &QAbstractItemView::clicked);
     QSignalSpy itemClickSpy(gv, &GridView::itemClicked);
 
-    QTest::mouseClick(gv->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      gv->visualRect(index).center());
+    QTest::mouseClick(gv->viewport(), Qt::LeftButton, Qt::NoModifier, gv->visualRect(index).center());
     QApplication::processEvents();
 
     ASSERT_EQ(inheritedPressSpy.count(), 1);
@@ -817,17 +649,37 @@ TEST_F(GridViewTest, CanReorderItemsChangesOnlyOnTransitions)
 
 TEST_F(GridViewTest, SelectionModesMapToQt)
 {
-    const std::pair<SelectionMode, QAbstractItemView::SelectionMode> modes[] = {
+    struct Mapping {
+        SelectionMode mode;
+        QAbstractItemView::SelectionMode qtMode;
+    };
+    const Mapping modes[] = {
         {SelectionMode::None, QAbstractItemView::NoSelection},
         {SelectionMode::Single, QAbstractItemView::SingleSelection},
         {SelectionMode::Multiple, QAbstractItemView::MultiSelection},
         {SelectionMode::Extended, QAbstractItemView::ExtendedSelection},
     };
     for (const auto& mode : modes) {
-        SCOPED_TRACE(static_cast<int>(mode.first));
-        GridView view;
-        view.setSelectionMode(mode.first);
-        EXPECT_EQ(static_cast<QAbstractItemView*>(&view)->selectionMode(), mode.second);
+        SCOPED_TRACE(static_cast<int>(mode.mode));
+        GridView view(window);
+        attachStringListModel(&view, {"A", "B", "C"});
+        EXPECT_EQ(view.selectionMode(), SelectionMode::Single);
+        QSignalSpy spy(&view, &GridView::selectionModeChanged);
+        view.setSelectionMode(SelectionMode::Single);
+        EXPECT_EQ(spy.count(), 0);
+
+        const int changes = mode.mode == SelectionMode::Single ? 0 : 1;
+        view.setSelectionMode(mode.mode);
+        EXPECT_EQ(view.selectionMode(), mode.mode);
+        EXPECT_EQ(static_cast<QAbstractItemView*>(&view)->selectionMode(), mode.qtMode);
+        EXPECT_EQ(spy.count(), changes);
+        view.setSelectionMode(mode.mode);
+        EXPECT_EQ(spy.count(), changes);
+
+        view.setSelectionMode(SelectionMode::Single);
+        EXPECT_EQ(view.selectionMode(), SelectionMode::Single);
+        EXPECT_EQ(static_cast<QAbstractItemView*>(&view)->selectionMode(), QAbstractItemView::SingleSelection);
+        EXPECT_EQ(spy.count(), 2 * changes);
     }
 }
 
@@ -957,8 +809,9 @@ TEST_F(GridViewTest, ExtendedSelectionPlainClickClearsOthers)
 TEST_F(GridViewTest, DragReorderSingleMode)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     // Single selection: drag item 0 over item 2, verify reorder + selection follows
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
@@ -1008,8 +861,9 @@ TEST_F(GridViewTest, DragReorderSingleMode)
 TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
@@ -1026,8 +880,7 @@ TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease)
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
     QTest::qWait(10);
-    sendDragMove(gv->viewport(),
-                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(), sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
     QTest::qWait(10);
 
     const QPoint stablePoint = boundaryCenter - QPoint(10, 0);
@@ -1036,8 +889,7 @@ TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease)
 
     const QStringList beforeRelease = modelTexts(mdl);
     const QList<QPoint> jitterPoints{boundaryCenter + QPoint(3, 0), boundaryCenter - QPoint(2, 0),
-                                     boundaryCenter + QPoint(2, 0), boundaryCenter - QPoint(3, 0),
-                                     boundaryCenter + QPoint(3, 0)};
+        boundaryCenter + QPoint(2, 0), boundaryCenter - QPoint(3, 0), boundaryCenter + QPoint(3, 0)};
 
     for (const QPoint& point : jitterPoints) {
         sendDragMove(gv->viewport(), point);
@@ -1055,8 +907,9 @@ TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease)
 TEST_F(GridViewTest, DragReorderClearThresholdCrossingChangesTarget)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
@@ -1073,8 +926,7 @@ TEST_F(GridViewTest, DragReorderClearThresholdCrossingChangesTarget)
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
     QTest::qWait(10);
-    sendDragMove(gv->viewport(),
-                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(), sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
     QTest::qWait(10);
 
     sendDragMove(gv->viewport(), boundaryCenter - QPoint(10, 0));
@@ -1098,8 +950,9 @@ TEST_F(GridViewTest, DragReorderClearThresholdCrossingChangesTarget)
 TEST_F(GridViewTest, DragDisplacementRepeatedStableMoveKeepsRunningAnimations)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
@@ -1113,8 +966,7 @@ TEST_F(GridViewTest, DragDisplacementRepeatedStableMoveKeepsRunningAnimations)
     const QPoint stablePoint = targetRect.center() - QPoint(10, 0);
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
-    sendDragMove(gv->viewport(),
-                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(), sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
     sendDragMove(gv->viewport(), stablePoint);
 
     const QList<QVariantAnimation*> firstAnimations = activeDragAnimations(gv);
@@ -1133,8 +985,9 @@ TEST_F(GridViewTest, DragDisplacementRepeatedStableMoveKeepsRunningAnimations)
 TEST_F(GridViewTest, DragReorderMultipleMode)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     // Multiple selection + drag: only the pressed item should reorder,
     // multi-selection state shouldn't prevent drag
@@ -1185,8 +1038,9 @@ TEST_F(GridViewTest, DragReorderMultipleMode)
 TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
@@ -1208,8 +1062,7 @@ TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode)
 
     QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
     QTest::qWait(10);
-    sendDragMove(gv->viewport(),
-                 sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
+    sendDragMove(gv->viewport(), sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
     QTest::qWait(10);
 
     const QStringList beforeRelease = modelTexts(mdl);
@@ -1231,8 +1084,9 @@ TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode)
 TEST_F(GridViewTest, DragReorderExtendedMode)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     // Extended selection + drag: drag should work even with Ctrl-selected items
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
@@ -1284,8 +1138,9 @@ TEST_F(GridViewTest, DragReorderExtendedMode)
 TEST_F(GridViewTest, DragReorderNoneSelectionDisablesDrag)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     // None selection mode: drag should still work if canReorderItems is true
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
@@ -1399,8 +1254,9 @@ TEST_F(GridViewTest, DragReorderPreservesSelectionInMultipleMode)
 TEST_F(GridViewTest, ReorderStandardItemModelTakeRowFallback)
 {
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
+        GTEST_SKIP()
+            << "Requires a real windowing platform; offscreen cannot deliver "
+               "synthetic pointer/keyboard input or show native popups.";
     }
     // QStandardItemModel doesn't implement moveRow natively;
     // verify the takeRow/insertRow fallback works

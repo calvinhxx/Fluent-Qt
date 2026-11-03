@@ -444,11 +444,10 @@ TEST_F(SelectorBarTest, MoreButtonOverflowRevealsTheKeyboardFocusedItem)
     selector->anchors()->left = {window, Edge::Left, 20};
     addAnchored(layout, selector);
     showAndProcess(*window);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     window->activateWindow();
     selector->setFocus();
-    QApplication::processEvents();
-    if (!selector->hasFocus())
-        GTEST_SKIP() << "The platform did not grant keyboard focus to the test window";
+    ASSERT_TRUE(QTest::qWaitFor([&] { return selector->hasFocus(); }, 2000));
 
     QTest::keyClick(selector, Qt::Key_End);
     QApplication::processEvents();
@@ -476,6 +475,7 @@ TEST_F(SelectorBarTest, Contract_AccessibilityMoreButtonKeepsNarrowFocusReachabl
             SelectorBarItem(QStringLiteral("Category %1 with a long title").arg(index), Typography::Icons::Folder));
     selector.setOverflowBehavior(SelectorBar::OverflowBehavior::MoreButton);
     selector.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&selector));
     selector.activateWindow();
 
     for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
@@ -485,8 +485,7 @@ TEST_F(SelectorBarTest, Contract_AccessibilityMoreButtonKeepsNarrowFocusReachabl
             selector.resize(width, 44);
             selector.setSelectedIndex(0);
             selector.setFocus();
-            QApplication::processEvents();
-            ASSERT_TRUE(selector.hasFocus());
+            ASSERT_TRUE(QTest::qWaitFor([&] { return selector.hasFocus(); }, 2000));
             QTest::keyClick(&selector, Qt::Key_End);
             QApplication::processEvents();
 
@@ -533,14 +532,14 @@ TEST_F(SelectorBarTest, Contract_KeyboardFocusCueDoesNotPersistForMouseInput)
     selector.addItem(SelectorBarItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
     selector.resize(520, 44);
     selector.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&selector));
     selector.activateWindow();
     for (const auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
         SCOPED_TRACE(::testing::Message() << "theme=" << theme);
         selector.setProperty("fluentThemeOverride", static_cast<int>(theme));
         selector.setSelectedIndex(0);
         selector.setFocus();
-        QApplication::processEvents();
-        ASSERT_TRUE(selector.hasFocus());
+        ASSERT_TRUE(QTest::qWaitFor([&] { return selector.hasFocus(); }, 2000));
         QTest::keyClick(&selector, Qt::Key_End);
         const QRect item = selector.itemGeometry(1);
         const auto border = [&]() {
@@ -568,10 +567,10 @@ TEST_F(SelectorBarTest, Contract_MoreButtonMouseRefocusInvokesTheVisibleItem)
     selector.setOverflowBehavior(SelectorBar::OverflowBehavior::MoreButton);
     selector.resize(selector.minimumSizeHint());
     selector.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&selector));
     selector.activateWindow();
     selector.setFocus();
-    QApplication::processEvents();
-    ASSERT_TRUE(selector.hasFocus());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return selector.hasFocus(); }, 2000));
     QTest::keyClick(&selector, Qt::Key_End);
     selector.clearFocus();
     QApplication::processEvents();
