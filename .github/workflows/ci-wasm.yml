@@ -14,7 +14,8 @@ permissions:
 jobs:
   build:
     name: Qt 6.9.3 / Emscripten 3.1.70 / ${{ inputs.mode }}
-    runs-on: ubuntu-latest
+    # Keep the host compatible with the pinned Playwright browser runtime.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       QT_VERSION: 6.9.3
