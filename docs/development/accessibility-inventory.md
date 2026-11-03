@@ -398,6 +398,10 @@ modality, dimming, and outside dismissal. A background counter verifies that
 visual effects and input blocking remain independent. `TestOverlayContract.cpp`
 runs the same interaction contract against all three components, and
 `TestGalleryOverlaySamples.cpp` checks their controls and full Gallery navigation.
+Backdrop capture preserves external effect shadows, including when only the
+shadow intersects the scrim. The shared snapshot adapter retains widget masks,
+geometry, visibility, effect state and focus; `OverlayScrimTest` covers these
+contracts without changing modal input routing or accessible widget bounds.
 Modal surfaces default to a subtle 4 px content blur unless explicitly configured;
 non-modal surfaces remain clear by default. High Contrast suppresses blur without
 weakening modal input containment.

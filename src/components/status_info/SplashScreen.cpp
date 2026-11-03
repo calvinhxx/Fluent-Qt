@@ -1,4 +1,5 @@
 #include "SplashScreen.h"
+#include "compatibility/PaintCompat.h"
 
 #include <QApplication>
 #include <QAccessibleWidget>
@@ -762,7 +763,7 @@ void SplashScreen::refreshBackgroundCache()
     m_backgroundCache = QPixmap(pixels);
     m_backgroundCache.setDevicePixelRatio(dpr);
     m_backgroundCache.fill(Qt::transparent);
-    QPainter painter(&m_backgroundCache);
+    FluentRasterCachePainter painter(&m_backgroundCache);
     const auto colors = themeColors();
     painter.fillRect(rect(), colors.bgCanvas);
     const qreal radius = qMax(width(), height()) * 0.65;
@@ -779,7 +780,7 @@ void SplashScreen::paintEvent(QPaintEvent* event)
     const bool lighting = branded && effectiveTheme() != HighContrast;
     if (lighting) {
         refreshBackgroundCache();
-        painter.drawPixmap(0, 0, m_backgroundCache);
+        fluentDrawPixmapAt(painter, QPointF(), m_backgroundCache);
         const qreal illumination = qSin(qBound<qreal>(0.0, m_reveal, 1.0) * M_PI);
         paintGlow(painter, m_iconRect.center() + QPointF((m_reveal - 0.5) * 120, 0), qMax(m_iconRect.width() * 2, 1),
             colors.accentDefault, illumination * 0.12);

@@ -7,6 +7,7 @@
 #include <QRectF>
 #include <QRegion>
 #include <QTransform>
+#include "compatibility/private/NativePaintDeviceCompat_p.h"
 
 namespace compatibility::detail {
 
@@ -21,14 +22,17 @@ namespace compatibility::detail {
 // 截图或带变换的绘制无法可靠换算，返回空区域，调用方按整块失效处理。
 inline QRegion graphicsEffectDirtyRegion(const QPainter* painter, const QPaintDevice* backingStoreDevice)
 {
-    if (!painter || !painter->isActive() || !backingStoreDevice || painter->device() != backingStoreDevice)
+    if (!painter || !painter->isActive())
+        return {};
+    const QPaintDevice* paintDevice = painter->device();
+    if (!paintDevice || (paintDevice != backingStoreDevice && paintDevice != nativeRasterDevice))
         return {};
     const QPaintEngine* engine = painter->paintEngine();
     const QTransform world = painter->worldTransform();
     if (!engine || world.type() > QTransform::TxTranslate)
         return {};
     const QRegion device = engine->systemClip();
-    const qreal dpr = backingStoreDevice->devicePixelRatioF();
+    const qreal dpr = paintDevice->devicePixelRatioF();
     if (device.isEmpty() || !(dpr > 0))
         return {};
     const QPointF offset(world.dx(), world.dy());

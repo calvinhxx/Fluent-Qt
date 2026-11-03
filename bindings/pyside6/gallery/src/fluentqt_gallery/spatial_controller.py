@@ -34,7 +34,9 @@ from PySide6.QtWidgets import (
 )
 from shiboken6 import VoidPtr, invalidate, isValid
 
-from fluentqt._qt_painting import region_rects
+from fluentqt._qt_painting import (
+    apply_render_target_scale, draw_pixmap_at, region_rects, set_render_target_device_pixel_ratio,
+)
 
 from .settings import gallery_settings
 from .glyph_paint_device import (
@@ -452,7 +454,7 @@ class _RhiSurface(_native_fluent._SpatialTextureHost):
 
     def paintLayer(self, painter, index, region):
         if index == 0:
-            painter.drawPixmap(QPointF(), self.owner.backdrop)
+            draw_pixmap_at(painter, QPointF(), self.owner.backdrop)
         else:
             nav = index == 2
             origin = QPoint() if nav else self.owner.panels[1][0].topLeft().toPoint()
@@ -977,11 +979,12 @@ class _Surface(QOpenGLWidget):
             gl.glClear(0x4000 | 0x0400)
             gl.glDisable(0x0C11)
             device = QOpenGLPaintDevice(QSize(paint_width, paint_rows))
-            device.setDevicePixelRatio(paint_dpr)
+            set_render_target_device_pixel_ratio(device, paint_dpr)
             glyph_device = GlyphPaintDevice(device, self.devicePixelRatioF(),
                                             QPointF(0, paint_top / paint_dpr), self.glyph_cache)
             painter = QPainter(glyph_device if needs_native_glyph_coverage(self.devicePixelRatioF())
                                else device)
+            apply_render_target_scale(painter, paint_dpr)
             painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
             strip = QRectF(0, paint_top / paint_dpr, rect.width(), paint_rows / paint_dpr)
             painter.setClipRect(QRectF(0, 0, rect.width(), paint_rows / paint_dpr))
@@ -1926,9 +1929,10 @@ class GallerySpatialController(QObject):
             if self.window.backdropState().surfaceMode != fluentqt.BackdropSurfaceMode.CompositedTransparent:
                 dpr = self.window.devicePixelRatioF()
                 self.backdrop = QPixmap(bounds.size() * dpr)
-                self.backdrop.setDevicePixelRatio(dpr)
+                set_render_target_device_pixel_ratio(self.backdrop, dpr)
                 self.backdrop.fill(Qt.transparent)
                 painter = QPainter(self.backdrop)
+                apply_render_target_scale(painter, dpr)
                 painter.translate(-bounds.topLeft())
                 # The backdrop excludes both panels; rendering it is not a panel change.
                 captures = [capture for capture in (self.capture, self.content_capture)
@@ -1942,6 +1946,7 @@ class GallerySpatialController(QObject):
                     for capture, composing in zip(captures, previous):
                         capture.composing = composing
                 painter.end()
+                self.backdrop.setDevicePixelRatio(dpr)
 
     @Slot()
     def sync(self):

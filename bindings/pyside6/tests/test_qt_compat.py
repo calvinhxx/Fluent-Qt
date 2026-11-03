@@ -6,8 +6,8 @@ import threading
 import unittest
 from unittest.mock import Mock, patch
 
-from PySide6.QtCore import QEvent, QObject, QPointF, QRect, QTimer
-from PySide6.QtGui import QFont, QImage, QPaintDevice, QRegion
+from PySide6.QtCore import QEvent, QObject, QPointF, QRect, QTimer, Qt
+from PySide6.QtGui import QColor, QFont, QImage, QPaintDevice, QPainter, QPixmap, QRegion
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from shiboken6 import isValid
@@ -18,6 +18,8 @@ from fluentqt._qt_events import is_display_scale_change_event
 from fluentqt._qt_painting import (
     device_pixel_ratio_metric, font_style_strategy, forward_paint_array, region_rects,
     image_device_pixel_ratio,
+    apply_render_target_scale, set_render_target_device_pixel_ratio,
+    draw_image_at, draw_pixmap_at,
 )
 from fluentqt._qt_widgets import application_is_saving_session
 from fluentqt import _qt_widgets
@@ -274,6 +276,10 @@ class QtWidgetFactoryCompatTest(unittest.TestCase):
 
 
 class QtAdapterCompatTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
     def test_system_color_scheme_handles_missing_and_unknown_apis(self):
         scheme = SimpleNamespace(Dark=1, Light=2, Unknown=0)
         for qt, hints, expected in (
@@ -334,6 +340,32 @@ class QtAdapterCompatTest(unittest.TestCase):
         self.assertFalse(is_display_scale_change_event(None))
         for event_type in expected | {QEvent.Resize, QEvent.Move, QEvent.User}:
             self.assertEqual(is_display_scale_change_event(QEvent(event_type)), event_type in expected)
+
+    def test_half_dpr_bitmaps_fill_their_logical_extent(self):
+        source = QImage(40, 30, QImage.Format_ARGB32_Premultiplied)
+        source.fill(Qt.blue)
+        source.setDevicePixelRatio(0.5)
+        for bitmap, draw in ((source, draw_image_at), (QPixmap.fromImage(source), draw_pixmap_at)):
+            result = QImage(90, 70, QImage.Format_ARGB32_Premultiplied)
+            result.fill(Qt.white)
+            painter = QPainter(result)
+            draw(painter, QPointF(3, 5), bitmap)
+            painter.end()
+            self.assertEqual(result.pixelColor(81, 63), QColor(Qt.blue))
+            self.assertEqual(result.pixelColor(84, 66), QColor(Qt.white))
+
+    def test_explicit_render_target_preserves_half_dpr_geometry(self):
+        for dpr in (0.5, 0.67, 1.0, 1.25):
+            with self.subTest(dpr=dpr):
+                image = QImage(round(80 * dpr), round(60 * dpr), QImage.Format_ARGB32_Premultiplied)
+                image.fill(Qt.white)
+                set_render_target_device_pixel_ratio(image, dpr)
+                painter = QPainter(image)
+                apply_render_target_scale(painter, dpr)
+                painter.fillRect(QRect(20, 10, 20, 20), Qt.red)
+                painter.end()
+                self.assertEqual(image.pixelColor(round(30 * dpr), round(20 * dpr)), QColor(Qt.red))
+                self.assertEqual(image.pixelColor(round(50 * dpr), round(20 * dpr)), QColor(Qt.white))
 
     def test_dpr_rounding_matches_qt_including_half_values(self):
         scale = QPaintDevice.devicePixelRatioFScale()

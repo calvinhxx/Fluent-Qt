@@ -1,4 +1,5 @@
 #include "GalleryEntryGrid.h"
+#include "compatibility/PaintCompat.h"
 
 #include <QFont>
 #include <QFontMetrics>
@@ -371,7 +372,7 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
                 m_hoverFrame = QPixmap(pixels);
                 m_hoverFrame.setDevicePixelRatio(dpr);
                 m_hoverFrame.fill(Qt::transparent);
-                QPainter cached(&m_hoverFrame);
+                FluentRasterCachePainter cached(&m_hoverFrame);
                 cached.setRenderHint(QPainter::Antialiasing);
                 cached.setRenderHint(QPainter::TextAntialiasing);
                 paintEntry(cached, index, QRect(QPoint(6, 6), bounds.size() - QSize(12, 12)), true);
@@ -379,7 +380,7 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
             }
             painter.save();
             painter.setTransform(cardTransform(index));
-            painter.drawPixmap(bounds.topLeft(), m_hoverFrame);
+            fluentDrawPixmapAt(painter, bounds.topLeft(), m_hoverFrame);
             painter.restore();
         } else {
             paintEntry(painter, index, body, index == m_hoveredIndex);

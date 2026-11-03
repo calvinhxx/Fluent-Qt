@@ -1,3 +1,4 @@
+#include "compatibility/PaintCompat.h"
 #include "GalleryParticleCompositor.h"
 
 #ifdef FLUENT_QT_HAS_SPATIAL
@@ -549,12 +550,13 @@ unsigned int GalleryParticleCompositor::compose(unsigned int base,
             gl->glClearColor(0, 0, 0, 0);
             gl->glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
             QOpenGLPaintDevice device(QSize(pixels.width(), paintHeight));
-            device.setDevicePixelRatio(d->cacheDpr);
+            fluentSetRenderTargetDevicePixelRatio(device, d->cacheDpr);
             const QPointF origin = layer.clip.topLeft() + QPointF(0, paintTop / d->cacheDpr);
             GalleryGlyphPaintDevice glyphDevice(device, d->nativeDpr, origin);
             QPaintDevice* target =
                 needsNativeGlyphCoverage(d->nativeDpr) ? static_cast<QPaintDevice*>(&glyphDevice) : &device;
             QPainter painter(target);
+            fluentApplyRenderTargetScale(painter, d->cacheDpr);
             painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
             painter.translate(-origin);
             const QRectF strip(origin, QSizeF(layer.clip.width(), paintHeight / d->cacheDpr));

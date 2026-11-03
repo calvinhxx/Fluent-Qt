@@ -330,8 +330,9 @@ private:
         FontIcon icon(glyph, this);
         icon.setIconSize(size);
         icon.resize(size, size);
-        QPixmap pixmap(QSize(size, size) * devicePixelRatioF());
-        pixmap.setDevicePixelRatio(devicePixelRatioF());
+        const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
+        QPixmap pixmap(QSize(size, size) * dpr);
+        pixmap.setDevicePixelRatio(dpr);
         pixmap.fill(Qt::transparent);
         icon.render(&pixmap, QPoint(), QRegion(), QWidget::DrawChildren);
         return QIcon(pixmap);

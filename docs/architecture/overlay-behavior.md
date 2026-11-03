@@ -314,7 +314,15 @@ Opening establishes the content → scrim → surface stacking order before capt
 including when a cached surface predates a newly raised 3D compositor.
 The snapshot includes widgets below the current surface, including an underlying
 overlay when stacked. It excludes the active surface and its scrim without hiding
-widgets or disturbing focus. Capture and filtering happen on opening, resize,
+widgets or disturbing focus. Effect-bearing widget subtrees are captured in their
+own coordinates before composition, so a lower dialog stays in place and retains
+its current fade opacity. Capture bounds include effects extending beyond a root
+widget, intersected with the scrim's visible area. If only an effect is visible,
+capture includes the nearest source pixel required by Qt and clips that extra
+area away during composition. Explicit widget masks remain in force, and the
+retained blur image stays downsampled.
+
+Capture and filtering happen on opening, resize,
 theme or radius changes, and an explicit `refreshBackdrop()` call. Content is
 frozen between those updates; applications with changing background content
 can refresh explicitly. This is content blur, not desktop/compositor blur.

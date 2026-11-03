@@ -2,6 +2,7 @@
 #include <FluentQt/FluentQt.h>
 #include <QAccessible>
 #include <QApplication>
+#include <QElapsedTimer>
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QGraphicsProxyWidget>
@@ -153,6 +154,22 @@ TEST_F(SpatialViewTest, Contract_GraphicsEffectDirtyRegionReportsBackingStoreDam
     ASSERT_FALSE(recorder->regions.isEmpty());
     EXPECT_TRUE(recorder->regions.last().isEmpty());
     EXPECT_TRUE(compatibility::detail::graphicsEffectDirtyRegion(nullptr, nullptr).isEmpty());
+}
+
+TEST_F(SpatialViewTest, Contract_NormalizedNativeTileKeepsDamageSeparateFromSnapshots)
+{
+    QImage tile(160, 100, QImage::Format_ARGB32_Premultiplied);
+    QImage backing(80, 50, QImage::Format_ARGB32_Premultiplied);
+    backing.setDevicePixelRatio(0.5);
+    QPainter painter(&tile);
+    painter.translate(-30, -20);
+    painter.paintEngine()->setSystemClip(QRect(10, 12, 40, 20));
+    EXPECT_TRUE(compatibility::detail::graphicsEffectDirtyRegion(&painter, &backing).isEmpty());
+    {
+        compatibility::detail::ScopedNativeRasterDevice nativePass(&tile);
+        EXPECT_EQ(compatibility::detail::graphicsEffectDirtyRegion(&painter, &backing), QRegion(QRect(40, 32, 40, 20)));
+    }
+    EXPECT_TRUE(compatibility::detail::graphicsEffectDirtyRegion(&painter, &backing).isEmpty());
 }
 
 TEST_F(SpatialViewTest, Contract_InheritsHostThemeAndRestoresCallerOverridesOnRelease)
@@ -331,10 +348,16 @@ TEST_F(SpatialViewTest, Contract_NativeRevealRestoresTheWholeCanvasWithoutIdleRe
                 EXPECT_EQ(actual.pixelColor(actual.width() / 2, y), background);
             EXPECT_EQ(actual.pixelColor(actual.width() / 2, actual.height() / 2), card->themeColors().bgLayer);
         }
-        QTest::qWait(200);
         auto* gl = view->findChild<QOpenGLWidget*>();
         ASSERT_NE(gl, nullptr);
         QSignalSpy frames(gl, &QOpenGLWidget::frameSwapped);
+        QElapsedTimer quiet;
+        quiet.start();
+        const auto activity = QObject::connect(gl, &QOpenGLWidget::frameSwapped, gl, [&quiet] { quiet.restart(); });
+        const bool settled = QTest::qWaitFor([&] { return quiet.elapsed() >= 200; }, 2000);
+        QObject::disconnect(activity);
+        ASSERT_TRUE(settled) << "Exposure recovery must settle instead of continuously repainting";
+        frames.clear();
         QTest::qWait(120);
         EXPECT_EQ(frames.count(), 0) << "Exposure recovery must not start an idle repaint loop";
     }

@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/PaintCompat.h"
 #include "compatibility/WidgetCompat.h"
 #include "TreeView.h"
 #include <QAbstractItemModel>
@@ -769,7 +770,7 @@ void TreeView::paintEvent(QPaintEvent* event)
         constexpr int kOffsetX = 8;
         constexpr int kOffsetY = 4;
         QPoint pixPos(m_dragCurrentPos.x() + kOffsetX, m_dragCurrentPos.y() - pixH / 2 + kOffsetY);
-        fp.drawPixmap(pixPos, m_dragPixmap);
+        fluentDrawPixmapAt(fp, pixPos, m_dragPixmap);
         fp.end();
     }
 
@@ -1093,7 +1094,7 @@ QPixmap TreeView::renderRowPixmap(const QModelIndex& index) const
     pix.setDevicePixelRatio(dpr);
     pix.fill(Qt::transparent);
 
-    QPainter p(&pix);
+    FluentRasterCachePainter p(&pix);
     p.setRenderHint(QPainter::Antialiasing);
     QStyleOptionViewItem opt;
     FLUENT_INIT_VIEW_ITEM_OPTION(&opt);

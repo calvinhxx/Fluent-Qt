@@ -554,13 +554,13 @@ void Button::paintButton(InteractionState state)
         const qreal dpr = pix.devicePixelRatio();
         const QSizeF logicalSize(pix.width() / dpr, pix.height() / dpr);
         if (qFuzzyIsNull(m_iconRotation)) {
-            painter.drawPixmap(QPointF(x, y), pix);
+            fluentDrawPixmapAt(painter, QPointF(x, y), pix);
             return;
         }
         painter.save();
         painter.translate(QPointF(x, y) + QPointF(logicalSize.width() / 2.0, logicalSize.height() / 2.0));
         painter.rotate(m_iconRotation);
-        painter.drawPixmap(QPointF(-logicalSize.width() / 2.0, -logicalSize.height() / 2.0), pix);
+        fluentDrawPixmapAt(painter, QPointF(-logicalSize.width() / 2.0, -logicalSize.height() / 2.0), pix);
         painter.restore();
     };
 

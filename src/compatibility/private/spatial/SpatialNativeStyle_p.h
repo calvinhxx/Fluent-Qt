@@ -1,6 +1,8 @@
 #ifndef FLUENTQT_SPATIALNATIVESTYLE_P_H
 #define FLUENTQT_SPATIALNATIVESTYLE_P_H
 
+#include "compatibility/PaintCompat.h"
+
 #include <QApplication>
 #include <QFrame>
 #include <QImage>
@@ -122,13 +124,13 @@ private:
         image.fill(Qt::transparent);
         if (qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK"))
             qApp->style()->setProperty("galleryLastNativeRasterPixels", qint64(image.width()) * image.height());
-        QPainter native(&image);
+        FluentRasterCachePainter native(&image);
         native.setFont(painter->font());
         native.setPen(painter->pen());
         native.setRenderHints(painter->renderHints());
         paint(option, &native);
         native.end();
-        painter->drawImage(bounds.topLeft(), image);
+        fluentDrawImageAt(*painter, bounds.topLeft(), image);
     }
 };
 
