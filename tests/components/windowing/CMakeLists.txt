@@ -74,6 +74,8 @@ if(WIN32)
     configure_native_window_desktop_test(
         WindowsWindowBackdropTest.HiddenPreparedWindowKeepsRequestedGeometryDuringChromeConfiguration windows)
     configure_native_window_desktop_test(
+        WindowsWindowGeometryTest.FirstShowKeepsRequestedClientSizeAndLaterSystemSizes windows)
+    configure_native_window_desktop_test(
         WindowsWindowBackdropTest.EffectChangesPreserveNativeWindowWithoutActivationCompensation windows)
     configure_native_window_desktop_test(
         WindowsWindowBackdropTest.StateChangesDoNotRepeatActivationCompensation windows)

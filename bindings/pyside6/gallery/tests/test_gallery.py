@@ -13,6 +13,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import traceback
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import uuid
@@ -1422,7 +1423,7 @@ with patch.object(settings_module, 'config_file_path', return_value=Path(sys.arg
         editor.focus_outs = 0
         for command in (controller.reset_zoom, controller.zoom_in, controller.zoom_out):
             command()
-            QTest.qWait(30)
+            _qwait(30)
             self.assertIs(QApplication.focusWidget(), editor)
             self.assertEqual(editor.focus_outs, 0)
             self.assertEqual(finished.count(), 0)
@@ -1431,6 +1432,31 @@ with patch.object(settings_module, 'config_file_path', return_value=Path(sys.arg
         self.assertEqual(editor.text(), "unfinished value")
         self.assertEqual(editor.focus_outs, 0)
         self.assertEqual(finished.count(), 0)
+
+    def test_interface_zoom_uses_legacy_accessibility_announcement(self):
+        from fluentqt import _qt_widgets
+        from fluentqt_gallery.interface_zoom_controller import GalleryInterfaceZoomController
+
+        settings = gallery_settings_module.gallery_settings()
+        saved_percent = settings.interface_zoom_percent
+        self.addCleanup(lambda: settings.set_interface_zoom_percent(saved_percent))
+        settings.set_interface_zoom_percent(DEFAULT_PERCENT)
+        window = QWidget()
+        self.addCleanup(window.deleteLater)
+        self.addCleanup(window.close)
+        controller = GalleryInterfaceZoomController(window, settings)
+        window.show()
+        self.assertTrue(QTest.qWaitForWindowExposed(window))
+
+        # A zoom command must still notify assistive technology on Qt versions
+        # without AnnouncementEvent. The shared adapter owns that fallback.
+        with patch.object(_qt_widgets, "_QtGui", SimpleNamespace()), \
+                patch.object(_qt_widgets.QAccessible, "updateAccessibility") as announce:
+            controller.reset_zoom()
+            announce.assert_called_once()
+            event = announce.call_args.args[0]
+            self.assertEqual(event.type(), _qt_widgets.QAccessible.Event.Alert)
+            self.assertIs(event.object(), controller._bubble)
 
     def test_interface_zoom_bubble_follows_limits(self):
         self.assertTrue(supports_live_interface_zoom(),
@@ -1538,6 +1564,40 @@ with patch.object(settings_module, 'config_file_path', return_value=Path(sys.arg
             apply_interface_zoom(1.0)
             settings._system_theme_poll.stop()
             delete_qobject(settings)
+
+    def test_zoomed_minimized_and_fullscreen_window_saves_scaled_restore_geometry(self):
+        from fluentqt_gallery.window_placement import GalleryWindowPlacement
+        self.assertTrue(supports_live_interface_zoom())
+        for state in (Qt.WindowMinimized, Qt.WindowFullScreen):
+            with self.subTest(state=state):
+                settings = gallery_settings_module.GallerySettings()
+                window = fluentqt.Window()
+                placement = GalleryWindowPlacement(window, settings, window)
+                try:
+                    self.assertTrue(apply_interface_zoom(1.0))
+                    window.resize(700, 600)
+                    window.show()
+                    self.assertTrue(QTest.qWaitForWindowExposed(window))
+                    _qwait(30)
+                    normal_size = window.size()
+                    window.setWindowState(state)
+                    self.assertTrue(_wait_until(lambda: bool(window.windowState() & state)))
+                    self.assertTrue(apply_interface_zoom(2.0))
+                    _qwait(30)
+                    placement.save_now()
+                    self.assertEqual(settings.window_normal_geometry.size(), normal_size / 2)
+                    self.assertEqual(settings.window_geometry_zoom_percent, 200)
+                    self.assertFalse(settings.window_maximized)
+                    window.showNormal()
+                    self.assertTrue(_wait_until(lambda: window.windowState() == Qt.WindowNoState))
+                    _qwait(60)
+                    self.assertEqual(window.size(), normal_size / 2)
+                finally:
+                    window.close()
+                    delete_qobject(window)
+                    apply_interface_zoom(1.0)
+                    settings._system_theme_poll.stop()
+                    delete_qobject(settings)
 
     def test_window_commands_are_listed_with_their_shortcuts(self):
         window = GalleryWindow(startup_visuals=False)

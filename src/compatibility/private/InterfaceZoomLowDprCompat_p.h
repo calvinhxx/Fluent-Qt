@@ -22,10 +22,12 @@ namespace compatibility::detail {
 namespace {
 
 struct ZoomEffectCacheTag {
-    friend auto zoomRepaintMember(ZoomEffectCacheTag);
+    using Type = QPixmapCache::Key QGraphicsEffectSourcePrivate::*;
+    friend Type zoomRepaintMember(ZoomEffectCacheTag);
 };
 struct ZoomFlushRegionTag {
-    friend auto zoomRepaintMember(ZoomFlushRegionTag);
+    using Type = QRegion QWidgetRepaintManager::*;
+    friend Type zoomRepaintMember(ZoomFlushRegionTag);
 };
 template struct ZoomRepaintMember<ZoomEffectCacheTag, &QGraphicsEffectSourcePrivate::m_cacheKey>;
 template struct ZoomRepaintMember<ZoomFlushRegionTag, &QWidgetRepaintManager::topLevelNeedsFlush>;

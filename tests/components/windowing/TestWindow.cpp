@@ -649,17 +649,22 @@ TEST_F(WindowTest, HiddenWindowShownMaximizedStaysMaximizedAndRestoresItsSize)
 {
     Window window;
     const QRect available = QGuiApplication::primaryScreen()->availableGeometry();
-    window.resize(640, 520);
-    window.move(available.center() - QPoint(window.width() / 2, window.height() / 2));
-    const QSize normalSize = window.size();
-    // macOS Stage Manager fits a window ordered in already zoomed into its stage.
-    window.showMaximized();
-    ASSERT_TRUE(window.isVisible());
-    EXPECT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 2000));
-
-    window.showNormal();
-    EXPECT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized() && window.size() == normalSize; }, 2000))
-        << "restored size " << window.width() << "x" << window.height();
+    for (const QSize normalSize : {QSize(640, 520), QSize(720, 560)}) {
+        window.hide();
+        window.resize(normalSize);
+        window.move(available.center() - QPoint(window.width() / 2, window.height() / 2));
+        for (int cycle = 0; cycle < 3; ++cycle) {
+            SCOPED_TRACE(::testing::Message()
+                << "cycle=" << cycle << " size=" << normalSize.width() << "x" << normalSize.height());
+            window.hide();
+            window.showMaximized();
+            ASSERT_TRUE(window.isVisible());
+            EXPECT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 2000));
+            window.showNormal();
+            EXPECT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized() && window.size() == normalSize; }, 2000))
+                << "restored size " << window.width() << "x" << window.height();
+        }
+    }
     window.close();
 }
 
@@ -1408,6 +1413,12 @@ TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsDriveWindowSlots)
 
     minimizeButton->click();
     EXPECT_EQ(minimizeSpy.count(), 1);
+    // A native minimize hands the foreground to another application. Restore it,
+    // so later native tests do not start behind that application's window.
+    // zh_CN: 原生最小化会把前台交给其他应用；恢复后再结束，避免后续原生测试的窗口落在其后。
+    window.showNormal();
+    window.activateWindow();
+    static_cast<void>(QTest::qWaitForWindowActive(&window, 1000));
 
     closeButton->click();
     EXPECT_EQ(closeSpy.count(), 1);

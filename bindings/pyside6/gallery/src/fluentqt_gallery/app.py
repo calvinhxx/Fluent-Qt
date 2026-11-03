@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 
 import fluentqt
+from fluentqt._qt_widgets import prepare_window_normal_geometry
 from PySide6.QtCore import (
     QCoreApplication,
     QElapsedTimer,
@@ -471,9 +472,12 @@ def main(argv: list[str] | None = None) -> int:
     failures = runtime_catalog_errors()
     visited_routes = 0
 
-    window.show()
     if restore_maximized and args.window_size is None:
-        window.showMaximized()
+        # Match the C++ Gallery: map the first frame maximized, retaining the
+        # restored placement as the normal geometry instead of flashing it.
+        prepare_window_normal_geometry(window, window.geometry())
+        window.setWindowState(window.windowState() | Qt.WindowState.WindowMaximized)
+    window.show()
 
     try:
         window.navigate(route, record_history=route != "home")

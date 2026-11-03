@@ -38,6 +38,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/compatibility/TextPaintCompat.h
     src/compatibility/WindowBackdropTypes.h
     src/compatibility/WindowChromeCompat.h
+    src/compatibility/WindowGeometryCompat.h
 
     src/components/basicinput/Button.h
     src/components/basicinput/CheckBox.h

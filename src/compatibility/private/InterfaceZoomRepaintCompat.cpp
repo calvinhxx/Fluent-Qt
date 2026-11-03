@@ -71,8 +71,12 @@ protected:
                 return false;
             // Preserve captures performed by GPU renderers during the same sync.
             // zh_CN: 保留 GPU 渲染器在同次同步中的离屏抓图。
-            if (root == m_nativePass)
-                return !QWidgetPrivate::get(widget)->renderToTexture;
+            if (root == m_nativePass) {
+                if (QWidgetPrivate::get(widget)->renderToTexture)
+                    return false;
+                restorePresentedPixels(widget, root, static_cast<QPaintEvent*>(event)->region());
+                return true;
+            }
             // Qt's compositor unlock callback can sync without UpdateRequest.
             // Repair that native damage once; texture-only frames have no raster device.
             // zh_CN: Qt 合成器解锁可绕过 UpdateRequest 直接同步；单次修复该原生区域，纯纹理帧没有位图目标。
@@ -128,6 +132,13 @@ protected:
                 QScopedValueRollback<bool> handling(m_handling, true);
                 QPointer<QWidget> alive(widget);
                 {
+                    // Qt clears an alpha backing store before painting and flushes
+                    // after it. This pass skips raster painting, so its flush would
+                    // present a transparent hole until the tile below; on Windows the
+                    // whole window can vanish for a frame. Keep the presented pixels.
+                    // zh_CN: Qt 会先把带 alpha 的后备缓冲清为透明、绘制后再提交。此轮跳过位图绘制，
+                    // 提交的透明空洞会一直显示到下面的图块完成，Windows 上整窗可能闪失一帧；保留已显示的像素。
+                    QScopedValueRollback<QImage> presented(m_presented, presentedPixels(widget, aligned));
                     QScopedValueRollback<QPointer<QWidget>> nativePass(m_nativePass, widget);
                     QCoreApplication::sendEvent(watched, event);
                 }
@@ -142,6 +153,46 @@ protected:
     }
 
 private:
+    static QRect pixelBounds(const QRect& logical, qreal dpr)
+    {
+        return QRectF(QPointF(logical.topLeft()) * dpr, QSizeF(logical.size()) * dpr).toAlignedRect();
+    }
+
+    static QImage presentedPixels(QWidget* window, const QRegion& region)
+    {
+        // A deep copy only: Qt paints into the platform image after this returns.
+        // zh_CN: 仅做深拷贝；返回后 Qt 会继续绘制平台图像。
+        auto* platform = window->backingStore()->handle();
+        const QImage image = platform ? platform->toImage() : QImage();
+        if (image.isNull())
+            return {};
+        const QRect pixels = pixelBounds(region.boundingRect(), window->devicePixelRatioF()).adjusted(-1, -1, 1, 1)
+            & image.rect();
+        QImage copy = image.copy(pixels);
+        copy.setOffset(pixels.topLeft());
+        return copy;
+    }
+
+    void restorePresentedPixels(QWidget* widget, QWidget* root, const QRegion& region) const
+    {
+        QPoint offset;
+        auto* device = QWidgetPrivate::get(widget)->redirected(&offset);
+        if (m_presented.isNull() || !device || device->devType() != QInternal::Image)
+            return;
+        auto* native = static_cast<QImage*>(device);
+        const qreal dpr = root->devicePixelRatioF();
+        QRegion clip;
+        for (const QRect& rect : region.translated(widget->mapTo(root, QPoint())))
+            clip += pixelBounds(rect, dpr);
+        // Pixel coordinates over the borrowed buffer, as in repaintLowDprRegion.
+        // zh_CN: 与 repaintLowDprRegion 相同，以像素坐标视图借用原生缓冲区。
+        QImage pixels(native->bits(), native->width(), native->height(), native->bytesPerLine(), native->format());
+        QPainter painter(&pixels);
+        painter.setClipRegion(clip);
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.drawImage(m_presented.offset(), m_presented);
+    }
+
     bool isNativeRasterPaint(QWidget* widget) const
     {
         QPoint offset;
@@ -202,6 +253,7 @@ private:
 
     bool m_handling = false;
     QPointer<QWidget> m_nativePass;
+    QImage m_presented;
     QSet<QWidget*> m_lowDprWindows;
     QSet<QWidget*> m_watchedWindows;
     QHash<QWidget*, QRegion> m_repairs;

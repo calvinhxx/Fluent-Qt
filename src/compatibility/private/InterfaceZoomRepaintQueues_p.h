@@ -11,21 +11,27 @@ namespace {
 // Qt 5.15/6.2 have no pending-damage getters; newer getters still omit the GPU
 // queue. Explicit instantiation permits naming private members ([temp.explicit]).
 // Use typed pointers from the matching header, never a copied layout or offsets.
-// Only read the queues; Qt remains responsible for consuming and clearing them.
+// Qt remains responsible for consuming and clearing the queues.
 // zh_CN: Qt 5.15/6.2 没有待绘区域访问器，新版访问器仍缺少 GPU 队列。
 // 显式实例化允许引用私有成员；使用匹配头文件的成员指针，不复制布局或硬编码偏移。
-// 队列只读，由 Qt 消费和清理。
+// 队列仍由 Qt 消费和清理。
 struct ZoomRasterRegionTag {
-    friend auto zoomRepaintMember(ZoomRasterRegionTag);
+    using Type = QRegion QWidgetRepaintManager::*;
+    friend Type zoomRepaintMember(ZoomRasterRegionTag);
 };
 struct ZoomRasterWidgetsTag {
-    friend auto zoomRepaintMember(ZoomRasterWidgetsTag);
+    using Type = QVector<QWidget*> QWidgetRepaintManager::*;
+    friend Type zoomRepaintMember(ZoomRasterWidgetsTag);
 };
 struct ZoomTextureWidgetsTag {
-    friend auto zoomRepaintMember(ZoomTextureWidgetsTag);
+    using Type = QVector<QWidget*> QWidgetRepaintManager::*;
+    friend Type zoomRepaintMember(ZoomTextureWidgetsTag);
 };
-template <class Tag, auto Member> struct ZoomRepaintMember {
-    friend auto zoomRepaintMember(Tag) { return Member; }
+// An explicit return type also works with MSVC's hidden-friend lookup. QVector
+// names the Qt 5 container and aliases QList on Qt 6; the probe checks the type.
+// zh_CN: 显式返回类型兼容 MSVC 的隐藏友元查找；QVector 在 Qt 6 中是 QList 别名，类型由编译探测校验。
+template <class Tag, typename Tag::Type Member> struct ZoomRepaintMember {
+    friend typename Tag::Type zoomRepaintMember(Tag) { return Member; }
 };
 template struct ZoomRepaintMember<ZoomRasterRegionTag, &QWidgetRepaintManager::dirty>;
 template struct ZoomRepaintMember<ZoomRasterWidgetsTag, &QWidgetRepaintManager::dirtyWidgets>;
@@ -57,12 +63,19 @@ QRegion pendingInterfaceZoomRasterDamage(QWidgetRepaintManager* manager, QWidget
 
 void invalidateInterfaceZoomRasterDamage(QWidget* window, const QRegion& damage)
 {
-    // This QRect entry point is exported by Qt 5.15/6.2 too; the repaint
-    // manager's markDirty instantiations are not exported by those kits.
-    // zh_CN: Qt 5.15/6.2 也导出此 QRect 入口，而它们不导出 manager 的 markDirty 实例。
+    // Called during an existing UpdateRequest, before Qt consumes its queues.
+    // Extend the top-level invalid buffer region so opaque children are included;
+    // a QWidget::update() would instead mark only that widget's own pixels.
+    // Qt's invalidateBackingStore/markDirty templates are not exported by all kits.
+    // zh_CN: 在已有 UpdateRequest 中、Qt 消费队列前扩大顶层缓冲区失效区域，包含不透明子控件；
+    // update() 只标记控件自身像素。部分 Qt 套件不导出 invalidateBackingStore/markDirty 模板。
     auto* data = QWidgetPrivate::get(window);
-    for (const QRect& rect : damage)
-        data->invalidateBackingStore(rect);
+    auto* manager = data->maybeRepaintManager();
+    const QRegion clipped = damage & data->clipRect();
+    if (!manager || clipped.isEmpty())
+        return;
+    data->invalidateGraphicsEffectsRecursively();
+    manager->*zoomRepaintMember(ZoomRasterRegionTag{}) |= clipped;
 }
 
 } // namespace

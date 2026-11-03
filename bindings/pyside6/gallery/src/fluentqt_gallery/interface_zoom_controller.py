@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 
 import fluentqt
+from fluentqt._qt_widgets import send_accessible_announcement
 from PySide6.QtCore import QEvent, QObject, QPoint, QSize, Qt, QTimer, Slot
-from PySide6.QtGui import QAccessible, QAction, QKeySequence
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 
 from .interface_zoom import (
@@ -20,12 +21,6 @@ from .interface_zoom import (
 from .metrics import TITLE_BAR_HEIGHT
 from .settings import GallerySettings
 from .window_placement import app_window_minimum_size
-
-try:  # Qt 6.8+
-    from PySide6.QtGui import QAccessibleAnnouncementEvent
-except ImportError:  # pragma: no cover - older PySide6
-    QAccessibleAnnouncementEvent = None
-
 
 # Long enough to read the level, short enough to stay out of the way.
 _BUBBLE_IDLE_CLOSE_MS = 2000
@@ -136,10 +131,7 @@ class GalleryInterfaceZoomController(QObject):
         announcement = "Zoom " + self._level_label.text()
         if not self._restart_hint.isHidden():
             announcement += ". " + self._restart_hint.text()
-        if QAccessibleAnnouncementEvent is not None:
-            event = QAccessibleAnnouncementEvent(self._bubble, announcement)
-            event.setPoliteness(QAccessible.AnnouncementPoliteness.Polite)
-            QAccessible.updateAccessibility(event)
+        send_accessible_announcement(self._bubble, announcement)
 
     @Slot(int)
     def _apply_saved_zoom(self, percent: int) -> None:

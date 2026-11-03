@@ -1,6 +1,7 @@
 #include "compatibility/PaintCompat.h"
 #include "GallerySpatialController.h"
 #include "compatibility/QtCompat.h"
+#include "compatibility/WindowGeometryCompat.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/foundation/overlay/OverlayPresentation.h"
 #include "components/foundation/overlay/OverlayShadow.h"
@@ -1489,16 +1490,7 @@ struct GallerySpatialController::Private {
                 // QMenu contains its initial popup, but QWidget::move does not.
                 // Keep the chosen placement while following a moving panel/window.
                 // zh_CN: QMenu 仅在首次弹出时约束屏幕；跟随面板或窗口移动时保留方向并重新限界。
-                const QRect available = screen->availableGeometry();
-                const QRect frame = popup->frameGeometry();
-                const QPoint frameOffset = frame.topLeft() - popup->pos();
-                const QPoint framePosition = position + frameOffset;
-                position =
-                    QPoint(qBound(available.left(), framePosition.x(),
-                               qMax(available.left(), available.right() - frame.width() + 1)),
-                        qBound(available.top(), framePosition.y(),
-                            qMax(available.top(), available.bottom() - frame.height() + 1)))
-                    - frameOffset;
+                position = fluentClampPopupPosition(popup, position, screen);
             }
             popup->move(position);
         }

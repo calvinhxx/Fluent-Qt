@@ -10,6 +10,8 @@
 #include <dwmapi.h>
 
 #include <QtMath>
+#include <QGuiApplication>
+#include <QResizeEvent>
 #include <QVariant>
 #include <QWindow>
 
@@ -103,6 +105,68 @@ void clearChromeTopMargin(HWND hwnd)
     if (hwnd)
         RemovePropW(hwnd, ChromeTopMarginProperty);
 }
+
+// Window flags replaced by custom chrome; the native values return when it is disabled.
+// zh_CN: 自定义 chrome 替换的窗口标志；关闭时恢复原生取值。
+Qt::WindowFlags customChromeReplacedFlags()
+{
+    Qt::WindowFlags flags = Qt::CustomizeWindowHint | Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint
+        | Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint | Qt::WindowTitleHint | Qt::WindowSystemMenuHint;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    flags |= Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint;
+#endif
+    return flags;
+}
+
+class WindowsCustomChromeState final : public QObject {
+public:
+    explicit WindowsCustomChromeState(QWidget* window) : QObject(window) { window->installEventFilter(this); }
+
+    static WindowsCustomChromeState* find(QWidget* window)
+    {
+        for (QObject* child : window->children()) {
+            if (auto* state = dynamic_cast<WindowsCustomChromeState*>(child))
+                return state;
+        }
+        return nullptr;
+    }
+
+    bool correctsCreationGeometry = false;
+    bool hasNativeFlags = false;
+    Qt::WindowFlags nativeFlags;
+    bool nativeSafeAreaMargins = true;
+
+protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+        auto* window = static_cast<QWidget*>(object);
+        if (event->type() == QEvent::WinIdChange && !window->internalWinId())
+            m_corrected = false;
+        if (!correctsCreationGeometry || m_corrected || event->type() != QEvent::Resize || !event->spontaneous()
+            || window->isVisible() || window->internalWinId() || !hwndForWindow(window))
+            return false;
+        const QSize requested = static_cast<QResizeEvent*>(event)->oldSize();
+        if (!requested.isValid() || requested == window->size())
+            return false;
+        // QPA can include the system frame in its first expanded-client resize.
+        // Preserve the requested client extent before QWidget records it as the
+        // shown or restore geometry; ordinary and maximized first shows both pass
+        // here. The native handle exists, but WinIdChange has not arrived yet.
+        // Later system resizes of the created window are not changed.
+        // zh_CN: QPA 的首个扩展客户区 resize 可能计入系统边框；原生句柄已存在、WinIdChange 尚未到达时，
+        // 在 QWidget 将其记为显示或还原几何前恢复请求的客户区尺寸，普通与最大化首次显示均经过此处，
+        // 不猜测边框宽度。窗口创建后的系统缩放不受影响。
+        m_corrected = true;
+        window->resize(requested);
+        // The original notification now carries a superseded size; the resize
+        // above delivers or queues the corrected notification instead.
+        // zh_CN: 原事件的尺寸已失效；上面的 resize 会投递或排队正确的尺寸事件。
+        return true;
+    }
+
+private:
+    bool m_corrected = false;
+};
 
 template <typename T> T resolveDwmProc(const char* name)
 {
@@ -459,18 +523,47 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
     if (!window)
         return;
 
-    if (options.useCustomWindowChrome) {
-        window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, false);
-        Qt::WindowFlags desiredFlags = window->windowFlags() | Qt::Window | Qt::CustomizeWindowHint;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-        desiredFlags |= Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint;
-#endif
-        desiredFlags &= ~(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint
-            | Qt::WindowCloseButtonHint | Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
-        if (!window->isVisible() && window->windowFlags() != desiredFlags)
-            window->setWindowFlags(desiredFlags);
-        ensureDwmChromeStyle(window);
+    auto* state = WindowsCustomChromeState::find(window);
+    if (!options.useCustomWindowChrome) {
+        if (!state)
+            return;
+        state->correctsCreationGeometry = false;
+        if (!state->hasNativeFlags)
+            return;
+        // Return the replaced flags. Otherwise an expanded client area remains
+        // without custom chrome, and the first show adds the system frame to it.
+        // Like enabling, a visible window keeps its flags until it is hidden.
+        // zh_CN: 恢复被替换的标志，否则关闭自定义 chrome 后仍保留扩展客户区，首次显示会计入系统边框。
+        // 与启用一致，可见窗口在隐藏前保持现有标志。
+        window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, state->nativeSafeAreaMargins);
+        if (window->isVisible())
+            return;
+        state->hasNativeFlags = false;
+        const Qt::WindowFlags restoredFlags = (window->windowFlags() & ~customChromeReplacedFlags())
+            | state->nativeFlags;
+        if (window->windowFlags() != restoredFlags)
+            window->setWindowFlags(restoredFlags);
+        return;
     }
+
+    if (!state)
+        state = new WindowsCustomChromeState(window);
+    state->correctsCreationGeometry = QGuiApplication::platformName() == QLatin1String("windows");
+    if (!state->hasNativeFlags) {
+        state->hasNativeFlags = true;
+        state->nativeFlags = window->windowFlags() & customChromeReplacedFlags();
+        state->nativeSafeAreaMargins = window->testAttribute(Qt::WA_ContentsMarginsRespectsSafeArea);
+    }
+    window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, false);
+    Qt::WindowFlags desiredFlags = window->windowFlags() | Qt::Window | Qt::CustomizeWindowHint;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    desiredFlags |= Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint;
+#endif
+    desiredFlags &= ~(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint
+        | Qt::WindowCloseButtonHint | Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
+    if (!window->isVisible() && window->windowFlags() != desiredFlags)
+        window->setWindowFlags(desiredFlags);
+    ensureDwmChromeStyle(window);
 }
 
 bool handlePlatformNativeEvent(QWidget* window,
