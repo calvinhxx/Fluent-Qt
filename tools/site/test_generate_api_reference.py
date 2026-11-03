@@ -381,6 +381,38 @@ class PreviewManifestTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'stale'):
                 previews.validated_manifest()
 
+    def test_image_viewer_recipe_reaches_native_capture_size(self):
+        recipe = next(c for c in component_inventory.config() if c['id'] == 'image-viewer')
+        executable = previews.ROOT / 'gallery.exe'
+        executable.write_bytes(b'fixture executable')
+        commands = []
+
+        def capture(command, _log):
+            commands.append(command)
+            Path(command[command.index('--snapshot') + 1]).write_bytes(png())
+            Path(command[command.index('--report') + 1]).write_text(json.dumps({
+                'status': 'ok', 'environment': {'platform_plugin': 'windows',
+                    'qt_version': os.environ.get('QT_VERSION', '6.9.3'), 'device_pixel_ratio': 1,
+                    'font': 'fixture', 'locale': 'en_US'},
+                'artifacts': {'snapshot': {'target': 'gallerySamplePreviewWidget'}},
+            }), encoding='utf-8')
+            return True
+
+        with patch.object(previews, 'config', return_value=[recipe]), \
+             patch.object(previews, 'run_capture', side_effect=capture), \
+             patch.object(previews.subprocess, 'check_output', return_value='fixture'), \
+             patch.object(sys, 'argv', ['capture', '--executable', str(executable)]), \
+             patch.object(sys, 'path', [str(component_inventory.ROOT / 'tools/dev'), *sys.path]), \
+             redirect_stdout(io.StringIO()):
+            previews.main()
+        self.assertEqual(len(commands), 2)
+        self.assertEqual({command[command.index('--theme') + 1] for command in commands}, {'light', 'dark'})
+        for command in commands:
+            self.assertEqual(command[command.index('--route') + 1], 'image-viewer')
+            self.assertEqual(command[command.index('--sample') + 1], 'image-viewer-basic')
+            # 920x460 clips the real 349 px sample below the Gallery heading.
+            self.assertEqual(command[command.index('--size') + 1], '920x640')
+
     def test_publication_rejects_changed_bytes_and_stale_inputs(self):
         previews.validated_manifest()
         self.digest.return_value = 'changed'

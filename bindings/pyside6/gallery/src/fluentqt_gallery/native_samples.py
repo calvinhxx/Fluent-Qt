@@ -21,6 +21,7 @@ from textwrap import dedent
 import tokenize
 
 import fluentqt
+from fluentqt._qt_widgets import enum_name as _enum_name
 from PySide6.QtCore import QDate, QItemSelectionModel, QRect, QRectF, QSize, Qt, QTime
 from PySide6.QtGui import (
     QColor,
@@ -880,7 +881,14 @@ def _focused_short_function(
     kept: list[ast.stmt] = []
     seen: set[int] = set()
     for child in ast.walk(node):
-        if not isinstance(child, (ast.Assign, ast.AnnAssign, ast.Expr)):
+        if not isinstance(
+            child, (ast.Assign, ast.AnnAssign, ast.Expr, ast.Return)
+        ):
+            continue
+        # Only the helper's own result is kept; nested returns stay nested.
+        if isinstance(child, ast.Return) and (
+            child.value is None or child not in node.body
+        ):
             continue
         if id(child) in seen:
             continue
@@ -894,8 +902,14 @@ def _focused_short_function(
             for item in ast.walk(child)
             if isinstance(item, ast.Attribute)
         }
-        if id(child) not in constructor_statements and not (
-            names & local_targets and attributes & canonical_members
+        # A returned component is part of the helper's contract: callers assign it.
+        returns_target = isinstance(child, ast.Return) and bool(
+            names & local_targets
+        )
+        if (
+            id(child) not in constructor_statements
+            and not returns_target
+            and not (names & local_targets and attributes & canonical_members)
         ):
             continue
         kept.append(child)
@@ -948,6 +962,12 @@ def _focused_canonical_function(
             selected_indexes.add(index)
     if not selected_indexes:
         return node
+    # Keep the helper's result, as the C++ lambda returns it to its caller.
+    selected_indexes.update(
+        index
+        for index, statement in enumerate(node.body)
+        if isinstance(statement, ast.Return) and statement.value is not None
+    )
 
     changed = True
     while changed:
@@ -1089,6 +1109,16 @@ def _focused_canonical_compound(
             ) and index not in selected:
                 selected.add(index)
                 changed = True
+        # A focused helper keeps its result: callers assign the returned value.
+        if selected and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for index, statement in enumerate(body):
+                if (
+                    index not in selected
+                    and isinstance(statement, ast.Return)
+                    and statement.value is not None
+                ):
+                    selected.add(index)
+                    changed = True
 
         dependencies = {
             name
@@ -1356,6 +1386,11 @@ def _canonical_outline(
     if sample is None:
         return None
     cpp = sample.cpp_snippet
+    # A supporting control explicitly constructed by the C++ teaching snippet
+    # is part of that example, even when it is not the route's primary type.
+    display_types = tuple(sorted(
+        set(covered_types) | set(re.findall(r"\bnew\s+([A-Z][A-Za-z0-9_]*)\b", cpp))
+    ))
     canonical_members = set(
         re.findall(r"(?:->|\.)([A-Za-z_][A-Za-z0-9_]*)\s*\(", cpp)
     )
@@ -1425,7 +1460,7 @@ def _canonical_outline(
     target_names: set[str] = set()
     for statement in body:
         target_names.update(
-            _covered_constructor_names(statement, covered_types)
+            _covered_constructor_names(statement, display_types)
         )
 
     definitions: dict[str, int] = {}
@@ -1482,7 +1517,7 @@ def _canonical_outline(
     selected: set[int] = {
         index
         for index, statement in enumerate(body)
-        if _covered_constructor_names(statement, covered_types)
+        if _covered_constructor_names(statement, display_types)
     }
     tracked = set(target_names)
     ignored_dependencies = {
@@ -5287,13 +5322,6 @@ def _column(
 
 def _hold(owner: QWidget, *values: object) -> None:
     owner._fluentqt_gallery_references = values
-
-
-def _enum_name(value: object) -> str:
-    """Normalize old Shiboken enum byte names for generated Python source."""
-
-    name = value.name
-    return name.decode("ascii") if isinstance(name, bytes) else str(name)
 
 
 def _result(

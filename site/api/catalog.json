@@ -24,7 +24,7 @@
   ],
   "summary": {
     "components": 98,
-    "public_headers": 176,
+    "public_headers": 177,
     "categories": 16
   },
   "categories": [
@@ -6533,6 +6533,13 @@
         "HitTest"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/WindowChromeCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/WindowGeometryCompat.h>",
+      "source": "src/compatibility/WindowGeometryCompat.h",
+      "summary": "Synchronizes a hidden window's normal geometry before maximized display.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/WindowGeometryCompat.h"
     },
     {
       "include": "<FluentQt/components/basicinput/Button.h>",

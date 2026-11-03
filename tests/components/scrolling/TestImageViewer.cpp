@@ -104,6 +104,14 @@ bool sendMouse(QWidget& target, QEvent::Type type, const QPoint& position, Qt::M
 
 class ImageViewerContractTest : public ::testing::Test {
 protected:
+    static void SetUpTestSuite()
+    {
+        qRegisterMetaType<ImageViewer::FitMode>("fluent::scrolling::ImageViewer::FitMode");
+        qRegisterMetaType<ImageViewer::WheelAction>("fluent::scrolling::ImageViewer::WheelAction");
+        qRegisterMetaType<ImageViewer::ControlsVisibility>("fluent::scrolling::ImageViewer::ControlsVisibility");
+        qRegisterMetaType<Qt::TransformationMode>("Qt::TransformationMode");
+    }
+
     void SetUp() override
     {
         m_previousMotion = fluent::MotionPolicy::instance().mode();
@@ -126,6 +134,48 @@ private:
 };
 
 } // namespace
+
+TEST(ImageViewerSignalTest, Contract_QueuedEnumsKeepValuesWithoutSpyRegistration)
+{
+    ImageViewer viewer;
+    QObject receiver;
+    int delivered = 0;
+    QObject::connect(
+        &viewer, &ImageViewer::fitModeChanged, &receiver,
+        [&](ImageViewer::FitMode value) {
+            EXPECT_EQ(value, ImageViewer::FitMode::Manual);
+            ++delivered;
+        },
+        Qt::QueuedConnection);
+    QObject::connect(
+        &viewer, &ImageViewer::wheelActionChanged, &receiver,
+        [&](ImageViewer::WheelAction value) {
+            EXPECT_EQ(value, ImageViewer::WheelAction::Pan);
+            ++delivered;
+        },
+        Qt::QueuedConnection);
+    QObject::connect(
+        &viewer, &ImageViewer::controlsVisibilityChanged, &receiver,
+        [&](ImageViewer::ControlsVisibility value) {
+            EXPECT_EQ(value, ImageViewer::ControlsVisibility::Visible);
+            ++delivered;
+        },
+        Qt::QueuedConnection);
+    QObject::connect(
+        &viewer, &ImageViewer::transformationModeChanged, &receiver,
+        [&](Qt::TransformationMode value) {
+            EXPECT_EQ(value, Qt::FastTransformation);
+            ++delivered;
+        },
+        Qt::QueuedConnection);
+    viewer.setFitMode(ImageViewer::FitMode::Manual);
+    viewer.setWheelAction(ImageViewer::WheelAction::Pan);
+    viewer.setControlsVisibility(ImageViewer::ControlsVisibility::Visible);
+    viewer.setTransformationMode(Qt::FastTransformation);
+    EXPECT_EQ(delivered, 0);
+    QCoreApplication::sendPostedEvents(&receiver, QEvent::MetaCall);
+    EXPECT_EQ(delivered, 4);
+}
 
 TEST_F(ImageViewerContractTest, Contract_DefaultsAndInheritance)
 {
