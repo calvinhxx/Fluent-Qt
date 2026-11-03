@@ -1,3 +1,4 @@
+#include "compatibility/TextPaintCompat.h"
 #include "HyperlinkButton.h"
 #include "components/basicinput/private/HyperlinkButtonAccessibility_p.h"
 #include <QDesktopServices>
@@ -125,14 +126,14 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
     int txtWidth = fm.horizontalAdvance(txt);
 
     QRectF textRect = rect();
-    painter.drawText(textRect, Qt::AlignCenter, txt);
+    fluent::painting::drawVerticallyCenteredText(painter, textRect, txt, Qt::AlignHCenter);
 
     // 5. Underline: the explicit opt-in draws on hover. zh_CN:
     // 显式开启后在悬停时绘制下划线。
     const bool underlineExplicit = m_showUnderline && state == Hover;
     if (underlineExplicit && !txt.isEmpty()) {
         int textX = (width() - txtWidth) / 2;
-        int textY = (height() + fm.ascent()) / 2; // Text baseline. zh_CN: 文字基线位置。
+        const int textY = fluent::painting::verticallyCenteredTextBaseline(rect(), fm);
         // Draw the line 2px under the text in the text color. zh_CN: 在文字下方 2 像素处用文字色画线。
         painter.setPen(textColor);
         painter.drawLine(textX, textY + 2, textX + txtWidth, textY + 2);

@@ -1,3 +1,4 @@
+#include "compatibility/TextPaintCompat.h"
 #include "GalleryNavigationDelegate.h"
 
 #include <QAbstractItemView>
@@ -13,7 +14,6 @@
 
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
-#include "compatibility/TextPaintCompat.h"
 #include "design/Typography.h"
 #include "GalleryNavigationMetrics.h"
 #include "model/GalleryNavigationItem.h"
@@ -123,8 +123,8 @@ public:
             painter->setFont(m_themeHost->themeFont(Typography::FontRole::Caption).toQFont());
             painter->setPen(colors.textSecondary);
             painter->setOpacity(expandedOpacity);
-            painter->drawText(option.rect.adjusted(qRound(16 - 6 * compactProgress), 6, -8, 0),
-                Qt::AlignLeft | Qt::AlignVCenter, text);
+            fluent::painting::drawVerticallyCenteredText(*painter,
+                option.rect.adjusted(qRound(16 - 6 * compactProgress), 6, -8, 0), text);
             painter->restore();
             return;
         }
@@ -233,12 +233,10 @@ public:
         const QRectF textSlot(textX - 6.0 * compactProgress, backgroundRect.top(), qMax<qreal>(0.0, textRight - textX),
             backgroundRect.height());
         if (expandedOpacity > 0.01) {
-            const QFontMetricsF metrics(painter->font());
             const QString elidedText = cachedElidedText(painter->fontMetrics(), text, qRound(textSlot.width()));
-            const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
             painter->save();
             painter->setOpacity(expandedOpacity);
-            painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedText);
+            fluent::painting::drawVerticallyCenteredText(*painter, textSlot, elidedText);
             painter->restore();
         }
         painter->restore();

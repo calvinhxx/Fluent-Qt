@@ -34,8 +34,8 @@ namespace fluent::textfields {
 class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Margins applied around the control content area.
-     * zh_CN: 控件内容区域周围的边距。
+     * @brief Content margins whose horizontal values include Qt's internal text inset.
+     * zh_CN: 内容边距；水平值已包含 Qt 内部文字留白，零值不会重复增加原生边距。
      */
     Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
     /**

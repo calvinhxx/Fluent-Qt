@@ -27,6 +27,24 @@ All inventoried gaps are closed. `covered` means
 there is deterministic repository evidence for the component boundary; it is
 not a claim of platform assistive-technology certification.
 
+Control and option-row text share the font-line centering policy in
+[TextPaintCompat.h](../../src/compatibility/TextPaintCompat.h). Descenders, accents,
+and elision do not add per-label vertical offsets. Isolated selection-count
+badges explicitly retain glyph-ink centering. This changes painted text placement;
+accessible names, roles, selection state, focus, and hit targets retain their
+existing component contracts. `ControlTextAlignment` exercises actual controls
+and option delegates at integer and fractional pixel ratios.
+
+Editors and selection fields share the 9 logical-pixel horizontal text inset
+in `Spacing::Padding::TextFieldHorizontal`. `LineEditMetricsCompat_p.h` removes
+Qt's additional editor padding; explicit content margins, including zero, refer
+to the resulting text area. ComboBox uses the same text rectangle in painted
+and editable modes, including immediately after padding changes. LineEdit,
+PasswordBox, NumberBox, AutoSuggestBox, empty TagInput, TreeSelect, MultiSelectComboBox
+and TextEdit are covered by `InputTextInsetsTest`. Prefix icons, tags and picker
+segments retain their own reserved space. These painting changes preserve native
+editing, selection, ownership, accessible names and hit targets.
+
 ## Hierarchical selection
 
 `TreeSelect` exposes a ComboBox role, selected full paths, expanded/read-only

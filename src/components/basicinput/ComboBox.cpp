@@ -21,6 +21,7 @@
 #include <QtMath>
 #include "compatibility/TextPaintCompat.h"
 #include "compatibility/private/ComboBoxCompat_p.h"
+#include "compatibility/private/LineEditMetricsCompat_p.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
@@ -30,6 +31,7 @@
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/foundation/private/SurfacePainter_p.h"
 #include "components/foundation/private/ControlMetrics_p.h"
+#include "components/foundation/private/FieldTextGeometry_p.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/LineEdit.h"
@@ -166,9 +168,8 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     const QString text = index.data(Qt::DisplayRole).toString();
     const QFontMetricsF metrics(painter->font());
     const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
-    painter->drawText(textRect, QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter),
-        elidedText);
+    fluent::painting::drawVerticallyCenteredText(*painter, textSlot, elidedText,
+        QStyle::visualAlignment(option.direction, Qt::AlignLeft));
 
     painter->restore();
 }
@@ -542,6 +543,7 @@ void ComboBox::setContentPaddingH(int px)
     if (m_contentPaddingH == px)
         return;
     m_contentPaddingH = px;
+    layoutLineEdit();
     updateGeometry();
     emit layoutChanged();
     update();
@@ -572,6 +574,8 @@ void ComboBox::setChevronSize(int size)
     if (m_chevronSize == size)
         return;
     m_chevronSize = size;
+    layoutLineEdit();
+    updateGeometry();
     emit chevronChanged();
     update();
 }
@@ -581,6 +585,8 @@ void ComboBox::setChevronOffset(const QPoint& offset)
     if (m_chevronOffset == offset)
         return;
     m_chevronOffset = offset;
+    layoutLineEdit();
+    updateGeometry();
     emit chevronChanged();
     update();
 }
@@ -735,11 +741,17 @@ void ComboBox::layoutLineEdit()
     if (!editor)
         return;
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
-    const int gap = ::Spacing::Gap::Tight;
-    const QRect logicalTextRect = rect().adjusted(m_contentPaddingH, m_contentPaddingV, -(chevronAreaW + gap),
-        -m_contentPaddingV);
-    const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
-    editor->setGeometry(textRect);
+    const QRect textRect = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
+        QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW, m_contentPaddingV));
+    // Only the leading edge needs the native text inset; keep the chevron side
+    // at the text slot so the editor never takes the chevron's hit area.
+    // zh_CN: 仅首端需要补偿原生文字留白；箭头一侧保持在文字区域边界，编辑框不占用箭头的点击区域。
+    QRect geometry = compatibility::detail::lineEditGeometryForTextRect(*editor, textRect);
+    if (layoutDirection() == Qt::RightToLeft)
+        geometry.setLeft(qMax(geometry.left(), textRect.left()));
+    else
+        geometry.setRight(qMin(geometry.right(), textRect.right()));
+    editor->setGeometry(geometry);
 }
 
 void ComboBox::applyLineEditStyle()
@@ -922,6 +934,8 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event)
             // The embedded Fluent editor also refreshes independently.
             // zh_CN: 内嵌 Fluent 编辑框也独立刷新主题，字体始终跟随 ComboBox。
             m_observedLineEdit->setFont(font());
+        } else if (event->type() == QEvent::StyleChange || event->type() == QEvent::ContentsRectChange) {
+            layoutLineEdit();
         } else if (event->type() == QEvent::FocusIn) {
             m_observedLineEdit->selectAll();
             update();
@@ -1038,9 +1052,8 @@ void ComboBox::paintEvent(QPaintEvent*)
 
     // Chevron area calculation
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
-    const QRect logicalTextRect = rect().adjusted(m_contentPaddingH, m_contentPaddingV, -chevronAreaW,
-        -m_contentPaddingV);
-    const QRectF textSlot = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+    const QRectF textSlot = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
+        QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW, m_contentPaddingV));
 
     // In editable mode, QLineEdit handles text display
     if (!m_observedLineEdit) {
@@ -1049,9 +1062,8 @@ void ComboBox::paintEvent(QPaintEvent*)
         const QString text = currentText();
         const QFontMetricsF metrics(painter.font());
         const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
-        painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
-            elidedText);
+        fluent::painting::drawVerticallyCenteredText(painter, textSlot, elidedText,
+            QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft));
     }
 
     // ── Chevron ──────────────────────────────────────────────────────────

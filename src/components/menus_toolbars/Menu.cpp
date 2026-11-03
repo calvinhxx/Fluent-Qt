@@ -1,3 +1,4 @@
+#include "compatibility/TextPaintCompat.h"
 #include "compatibility/InputEventCompat.h"
 #include "Menu.h"
 #include "compatibility/private/WidgetPlatformCompat_p.h"
@@ -543,7 +544,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
         const int shortcutReserve = shortcutColumn > 0 ? shortcutColumn + shortcutGap : 0;
         const int textRight = itemRect.right() - textPadding - trailingColumn - shortcutReserve;
         const int textLeft = itemRect.left() + textPadding + leadingColumn;
-        const int textBaseline = itemRect.top() + (itemRect.height() - fontMetrics.height()) / 2 + fontMetrics.ascent();
+        const int textBaseline = fluent::painting::verticallyCenteredTextBaseline(itemRect, fontMetrics);
 
         p.setPen(primaryText);
         // Draw from a baseline instead of an exactly measured QRect. Some

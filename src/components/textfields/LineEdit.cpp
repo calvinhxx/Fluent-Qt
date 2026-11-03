@@ -1,6 +1,7 @@
 #include "components/foundation/private/TextInputFrame_p.h"
 #include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/private/LineEditMetricsCompat_p.h"
 #include "LineEdit.h"
 #include "components/basicinput/Button.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
@@ -75,6 +76,9 @@ void LineEdit::changeEvent(QEvent* event)
     // zh_CN: 祖先在主题更新后重新 polish 时可能还原 Qt 缓存的旧调色板；仅恢复颜色，避免再次刷新整棵子树。
     if (event->type() == QEvent::StyleChange)
         applyThemePalette();
+    if (event->type() == QEvent::LayoutDirectionChange) {
+        updateClearButtonGeometry();
+    }
 }
 
 void LineEdit::paintEvent(QPaintEvent* event)
@@ -117,7 +121,8 @@ void LineEdit::updateClearButtonGeometry()
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     int x = width() - m_clearButtonSize - m_clearButtonOffset.x();
     int y = (height() - m_clearButtonSize) / 2 + m_clearButtonOffset.y();
-    m_clearButton->move(x, y);
+    m_clearButton->setGeometry(
+        QStyle::visualRect(layoutDirection(), rect(), QRect(x, y, m_clearButtonSize, m_clearButtonSize)));
 }
 
 void LineEdit::paintFrame(QPainter& painter)
@@ -277,10 +282,13 @@ void LineEdit::applyThemePalette()
 void LineEdit::applyThemeStyle()
 {
     const auto& c = themeColorsRef();
-    int rightPadding = m_contentMargins.right();
+    QMargins padding = m_contentMargins;
     if (m_clearButtonEnabled) {
-        rightPadding += m_clearButtonSize + m_clearButtonOffset.x();
+        // QStyleSheetStyle mirrors its contents rectangle for RTL itself.
+        // zh_CN: QStyleSheetStyle 自行镜像 RTL 内容矩形，无需再次交换留白。
+        padding.setRight(padding.right() + m_clearButtonSize + m_clearButtonOffset.x());
     }
+    padding = compatibility::detail::lineEditStylePadding(padding);
 
     // Do not set the generic QSS `color`: QStyleSheetStyle on Qt 5 and Qt 6.2
     // uses it for the placeholder as well and bypasses PlaceholderText. Keeping
@@ -296,10 +304,10 @@ void LineEdit::applyThemeStyle()
             "padding-left: %1px; padding-right: %2px; "
             "padding-top: %3px; padding-bottom: %4px; "
             "border: none; }")
-            .arg(m_contentMargins.left())
-            .arg(rightPadding)
-            .arg(m_contentMargins.top())
-            .arg(m_contentMargins.bottom())
+            .arg(padding.left())
+            .arg(padding.right())
+            .arg(padding.top())
+            .arg(padding.bottom())
             .arg(c.accentDefault.name(QColor::HexArgb))
             .arg(c.textOnAccent.name(QColor::HexArgb));
     // Applying a style sheet repolishes the widget and QStyleSheetStyle may

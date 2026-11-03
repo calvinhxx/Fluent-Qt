@@ -3,11 +3,30 @@
 
 #include <QFontMetricsF>
 #include <QPaintDevice>
+#include <QPainter>
 #include <QRectF>
 #include <QString>
 #include <QtMath>
 
 namespace fluent::painting {
+
+/**
+ * @brief Returns a centered font baseline, independent of the displayed characters.
+ * zh_CN: 返回按字体度量居中的基线，不随显示字符变化。
+ */
+inline qreal verticallyCenteredTextBaseline(const QRectF& targetRect, const QFontMetricsF& metrics)
+{
+    return targetRect.top() + (targetRect.height() - metrics.height()) / 2.0 + metrics.ascent();
+}
+
+/**
+ * @brief Preserves Qt's integer geometry rounding for existing point-based text painters.
+ * zh_CN: 为使用基线坐标绘字的现有调用保留 Qt 整数几何的取整方式。
+ */
+inline int verticallyCenteredTextBaseline(const QRect& targetRect, const QFontMetrics& metrics)
+{
+    return targetRect.top() + (targetRect.height() - metrics.height()) / 2 + metrics.ascent();
+}
 
 /**
  * @brief Encodes a target DPR for a forwarding paint device's metric override.
@@ -62,6 +81,8 @@ inline qreal imageRasterDpr(qreal dpr)
 /**
  * @brief Returns the vertical translation that centers visible glyph ink in a target rectangle.
  * zh_CN: 返回将可见字形墨迹垂直居中到目标矩形所需的平移量。
+ * Intended for isolated badges, not labels sharing a row with icons or other text.
+ * zh_CN: 适用于独立徽标；与图标或其他文字同行的标签应使用字体行框居中。
  */
 inline qreal
 verticallyCenteredTextInkOffset(const QRectF& targetRect, const QFontMetricsF& metrics, const QString& text)
@@ -73,7 +94,7 @@ verticallyCenteredTextInkOffset(const QRectF& targetRect, const QFontMetricsF& m
     if (!ink.isValid() || ink.isEmpty())
         return 0.0;
 
-    const qreal alignedBaseline = targetRect.top() + (targetRect.height() - metrics.height()) / 2.0 + metrics.ascent();
+    const qreal alignedBaseline = verticallyCenteredTextBaseline(targetRect, metrics);
     const qreal alignedInkCenter = alignedBaseline + ink.center().y();
     return targetRect.center().y() - alignedInkCenter;
 }
@@ -94,8 +115,27 @@ inline QRectF verticallyCenteredTextInkRect(const QRectF& targetRect, const QFon
 inline qreal alignedTextInkCenterY(const QRectF& alignedRect, const QFontMetricsF& metrics, const QString& text)
 {
     const QRectF ink = metrics.tightBoundingRect(text);
-    const qreal baseline = alignedRect.top() + (alignedRect.height() - metrics.height()) / 2.0 + metrics.ascent();
+    const qreal baseline = verticallyCenteredTextBaseline(alignedRect, metrics);
     return baseline + ink.center().y();
+}
+
+/**
+ * @brief Draws control text centered on the font line box, so labels in a row share one baseline.
+ * zh_CN: 按字体行框垂直居中绘制控件文字，使同一行的标签共用基线。
+ * The caller owns the font, pen, slot and visual horizontal alignment. Qt retains shaping,
+ * font fallback and multiline behavior; this helper does not elide text or change control geometry.
+ * Isolated badges that center visible ink use verticallyCenteredTextInkRect() instead.
+ * zh_CN: 调用方提供字体、画笔、区域和视觉水平对齐；字形塑形、字体回退和多行行为交给 Qt，
+ * 此函数不截断文字，也不改变控件布局。按可见墨迹居中的独立徽标改用 verticallyCenteredTextInkRect()。
+ */
+inline void drawVerticallyCenteredText(QPainter& painter,
+    const QRectF& targetRect,
+    const QString& text,
+    Qt::Alignment horizontalAlignment = Qt::AlignLeft)
+{
+    if (targetRect.isEmpty() || text.isEmpty())
+        return;
+    painter.drawText(targetRect, (horizontalAlignment & Qt::AlignHorizontal_Mask) | Qt::AlignVCenter, text);
 }
 
 } // namespace fluent::painting

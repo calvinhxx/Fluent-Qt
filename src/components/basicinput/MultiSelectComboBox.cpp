@@ -1,4 +1,5 @@
 #include "components/foundation/private/ControlMetrics_p.h"
+#include "components/foundation/private/FieldTextGeometry_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "compatibility/WidgetCompat.h"
 #include "MultiSelectComboBox.h"
@@ -133,8 +134,8 @@ protected:
         painter.setFont(m_owner->font());
 
         const int trailingReserve = qMax(0, chevronOffset().x()) + qMax(0, chevronSize()) + ::Spacing::Gap::Normal;
-        const QRect logicalTextRect = rect().adjusted(::Spacing::Padding::ComboBoxHorizontal, 0, -trailingReserve, 0);
-        const QRect textSlot = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+        const QRect textSlot = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
+            QMargins(::Spacing::Padding::TextFieldHorizontal, 0, trailingReserve, 0));
 
         const bool hasSelection = m_owner->selectedCount() > 0;
         QColor textColor = isEnabled()
@@ -160,15 +161,15 @@ protected:
                 -kSummaryBadgeHorizontalPadding, 0);
             const QString elided = metrics.elidedText(text, Qt::ElideRight, qMax(0, badgeTextRect.width()));
             painter.setPen(textColor);
-            const QRectF inkRect = fluent::painting::verticallyCenteredTextInkRect(QRectF(badgeTextRect), metrics,
-                elided);
-            painter.drawText(inkRect, Qt::AlignHCenter | Qt::AlignVCenter, elided);
+            painter.drawText(
+                fluent::painting::verticallyCenteredTextInkRect(QRectF(badgeTextRect),
+                    QFontMetricsF(painter.font(), painter.device()), elided),
+                Qt::AlignHCenter | Qt::AlignVCenter, elided);
         } else {
             painter.setPen(textColor);
             const QString elided = metrics.elidedText(text, Qt::ElideRight, qMax(0, textSlot.width()));
-            const QRectF inkRect = fluent::painting::verticallyCenteredTextInkRect(QRectF(textSlot), metrics, elided);
-            painter.drawText(inkRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
-                elided);
+            fluent::painting::drawVerticallyCenteredText(painter, textSlot, elided,
+                QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft));
         }
 
         if (isEnabled() && m_owner->hasFocus() && m_owner->m_keyboardFocusVisible) {
@@ -304,9 +305,8 @@ public:
         const QString label = index.data(Qt::DisplayRole).toString();
         const QFontMetricsF metrics(painter->font());
         const QString elided = metrics.elidedText(label, Qt::ElideRight, qMax(0, textSlot.width()));
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(QRectF(textSlot), metrics, elided);
-        painter->drawText(textRect, QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter),
-            elided);
+        fluent::painting::drawVerticallyCenteredText(*painter, textSlot, elided,
+            QStyle::visualAlignment(option.direction, Qt::AlignLeft));
 
         if (keyboardFocused && enabled) {
             painter->setBrush(Qt::NoBrush);

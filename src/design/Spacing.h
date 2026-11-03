@@ -30,14 +30,18 @@ const int ControlHorizontal = 12; // Generic horizontal control padding. zh_CN: 
 const int ControlVertical = 8;    // Generic vertical control padding. zh_CN: 通用控件垂直内边距。
 
 /**
-         * @brief ComboBox content padding from the Windows UI Kit rest state.
-         * zh_CN: 来自 Windows UI Kit / Figma ComboBox Rest 状态的内容区内边距。
-         */
+ * @brief Horizontal text inset shared by editors and selection fields.
+ * zh_CN: 编辑框与选择框共用的水平文字起点，包含原生编辑器的内部留白。
+ */
+const int TextFieldHorizontal = 9;
+/**
+ * @brief Selector chrome inset from the Windows UI Kit; positions the ComboBox chevron.
+ * zh_CN: 来自 Windows UI Kit 的选择框边缘留白，用于定位 ComboBox 下拉箭头。
+ */
 const int ComboBoxHorizontal = 11;
 const int ComboBoxVertical = 4;
 
-const int TextFieldHorizontal = 8; // Text input horizontal padding. zh_CN: 输入框内容区水平内边距。
-const int TextFieldVertical = 4;   // Text input vertical padding. zh_CN: 输入框内容区垂直内边距。
+const int TextFieldVertical = 4; // Text input vertical padding. zh_CN: 输入框内容区垂直内边距。
 
 const int Card = 16;   // Card content padding. zh_CN: 卡片内容内边距。
 const int Dialog = 24; // Dialog content padding. zh_CN: 对话框内容内边距。

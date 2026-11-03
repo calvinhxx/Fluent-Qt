@@ -180,15 +180,14 @@ public:
             background.height());
         const QFontMetricsF metrics(font);
         const QString elided = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elided);
-        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
+        fluent::painting::drawVerticallyCenteredText(*painter, textSlot, elided);
         if (trailingWidth > 0) {
             const QRectF slot(background.right() - 8.0 - trailingWidth, background.top(), trailingWidth,
                 background.height());
             painter->setFont(caption);
             painter->setPen(option.state & QStyle::State_Enabled ? colors.textSecondary : colors.textDisabled);
-            painter->drawText(slot, Qt::AlignRight | Qt::AlignVCenter,
-                captionMetrics.elidedText(trailing, Qt::ElideRight, qRound(trailingWidth)));
+            fluent::painting::drawVerticallyCenteredText(*painter, slot,
+                captionMetrics.elidedText(trailing, Qt::ElideRight, qRound(trailingWidth)), Qt::AlignRight);
         }
         painter->restore();
     }

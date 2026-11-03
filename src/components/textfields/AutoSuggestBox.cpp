@@ -114,8 +114,7 @@ public:
         const QString display = index.data(Qt::DisplayRole).toString();
         const QFontMetricsF metrics(painter->font());
         const QString elidedText = metrics.elidedText(display, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
-        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elidedText);
+        fluent::painting::drawVerticallyCenteredText(*painter, textSlot, elidedText);
 
         painter->restore();
     }

@@ -97,9 +97,9 @@ class Spacing(_DesignNamespace):
     class Padding(_DesignNamespace):
         ControlHorizontal = 12
         ControlVertical = 8
+        TextFieldHorizontal = 9
         ComboBoxHorizontal = 11
         ComboBoxVertical = 4
-        TextFieldHorizontal = 8
         TextFieldVertical = 4
         Card = 16
         Dialog = 24
