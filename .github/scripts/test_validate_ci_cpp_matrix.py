@@ -114,6 +114,20 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
                         errors,
                     )
 
+    def test_full_subset_cannot_also_build_unused_local_tests(self):
+        for entry in self.catalog["scenarios"]:
+            if entry["test_labels"] != "^ci_full$":
+                continue
+            with self.subTest(lane=entry["id"]):
+                catalog = copy.deepcopy(self.catalog)
+                scenario = next(item for item in catalog["scenarios"]
+                                if item["id"] == entry["id"])
+                scenario["build_targets"] += " fluent_qt_all_tests"
+                self.assertTrue(any(
+                    "must not build the exhaustive local test set" in error
+                    for error in MODULE.validate_catalog(catalog)
+                ))
+
     def test_required_execution_lanes_cannot_omit_optional_qml_bridge(self):
         for contract in MODULE.REQUIRED_EXECUTION_LANES.values():
             with self.subTest(lane=contract["id"]):

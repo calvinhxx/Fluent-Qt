@@ -86,7 +86,7 @@ REQUIRED_EXECUTION_LANES = {
     "ci_full": {
         "id": "linux-x64-qt62-full",
         "mode": "full",
-        "build_target": "fluent_qt_all_tests",
+        "build_target": "fluent_qt_ci_full_tests",
         "configure_options": ("-DFLUENT_QT_BUILD_QML_BRIDGE=ON",),
         "test_labels": "^ci_full$",
         "exclude_labels": "^(manual_visual|local_desktop)$",
@@ -168,6 +168,14 @@ def validate_catalog(data: Any) -> list[str]:
             value = scenario.get(field)
             if not isinstance(value, int) or value <= 0:
                 errors.append(f"{context}.{field} must be a positive integer")
+
+        targets = scenario.get("build_targets", "")
+        if (scenario.get("test_labels") == "^ci_full$"
+                and isinstance(targets, str)
+                and "fluent_qt_all_tests" in targets.split()):
+            errors.append(
+                f"{context} ci_full selection must not build the exhaustive local test set"
+            )
 
     for mode, expected_ids in EXPECTED_IDS.items():
         actual_ids = ids_by_mode[mode]
