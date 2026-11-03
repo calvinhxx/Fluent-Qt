@@ -364,10 +364,17 @@ def capture_report_errors(value: object) -> list[str]:
         assert isinstance(artifacts, dict)
         snapshot_fields = {"requested", "written", "path", "sha256", "error"}
         snapshot = artifacts.get("snapshot")
-        if not object_fields_are(snapshot, snapshot_fields, snapshot_fields):
+        if not object_fields_are(snapshot, snapshot_fields, snapshot_fields | {"target", "padding"}):
             errors.append("capture report artifacts.snapshot is malformed")
         else:
             assert isinstance(snapshot, dict)
+            # Current Gallery reports include the optional crop metadata even
+            # for a full-window snapshot. This gate still accepts full frames
+            # only, and keeps rejecting unknown fields and malformed padding.
+            if "target" in snapshot and snapshot["target"] != "":
+                errors.append("full-frame verification requires an empty snapshot target")
+            if "padding" in snapshot and not is_json_integer(snapshot["padding"], minimum=0, maximum=64):
+                errors.append("capture report artifacts.snapshot.padding must be from 0 to 64")
             for name in ("requested", "written"):
                 if not isinstance(snapshot.get(name), bool):
                     errors.append(
