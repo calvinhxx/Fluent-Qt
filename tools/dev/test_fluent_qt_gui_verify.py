@@ -1316,6 +1316,22 @@ class FluentQtGuiVerifyTest(unittest.TestCase):
                     "human-required",
                 )
 
+    def test_full_frame_capture_accepts_current_crop_metadata_but_not_cropped_frames(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            snapshot = Path(temporary) / "actual.png"
+            snapshot.write_bytes(PNG_FIXTURE)
+            report = capture_report(snapshot)
+            report["artifacts"]["snapshot"].update(target="", padding=16)
+            self.assertEqual(MODULE.capture_report_errors(report), [])
+            for change in (
+                {"target": "dialog"}, {"target": None}, {"padding": -1},
+                {"padding": 65}, {"padding": True}, {"unknown": 1},
+            ):
+                with self.subTest(change=change):
+                    altered = copy.deepcopy(report)
+                    altered["artifacts"]["snapshot"].update(change)
+                    self.assertTrue(MODULE.capture_report_errors(altered))
+
     def test_capture_snapshot_must_match_scene_native_resolution(self):
         with tempfile.TemporaryDirectory() as temporary:
             actual = Path(temporary) / "actual.png"
