@@ -2761,6 +2761,7 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 
 .support-intro {
   margin-top: 18px;
+  max-width: 720px;
   color: var(--section-copy);
   font-size: 15.5px;
   line-height: 1.78;
@@ -2779,8 +2780,9 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   min-width: 0;
 }
 
-.support-fieldset legend {
-  margin-bottom: 10px;
+.support-fieldset legend,
+.support-field-label {
+  margin: 0 0 10px;
   padding: 0;
   color: var(--section-label);
   font-size: 12px;
@@ -2792,6 +2794,12 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 .support-amounts {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.support-kofi-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -2812,7 +2820,8 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   white-space: nowrap;
 }
 
-.support-option-card {
+.support-option-card,
+.support-kofi-action {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2827,6 +2836,7 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   background: color-mix(in srgb, var(--panel) 34%, var(--white));
   color: var(--ink);
   text-align: left;
+  text-decoration: none;
   transition:
     transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
     background 160ms ease,
@@ -2855,8 +2865,12 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   font-variant-numeric: tabular-nums;
 }
 
-.support-amount-any {
+.support-amount-any,
+.support-kofi-action-title {
+  color: var(--ink);
   font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
   letter-spacing: -0.02em;
 }
 
@@ -2868,14 +2882,16 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   transition: color 160ms ease;
 }
 
-.support-amounts .support-option:hover .support-option-card {
+.support-amounts .support-option:hover .support-option-card,
+.support-kofi-action:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
   background: var(--white);
   box-shadow: 0 10px 24px -14px rgba(12, 32, 48, 0.16);
   transform: translateY(-2px);
 }
 
-.support-amounts .support-option input:checked + .support-option-card {
+.support-amounts .support-option input:checked + .support-option-card,
+.support-kofi-action-primary {
   border-color: var(--accent);
   background:
     linear-gradient(
@@ -2894,19 +2910,21 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   transform: scale(1.1);
 }
 
-.support-amounts .support-option input:checked + .support-option-card .support-amount-tag {
+.support-amounts .support-option input:checked + .support-option-card .support-amount-tag,
+.support-kofi-action-primary .support-amount-tag {
   color: color-mix(in srgb, var(--accent-hover) 82%, var(--ink));
   font-weight: 600;
 }
 
-.support-option input:focus-visible + span {
+.support-option input:focus-visible + span,
+.support-kofi-action:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
 
 .support-methods {
   display: inline-grid;
-  grid-template-columns: repeat(2, minmax(148px, 1fr));
+  grid-template-columns: repeat(3, minmax(132px, 1fr));
   gap: 6px;
   padding: 5px;
   border: 1px solid var(--line);
@@ -2921,13 +2939,14 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   justify-content: center;
   gap: 9px;
   min-height: 42px;
-  padding: 8px 18px;
+  padding: 8px 16px;
   border: 1px solid transparent;
   border-radius: 9px;
   color: var(--muted);
   background: transparent;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
   transition:
     color 160ms ease,
     background 160ms ease,
@@ -2960,6 +2979,10 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 
 .support-methods .support-option input:checked + .support-method-alipay .support-method-icon {
   color: #1677ff;
+}
+
+.support-methods .support-option input:checked + .support-method-kofi .support-method-icon {
+  color: #ff5e5b;
 }
 
 .support-instruction {
@@ -3040,6 +3063,10 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   background: linear-gradient(90deg, #1677ff, var(--signal));
 }
 
+#support-kofi::before {
+  background: linear-gradient(90deg, #ff5e5b, #29abe0);
+}
+
 .support-payment figcaption {
   display: inline-flex;
   align-items: center;
@@ -3070,6 +3097,11 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.16);
 }
 
+#support-kofi figcaption::before {
+  background: #ff5e5b;
+  box-shadow: 0 0 0 3px rgba(255, 94, 91, 0.16);
+}
+
 .support-code {
   position: relative;
   width: min(100%, 304px);
@@ -3096,10 +3128,12 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 /* Viewports isolate the QR pixels; the white frame restores a generous quiet zone.
    WeChat generic: (238, 292, 352, 352); fixed: (243, 351, 341, 341) in 828 × 1124.
    Alipay, all amounts: (250, 718, 782, 782) in 1280 × 1919.
+   Ko-fi: (80, 80, 660, 660) in 820 × 820.
    Replace these coordinates together with the corresponding original asset. */
 .support-code-wechat img { width: 235.227273%; left: -67.613636%; top: -82.954545%; }
 .support-code-wechat img[data-support-fixed] { width: 242.815249%; left: -71.260997%; top: -102.932551%; }
 .support-code-alipay img { width: 163.682864%; left: -31.969309%; top: -91.815857%; }
+.support-code-kofi img { width: 124.242424%; left: -12.121212%; top: -12.121212%; }
 
 .support-code-loading {
   position: absolute;
@@ -3118,6 +3152,82 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   line-height: 1.7;
 }
 
+.support-kofi-fallback {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+}
+
+.support-kofi-fallback a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.support-kofi-dialog {
+  width: min(460px, calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--white);
+  box-shadow: var(--card-shadow);
+}
+
+.support-kofi-dialog::backdrop {
+  background: rgb(0 0 0 / 70%);
+}
+
+.support-kofi-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.support-kofi-dialog-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.support-kofi-dialog-header a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.support-kofi-dialog-header button {
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--panel);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.support-kofi-dialog-body {
+  max-height: calc(100dvh - 96px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  border-radius: 0 0 15px 15px;
+}
+
+.support-kofi-dialog-body iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+
 .support-section [hidden] {
   display: none !important;
 }
@@ -3130,7 +3240,10 @@ html[data-support-pending] [data-support-loading] {
   display: grid !important;
 }
 
-html[data-support-pending] [data-support-payment="alipay"] {
+html[data-support-pending] [data-support-payment="alipay"],
+html[data-site-language="zh"][data-support-pending] [data-support-payment="kofi"],
+html[data-site-language="en"][data-support-pending] [data-support-payment="wechat"],
+html[data-support-pending] .support-kofi-fallback {
   display: none;
 }
 
@@ -3164,10 +3277,25 @@ html[data-support-pending] [data-support-payment="alipay"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .support-kofi-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .support-methods {
     display: grid;
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .support-method-pill {
+    gap: 6px;
+    padding: 8px 6px;
+    font-size: 12.5px;
+  }
+
+  .support-method-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 

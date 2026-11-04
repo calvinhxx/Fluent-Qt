@@ -57,6 +57,17 @@ class HomepageAssetTest(unittest.TestCase):
             self.assertIn(f'location.replace("../../zh-CN/?fuel={tier}#support")', page)
             self.assertIn(f'<a href="../../?fuel={tier}#support">', page)
 
+    def test_rendered_pages_select_locale_default_support_channel(self):
+        source = site.TEMPLATE_PATH.read_text(encoding='utf-8')
+        values = site.translations()
+        version = site.project_version()
+        english = site.render_page(source, site.LOCALES[0], values['en'], version)
+        chinese = site.render_page(source, site.LOCALES[1], values['zh'], version)
+        self.assertRegex(english, r'<input type="radio" name="support-method" value="kofi"[^>]*\schecked>')
+        self.assertNotRegex(english, r'<input type="radio" name="support-method" value="wechat"[^>]*\schecked>')
+        self.assertRegex(chinese, r'<input type="radio" name="support-method" value="wechat"[^>]*\schecked>')
+        self.assertNotRegex(chinese, r'<input type="radio" name="support-method" value="kofi"[^>]*\schecked>')
+
 
 if __name__ == '__main__':
     unittest.main()
