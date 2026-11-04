@@ -1640,7 +1640,7 @@
           "id": "checkbox-two-state",
           "title": "Two-state CheckBox",
           "description": "A two-state checkbox represents a simple on/off choice and reports the current state.",
-          "cpp_snippet": "auto* checkBox = new CheckBox(\"Accept terms\", this);\nauto* status = new Label(\"State: Unchecked\", this);\nconnect(checkBox, &CheckBox::stateChanged, status, [status](int state) {\n    status->setText(state == Qt::Checked ? \"State: Checked\" : \"State: Unchecked\");\n});",
+          "cpp_snippet": "auto* checkBox = new CheckBox(\"Accept terms\", this);\nauto* status = new Label(\"State: Unchecked\", this);\nconnect(checkBox, &CheckBox::stateChanged, status, [status](int state) {\n    status->setText(state == Qt::Checked ? \"State: Checked\" : \"State: Unchecked\");\n});\n\nauto* disabledOff = new CheckBox(\"Disabled off\", this);\ndisabledOff->setEnabled(false);\nauto* disabledOn = new CheckBox(\"Disabled on\", this);\ndisabledOn->setChecked(true);\ndisabledOn->setEnabled(false);",
           "preview_layout": {
             "orientation": "vertical",
             "spacing": 8

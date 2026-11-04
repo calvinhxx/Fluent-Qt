@@ -45,7 +45,7 @@
     {
       "route_id": "checkbox",
       "sample_id": "checkbox-two-state",
-      "source": "from PySide6.QtCore import Qt\n\ncheck_box = fluentqt.CheckBox(\"Accept terms\")\nstatus = fluentqt.Label(\"State: Unchecked\")\ncheck_box.stateChanged.connect(\n    lambda state: status.setText(\n        \"State: Checked\"\n        if Qt.CheckState(state) == Qt.CheckState.Checked\n        else \"State: Unchecked\"\n    )\n)\n"
+      "source": "from PySide6.QtCore import Qt\n\ncheck_box = fluentqt.CheckBox(\"Accept terms\")\nstatus = fluentqt.Label(\"State: Unchecked\")\ncheck_box.stateChanged.connect(\n    lambda state: status.setText(\n        \"State: Checked\"\n        if Qt.CheckState(state) == Qt.CheckState.Checked\n        else \"State: Unchecked\"\n    )\n)\ndisabled_off = fluentqt.CheckBox(\"Disabled off\")\ndisabled_off.setEnabled(False)\ndisabled_on = fluentqt.CheckBox(\"Disabled on\")\ndisabled_on.setChecked(True)\ndisabled_on.setEnabled(False)\n"
     },
     {
       "route_id": "checkbox",

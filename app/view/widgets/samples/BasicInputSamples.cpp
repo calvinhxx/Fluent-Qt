@@ -351,7 +351,12 @@ QVector<GallerySample> checkBoxSamples()
                 "auto* status = new Label(\"State: Unchecked\", this);\n"
                 "connect(checkBox, &CheckBox::stateChanged, status, [status](int state) {\n"
                 "    status->setText(state == Qt::Checked ? \"State: Checked\" : \"State: Unchecked\");\n"
-                "});"),
+                "});\n\n"
+                "auto* disabledOff = new CheckBox(\"Disabled off\", this);\n"
+                "disabledOff->setEnabled(false);\n"
+                "auto* disabledOn = new CheckBox(\"Disabled on\", this);\n"
+                "disabledOn->setChecked(true);\n"
+                "disabledOn->setEnabled(false);"),
             [](QWidget* parent) {
                 QWidget* group = verticalGroup(parent, 8);
                 auto* checkBox = new CheckBox(QStringLiteral("Accept terms"), group);
@@ -364,6 +369,13 @@ QVector<GallerySample> checkBoxSamples()
                 });
                 group->layout()->addWidget(checkBox);
                 group->layout()->addWidget(status);
+                auto* disabledOff = new CheckBox(QStringLiteral("Disabled off"), group);
+                disabledOff->setEnabled(false);
+                auto* disabledOn = new CheckBox(QStringLiteral("Disabled on"), group);
+                disabledOn->setChecked(true);
+                disabledOn->setEnabled(false);
+                group->layout()->addWidget(disabledOff);
+                group->layout()->addWidget(disabledOn);
                 return group;
             }),
         makeSample(QStringLiteral("checkbox-three-state"), QStringLiteral("Three-state CheckBox"),

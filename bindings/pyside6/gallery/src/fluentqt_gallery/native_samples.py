@@ -4002,6 +4002,11 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                     else "State: Unchecked"
                 )
             )
+            disabled_off = fluentqt.CheckBox("Disabled off")
+            disabled_off.setEnabled(False)
+            disabled_on = fluentqt.CheckBox("Disabled on")
+            disabled_on.setChecked(True)
+            disabled_on.setEnabled(False)
             """,
             imports="from PySide6.QtCore import Qt",
         )
