@@ -50,6 +50,10 @@ def parse_args() -> argparse.Namespace:
         help="viewport repeats the size-dependent Gallery and base Hello World pages.",
     )
     parser.add_argument(
+        "--group", choices=("all", "gallery", "interaction"), default="all",
+        help="Run the complete local suite or one CI group. Interaction requires full mode.",
+    )
+    parser.add_argument(
         "--device-scale-factor",
         type=float,
         default=2.0,
@@ -652,23 +656,30 @@ def run_timed_contract(contract: Callable[..., object], *args: object) -> None:
         print(f"Browser contract timing: {name} {time.perf_counter() - started:.1f}s", flush=True)
 
 
-def run_fixed_viewport_contracts(mode: str, browser: object, base_url: str, root: Path) -> None:
+def run_fixed_viewport_contracts(
+    mode: str, browser: object, base_url: str, root: Path, group: str = "all",
+) -> None:
+    if group == "interaction" and mode != "full":
+        raise ValueError("The interaction browser group requires full mode")
     if mode == "viewport":
         return
     if mode == "full":
-        for contract, artifact_dir in (
-            (run_command_submenus_contract, "command-menu-validation"),
-            (run_command_palette_contract, "command-palette-validation"),
-            (run_form_contract, "form-validation"),
-            (run_list_detail_contract, "list-detail-validation"),
-            (run_data_grid_contract, "data-grid-validation"),
-            (run_auto_suggest_contract, "auto-suggest-validation"),
-            (run_gallery_search_contract, "gallery-search-validation"),
-            (run_tag_input_contract, "tag-input-validation"),
-            (run_tree_select_contract, "tree-select-validation"),
-            (run_chart_workbench_contract, "chart-workbench-validation"),
+        for owner, contract, artifact_dir in (
+            ("interaction", run_command_submenus_contract, "command-menu-validation"),
+            ("interaction", run_command_palette_contract, "command-palette-validation"),
+            ("interaction", run_form_contract, "form-validation"),
+            ("gallery", run_list_detail_contract, "list-detail-validation"),
+            ("interaction", run_data_grid_contract, "data-grid-validation"),
+            ("gallery", run_auto_suggest_contract, "auto-suggest-validation"),
+            ("gallery", run_gallery_search_contract, "gallery-search-validation"),
+            ("gallery", run_tag_input_contract, "tag-input-validation"),
+            ("gallery", run_tree_select_contract, "tree-select-validation"),
+            ("gallery", run_chart_workbench_contract, "chart-workbench-validation"),
         ):
-            run_timed_contract(contract, browser, base_url, root / artifact_dir)
+            if group in ("all", owner):
+                run_timed_contract(contract, browser, base_url, root / artifact_dir)
+    if group == "interaction":
+        return
 
     run_timed_contract(
         run_hello_world_spatial_contract, browser, base_url, root / "hello-world-validation"
@@ -688,6 +699,7 @@ def run_smoke(
     window_mode: str,
     viewport_width: int,
     viewport_height: int,
+    group: str = "all",
 ) -> None:
     try:
         from playwright.sync_api import sync_playwright
@@ -708,6 +720,11 @@ def run_smoke(
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
+            if group == "interaction":
+                run_fixed_viewport_contracts(mode, browser, base_url, root, group)
+                browser.close()
+                print("WebAssembly interaction browser checks passed")
+                return
             page = browser.new_page(
                 viewport={"width": viewport_width, "height": viewport_height},
                 device_scale_factor=device_scale_factor,
@@ -1093,7 +1110,7 @@ def run_smoke(
                 f"{time.perf_counter() - gallery_started:.1f}s",
                 flush=True,
             )
-            run_fixed_viewport_contracts(mode, browser, base_url, root)
+            run_fixed_viewport_contracts(mode, browser, base_url, root, group)
 
             browser.close()
     except Exception:
@@ -1135,6 +1152,7 @@ def main() -> int:
             args.window_mode,
             args.viewport_width,
             args.viewport_height,
+            args.group,
         )
     except Exception as error:
         print(f"error: {error}", file=sys.stderr)

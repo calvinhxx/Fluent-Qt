@@ -76,7 +76,7 @@ EXPECTED_JOBS = {
         "release-ready",
     },
     "ci-cpp.yml": {"plan", "build", "integration"},
-    "ci-wasm.yml": {"build"},
+    "ci-wasm.yml": {"build", "browser", "pages-payload"},
     "ci-site.yml": {"build"},
     "ci-python.yml": {
         "plan",
@@ -111,7 +111,7 @@ EXPECTED_JOBS = {
 }
 UNCONDITIONAL_JOBS = {
     "ci-python.yml": {"plan"},
-    "ci-wasm.yml": {"build"},
+    "ci-wasm.yml": {"build", "browser", "pages-payload"},
     "ci-site.yml": {"build"},
     "pages.yml": {"authorize"},
 }
@@ -237,6 +237,7 @@ def pages_deployment_boundary_errors(contents: str) -> list[str]:
         "    needs: authorize",
         "    if: ${{ github.event_name == 'workflow_dispatch' }}",
         "    permissions:",
+        "      actions: read",
         "      contents: read",
         "    uses: ./.github/workflows/ci-wasm.yml",
         "    with:",
@@ -484,6 +485,8 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     errors = immutable_action_errors("ci-wasm.yml", contents)
     contents = normalize_action_references(contents)
     build = job_section(contents, "build")
+    browser = job_section(contents, "browser")
+    publish = job_section(contents, "pages-payload")
     active_build = "\n".join(uncommented_workflow_lines(build)) + "\n"
     build_env_match = re.search(
         r"^    env:\n(?P<body>(?:^      [^\n]+\n)*)",
@@ -506,7 +509,8 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Configure runner paths",
         "      - name: Validate browser tier",
         "      - name: Set up Python",
-        "      - name: Install WebAssembly tooling frontends",
+        "      - name: Validate browser checks",
+        "      - name: Install Qt installer",
         "      - name: Cache Qt WebAssembly and host kits",
         "      - name: Install Qt WebAssembly and host kits",
         "      - name: Verify Qt kits",
@@ -517,19 +521,50 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Fetch and verify pinned Qt accessibility sources",
         "      - name: Configure and build WebAssembly targets",
         "      - name: Verify installed FluentQt WebAssembly consumer",
-        "      - name: Cache Chromium",
-        "      - name: Install Chromium runtime",
-        "      - name: Run browser smoke",
-        "      - name: Upload browser smoke diagnostics",
-        "      - name: Run Spatial software fallback smoke",
-        "      - name: Upload Spatial fallback evidence",
-        "      - name: Stage GitHub Pages payload",
-        "      - name: Upload WebAssembly Pages payload",
+        "      - name: Stage browser payload",
+        "      - name: Upload browser input",
     ]
     if workflow_step_headers(build) != expected_step_headers:
         errors.append(
             "ci-wasm.yml build steps must be the exact audited set and order"
         )
+    for job, step_names in (
+        (browser, ("Checkout", "Download browser input", "Verify browser input", "Set up Python",
+                   "Install Playwright", "Cache Chromium", "Install Chromium runtime", "Run browser smoke",
+                   "Check wide viewport", "Upload browser smoke diagnostics", "Run Spatial software fallback smoke",
+                   "Upload Spatial fallback evidence")),
+        (publish, ("Download tested browser input", "Upload WebAssembly Pages payload")),
+    ):
+        if workflow_step_headers(job) != [f"      - name: {name}" for name in step_names]:
+            errors.append("ci-wasm.yml browser and publication steps must preserve the audited order")
+    if ("    needs: build" not in job_level_lines(browser)
+            or "    needs: [build, browser]" not in job_level_lines(publish)):
+        errors.append("ci-wasm.yml must publish only after the build and every browser group pass")
+    matrix = """        group: ${{ fromJSON(inputs.mode == 'full' && '["gallery","interaction"]' || '["gallery"]') }}"""
+    if matrix not in uncommented_workflow_lines(browser):
+        errors.append("ci-wasm.yml full mode must run both browser groups and fast mode only Gallery")
+    for job, step, path in ((browser, "Download browser input", "build/wasm/app"),
+                            (publish, "Download tested browser input", "build/wasm-pages")):
+        if uncommented_workflow_lines(named_step_section(job, step))[1:] != [
+            "        uses: actions/download-artifact@<commit>",
+            "        with:",
+            "          name: fluentqt-wasm-input-${{ needs.build.outputs.payload_attempt }}",
+            f"          path: {path}",
+            "          github-token: ${{ github.token }}",
+            "          run-id: ${{ github.run_id }}",
+        ]:
+            errors.append("ci-wasm.yml must use the same build attempt's browser input from this run")
+    for job, step, name, overwrite in (
+        (build, "Upload browser input", "fluentqt-wasm-input-${{ github.run_attempt }}", False),
+        (publish, "Upload WebAssembly Pages payload", "fluentqt-wasm-pages", True),
+    ):
+        expected = ["        uses: actions/upload-artifact@<commit>", "        with:",
+                    f"          name: {name}", "          path: build/wasm-pages"]
+        if overwrite:
+            expected.append("          overwrite: true")
+        expected.extend(["          if-no-files-found: error", "          retention-days: 7"])
+        if uncommented_workflow_lines(named_step_section(job, step))[1:] != expected:
+            errors.append("ci-wasm.yml must keep its untested input separate from the tested Pages artifact")
     revision_mapping = f"EMSDK_REPOSITORY_REVISION: {EMSDK_REPOSITORY_REVISION}"
     if revision_mapping not in active_build:
         errors.append(
@@ -641,10 +676,10 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
             "ci-wasm.yml installed-consumer step must exactly consume the audited SDK"
         )
 
-    browser_evidence = named_step_section(build, "Upload browser smoke diagnostics")
+    browser_evidence = named_step_section(browser, "Upload browser smoke diagnostics")
     expected_browser_evidence = [
         "      - name: Upload browser smoke diagnostics",
-        "        if: ${{ always() }}",
+        "        if: ${{ always() && matrix.group == 'interaction' }}",
         "        uses: actions/upload-artifact@<commit>",
         "        with:",
         "          name: fluentqt-wasm-browser-diagnostics-${{ github.run_attempt }}",
@@ -659,9 +694,10 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     if uncommented_workflow_lines(browser_evidence) != expected_browser_evidence:
         errors.append("ci-wasm.yml must retain bounded browser failure diagnostics")
 
-    fallback_step = named_step_section(build, "Run Spatial software fallback smoke")
+    fallback_step = named_step_section(browser, "Run Spatial software fallback smoke")
     expected_fallback_step = [
         "      - name: Run Spatial software fallback smoke",
+        "        if: ${{ matrix.group == 'gallery' }}",
         "        shell: bash",
         "        run: |",
         "          python .github/scripts/run-wasm-spatial-smoke.py \\",
@@ -674,14 +710,15 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         errors.append(
             "ci-wasm.yml must run the fail-closed Spatial software fallback contract"
         )
-    evidence_step = named_step_section(build, "Upload Spatial fallback evidence")
+    evidence_step = named_step_section(browser, "Upload Spatial fallback evidence")
     expected_evidence_step = [
         "      - name: Upload Spatial fallback evidence",
-        "        if: ${{ always() }}",
+        "        if: ${{ always() && matrix.group == 'gallery' }}",
         "        uses: actions/upload-artifact@<commit>",
         "        with:",
         "          name: fluentqt-wasm-spatial-software-fallback",
         "          path: build/spatial-validation/ci-software-fallback",
+        "          overwrite: true",
         "          if-no-files-found: ignore",
         "          retention-days: 7",
     ]

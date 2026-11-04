@@ -25,12 +25,13 @@ STAGE_SPEC.loader.exec_module(STAGE)
 
 
 class BrowserTierTest(unittest.TestCase):
+    def contracts(self, mode, group="all"):
+        with mock.patch.object(MODULE, "run_timed_contract") as run:
+            MODULE.run_fixed_viewport_contracts(mode, object(), "http://localhost", Path("output"), group)
+            return [call.args[0] for call in run.call_args_list]
+
     def test_wide_pass_does_not_repeat_fixed_size_contracts(self):
-        runs = {}
-        for mode in ("fast", "full", "viewport"):
-            with mock.patch.object(MODULE, "run_timed_contract") as run:
-                MODULE.run_fixed_viewport_contracts(mode, object(), "http://localhost", Path("output"))
-                runs[mode] = [call.args[0] for call in run.call_args_list]
+        runs = {mode: self.contracts(mode) for mode in ("fast", "full", "viewport")}
         self.assertEqual(runs["viewport"], [])
         self.assertEqual(runs["fast"], [
             MODULE.run_hello_world_spatial_contract, MODULE.run_embedded_theme_contract,
@@ -39,6 +40,24 @@ class BrowserTierTest(unittest.TestCase):
         self.assertEqual(runs["full"][-len(runs["fast"]):], runs["fast"])
         self.assertIn(MODULE.run_data_grid_contract, runs["full"])
         self.assertEqual(len(runs["full"]), len(set(runs["full"])))
+
+    def test_full_groups_preserve_every_contract_once_and_keep_diagnostics_together(self):
+        interaction = self.contracts("full", "interaction")
+        self.assertEqual(interaction, [
+            MODULE.run_command_submenus_contract, MODULE.run_command_palette_contract,
+            MODULE.run_form_contract, MODULE.run_data_grid_contract,
+        ])
+        gallery = self.contracts("full", "gallery")
+        self.assertCountEqual(gallery, [
+            MODULE.run_list_detail_contract, MODULE.run_auto_suggest_contract,
+            MODULE.run_gallery_search_contract, MODULE.run_tag_input_contract,
+            MODULE.run_tree_select_contract, MODULE.run_chart_workbench_contract, *self.contracts("fast"),
+        ])
+        self.assertCountEqual(interaction + gallery, self.contracts("full"))
+        for mode in ("fast", "viewport"):
+            self.assertEqual(self.contracts(mode, "gallery"), self.contracts(mode))
+            with self.assertRaisesRegex(ValueError, "requires full"):
+                self.contracts(mode, "interaction")
 
 
 class MinimalExamplePresentationTest(unittest.TestCase):

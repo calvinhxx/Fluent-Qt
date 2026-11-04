@@ -770,16 +770,16 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_wasm_spatial_failure_evidence_must_be_retained(self):
         errors = self.workflow_errors_with_replacement(
             "ci-wasm.yml",
-            "      - name: Upload Spatial fallback evidence\n        if: ${{ always() }}\n",
-            "      - name: Upload Spatial fallback evidence\n        if: ${{ success() }}\n",
+            "always() && matrix.group == 'gallery'",
+            "success() && matrix.group == 'gallery'",
         )
         self.assertTrue(any("retain Spatial fallback failure evidence" in error for error in errors))
 
     def test_wasm_browser_diagnostics_retain_failures_with_bounded_paths(self):
         for before, after in (
             (
-                "      - name: Upload browser smoke diagnostics\n        if: ${{ always() }}\n",
-                "      - name: Upload browser smoke diagnostics\n        if: ${{ success() }}\n",
+                "always() && matrix.group == 'interaction'",
+                "success() && matrix.group == 'interaction'",
             ),
             ("            build/wasm/command-palette-validation\n", "            .git\n"),
             ("            build/wasm/data-grid-validation\n", ""),
@@ -787,6 +787,44 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             with self.subTest(replacement=after):
                 errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
                 self.assertTrue(any("bounded browser failure diagnostics" in error for error in errors))
+
+    def test_wasm_pages_waits_for_both_full_groups_on_the_same_build_input(self):
+        for before, after, diagnostic in (
+            ('["gallery","interaction"]', '["gallery"]', "both browser groups"),
+            ("needs: [build, browser]", "needs: build", "every browser group"),
+            ("fluentqt-wasm-input-${{ needs.build.outputs.payload_attempt }}",
+             "fluentqt-wasm-input-${{ github.run_attempt }}", "same build attempt"),
+            ("name: fluentqt-wasm-input-${{ github.run_attempt }}", "name: fluentqt-wasm-pages",
+             "untested input separate"),
+        ):
+            with self.subTest(before=before):
+                errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
+                self.assertTrue(any(diagnostic in error for error in errors), errors)
+
+    def test_wasm_browser_steps_invoke_the_selected_tier_group_and_viewport(self):
+        job = MODULE.job_section(MODULE.read_workflow("ci-wasm.yml"), "browser")
+        for mode, group in (("fast", "gallery"), ("full", "gallery"), ("full", "interaction")):
+            for name in ("Run browser smoke", "Check wide viewport"):
+                step = MODULE.named_step_section(job, name)
+                wide = name == "Check wide viewport"
+                if wide:
+                    self.assertIn("        if: ${{ matrix.group == 'gallery' }}", step.splitlines())
+                    if group != "gallery":
+                        continue
+                else:
+                    self.assertNotIn("        if:", step)
+                script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+                script = script.replace("${{ inputs.mode }}", mode).replace("${{ matrix.group }}", group)
+                args = subprocess.check_output(
+                    ["bash", "-eu", "-c", "python() { printf '%s\\n' \"$@\"; }\n" + script], text=True,
+                ).splitlines()
+                expected = [".github/scripts/run-wasm-browser-smoke.py", "--root", "build/wasm", "--mode"]
+                if wide:
+                    expected += ["viewport", "--device-scale-factor", "2", "--viewport-width", "1920",
+                                 "--viewport-height", "1080"]
+                else:
+                    expected += [mode, "--group", group, "--device-scale-factor", "2"]
+                self.assertEqual(args, expected)
 
     def test_wasm_source_fetch_and_unit_checks_cannot_be_disabled_or_fail_open(self):
         commands = (

@@ -23,10 +23,11 @@ PAGES_PIPELINE_ACTIONS = {
         "actions/deploy-pages": 1,
     },
     "ci-wasm.yml": {
-        "actions/checkout": 1,
-        "actions/setup-python": 1,
+        "actions/checkout": 2,
+        "actions/setup-python": 2,
         "actions/cache": 5,
-        "actions/upload-artifact": 3,
+        "actions/upload-artifact": 4,
+        "actions/download-artifact": 2,
     },
 }
 ACTION_USES = re.compile(

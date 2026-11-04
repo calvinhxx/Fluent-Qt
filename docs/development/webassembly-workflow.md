@@ -235,10 +235,11 @@ The Gallery owns condition-driven browser checks selected by a query parameter:
   deactivation, and restoration, checking retained widgets and native
   dependency/failure probes.
 
-The CI runner uses `--mode viewport` for the second, wide-screen pass. It runs
-the fast Gallery and base Hello World checks at the requested size. The first
-pass runs the fixed-size Spatial Hello World, embedded theme, plugin extension,
-and Spatial showcase contracts once.
+The default local command runs all checks for its tier. In full CI,
+`--group interaction` runs command menus, the command palette, forms and
+DataGrid on a separate runner. The `gallery` group runs the remaining checks
+and the 1920×1080 `--mode viewport` pass. The wide pass exercises only the
+size-dependent Gallery and base Hello World pages.
 
 Website theme cycling and persistence are covered by the
 [static theme contract](../../tools/site/test_theme_browser.py) in
@@ -415,8 +416,10 @@ asynchronous, so the Gallery itself does not link whole-program Asyncify.
 
 `.github/workflows/ci-wasm.yml` is the reusable browser validation module. The
 top-level CI selects it for browser-affecting pull requests and for full `main`
-validation. On `main`, that same run passes the staged payload to the reusable
-Pages deployment, so the Gallery is built once. A manual Pages run rebuilds the
+validation. Browser jobs download the staged files from the producing build
+attempt and check its commit and tier. Once all groups pass, CI copies those
+same files to `fluentqt-wasm-pages`. On `main` the reusable Pages deployment
+consumes that artifact. A manual Pages run rebuilds the
 full tier before deploying and remains the recovery path. The site is published
 below `/Fluent-Qt/gallery/` together with `build-info.json` and license material.
 
