@@ -3,8 +3,8 @@
   "versions": [
     {
       "version": "1.11.2",
-      "status": "candidate",
-      "published_at": null,
+      "status": "published",
+      "published_at": "2026-11-04T15:17:21Z",
       "source_sha256": "8fcefe1ba8b9ed3b84dddf3832d4d16359bbadcbc0610bb8def780abe22accff",
       "summary": {
         "en": "Fixes Windows headless window handling and adds disabled checkbox examples in the C++ and PySide6 Gallery.",
@@ -871,7 +871,7 @@
     }
   ],
   "unreleased": {
-    "after": "1.11.1",
+    "after": "1.11.2",
     "related": [],
     "headers": [],
     "changes": [],
