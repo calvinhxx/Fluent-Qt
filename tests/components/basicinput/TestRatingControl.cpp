@@ -1,14 +1,9 @@
 #include "components/basicinput/Button.h"
 #include "components/basicinput/RatingControl.h"
 #include "components/foundation/FluentElement.h"
-#include "components/foundation/ThemeRegistry.h"
-#include "design/Spacing.h"
-#include "design/Typography.h"
 #include "ControlSurfaceTestUtils.h"
 #include <QApplication>
-#include <QHBoxLayout>
 #include <QImage>
-#include <QLabel>
 #include <QPainter>
 #include <QRegion>
 #include <QSignalSpy>
@@ -18,38 +13,7 @@
 
 using namespace fluent::basicinput;
 
-// ── 测试窗口 ─────────────────────────────────────────────────────────────────
-
-class RatingControlTestWindow : public QWidget, public fluent::FluentElement {
-public:
-    using QWidget::QWidget;
-    void onThemeUpdated() override
-    {
-        const auto& c = themeColors();
-        setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
-    }
-};
-
-// ── 测试类 ───────────────────────────────────────────────────────────────────
-
-class RatingControlTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        window = new RatingControlTestWindow();
-        window->setFixedSize(600, 500);
-        window->setWindowTitle("Fluent RatingControl Visual Test");
-        window->onThemeUpdated();
-    }
-
-    void TearDown() override { delete window; }
-
-    RatingControlTestWindow* window = nullptr;
-};
-
-// ── 默认属性 ─────────────────────────────────────────────────────────────────
-
-TEST_F(RatingControlTest, DefaultPropertyValues)
+TEST(RatingControlTest, DefaultPropertyValues)
 {
     RatingControl rc;
     EXPECT_DOUBLE_EQ(rc.value(), -1.0);
@@ -64,7 +28,7 @@ TEST_F(RatingControlTest, DefaultPropertyValues)
 
 // ── Value 属性 ───────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetValueEmitsSignal)
+TEST(RatingControlTest, ValueEmitsOnlyWhenChanged)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::valueChanged);
@@ -72,18 +36,11 @@ TEST_F(RatingControlTest, SetValueEmitsSignal)
     ASSERT_EQ(spy.count(), 1);
     EXPECT_DOUBLE_EQ(spy.first().first().toDouble(), 3.0);
     EXPECT_DOUBLE_EQ(rc.value(), 3.0);
+    rc.setValue(3.0);
+    EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(RatingControlTest, SetSameValueNoSignal)
-{
-    RatingControl rc;
-    rc.setValue(3.0);
-    QSignalSpy spy(&rc, &RatingControl::valueChanged);
-    rc.setValue(3.0);
-    EXPECT_EQ(spy.count(), 0);
-}
-
-TEST_F(RatingControlTest, ValueClampedToMaxRating)
+TEST(RatingControlTest, ValueClampedToMaxRating)
 {
     RatingControl rc;
     rc.setMaxRating(5);
@@ -91,14 +48,14 @@ TEST_F(RatingControlTest, ValueClampedToMaxRating)
     EXPECT_DOUBLE_EQ(rc.value(), 5.0);
 }
 
-TEST_F(RatingControlTest, ValueClampedToMinusOne)
+TEST(RatingControlTest, ValueClampedToMinusOne)
 {
     RatingControl rc;
     rc.setValue(-5.0);
     EXPECT_DOUBLE_EQ(rc.value(), -1.0);
 }
 
-TEST_F(RatingControlTest, HalfStarValue)
+TEST(RatingControlTest, HalfStarValue)
 {
     RatingControl rc;
     rc.setValue(3.5);
@@ -107,7 +64,7 @@ TEST_F(RatingControlTest, HalfStarValue)
 
 // ── PlaceholderValue 属性 ────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetPlaceholderValueEmitsSignal)
+TEST(RatingControlTest, SetPlaceholderValueEmitsSignal)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::placeholderValueChanged);
@@ -116,7 +73,7 @@ TEST_F(RatingControlTest, SetPlaceholderValueEmitsSignal)
     EXPECT_DOUBLE_EQ(spy.first().first().toDouble(), 2.5);
 }
 
-TEST_F(RatingControlTest, PlaceholderValueClampedToZero)
+TEST(RatingControlTest, PlaceholderValueClampedToZero)
 {
     RatingControl rc;
     rc.setPlaceholderValue(-1.0);
@@ -125,38 +82,42 @@ TEST_F(RatingControlTest, PlaceholderValueClampedToZero)
 
 // ── Caption 属性 ─────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetCaptionEmitsSignal)
+TEST(RatingControlTest, CaptionEmitsOnlyWhenChanged)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::captionChanged);
     rc.setCaption("312 ratings");
     ASSERT_EQ(spy.count(), 1);
     EXPECT_EQ(rc.caption(), "312 ratings");
-}
-
-TEST_F(RatingControlTest, SetSameCaptionNoSignal)
-{
-    RatingControl rc;
-    rc.setCaption("test");
-    QSignalSpy spy(&rc, &RatingControl::captionChanged);
-    rc.setCaption("test");
-    EXPECT_EQ(spy.count(), 0);
+    rc.setCaption("312 ratings");
+    EXPECT_EQ(spy.count(), 1);
 }
 
 // ── IsClearEnabled 属性 ──────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetIsClearEnabledEmitsSignal)
+TEST(RatingControlTest, ClearEnabledControlsRepeatedClicksOnTheSameStar)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::isClearEnabledChanged);
     rc.setIsClearEnabled(false);
     ASSERT_EQ(spy.count(), 1);
     EXPECT_FALSE(rc.isClearEnabled());
+
+    rc.resize(rc.sizeHint());
+    QTest::mouseClick(&rc, Qt::LeftButton);
+    const double selected = rc.value();
+    ASSERT_GT(selected, 0.0);
+    QTest::mouseClick(&rc, Qt::LeftButton);
+    EXPECT_DOUBLE_EQ(rc.value(), selected);
+
+    rc.setIsClearEnabled(true);
+    QTest::mouseClick(&rc, Qt::LeftButton);
+    EXPECT_DOUBLE_EQ(rc.value(), -1.0);
 }
 
 // ── IsReadOnly 属性 ──────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetIsReadOnlyEmitsSignal)
+TEST(RatingControlTest, SetIsReadOnlyEmitsSignal)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::isReadOnlyChanged);
@@ -165,14 +126,14 @@ TEST_F(RatingControlTest, SetIsReadOnlyEmitsSignal)
     EXPECT_TRUE(rc.isReadOnly());
 }
 
-TEST_F(RatingControlTest, ReadOnlyCursorIsArrow)
+TEST(RatingControlTest, ReadOnlyCursorIsArrow)
 {
     RatingControl rc;
     rc.setIsReadOnly(true);
     EXPECT_EQ(rc.cursor().shape(), Qt::ArrowCursor);
 }
 
-TEST_F(RatingControlTest, KeyboardNavigationSupportsHalfStepsBoundsAndRtl)
+TEST(RatingControlTest, KeyboardNavigationSupportsHalfStepsBoundsAndRtl)
 {
     RatingControl rc;
     rc.resize(rc.sizeHint());
@@ -210,11 +171,12 @@ TEST_F(RatingControlTest, KeyboardNavigationSupportsHalfStepsBoundsAndRtl)
     EXPECT_DOUBLE_EQ(rc.value(), 2.0);
 }
 
-TEST_F(RatingControlTest, MouseActivationTakesFocus)
+TEST(RatingControlTest, MouseActivationTakesFocus)
 {
-    RatingControl rc(window);
+    QWidget host;
+    RatingControl rc(&host);
     rc.setGeometry(20, 20, rc.sizeHint().width(), rc.sizeHint().height());
-    window->show();
+    host.show();
     rc.show();
     QApplication::processEvents();
 
@@ -225,7 +187,7 @@ TEST_F(RatingControlTest, MouseActivationTakesFocus)
 
 // ── MaxRating 属性 ───────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetMaxRatingEmitsSignal)
+TEST(RatingControlTest, SetMaxRatingEmitsSignal)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::maxRatingChanged);
@@ -234,7 +196,7 @@ TEST_F(RatingControlTest, SetMaxRatingEmitsSignal)
     EXPECT_EQ(rc.maxRating(), 10);
 }
 
-TEST_F(RatingControlTest, MaxRatingClampsExistingValue)
+TEST(RatingControlTest, MaxRatingClampsExistingValue)
 {
     RatingControl rc;
     rc.setValue(5.0);
@@ -242,7 +204,7 @@ TEST_F(RatingControlTest, MaxRatingClampsExistingValue)
     EXPECT_DOUBLE_EQ(rc.value(), 3.0);
 }
 
-TEST_F(RatingControlTest, MaxRatingMinIsOne)
+TEST(RatingControlTest, MaxRatingMinIsOne)
 {
     RatingControl rc;
     rc.setMaxRating(0);
@@ -251,7 +213,7 @@ TEST_F(RatingControlTest, MaxRatingMinIsOne)
 
 // ── StarSize 属性 ────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SetStarSizeEmitsSignal)
+TEST(RatingControlTest, SetStarSizeEmitsSignal)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::starSizeChanged);
@@ -262,7 +224,7 @@ TEST_F(RatingControlTest, SetStarSizeEmitsSignal)
 
 // ── SizeHint ─────────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, SizeHintReflectsMaxRating)
+TEST(RatingControlTest, SizeHintReflectsMaxRating)
 {
     RatingControl rc;
     QSize hint5 = rc.sizeHint();
@@ -271,7 +233,7 @@ TEST_F(RatingControlTest, SizeHintReflectsMaxRating)
     EXPECT_GT(hint10.width(), hint5.width());
 }
 
-TEST_F(RatingControlTest, SizeHintIncludesCaption)
+TEST(RatingControlTest, SizeHintIncludesCaption)
 {
     RatingControl rc;
     QSize hintNoCaption = rc.sizeHint();
@@ -282,7 +244,7 @@ TEST_F(RatingControlTest, SizeHintIncludesCaption)
 
 // ── Disabled 状态 ────────────────────────────────────────────────────────────
 
-TEST_F(RatingControlTest, DisabledState)
+TEST(RatingControlTest, DisabledState)
 {
     RatingControl rc;
     rc.setValue(3.0);
@@ -291,7 +253,7 @@ TEST_F(RatingControlTest, DisabledState)
     EXPECT_DOUBLE_EQ(rc.value(), 3.0);
 }
 
-TEST_F(RatingControlTest, Contract_SelectedStarHasSolidCenterAndEmptyStarDoesNot)
+TEST(RatingControlTest, Contract_SelectedStarHasSolidCenterAndEmptyStarDoesNot)
 {
     RatingControl rating;
     rating.setMaxRating(2);
@@ -312,7 +274,7 @@ TEST_F(RatingControlTest, Contract_SelectedStarHasSolidCenterAndEmptyStarDoesNot
     EXPECT_EQ(emptyCenter, background);
 }
 
-TEST_F(RatingControlTest, Contract_LegacyFixedSizeKeepsStarsCaptionAndHitTargets)
+TEST(RatingControlTest, Contract_LegacyFixedSizeKeepsStarsCaptionAndHitTargets)
 {
     const QColor background(17, 23, 31);
     for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
@@ -339,7 +301,7 @@ TEST_F(RatingControlTest, Contract_LegacyFixedSizeKeepsStarsCaptionAndHitTargets
     }
 }
 
-TEST_F(RatingControlTest, Contract_FocusPreservesStarInkAndEdgesAtEveryScale)
+TEST(RatingControlTest, Contract_FocusPreservesStarInkAndEdgesAtEveryScale)
 {
     const QColor background(17, 23, 31);
     for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
@@ -380,79 +342,4 @@ TEST_F(RatingControlTest, Contract_FocusPreservesStarInkAndEdgesAtEveryScale)
             }
         }
     }
-}
-
-TEST_F(RatingControlTest, VisualCheck)
-{
-    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
-        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
-    }
-
-    auto* layout = new QVBoxLayout(window);
-    layout->setContentsMargins(40, 40, 40, 40);
-    layout->setSpacing(16);
-
-    // 1. 简单评分
-    layout->addWidget(new QLabel("1. Simple RatingControl:", window));
-    auto* rc1 = new RatingControl(window);
-    rc1->setCaption("312 ratings");
-    auto* label1 = new QLabel("Output: Unset", window);
-    QObject::connect(rc1, &RatingControl::valueChanged, [rc1, label1](double v) {
-        if (v < 0)
-            label1->setText("Output: Unset");
-        else
-            label1->setText(QString("Output: %1 stars").arg(v, 0, 'f', 1));
-        rc1->setCaption("Your rating");
-    });
-    layout->addWidget(rc1);
-    layout->addWidget(label1);
-
-    // 2. 占位值
-    layout->addWidget(new QLabel("2. PlaceholderValue = 3.5:", window));
-    auto* rc2 = new RatingControl(window);
-    rc2->setPlaceholderValue(3.5);
-    layout->addWidget(rc2);
-
-    // 3. 只读
-    layout->addWidget(new QLabel("3. IsReadOnly (value = 4):", window));
-    auto* rc3 = new RatingControl(window);
-    rc3->setValue(4.0);
-    rc3->setIsReadOnly(true);
-    layout->addWidget(rc3);
-
-    // 4. 禁用
-    layout->addWidget(new QLabel("4. Disabled (value = 2.5):", window));
-    auto* rc4 = new RatingControl(window);
-    rc4->setValue(2.5);
-    rc4->setEnabled(false);
-    layout->addWidget(rc4);
-
-    // 5. MaxRating = 10, 大星星
-    layout->addWidget(new QLabel("5. MaxRating = 10, StarSize = 20:", window));
-    auto* rc5 = new RatingControl(window);
-    rc5->setMaxRating(10);
-    rc5->setStarSize(20);
-    rc5->setPlaceholderValue(7.0);
-    layout->addWidget(rc5);
-
-    // 6. IsClearEnabled = false
-    layout->addWidget(new QLabel("6. IsClearEnabled = false:", window));
-    auto* rc6 = new RatingControl(window);
-    rc6->setIsClearEnabled(false);
-    layout->addWidget(rc6);
-
-    layout->addStretch();
-
-    // 主题切换
-    auto* themeBtn = new Button("Switch Theme", window);
-    themeBtn->setFixedSize(120, 32);
-    layout->addWidget(themeBtn);
-    QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                ? fluent::FluentElement::Dark
-                : fluent::FluentElement::Light);
-    });
-
-    window->show();
-    qApp->exec();
 }

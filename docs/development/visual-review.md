@@ -29,6 +29,9 @@ The [App Visual Geometry Verification](app-visual-geometry-verification.md)
 guide owns that workflow and its diagnostic command. Return here for perceived
 balance, color, typography, icon sharpness, material, and animation.
 
+Use Gallery's **Basic input** pages for manual review of Button, CheckBox,
+RadioButton, RatingControl, Slider, ToggleButton, and ToggleSwitch.
+
 ## Find the Test Binary
 
 Default build output uses the `vcpkg-osx` preset:
@@ -40,7 +43,6 @@ Default build output uses the `vcpkg-osx` preset:
 Examples:
 
 ```bash
-./build/vcpkg-osx/tests/components/basicinput/test_button
 ./build/vcpkg-osx/tests/components/basicinput/test_combo_box
 ./build/vcpkg-osx/tests/components/collections/test_list_view
 ./build/vcpkg-osx/tests/components/collections/test_tree_view
