@@ -16,6 +16,7 @@
 #include <QWidget>
 #include <QWindow>
 #ifdef FLUENT_QT_ZOOM_TEST_HAS_OPENGL_WIDGET
+#include "OpenGLTestEnvironment.h"
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
@@ -396,10 +397,14 @@ TEST(InterfaceZoomRepaintTest, NativePartialRepaintsMatchACompleteFrame)
 #endif
         }
     };
+#ifdef FLUENT_QT_ZOOM_TEST_HAS_OPENGL_WIDGET
+    const bool canPaintTextures = tests::support::nativeOpenGLContextUnavailableReason().isEmpty();
+#endif
     for (bool alphaSurface : {false, true}) {
         verifySurface(false, alphaSurface);
 #ifdef FLUENT_QT_ZOOM_TEST_HAS_OPENGL_WIDGET
-        verifySurface(true, alphaSurface);
+        if (canPaintTextures)
+            verifySurface(true, alphaSurface);
 #endif
     }
 #endif
@@ -621,6 +626,9 @@ TEST(InterfaceZoomRepaintTest, HalfDprGpuFramesAvoidReadbackAndRecoverAfterCompo
         GTEST_SKIP() << "Requires the native GPU compositor.";
     ASSERT_TRUE(zoom::isSupported());
 #if defined(FLUENT_QT_INTERFACE_ZOOM_HAS_REPAINT_QUEUES) && defined(FLUENT_QT_ZOOM_TEST_HAS_OPENGL_WIDGET)
+    const QString unavailable = tests::support::nativeOpenGLContextUnavailableReason();
+    if (!unavailable.isEmpty())
+        GTEST_SKIP() << unavailable.toStdString();
     ASSERT_TRUE(zoom::apply(1.0));
     struct Restore {
         ~Restore() { zoom::apply(1.0); }
