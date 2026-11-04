@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "QtTestEnvironment.h"
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -134,7 +135,7 @@ public:
         : m_settings(settings), m_themeMode(settings.themeMode()), m_motionMode(settings.motionMode()),
           m_navigationStyle(settings.navigationStyle()), m_closeBehavior(settings.closeBehavior()),
           m_closeBehaviorConfirmed(settings.closeBehaviorConfirmed()),
-          m_homeParticlesEnabled(settings.homeParticlesEnabled())
+          m_homeParticlesEnabled(settings.homeParticlesEnabled()), m_introCompleted(settings.introCompleted())
     {}
 
     ~GallerySettingsRestorer()
@@ -145,6 +146,7 @@ public:
         m_settings.setCloseBehavior(m_closeBehavior);
         m_settings.setCloseBehaviorConfirmed(m_closeBehaviorConfirmed);
         m_settings.setHomeParticlesEnabled(m_homeParticlesEnabled);
+        m_settings.setIntroCompleted(m_introCompleted);
     }
 
 private:
@@ -155,7 +157,14 @@ private:
     GallerySettings::CloseBehavior m_closeBehavior;
     bool m_closeBehaviorConfirmed = false;
     bool m_homeParticlesEnabled = true;
+    bool m_introCompleted = false;
 };
+
+bool showInteractiveGallery(GalleryWindow& window)
+{
+    window.show();
+    return QTest::qWaitFor([&] { return !window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")); }, 10000);
+}
 
 class GalleryZoomPlacementRestorer {
 public:
@@ -2058,6 +2067,9 @@ TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesContentPages)
 
 TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
 {
+    auto& settings = GallerySettings::instance();
+    GallerySettingsRestorer restore(settings);
+    settings.setIntroCompleted(true);
     GalleryWindow window;
 
     // Exact (case-insensitive) title match wins.
@@ -2097,15 +2109,16 @@ TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
     const auto rowText = [results](int row) { return results->index(row, 0).data(Qt::DisplayRole).toString(); };
     const auto rowRoute = [results](int row) { return results->index(row, 0).data(Qt::UserRole).toString(); };
     const auto searchFor = [&](const QString& query) {
+        if (!tests::support::showAndFocusWidget(searchBox))
+            return false;
         searchBox->clear();
         QTest::keyClicks(searchBox, query);
         EXPECT_NE(searchBox->loadState(), AutoSuggestBox::LoadState::Ready) << "Typing must not answer synchronously";
         return QTest::qWaitFor([&] { return searchBox->loadState() == AutoSuggestBox::LoadState::Ready; }, 5000);
     };
 
-    window.show();
-    QApplication::processEvents();
-    searchBox->setFocus();
+    ASSERT_TRUE(showInteractiveGallery(window));
+    ASSERT_TRUE(searchBox->isVisible());
     ASSERT_TRUE(searchFor(QStringLiteral("progress")));
     ASSERT_GE(results->rowCount(), 2);
     EXPECT_EQ(rowText(0), QStringLiteral("ProgressBar"));
@@ -2123,7 +2136,6 @@ TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
     ASSERT_TRUE(QTest::qWaitFor([&] { return window.currentRouteId() == QStringLiteral("progress-bar"); }, 2000));
 
     // Example rows name their page and carry that page's route.
-    searchBox->setFocus();
     ASSERT_TRUE(searchFor(QStringLiteral("project directory")));
     ASSERT_GE(results->rowCount(), 1);
     EXPECT_EQ(rowText(0), QStringLiteral("Search a project directory · AutoSuggestBox"));
@@ -2934,14 +2946,15 @@ TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMo
 {
     auto& settings = GallerySettings::instance();
     GallerySettingsRestorer restore(settings);
+    settings.setIntroCompleted(true);
     settings.setThemeMode(GallerySettings::ThemeMode::Light);
 
     GalleryWindow window;
     window.resize(1180, 760);
-    window.show();
-    QApplication::processEvents();
+    ASSERT_TRUE(showInteractiveGallery(window));
     ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
-    ASSERT_TRUE(QTest::qWaitFor([&] { return window.currentSettingsPage() != nullptr; }, 2000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return window.currentSettingsPage() && window.currentSettingsPage()->isVisible(); }, 2000));
 
     SettingsPage* page = window.currentSettingsPage();
     ASSERT_NE(page, nullptr);
@@ -2967,8 +2980,10 @@ TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMo
         const QColor expected = label->textColorRole() == fluent::textfields::Label::TextColorRole::Secondary
             ? darkColors.textSecondary
             : darkColors.textPrimary;
-        ASSERT_TRUE(
-            QTest::qWaitFor([&] { return (label->palette().color(QPalette::WindowText)) == (expected); }, 1000));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return label->palette().color(QPalette::WindowText) == expected; }, 1000))
+            << label->text().toStdString()
+            << ": actual=" << label->palette().color(QPalette::WindowText).name(QColor::HexArgb).toStdString()
+            << " expected=" << expected.name(QColor::HexArgb).toStdString();
         ASSERT_TRUE(QTest::qWaitFor([&] { return label->styleSheet().contains(cssRgba(expected)); }, 1000));
     }
 
