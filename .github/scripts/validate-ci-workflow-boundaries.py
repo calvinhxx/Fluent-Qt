@@ -1521,6 +1521,16 @@ def validate_ci_gate_execution_contract(orchestrator: str) -> list[str]:
     return errors
 
 
+def cmake_argument_errors(contents: str) -> list[str]:
+    """Reject two -D settings accidentally combined into one quoted argument."""
+    errors = []
+    for line in uncommented_workflow_lines(contents):
+        for match in re.finditer(r'''(["'])(-D[A-Za-z_][^\r\n]*?)\1''', line):
+            if re.search(r"\s-D[A-Za-z_][A-Za-z0-9_]*(?::[A-Za-z]+)?=", match.group(2)):
+                errors.append("CMake -D settings must be separate arguments: " + match.group(2))
+    return errors
+
+
 def site_generation_errors(contents: str) -> list[str]:
     """Require fresh, tested website output before uploading it for deployment."""
     errors = immutable_action_errors("ci-site.yml", contents)
@@ -1618,6 +1628,7 @@ def validate_boundaries() -> list[str]:
     cpp = contents["ci-cpp.yml"]
     wasm = contents["ci-wasm.yml"]
     python = contents["ci-python.yml"]
+    errors.extend(cmake_argument_errors(python))
     python_release = normalize_action_references(contents["python-release.yml"])
     desktop_candidate = contents["desktop-release-candidate.yml"]
     release_candidate = contents["release-candidate.yml"]
