@@ -630,7 +630,40 @@ target_link_libraries(
 
             <div class="support-controls" data-support-controls hidden>
               <fieldset class="support-fieldset" aria-describedby="support-instruction">
-                <legend data-i18n="support.amount">选择投喂档位</legend>
+                <legend data-i18n="support.method">切换投喂通道</legend>
+                <div class="support-methods">
+                  <label class="support-option">
+                    <input type="radio" name="support-method" value="wechat" aria-controls="support-wechat" checked>
+                    <span class="support-method-pill support-method-wechat">
+                      <svg class="support-method-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9.5 4C5.36 4 2 6.91 2 10.5c0 1.98 1.03 3.75 2.66 4.95L4 18l2.76-1.38c.86.25 1.78.38 2.74.38.34 0 .68-.02 1.01-.06A5.95 5.95 0 0 1 10 14.5c0-3.04 2.91-5.5 6.5-5.5.17 0 .34.01.5.02C16.25 6.13 13.18 4 9.5 4Zm-2.25 4.25a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm4.5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM16.5 10c-3.04 0-5.5 2.01-5.5 4.5S13.46 19 16.5 19c.77 0 1.5-.13 2.17-.36L21 19.8l-.55-2.18C21.42 16.79 22 15.7 22 14.5c0-2.49-2.46-4.5-5.5-4.5Zm-1.75 2.75a.85.85 0 1 1 0 1.7.85.85 0 0 1 0-1.7Zm3.5 0a.85.85 0 1 1 0 1.7.85.85 0 0 1 0-1.7Z"/>
+                      </svg>
+                      <span data-i18n="support.wechat">微信支付</span>
+                    </span>
+                  </label>
+                  <label class="support-option">
+                    <input type="radio" name="support-method" value="alipay" aria-controls="support-alipay">
+                    <span class="support-method-pill support-method-alipay">
+                      <svg class="support-method-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 3v2H7.5v1.6H12v1.8H8.2v1.5h3.5a9.3 9.3 0 0 1-1.9 2.7c-1.1-.4-2.1-.9-2.8-1.4l-.9 1.3c.8.6 1.9 1.1 3.2 1.6a11.7 11.7 0 0 1-4.1 1.4l.6 1.6c1.8-.3 3.4-.9 4.9-1.9 1.7.6 3.7 1.1 6.1 1.5l.5-1.7c-2.1-.3-3.9-.7-5.4-1.3.9-1.1 1.6-2.3 2-3.8H18V11.4h-4.4V9.6H17V8h-3.4V6H12Z"/>
+                      </svg>
+                      <span data-i18n="support.alipay">支付宝</span>
+                    </span>
+                  </label>
+                  <label class="support-option">
+                    <input type="radio" name="support-method" value="kofi" aria-controls="support-kofi">
+                    <span class="support-method-pill support-method-kofi">
+                      <svg class="support-method-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 6h12a1 1 0 0 1 1 1v1h1.5a3.5 3.5 0 1 1 0 7H17v.5A4.5 4.5 0 0 1 12.5 20h-5A4.5 4.5 0 0 1 3 15.5V7a1 1 0 0 1 1-1Zm13 4v3h1.5a1.5 1.5 0 0 0 0-3H17Zm-7 1.1c-.95-.95-2.5-.9-3.35.08-.82.94-.74 2.4.18 3.27L10 17.3l3.17-2.85c.92-.87 1-2.33.18-3.27-.85-.98-2.4-1.03-3.35-.08Z"/>
+                      </svg>
+                      <span data-i18n="support.kofi">Ko-fi</span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="support-fieldset" data-support-cny aria-describedby="support-instruction">
+                <legend data-i18n="support.amount">选择投喂档位 · 人民币</legend>
                 <div class="support-amounts">
                   <label class="support-option">
                     <input type="radio" name="support-amount" value="19" checked>
@@ -663,29 +696,20 @@ target_link_libraries(
                 </div>
               </fieldset>
 
-              <fieldset class="support-fieldset">
-                <legend data-i18n="support.method">切换投喂通道</legend>
-                <div class="support-methods">
-                  <label class="support-option">
-                    <input type="radio" name="support-method" value="wechat" aria-controls="support-wechat" checked>
-                    <span class="support-method-pill support-method-wechat">
-                      <svg class="support-method-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M9.5 4C5.36 4 2 6.91 2 10.5c0 1.98 1.03 3.75 2.66 4.95L4 18l2.76-1.38c.86.25 1.78.38 2.74.38.34 0 .68-.02 1.01-.06A5.95 5.95 0 0 1 10 14.5c0-3.04 2.91-5.5 6.5-5.5.17 0 .34.01.5.02C16.25 6.13 13.18 4 9.5 4Zm-2.25 4.25a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm4.5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM16.5 10c-3.04 0-5.5 2.01-5.5 4.5S13.46 19 16.5 19c.77 0 1.5-.13 2.17-.36L21 19.8l-.55-2.18C21.42 16.79 22 15.7 22 14.5c0-2.49-2.46-4.5-5.5-4.5Zm-1.75 2.75a.85.85 0 1 1 0 1.7.85.85 0 0 1 0-1.7Zm3.5 0a.85.85 0 1 1 0 1.7.85.85 0 0 1 0-1.7Z"/>
-                      </svg>
-                      <span data-i18n="support.wechat">微信支付</span>
-                    </span>
-                  </label>
-                  <label class="support-option">
-                    <input type="radio" name="support-method" value="alipay" aria-controls="support-alipay">
-                    <span class="support-method-pill support-method-alipay">
-                      <svg class="support-method-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm7 3v2H7.5v1.6H12v1.8H8.2v1.5h3.5a9.3 9.3 0 0 1-1.9 2.7c-1.1-.4-2.1-.9-2.8-1.4l-.9 1.3c.8.6 1.9 1.1 3.2 1.6a11.7 11.7 0 0 1-4.1 1.4l.6 1.6c1.8-.3 3.4-.9 4.9-1.9 1.7.6 3.7 1.1 6.1 1.5l.5-1.7c-2.1-.3-3.9-.7-5.4-1.3.9-1.1 1.6-2.3 2-3.8H18V11.4h-4.4V9.6H17V8h-3.4V6H12Z"/>
-                      </svg>
-                      <span data-i18n="support.alipay">支付宝</span>
-                    </span>
-                  </label>
+              <div class="support-kofi-stage" data-support-kofi-actions hidden>
+                <p class="support-field-label" data-i18n="support.kofiAmount">在线投喂 · 美元（US$5 起）</p>
+                <div class="support-kofi-actions">
+                  <a class="support-kofi-action support-kofi-action-primary" href="https://ko-fi.com/ifritclavin" data-kofi-open>
+                    <strong class="support-kofi-action-title" data-i18n="support.kofiPanel">页内打开打赏面板</strong>
+                    <small class="support-amount-tag" data-i18n="support.kofiPanelTag">PayPal / 银行卡 · 自由选择咖啡杯数</small>
+                  </a>
+                  <a class="support-kofi-action" href="https://ko-fi.com/ifritclavin" target="_blank" rel="noopener noreferrer">
+                    <strong class="support-kofi-action-title" data-i18n="support.kofiDirect">直接在 Ko-fi 打开 ↗</strong>
+                    <small class="support-amount-tag" data-i18n="support.kofiDirectTag">新标签页前往创作者主页结账</small>
+                  </a>
                 </div>
-              </fieldset>
+              </div>
+
               <p class="support-instruction" id="support-instruction" data-support-instruction role="status" aria-live="polite" aria-atomic="true"></p>
             </div>
 
@@ -712,10 +736,21 @@ target_link_libraries(
               </div>
               <p class="support-image-error" data-support-error hidden data-i18n="support.imageError">哎呀，收款码在路上迷路了，刷新页面或换个档位再试试？</p>
             </figure>
+            <figure class="support-payment" id="support-kofi" data-support-payment="kofi">
+              <figcaption data-i18n="support.kofiScan">Ko-fi 扫码 · 手机投喂</figcaption>
+              <div class="support-code" data-support-code>
+                <div class="support-code-window support-code-kofi">
+                  <img src="assets/support/kofi.png" width="820" height="820" loading="lazy" decoding="async" alt="维护者的 Ko-fi 主页二维码" data-i18n-alt="support.kofiAlt">
+                </div>
+                <p class="support-code-loading" data-support-loading hidden role="status" data-i18n="support.loading">正在召唤收款码…</p>
+              </div>
+              <p class="support-image-error" data-support-error hidden data-i18n="support.imageError">哎呀，收款码在路上迷路了，刷新页面或换个档位再试试？</p>
+              <p class="support-kofi-fallback"><a href="https://ko-fi.com/ifritclavin" data-i18n="support.kofiDirect">直接在 Ko-fi 打开 ↗</a></p>
+            </figure>
           </div>
 
           <div class="support-details">
-            <p class="support-mobile-help" data-i18n="support.mobileHelp">手机端冲浪？截屏后去微信或支付宝「扫一扫」里从相册召唤即可。</p>
+            <p class="support-mobile-help" data-support-mobile-help data-i18n="support.mobileHelp">手机端冲浪？截屏后去微信或支付宝「扫一扫」里从相册召唤即可。</p>
             <p class="support-policy"><span data-i18n="support.policy">纯属自愿投喂，仅用于补充咖啡因与 Token，不解锁催更特权或付费服务（但会收获作者在心里的疯狂感谢）。</span> <a href="https://github.com/calvinhxx/Fluent-Qt/blob/main/SUPPORT.md" data-i18n="support.policyLink">正经支持说明</a></p>
           </div>
         </div>
@@ -729,6 +764,22 @@ target_link_libraries(
       </div>
       <div class="gallery-preview-scroll" tabindex="0" role="region" aria-label="原尺寸 Gallery 截图" data-i18n-aria-label="hero.previewRegion">
         <img alt="" width="1440" height="900">
+      </div>
+    </dialog>
+
+    <dialog class="support-kofi-dialog" aria-labelledby="support-kofi-dialog-title">
+      <div class="support-kofi-dialog-header">
+        <div>
+          <strong id="support-kofi-dialog-title" data-i18n="support.kofiTitle">Fluent-Qt 的 Ko-fi 美元打赏面板</strong>
+          <p><span data-i18n="support.kofiDialogHelp">支持 PayPal 与银行卡；按 Esc 关闭，或</span> <a href="https://ko-fi.com/ifritclavin" target="_blank" rel="noopener noreferrer" data-i18n="support.kofiDirect">直接在 Ko-fi 打开 ↗</a></p>
+        </div>
+        <form method="dialog"><button type="submit" autofocus data-i18n="hero.closePreview">关闭</button></form>
+      </div>
+      <div class="support-kofi-dialog-body" data-kofi-checkout>
+        <template>
+          <iframe src="https://ko-fi.com/ifritclavin/?hidefeed=true&amp;widget=true&amp;embed=true&amp;preview=true"
+            title="Fluent-Qt 的 Ko-fi 美元打赏面板" data-i18n-title="support.kofiTitle" height="712"></iframe>
+        </template>
       </div>
     </dialog>
 

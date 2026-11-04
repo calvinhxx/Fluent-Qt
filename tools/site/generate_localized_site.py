@@ -59,6 +59,7 @@ class Locale:
     chinese_url: str
     english_current: str
     chinese_current: str
+    default_support_method: str
     readme_url: str
     image_alt: str
 
@@ -76,6 +77,7 @@ LOCALES = (
         chinese_url="zh-CN/",
         english_current="page",
         chinese_current="false",
+        default_support_method="kofi",
         readme_url=f"{REPOSITORY_URL}/blob/main/README.md",
         image_alt="Fluent-Qt Gallery project preview with native Qt Widgets controls.",
     ),
@@ -91,6 +93,7 @@ LOCALES = (
         chinese_url="./",
         english_current="false",
         chinese_current="page",
+        default_support_method="wechat",
         readme_url=f"{REPOSITORY_URL}/blob/main/README.zh-CN.md",
         image_alt="Fluent-Qt Gallery 项目预览，展示原生 Qt Widgets 控件。",
     ),
@@ -178,6 +181,12 @@ def localize_attributes(page: str, values: dict[str, str], locale: Locale) -> st
 
         if "data-readme-link" in tag:
             tag = replace_attribute(tag, "href", locale.readme_url)
+        if 'name="support-method"' in tag:
+            value_match = re.search(r'\bvalue="([^"]+)"', tag)
+            tag = re.sub(r"\schecked\b", "", tag)
+            if value_match and value_match.group(1) == locale.default_support_method:
+                insertion = " />" if tag.endswith("/>") else ">"
+                tag = tag[: -len(insertion)] + " checked" + insertion
         return tag
 
     return START_TAG_PATTERN.sub(transform, page)

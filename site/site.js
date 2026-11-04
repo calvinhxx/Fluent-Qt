@@ -3,7 +3,19 @@ const translations = {
     "support.kicker": "09 / SPONSOR · 赛博投喂",
     "support.title": "大佬，赏点 Token？",
     "support.intro": "开源用爱发电，奈何 AI 实在太费电。写 C++ 掉的是作者的头发，跑 Agent 烧的是真金白银的上下文。如果 Fluent-Qt 帮你的界面少踩了几个坑、省下了调样式的深夜，不妨投喂一点「赛博猫粮」——哪怕不够大模型塞牙缝，也能让维护者嘴角疯狂上扬。",
-    "support.amount": "选择投喂档位",
+    "support.kofi": "Ko-fi",
+    "support.kofiAmount": "在线投喂 · 美元（US$5 起）",
+    "support.kofiPanel": "页内打开打赏面板",
+    "support.kofiPanelTag": "PayPal / 银行卡 · 自由选择咖啡杯数",
+    "support.kofiDirect": "直接在 Ko-fi 打开 ↗",
+    "support.kofiDirectTag": "新标签页前往创作者主页结账",
+    "support.kofiTitle": "Fluent-Qt 的 Ko-fi 美元打赏面板",
+    "support.kofiDialogHelp": "支持 PayPal 与银行卡；按 Esc 关闭，或",
+    "support.kofiInstruction": "已切到 Ko-fi 美元通道：点上方按钮即可在线投喂，也可扫右侧码在手机打开。",
+    "support.kofiScan": "Ko-fi 扫码 · 手机投喂",
+    "support.kofiAlt": "维护者的 Ko-fi 主页二维码",
+    "support.kofiMobileHelp": "手机端冲浪？直接点击上方按钮即可在浏览器完成 Ko-fi 投喂。",
+    "support.amount": "选择投喂档位 · 人民币",
     "support.tier19": "一杯续命冰美式",
     "support.tier49": "够烧几轮长上下文",
     "support.tier99": "今晚放心开满推理",
@@ -212,6 +224,18 @@ const translations = {
     "support.kicker": "09 / SPONSOR · TOKEN FUND",
     "support.title": "Spare a few tokens?",
     "support.intro": "Open source runs on love, caffeine, and an alarming amount of LLM context. Writing C++ costs the maintainer’s hairline; wrangling AI agents costs cold, hard tokens. If Fluent-Qt saved your UI from a late-night stylesheet meltdown, toss a few coins into the token furnace—every bit keeps the commits flowing.",
+    "support.kofi": "Ko-fi",
+    "support.kofiAmount": "Online tip · USD (US$5+)",
+    "support.kofiPanel": "Open Tip Panel here",
+    "support.kofiPanelTag": "PayPal or card · Pick your coffees",
+    "support.kofiDirect": "Open on Ko-fi ↗",
+    "support.kofiDirectTag": "Checkout on the creator page in a new tab",
+    "support.kofiTitle": "Tip Fluent-Qt in USD on Ko-fi",
+    "support.kofiDialogHelp": "PayPal and cards supported; press Esc to close, or",
+    "support.kofiInstruction": "Ko-fi USD channel ready—open the tip panel above, head to Ko-fi directly, or scan the QR code on your phone.",
+    "support.kofiScan": "Scan for Ko-fi",
+    "support.kofiAlt": "QR code for the maintainer’s Ko-fi page",
+    "support.kofiMobileHelp": "On your phone? Tap either button above to tip directly in your browser.",
     "support.amount": "Pick a fuel tier · CNY",
     "support.tier19": "Iced coffee fuel",
     "support.tier49": "Fresh context window",
@@ -997,12 +1021,30 @@ function setupInteractions() {
 function setupSupport() {
   const root = document.querySelector("[data-support]");
   if (!root) return;
+  const kofiOpen = root.querySelector("[data-kofi-open]");
+  const kofiDialog = document.querySelector(".support-kofi-dialog");
+  if (kofiOpen && typeof kofiDialog?.showModal === "function") {
+    kofiOpen.addEventListener("click", (event) => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      const template = kofiDialog.querySelector("template");
+      if (template) template.replaceWith(template.content.cloneNode(true));
+      kofiDialog.showModal();
+    });
+    kofiDialog.addEventListener("click", (event) => {
+      if (event.target === kofiDialog && typeof kofiDialog.close === "function") kofiDialog.close();
+    });
+  }
   const controls = root.querySelector("[data-support-controls]");
   const instruction = root.querySelector("[data-support-instruction]");
   // An incomplete template keeps the static codes and leaves the controls hidden.
   if (!controls || !instruction
       || !controls.querySelector('[name="support-method"]:checked')
       || !controls.querySelector('[name="support-amount"]:checked')) return;
+  const cnyFieldset = controls.querySelector("[data-support-cny]");
+  const kofiActions = controls.querySelector("[data-support-kofi-actions]");
+  const mobileHelp = root.querySelector("[data-support-mobile-help]");
+  const kofiFallback = root.querySelector(".support-kofi-fallback");
   const payments = Array.from(root.querySelectorAll("[data-support-payment]"), (payment) => {
     const method = payment.dataset.supportPayment;
     const code = payment.querySelector("[data-support-code]");
@@ -1030,16 +1072,17 @@ function setupSupport() {
     watchImage(genericImage);
 
     const select = (amount) => {
-      let image = images.get(amount);
+      const key = method === "kofi" ? "any" : amount;
+      let image = images.get(key);
       if (!image) {
         image = genericImage.cloneNode(false);
         image.removeAttribute("data-i18n-alt");
         image.dataset.supportFixed = "";
-        image.alt = `${genericImage.alt} · ¥${amount}`;
+        image.alt = `${genericImage.alt} · ¥${key}`;
         // Resolve beside the localized generic asset, including project subpaths.
-        image.src = new URL(`${method}-${amount}.jpg`, genericImage.src).href;
+        image.src = new URL(`${method}-${key}.jpg`, genericImage.src).href;
         watchImage(image);
-        images.set(amount, image);
+        images.set(key, image);
       }
       image.loading = "eager";
       activeImage = image;
@@ -1054,20 +1097,37 @@ function setupSupport() {
     ["iced-coffee", "19"], ["context-window", "49"], ["max-reasoning", "99"], ["freestyle", "any"]
   ]).get(new URLSearchParams(window.location.search).get("fuel"));
   const linkedInput = linkedAmount && controls.querySelector(`[name="support-amount"][value="${linkedAmount}"]`);
-  if (linkedInput) linkedInput.checked = true;
+  if (linkedInput) {
+    linkedInput.checked = true;
+    // The English homepage defaults to Ko-fi; switch to WeChat Pay so CNY tier links show their QR code.
+    if (controls.querySelector('[name="support-method"]:checked').value === "kofi") {
+      const wechatInput = controls.querySelector('[name="support-method"][value="wechat"]');
+      if (wechatInput) wechatInput.checked = true;
+    }
+  }
   // Greet the arrival until the visitor picks something else.
   let linked = Boolean(linkedInput);
   const render = () => {
     const method = controls.querySelector('[name="support-method"]:checked').value;
     const amount = controls.querySelector('[name="support-amount"]:checked').value;
+    const isKofi = method === "kofi";
+    if (cnyFieldset) cnyFieldset.hidden = isKofi;
+    if (kofiActions) kofiActions.hidden = !isKofi;
     const values = dictionary();
-    const any = amount === "any";
-    const message = linked
-      ? values[any ? "support.linkedAnyInstruction" : "support.linkedInstruction"]
-      : values[any ? "support.anyInstruction" : "support.instruction"];
-    instruction.textContent = message
-      .replace("{amount}", amount)
-      .replace("{tier}", values[any ? "support.any" : `support.tier${amount}`]);
+    if (mobileHelp) {
+      mobileHelp.textContent = values[isKofi ? "support.kofiMobileHelp" : "support.mobileHelp"];
+    }
+    if (isKofi) {
+      instruction.textContent = values["support.kofiInstruction"];
+    } else {
+      const any = amount === "any";
+      const message = linked
+        ? values[any ? "support.linkedAnyInstruction" : "support.linkedInstruction"]
+        : values[any ? "support.anyInstruction" : "support.instruction"];
+      instruction.textContent = message
+        .replace("{amount}", amount)
+        .replace("{tier}", values[any ? "support.any" : `support.tier${amount}`]);
+    }
     payments.forEach(({ payment, method: paymentMethod, select }) => {
       if (paymentMethod === method) select(amount);
       payment.hidden = paymentMethod !== method;
@@ -1081,6 +1141,7 @@ function setupSupport() {
   // Reset the derived view when a browser restores radio selections from history.
   window.addEventListener("pageshow", render);
   render();
+  if (kofiFallback) kofiFallback.hidden = true;
   controls.hidden = false;
 }
 

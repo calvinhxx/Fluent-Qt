@@ -272,15 +272,24 @@ falls back to an ordinary image link without JavaScript or dialog support.
 
 ## Voluntary support
 
-The homepage's `#support` section offers ¥19, ¥49, ¥99, and an any-amount
-option for the maintainer's WeChat Pay and Alipay collection codes. Each preset
-selects its matching supplied fixed-amount code; the any-amount option uses the
-generic code. The website does not create orders or confirm payment. Payment
+The homepage's `#support` section presents WeChat Pay, Alipay, and Ko-fi as peer
+payment channels. The Chinese homepage defaults to WeChat Pay; the English
+homepage defaults to Ko-fi unless a `?fuel=` tier parameter selects a CNY tier.
+WeChat Pay and Alipay offer ¥19, ¥49, ¥99, and an any-amount option; each preset
+selects its matching supplied fixed-amount code, and the any-amount option uses
+the generic code. Selecting Ko-fi displays `site/assets/support/kofi.png` in the
+same QR card frame and replaces the CNY tier controls with USD actions that open
+the maintainer's official Ko-fi Tip Panel in a modal `<dialog>` or open the
+creator page directly. Closing and reopening the dialog preserves the mounted
+checkout and the supporter's selection; modifier clicks and no-script or
+blocked-embed states fall back to the direct Ko-fi link. Download QR replacements
+from the account's [QR Code page](https://ko-fi.com/QRCode).
+The website does not create orders or confirm payment. WeChat Pay and Alipay
 status remains in the visitor's WeChat or Alipay bill, and community support
 retains the boundaries in [SUPPORT.md](../../SUPPORT.md).
 
-Keep the untouched generic images at `site/assets/support/wechat.jpg` and
-`site/assets/support/alipay.jpg`. Fixed-amount originals use the same directory
+Keep the untouched generic images at `site/assets/support/wechat.jpg`,
+`site/assets/support/alipay.jpg`, and `site/assets/support/kofi.png`. Fixed-amount originals use the same directory
 and the names `wechat-19.jpg`, `wechat-49.jpg`, `wechat-99.jpg`, `alipay-19.jpg`,
 `alipay-49.jpg`, and `alipay-99.jpg`. CSS crops each image to the QR region inside
 a white quiet zone without exposing payee name labels or raw uncropped poster links.
@@ -290,7 +299,8 @@ image failure must never fall back to a different amount.
 When replacing an image, check its dimensions and crop coordinates in
 `site/styles.css`. WeChat's fixed-amount images use a different crop from its
 generic image. Asset URLs resolve beside the generic image so locale and
-deployment subpaths work. Without JavaScript, both generic codes remain available.
+deployment subpaths work. Without JavaScript, the three generic cards and the
+direct Ko-fi link remain available.
 
 Before the deferred controller runs, the early page script masks the QR pixels
 and shows the existing loading message. `DOMContentLoaded` releases that mask
@@ -301,11 +311,11 @@ available; a support initialization exception must not stop Gallery, theme, or
 other page initialization.
 
 For local verification, open `/zh-CN/#support` and `/#support`. Check all eight
-amount/method combinations, arrow-key selection, visible focus, narrow layouts,
-and Light, Dark, and High Contrast. Check rapid selection and image-error
-recovery. Decode the rendered codes and compare them with the supplied originals.
-Also check delayed and failed main-script loading and the no-script fallback.
-Run the focused controller checks:
+CNY amount/method combinations, the Ko-fi channel and modal checkout, arrow-key
+selection, visible focus, narrow layouts, and Light, Dark, and High Contrast.
+Check rapid selection and image-error recovery. Decode the rendered codes and
+compare them with the supplied originals. Also check delayed and failed
+main-script loading and the no-script fallback. Run the focused controller checks:
 
 ```bash
 node --test tools/site/test_support.mjs
@@ -325,11 +335,12 @@ URLs without labels or styling, so each one is a short path that names its tier:
 `/fuel/freestyle/`. `generate_localized_site.py` writes these redirect pages from
 `SUPPORT_TIERS`. Each opens `?fuel=<tier>#support` on the Chinese homepage when
 the browser language is Chinese, and on the English homepage otherwise; without
-JavaScript, the meta refresh opens the English homepage. The support controller
-selects the named tier and greets the visitor until they change the selection;
-unknown values keep the default tier. GitHub accepts at most four custom links.
-The Chinese README links directly to `/zh-CN/#support`. These links lead to
-WeChat Pay and Alipay collection codes; GitHub does not process the payments.
+JavaScript, the meta refresh opens the English homepage. The support controller selects the named CNY tier on WeChat Pay and greets the
+visitor until they change the selection; unknown values keep each locale's
+default channel and copy. GitHub accepts at most four custom links.
+The separate `ko_fi` field identifies the same account as the tip panel and
+direct link. When changing the recipient, check the panel, link and QR code. The
+English and Chinese README links lead to their respective homepage support sections.
 
 For publication, verify the codes in both payment apps, publish the website
 through the existing `main`-branch Pages workflow, and confirm the public
