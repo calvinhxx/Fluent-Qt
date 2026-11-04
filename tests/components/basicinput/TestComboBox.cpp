@@ -708,6 +708,26 @@ TEST_F(ComboBoxTest, DirectBaseEditableCallsRemainCoherent)
     EXPECT_EQ(cb.lineEdit(), nullptr);
 }
 
+TEST_F(ComboBoxTest, Contract_BaseEditorReplacementKeepsNewEditorObserved)
+{
+    ComboBox cb(window);
+    cb.setEditable(true);
+    cb.show();
+    window->show();
+    QApplication::processEvents();
+    const QPointer<QObject> oldEditor = cb.lineEdit();
+    auto* replacement = new QLineEdit;
+    static_cast<QComboBox&>(cb).setLineEdit(replacement);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return oldEditor.isNull(); }));
+    ASSERT_EQ(cb.lineEdit(), replacement);
+    cb.setContentPaddingH(cb.contentPaddingH() + 1);
+    replacement->setText(QStringLiteral("Replacement editor"));
+    replacement->deselect();
+    QFocusEvent focus(QEvent::FocusIn);
+    QApplication::sendEvent(replacement, &focus);
+    EXPECT_EQ(replacement->selectedText(), replacement->text());
+}
+
 TEST_F(ComboBoxTest, EditableLineEditKeepsDarkThemeTextPaletteInsideStyledHost)
 {
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);

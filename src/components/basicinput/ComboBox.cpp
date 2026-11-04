@@ -674,7 +674,7 @@ void ComboBox::setEditable(bool editable)
         editor->show();
         connect(editor, &fluent::textfields::LineEdit::returnPressed, this, [this]() { hidePopup(); });
     } else {
-        QPointer<QLineEdit> previousEditor = m_observedLineEdit;
+        const QPointer<QObject> previousEditor = m_observedLineEdit;
         if (m_observedLineEdit)
             m_observedLineEdit->removeEventFilter(this);
         m_observedLineEdit = nullptr;
@@ -734,10 +734,18 @@ void ComboBox::synchronizeLineEdit()
         m_observedLineEdit->installEventFilter(this);
 }
 
+QLineEdit* ComboBox::observedLineEdit() const
+{
+    // Qt can deliver QWidget teardown events after the QLineEdit destructor
+    // has run, while the guarded QObject is still alive.
+    // zh_CN: 输入框析构后仍可能收到 QWidget 事件；此时 QObject 弱引用尚未清空。
+    return m_editorMutationInProgress ? nullptr : qobject_cast<QLineEdit*>(m_observedLineEdit.data());
+}
+
 void ComboBox::layoutLineEdit()
 {
     synchronizeLineEdit();
-    QLineEdit* editor = m_observedLineEdit.data();
+    QLineEdit* editor = observedLineEdit();
     if (!editor)
         return;
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
@@ -757,7 +765,7 @@ void ComboBox::layoutLineEdit()
 void ComboBox::applyLineEditStyle()
 {
     synchronizeLineEdit();
-    QLineEdit* editor = m_observedLineEdit.data();
+    QLineEdit* editor = observedLineEdit();
     if (!editor)
         return;
     if (auto* fluentEditor = qobject_cast<fluent::textfields::LineEdit*>(editor)) {
@@ -853,7 +861,8 @@ void ComboBox::leaveEvent(QEvent* event)
 void ComboBox::wheelEvent(QWheelEvent* event)
 {
     synchronizeLineEdit();
-    const bool ownsFocus = hasFocus() || (m_observedLineEdit && m_observedLineEdit->hasFocus());
+    auto* editor = observedLineEdit();
+    const bool ownsFocus = hasFocus() || (editor && editor->hasFocus());
     if (!ownsFocus) {
         event->ignore();
         return;
@@ -864,7 +873,8 @@ void ComboBox::wheelEvent(QWheelEvent* event)
 void ComboBox::keyPressEvent(QKeyEvent* event)
 {
     synchronizeLineEdit();
-    const bool ownsFocus = hasFocus() || (m_observedLineEdit && m_observedLineEdit->hasFocus());
+    auto* editor = observedLineEdit();
+    const bool ownsFocus = hasFocus() || (editor && editor->hasFocus());
     if (!ownsFocus) {
         event->ignore();
         return;
@@ -929,25 +939,23 @@ void ComboBox::mouseMoveEvent(QMouseEvent* event)
 
 bool ComboBox::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == m_observedLineEdit) {
-        if (event->type() == QEvent::FontChange && m_observedLineEdit->font() != font()) {
+    if (auto* editor = watched == m_observedLineEdit ? observedLineEdit() : nullptr) {
+        if (event->type() == QEvent::FontChange && editor->font() != font()) {
             // The embedded Fluent editor also refreshes independently.
             // zh_CN: 内嵌 Fluent 编辑框也独立刷新主题，字体始终跟随 ComboBox。
-            m_observedLineEdit->setFont(font());
+            editor->setFont(font());
         } else if (event->type() == QEvent::StyleChange || event->type() == QEvent::ContentsRectChange) {
             layoutLineEdit();
         } else if (event->type() == QEvent::FocusIn) {
-            m_observedLineEdit->selectAll();
+            editor->selectAll();
             update();
         } else if (event->type() == QEvent::FocusOut) {
             update();
-        } else if (event->type() == QEvent::ContextMenu
-            && !qobject_cast<fluent::textfields::LineEdit*>(m_observedLineEdit.data())
-            && m_observedLineEdit->contextMenuPolicy() == Qt::DefaultContextMenu) {
+        } else if (event->type() == QEvent::ContextMenu && !qobject_cast<fluent::textfields::LineEdit*>(editor)
+            && editor->contextMenuPolicy() == Qt::DefaultContextMenu) {
             auto* contextEvent = static_cast<QContextMenuEvent*>(event);
-            if (fluent::menus_toolbars::detail::showTextEditingContextMenu(m_observedLineEdit.data(),
-                    m_observedLineEdit->createStandardContextMenu(), contextEvent->globalPos(),
-                    QStringLiteral("FluentComboBox.LineEdit.ContextMenu"))) {
+            if (fluent::menus_toolbars::detail::showTextEditingContextMenu(editor, editor->createStandardContextMenu(),
+                    contextEvent->globalPos(), QStringLiteral("FluentComboBox.LineEdit.ContextMenu"))) {
                 contextEvent->accept();
                 return true;
             }
@@ -981,7 +989,8 @@ void ComboBox::paintEvent(QPaintEvent*)
     // Outer wrapper
     QColor outerBg = Qt::transparent;
     synchronizeLineEdit();
-    const bool lineEditFocused = m_observedLineEdit && m_observedLineEdit->hasFocus();
+    auto* editor = observedLineEdit();
+    const bool lineEditFocused = editor && editor->hasFocus();
     if (!enabled) {
         outerBg = colors.controlDisabled;
     } else if (m_popupVisible) {
@@ -1056,7 +1065,7 @@ void ComboBox::paintEvent(QPaintEvent*)
         QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW, m_contentPaddingV));
 
     // In editable mode, QLineEdit handles text display
-    if (!m_observedLineEdit) {
+    if (!editor) {
         painter.setPen(textColor);
         painter.setFont(font());
         const QString text = currentText();
@@ -1093,7 +1102,7 @@ void ComboBox::paintEvent(QPaintEvent*)
     chevronSlot.translate(0, pressOffset + m_chevronOffset.y());
 
     // Editable mode: draw chevron button hover/press background
-    if (m_observedLineEdit && enabled) {
+    if (editor && enabled) {
         QColor chevronBg = Qt::transparent;
         if (m_chevronHovered && m_pressed) {
             chevronBg = colors.subtleTertiary;
