@@ -112,12 +112,10 @@ if(FLUENT_QT_BUILD_GALLERY)
 endif()
 
 set(FLUENT_QT_MANUAL_VISUAL_TESTS
-    ButtonTest.VisualPropertyVerification
     FluentElementTest.VisualExample
     ScrollBarTest.VisualPropertyVerification
     ToolTipTest.VisualGallery
     TypographyTest.VisualCheck
-    SliderTest.VisualSliderGalleryLike
 )
 
 set(FLUENT_QT_LOCAL_DESKTOP_TESTS
