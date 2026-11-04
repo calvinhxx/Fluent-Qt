@@ -100,10 +100,13 @@ changes to its runtime, shell, or browser helpers still select that module.
 The mixed UI/runtime scripts `site/site.js` and `site/spatial-showcase.js` also
 keep the WASM lane because they own real iframe lifecycle and host messages.
 
-Browser contracts run sequentially in isolated pages. The second, 1920×1080
-pass exercises the viewport-dependent pages. The primary pass owns the four
-fixed-size example and theme checks. Per-contract timing is logged on success
-and failure.
+WASM CI compiles once and builds an external consumer from the installed SDK.
+Full validation sends the same staged files to two Chromium runners. One tests
+the Gallery, examples, wide viewport and Spatial fallback. The other tests
+command menus, the command palette, forms and DataGrid, keeping their failure
+diagnostics together. Fast validation uses the Gallery runner alone. Pages
+receives the tested files after every selected group passes. Each browser
+contract logs its duration.
 
 Use CMake aggregate targets rather than duplicating lists in YAML:
 `fluent_qt_ci_fast_tests`, `fluent_qt_ci_full_tests`, and
@@ -213,6 +216,8 @@ The main matrix builds in C++ CI, desktop Release Candidate, and Desktop Compat
 Packages use `tools/dev/fluent_qt_build.py --jobs auto` when `build_parallel` is
 empty, including on Windows. The workflow validator checks all three entry
 points, preserves explicit job counts, and requires build failures to propagate.
+The Intel macOS Gallery build logs the CPU model, starting load, wall time and
+CPU time alongside the selected compiler job count.
 
 Require a successful full `CI Gate` before merging a release-to-main pull
 request. Merging earlier sends full-only failures to `main`, where every fix

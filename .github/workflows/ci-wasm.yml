@@ -13,10 +13,11 @@ permissions:
 
 jobs:
   build:
-    name: Qt 6.9.3 / Emscripten 3.1.70 / ${{ inputs.mode }}
-    # Keep the host compatible with the pinned Playwright browser runtime.
+    name: Build Qt 6.9.3 / Emscripten 3.1.70 / ${{ inputs.mode }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    outputs:
+      payload_attempt: ${{ github.run_attempt }}
     env:
       QT_VERSION: 6.9.3
       EMSCRIPTEN_VERSION: 3.1.70
@@ -48,12 +49,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install WebAssembly tooling frontends
-        shell: bash
+      - name: Validate browser checks
         run: |
-          python -m pip install --disable-pip-version-check \
-            "aqtinstall==3.3.0" \
-            "playwright==1.58.0"
+          python .github/scripts/test_wasm_browser_smoke.py
+          python .github/scripts/test_wasm_spatial_smoke.py
+
+      - name: Install Qt installer
+        shell: bash
+        run: python -m pip install --disable-pip-version-check "aqtinstall==3.3.0"
 
       - name: Cache Qt WebAssembly and host kits
         id: qt-cache
@@ -167,6 +170,64 @@ jobs:
           cmake --build build/wasm-installed-consumer --parallel 4
           test -f build/wasm-installed-consumer/fluentqt_hello_world.wasm
 
+      - name: Stage browser payload
+        shell: bash
+        run: |
+          python .github/scripts/stage-wasm-pages.py \
+            build/wasm/app \
+            build/wasm-pages \
+            --qt-version "$QT_VERSION" \
+            --emscripten-version "$EMSCRIPTEN_VERSION" \
+            --validation-mode "${{ inputs.mode }}" \
+            --commit "$GITHUB_SHA"
+
+      - name: Upload browser input
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fluentqt-wasm-input-${{ github.run_attempt }}
+          path: build/wasm-pages
+          if-no-files-found: error
+          retention-days: 7
+
+  browser:
+    name: Chromium / ${{ matrix.group }} / ${{ inputs.mode }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJSON(inputs.mode == 'full' && '["gallery","interaction"]' || '["gallery"]') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Download browser input
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: fluentqt-wasm-input-${{ needs.build.outputs.payload_attempt }}
+          path: build/wasm/app
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+
+      - name: Verify browser input
+        env:
+          MODE: ${{ inputs.mode }}
+        run: jq -e --arg sha "$GITHUB_SHA" --arg mode "$MODE" '.commit == $sha and .validation_mode == $mode' build/wasm/app/build-info.json
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: python -m pip install --disable-pip-version-check "playwright==1.58.0"
+
       - name: Cache Chromium
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -180,12 +241,16 @@ jobs:
       - name: Run browser smoke
         shell: bash
         run: |
-          python .github/scripts/test_wasm_browser_smoke.py
-          python .github/scripts/test_wasm_spatial_smoke.py
           python .github/scripts/run-wasm-browser-smoke.py \
             --root build/wasm \
             --mode "${{ inputs.mode }}" \
+            --group "${{ matrix.group }}" \
             --device-scale-factor 2
+
+      - name: Check wide viewport
+        if: ${{ matrix.group == 'gallery' }}
+        shell: bash
+        run: |
           python .github/scripts/run-wasm-browser-smoke.py \
             --root build/wasm \
             --mode viewport \
@@ -194,7 +259,7 @@ jobs:
             --viewport-height 1080
 
       - name: Upload browser smoke diagnostics
-        if: ${{ always() }}
+        if: ${{ always() && matrix.group == 'interaction' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-wasm-browser-diagnostics-${{ github.run_attempt }}
@@ -209,6 +274,7 @@ jobs:
       # Hosted runners have no audited hardware GPU. This proves a usable 2D
       # fallback, not hardware 3D performance or projected-text quality.
       - name: Run Spatial software fallback smoke
+        if: ${{ matrix.group == 'gallery' }}
         shell: bash
         run: |
           python .github/scripts/run-wasm-spatial-smoke.py \
@@ -218,29 +284,36 @@ jobs:
             --output build/spatial-validation/ci-software-fallback
 
       - name: Upload Spatial fallback evidence
-        if: ${{ always() }}
+        if: ${{ always() && matrix.group == 'gallery' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-wasm-spatial-software-fallback
           path: build/spatial-validation/ci-software-fallback
+          overwrite: true
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Stage GitHub Pages payload
-        shell: bash
-        run: |
-          python .github/scripts/stage-wasm-pages.py \
-            build/wasm/app \
-            build/wasm-pages \
-            --qt-version "$QT_VERSION" \
-            --emscripten-version "$EMSCRIPTEN_VERSION" \
-            --validation-mode "${{ inputs.mode }}" \
-            --commit "$GITHUB_SHA"
+  pages-payload:
+    name: Publish tested WASM artifact
+    needs: [build, browser]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    steps:
+      - name: Download tested browser input
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: fluentqt-wasm-input-${{ needs.build.outputs.payload_attempt }}
+          path: build/wasm-pages
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
 
       - name: Upload WebAssembly Pages payload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-wasm-pages
           path: build/wasm-pages
+          overwrite: true
           if-no-files-found: error
           retention-days: 7

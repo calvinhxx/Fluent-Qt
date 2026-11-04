@@ -41,6 +41,7 @@ jobs:
     needs: authorize
     if: ${{ github.event_name == 'workflow_dispatch' }}
     permissions:
+      actions: read
       contents: read
     uses: ./.github/workflows/ci-wasm.yml
     with:

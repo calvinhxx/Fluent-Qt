@@ -326,7 +326,14 @@ jobs:
           # --parallel lets Makefile builds start every compiler at once.
           $jobs = "${{ matrix.build_parallel }}"
           if (-not $jobs) { $jobs = "auto" }
-          & $python tools/dev/fluent_qt_build.py --jobs $jobs @buildArgs
+          $launcher = $python
+          $prefixArgs = @()
+          if ("${{ matrix.id }}" -eq "mac-x64-qt62-gallery") {
+            /usr/sbin/sysctl machdep.cpu.brand_string hw.logicalcpu vm.loadavg
+            $launcher = "/usr/bin/time"
+            $prefixArgs = @("-l", $python)
+          }
+          & $launcher @prefixArgs tools/dev/fluent_qt_build.py --jobs $jobs @buildArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify relocatable macOS CMake package
