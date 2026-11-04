@@ -187,6 +187,7 @@ private:
     void initAnimation();
     void onPopupHidden();
     void synchronizeLineEdit();
+    QLineEdit* observedLineEdit() const;
     void layoutLineEdit();
     void applyLineEditStyle();
     void applyFontRole();
@@ -215,7 +216,7 @@ private:
     QPropertyAnimation* m_pressAnimation = nullptr;
 
     // --- Editable ---
-    QPointer<QLineEdit> m_observedLineEdit;
+    QPointer<QObject> m_observedLineEdit;
     bool m_editorMutationInProgress = false;
 
     // --- Popup ---
