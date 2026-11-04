@@ -168,6 +168,7 @@ if(WIN32)
         set_tests_properties("${_typography_test}" PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=windows;QT_SCALE_FACTOR=${_typography_scale}"
             LABELS "qt;unit;gallery;gallery_spatial;test_gallery_spatial;platform_windows;local_desktop;native_window"
+            SKIP_REGULAR_EXPRESSION "\\[  SKIPPED \\]"
             RUN_SERIAL TRUE TIMEOUT 60)
     endforeach()
 endif()

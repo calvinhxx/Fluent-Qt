@@ -4010,7 +4010,7 @@ TEST_F(GallerySpatialTest, PanelDensityGlyphsRetainSmallTextDetailDuringProjecti
 TEST_F(GallerySpatialTest, Contract_WindowsScaledTypographyLimitsInkWithoutLosingContrast)
 {
     if (QGuiApplication::platformName() != QStringLiteral("windows"))
-        GTEST_SKIP() << "Requires native Windows font and OpenGL rendering";
+        GTEST_SKIP() << "Requires native Windows fonts and graphics presentation";
     class TextContent final : public QWidget {
     public:
         static void paintText(QPainter& painter)
@@ -4044,6 +4044,21 @@ TEST_F(GallerySpatialTest, Contract_WindowsScaledTypographyLimitsInkWithoutLosin
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     QTest::qWait(200);
     const QImage reference = content->grab().toImage();
+    ASSERT_FALSE(reference.isNull());
+    const QString noOpenGL = tests::support::nativeOpenGLUnavailableReason();
+    const bool hasRhi = spatial::SpatialTextureHost::isPreferred()
+        && spatial::SpatialTextureHost::preflightFailure().isEmpty();
+    auto& settings = GallerySettings::instance();
+    settings.setSpatialModeEnabled(true);
+    if (!noOpenGL.isEmpty() && !hasRhi) {
+        ASSERT_TRUE(QTest::qWaitFor([&] { return !settings.spatialAvailabilityPending(); }));
+        ASSERT_FALSE(settings.spatialAvailable());
+        ASSERT_FALSE(settings.spatialUnavailableReason().isEmpty());
+        ASSERT_TRUE(content->isVisible());
+        ASSERT_EQ(content->grab().toImage(), reference) << "2D text must survive a refused 3D activation at this scale";
+        GTEST_SKIP()
+            << "Verified the native 2D fallback; GPU ink comparison requires hardware. " << noOpenGL.toStdString();
+    }
     // Transparent text must use Qt's transparent-text oracle. Native opaque
     // Windows text uses different edge coverage: at 7 physical pixels it has
     // less black ink even without OpenGL or panel resampling. Keep that native
@@ -4067,10 +4082,15 @@ TEST_F(GallerySpatialTest, Contract_WindowsScaledTypographyLimitsInkWithoutLosin
         painter.fillRect(QRect(0, 180, content->width(), 180), Qt::black);
         painter.drawImage(QPoint(), glyphs);
     }
-    GallerySettings::instance().setSpatialModeEnabled(true);
-    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
-    ASSERT_NE(surface, nullptr);
-    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 3000));
+    QPointer<QWidget> surface;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            surface = window.findChild<QWidget*>("gallerySpatialSurface");
+            return surface && surface->property("presenting").toBool();
+        },
+        3000))
+        << settings.spatialUnavailableReason().toStdString();
+    ASSERT_TRUE(qobject_cast<QOpenGLWidget*>(surface) || qobject_cast<spatial::SpatialTextureHost*>(surface));
     controller.cancelTransition();
     auto* motion = controller.findChild<QVariantAnimation*>("galleryAssemblyAnimation");
     ASSERT_NE(motion, nullptr);
@@ -4081,7 +4101,9 @@ TEST_F(GallerySpatialTest, Contract_WindowsScaledTypographyLimitsInkWithoutLosin
     QTest::qWait(200);
     const qreal dpr = surface->devicePixelRatioF();
     const QPoint origin = surface->mapFrom(&window, controller.projectedPosition(content, {}));
-    const QImage actual = surface->grabFramebuffer().copy(QRect(origin * dpr, reference.size()));
+    const QImage frame = spatialFrame(surface);
+    ASSERT_FALSE(frame.isNull());
+    const QImage actual = frame.copy(QRect(origin * dpr, reference.size()));
     const QString evidence = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
     if (!evidence.isEmpty()) {
         QDir().mkpath(evidence);
