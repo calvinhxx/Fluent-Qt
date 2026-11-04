@@ -72,12 +72,20 @@ bool supportsDwmSystemBackdrop(const WindowsVersionInfo& version)
     return version.valid && (version.major > 10 || (version.major == 10 && version.build >= 22621));
 }
 
+bool platformProvidesHwnd()
+{
+    // Offscreen and minimal also create QPlatformWindows, but assign synthetic WIds.
+    // zh_CN: offscreen 和 minimal 也会创建 QPlatformWindow，但分配的是模拟窗口 ID。
+    const QString platform = QGuiApplication::platformName();
+    return platform == QLatin1String("windows") || platform == QLatin1String("direct2d");
+}
+
 HWND hwndForWindow(QWidget* window)
 {
     // A prepared QWindow may not have a native surface yet. Chrome queries must
     // not create it before QWidget submits its pending geometry on show.
     // zh_CN: 已准备的 QWindow 可能尚无原生 surface；查询 chrome 不能抢先创建并覆盖 QWidget 的待显示几何。
-    if (!window || !window->windowHandle() || !window->windowHandle()->handle())
+    if (!window || !window->windowHandle() || !window->windowHandle()->handle() || !platformProvidesHwnd())
         return nullptr;
 
     return reinterpret_cast<HWND>(window->windowHandle()->winId());
@@ -379,7 +387,7 @@ namespace detail {
 BackdropCapabilities platformBackdropCapabilities()
 {
     BackdropCapabilities capabilities;
-    const bool supported = supportsDwmSystemBackdrop(currentWindowsVersion());
+    const bool supported = platformProvidesHwnd() && supportsDwmSystemBackdrop(currentWindowsVersion());
     capabilities.alphaSurfaceSupported = supported;
     capabilities.nativeMica = supported;
     capabilities.nativeAcrylic = supported;

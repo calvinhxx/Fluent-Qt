@@ -1130,6 +1130,26 @@ TEST_F(WindowTest, PaintedAcrylicKeepsBroadAccentGlassField)
     EXPECT_GT(rightCoolChroma, leftCoolChroma + 10);
 }
 
+TEST_F(WindowTest, WindowsHeadlessChromeRejectsSyntheticWindowIds)
+{
+    const QString platform = QGuiApplication::platformName();
+    if (WindowChromeCompat::currentPlatform() != WindowChromeCompat::Platform::Windows
+        || (platform != QLatin1String("offscreen") && platform != QLatin1String("minimal")))
+        GTEST_SKIP() << "Requires a headless Windows QPA plugin";
+
+    Window window;
+    window.show();
+    QApplication::processEvents();
+    ASSERT_NE(window.internalWinId(), WId(0));
+
+    WindowChromeCompat chrome(&window);
+    EXPECT_FALSE(chrome.systemBackdropSupported());
+    const auto backdrop = chrome.applySystemBackdropDetailed(BackdropEffect::Solid, false);
+    EXPECT_FALSE(backdrop.applied);
+    EXPECT_EQ(backdrop.reason, QStringLiteral("native-window-unavailable"));
+    EXPECT_FALSE(chrome.performTitleBarDoubleClick());
+}
+
 TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption)
 {
 #ifdef Q_OS_WIN
