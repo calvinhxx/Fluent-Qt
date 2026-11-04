@@ -2,6 +2,39 @@
   "schema_version": 1,
   "versions": [
     {
+      "version": "1.11.2",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "8fcefe1ba8b9ed3b84dddf3832d4d16359bbadcbc0610bb8def780abe22accff",
+      "summary": {
+        "en": "Fixes Windows headless window handling and adds disabled checkbox examples in the C++ and PySide6 Gallery.",
+        "zh": "修复 Windows 无界面环境下的窗口句柄处理，C++ 和 PySide6 Gallery 新增禁用复选框示例。"
+      },
+      "related": [
+        "window",
+        "checkbox"
+      ],
+      "changes": [
+        {
+          "en": "Windows offscreen and minimal Qt windows skip native window styling and backdrop calls when Qt assigns a synthetic window ID.",
+          "zh": "Windows 上使用 offscreen 或 minimal 插件时，Qt 分配的模拟窗口 ID 不再传给原生窗口样式和背景效果接口。"
+        },
+        {
+          "en": "The two-state checkbox example shows disabled checked and unchecked controls in both Gallery implementations.",
+          "zh": "两个 Gallery 的双态复选框示例均展示禁用状态下选中和未选中的控件。"
+        },
+        {
+          "en": "The website offers an embedded Ko-fi tip panel and QR code alongside the existing CNY support options.",
+          "zh": "官网在人民币打赏方式旁提供 Ko-fi 页内打赏面板和二维码。"
+        },
+        {
+          "en": "WebAssembly browser checks run in parallel on a shared build, and release CI reuses compatible wheels and candidate builds.",
+          "zh": "WebAssembly 浏览器检查基于同一次构建并行运行，发布 CI 复用兼容的 Python wheel 和候选构建。"
+        }
+      ],
+      "migrations": []
+    },
+    {
       "version": "1.11.1",
       "status": "published",
       "published_at": "2026-11-04T03:09:52Z",
