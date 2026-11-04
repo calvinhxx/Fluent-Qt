@@ -358,6 +358,13 @@ register_source_samples(
                 )
                 layout.addWidget(check_box)
                 layout.addWidget(status)
+                disabled_off = fluentqt.CheckBox("Disabled off", root)
+                disabled_off.setEnabled(False)
+                disabled_on = fluentqt.CheckBox("Disabled on", root)
+                disabled_on.setChecked(True)
+                disabled_on.setEnabled(False)
+                layout.addWidget(disabled_off)
+                layout.addWidget(disabled_on)
                 """,
                 "from PySide6.QtCore import Qt\n" + _WIDGETS,
             ),
