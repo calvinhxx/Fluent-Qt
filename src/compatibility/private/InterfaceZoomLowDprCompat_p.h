@@ -81,11 +81,13 @@ inline void discardLowDprEffectCaches(QWidget* widget, const QRegion& region)
     if (effect && effect->isEnabled()) {
         const auto* data = static_cast<QGraphicsEffectPrivate*>(QObjectPrivate::get(effect));
         if (data->source) {
-            const auto* source = static_cast<QGraphicsEffectSourcePrivate*>(QObjectPrivate::get(data->source));
             // Qt's cache key does not distinguish a low-DPR native pass from
-            // the unit-density pass. Invalidate pixels without signals/updates.
-            // zh_CN: Qt 缓存键不区分低 DPR 原生绘制与单位密度绘制；只清像素，不发信号或更新请求。
-            QPixmapCache::remove(source->*zoomRepaintMember(ZoomEffectCacheTag{}));
+            // the unit-density pass. Use its typed member on this source's
+            // d-pointer: a downcast needs RTTI that Qt does not export to UBSan.
+            // zh_CN: 两种密度共用 Qt 缓存键；通过成员指针只清像素，避免依赖 Qt 未导出的 RTTI。
+            const auto cacheKey = static_cast<QPixmapCache::Key QObjectPrivate::*>(
+                zoomRepaintMember(ZoomEffectCacheTag{}));
+            QPixmapCache::remove(QObjectPrivate::get(data->source)->*cacheKey);
         }
     }
     for (QObject* object : widget->children()) {
