@@ -58,9 +58,12 @@ this headless font policy. Keep their thin Qt adapters aligned with these rules:
 The Gallery and glyph Python fixtures call the shared initializer after resources
 are initialized. This support code is not installed in the Python package.
 Persistence probes should keep this test identity unless their contract
-explicitly requires another scope. The Gallery cold-load probe needs the real
-application identity to enable persistence; it uses a process lock inside Qt's
-test-data directory and restores the setting it changes.
+explicitly requires another scope. The Gallery cold-load probes need the real
+application identity to enable persistence; they use a process lock inside Qt's
+test-data directory and restore the settings they change. Their parent tests
+also share the `fluentqt_gallery_settings` CTest `RESOURCE_LOCK`, because CI
+runs selected labels with `ctest --parallel`. Give any new test that shares a
+fixed identity, file, or named resource a `RESOURCE_LOCK` or `RUN_SERIAL`.
 
 - Register Qt component tests with `add_qt_test_module(test_<name> Test<Name>.cpp
   [extra sources...])`.

@@ -145,21 +145,25 @@ def run_data_grid_contract(browser: object, base_url: str, artifact_dir: Path) -
         def edit_priority(value: str, finish: str) -> None:
             header = control("workspaceDataGrid").filter(has_text=re.compile(r"^Priority$"))
             row = control("workspaceDataGrid").filter(has_text=re.compile(r"^Aurora$"))
+            # Select Aurora via its name. A preparatory click on Priority itself
+            # joins the following double-click into three presses on one cell.
+            pointer(row)
+            summary("8 of 8 projects · 1 selected")
             column_bounds, row_bounds = header.bounding_box(), row.bounding_box()
             if not column_bounds or not row_bounds:
                 raise RuntimeError("Missing numeric cell bounds")
             x = column_bounds["x"] + column_bounds["width"] / 2
             y = row_bounds["y"] + row_bounds["height"] / 2
-            # Establish the current cell before testing double-click editing.
-            # Activating a fresh headless page or leaving a previous editor can
-            # consume the first click; wait for Qt's selection and paint turn.
-            page.bring_to_front()
             page.mouse.click(x, y)
-            summary("8 of 8 projects · 1 selected")
-            page.evaluate("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
-            page.mouse.dblclick(x, y, delay=60)
+            if finish == "Tab":
+                # Keep one real double-click. Give its two presses distinct timestamps.
+                page.wait_for_timeout(20)
+                page.mouse.down(click_count=2)
+                page.mouse.up(click_count=2)
+            else:
+                page.keyboard.press("F2")
             editor = control("fluentDataGridNumberEditor")
-            expect(editor).to_be_visible()
+            expect(editor, f"Aurora Priority editor must open for {finish}").to_be_visible()
             page.keyboard.press("ControlOrMeta+A")
             page.keyboard.type(value)
             page.screenshot(path=str(artifact_dir / f"number-editor-{finish}.png"))
@@ -182,7 +186,8 @@ def run_data_grid_contract(browser: object, base_url: str, artifact_dir: Path) -
         changed_priority("10")
         edit_priority("7", "focus-out")
         changed_priority("7")
-        edit_priority("1", "Enter")
+        edit_priority("11", "Enter")
+        changed_priority("11")
 
         def first_project_before(first: str, last: str) -> None:
             page.wait_for_function(

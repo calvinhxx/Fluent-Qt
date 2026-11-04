@@ -308,9 +308,11 @@ def run_gallery_search_contract(browser: object, base_url: str, artifact_dir: Pa
         activation.focus()
         page.keyboard.press("Enter")
         query("button")
+        # The first query can build the index. Wait for the published page
+        # and its settled footer before inspecting individual row proxies.
+        footer_after_rows()
         expect(cells.first).to_be_visible()
         expect(more).to_have_text("Load more")
-        footer_after_rows()
         expect(cells.first).to_have_attribute("aria-setsize", re.compile(r"^[1-9][0-9]*$"))
         first_size = int(cells.first.get_attribute("aria-setsize"))
         page.screenshot(path=str(artifact_dir / "first-page.png"))

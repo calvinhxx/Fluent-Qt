@@ -188,7 +188,7 @@ jobs:
             --device-scale-factor 2
           python .github/scripts/run-wasm-browser-smoke.py \
             --root build/wasm \
-            --mode fast \
+            --mode viewport \
             --device-scale-factor 2 \
             --viewport-width 1920 \
             --viewport-height 1080

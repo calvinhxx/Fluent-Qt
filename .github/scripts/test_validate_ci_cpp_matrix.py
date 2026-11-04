@@ -7,6 +7,9 @@ import sys
 import unittest
 from pathlib import Path
 
+from classify_ci_changes import CppTestSelection
+from select_ci_cpp_matrix import select_matrix
+
 
 SCRIPT = Path(__file__).with_name("validate-ci-cpp-matrix.py")
 SPEC = importlib.util.spec_from_file_location("validate_ci_cpp_matrix", SCRIPT)
@@ -48,6 +51,95 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
         catalog = copy.deepcopy(self.catalog)
         catalog["scenarios"][0]["timeout_minutes"] = 0
         self.assertTrue(any("positive integer" in error for error in MODULE.validate_catalog(catalog)))
+
+    def scenario(self, catalog, scenario_id):
+        return next(item for item in catalog["scenarios"] if item["id"] == scenario_id)
+
+    def test_parallel_ctest_requires_a_positive_job_count(self):
+        for value in (0, True, "4", None):
+            with self.subTest(value=value):
+                catalog = copy.deepcopy(self.catalog)
+                self.scenario(catalog, "linux-x64-qt62-full")["ctest_parallel"] = value
+                self.assertTrue(any(
+                    "ctest_parallel must be a positive integer" in error
+                    for error in MODULE.validate_catalog(catalog)
+                ))
+
+    def test_parallel_ctest_cannot_exceed_pinned_runner_capacity(self):
+        catalog = copy.deepcopy(self.catalog)
+        self.scenario(catalog, "mac-arm64-qt62-full")["ctest_parallel"] = 4
+        self.assertTrue(any(
+            "must not exceed build_parallel 3" in error
+            for error in MODULE.validate_catalog(catalog)
+        ))
+
+    def test_parallel_ctest_requires_pinned_capacity(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = self.scenario(catalog, "linux-x64-qt62-full")
+        scenario["build_parallel"] = ""
+        self.assertTrue(any(
+            "requires a pinned build_parallel" in error
+            for error in MODULE.validate_catalog(catalog)
+        ))
+
+    def test_windows_and_native_platform_lanes_keep_serial_ctest(self):
+        for scenario_id, message in (
+            ("win-x64-qt62-platform", "must stay 1 on Windows"),
+            ("win-arm64-qt693-native", "must stay 1 on a native QPA platform"),
+        ):
+            with self.subTest(lane=scenario_id):
+                catalog = copy.deepcopy(self.catalog)
+                scenario = self.scenario(catalog, scenario_id)
+                scenario["build_parallel"] = "4"
+                scenario["ctest_parallel"] = 2
+                self.assertTrue(any(
+                    message in error for error in MODULE.validate_catalog(catalog)
+                ))
+
+    def test_pr_selection_preserves_baseline_targets_and_labels_in_both_tiers(self):
+        for tier in ("fast", "full"):
+            owner = f"linux-x64-qt62-{tier}"
+            baseline = self.scenario(self.catalog, owner)
+            for scope in (CppTestSelection("selected", ("basicinput",)), CppTestSelection("all")):
+                with self.subTest(tier=tier, scope=scope.scope):
+                    _, labels, targets = scope.output_values()
+                    jobs = select_matrix(self.catalog, tier, *scope.output_values())["include"]
+                    self.assertIn(owner, {job["id"] for job in jobs})
+                    for job in jobs:
+                        source = self.scenario(self.catalog, job["id"])
+                        if job["id"] != owner:
+                            self.assertEqual(job["build_targets"], source["build_targets"])
+                            self.assertEqual(job["test_labels"], source["test_labels"])
+                            continue
+                        expected = set(baseline["build_targets"].split()) | set(targets.split())
+                        if scope.scope == "all":
+                            expected.remove(f"fluent_qt_ci_{tier}_tests")
+                        self.assertEqual(set(job["build_targets"].split()), expected)
+                        self.assertEqual(job["test_labels"], f"({source['test_labels']}|{labels})")
+
+    def test_candidate_only_replaces_the_windows_arm64_installer(self):
+        scope = CppTestSelection("none").output_values()
+        jobs = select_matrix(self.catalog, "full", *scope)["include"]
+        candidate = select_matrix(self.catalog, "full", *scope, candidate_owns_package=True)["include"]
+        self.assertIn("win-arm64-qt693-native", {job["id"] for job in candidate})
+        self.assertEqual(candidate, [job for job in jobs if job["id"] != "win-arm64-qt693-cross"])
+        self.assertEqual(len(jobs), len(candidate) + 1)
+        installer = self.scenario(self.catalog, "win-arm64-qt693-cross")
+        packages = json.loads(MODULE.DEFAULT_CATALOG.with_name("package-matrix.json").read_text(encoding="utf-8"))
+        replacement = self.scenario(packages, "windows-arm64-qt693")
+        self.assertIs(replacement["standard"], True)
+        for field in ("os", "qt_version", "qt_arch", "host_qt_arch", "preset", "package_preset"):
+            self.assertEqual(installer[field], replacement[field], field)
+
+    def test_unsafe_or_disconnected_test_selection_is_rejected(self):
+        for scope, labels, targets in (
+            ("selected", "^(basicinput)$", "fluent_qt_windowing_tests"),
+            ("selected", "^(unreviewed)$", "fluent_qt_unreviewed_tests"),
+            ("all", "^qt$", "fluent_qt_ci_fast_tests"),
+            ("none", "^qt$", ""),
+        ):
+            with self.subTest(scope=scope, labels=labels), self.assertRaises(ValueError):
+                select_matrix(self.catalog, "full", scope, labels, targets)
 
     def test_minimal_qt_download_must_include_gallery_svg_dependency(self):
         catalog = copy.deepcopy(self.catalog)

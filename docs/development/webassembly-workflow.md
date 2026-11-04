@@ -235,6 +235,11 @@ The Gallery owns condition-driven browser checks selected by a query parameter:
   deactivation, and restoration, checking retained widgets and native
   dependency/failure probes.
 
+The CI runner uses `--mode viewport` for the second, wide-screen pass. It runs
+the fast Gallery and base Hello World checks at the requested size. The first
+pass runs the fixed-size Spatial Hello World, embedded theme, plugin extension,
+and Spatial showcase contracts once.
+
 Website theme cycling and persistence are covered by the
 [static theme contract](../../tools/site/test_theme_browser.py) in
 [website CI](ci-workflow.md#keep-workflow-ownership-explicit), without loading

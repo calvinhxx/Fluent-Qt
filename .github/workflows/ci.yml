@@ -1,5 +1,5 @@
 name: CI
-run-name: CI ${{ (github.event_name == 'schedule' || github.event_name == 'push') && 'full' || github.event.inputs.matrix || 'fast' }}
+run-name: CI ${{ (github.event_name == 'schedule' || github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)) && 'full' || github.event.inputs.matrix || 'fast' }}
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
     outputs:
       mode: ${{ steps.mode.outputs.mode }}
       python_release_bundle: ${{ steps.mode.outputs.python_release_bundle }}
-      run_macos_release_validation: ${{ steps.mode.outputs.run_macos_release_validation }}
+      release_candidate_expected: ${{ steps.mode.outputs.release_candidate_expected }}
       should_build: ${{ steps.changes.outputs.should_build }}
       should_build_pyside: ${{ steps.changes.outputs.should_build_pyside }}
       should_build_wasm: ${{ steps.changes.outputs.should_build_wasm }}
@@ -161,28 +161,32 @@ jobs:
           echo "CI selection: native=$should_build, PySide6=$should_build_pyside, WebAssembly=$should_build_wasm, C++ tests=$cpp_test_scope."
       - name: Select validation tier
         id: mode
+        env:
+          REQUESTED_MODE: ${{ github.event.inputs.matrix || 'fast' }}
+          REQUESTED_BUNDLE: ${{ github.event.inputs.python_release_bundle || 'false' }}
+          RELEASE_PULL_REQUEST: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          mode="fast"
-          python_release_bundle="false"
-          run_macos_release_validation="true"
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+          mode="$REQUESTED_MODE"
+          python_release_bundle="$REQUESTED_BUNDLE"
+          release_candidate_expected="false"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             mode="full"
             python_release_bundle="true"
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             mode="full"
             version="$(sed -nE 's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQt[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
             tag="v$version"
             git fetch --force --tags origin
-            if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ &&
+            if [[ "$GITHUB_REF" == "refs/heads/main" && "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ &&
                   -f "docs/releases/$tag.md" ]] &&
                ! git rev-parse -q --verify "refs/tags/$tag^{tag}" >/dev/null; then
-              run_macos_release_validation="false"
+              release_candidate_expected="true"
             fi
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            mode="${{ github.event.inputs.matrix }}"
-            python_release_bundle="${{ github.event.inputs.python_release_bundle }}"
+          elif [[ "$RELEASE_PULL_REQUEST" == "true" ]]; then
+            # Surface full-only lane failures before promotion to main.
+            mode="full"
           fi
 
           case "$mode" in
@@ -199,8 +203,8 @@ jobs:
 
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "python_release_bundle=$python_release_bundle" >> "$GITHUB_OUTPUT"
-          echo "run_macos_release_validation=$run_macos_release_validation" >> "$GITHUB_OUTPUT"
-          echo "Selected $mode validation (Python release bundle: $python_release_bundle; macOS release validation: $run_macos_release_validation)."
+          echo "release_candidate_expected=$release_candidate_expected" >> "$GITHUB_OUTPUT"
+          echo "Selected $mode validation (Python release bundle: $python_release_bundle; release candidate expected: $release_candidate_expected)."
 
   cpp:
     name: C++ validation
@@ -209,6 +213,7 @@ jobs:
     uses: ./.github/workflows/ci-cpp.yml
     with:
       mode: ${{ needs.plan.outputs.mode }}
+      candidate_owns_windows_arm64: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}
       cpp_test_scope: ${{ needs.plan.outputs.cpp_test_scope }}
       cpp_test_label_regex: ${{ needs.plan.outputs.cpp_test_label_regex }}
       cpp_test_targets: ${{ needs.plan.outputs.cpp_test_targets }}
@@ -222,7 +227,7 @@ jobs:
       mode: ${{ needs.plan.outputs.mode }}
       build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}
       run_compatibility_validation: true
-      run_macos_release_validation: ${{ needs.plan.outputs.run_macos_release_validation == 'true' }}
+      run_macos_release_validation: ${{ needs.plan.outputs.release_candidate_expected != 'true' }}
       release_max_parallel: 4
 
   wasm:
@@ -314,7 +319,8 @@ jobs:
   release-ready:
     name: Release ready
     needs: [plan, ci-gate]
-    if: ${{ always() && needs.plan.outputs.mode == 'full' }}
+    # Release evidence stays bound to a full run of the exact pushed commit.
+    if: ${{ always() && needs.plan.outputs.mode == 'full' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

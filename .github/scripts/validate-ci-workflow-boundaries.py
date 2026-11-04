@@ -18,8 +18,9 @@ from ci_action_policy import (
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
-# Includes the independent website module and its required publication/gate dependencies.
-MAX_ORCHESTRATOR_ACTIVE_LINES = 315
+# Includes the independent website module, its required publication/gate
+# dependencies, and full validation for release pull requests.
+MAX_ORCHESTRATOR_ACTIVE_LINES = 320
 EMSDK_REPOSITORY_REVISION = "2514ec738de72cebbba7f4fdba0cf2fabcb779a5"
 ACTION_TEMPLATE_PATHS = (
     ROOT / "tools/onboarding/starters/cpp-existing-qt/.github/workflows/ci.yml.in",
@@ -975,6 +976,7 @@ def validate_cpp_execution_contract(cpp: str) -> list[str]:
         '"--preset", "${{ matrix.preset }}",',
         '"--output-on-failure",',
         '"--timeout", "${{ matrix.ctest_timeout }}",',
+        '"--parallel", "${{ matrix.ctest_parallel }}",',
         '"--no-tests=error"',
         ')',
         '$testLabels = "${{ matrix.test_labels }}"',
@@ -1122,8 +1124,8 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
             *errors,
             "ci-cpp.yml plan job must contain the matrix-selection step",
         ]
-    selection_lines = uncommented_workflow_lines(selection)
-    selection_prelude = [
+    # Keep the wiring fail-closed. The selector tests exercise the resulting jobs.
+    if uncommented_workflow_lines(selection) != [
         "      - name: Select C++ validation matrix",
         "        id: matrix",
         "        env:",
@@ -1131,91 +1133,15 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
         "          CPP_TEST_SCOPE: ${{ inputs.cpp_test_scope }}",
         "          CPP_TEST_LABEL_REGEX: ${{ inputs.cpp_test_label_regex }}",
         "          CPP_TEST_TARGETS: ${{ inputs.cpp_test_targets }}",
+        "          CANDIDATE_OWNS_WINDOWS_ARM64: ${{ inputs.candidate_owns_windows_arm64 }}",
         "        shell: bash",
         "        run: |",
-    ]
-    selection_script = [
-        "set -euo pipefail",
-        'case "$VALIDATION_MODE" in',
-        "fast|full) ;;",
-        "*)",
-        'echo "::error::Unsupported C++ validation tier: $VALIDATION_MODE"',
-        "exit 1",
-        ";;",
-        "esac",
-        "selected_label_pattern='^\\^\\([a-z_]+(\\|[a-z_]+)*\\)\\$$'",
-        "selected_target_pattern='^fluent_qt_[a-z_]+_tests( fluent_qt_[a-z_]+_tests)*$'",
-        'case "$CPP_TEST_SCOPE" in',
-        "none)",
-        '[[ -z "$CPP_TEST_LABEL_REGEX" && -z "$CPP_TEST_TARGETS" ]] || {',
-        'echo "::error::The none C++ test scope must not provide labels or targets."',
-        "exit 1",
-        "}",
-        ";;",
-        "selected)",
-        '[[ "$CPP_TEST_LABEL_REGEX" =~ $selected_label_pattern &&',
-        '"$CPP_TEST_TARGETS" =~ $selected_target_pattern ]] || {',
-        'echo "::error::Invalid selected C++ test labels or targets."',
-        "exit 1",
-        "}",
-        ";;",
-        "all)",
-        '[[ "$CPP_TEST_LABEL_REGEX" == \'^qt$\' &&',
-        '"$CPP_TEST_TARGETS" == \'fluent_qt_all_tests\' ]] || {',
-        'echo "::error::Invalid all-tests C++ selection."',
-        "exit 1",
-        "}",
-        ";;",
-        "*)",
-        'echo "::error::Unsupported C++ test scope: $CPP_TEST_SCOPE"',
-        "exit 1",
-        ";;",
-        "esac",
-        'matrix="$(',
-        "jq -c \\",
-        '--arg mode "$VALIDATION_MODE" \\',
-        '--arg test_scope "$CPP_TEST_SCOPE" \\',
-        '--arg test_label_regex "$CPP_TEST_LABEL_REGEX" \\',
-        '--arg test_targets "$CPP_TEST_TARGETS" \\',
-        "'{include: [.scenarios[] |",
-        "select(.mode == $mode) |",
-        "del(.mode) |",
-        'if $mode == "fast" and',
-        '.id == "linux-x64-qt62-fast" and',
-        '$test_scope != "none"',
-        "then",
-        ".build_targets = (",
-        'if $test_scope == "all" then $test_targets',
-        'else .build_targets + " " + $test_targets',
-        "end",
-        ") |",
-        '.test_labels = "(" + .test_labels + "|" + $test_label_regex + ")"',
-        "else .",
-        "end]}' \\",
-        ".github/ci-cpp-matrix.json",
-        ')"',
-        'scenario_count="$(jq \'.include | length\' <<< "$matrix")"',
-        'if [[ "$scenario_count" == "0" ]]; then',
-        'echo "::error::The $VALIDATION_MODE C++ matrix is empty."',
-        "exit 1",
-        "fi",
-        'echo "matrix=$matrix" >> "$GITHUB_OUTPUT"',
-        'echo "mode=$VALIDATION_MODE" >> "$GITHUB_OUTPUT"',
-        'echo "Selected $scenario_count C++ $VALIDATION_MODE scenarios (PR tests: $CPP_TEST_SCOPE)."',
-    ]
-    if selection_lines[: len(selection_prelude)] != selection_prelude:
-        errors.append(
-            "ci-cpp.yml matrix-selection step prelude must match the "
-            "fail-closed contract"
-        )
-    selection_script_lines = [
-        line.strip() for line in selection_lines[len(selection_prelude) :]
-    ]
-    if selection_script_lines != selection_script:
-        errors.append(
-            "ci-cpp.yml matrix-selection script must exactly validate and select "
-            "the requested catalog tier"
-        )
+        "          set -euo pipefail",
+        '          matrix="$(python3 .github/scripts/select_ci_cpp_matrix.py)"',
+        '          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"',
+        '          echo "mode=$VALIDATION_MODE" >> "$GITHUB_OUTPUT"',
+    ]:
+        errors.append("ci-cpp.yml must run the C++ matrix selector with the classified PR inputs")
     return errors
 
 
@@ -1668,13 +1594,16 @@ def validate_boundaries() -> list[str]:
         'python_release_bundle="true"',
         "build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}",
         "run_compatibility_validation: true",
-        "run_macos_release_validation: ${{ needs.plan.outputs.run_macos_release_validation == 'true' }}",
-        'run_macos_release_validation="false"',
+        "run_macos_release_validation: ${{ needs.plan.outputs.release_candidate_expected != 'true' }}",
+        "candidate_owns_windows_arm64: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}",
         'refs/tags/$tag^{tag}',
         'docs/releases/$tag.md',
         "release_max_parallel: 4",
         "Require a current main base for release pull requests",
         ".github/scripts/check-release-branch-freshness.py",
+        "RELEASE_PULL_REQUEST: ${{ github.event_name == 'pull_request' && "
+        "github.base_ref == 'main' && startsWith(github.head_ref, 'release/') && "
+        "github.event.pull_request.head.repo.full_name == github.repository }}",
         "python3 tools/site/generate_api_reference.py --check",
         "uses: ./.github/workflows/ci-site.yml",
         "actions: read",
@@ -1717,6 +1646,7 @@ def validate_boundaries() -> list[str]:
     release_ready = job_section(active_orchestrator, "release-ready")
     for required in (
         "needs: [plan, ci-gate]",
+        "github.event_name != 'pull_request'",
         "CI_GATE_RESULT: ${{ needs.ci-gate.result }}",
     ):
         if required not in release_ready:
@@ -1764,16 +1694,15 @@ def validate_boundaries() -> list[str]:
     if re.search(r"^  push:\s*$", pages, re.MULTILINE):
         errors.append("pages.yml must not rebuild WASM automatically outside main CI")
 
-    if ".github/ci-cpp-matrix.json" not in cpp:
-        errors.append("ci-cpp.yml must own the C++ matrix catalog")
     cpp_build = job_section(cpp, "build")
+    for name in ("ci-python.yml", "desktop-release-candidate.yml", "release-candidate.yml",
+                 "release.yml", "package-win10-compat-test.yml", "python-release.yml"):
+        active = "\n".join(uncommented_workflow_lines(contents[name]))
+        if re.search(r"""^\s*(?:(?:key|restore-keys):\s*)?["']?fluentqt-ccache-""", active, re.MULTILINE):
+            errors.append(f"{name} must not restore the C++ CI compiler cache")
     errors.extend(validate_cpp_plan_contract(cpp))
     errors.extend(validate_cpp_execution_contract(cpp))
     errors.extend(validate_cpp_integration_contract(cpp))
-    if "max-parallel: 4" not in cpp_build:
-        errors.append(
-            "ci-cpp.yml build matrix must cap parallel action downloads at 4"
-        )
     for required in (
         "name: Smoke adaptive build parallelism",
         "tools/dev/fluent_qt_build.py --print-jobs",
@@ -1891,8 +1820,6 @@ def validate_boundaries() -> list[str]:
         if required not in python:
             errors.append(f"ci-python.yml is missing platform summary: {required}")
     for contract, expected_count in (
-        ("Test core wheel in a clean virtual environment (fast)", 2),
-        ("needs.plan.outputs.mode != 'full'", 2),
         ("Run extended installed-wheel acceptance", 1),
         ("name: Test stable-ABI wheel on every supported CPython", 2),
         (".github/scripts/smoke-pyside-wheel-interpreters.py", 2),
@@ -1924,6 +1851,7 @@ def validate_boundaries() -> list[str]:
         "-RequireQt6SpatialRuntime",
         "runs-on: windows-11-arm",
         "name: fluentqt-desktop-package-windows-arm64-qt693",
+        '-D "QT_HOST_PATH=$qtHost" -DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON',
         "needs: [plan, package, windows_arm64_install]",
         "needs.windows_arm64_install.result == 'success'",
         "needs.plan.outputs.windows_arm64 == 'false' && needs.windows_arm64_install.result == 'skipped'",

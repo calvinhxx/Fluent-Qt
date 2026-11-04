@@ -6,6 +6,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
+import textwrap
 import unittest
 from unittest import mock
 
@@ -164,6 +166,71 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 with self.subTest(workflow=workflow_name, original=original):
                     errors = self.workflow_errors_with_replacement(workflow_name, original, replacement)
                     self.assertTrue(any("memory-bounded jobs" in error for error in errors))
+
+    def test_ci_tier_and_candidate_ownership_for_each_event(self):
+        plan = MODULE.job_section(MODULE.read_workflow("ci.yml"), "plan")
+        step = MODULE.named_step_section(plan, "Select validation tier")
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        # Exercise the workflow shell with local responses for its two Git commands.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "CMakeLists.txt").write_text("project(FluentQt VERSION 1.2.3 LANGUAGES CXX)\n")
+            git = root / "git"
+            git.write_text(
+                '#!/bin/sh\n'
+                'case "$*" in\n'
+                '  "fetch --force --tags origin") exit 0 ;;\n'
+                '  "rev-parse -q --verify refs/tags/v1.2.3^{tag}") test -f annotated-tag ;;\n'
+                '  *) exit 2 ;;\n'
+                'esac\n'
+            )
+            git.chmod(0o755)
+            notes = root / "docs/releases/v1.2.3.md"
+            notes.parent.mkdir(parents=True)
+            output = root / "output"
+
+            def select(event, release_pr="false", mode="fast", bundle="false", ref="refs/heads/main"):
+                output.write_text("")
+                env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", GITHUB_EVENT_NAME=event,
+                           GITHUB_REF=ref, RELEASE_PULL_REQUEST=release_pr,
+                           REQUESTED_MODE=mode, REQUESTED_BUNDLE=bundle, GITHUB_OUTPUT=str(output))
+                subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env, cwd=root,
+                               check=True, capture_output=True)
+                values = dict(line.split("=", 1) for line in output.read_text().splitlines())
+                return (values["mode"], values["python_release_bundle"], values["release_candidate_expected"])
+
+            self.assertEqual(select("pull_request"), ("fast", "false", "false"))
+            self.assertEqual(select("pull_request", release_pr="true"), ("full", "false", "false"))
+            self.assertEqual(select("schedule"), ("full", "true", "false"))
+            self.assertEqual(select("workflow_dispatch", mode="full"), ("full", "false", "false"))
+            with self.assertRaises(subprocess.CalledProcessError):
+                select("workflow_dispatch", bundle="true")
+            self.assertEqual(select("push"), ("full", "false", "false"))
+            notes.touch()
+            self.assertEqual(select("push"), ("full", "false", "true"))
+            self.assertEqual(select("push", ref="refs/heads/topic"), ("full", "false", "false"))
+            (root / "annotated-tag").touch()
+            self.assertEqual(select("push"), ("full", "false", "false"))
+
+    def test_release_ready_cannot_use_a_pull_request(self):
+        errors = self.workflow_errors_with_replacement("ci.yml", " && github.event_name != 'pull_request' }}", " }}")
+        self.assertTrue(any("Release ready" in error for error in errors))
+
+    def test_compatibility_lanes_verify_standalone_core_before_gallery(self):
+        workflow = MODULE.read_workflow("ci-python.yml")
+        for platform in ("linux", "windows"):
+            with self.subTest(platform=platform):
+                job = MODULE.job_section(workflow, f"pyside6_{platform}")
+                core = MODULE.named_step_section(job, "Verify standalone core wheel")
+                gallery = MODULE.named_step_section(job, "Verify Gallery in the tested core environment")
+                trial = job.index(f"Record {platform.title()} PySide6 first-window trial")
+                self.assertNotIn("if:", core.split("run: |")[0])
+                self.assertIn("assert find_spec('fluentqt_gallery') is None", core)
+                self.assertIn("bindings/pyside6/tests/test_wheel_smoke.py", core)
+                self.assertIn("needs.plan.outputs.mode == 'full'", gallery)
+                self.assertIn("test_gallery_wheel_smoke.py", gallery)
+                self.assertLess(job.index(core), trial)
+                self.assertLess(trial, job.index(gallery))
 
     def test_optional_spatial_binding_cannot_silently_skip_coverage(self):
         for requirement in ("-DFLUENT_QT_BUILD_SPATIAL=ON", "assert SPATIAL_AVAILABLE",
@@ -924,28 +991,6 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                     "ci-cpp.yml", "clang-format==22.1.8", replacement)
                 self.assertTrue(any("pinned C++ formatter" in error for error in errors))
 
-    def test_cpp_selected_matrix_must_build_selected_targets(self):
-        original_read = MODULE.read_workflow
-
-        def without_selected_build_targets(name: str) -> str:
-            contents = original_read(name)
-            if name != "ci-cpp.yml":
-                return contents
-            return contents.replace(
-                '                  .build_targets = (\n',
-                '                  .name = (\n',
-                1,
-            )
-
-        with mock.patch.object(
-            MODULE, "read_workflow", side_effect=without_selected_build_targets
-        ):
-            errors = MODULE.validate_boundaries()
-        self.assertTrue(
-            any("matrix-selection script" in error for error in errors),
-            "workflow validator accepted selected tests that were not built",
-        )
-
     def test_duplicate_or_noncanonical_job_ids_are_rejected(self):
         original_read = MODULE.read_workflow
         shadow_keys = (
@@ -1517,6 +1562,48 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         self.assert_contract_error(
             self.workflow.replace('            "--no-tests=error"\n', "", 1)
         )
+
+    def test_ctest_parallelism_comes_only_from_the_catalog(self):
+        parallel = '            "--parallel", "${{ matrix.ctest_parallel }}",\n'
+        self.assertIn(parallel, self.workflow)
+        for replacement in ("", '            "--parallel", "8",\n'):
+            with self.subTest(replacement=replacement):
+                self.assert_contract_error(
+                    self.workflow.replace(parallel, replacement, 1)
+                )
+
+    def test_sanitizer_cache_is_enabled_only_after_initialization(self):
+        step = MODULE.named_step_section(self.workflow, "Enable sanitizer compiler cache")
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            tool = root / "ccache"
+            tool.write_text('#!/bin/sh\ntest "$1" = --zero-stats && exit "$PROBE_STATUS"\nexit 1\n')
+            tool.chmod(0o755)
+            output = root / "env"
+            for status in (1, 0):
+                output.write_text("")
+                env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", PROBE_STATUS=str(status),
+                           CCACHE_DIR=str(root / "cache"), CCACHE_MAXSIZE="512M", GITHUB_ENV=str(output))
+                subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env,
+                               check=True, capture_output=True)
+                self.assertEqual("CMAKE_CXX_COMPILER_LAUNCHER=ccache" in output.read_text(), status == 0)
+
+    def test_compiler_cache_write_guard(self):
+        save = MODULE.named_step_section(self.workflow, "Save sanitizer compiler cache")
+        condition = save.split("${{", 1)[1].split("}}", 1)[0]
+        self.assertEqual(" ".join(condition.split()), (
+            "success() && env.CCACHE_DIR != '' && steps.compiler_cache.outputs.cache-hit != 'true' && "
+            "github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')"
+        ))
+
+    def test_packaging_cannot_restore_the_ci_compiler_cache(self):
+        # An explanatory comment has no effect on the action's restore key.
+        key = "          key: release-vcpkg-"
+        for prefix, forbidden in (("fluentqt-ccache-", True), ("release-vcpkg-", False)):
+            replacement = f"          # fluentqt-ccache- snapshots belong to C++ CI.\n          key: {prefix}"
+            errors = self.workflow_errors_with_replacement("desktop-release-candidate.yml", key, replacement)
+            self.assertEqual(any("C++ CI compiler cache" in error for error in errors), forbidden)
 
     def test_test_step_cannot_continue_on_error(self):
         self.assert_contract_error(

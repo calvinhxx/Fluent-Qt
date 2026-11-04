@@ -7,6 +7,10 @@ on:
         description: Validation tier selected by the CI orchestrator.
         required: true
         type: string
+      candidate_owns_windows_arm64:
+        description: The release candidate builds and verifies this commit's Windows ARM64 installer.
+        type: boolean
+        default: false
       cpp_test_scope:
         description: Pull-request C++ test scope (none, selected, or all).
         required: false
@@ -79,79 +83,13 @@ jobs:
           CPP_TEST_SCOPE: ${{ inputs.cpp_test_scope }}
           CPP_TEST_LABEL_REGEX: ${{ inputs.cpp_test_label_regex }}
           CPP_TEST_TARGETS: ${{ inputs.cpp_test_targets }}
+          CANDIDATE_OWNS_WINDOWS_ARM64: ${{ inputs.candidate_owns_windows_arm64 }}
         shell: bash
         run: |
           set -euo pipefail
-
-          case "$VALIDATION_MODE" in
-            fast|full) ;;
-            *)
-              echo "::error::Unsupported C++ validation tier: $VALIDATION_MODE"
-              exit 1
-              ;;
-          esac
-
-          selected_label_pattern='^\^\([a-z_]+(\|[a-z_]+)*\)\$$'
-          selected_target_pattern='^fluent_qt_[a-z_]+_tests( fluent_qt_[a-z_]+_tests)*$'
-          case "$CPP_TEST_SCOPE" in
-            none)
-              [[ -z "$CPP_TEST_LABEL_REGEX" && -z "$CPP_TEST_TARGETS" ]] || {
-                echo "::error::The none C++ test scope must not provide labels or targets."
-                exit 1
-              }
-              ;;
-            selected)
-              [[ "$CPP_TEST_LABEL_REGEX" =~ $selected_label_pattern &&
-                 "$CPP_TEST_TARGETS" =~ $selected_target_pattern ]] || {
-                echo "::error::Invalid selected C++ test labels or targets."
-                exit 1
-              }
-              ;;
-            all)
-              [[ "$CPP_TEST_LABEL_REGEX" == '^qt$' &&
-                 "$CPP_TEST_TARGETS" == 'fluent_qt_all_tests' ]] || {
-                echo "::error::Invalid all-tests C++ selection."
-                exit 1
-              }
-              ;;
-            *)
-              echo "::error::Unsupported C++ test scope: $CPP_TEST_SCOPE"
-              exit 1
-              ;;
-          esac
-
-          matrix="$(
-            jq -c \
-              --arg mode "$VALIDATION_MODE" \
-              --arg test_scope "$CPP_TEST_SCOPE" \
-              --arg test_label_regex "$CPP_TEST_LABEL_REGEX" \
-              --arg test_targets "$CPP_TEST_TARGETS" \
-              '{include: [.scenarios[] |
-                select(.mode == $mode) |
-                del(.mode) |
-                if $mode == "fast" and
-                   .id == "linux-x64-qt62-fast" and
-                   $test_scope != "none"
-                then
-                  .build_targets = (
-                    if $test_scope == "all" then $test_targets
-                    else .build_targets + " " + $test_targets
-                    end
-                  ) |
-                  .test_labels = "(" + .test_labels + "|" + $test_label_regex + ")"
-                else .
-                end]}' \
-              .github/ci-cpp-matrix.json
-          )"
-          scenario_count="$(jq '.include | length' <<< "$matrix")"
-          if [[ "$scenario_count" == "0" ]]; then
-            echo "::error::The $VALIDATION_MODE C++ matrix is empty."
-            exit 1
-          fi
-
+          matrix="$(python3 .github/scripts/select_ci_cpp_matrix.py)"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "mode=$VALIDATION_MODE" >> "$GITHUB_OUTPUT"
-          echo "Selected $scenario_count C++ $VALIDATION_MODE scenarios (PR tests: $CPP_TEST_SCOPE)."
 
   build:
     name: ${{ matrix.name }}
@@ -160,9 +98,8 @@ jobs:
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
-      # Avoid a codeload.github.com burst when every lane prepares the same
-      # pinned Qt setup action at once.
-      max-parallel: 4
+      # Allow the longer macOS and Windows jobs to start alongside Linux.
+      max-parallel: 10
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     env:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
@@ -231,6 +168,44 @@ jobs:
             qml6-module-qtqml \
             qml6-module-qtqml-models \
             qml6-module-qtqml-workerscript
+
+      - name: Select sanitizer cache key
+        id: cache_key
+        if: ${{ matrix.id == 'linux-x64-qt62-contract-sanitizers' }}
+        shell: bash
+        run: date -u '+key=fluentqt-ccache-linux-qt62-asan-v1-%G-%V' >> "$GITHUB_OUTPUT"
+
+      - name: Restore sanitizer compiler cache
+        id: compiler_cache
+        if: ${{ steps.cache_key.outputs.key != '' }}
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ${{ steps.cache_key.outputs.key }}
+          restore-keys: fluentqt-ccache-linux-qt62-asan-v1-
+
+      - name: Enable sanitizer compiler cache
+        if: ${{ steps.compiler_cache.outcome == 'success' }}
+        shell: bash
+        env:
+          CCACHE_DIR: ${{ runner.temp }}/ccache
+          CCACHE_MAXSIZE: 512M
+        run: |
+          if ! command -v ccache >/dev/null && ! sudo apt-get install -y --no-install-recommends ccache; then
+            echo "::warning::ccache is unavailable. Compiling normally."
+            exit 0
+          fi
+          if ! mkdir -p "$CCACHE_DIR" || ! ccache --zero-stats; then
+            echo "::warning::Could not initialize ccache. Compiling normally."
+            exit 0
+          fi
+          {
+            echo "CCACHE_DIR=$CCACHE_DIR"
+            echo "CCACHE_MAXSIZE=$CCACHE_MAXSIZE"
+            echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          } >> "$GITHUB_ENV"
 
       - name: Install NSIS for Windows packaging
         if: ${{ matrix.windows_package == true }}
@@ -355,7 +330,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify relocatable macOS CMake package
-        if: ${{ matrix.id == 'mac-arm64-qt62-build' }}
+        if: ${{ matrix.verify_relocatable_sdk == true }}
         shell: bash
         run: |
           set -euo pipefail
@@ -452,10 +427,13 @@ jobs:
           ASAN_OPTIONS: ${{ matrix.asan_options || '' }}
           UBSAN_OPTIONS: ${{ matrix.ubsan_options || '' }}
         run: |
+          # The catalog keeps ctest_parallel at 1 unless the lane's isolation is
+          # proven; shared Gallery settings probes carry a CTest RESOURCE_LOCK.
           $testArgs = @(
             "--preset", "${{ matrix.preset }}",
             "--output-on-failure",
             "--timeout", "${{ matrix.ctest_timeout }}",
+            "--parallel", "${{ matrix.ctest_parallel }}",
             "--no-tests=error"
           )
           $testLabels = "${{ matrix.test_labels }}"
@@ -599,6 +577,22 @@ jobs:
           path: ${{ runner.temp }}/fluentqt-first-window-cpp.json
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Report compiler cache usage
+        if: ${{ !cancelled() && env.CCACHE_DIR != '' }}
+        continue-on-error: true
+        shell: bash
+        run: ccache --show-stats
+
+      - name: Save sanitizer compiler cache
+        if: >-
+          ${{ success() && env.CCACHE_DIR != '' && steps.compiler_cache.outputs.cache-hit != 'true' &&
+              github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule') }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ${{ steps.cache_key.outputs.key }}
 
       - name: Upload diagnostics
         if: failure()
