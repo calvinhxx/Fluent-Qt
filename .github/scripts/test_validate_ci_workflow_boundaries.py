@@ -70,6 +70,27 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             MODULE.validate_cpp_execution_contract(self.workflow), []
         )
 
+    def test_cmake_settings_cannot_share_a_quoted_argument(self):
+        for quote in ('"', "'"):
+            with self.subTest(quote=quote):
+                invalid = f"{quote}-DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON{quote}"
+                self.assertTrue(MODULE.cmake_argument_errors(invalid))
+                valid = f"{quote}-DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON{quote}, {quote}-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON{quote}"
+                self.assertEqual(MODULE.cmake_argument_errors(valid), [])
+        self.assertEqual(MODULE.cmake_argument_errors('"-DCMAKE_PREFIX_PATH=C:/Qt SDK/6.9.3"'), [])
+
+    def test_python_windows_configurations_reject_joined_cmake_settings(self):
+        workflow = MODULE.read_workflow("ci-python.yml")
+        for job_id in ("pyside6_windows", "pyside6_release"):
+            with self.subTest(job=job_id):
+                job = MODULE.job_section(workflow, job_id)
+                before = ('"-DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON",\n'
+                          '            "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",')
+                after = '"-DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",'
+                self.assertIn(before, job)
+                errors = self.workflow_errors_with_replacement("ci-python.yml", job, job.replace(before, after, 1))
+                self.assertTrue(any("must be separate arguments" in error for error in errors))
+
     def test_repository_cpp_plan_contract_is_valid(self):
         self.assertEqual(MODULE.validate_cpp_plan_contract(self.workflow), [])
 
