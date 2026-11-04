@@ -219,6 +219,16 @@ target_compile_definitions(test_gallery_preview_cli PRIVATE
     FLUENT_QT_GALLERY_PREVIEW_PATH="$<TARGET_FILE:fluent_qt_gallery>")
 add_dependencies(test_gallery_preview_cli fluent_qt_gallery)
 
+# These parents launch fresh-process probes that temporarily rewrite the one
+# Gallery-identity settings file in Qt's test-mode data directory, including
+# the shared home/particlesEnabled key. All other tests use a per-process
+# identity, so parallel CTest only has to serialize these three parents.
+set_tests_properties(
+    GalleryMotionPersistenceTest.LegacyDefaultAndPersistedModeLoadInFreshProcess
+    GallerySpatialPreferenceTest.DefaultsAndSavedChoicesLoadInFreshProcesses
+    GalleryParticleBackdropTest.HomeEffectDoesNotRepeatAcrossLaunches
+    PROPERTIES RESOURCE_LOCK fluentqt_gallery_settings)
+
 foreach(_gallery_acceptance_scale 1.25 2 3)
     string(REPLACE "." "" _gallery_acceptance_scale_id
         "${_gallery_acceptance_scale}")

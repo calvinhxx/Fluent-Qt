@@ -67,6 +67,7 @@ REQUIRED_FIELDS = {
     "test_labels",
     "exclude_labels",
     "ctest_timeout",
+    "ctest_parallel",
     "timeout_minutes",
     "configure_args",
     "first_window_trial",
@@ -100,6 +101,34 @@ REQUIRED_EXECUTION_LANES = {
         "exclude_labels": "^(known_contract_gap|manual_visual|local_desktop)$",
     },
 }
+
+
+def ctest_parallel_errors(context: str, scenario: dict[str, Any]) -> list[str]:
+    """Keep parallel CTest on lanes with proven isolation and pinned capacity."""
+    value = scenario.get("ctest_parallel")
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 1:
+        return []
+    errors: list[str] = []
+    os_name = scenario.get("os")
+    if isinstance(os_name, str) and os_name.startswith("windows"):
+        errors.append(
+            f"{context}.ctest_parallel must stay 1 on Windows until its test "
+            "isolation is proven"
+        )
+    if (scenario.get("qt_qpa_platform") or "offscreen") not in ("offscreen", "minimal"):
+        errors.append(
+            f"{context}.ctest_parallel must stay 1 on a native QPA platform"
+        )
+    pinned = scenario.get("build_parallel")
+    if not isinstance(pinned, str) or not pinned.isdigit():
+        errors.append(
+            f"{context}.ctest_parallel requires a pinned build_parallel runner capacity"
+        )
+    elif value > int(pinned):
+        errors.append(
+            f"{context}.ctest_parallel must not exceed build_parallel {pinned}"
+        )
+    return errors
 
 
 def validate_catalog(data: Any) -> list[str]:
@@ -164,10 +193,11 @@ def validate_catalog(data: Any) -> list[str]:
             and scenario.get("first_window_trial") is True
         ):
             trial_ids_by_mode[mode].add(scenario_id)
-        for field in ("ctest_timeout", "timeout_minutes"):
+        for field in ("ctest_timeout", "ctest_parallel", "timeout_minutes"):
             value = scenario.get(field)
-            if not isinstance(value, int) or value <= 0:
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
                 errors.append(f"{context}.{field} must be a positive integer")
+        errors.extend(ctest_parallel_errors(context, scenario))
 
         targets = scenario.get("build_targets", "")
         if (scenario.get("test_labels") == "^ci_full$"
@@ -200,15 +230,20 @@ def validate_catalog(data: Any) -> list[str]:
                 f"{', '.join(unexpected_trials)}"
             )
 
-    sdk_scenario = scenarios_by_id.get("mac-arm64-qt62-build")
-    if sdk_scenario is not None:
-        targets = sdk_scenario.get("build_targets", "")
-        built = set(targets.split()) if isinstance(targets, str) else set()
-        for target in ("FluentQt", "FluentQtSpatial", "FluentQtQmlBridge"):
-            if target not in built:
+    for sdk_id, required in (
+        ("mac-arm64-qt62-build", ("FluentQt", "FluentQtSpatial", "FluentQtQmlBridge")),
+        ("mac-arm64-qt62-full", ("fluent_qt_ci_full_tests", "FluentQtQmlBridge")),
+    ):
+        sdk = scenarios_by_id.get(sdk_id)
+        if sdk is None:
+            continue
+        if sdk.get("verify_relocatable_sdk") is not True:
+            errors.append(f"{sdk_id} must verify the relocatable SDK")
+        targets = str(sdk.get("build_targets", "")).split()
+        for target in required:
+            if target not in targets:
                 errors.append(f"macOS SDK installation lane must build target {target}")
-        options = sdk_scenario.get("configure_args", "")
-        if not isinstance(options, str) or "-DFLUENT_QT_BUILD_QML_BRIDGE=ON" not in options.split():
+        if "-DFLUENT_QT_BUILD_QML_BRIDGE=ON" not in str(sdk.get("configure_args", "")).split():
             errors.append("macOS SDK installation lane must enable QmlBridge")
 
     for lane, contract in REQUIRED_EXECUTION_LANES.items():

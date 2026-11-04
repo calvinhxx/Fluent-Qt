@@ -13,6 +13,7 @@ import time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlencode
 
 from wasm_plugin_contract import run_plugin_extension_contract
@@ -44,7 +45,10 @@ def parse_args() -> argparse.Namespace:
         default=Path("build/wasm"),
         help="WebAssembly build root containing app/ and examples/.",
     )
-    parser.add_argument("--mode", choices=("fast", "full"), default="fast")
+    parser.add_argument(
+        "--mode", choices=("fast", "full", "viewport"), default="fast",
+        help="viewport repeats the size-dependent Gallery and base Hello World pages.",
+    )
     parser.add_argument(
         "--device-scale-factor",
         type=float,
@@ -638,6 +642,44 @@ def run_hello_world_spatial_contract(
         context.close()
 
 
+def run_timed_contract(contract: Callable[..., object], *args: object) -> None:
+    """Report durations for both successful and failed browser contracts."""
+    name = contract.__name__.removeprefix("run_").removesuffix("_contract")
+    started = time.perf_counter()
+    try:
+        contract(*args)
+    finally:
+        print(f"Browser contract timing: {name} {time.perf_counter() - started:.1f}s", flush=True)
+
+
+def run_fixed_viewport_contracts(mode: str, browser: object, base_url: str, root: Path) -> None:
+    if mode == "viewport":
+        return
+    if mode == "full":
+        for contract, artifact_dir in (
+            (run_command_submenus_contract, "command-menu-validation"),
+            (run_command_palette_contract, "command-palette-validation"),
+            (run_form_contract, "form-validation"),
+            (run_list_detail_contract, "list-detail-validation"),
+            (run_data_grid_contract, "data-grid-validation"),
+            (run_auto_suggest_contract, "auto-suggest-validation"),
+            (run_gallery_search_contract, "gallery-search-validation"),
+            (run_tag_input_contract, "tag-input-validation"),
+            (run_tree_select_contract, "tree-select-validation"),
+            (run_chart_workbench_contract, "chart-workbench-validation"),
+        ):
+            run_timed_contract(contract, browser, base_url, root / artifact_dir)
+
+    run_timed_contract(
+        run_hello_world_spatial_contract, browser, base_url, root / "hello-world-validation"
+    )
+    run_timed_contract(run_embedded_theme_contract, browser, base_url)
+    run_timed_contract(
+        run_plugin_extension_contract, browser, base_url, root / "plugin-validation"
+    )
+    run_timed_contract(run_spatial_showcase_contract, browser, base_url, root)
+
+
 def run_smoke(
     root: Path,
     mode: str,
@@ -688,7 +730,7 @@ def run_smoke(
 
             page.on("requestfailed", record_failed_request)
 
-            query = {"wasm-smoke": mode}
+            query = {"wasm-smoke": "fast" if mode == "viewport" else mode}
             if render_scale != "default":
                 query["render-scale"] = render_scale
             if window_mode != "default":
@@ -1046,22 +1088,12 @@ def run_smoke(
                     + " | ".join(local_request_failures)
                 )
 
-            if mode == "full":
-                run_command_submenus_contract(browser, base_url, root / "command-menu-validation")
-                run_command_palette_contract(browser, base_url, root / "command-palette-validation")
-                run_form_contract(browser, base_url, root / "form-validation")
-                run_list_detail_contract(browser, base_url, root / "list-detail-validation")
-                run_data_grid_contract(browser, base_url, root / "data-grid-validation")
-                run_auto_suggest_contract(browser, base_url, root / "auto-suggest-validation")
-                run_gallery_search_contract(browser, base_url, root / "gallery-search-validation")
-                run_tag_input_contract(browser, base_url, root / "tag-input-validation")
-                run_tree_select_contract(browser, base_url, root / "tree-select-validation")
-                run_chart_workbench_contract(browser, base_url, root / "chart-workbench-validation")
-
-            run_hello_world_spatial_contract(browser, base_url, root / "hello-world-validation")
-            run_embedded_theme_contract(browser, base_url)
-            run_plugin_extension_contract(browser, base_url, root / "plugin-validation")
-            run_spatial_showcase_contract(browser, base_url, root)
+            print(
+                f"Browser contract timing: gallery_smoke_page "
+                f"{time.perf_counter() - gallery_started:.1f}s",
+                flush=True,
+            )
+            run_fixed_viewport_contracts(mode, browser, base_url, root)
 
             browser.close()
     except Exception:

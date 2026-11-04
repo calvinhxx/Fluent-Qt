@@ -31,7 +31,8 @@ represent supported patch lines, not Git Flow release branches.
 - Use older supported release branches only for deliberate backports to those
   patch lines. Do not mix new-line development into an older branch.
 - Promote the intended `release/X.Y.x` commit to `main` before a stable release,
-  normally with a rebase merge. Wait for both `Release ready` and
+  normally with a rebase merge after the release pull request's full `CI Gate`
+  passes. Wait for both `Release ready` and
   `Release Candidate ready` on that final `main` SHA, then cut `vX.Y.Z` from
   the same commit. Treat tag creation as the publication boundary and obtain
   explicit maintainer approval first.
@@ -268,8 +269,10 @@ Before creating a stable tag:
    `--require-curated` and review the maintainer changelog from the previous
    release tag. The automatic candidate refuses to package an untagged version
    without these curated notes.
-3. Rebase-merge the approved commit into `main`; do not tag the pre-merge
-   release-branch SHA.
+3. Open the `release/X.Y.x` → `main` pull request and wait for its full
+   `CI Gate`. Fix failures on the release branch; rerun failed jobs for an
+   external failure. Then rebase-merge the approved commit into `main`; do not
+   tag the pre-merge release-branch SHA.
 4. Confirm `main` and the worktree are clean, point at the intended commit, and
    declare the intended CMake project version.
 5. Wait for the automatic `CI full` run triggered by the `main` push. If a
@@ -278,17 +281,17 @@ Before creating a stable tag:
    The GitHub Release workflow requires the exact tagged commit to have a
    successful `Release ready` check; do not substitute a tree-equivalent run
    from the release branch or disable `require_ci` for a standard release.
-   For an untagged release-ready version, this run leaves the macOS ARM64
-   CPython 3.11 representative to the simultaneous Release Candidate instead
-   of compiling the same wheel twice.
+   For an untagged release-ready version, the simultaneous Release Candidate
+   owns the macOS ARM64 CPython 3.11 wheel and the Windows ARM64 installer.
+   Full CI still runs the Windows ARM64 native platform tests.
    If the change touches CMake, tests, Qt compatibility, platform behavior, or
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).
 6. Wait for `Release Candidate ready` on the same `main` SHA. It must contain
    the nine desktop packages, the complete Python wheel bundle, and a receipt binding
    both candidates to that repository and commit. Together with `Release ready`,
-   this is also the macOS ARM64 Python representative gate for the release
-   commit. For a post-tag recovery, run
+   this covers the macOS ARM64 Python representative and the installed Windows
+   ARM64 Gallery on the release commit. For a post-tag recovery, run
    `Release Candidate` manually from the tag instead of weakening the identity
    checks. For Windows/macOS packages, verify the installed runtime notices and
    retain the exact corresponding Qt source required by their Qt `NOTICE.md`.

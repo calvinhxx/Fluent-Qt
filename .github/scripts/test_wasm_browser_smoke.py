@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 SPEC = importlib.util.spec_from_file_location(
@@ -21,6 +22,23 @@ STAGE_SPEC = importlib.util.spec_from_file_location(
 )
 STAGE = importlib.util.module_from_spec(STAGE_SPEC)
 STAGE_SPEC.loader.exec_module(STAGE)
+
+
+class BrowserTierTest(unittest.TestCase):
+    def test_wide_pass_does_not_repeat_fixed_size_contracts(self):
+        runs = {}
+        for mode in ("fast", "full", "viewport"):
+            with mock.patch.object(MODULE, "run_timed_contract") as run:
+                MODULE.run_fixed_viewport_contracts(mode, object(), "http://localhost", Path("output"))
+                runs[mode] = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(runs["viewport"], [])
+        self.assertEqual(runs["fast"], [
+            MODULE.run_hello_world_spatial_contract, MODULE.run_embedded_theme_contract,
+            MODULE.run_plugin_extension_contract, MODULE.run_spatial_showcase_contract,
+        ])
+        self.assertEqual(runs["full"][-len(runs["fast"]):], runs["fast"])
+        self.assertIn(MODULE.run_data_grid_contract, runs["full"])
+        self.assertEqual(len(runs["full"]), len(set(runs["full"])))
 
 
 class MinimalExamplePresentationTest(unittest.TestCase):

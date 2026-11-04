@@ -18,6 +18,7 @@ belong to [release governance](release-governance.md).
 | Trigger | Validation | Python publication bundle |
 |---|---|---|
 | Pull request | `fast`; path classification may skip native builds | Disabled |
+| Release pull request (`release/*` → `main`, same repository) | `full`; path classification still applies; no `Release ready` | Disabled |
 | Push to `main` | `full` | Built separately by Release Candidate for an untagged release version |
 | Weekly schedule | `full` | Enabled |
 | Manual CI | `fast` by default; `full` selectable | Opt in with `python_release_bundle=true`; requires `full` |
@@ -27,6 +28,13 @@ belong to [release governance](release-governance.md).
 the current triggers and path rules. The classifier must keep build lanes
 enabled when it cannot prove a change is documentation-only. The stable
 `CI Gate` check still runs when native builds are skipped.
+
+Release pull requests run the full tier before promotion. The representative
+Linux job in either tier also runs the C++ tests selected by the changed paths.
+Both macOS ARM64 tiers move the installed development SDK and build an external
+consumer. The Linux and Windows Python compatibility jobs install the core wheel
+and run the first-window trial before full validation adds the Gallery wheel to
+the same environment. Only a successful non-PR full run supplies `Release ready`.
 
 `ci_fast` and `ci_full` are curated CTest subsets. `local_full` is the exhaustive
 non-manual host set; a full CI run is not an exhaustive local or native visual
@@ -92,6 +100,11 @@ changes to its runtime, shell, or browser helpers still select that module.
 The mixed UI/runtime scripts `site/site.js` and `site/spatial-showcase.js` also
 keep the WASM lane because they own real iframe lifecycle and host messages.
 
+Browser contracts run sequentially in isolated pages. The second, 1920×1080
+pass exercises the viewport-dependent pages. The primary pass owns the four
+fixed-size example and theme checks. Per-contract timing is logged on success
+and failure.
+
 Use CMake aggregate targets rather than duplicating lists in YAML:
 `fluent_qt_ci_fast_tests`, `fluent_qt_ci_full_tests`, and
 `fluent_qt_ci_windows_platform_tests`. When registering a test, choose its
@@ -107,6 +120,20 @@ the sanitizer lane still builds its separate contract aggregate.
 CI may pin build parallelism to its measured runner capacity. Local builds and
 matrix builds without an explicit job count use the
 [adaptive wrapper](build-workflow.md).
+
+### Reuse compiler output and run tests in parallel
+
+The [C++ matrix](../../.github/ci-cpp-matrix.json) sets `ctest_parallel` within
+each lane's build capacity. Windows and native display lanes run tests serially.
+Tests sharing settings, files or desktop focus must use a CTest `RESOURCE_LOCK`
+or `RUN_SERIAL`. See the [testing workflow](testing-workflow.md#ctest-labels).
+
+Only the Linux x64 Qt 6.2 sanitizer lane uses ccache. It restores the latest
+available snapshot and enables compiler launchers after ccache initializes.
+A successful push or scheduled run on `main` can save one snapshot per UTC ISO
+week, with a 512 MB local cache limit. PRs only read the cache. Cache setup
+and transfer failures allow ordinary compilation to continue. Compare ccache
+hits, total job time and repository cache use before expanding the trial.
 
 Full Python validation also builds the optional Spatial binding on one Linux
 Qt 6.9 lane. It checks the binding and Gallery contracts offscreen, then OpenGL
@@ -159,9 +186,12 @@ before assembly. The retained launch
 report explicitly leaves hardware 3D unvalidated; GPU rendering and input need
 a capable graphics environment and separate native review.
 
-On that release commit, Release Candidate also owns the macOS ARM64
-stable-ABI lane omitted from simultaneous main CI. Scheduled and manual full
-runs retain it. Bundle-enabled Python runs build one stable-ABI wheel per
+On an untagged release push with curated notes, Release Candidate owns the
+Windows ARM64 installer and the macOS ARM64 stable-ABI wheel. The Windows
+candidate requires live interface zoom and verifies the staged ARM64 runtime
+before the native installation test. Main CI keeps the Windows ARM64 native
+component tests. Full PR, manual, scheduled and already-tagged main runs keep
+the independent installer build. Bundle-enabled Python runs build one stable-ABI wheel per
 platform with its oldest supported CPython, then install and smoke-test that
 same wheel on every newer interpreter in the lane's `test_python_versions`.
 The critical Windows ARM64 lane is queued first. Consult the wheel matrix for
@@ -174,7 +204,7 @@ hosted-runner capacity, including the account's platform-specific limits. A
 matrix's `max-parallel` is an upper bound for that matrix; it neither reserves
 runners nor guarantees a share for another workflow. The candidate cap allows
 the current dynamic platform lanes to run together, with the fixed macOS ARM64
-lane counted separately. Full CI retains its own matrix caps. Measure queue
+lane counted separately. The C++ matrix allows up to ten concurrent jobs. Measure queue
 time, execution time, and the slowest required job after a matrix change;
 timing estimates from the former per-interpreter wheel matrix do not predict
 the stable-ABI pipeline.
@@ -184,7 +214,9 @@ Packages use `tools/dev/fluent_qt_build.py --jobs auto` when `build_parallel` is
 empty, including on Windows. The workflow validator checks all three entry
 points, preserves explicit job counts, and requires build failures to propagate.
 
-Require a successful `CI Gate` before merging a release-to-main pull request.
+Require a successful full `CI Gate` before merging a release-to-main pull
+request. Merging earlier sends full-only failures to `main`, where every fix
+costs another full run and candidate rebuild.
 Configure that required check in the `main` branch rules; workflow source checks
 alone do not enforce repository settings. For an external failure, rerun failed
 jobs in the same run and commit: successful lanes and their retained artifacts
