@@ -391,6 +391,7 @@ set(FLUENTQT_PYSIDE6_HEADER_STAMP "${FLUENTQT_PYSIDE6_GENERATED_ROOT}/headers.sh
 add_custom_command(
     OUTPUT "${FLUENTQT_PYSIDE6_GENERATION_STAMP}"
     BYPRODUCTS ${FLUENTQT_PYSIDE6_GENERATED_SOURCES} "${FLUENTQT_PYSIDE6_HEADER_STAMP}"
+        "${FLUENTQT_PYSIDE6_GENERATED_DIR}/_fluentqt_python.h"
     COMMAND "${CMAKE_COMMAND}" -E make_directory
         "${FLUENTQT_PYSIDE6_GENERATED_ROOT}"
     COMMAND "${Python_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_bindings.py"
@@ -420,12 +421,22 @@ set_source_files_properties(
 set_property(SOURCE ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
     APPEND PROPERTY OBJECT_DEPENDS "${FLUENTQT_PYSIDE6_HEADER_STAMP}")
 
-add_library(_fluentqt MODULE
-    ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
+set(FLUENTQT_PYSIDE6_NATIVE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/InterfaceZoomBinding.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/PluginBindingApi.cpp")
+add_library(_fluentqt MODULE
+    ${FLUENTQT_PYSIDE6_GENERATED_SOURCES} ${FLUENTQT_PYSIDE6_NATIVE_SOURCES})
 add_dependencies(_fluentqt fluentqt_pyside6_generate)
+include(CMakeDependentOption)
+cmake_dependent_option(FLUENT_QT_PYSIDE6_PRECOMPILE_WRAPPERS
+    "Precompile the generated module header for macOS stable-ABI wrappers" OFF
+    "APPLE;FLUENT_QT_PYSIDE6_STABLE_ABI" OFF)
+if(FLUENT_QT_PYSIDE6_PRECOMPILE_WRAPPERS)
+    target_precompile_headers(_fluentqt PRIVATE native/WrapperPch.h)
+    set_source_files_properties(${FLUENTQT_PYSIDE6_NATIVE_SOURCES}
+        PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
 set_target_properties(_fluentqt PROPERTIES
     AUTOMOC OFF
     CXX_STANDARD 17
