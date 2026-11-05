@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 SCRIPT_PATH = Path(__file__).with_name("verify-python-package-index.py")
@@ -90,6 +91,30 @@ class PackageIndexVerifierTest(unittest.TestCase):
         VERIFIER.compare_release(
             "FluentQt", self.expected, self.actual(), "complete"
         )
+
+    def test_resume_skips_only_hash_verified_complete_distributions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = self.make_bundle(Path(directory))
+        files = manifest["files"]
+        for published, complete in [
+            ([], []),
+            (files[1:], ["FluentQt-Gallery"]),
+            (files, ["FluentQt", "FluentQt-Gallery"]),
+        ]:
+            def fetch(_index, distribution, _version):
+                return {"urls": [
+                    {"filename": item["filename"], "digests": {"sha256": item["sha256"]},
+                     "url": "https://example.org/" + item["filename"]}
+                    for item in published if item["distribution"] == distribution
+                ]}
+
+            with self.subTest(complete=complete), mock.patch.object(VERIFIER, "fetch_release", fetch):
+                report = VERIFIER.verify_index(
+                    manifest=manifest, index_json_url="fixture", mode="subset")
+                self.assertEqual(
+                    [entry["distribution"] for entry in report["distributions"] if entry["complete"]],
+                    complete,
+                )
 
     def test_complete_release_rejects_missing_file(self):
         with self.assertRaisesRegex(

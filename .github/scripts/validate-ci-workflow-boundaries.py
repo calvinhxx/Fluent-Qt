@@ -1041,6 +1041,117 @@ def validate_cpp_execution_contract(cpp: str) -> list[str]:
     return errors
 
 
+CPP_COMPILER_CACHE_SAVE_GUARD = (
+    "success() && env.CCACHE_DIR != '' && steps.compiler_cache.outputs.cache-hit != 'true' && "
+    "matrix.compiler_cache == matrix.id && "
+    "github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')"
+)
+CPP_COMPILER_CACHE_STEPS = {
+    "Select compiler cache key": (
+        "        if: ${{ matrix.compiler_cache != '' }}",
+        "        continue-on-error: true",
+        "          CACHE_LANE: ${{ matrix.compiler_cache }}",
+        "          CACHE_QT_VERSION: ${{ matrix.qt_version }}",
+        "prefix=\"fluentqt-ccache-v2-$CACHE_LANE-$RUNNER_OS-$RUNNER_ARCH-qt$CACHE_QT_VERSION-$compiler_id-\"",
+        "echo \"key=$prefix$(date -u '+%G-%V')\"",
+    ),
+    "Restore compiler cache": (
+        "        if: ${{ steps.compiler_cache_key.outputs.key != '' }}",
+        "        continue-on-error: true",
+        "        uses: actions/cache/restore@<commit>",
+        "          path: ${{ runner.temp }}/ccache",
+        "          key: ${{ steps.compiler_cache_key.outputs.key }}",
+        "          restore-keys: ${{ steps.compiler_cache_key.outputs.prefix }}",
+    ),
+    "Enable compiler cache": (
+        "        if: ${{ steps.compiler_cache.outcome == 'success' }}",
+        "          CCACHE_DIR: ${{ runner.temp }}/ccache",
+        "          CCACHE_MAXSIZE: ${{ matrix.compiler_cache_max_size }}",
+        '          CCACHE_NOHASHDIR: "1"',
+        'echo "::warning::ccache is unavailable. Compiling normally."',
+        'if ! mkdir -p "$CCACHE_DIR" || ! ccache --zero-stats; then',
+        'echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"',
+    ),
+    "Report compiler cache usage": (
+        "        continue-on-error: true",
+    ),
+    "Save compiler cache": (
+        "        continue-on-error: true",
+        "        uses: actions/cache/save@<commit>",
+        "          path: ${{ runner.temp }}/ccache",
+        "          key: ${{ steps.compiler_cache_key.outputs.key }}",
+    ),
+}
+
+
+def step_condition(step: str) -> str:
+    """Return a step-level if expression without its ${{ }} wrapper."""
+    match = re.search(
+        r"^        if: (?:>-\n)?(?P<condition>.*?)(?=^        [A-Za-z-]+:|\Z)",
+        step,
+        re.MULTILINE | re.DOTALL,
+    )
+    condition = " ".join(match.group("condition").split()) if match else ""
+    if condition.startswith("${{") and condition.endswith("}}"):
+        condition = condition[3:-2].strip()
+    return condition
+
+
+def validate_cpp_compiler_cache_contract(cpp: str) -> list[str]:
+    """Keep ccache optional, main-written, and configured before CMake runs."""
+    active_cpp = "\n".join(uncommented_workflow_lines(normalize_action_references(cpp))) + "\n"
+    build = job_section(active_cpp, "build")
+    errors: list[str] = []
+    headers = [header.strip() for header in workflow_step_headers(build)]
+    positions = {}
+    for name, required in CPP_COMPILER_CACHE_STEPS.items():
+        step = named_step_section(build, name)
+        if not step:
+            errors.append(f"ci-cpp.yml build job is missing compiler cache step: {name}")
+            continue
+        positions[name] = headers.index(f"- name: {name}")
+        lines = step.splitlines()
+        script = {line.strip() for line in lines}
+        for line in required:
+            # Step keys keep their YAML indentation; script fragments may move.
+            if (line in lines) if line.startswith(" ") else (line in script):
+                continue
+            errors.append(f"ci-cpp.yml {name} must keep: {line.strip()}")
+    save = named_step_section(build, "Save compiler cache")
+    if save and step_condition(save) != CPP_COMPILER_CACHE_SAVE_GUARD:
+        errors.append(
+            "ci-cpp.yml Save compiler cache must write only owner snapshots from "
+            "successful main pushes or schedules"
+        )
+    enable = named_step_section(build, "Enable compiler cache")
+    if enable and enable.find("ccache --zero-stats") > enable.find("COMPILER_LAUNCHER=ccache"):
+        errors.append("ci-cpp.yml must enable compiler launchers only after ccache initializes")
+    # base_dir hands the compiler relative paths, which changes __FILE__ in
+    # tests that locate repository sources from it.
+    if re.search(r"CCACHE_BASEDIR|base_dir", build):
+        errors.append("ci-cpp.yml must keep absolute compiler paths; do not set ccache base_dir")
+    # A combined actions/cache step would also save from pull requests.
+    for step in re.split(r"^      - ", build, flags=re.MULTILINE)[1:]:
+        if re.search(r"uses: actions/cache@", step) and "/ccache" in step:
+            errors.append("ci-cpp.yml must restore and save the compiler cache in separate steps")
+    if len(positions) == len(CPP_COMPILER_CACHE_STEPS):
+        order = list(CPP_COMPILER_CACHE_STEPS)
+        if [positions[name] for name in order] != sorted(positions.values()):
+            errors.append("ci-cpp.yml compiler cache steps must keep select, restore, enable, report, save order")
+        for configure in ("Configure", "Configure Windows ARM64 cross-build"):
+            name = f"- name: {configure}"
+            if name in headers and headers.index(name) < positions["Enable compiler cache"]:
+                errors.append(f"ci-cpp.yml must enable the compiler cache before {configure}")
+        for producer in ("Test", "Build Linux Gallery package"):
+            name = f"- name: {producer}"
+            if name in headers and headers.index(name) > positions["Report compiler cache usage"]:
+                errors.append(f"ci-cpp.yml must report and save the compiler cache after {producer}")
+    trial = named_step_section(build, "Record installed C++ first-window trial")
+    if "Remove-Item Env:CMAKE_C_COMPILER_LAUNCHER, Env:CMAKE_CXX_COMPILER_LAUNCHER" not in trial:
+        errors.append("ci-cpp.yml first-window trial must time an uncached application build")
+    return errors
+
+
 def validate_cpp_plan_contract(cpp: str) -> list[str]:
     """Keep C++ catalog and repository-quality validation fail closed."""
     errors = immutable_action_errors("ci-cpp.yml", cpp)
@@ -1251,16 +1362,19 @@ def validate_job_level_contracts(name: str, contents: str) -> list[str]:
 
 
 def validate_pr_change_classification_contract(orchestrator: str) -> list[str]:
-    """Require the trusted PR file count to reach the classifier executable."""
+    """Require trusted PR and non-release push inputs to reach the classifier."""
     active = "\n".join(uncommented_workflow_lines(orchestrator)) + "\n"
     plan = job_section(active, "plan")
-    step = named_step_section(plan, "Classify pull-request changes")
+    step = named_step_section(plan, "Classify changes")
     if not step:
-        return ["ci.yml plan job must contain the pull-request classification step"]
+        return ["ci.yml plan job must contain the change classification step"]
+    tier = plan.find("      - name: Select validation tier")
+    if tier < 0 or tier > plan.find(step):
+        return ["ci.yml must select the validation tier before classifying changes"]
 
     lines = uncommented_workflow_lines(step)
     expected_prelude = [
-        "      - name: Classify pull-request changes",
+        "      - name: Classify changes",
         "        id: changes",
         "        env:",
         "          GH_TOKEN: ${{ github.token }}",
@@ -1287,6 +1401,8 @@ def validate_pr_change_classification_contract(orchestrator: str) -> list[str]:
         '--expected-count "$PR_CHANGED_FILES" \\',
         '<<< "$changed_files_json"',
         ')"',
+        'elif [[ "${{ github.event_name }}" == "push" && "${{ steps.mode.outputs.release_candidate_expected }}" != "true" ]]; then',
+        'classification="$(python3 .github/scripts/classify_ci_changes.py --push-event "$GITHUB_EVENT_PATH")"',
         "fi",
         'output_value() { sed -n "s/^$1=//p" <<< "$classification"; }',
         'should_build="$(output_value should_build)"',
@@ -1301,9 +1417,8 @@ def validate_pr_change_classification_contract(orchestrator: str) -> list[str]:
         "exit 1",
         "}",
         "done",
-        'if [[ "$should_build" == "false" && \\',
-        '("$should_build_pyside" == "true" || "$should_build_wasm" == "true") ]]; then',
-        'echo "::error::A specialized module cannot run when native validation is skipped."',
+        'if [[ "$should_build" == "false" && "$should_build_pyside" == "true" ]]; then',
+        'echo "::error::PySide6 validation cannot run when native validation is skipped."',
         "exit 1",
         "fi",
         "label_pattern='^[a-z0-9_^$()|]*$'",
@@ -1337,14 +1452,15 @@ def validate_pr_change_classification_contract(orchestrator: str) -> list[str]:
     errors: list[str] = []
     if lines[: len(expected_prelude)] != expected_prelude:
         errors.append(
-            "ci.yml pull-request classification prelude must bind PR_CHANGED_FILES "
+            "ci.yml change classification prelude must bind PR_CHANGED_FILES "
             "to github.event.pull_request.changed_files"
         )
     script = [line.strip() for line in lines[len(expected_prelude) :]]
     if script != expected_script:
         errors.append(
-            "ci.yml pull-request classification script must exactly fetch every API "
-            "page and pass --expected-count \"$PR_CHANGED_FILES\" to the executable"
+            "ci.yml change classification script must exactly fetch every PR API "
+            "page, pass --expected-count \"$PR_CHANGED_FILES\", and classify only "
+            "non-release-candidate pushes from the event payload"
         )
     return errors
 
@@ -1684,6 +1800,8 @@ def validate_boundaries() -> list[str]:
     for required in (
         "needs: [plan, ci-gate]",
         "github.event_name != 'pull_request'",
+        # A classified push skips lanes, so only a release-candidate push is evidence.
+        "(github.event_name != 'push' || needs.plan.outputs.release_candidate_expected == 'true')",
         "CI_GATE_RESULT: ${{ needs.ci-gate.result }}",
     ):
         if required not in release_ready:
@@ -1739,6 +1857,7 @@ def validate_boundaries() -> list[str]:
             errors.append(f"{name} must not restore the C++ CI compiler cache")
     errors.extend(validate_cpp_plan_contract(cpp))
     errors.extend(validate_cpp_execution_contract(cpp))
+    errors.extend(validate_cpp_compiler_cache_contract(cpp))
     errors.extend(validate_cpp_integration_contract(cpp))
     for required in (
         "name: Smoke adaptive build parallelism",
@@ -2003,14 +2122,17 @@ def validate_boundaries() -> list[str]:
         "needs.preflight.outputs.promote_candidate == 'true'",
         "A manual stable publication must dispatch release.yml from $tag.",
         "name: Dispatch synchronized Python publication",
-        "gh workflow run python-release.yml",
-        "-f stage=all",
+        'repos/$GITHUB_REPOSITORY/actions/workflows/python-release.yml/dispatches',
+        "'inputs[stage]=all'",
         'source_run_id="$(jq -r',
         'source_run_attempt="$(jq -r',
-        "-f source_run_id=\"${{ steps.candidate.outputs.source_run_id }}\"",
-        "-f source_run_attempt=\"${{ steps.candidate.outputs.source_run_attempt }}\"",
-        "gh run watch",
-        "--exit-status",
+        "SOURCE_RUN_ID: ${{ steps.candidate.outputs.source_run_id }}",
+        "SOURCE_RUN_ATTEMPT: ${{ steps.candidate.outputs.source_run_attempt }}",
+        '"inputs[source_run_id]=$SOURCE_RUN_ID"',
+        '"inputs[source_run_attempt]=$SOURCE_RUN_ATTEMPT"',
+        "--jq '.workflow_run_id'",
+        "RUN_ID: ${{ steps.python_release.outputs.run_id }}",
+        'gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"',
     ):
         if required not in release:
             errors.append(f"release.yml is missing Python publication orchestration: {required}")

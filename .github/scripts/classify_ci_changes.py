@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
-"""Classify pull-request paths and select fail-closed native test coverage."""
+"""Classify pull-request or push paths and select fail-closed native test coverage."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
+import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 
 
 DOCUMENTATION_PREFIXES = (
@@ -143,6 +146,8 @@ WASM_ONLY_PREFIXES = (
 )
 
 GITHUB_PULL_FILES_LIMIT = 3000
+
+GIT_COMMIT_PATTERN = re.compile(r"[0-9a-f]{40}")
 
 CPP_COMPONENT_TEST_GROUPS = frozenset(
     {
@@ -429,13 +434,89 @@ def select_cpp_tests_from_github_file_pages(
     return select_cpp_tests(list(paths))
 
 
+def push_changed_paths(
+    event: object, cwd: Path | None = None
+) -> tuple[str, ...] | None:
+    """Return paths changed since the previous branch tip, or None if unknown."""
+    if not isinstance(event, dict):
+        return None
+    before = event.get("before")
+    after = event.get("after")
+    if not all(
+        isinstance(revision, str) and GIT_COMMIT_PATTERN.fullmatch(revision)
+        for revision in (before, after)
+    ) or set(before) == {"0"}:
+        return None
+
+    def git(*arguments: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *arguments],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    for revision in (before, after):
+        if (
+            git("cat-file", "-e", f"{revision}^{{commit}}").returncode != 0
+            and git("fetch", "--no-tags", "--depth=1", "origin", revision).returncode
+            != 0
+        ):
+            return None
+    diff = git("diff", "--name-only", "--no-renames", "-z", before, after)
+    if diff.returncode != 0:
+        return None
+    # An identical tree proves nothing about the previous run, so keep full CI.
+    return tuple(path for path in diff.stdout.split("\0") if path) or None
+
+
+def classify_push_event(
+    event: object, cwd: Path | None = None
+) -> tuple[ChangeClassification, CppTestSelection] | None:
+    """Classify a push that cannot become release evidence.
+
+    Pages publishes the website and Web Gallery from the same run, so a
+    classified push always keeps the WebAssembly lane. None means the previous
+    tip could not be compared and the complete matrix must run.
+    """
+    paths = push_changed_paths(event, cwd)
+    if paths is None:
+        return None
+    return (
+        replace(classify_changes(list(paths)), should_build_wasm=True),
+        select_cpp_tests(list(paths)),
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--github-files-json", action="store_true")
     parser.add_argument("--expected-count", type=int)
+    parser.add_argument("--push-event", type=Path)
     args = parser.parse_args()
     try:
-        if args.github_files_json:
+        if args.push_event is not None:
+            if args.github_files_json or args.expected_count is not None:
+                raise ValueError(
+                    "--push-event cannot be combined with pull-request inputs"
+                )
+            try:
+                event = json.loads(args.push_event.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                event = None
+            classified = classify_push_event(event)
+            if classified is None:
+                print(
+                    "::warning::The previous branch tip could not be compared; "
+                    "running the complete validation matrix.",
+                    file=sys.stderr,
+                )
+                result = ChangeClassification(True, True, True)
+                cpp_tests = CppTestSelection("none")
+            else:
+                result, cpp_tests = classified
+        elif args.github_files_json:
             if args.expected_count is None:
                 raise ValueError(
                     "--expected-count is required with --github-files-json"

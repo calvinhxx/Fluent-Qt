@@ -4,6 +4,7 @@ import importlib.util
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -215,6 +216,25 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_release_ready_cannot_use_a_pull_request(self):
         errors = self.workflow_errors_with_replacement("ci.yml", " && github.event_name != 'pull_request' }}", " }}")
         self.assertTrue(any("Release ready" in error for error in errors))
+
+    def test_release_ready_cannot_use_a_classified_push(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci.yml",
+            " && (github.event_name != 'push' || needs.plan.outputs.release_candidate_expected == 'true')",
+            "",
+        )
+        self.assertTrue(any("Release ready" in error for error in errors))
+
+    def test_only_non_release_candidate_pushes_are_classified(self):
+        condition = ' && "${{ steps.mode.outputs.release_candidate_expected }}" != "true"'
+        for original, replacement in (
+            (condition, ""),
+            ("--push-event \"$GITHUB_EVENT_PATH\"", "--github-files-json"),
+            ("      - name: Select validation tier", "      - name: Select validation stage"),
+        ):
+            with self.subTest(original=original):
+                errors = self.workflow_errors_with_replacement("ci.yml", original, replacement)
+                self.assertTrue(any("classif" in error for error in errors))
 
     def test_compatibility_lanes_verify_standalone_core_before_gallery(self):
         workflow = MODULE.read_workflow("ci-python.yml")
@@ -978,6 +998,33 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             "workflow validator accepted a missing release input mapping",
         )
 
+    def test_python_publication_wait_retries_reads_and_preserves_conclusion(self):
+        workflow = MODULE.read_workflow("release.yml")
+        step = MODULE.named_step_section(workflow, "Wait for the dispatched Python publication")
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        mock_commands = """
+            gh() {
+                [[ "$1" == api && "$2" == repos/owner/repo/actions/runs/42 ]] || exit 2
+                echo "read run" >&2
+                read -r state && [[ "$state" != unreadable ]] || return 1
+                echo "$state"
+            }
+            sleep() { :; }
+        """
+        for states, expected in [
+            (["unreadable", "pending", "success"], 0),
+            (["pending", "failure"], 1),
+            (["cancelled"], 1),
+            (["unreadable"] * 6, 1),
+        ]:
+            with self.subTest(states=states):
+                result = subprocess.run(
+                    ["bash", "-c", mock_commands + script],
+                    env=dict(os.environ, GITHUB_REPOSITORY="owner/repo", RUN_ID="42"),
+                    input="\n".join(states) + "\n", capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self.assertEqual(result.stderr.count("read run"), len(states))
+
     def test_cpp_test_selection_must_reach_reusable_workflow(self):
         original_read = MODULE.read_workflow
 
@@ -1610,30 +1657,131 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                     self.workflow.replace(parallel, replacement, 1)
                 )
 
-    def test_sanitizer_cache_is_enabled_only_after_initialization(self):
-        step = MODULE.named_step_section(self.workflow, "Enable sanitizer compiler cache")
-        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+    @staticmethod
+    def step_script(workflow: str, name: str) -> str:
+        step = MODULE.named_step_section(workflow, name)
+        return textwrap.dedent(step.split("        run: |\n", 1)[1])
+
+    @staticmethod
+    def write_tool(path: Path, body: str) -> None:
+        path.write_text(f"#!/bin/sh\n{body}\n")
+        path.chmod(0o755)
+
+    def assert_compiler_cache_error(self, workflow: str, message: str) -> None:
+        errors = MODULE.validate_cpp_compiler_cache_contract(workflow)
+        self.assertTrue(any(message in error for error in errors), errors)
+
+    def test_repository_compiler_cache_contract_is_valid(self):
+        self.assertEqual(MODULE.validate_cpp_compiler_cache_contract(self.workflow), [])
+
+    def test_compiler_cache_is_enabled_only_after_initialization(self):
+        script = self.step_script(self.workflow, "Enable compiler cache")
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            tool = root / "ccache"
-            tool.write_text('#!/bin/sh\ntest "$1" = --zero-stats && exit "$PROBE_STATUS"\nexit 1\n')
-            tool.chmod(0o755)
+            self.write_tool(root / "ccache", 'test "$1" = --zero-stats && exit "$PROBE_STATUS"\nexit 1')
             output = root / "env"
             for status in (1, 0):
                 output.write_text("")
                 env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", PROBE_STATUS=str(status),
-                           CCACHE_DIR=str(root / "cache"), CCACHE_MAXSIZE="512M", GITHUB_ENV=str(output))
+                           RUNNER_OS="Linux", CCACHE_DIR=str(root / "cache"), CCACHE_MAXSIZE="384M",
+                           CCACHE_NOHASHDIR="1", CCACHE_COMPRESSLEVEL="5", GITHUB_ENV=str(output))
                 subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env,
                                check=True, capture_output=True)
-                self.assertEqual("CMAKE_CXX_COMPILER_LAUNCHER=ccache" in output.read_text(), status == 0)
+                exported = output.read_text().splitlines()
+                self.assertEqual("CMAKE_CXX_COMPILER_LAUNCHER=ccache" in exported, status == 0)
+                if status == 0:
+                    for line in ("CCACHE_MAXSIZE=384M", "CCACHE_NOHASHDIR=1", "CCACHE_COMPRESSLEVEL=5"):
+                        self.assertIn(line, exported)
+
+    def test_compiler_cache_install_failure_compiles_normally(self):
+        script = self.step_script(self.workflow, "Enable compiler cache")
+        bash = shutil.which("bash")
+        self.assertIsNotNone(bash)
+        for runner_os, installer in (
+            ("Linux", "sudo apt-get install -y --no-install-recommends ccache"),
+            ("macOS", "brew install ccache 1"),  # Homebrew must skip its auto-update.
+        ):
+            with self.subTest(runner_os=runner_os), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                log, output = root / "calls", root / "github-env"
+                output.write_text("")
+                # PATH holds only failing installers, so no host ccache is found.
+                self.write_tool(root / "sudo", 'echo "sudo $*" >> "$PROBE_LOG"\nexit 1')
+                self.write_tool(root / "brew", 'echo "brew $* $HOMEBREW_NO_AUTO_UPDATE" >> "$PROBE_LOG"\nexit 1')
+                self.write_tool(root / "env", 'while [ "${1#*=}" != "$1" ]; do export "$1"; shift; done\nexec "$@"')
+                env = {"PATH": str(root), "RUNNER_OS": runner_os, "PROBE_LOG": str(log),
+                       "CCACHE_DIR": str(root / "cache"), "GITHUB_ENV": str(output)}
+                result = subprocess.run([bash, "-e", "-o", "pipefail", "-c", script], env=env,
+                                        check=True, capture_output=True, text=True)
+                self.assertIn("ccache is unavailable", result.stdout)
+                self.assertIn(installer, log.read_text())
+                self.assertEqual(output.read_text(), "")
+
+    def test_compiler_cache_key_partitions_lane_runner_qt_compiler_and_week(self):
+        script = self.step_script(self.workflow, "Select compiler cache key")
+        prefixes = set()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for version in ("c++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0", "c++ (Ubuntu 12.3.0) 12.3.0"):
+                self.write_tool(root / "c++", f'echo "{version}"\necho "Copyright"')
+                output = root / "outputs"
+                output.write_text("")
+                env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", GITHUB_OUTPUT=str(output),
+                           CACHE_LANE="linux-x64-qt62-full", CACHE_QT_VERSION="6.2.4",
+                           RUNNER_OS="Linux", RUNNER_ARCH="X64")
+                subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env,
+                               check=True, capture_output=True)
+                values = dict(line.split("=", 1) for line in output.read_text().splitlines())
+                self.assertRegex(values["prefix"],
+                                 r"^fluentqt-ccache-v2-linux-x64-qt62-full-Linux-X64-qt6\.2\.4-[0-9a-f]{12}-$")
+                self.assertRegex(values["key"], r"^" + re.escape(values["prefix"]) + r"\d{4}-\d{2}$")
+                prefixes.add(values["prefix"])
+        self.assertEqual(len(prefixes), 2, "a compiler update must start a separate snapshot")
 
     def test_compiler_cache_write_guard(self):
-        save = MODULE.named_step_section(self.workflow, "Save sanitizer compiler cache")
-        condition = save.split("${{", 1)[1].split("}}", 1)[0]
-        self.assertEqual(" ".join(condition.split()), (
-            "success() && env.CCACHE_DIR != '' && steps.compiler_cache.outputs.cache-hit != 'true' && "
-            "github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')"
-        ))
+        save = MODULE.named_step_section(self.workflow, "Save compiler cache")
+        self.assertEqual(MODULE.step_condition(save), MODULE.CPP_COMPILER_CACHE_SAVE_GUARD)
+        for clause in ("matrix.compiler_cache == matrix.id &&", "github.ref == 'refs/heads/main' &&",
+                       "success() &&"):
+            with self.subTest(removed=clause):
+                self.assertIn(clause, save)
+                self.assert_compiler_cache_error(self.workflow.replace(clause, "", 1),
+                                                 "must write only owner snapshots")
+
+    def test_compiler_cache_steps_stay_non_fatal(self):
+        for name in ("Select compiler cache key", "Restore compiler cache", "Save compiler cache"):
+            with self.subTest(step=name):
+                step = MODULE.named_step_section(self.workflow, name)
+                mutated = step.replace("        continue-on-error: true\n", "", 1)
+                self.assertNotEqual(step, mutated)
+                self.assert_compiler_cache_error(self.workflow.replace(step, mutated, 1),
+                                                 f"{name} must keep: continue-on-error: true")
+
+    def test_compiler_cache_keeps_absolute_compiler_paths(self):
+        # tests/components/TestQtCompat.cpp finds the repository from __FILE__.
+        line = '          CCACHE_NOHASHDIR: "1"\n'
+        self.assertIn(line, self.workflow)
+        self.assert_compiler_cache_error(
+            self.workflow.replace(line, line + "          CCACHE_BASEDIR: ${{ github.workspace }}\n", 1),
+            "do not set ccache base_dir")
+
+    def test_compiler_cache_is_enabled_before_configure(self):
+        enable = MODULE.named_step_section(self.workflow, "Enable compiler cache")
+        configure = MODULE.named_step_section(self.workflow, "Configure")
+        moved = self.workflow.replace(enable, "", 1).replace(configure, configure + enable, 1)
+        self.assert_compiler_cache_error(moved, "must enable the compiler cache before Configure")
+
+    def test_combined_cache_action_cannot_store_compiler_output(self):
+        restore = MODULE.named_step_section(self.workflow, "Restore compiler cache")
+        combined = restore.replace("actions/cache/restore@", "actions/cache@", 1)
+        self.assert_compiler_cache_error(self.workflow.replace(restore, combined, 1),
+                                         "restore and save the compiler cache in separate steps")
+
+    def test_first_window_trial_times_an_uncached_build(self):
+        line = "          Remove-Item Env:CMAKE_C_COMPILER_LAUNCHER, Env:CMAKE_CXX_COMPILER_LAUNCHER `\n"
+        self.assertIn(line, self.workflow)
+        self.assert_compiler_cache_error(self.workflow.replace(line, "", 1),
+                                         "first-window trial must time an uncached application build")
 
     def test_packaging_cannot_restore_the_ci_compiler_cache(self):
         # An explanatory comment has no effect on the action's restore key.
