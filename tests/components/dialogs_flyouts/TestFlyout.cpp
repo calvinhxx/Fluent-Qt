@@ -19,6 +19,8 @@ using fluent::textfields::Label;
 // 与 Popup.cpp 内部 kShadowMargin 保持一致
 static constexpr int kShadowMargin = ::Spacing::Standard; // 16
 
+namespace {
+
 // ── FluentTestWindow ─────────────────────────────────────────────────────────
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -29,6 +31,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 // ── Fixture ──────────────────────────────────────────────────────────────────
 class FlyoutTest : public ::testing::Test {
@@ -114,14 +118,15 @@ TEST_F(FlyoutTest, Contract_InheritsPopupLifecycleAndNotifyNoOps)
     EXPECT_TRUE(fl.isVisible());
     fl.close();
     EXPECT_FALSE(fl.isOpen());
-    EXPECT_EQ(order, (QStringList{
-                         QStringLiteral("opening"),
-                         QStringLiteral("aboutToShow"),
-                         QStringLiteral("opened"),
-                         QStringLiteral("closing"),
-                         QStringLiteral("aboutToHide"),
-                         QStringLiteral("closed"),
-                     }));
+    EXPECT_EQ(order,
+        (QStringList{
+            QStringLiteral("opening"),
+            QStringLiteral("aboutToShow"),
+            QStringLiteral("opened"),
+            QStringLiteral("closing"),
+            QStringLiteral("aboutToHide"),
+            QStringLiteral("closed"),
+        }));
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -183,8 +188,7 @@ TEST_F(FlyoutTest, BottomPlacement)
     fl.showAt(btn);
 
     // 卡片可见区域 = 整体几何 - shadow margin
-    const QRect card =
-        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card = fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
 
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
@@ -209,8 +213,7 @@ TEST_F(FlyoutTest, TopPlacement)
     fl.setPlacement(Flyout::Top);
     fl.showAt(btn);
 
-    const QRect card =
-        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card = fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     // QRect.bottom() = top + h - 1（闭区间）→ 卡片底边与 anchor 顶边之间留 anchorOffset 个像素
@@ -233,8 +236,7 @@ TEST_F(FlyoutTest, LeftPlacement)
     fl.setPlacement(Flyout::Left);
     fl.showAt(btn);
 
-    const QRect card =
-        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card = fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     EXPECT_EQ(card.right() + 1, anchor.left() - fl.anchorOffset());
@@ -252,8 +254,7 @@ TEST_F(FlyoutTest, RightPlacement)
     fl.setPlacement(Flyout::Right);
     fl.showAt(btn);
 
-    const QRect card =
-        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card = fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     EXPECT_EQ(card.left(), anchor.right() + fl.anchorOffset());
@@ -276,8 +277,7 @@ TEST_F(FlyoutTest, AutoFlipsToTopWhenBottomInsufficient)
     fl.setPlacement(Flyout::Auto);
     fl.showAt(btn);
 
-    const QRect card =
-        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card = fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     const QRect anchor(btn->mapTo(window, QPoint(0, 0)), btn->size());
 
     // Auto 应该反转到 Top → 卡片底部 < anchor 顶部
@@ -301,8 +301,7 @@ TEST_F(FlyoutTest, ClampToWindowKeepsCardInside)
     fl.setClampToWindow(true);
     fl.showAt(btn);
 
-    const QRect card =
-        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card = fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
 
     // 右边 ≤ window.right - 4（4px 呼吸空间）
     EXPECT_LE(card.right(), window->width() - 4);
@@ -328,8 +327,7 @@ TEST_F(FlyoutTest, TopLevelResizeRepositionsAndRaisesAboveSiblings)
     window->setFixedSize(840, 640);
     QApplication::processEvents();
 
-    const QRect card =
-        fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
+    const QRect card = fl.geometry().adjusted(kShadowMargin, kShadowMargin, -kShadowMargin, -kShadowMargin);
     EXPECT_EQ(window->childAt(card.center()), &fl);
 
     fl.close();
@@ -353,8 +351,7 @@ TEST_F(FlyoutTest, TracksMovingAnchorAncestorAndClosesWhenAnchorIsClipped)
     const QPoint initialPosition = fl.pos();
 
     scrollingContent->move(0, -64);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (fl.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (fl.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
 
     scrollingContent->move(0, -500);
     ASSERT_TRUE(QTest::qWaitFor([&] { return !fl.isOpen(); }, 1000));
@@ -495,10 +492,9 @@ TEST_F(FlyoutTest, VisualCheck)
     themeBtn->anchors()->right = {visual, Edge::Right, -12};
     layout->addWidget(themeBtn);
     QObject::connect(themeBtn, &Button::clicked, [visual]() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
         visual->onThemeUpdated();
     });
 

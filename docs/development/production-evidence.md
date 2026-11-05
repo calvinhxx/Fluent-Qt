@@ -96,9 +96,14 @@ macOS measurement:
 ```bash
 env SKIP_VISUAL_TEST=1 QT_QPA_PLATFORM=offscreen \
   /usr/bin/time -l \
-  build/vcpkg-osx/tests/components/collections/test_data_grid \
+  build/vcpkg-osx/tests/components/collections/test_group_collections_ci_full \
   '--gtest_filter=DataGridTest.Contract_LargeModel*:DataGridTest.Contract_CellWidgetsAndEditorsDoNotScaleWithModelSize'
 ```
+
+This baseline was recorded with the former per-module `test_data_grid` binary.
+`test_group_collections_ci_full` also links the other `ci_full` collection
+modules, so compare a new resident-size result against a fresh measurement of
+that executable.
 
 One fresh process passed all three contracts in 245 ms of test time and 330 ms
 wall time. Maximum resident set size was 64,585,728 bytes (61.6 MiB). The

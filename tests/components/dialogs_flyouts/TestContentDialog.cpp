@@ -22,10 +22,13 @@ using namespace fluent;
 
 // ── FluentTestWindow ─────────────────────────────────────────────────────────
 
+namespace {
+
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
-    void onThemeUpdated() override {
+    void onThemeUpdated() override
+    {
         // 注意：不能用 setStyleSheet("background-color: ...")，因为 QSS 会沿父子链
         // 传播到所有子孙控件（包括弹出的 ContentDialog 内的 Label / CheckBox），
         // 导致 dialog 内容区被错误地染成 bgCanvas 颜色。
@@ -38,20 +41,21 @@ public:
     }
 };
 
+} // namespace
+
 // ── Test fixture ─────────────────────────────────────────────────────────────
 
 class ContentDialogTest : public ::testing::Test {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         window = new FluentTestWindow();
         window->setFixedSize(600, 500);
         window->setWindowTitle("ContentDialog Test");
         window->onThemeUpdated();
     }
 
-    void TearDown() override {
-        delete window;
-    }
+    void TearDown() override { delete window; }
 
     FluentTestWindow* window;
 };
@@ -62,7 +66,8 @@ protected:
 
 // --- 默认属性 ---
 
-TEST_F(ContentDialogTest, DefaultProperties) {
+TEST_F(ContentDialogTest, DefaultProperties)
+{
     ContentDialog dialog(window);
 
     EXPECT_TRUE(dialog.title().isEmpty());
@@ -77,7 +82,8 @@ TEST_F(ContentDialogTest, DefaultProperties) {
     EXPECT_EQ(dialog.shadowSize(), 16);
 }
 
-TEST_F(ContentDialogTest, Contract_IsOpenAndNotifyNoOps) {
+TEST_F(ContentDialogTest, Contract_IsOpenAndNotifyNoOps)
+{
     window->show();
     QApplication::processEvents();
 
@@ -111,29 +117,28 @@ TEST_F(ContentDialogTest, Contract_IsOpenAndNotifyNoOps) {
     dialog.done(ContentDialog::ResultNone);
     QApplication::processEvents();
     EXPECT_FALSE(dialog.isOpen());
-    EXPECT_EQ(order, (QStringList{
-                          QStringLiteral("opening"),
-                          QStringLiteral("aboutToShow"),
-                          QStringLiteral("opened"),
-                          QStringLiteral("closing"),
-                          QStringLiteral("aboutToHide"),
-                          QStringLiteral("closed"),
-                      }));
+    EXPECT_EQ(order,
+        (QStringList{
+            QStringLiteral("opening"),
+            QStringLiteral("aboutToShow"),
+            QStringLiteral("opened"),
+            QStringLiteral("closing"),
+            QStringLiteral("aboutToHide"),
+            QStringLiteral("closed"),
+        }));
 }
 
 // --- Title ---
 
-TEST_F(ContentDialogTest, SetTitle) {
+TEST_F(ContentDialogTest, SetTitle)
+{
     ContentDialog dialog(window);
     dialog.setTitle("Save your work?");
     EXPECT_EQ(dialog.title(), "Save your work?");
     auto* titleLabel = dialog.findChild<Label*>();
     ASSERT_NE(titleLabel, nullptr);
-    EXPECT_EQ(
-        titleLabel->textColorRole(),
-        Label::TextColorRole::Primary);
-    EXPECT_TRUE(titleLabel->styleSheet().contains(
-        QStringLiteral("color:")));
+    EXPECT_EQ(titleLabel->textColorRole(), Label::TextColorRole::Primary);
+    EXPECT_TRUE(titleLabel->styleSheet().contains(QStringLiteral("color:")));
 
     dialog.setTitle("");
     EXPECT_TRUE(dialog.title().isEmpty());
@@ -141,19 +146,22 @@ TEST_F(ContentDialogTest, SetTitle) {
 
 // --- Button text ---
 
-TEST_F(ContentDialogTest, SetPrimaryButtonText) {
+TEST_F(ContentDialogTest, SetPrimaryButtonText)
+{
     ContentDialog dialog(window);
     dialog.setPrimaryButtonText("Save");
     EXPECT_EQ(dialog.primaryButtonText(), "Save");
 }
 
-TEST_F(ContentDialogTest, SetSecondaryButtonText) {
+TEST_F(ContentDialogTest, SetSecondaryButtonText)
+{
     ContentDialog dialog(window);
     dialog.setSecondaryButtonText("Don't Save");
     EXPECT_EQ(dialog.secondaryButtonText(), "Don't Save");
 }
 
-TEST_F(ContentDialogTest, SetCloseButtonText) {
+TEST_F(ContentDialogTest, SetCloseButtonText)
+{
     ContentDialog dialog(window);
     dialog.setCloseButtonText("Cancel");
     EXPECT_EQ(dialog.closeButtonText(), "Cancel");
@@ -161,7 +169,8 @@ TEST_F(ContentDialogTest, SetCloseButtonText) {
 
 // --- DefaultButton ---
 
-TEST_F(ContentDialogTest, DefaultButtonEnum) {
+TEST_F(ContentDialogTest, DefaultButtonEnum)
+{
     ContentDialog dialog(window);
 
     dialog.setDefaultButton(ContentDialog::Primary);
@@ -179,7 +188,8 @@ TEST_F(ContentDialogTest, DefaultButtonEnum) {
 
 // --- Content ---
 
-TEST_F(ContentDialogTest, SetContent) {
+TEST_F(ContentDialogTest, SetContent)
+{
     ContentDialog dialog(window);
 
     auto* label = new Label("Hello content");
@@ -200,7 +210,8 @@ TEST_F(ContentDialogTest, SetContent) {
     delete label2;
 }
 
-TEST_F(ContentDialogTest, ExternallyDeletedContentIsCleared) {
+TEST_F(ContentDialogTest, ExternallyDeletedContentIsCleared)
+{
     ContentDialog dialog(window);
     auto* label = new Label("Temporary content");
     dialog.setContent(label);
@@ -210,7 +221,8 @@ TEST_F(ContentDialogTest, ExternallyDeletedContentIsCleared) {
     EXPECT_EQ(dialog.content(), nullptr);
 }
 
-TEST_F(ContentDialogTest, InstalledContentIsDestroyedWithDialog) {
+TEST_F(ContentDialogTest, InstalledContentIsDestroyedWithDialog)
+{
     auto* dialog = new ContentDialog(window);
     auto* label = new Label("Owned content");
     QPointer<Label> guard(label);
@@ -223,7 +235,8 @@ TEST_F(ContentDialogTest, InstalledContentIsDestroyedWithDialog) {
 
 // --- Result constants ---
 
-TEST_F(ContentDialogTest, ResultConstants) {
+TEST_F(ContentDialogTest, ResultConstants)
+{
     EXPECT_EQ(ContentDialog::ResultNone, QDialog::Rejected);
     EXPECT_EQ(ContentDialog::ResultPrimary, QDialog::Accepted);
     EXPECT_EQ(ContentDialog::ResultSecondary, 2);
@@ -231,7 +244,8 @@ TEST_F(ContentDialogTest, ResultConstants) {
 
 // --- 按钮点击信号 + done() 结果（无需 exec()，不弹窗） ---
 
-TEST_F(ContentDialogTest, PrimaryButtonSignalAndResult) {
+TEST_F(ContentDialogTest, PrimaryButtonSignalAndResult)
+{
     ContentDialog dialog(window);
     dialog.setAnimationEnabled(false);
     dialog.setPrimaryButtonText("OK");
@@ -241,7 +255,10 @@ TEST_F(ContentDialogTest, PrimaryButtonSignalAndResult) {
 
     auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
     for (auto* btn : buttons) {
-        if (btn->text() == "OK") { btn->click(); break; }
+        if (btn->text() == "OK") {
+            btn->click();
+            break;
+        }
     }
 
     EXPECT_EQ(clickSpy.count(), 1);
@@ -249,27 +266,26 @@ TEST_F(ContentDialogTest, PrimaryButtonSignalAndResult) {
     EXPECT_EQ(dialog.result(), ContentDialog::ResultPrimary);
 }
 
-TEST_F(ContentDialogTest, PrimarySignalCanSynchronouslyDeleteDialog) {
+TEST_F(ContentDialogTest, PrimarySignalCanSynchronouslyDeleteDialog)
+{
     auto* dialog = new ContentDialog(window);
     dialog->setAnimationEnabled(false);
     dialog->setPrimaryButtonText(QStringLiteral("Delete"));
     QPointer<ContentDialog> guard(dialog);
-    QObject::connect(dialog, &ContentDialog::primaryButtonClicked, window, [dialog] {
-        delete dialog;
-    });
+    QObject::connect(dialog, &ContentDialog::primaryButtonClicked, window, [dialog] { delete dialog; });
 
     const auto buttons = dialog->findChildren<fluent::basicinput::Button*>();
-    const auto primary = std::find_if(
-        buttons.cbegin(), buttons.cend(), [](const auto* button) {
-            return button->text() == QStringLiteral("Delete");
-        });
+    const auto primary = std::find_if(buttons.cbegin(), buttons.cend(), [](const auto* button) {
+        return button->text() == QStringLiteral("Delete");
+    });
     ASSERT_NE(primary, buttons.cend());
     (*primary)->click();
 
     EXPECT_TRUE(guard.isNull());
 }
 
-TEST_F(ContentDialogTest, SecondaryButtonSignalAndResult) {
+TEST_F(ContentDialogTest, SecondaryButtonSignalAndResult)
+{
     ContentDialog dialog(window);
     dialog.setAnimationEnabled(false);
     dialog.setSecondaryButtonText("Don't Save");
@@ -279,7 +295,10 @@ TEST_F(ContentDialogTest, SecondaryButtonSignalAndResult) {
 
     auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
     for (auto* btn : buttons) {
-        if (btn->text() == "Don't Save") { btn->click(); break; }
+        if (btn->text() == "Don't Save") {
+            btn->click();
+            break;
+        }
     }
 
     EXPECT_EQ(clickSpy.count(), 1);
@@ -287,7 +306,8 @@ TEST_F(ContentDialogTest, SecondaryButtonSignalAndResult) {
     EXPECT_EQ(dialog.result(), ContentDialog::ResultSecondary);
 }
 
-TEST_F(ContentDialogTest, CloseButtonSignalAndResult) {
+TEST_F(ContentDialogTest, CloseButtonSignalAndResult)
+{
     ContentDialog dialog(window);
     dialog.setAnimationEnabled(false);
     dialog.setCloseButtonText("Cancel");
@@ -297,7 +317,10 @@ TEST_F(ContentDialogTest, CloseButtonSignalAndResult) {
 
     auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
     for (auto* btn : buttons) {
-        if (btn->text() == "Cancel") { btn->click(); break; }
+        if (btn->text() == "Cancel") {
+            btn->click();
+            break;
+        }
     }
 
     EXPECT_EQ(clickSpy.count(), 1);
@@ -307,14 +330,16 @@ TEST_F(ContentDialogTest, CloseButtonSignalAndResult) {
 
 // --- Min width ---
 
-TEST_F(ContentDialogTest, MinimumWidth) {
+TEST_F(ContentDialogTest, MinimumWidth)
+{
     ContentDialog dialog(window);
     EXPECT_GE(dialog.minimumWidth(), 320 + 2 * dialog.shadowSize());
 }
 
 // --- Theme switch no crash ---
 
-TEST_F(ContentDialogTest, ThemeSwitchNoCrash) {
+TEST_F(ContentDialogTest, ThemeSwitchNoCrash)
+{
     ContentDialog dialog(window);
     dialog.setTitle("Theme Test");
     dialog.setPrimaryButtonText("OK");
@@ -330,7 +355,8 @@ TEST_F(ContentDialogTest, ThemeSwitchNoCrash) {
 
 // --- Full ContentDialog 属性装配 ---
 
-TEST_F(ContentDialogTest, FullContentDialogSetup) {
+TEST_F(ContentDialogTest, FullContentDialogSetup)
+{
     ContentDialog dialog(window);
     dialog.setTitle("Save your work?");
     dialog.setPrimaryButtonText("Save");
@@ -355,14 +381,17 @@ TEST_F(ContentDialogTest, FullContentDialogSetup) {
 
 namespace {
 // 找到按钮条容器（QHBoxLayout 的 parent widget）
-QWidget* findButtonBar(ContentDialog* dialog) {
+QWidget* findButtonBar(ContentDialog* dialog)
+{
     auto buttons = dialog->findChildren<fluent::basicinput::Button*>();
-    if (buttons.isEmpty()) return nullptr;
+    if (buttons.isEmpty())
+        return nullptr;
     return buttons.first()->parentWidget();
 }
 } // namespace
 
-TEST_F(ContentDialogTest, ButtonsHaveMinimumWidth96) {
+TEST_F(ContentDialogTest, ButtonsHaveMinimumWidth96)
+{
     ContentDialog dialog(window);
     dialog.setPrimaryButtonText("OK");
     dialog.setSecondaryButtonText("No");
@@ -372,22 +401,22 @@ TEST_F(ContentDialogTest, ButtonsHaveMinimumWidth96) {
     ASSERT_EQ(buttons.size(), 3);
     for (auto* btn : buttons) {
         EXPECT_GE(btn->minimumWidth(), 96)
-            << "Button '" << btn->text().toStdString()
-            << "' minimumWidth should be >= 96, got " << btn->minimumWidth();
+            << "Button '" << btn->text().toStdString() << "' minimumWidth should be >= 96, got " << btn->minimumWidth();
     }
 }
 
-TEST_F(ContentDialogTest, ButtonBarHeightIs68) {
+TEST_F(ContentDialogTest, ButtonBarHeightIs68)
+{
     ContentDialog dialog(window);
     dialog.setPrimaryButtonText("Save");
 
     QWidget* bar = findButtonBar(&dialog);
     ASSERT_NE(bar, nullptr);
-    EXPECT_EQ(bar->height(), 68)
-        << "Button bar height should be 68px (was 80), got " << bar->height();
+    EXPECT_EQ(bar->height(), 68) << "Button bar height should be 68px (was 80), got " << bar->height();
 }
 
-TEST_F(ContentDialogTest, ButtonBarBalancesTwoVisibleActions) {
+TEST_F(ContentDialogTest, ButtonBarBalancesTwoVisibleActions)
+{
     // 按钮条应左对齐：可见按钮的最右侧位置 < 按钮条 contentsRect 右边界
     ContentDialog dialog(window);
     dialog.setFixedSize(572, 300);
@@ -412,23 +441,21 @@ TEST_F(ContentDialogTest, ButtonBarBalancesTwoVisibleActions) {
     }
 
     ASSERT_EQ(visibleButtons.size(), 2);
-    std::sort(visibleButtons.begin(), visibleButtons.end(),
-              [](const auto* left, const auto* right) {
-                  return left->geometry().left() < right->geometry().left();
-              });
+    std::sort(visibleButtons.begin(), visibleButtons.end(), [](const auto* left, const auto* right) {
+        return left->geometry().left() < right->geometry().left();
+    });
 
     EXPECT_NEAR(visibleButtons.at(0)->width(), visibleButtons.at(1)->width(), 1);
     const int leftInset = visibleButtons.first()->geometry().left();
-    const int rightInset = bar->contentsRect().right()
-        - visibleButtons.last()->geometry().right();
-    EXPECT_NEAR(leftInset, rightInset, 1)
-        << "The action row should have symmetric outer padding";
+    const int rightInset = bar->contentsRect().right() - visibleButtons.last()->geometry().right();
+    EXPECT_NEAR(leftInset, rightInset, 1) << "The action row should have symmetric outer padding";
 
     dialog.setAnimationEnabled(false);
     dialog.done(0);
 }
 
-TEST_F(ContentDialogTest, AutoSizedSurfaceKeepsContentBetweenTitleAndCommands) {
+TEST_F(ContentDialogTest, AutoSizedSurfaceKeepsContentBetweenTitleAndCommands)
+{
     window->show();
     QApplication::processEvents();
 
@@ -439,8 +466,7 @@ TEST_F(ContentDialogTest, AutoSizedSurfaceKeepsContentBetweenTitleAndCommands) {
     dialog.setSecondaryButtonText("Don't save");
     dialog.setCloseButtonText("Cancel");
 
-    auto* body = new Label(
-        "Your changes will be lost if you close this document.", &dialog);
+    auto* body = new Label("Your changes will be lost if you close this document.", &dialog);
     body->setFixedHeight(52);
     dialog.setContent(body);
 
@@ -458,8 +484,8 @@ TEST_F(ContentDialogTest, AutoSizedSurfaceKeepsContentBetweenTitleAndCommands) {
     QApplication::processEvents();
 }
 
-
-TEST_F(ContentDialogTest, VisualCheck) {
+TEST_F(ContentDialogTest, VisualCheck)
+{
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
@@ -474,7 +500,7 @@ TEST_F(ContentDialogTest, VisualCheck) {
     Button* btn1 = new Button("Standard 2-Button Dialog", window);
     btn1->setFluentStyle(Button::Accent);
     btn1->setFixedSize(240, 32);
-    btn1->anchors()->top  = {window, Edge::Top,  40};
+    btn1->anchors()->top = {window, Edge::Top, 40};
     btn1->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(btn1);
 
@@ -509,7 +535,7 @@ TEST_F(ContentDialogTest, VisualCheck) {
     // --- 3-button dialog ---
     Button* btn2 = new Button("3-Button Dialog", window);
     btn2->setFixedSize(240, 32);
-    btn2->anchors()->top  = {btn1, Edge::Bottom, 16};
+    btn2->anchors()->top = {btn1, Edge::Bottom, 16};
     btn2->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(btn2);
 
@@ -534,7 +560,7 @@ TEST_F(ContentDialogTest, VisualCheck) {
     // --- Min-width 2-button dialog (Figma 320px variant) ---
     Button* btn3 = new Button("Min-Width Dialog", window);
     btn3->setFixedSize(240, 32);
-    btn3->anchors()->top  = {btn2, Edge::Bottom, 16};
+    btn3->anchors()->top = {btn2, Edge::Bottom, 16};
     btn3->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(btn3);
 
@@ -554,13 +580,14 @@ TEST_F(ContentDialogTest, VisualCheck) {
     // --- Toggle theme ---
     Button* themeBtn = new Button("Toggle Dark/Light", window);
     themeBtn->setFixedSize(240, 32);
-    themeBtn->anchors()->top  = {btn3, Edge::Bottom, 32};
+    themeBtn->anchors()->top = {btn3, Edge::Bottom, 32};
     themeBtn->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, [this]() {
         auto theme = fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                         ? fluent::FluentElement::Dark : fluent::FluentElement::Light;
+            ? fluent::FluentElement::Dark
+            : fluent::FluentElement::Light;
         fluent::FluentElement::setTheme(theme);
         window->onThemeUpdated();
     });

@@ -38,7 +38,7 @@ endforeach()
 add_qt_test_module(test_onboarding_workbench
     TestGeneratedWorkbenchInspector.cpp
     ${_fluent_qt_workbench_generated_sources})
-target_include_directories(test_onboarding_workbench PRIVATE
+target_include_directories(test_onboarding_workbench_objects PRIVATE
     "${_fluent_qt_workbench_generated_root}/src")
-target_compile_definitions(test_onboarding_workbench PRIVATE
+target_compile_definitions(test_onboarding_workbench_objects PRIVATE
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")

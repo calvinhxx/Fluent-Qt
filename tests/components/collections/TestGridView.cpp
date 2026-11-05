@@ -124,8 +124,6 @@ private:
     std::function<void()> m_callback;
 };
 
-} // namespace
-
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -135,6 +133,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 class GridViewTest : public ::testing::Test {
 protected:

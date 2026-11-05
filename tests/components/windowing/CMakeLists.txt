@@ -1,5 +1,5 @@
 add_qt_test_module(test_window TestWindow.cpp TestWindowX11Protocol.cpp)
-target_compile_definitions(test_window PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(test_window_objects PRIVATE PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 # Native window transitions can change Spaces or focus. Keep these out of local_full,
 # while preserving the standard target/category labels for focused selection.
@@ -18,9 +18,9 @@ endfunction()
 if(APPLE)
     add_qt_test_module(test_window_mac TestWindowMac.cpp)
     if(TARGET FluentQtSpatial)
-        target_link_libraries(test_window_mac PRIVATE FluentQt::Spatial)
+        target_link_libraries(test_window_mac_objects PRIVATE FluentQt::Spatial)
         if(QT_VERSION_MAJOR EQUAL 6)
-            target_link_libraries(test_window_mac PRIVATE Qt6::OpenGLWidgets)
+            target_link_libraries(test_window_mac_objects PRIVATE Qt6::OpenGLWidgets)
         endif()
     endif()
     configure_native_window_desktop_test(
@@ -66,9 +66,9 @@ if(WIN32)
     configure_native_window_desktop_test(
         WindowsWindowOverlayTest.ModalDialogFollowsCaptionMaximizeRestore windows)
     if(TARGET FluentQtSpatial)
-        target_link_libraries(test_window_win PRIVATE FluentQt::Spatial)
+        target_link_libraries(test_window_win_objects PRIVATE FluentQt::Spatial)
         if(QT_VERSION_MAJOR EQUAL 6)
-            target_link_libraries(test_window_win PRIVATE Qt6::OpenGLWidgets)
+            target_link_libraries(test_window_win_objects PRIVATE Qt6::OpenGLWidgets)
         endif()
     endif()
     configure_native_window_desktop_test(

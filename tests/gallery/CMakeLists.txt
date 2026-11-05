@@ -58,7 +58,7 @@ if(APPLE)
     list(APPEND _interface_zoom_test_sources TestInterfaceZoomBackdropMac.cpp)
 endif()
 add_qt_test_module(test_interface_zoom ${_interface_zoom_test_sources})
-fluent_qt_add_interface_zoom_support(test_interface_zoom)
+fluent_qt_add_interface_zoom_support(test_interface_zoom_objects)
 if(APPLE)
     set_tests_properties(InterfaceZoomBackdropTest.NativeHalfDprCommitsOpaqueMaterialRemoval PROPERTIES
         ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=cocoa"
@@ -75,12 +75,12 @@ set_tests_properties(InterfaceZoomRepaintTest.NativePartialRepaintsMatchAComplet
     PROPERTIES RUN_SERIAL TRUE)
 if(TARGET FluentQtSpatial)
     # Exercise the GPU-backed QWidget window used by the real Gallery shell.
-    target_compile_definitions(test_interface_zoom PRIVATE FLUENT_QT_ZOOM_TEST_HAS_OPENGL_WIDGET=1)
+    target_compile_definitions(test_interface_zoom_objects PRIVATE FLUENT_QT_ZOOM_TEST_HAS_OPENGL_WIDGET=1)
     if(QT_VERSION_MAJOR EQUAL 6)
-        target_link_libraries(test_interface_zoom PRIVATE Qt6::OpenGLWidgets)
+        target_link_libraries(test_interface_zoom_objects PRIVATE Qt6::OpenGLWidgets)
     endif()
 endif()
-target_compile_definitions(test_interface_zoom PRIVATE
+target_compile_definitions(test_interface_zoom_objects PRIVATE
     FLUENT_QT_ZOOM_STARTUP_PROBE="$<TARGET_FILE:test_interface_zoom_startup_probe>")
 add_dependencies(test_interface_zoom test_interface_zoom_startup_probe)
 
@@ -94,10 +94,14 @@ target_include_directories(FluentQtGalleryRestartTestPlatform
     PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(FluentQtGalleryRestartTestPlatform PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 fluent_qt_add_interface_zoom_support(FluentQtGalleryRestartTestPlatform RESTART_ONLY)
-add_qt_test_module(test_gallery_zoom_restart TestGalleryZoomRestart.cpp)
-target_include_directories(test_gallery_zoom_restart PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_zoom_restart PRIVATE FluentQtGalleryCore
-    FluentQtGalleryRestartTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
+# STANDALONE: the restart-only platform objects conflict with the live-zoom
+# FluentQtGalleryTestPlatform linked by the other Gallery modules.
+add_qt_test_module(test_gallery_zoom_restart TestGalleryZoomRestart.cpp STANDALONE)
+target_include_directories(test_gallery_zoom_restart_objects PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_zoom_restart_objects PRIVATE FluentQtGalleryCore
+    Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
+fluent_qt_link_test_objects(test_gallery_zoom_restart
+    FluentQtGalleryCore FluentQtGalleryRestartTestPlatform)
 
 add_executable(test_gallery_single_instance_probe
     GallerySingleInstanceProbe.cpp
@@ -115,9 +119,9 @@ add_qt_test_module(test_gallery_single_instance
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/view/shell/GallerySingleInstance.cpp
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/view/shell/GallerySingleInstance.h
 )
-target_include_directories(test_gallery_single_instance PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_single_instance PRIVATE Qt${QT_VERSION_MAJOR}::Network)
-target_compile_definitions(test_gallery_single_instance PRIVATE
+target_include_directories(test_gallery_single_instance_objects PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_single_instance_objects PRIVATE Qt${QT_VERSION_MAJOR}::Network)
+target_compile_definitions(test_gallery_single_instance_objects PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_single_instance test_gallery_single_instance_probe)
 
@@ -125,22 +129,21 @@ add_qt_test_module(test_gallery_shell_framework
     TestGalleryShellFramework.cpp
     TestGallerySpatialFallback.cpp
     TestUpdateChecker.cpp
-    ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
 )
-target_include_directories(test_gallery_shell_framework PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_shell_framework
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
-target_compile_definitions(test_gallery_shell_framework PRIVATE
+target_include_directories(test_gallery_shell_framework_objects PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_shell_framework_objects
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
+target_compile_definitions(test_gallery_shell_framework_objects PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe)
 
 add_qt_test_module(test_gallery_shell_motion_policy
     TestGalleryShellMotionPolicy.cpp
 )
-target_include_directories(test_gallery_shell_motion_policy
+target_include_directories(test_gallery_shell_motion_policy_objects
     PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_shell_motion_policy
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
+target_link_libraries(test_gallery_shell_motion_policy_objects
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
 
 if(TARGET FluentQtSpatial)
 add_qt_test_module(test_gallery_spatial
@@ -150,11 +153,11 @@ add_qt_test_module(test_gallery_spatial
     TestGallerySpatialBackdrop.cpp
     TestGalleryParticleCompositor.cpp
 )
-target_include_directories(test_gallery_spatial PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_spatial
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
+target_include_directories(test_gallery_spatial_objects PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_spatial_objects
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
 if(QT_VERSION_MAJOR EQUAL 6)
-    target_link_libraries(test_gallery_spatial PRIVATE Qt6::OpenGLWidgets)
+    target_link_libraries(test_gallery_spatial_objects PRIVATE Qt6::OpenGLWidgets)
 endif()
 
 if(WIN32)
@@ -163,7 +166,7 @@ if(WIN32)
     foreach(_typography_scale IN ITEMS 0.5 0.75 1 1.25 1.5 2)
         set(_typography_test "GallerySpatialTest.NativeWindowsScaledTypography_${_typography_scale}")
         add_test(NAME "${_typography_test}"
-            COMMAND $<TARGET_FILE:test_gallery_spatial>
+            COMMAND $<TARGET_FILE:${test_gallery_spatial_EXECUTABLE}>
                 --gtest_filter=GallerySpatialTest.Contract_WindowsScaledTypographyLimitsInkWithoutLosingContrast)
         set_tests_properties("${_typography_test}" PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=windows;QT_SCALE_FACTOR=${_typography_scale}"
@@ -175,7 +178,7 @@ endif()
 
 if(APPLE)
     add_test(NAME GallerySpatialTest.NativeGalleryAssemblyPreservesMaterial
-        COMMAND $<TARGET_FILE:test_gallery_spatial>
+        COMMAND $<TARGET_FILE:${test_gallery_spatial_EXECUTABLE}>
             --gtest_filter=GallerySpatialTest.GalleryAssemblyPreservesMaterialAndNativeSurface)
     set_tests_properties(
         GallerySpatialTest.NativeGalleryAssemblyPreservesMaterial
@@ -202,20 +205,19 @@ add_qt_test_module(test_gallery_content_pages
     TestGalleryPreview.cpp
     TestGalleryPreviewSession.cpp
     TestGalleryInspectorScenes.cpp
-    ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
     ${FLUENT_QT_GALLERY_WEB_RESOURCES}
 )
-target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_content_pages
-    PRIVATE FluentQtGalleryCore FluentQtGalleryTestPlatform Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
-target_compile_definitions(test_gallery_content_pages PRIVATE
+target_include_directories(test_gallery_content_pages_objects PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_content_pages_objects
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Svg)
+target_compile_definitions(test_gallery_content_pages_objects PRIVATE
     FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")
 
 add_qt_test_module(test_gallery_preview_cli
     TestGalleryPreviewCli.cpp
 )
-target_compile_definitions(test_gallery_preview_cli PRIVATE
+target_compile_definitions(test_gallery_preview_cli_objects PRIVATE
     FLUENT_QT_GALLERY_PREVIEW_PATH="$<TARGET_FILE:fluent_qt_gallery>")
 add_dependencies(test_gallery_preview_cli fluent_qt_gallery)
 
@@ -234,7 +236,7 @@ foreach(_gallery_acceptance_scale 1.25 2 3)
         "${_gallery_acceptance_scale}")
     add_test(
         NAME "GalleryAcceptanceScaleTest.Scale${_gallery_acceptance_scale_id}"
-        COMMAND $<TARGET_FILE:test_gallery_content_pages>
+        COMMAND $<TARGET_FILE:${test_gallery_content_pages_EXECUTABLE}>
             --gtest_filter=GalleryContentPagesTest.GalleryAcceptanceMatrixHonorsProcessScale)
     set_tests_properties(
         "GalleryAcceptanceScaleTest.Scale${_gallery_acceptance_scale_id}"
@@ -246,24 +248,35 @@ foreach(_gallery_acceptance_scale 1.25 2 3)
             TIMEOUT 60)
 endforeach()
 
+# GalleryCore and the resource platform are OBJECT libraries: their object
+# files must be linked by the executable itself, once per shared executable.
+foreach(_gallery_platform_test
+        test_gallery_shell_framework test_gallery_shell_motion_policy
+        test_gallery_spatial test_gallery_content_pages)
+    if(TARGET ${_gallery_platform_test}_objects)
+        fluent_qt_link_test_objects(${_gallery_platform_test}
+            FluentQtGalleryCore FluentQtGalleryTestPlatform)
+    endif()
+endforeach()
+
 if(WIN32)
+    target_link_libraries(test_gallery_single_instance_probe PRIVATE user32)
     foreach(_gallery_test_target
             test_gallery_zoom_restart
-            test_gallery_single_instance_probe
             test_gallery_single_instance
             test_gallery_shell_framework
             test_gallery_shell_motion_policy
             test_gallery_spatial
             test_gallery_content_pages)
-        if(TARGET ${_gallery_test_target})
-            target_link_libraries(${_gallery_test_target} PRIVATE user32)
+        if(TARGET ${_gallery_test_target}_objects)
+            target_link_libraries(${_gallery_test_target}_objects PRIVATE user32)
         endif()
     endforeach()
 endif()
 
 if(TARGET FluentQtSpatial)
     foreach(_spatial_gallery_test test_gallery_zoom_restart test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
-        target_link_libraries(${_spatial_gallery_test} PRIVATE FluentQtSpatialRenderer FluentQt::Spatial)
+        target_link_libraries(${_spatial_gallery_test}_objects PRIVATE FluentQtSpatialRenderer FluentQt::Spatial)
     endforeach()
 endif()
 
@@ -272,15 +285,17 @@ if(TARGET FluentQtQmlBridge)
         TestGalleryQmlBridge.cpp
         ${FLUENT_QT_GALLERY_WEB_RESOURCES}
     )
-    target_include_directories(test_gallery_qml_bridge PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-    target_link_libraries(test_gallery_qml_bridge PRIVATE FluentQtGalleryCore
-        FluentQtGalleryTestPlatform FluentQt::QmlBridge Qt${QT_VERSION_MAJOR}::Network
+    target_include_directories(test_gallery_qml_bridge_objects PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+    target_link_libraries(test_gallery_qml_bridge_objects PRIVATE FluentQtGalleryCore
+        FluentQt::QmlBridge Qt${QT_VERSION_MAJOR}::Network
         Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::QuickWidgets)
+    fluent_qt_link_test_objects(test_gallery_qml_bridge
+        FluentQtGalleryCore FluentQtGalleryTestPlatform)
     if(TARGET FluentQtSpatial)
-        target_link_libraries(test_gallery_qml_bridge PRIVATE FluentQtSpatialRenderer FluentQt::Spatial)
+        target_link_libraries(test_gallery_qml_bridge_objects PRIVATE FluentQtSpatialRenderer FluentQt::Spatial)
     endif()
     if(QT_VERSION_MAJOR EQUAL 6)
-        target_link_libraries(test_gallery_qml_bridge PRIVATE Qt6::OpenGLWidgets Qt6::OpenGL)
+        target_link_libraries(test_gallery_qml_bridge_objects PRIVATE Qt6::OpenGLWidgets Qt6::OpenGL)
     endif()
     foreach(_qml_gallery_case IN LISTS test_gallery_qml_bridge_TESTS)
         if(_qml_gallery_case MATCHES "\\.Contract_Native(RequestedSpatialModeRoundtrip|CornersFollowPreviewTheme|SourceSwitchKeepsPaintGeometryConsistent|QmlFailureKeepsTheCompletedFrameUntilFallback)$")
@@ -308,8 +323,8 @@ if(TARGET FluentQtQmlBridge)
         endif()
     endforeach()
     foreach(_qml_gallery_test test_gallery_zoom_restart test_gallery_shell_framework test_gallery_shell_motion_policy test_gallery_spatial test_gallery_content_pages)
-        if(TARGET ${_qml_gallery_test})
-            target_link_libraries(${_qml_gallery_test} PRIVATE FluentQt::QmlBridge)
+        if(TARGET ${_qml_gallery_test}_objects)
+            target_link_libraries(${_qml_gallery_test}_objects PRIVATE FluentQt::QmlBridge)
         endif()
     endforeach()
 endif()
@@ -320,8 +335,8 @@ if(TARGET FluentQtParticles)
     foreach(_particles_gallery_test
             test_gallery_zoom_restart test_gallery_shell_framework test_gallery_shell_motion_policy
             test_gallery_spatial test_gallery_content_pages test_gallery_qml_bridge)
-        if(TARGET ${_particles_gallery_test})
-            target_link_libraries(${_particles_gallery_test} PRIVATE FluentQt::Particles)
+        if(TARGET ${_particles_gallery_test}_objects)
+            target_link_libraries(${_particles_gallery_test}_objects PRIVATE FluentQt::Particles)
         endif()
     endforeach()
 endif()
