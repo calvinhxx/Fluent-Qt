@@ -137,6 +137,31 @@ CI may pin build parallelism to its measured runner capacity. Local builds and
 matrix builds without an explicit job count use the
 [adaptive wrapper](build-workflow.md).
 
+### Measure build changes on the same runner
+
+Dispatch [CI build performance](../../.github/workflows/ci-performance.yml)
+on the branch containing the measurement harness. Select a suite and provide
+full commit SHAs for `baseline` and `candidate`. This optional workflow measures
+builds and tests; it does not replace `CI Gate`, produce release packages, or
+publish compiler caches.
+
+The Linux sanitizer and Windows targeted suites alternate clean baseline and
+candidate builds in baseline/candidate/candidate/baseline order. The Intel
+Gallery suite compares uncached, cold-cache, warm-cache, and uncached builds.
+The macOS Python suite compares wrapper PCH off/on/on/off. WASM repeats the
+same clean build twice and records each Ninja edge's timing. WASM and Intel
+cache comparisons require identical runtime build inputs in both revisions.
+
+Each suite keeps its runner, source path, build path, and parallelism fixed.
+Dependency setup is reported separately from compilation. The harness then
+removes only linked outputs and rebuilds, rejecting a relink measurement if
+any compiled object changes. Baseline test fixtures receive the listed
+candidate reliability fixes without changing their test selection. The
+`ci-performance-*` artifacts contain the exact variants, phase durations,
+cache statistics, and raw logs, including failed phases. Use these paired
+measurements to explain build changes; a complete CI run still measures
+queueing, artifact transfer, packaging, and browser validation.
+
 ### Reuse compiler output and run tests in parallel
 
 The [C++ matrix](../../.github/ci-cpp-matrix.json) sets `ctest_parallel` within
