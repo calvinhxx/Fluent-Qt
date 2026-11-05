@@ -236,6 +236,17 @@ jobs:
             echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
           } >> "$GITHUB_ENV"
 
+      # ccache's Homebrew fmt dependency must not shadow vcpkg's headers.
+      # Keep its keg for ccache's runtime, but remove the global prefix links.
+      # Run even after an optional cache-install failure that installed fmt.
+      - name: Isolate Homebrew fmt from vcpkg
+        if: ${{ runner.os == 'macOS' && matrix.compiler_cache != '' }}
+        shell: bash
+        run: |
+          if brew list --versions fmt >/dev/null 2>&1; then
+            brew unlink fmt
+          fi
+
       - name: Install NSIS for Windows packaging
         if: ${{ matrix.windows_package == true }}
         shell: pwsh
