@@ -1,0 +1,203 @@
+name: CI build performance
+
+on:
+  # One-time registration on the working branch; remove after this first run starts.
+  push:
+    branches: [release/1.11.x]
+    paths: [.github/workflows/ci-performance.yml]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Same-runner experiment to execute.
+        type: choice
+        default: all
+        options: [all, linux-sanitizers, windows-targeted, intel-cache, python-pch, wasm]
+      baseline:
+        description: Immutable pre-optimization source commit.
+        type: string
+        default: 6bf2ba3b18290d058a458220210f877a5456c284
+      candidate:
+        description: Immutable optimized source commit.
+        type: string
+        default: 36aa791d214a49a2fb2ec40c65eb71e9591c6fdc
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-build-performance-${{ github.ref }}-${{ inputs.suite || 'all' }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Select experiments and test the measurement harness
+        id: select
+        env:
+          SUITE: ${{ inputs.suite || 'all' }}
+        run: |
+          python3 .github/scripts/test_benchmark_ci_builds.py
+          python3 .github/scripts/benchmark-ci-builds.py --matrix "$SUITE" >> "$GITHUB_OUTPUT"
+
+  measure:
+    name: ${{ matrix.lane }} / paired measurements
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      BASELINE: ${{ inputs.baseline || '6bf2ba3b18290d058a458220210f877a5456c284' }}
+      CANDIDATE: ${{ inputs.candidate || '36aa791d214a49a2fb2ec40c65eb71e9591c6fdc' }}
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.11'
+      - name: Configure runner paths
+        shell: pwsh
+        run: |
+          "BENCH_OUTPUT=$(Join-Path $env:RUNNER_TEMP 'ci-performance')" >> $env:GITHUB_ENV
+          "EMSDK_ROOT=$(Join-Path $env:RUNNER_TEMP 'emsdk')" >> $env:GITHUB_ENV
+          "EM_CACHE=$(Join-Path $env:RUNNER_TEMP 'emscripten-cache')" >> $env:GITHUB_ENV
+          "QT_WASM_ROOT=$(Join-Path $env:RUNNER_TEMP 'Qt/6.9.3/wasm_singlethread')" >> $env:GITHUB_ENV
+          "FLUENT_QT_WASM_SOURCE_CACHE=$(Join-Path $env:RUNNER_TEMP 'fluentqt-qt-source-cache')" >> $env:GITHUB_ENV
+      - name: Fetch immutable comparison sources
+        shell: bash
+        run: |
+          [[ "$BASELINE" =~ ^[0-9a-f]{40}$ && "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags --depth=1 origin "$BASELINE" "$CANDIDATE"
+
+      - name: Prepare native dependency cache
+        if: ${{ matrix.triplet != '' }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+          if (-not $env:VCPKG_INSTALLATION_ROOT) { throw "Missing vcpkg checkout" }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+      - name: Restore native dependency packages
+        if: ${{ matrix.triplet != '' }}
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.triplet }}-
+      - name: Install Linux native dependencies
+        if: ${{ matrix.lane == 'linux-sanitizers' }}
+        run: |
+          bash .github/scripts/install-linux-dependencies.sh apt
+          sudo apt-get install -y --no-install-recommends \
+            qt6-declarative-dev qt6-declarative-private-dev \
+            qml6-module-qtquick qml6-module-qtqml qml6-module-qtqml-models qml6-module-qtqml-workerscript
+      - name: Install native Qt SDK
+        if: ${{ matrix.arch != '' }}
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        with:
+          version: ${{ matrix.qt }}
+          arch: ${{ matrix.arch }}
+          cache: true
+          setup-python: false
+      - name: Install and isolate compiler cache
+        if: ${{ matrix.lane == 'intel-cache' }}
+        shell: bash
+        run: |
+          env HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install ccache
+          if brew list --versions fmt >/dev/null 2>&1; then brew unlink fmt; fi
+          ccache --version
+      - name: Install Python binding tools
+        if: ${{ matrix.lane == 'python-pch' }}
+        run: |
+          python -m pip install PySide6==6.9.3
+          python -m pip install --index-url https://download.qt.io/official_releases/QtForPython/ shiboken6_generator==6.9.3
+
+      - name: Restore WebAssembly Qt SDK
+        if: ${{ matrix.lane == 'wasm' }}
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: wasm-qt
+        with:
+          path: ${{ runner.temp }}/Qt
+          key: fluentqt-qt-wasm-${{ runner.os }}-${{ runner.arch }}-6.9.3
+      - name: Install WebAssembly Qt SDK
+        if: ${{ matrix.lane == 'wasm' && steps.wasm-qt.outputs.cache-hit != 'true' }}
+        run: |
+          python -m pip install --disable-pip-version-check aqtinstall==3.3.0
+          python -m aqt install-qt -O "$RUNNER_TEMP/Qt" all_os wasm 6.9.3 wasm_singlethread --autodesktop
+      - name: Restore Emscripten SDK
+        if: ${{ matrix.lane == 'wasm' }}
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/emsdk
+          key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5
+      - name: Restore Emscripten system libraries
+        if: ${{ matrix.lane == 'wasm' }}
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/emscripten-cache
+          key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5
+      - name: Restore pinned Qt accessibility sources
+        if: ${{ matrix.lane == 'wasm' }}
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.FLUENT_QT_WASM_SOURCE_CACHE }}
+          key: fluentqt-qt-wasm-source-6.9.3-be09b211-${{ hashFiles('src/compatibility/private/wasm/qt-6.9.3/manifest.json') }}
+      - name: Prepare verified WebAssembly toolchain
+        if: ${{ matrix.lane == 'wasm' }}
+        shell: bash
+        run: |
+          test -f "$QT_WASM_ROOT/bin/qt-cmake"
+          chmod +x "$QT_WASM_ROOT/bin/qt-cmake"
+          qt_host_cmake="$(find "$RUNNER_TEMP/Qt/6.9.3" -mindepth 3 -maxdepth 3 -type f -path '*/bin/qt-cmake' ! -path '*/wasm_*/*' -print -quit)"
+          test -n "$qt_host_cmake"
+          chmod +x "$qt_host_cmake"
+          echo "QT_HOST_ROOT=${qt_host_cmake%/bin/qt-cmake}" >> "$GITHUB_ENV"
+          if [[ ! -d "$EMSDK_ROOT/.git" ]]; then
+            mkdir -p "$EMSDK_ROOT"
+            git -C "$EMSDK_ROOT" init
+            git -C "$EMSDK_ROOT" remote add origin https://github.com/emscripten-core/emsdk.git
+          fi
+          test "$(git -C "$EMSDK_ROOT" remote get-url origin)" = https://github.com/emscripten-core/emsdk.git
+          git -C "$EMSDK_ROOT" fetch --depth 1 origin refs/tags/3.1.70
+          test "$(git -C "$EMSDK_ROOT" rev-parse FETCH_HEAD)" = 2514ec738de72cebbba7f4fdba0cf2fabcb779a5
+          git -C "$EMSDK_ROOT" checkout --detach 2514ec738de72cebbba7f4fdba0cf2fabcb779a5
+          if [[ ! -x "$EMSDK_ROOT/upstream/emscripten/emcc" ]]; then "$EMSDK_ROOT/emsdk" install 3.1.70; fi
+          "$EMSDK_ROOT/emsdk" activate 3.1.70
+          python tools/wasm/qt_accessibility_overlay.py fetch --cache "$FLUENT_QT_WASM_SOURCE_CACHE"
+
+      - name: Measure native builds on this runner
+        if: ${{ matrix.lane != 'wasm' }}
+        shell: pwsh
+        env:
+          LANE: ${{ matrix.lane }}
+        run: |
+          $driver = Join-Path $env:RUNNER_TEMP "benchmark-ci-builds.py"
+          Copy-Item .github/scripts/benchmark-ci-builds.py $driver
+          & python $driver --lane $env:LANE --baseline $env:BASELINE --candidate $env:CANDIDATE --root $env:GITHUB_WORKSPACE --output $env:BENCH_OUTPUT
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Measure WebAssembly builds on this runner
+        if: ${{ matrix.lane == 'wasm' }}
+        shell: bash
+        run: |
+          source "$EMSDK_ROOT/emsdk_env.sh"
+          cp .github/scripts/benchmark-ci-builds.py "$RUNNER_TEMP/benchmark-ci-builds.py"
+          python "$RUNNER_TEMP/benchmark-ci-builds.py" --lane wasm --baseline "$BASELINE" --candidate "$CANDIDATE" --root "$GITHUB_WORKSPACE" --output "$BENCH_OUTPUT"
+      - name: Upload performance evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-performance-${{ matrix.lane }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ci-performance/*.json
+            ${{ runner.temp }}/ci-performance/*.log
+          if-no-files-found: warn
+          retention-days: 14
