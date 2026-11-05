@@ -32,6 +32,8 @@ using fluent::textfields::Label;
 // Shadow margin baked into the outer window size by CoachMark (see OverlayGeometry).
 static constexpr int kShadowMargin = ::fluent::overlay::defaultShadowMargin(); // 16
 
+namespace {
+
 // ── FluentTestWindow ─────────────────────────────────────────────────────────
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -42,6 +44,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 // ── Fixture ──────────────────────────────────────────────────────────────────
 class CoachMarkTest : public ::testing::Test {
@@ -77,10 +81,7 @@ protected:
         return btn;
     }
 
-    QRect targetGlobalRect(QWidget* target) const
-    {
-        return QRect(target->mapToGlobal(QPoint(0, 0)), target->size());
-    }
+    QRect targetGlobalRect(QWidget* target) const { return QRect(target->mapToGlobal(QPoint(0, 0)), target->size()); }
 
     // Visible card rect of the coach mark in global coordinates.
     QRect cardGlobalRect(CoachMark* coach) const
@@ -392,8 +393,8 @@ TEST_F(CoachMarkTest, SameWindowSurfaceCentersInsideOwnerAndTracksResize)
     window->resize(760, 560);
     const bool recentered = QTest::qWaitFor(
         [&]() {
-            return std::abs(coach.geometry().center().x() - window->rect().center().x()) <= 2 &&
-                   std::abs(coach.geometry().center().y() - window->rect().center().y()) <= 2;
+            return std::abs(coach.geometry().center().x() - window->rect().center().x()) <= 2
+                && std::abs(coach.geometry().center().y() - window->rect().center().y()) <= 2;
         },
         1000);
     EXPECT_TRUE(recentered);
@@ -414,8 +415,7 @@ TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget)
     ASSERT_TRUE(QTest::qWaitFor([&coach] { return coach.isVisible(); }, 1000));
     ASSERT_TRUE(QTest::qWaitFor(
         [this, &coach, first] {
-            return std::abs(cardGlobalRect(&coach).center().x() -
-                            targetGlobalRect(first).center().x()) <= 2;
+            return std::abs(cardGlobalRect(&coach).center().x() - targetGlobalRect(first).center().x()) <= 2;
         },
         1000));
     const QPoint initialPosition = coach.pos();
@@ -458,8 +458,7 @@ TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped)
     const QPoint initialPosition = coach.pos();
 
     scrollingContent->move(0, -64);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (coach.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (coach.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
 
     scrollingContent->move(0, -500);
     ASSERT_TRUE(QTest::qWaitFor([&] { return !coach.isOpen(); }, 1000));
@@ -519,10 +518,8 @@ TEST_F(CoachMarkTest, PlacementEnumIsRegistered)
     const int surfaceIndex = CoachMark::staticMetaObject.indexOfEnumerator("SurfaceMode");
     ASSERT_GE(surfaceIndex, 0);
     const QMetaEnum surfaceMeta = CoachMark::staticMetaObject.enumerator(surfaceIndex);
-    EXPECT_EQ(surfaceMeta.keyToValue("TopLevelSurface"),
-              static_cast<int>(CoachMark::TopLevelSurface));
-    EXPECT_EQ(surfaceMeta.keyToValue("SameWindowSurface"),
-              static_cast<int>(CoachMark::SameWindowSurface));
+    EXPECT_EQ(surfaceMeta.keyToValue("TopLevelSurface"), static_cast<int>(CoachMark::TopLevelSurface));
+    EXPECT_EQ(surfaceMeta.keyToValue("SameWindowSurface"), static_cast<int>(CoachMark::SameWindowSurface));
 }
 
 TEST_F(CoachMarkTest, VisualCheck)
@@ -548,9 +545,10 @@ TEST_F(CoachMarkTest, VisualCheck)
         auto* title = new Label("Bottom placement", host);
         title->setFluentTypography(Typography::FontRole::BodyStrong);
         layout->addWidget(title);
-        auto* body = new Label("The tail points back at the control you clicked. "
-                               "Pick another target to watch it glide.",
-                               host);
+        auto* body = new Label(
+            "The tail points back at the control you clicked. "
+            "Pick another target to watch it glide.",
+            host);
         body->setFluentTypography(Typography::FontRole::Body);
         body->setWordWrap(true);
         layout->addWidget(body);

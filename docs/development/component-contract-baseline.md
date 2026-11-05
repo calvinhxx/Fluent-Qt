@@ -47,7 +47,7 @@ ctest --preset vcpkg-linux -L '^contract$' -LE '^known_contract_gap$' --output-o
 Run one acceptance contract explicitly:
 
 ```bash
-./build/vcpkg-linux/tests/components/textfields/test_text_edit \
+./build/vcpkg-linux/tests/components/textfields/test_group_textfields_ci_full \
   --gtest_filter='TextEditTest.Contract_WidthReflowRecomputesVisibleLineHeight'
 ```
 

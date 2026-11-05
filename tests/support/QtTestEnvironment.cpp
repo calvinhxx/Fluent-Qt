@@ -58,10 +58,13 @@ QString configuredBinaryDir()
     return binaryDir.isEmpty() ? QDir::currentPath() : binaryDir;
 }
 
-QString snapshotIdentityFileName(const QString& variant)
+QString snapshotIdentityFileName(const QString& variant, const char* testModule)
 {
     QStringList parts;
-    parts << sanitizeSnapshotPart(QFileInfo(QCoreApplication::applicationFilePath()).completeBaseName());
+    const QString module = testModule && *testModule
+        ? QString::fromUtf8(testModule)
+        : QFileInfo(QCoreApplication::applicationFilePath()).completeBaseName();
+    parts << sanitizeSnapshotPart(module);
 
     if (const auto* info = ::testing::UnitTest::GetInstance()->current_test_info()) {
         parts << sanitizeSnapshotPart(QString::fromUtf8(info->test_suite_name()));
@@ -285,9 +288,9 @@ QString visualSnapshotDirectory()
     return QDir(configuredBinaryDir()).filePath(QStringLiteral("visual"));
 }
 
-QString visualSnapshotFilePath(const QString& variant)
+QString visualSnapshotFilePath(const QString& variant, const char* testModule)
 {
-    return QDir(visualSnapshotDirectory()).filePath(snapshotIdentityFileName(variant));
+    return QDir(visualSnapshotDirectory()).filePath(snapshotIdentityFileName(variant, testModule));
 }
 
 QString visualBaselineDirectory()
@@ -303,9 +306,9 @@ QString visualBaselineDirectory()
     return QDir(configuredBinaryDir()).filePath(QStringLiteral("visual-baselines"));
 }
 
-QString visualBaselineFilePath(const QString& variant)
+QString visualBaselineFilePath(const QString& variant, const char* testModule)
 {
-    return QDir(visualBaselineDirectory()).filePath(snapshotIdentityFileName(variant));
+    return QDir(visualBaselineDirectory()).filePath(snapshotIdentityFileName(variant, testModule));
 }
 
 ::testing::AssertionResult compareVisualImages(const QImage& actual, const QImage& expected)
@@ -316,9 +319,10 @@ QString visualBaselineFilePath(const QString& variant)
     return ::testing::AssertionFailure() << visualComparisonSummary(comparison).toStdString();
 }
 
-::testing::AssertionResult compareVisualSnapshotToBaseline(const QString& actualPath, const QString& variant)
+::testing::AssertionResult
+compareVisualSnapshotToBaseline(const QString& actualPath, const QString& variant, const char* testModule)
 {
-    const QString baselinePath = visualBaselineFilePath(variant);
+    const QString baselinePath = visualBaselineFilePath(variant, testModule);
     const QFileInfo baselineInfo(baselinePath);
     if (!baselineInfo.exists() || baselineInfo.size() <= 0) {
         return ::testing::AssertionFailure()
@@ -351,7 +355,8 @@ QString visualBaselineFilePath(const QString& variant)
         << " baseline=" << baselinePath.toStdString();
 }
 
-::testing::AssertionResult captureVisualSnapshot(QWidget* window, const VisualSnapshotOptions& options)
+::testing::AssertionResult
+captureVisualSnapshot(QWidget* window, const VisualSnapshotOptions& options, const char* testModule)
 {
     if (!window)
         return ::testing::AssertionFailure() << "Cannot capture a null VisualCheck window";
@@ -439,7 +444,7 @@ QString visualBaselineFilePath(const QString& variant)
             << "Failed to create visual snapshot directory: " << outputDir.toStdString();
     }
 
-    const QString outputPath = visualSnapshotFilePath(options.variant);
+    const QString outputPath = visualSnapshotFilePath(options.variant, testModule);
     QFile::remove(outputPath);
     if (!snapshotImage.save(outputPath, "PNG")) {
         return ::testing::AssertionFailure() << "Failed to save visual snapshot PNG: " << outputPath.toStdString();
@@ -456,7 +461,7 @@ QString visualBaselineFilePath(const QString& variant)
             return ::testing::AssertionFailure()
                 << "Failed to create visual baseline directory: " << baselineDir.toStdString();
         }
-        const QString baselinePath = visualBaselineFilePath(options.variant);
+        const QString baselinePath = visualBaselineFilePath(options.variant, testModule);
         QFile::remove(baselinePath);
         if (!QFile::copy(outputPath, baselinePath)) {
             return ::testing::AssertionFailure()
@@ -466,7 +471,7 @@ QString visualBaselineFilePath(const QString& variant)
     }
 
     if (isVisualCompareMode())
-        return compareVisualSnapshotToBaseline(outputPath, options.variant);
+        return compareVisualSnapshotToBaseline(outputPath, options.variant, testModule);
 
     return ::testing::AssertionSuccess() << "Saved visual snapshot: " << outputPath.toStdString();
 }

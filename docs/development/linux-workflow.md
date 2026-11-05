@@ -272,7 +272,7 @@ target binary directly without `SKIP_VISUAL_TEST` in an X11 or Wayland desktop
 session. WSLg may be used as one optional local display host:
 
 ```bash
-QT_QPA_PLATFORM=xcb ./build/vcpkg-linux/tests/components/collections/test_list_view \
+QT_QPA_PLATFORM=xcb ./build/vcpkg-linux/tests/components/collections/test_group_collections_ci_full \
   --gtest_filter='ListViewTest.SelectedIndicatorSettlesAfterDragReorder'
 ```
 

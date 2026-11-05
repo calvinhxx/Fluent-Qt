@@ -22,6 +22,8 @@ using fluent::AnchorLayout;
 using fluent::basicinput::Button;
 using fluent::textfields::Label;
 
+namespace {
+
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -31,6 +33,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 class TeachingTipTest : public ::testing::Test {
 protected:
@@ -164,8 +168,7 @@ TEST_F(TeachingTipTest, TracksMovingTargetAncestorAndClosesWhenClipped)
     const QPoint initialPosition = tip.pos();
 
     scrollingContent->move(0, -64);
-    ASSERT_TRUE(
-        QTest::qWaitFor([&] { return (tip.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (tip.pos()) == (initialPosition - QPoint(0, 64)); }, 1000));
 
     scrollingContent->move(0, -500);
     ASSERT_TRUE(QTest::qWaitFor([&] { return !tip.isOpen(); }, 1000));
@@ -389,13 +392,14 @@ TEST_F(TeachingTipTest, Contract_PopupClosingAliasAndNotifyNoOps)
     EXPECT_EQ(popupClosing.at(0).at(0).toInt(), static_cast<int>(Popup::CloseButton));
     ASSERT_EQ(tipClosing.count(), 1);
     EXPECT_EQ(lastCloseReason(tipClosing), TeachingTip::CloseButton);
-    EXPECT_EQ(order, (QStringList{
-                         QStringLiteral("opening"),
-                         QStringLiteral("aboutToShow"),
-                         QStringLiteral("opened"),
-                         QStringLiteral("aboutToHide"),
-                         QStringLiteral("closed"),
-                     }));
+    EXPECT_EQ(order,
+        (QStringList{
+            QStringLiteral("opening"),
+            QStringLiteral("aboutToShow"),
+            QStringLiteral("opened"),
+            QStringLiteral("aboutToHide"),
+            QStringLiteral("closed"),
+        }));
 }
 
 TEST_F(TeachingTipTest, VisualCheck)
@@ -473,11 +477,13 @@ TEST_F(TeachingTipTest, VisualCheck)
         dismiss->anchors()->right = {host, Edge::Right, -4};
         hostLayout->addWidget(dismiss);
 
-        QObject::connect(dismiss, &Button::clicked, simpleTip,
-                         [simpleTip]() { simpleTip->closeWithReason(TeachingTip::CloseButton); });
+        QObject::connect(dismiss, &Button::clicked, simpleTip, [simpleTip]() {
+            simpleTip->closeWithReason(TeachingTip::CloseButton);
+        });
     }
-    QObject::connect(simpleAnchor, &Button::clicked, simpleTip,
-                     [simpleTip, simpleAnchor]() { simpleTip->showAt(simpleAnchor); });
+    QObject::connect(simpleAnchor, &Button::clicked, simpleTip, [simpleTip, simpleAnchor]() {
+        simpleTip->showAt(simpleAnchor);
+    });
 
     // ── Rich tip: title + body + action/close buttons ───────────────────
     auto* richTip = new TeachingTip(visual);
@@ -525,15 +531,17 @@ TEST_F(TeachingTipTest, VisualCheck)
         closeBtn->anchors()->bottom = {host, Edge::Bottom, -16};
         hostLayout->addWidget(closeBtn);
 
-        QObject::connect(dismiss, &Button::clicked, richTip,
-                         [richTip]() { richTip->closeWithReason(TeachingTip::CloseButton); });
-        QObject::connect(actionBtn, &Button::clicked, richTip,
-                         [richTip]() { richTip->closeWithReason(TeachingTip::ActionButton); });
-        QObject::connect(closeBtn, &Button::clicked, richTip,
-                         [richTip]() { richTip->closeWithReason(TeachingTip::CloseButton); });
+        QObject::connect(dismiss, &Button::clicked, richTip, [richTip]() {
+            richTip->closeWithReason(TeachingTip::CloseButton);
+        });
+        QObject::connect(actionBtn, &Button::clicked, richTip, [richTip]() {
+            richTip->closeWithReason(TeachingTip::ActionButton);
+        });
+        QObject::connect(closeBtn, &Button::clicked, richTip, [richTip]() {
+            richTip->closeWithReason(TeachingTip::CloseButton);
+        });
     }
-    QObject::connect(richAnchor, &Button::clicked, richTip,
-                     [richTip, richAnchor]() { richTip->showAt(richAnchor); });
+    QObject::connect(richAnchor, &Button::clicked, richTip, [richTip, richAnchor]() { richTip->showAt(richAnchor); });
 
     // ── Top placement tip ────────────────────────────────────────────────
     auto* topTip = new TeachingTip(visual);
@@ -553,8 +561,7 @@ TEST_F(TeachingTipTest, VisualCheck)
         label->anchors()->right = {host, Edge::Right, -16};
         hostLayout->addWidget(label);
     }
-    QObject::connect(topAnchor, &Button::clicked, topTip,
-                     [topTip, topAnchor]() { topTip->showAt(topAnchor); });
+    QObject::connect(topAnchor, &Button::clicked, topTip, [topTip, topAnchor]() { topTip->showAt(topAnchor); });
 
     // ── RightTop placement tip ───────────────────────────────────────────
     auto* edgeTip = new TeachingTip(visual);
@@ -574,8 +581,7 @@ TEST_F(TeachingTipTest, VisualCheck)
         label->anchors()->right = {host, Edge::Right, -16};
         hostLayout->addWidget(label);
     }
-    QObject::connect(edgeAnchor, &Button::clicked, edgeTip,
-                     [edgeTip, edgeAnchor]() { edgeTip->showAt(edgeAnchor); });
+    QObject::connect(edgeAnchor, &Button::clicked, edgeTip, [edgeTip, edgeAnchor]() { edgeTip->showAt(edgeAnchor); });
 
     visual->show();
     if (tests::support::shouldCaptureVisualSnapshot()) {

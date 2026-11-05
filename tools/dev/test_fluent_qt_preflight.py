@@ -30,6 +30,9 @@ class LocalPreflightTest(unittest.TestCase):
             ("tests/components/status_info/TestToast.cpp", "test_toast"),
             ("tests/components/collections/FluentListItemDelegate.cpp", "test_list_view"),
             ("src/components/status_info/Toast.cpp", "test_toast"),
+            # STANDALONE modules keep the module name as their executable.
+            ("tests/components/TestVisualGate.cpp", "test_visual_gate"),
+            ("tests/components/spatial/TestSpatialTextureBackend.cpp", "test_spatial_texture_backend_fallback"),
         ):
             with self.subTest(path=path):
                 cpp, _, pyside = MODULE.quick_selection([path])

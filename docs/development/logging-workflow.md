@@ -91,7 +91,7 @@ Gallery and tests additionally support:
 
 ```bash
 SPDLOG_LEVEL=debug SKIP_VISUAL_TEST=1 \
-  ./build/vcpkg-osx/tests/test_project_logging
+  ./build/vcpkg-osx/tests/test_group_root_ci_full --gtest_filter='ProjectLoggingTest.*'
 
 SPDLOG_LEVEL=debug \
 SPDLOG_FILE=build/logs/gallery.log \

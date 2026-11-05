@@ -276,8 +276,6 @@ QStandardItemModel* createIconTreeModel(QObject* parent = nullptr)
     return model;
 }
 
-} // namespace
-
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -287,6 +285,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 class TreeViewTest : public ::testing::Test {
 protected:

@@ -26,7 +26,8 @@ Qt/GTest executables link the shared `FluentQtTestSupport` library. Its entry
 point initializes Qt, logging, fonts, and resources once per process. Each run
 uses an independent temporary application-data directory and removes it on
 exit, so parallel instances of the same test binary do not share themes or
-settings. Snapshot names use the executable name and remain stable across runs.
+settings. Snapshot names use the owning test module name and remain stable
+across runs, including when modules share an executable.
 Assertions must use GTest (`ASSERT_*`, `EXPECT_*`, `GTEST_SKIP`). QtTest remains
 available for input simulation and bounded event-loop waits, for example
 `ASSERT_TRUE(QTest::qWaitFor([&] { return ready; }, 1000))`. Do not use QtTest's
@@ -67,6 +68,37 @@ fixed identity, file, or named resource a `RESOURCE_LOCK` or `RUN_SERIAL`.
 
 - Register Qt component tests with `add_qt_test_module(test_<name> Test<Name>.cpp
   [extra sources...])`.
+- `test_<name>` is the test module. It remains the target to build and the
+  `^test_<name>$` label to run, and the CI tier lists select it by name. Its
+  sources compile into the OBJECT library `test_<name>_objects` with the
+  module's own compile settings. Put module-specific `target_link_libraries`,
+  `target_compile_definitions`, `target_include_directories`, and
+  `target_sources` calls on `test_<name>_objects`.
+- Modules registered in the same CMake directory and CI tier link into one
+  executable, `test_group_<group>_<tier>`, with `<tier>` being `ci_fast`,
+  `ci_full`, or `local`. `<group>` is the directory name, or `root` for
+  `tests/`. Each executable links FluentQt once instead of once per module.
+  CTest still runs every discovered test in a separate process with an exact
+  `--gtest_filter`, so process isolation, labels, `RESOURCE_LOCK`, and
+  `RUN_SERIAL` stay per test. Moving a module between tier lists also moves it
+  to that tier's executable.
+- Use `${test_<name>_EXECUTABLE}` in custom `add_test` commands, for example
+  `$<TARGET_FILE:${test_high_dpi_EXECUTABLE}>`. An OBJECT library whose object
+  files the executable must contain, such as `FluentQtGalleryCore` or a
+  resource platform, is linked with `fluent_qt_link_test_objects(test_<name> ...)`.
+  CMake does not propagate object files through another OBJECT library.
+- Pass `STANDALONE` to keep an executable named `test_<name>`. Use it only when
+  the module's objects or definitions conflict with another module of the same
+  group, or when the binary is itself a documented direct-run contract.
+  `test_spatial_texture_backend_fallback`, `test_gallery_zoom_restart`, and
+  `test_visual_gate` are standalone.
+- Modules that share an executable share one link namespace. Keep test-local
+  classes and inline or template helpers in an anonymous namespace. The
+  `TestExecutables.Contract_UniqueModuleSymbols` quality contract rejects a
+  namespace-scope type or inline helper defined in two sources of one executable,
+  and a compiled helper source listed by two modules. Move such a helper into
+  `FluentQtTestSupport`. The configured build lists each executable's modules
+  in `build/<preset>/tests/fluent_qt_test_executables.tsv`.
 - The helper applies these labels to discovered tests: `qt`, `unit`,
   source-directory labels, target name, component name, and validation-tier
   labels.
@@ -485,10 +517,12 @@ debug builds.
 
 - Automated CTest runs inject `SKIP_VISUAL_TEST=1`; VisualCheck tests should
   skip in that mode.
-- For manual UI review, run the test binary directly:
+- For manual UI review, run the module's executable directly and select its
+  suite. CTest prints the executable that owns a test:
 
 ```bash
-./build/vcpkg-osx/tests/components/<category>/<test_target> --gtest_filter="*VisualCheck*"
+ctest --preset vcpkg-osx -N -V -R '^LabelTest\.VisualCheck$' | grep 'Test command'
+./build/vcpkg-osx/tests/components/<category>/test_group_<category>_<tier> --gtest_filter="LabelTest.*VisualCheck*"
 ```
 
 On Linux, use the corresponding `build/vcpkg-linux/...` or
@@ -500,11 +534,12 @@ directly so `SKIP_VISUAL_TEST` is not inherited from CTest.
   `VISUAL_SNAPSHOT=1`:
 
 ```bash
-VISUAL_SNAPSHOT=1 ./build/vcpkg-osx/tests/components/textfields/test_label --gtest_filter="LabelTest.VisualCheck"
+VISUAL_SNAPSHOT=1 ./build/vcpkg-osx/tests/components/textfields/test_group_textfields_ci_full --gtest_filter="LabelTest.VisualCheck"
 ```
 
 - Snapshot files are written to `build/<preset>/visual/` using stable names such
-  as `<target>__<suite>__<test>[_variant].png`. Repeated runs overwrite the same
+  as `<module>__<suite>__<test>[__<variant>].png`, for example
+  `test_label__LabelTest__VisualCheck.png`. Repeated runs overwrite the same
   file. Migrated VisualCheck tests still only verify that a non-empty PNG was
   written. They are not a screenshot farm and do not compare against baselines.
 - If both `SKIP_VISUAL_TEST=1` and `VISUAL_SNAPSHOT=1` are set, skip behavior wins
