@@ -191,8 +191,9 @@ The tag starts one standard chain:
    verifies both manifests and checksums without recompiling.
 2. Release packages the source and Agent Skill, then publishes the stable
    GitHub Release with the prebuilt desktop packages.
-3. Release dispatches `python-release.yml` at the same tag with `stage=all` and
-   waits for it.
+3. Release dispatches `python-release.yml` at the same tag with `stage=all`.
+   It follows the run ID returned by GitHub. A temporary failure to read that
+   run's status triggers a read retry. A failed or cancelled run fails Release.
 4. The Python workflow publishes and verifies TestPyPI before any PyPI upload.
 5. It publishes the same files to PyPI, verifies all attestations, installs
    both public distributions, and runs the smoke suites.
@@ -217,8 +218,9 @@ manifest. A mismatch requires a new version because package-index files are
 immutable.
 
 If the synchronized publisher is interrupted, rerun the failed Release jobs.
-`stage=all` accepts only exact manifest subsets on both indexes, skips matching
-files, and resumes the same TestPyPI-to-PyPI sequence.
+`stage=all` accepts only exact manifest subsets on both indexes. When all
+files of a distribution already match, its upload step is skipped. Partial
+uploads resume, and installation and production attestation checks run again.
 
 If candidate artifacts expire or a post-tag packaging recovery is required,
 manually run `Release Candidate` from the stable tag, wait for
