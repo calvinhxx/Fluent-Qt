@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 
 #include <QElapsedTimer>
+#include <QFile>
 #include <QProcess>
 #include <QString>
+#include <QTemporaryDir>
 #include <QTest>
 #include <QUuid>
 
@@ -27,8 +29,7 @@ public:
 
 QString uniqueInstanceKey()
 {
-    return QStringLiteral("com.fluentqt.gallery.test.%1")
-        .arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+    return QStringLiteral("com.fluentqt.gallery.test.%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
 }
 
 QByteArray waitForOutput(QProcess& process, const QByteArray& marker, int timeoutMs)
@@ -86,15 +87,16 @@ TEST(GallerySingleInstanceTest, EmptyApplicationIdFailsClosed)
 TEST(GallerySingleInstanceTest, SeparateProcessNotifiesPrimaryAndExits)
 {
     const QString key = uniqueInstanceKey();
-    const QString probe = QString::fromLocal8Bit(
-        FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH);
+    const QString probe = QString::fromLocal8Bit(FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH);
+    QTemporaryDir control;
+    ASSERT_TRUE(control.isValid());
+    const QString shutdownPath = control.filePath(QStringLiteral("shutdown"));
 
     ProcessGuard primary;
     primary.process.setProgram(probe);
-    primary.process.setArguments({key});
+    primary.process.setArguments({key, shutdownPath});
     primary.process.start();
-    EXPECT_TRUE(primary.process.waitForStarted(2000))
-        << primary.process.errorString().toStdString();
+    EXPECT_TRUE(primary.process.waitForStarted(2000)) << primary.process.errorString().toStdString();
     if (primary.process.state() == QProcess::NotRunning)
         return;
     const QByteArray primaryStartup = waitForOutput(primary.process, "PRIMARY", 2000);
@@ -106,13 +108,17 @@ TEST(GallerySingleInstanceTest, SeparateProcessNotifiesPrimaryAndExits)
     secondary.process.setProgram(probe);
     secondary.process.setArguments({key});
     secondary.process.start();
-    EXPECT_TRUE(secondary.process.waitForFinished(3000))
-        << secondary.process.errorString().toStdString();
+    EXPECT_TRUE(secondary.process.waitForFinished(3000)) << secondary.process.errorString().toStdString();
     const QByteArray secondaryOutput = secondary.process.readAllStandardOutput();
     EXPECT_EQ(secondary.process.exitStatus(), QProcess::NormalExit);
     EXPECT_EQ(secondary.process.exitCode(), 0) << secondaryOutput.constData();
     EXPECT_TRUE(secondaryOutput.contains("SECONDARY")) << secondaryOutput.constData();
 
+    // Keep the primary's event loop alive until the secondary has read its reply.
+    EXPECT_EQ(primary.process.state(), QProcess::Running);
+    QFile shutdown(shutdownPath);
+    ASSERT_TRUE(shutdown.open(QIODevice::WriteOnly));
+    shutdown.close();
     EXPECT_TRUE(primary.process.waitForFinished(3000));
     const QByteArray primaryActivation = primary.process.readAllStandardOutput();
     EXPECT_EQ(primary.process.exitStatus(), QProcess::NormalExit);
