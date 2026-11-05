@@ -1717,6 +1717,39 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 self.assertIn(installer, log.read_text())
                 self.assertEqual(output.read_text(), "")
 
+    def test_homebrew_fmt_does_not_shadow_vcpkg_after_cache_install(self):
+        name = "Isolate Homebrew fmt from vcpkg"
+        step = MODULE.named_step_section(self.workflow, name)
+        self.assertEqual(MODULE.step_condition(step),
+                         "runner.os == 'macOS' && matrix.compiler_cache != ''")
+        self.assertLess(self.workflow.index("      - name: Enable compiler cache"),
+                        self.workflow.index(f"      - name: {name}"))
+        self.assertLess(self.workflow.index(f"      - name: {name}"),
+                        self.workflow.index("      - name: Configure\n"))
+        script = self.step_script(self.workflow, name)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.write_tool(root / "brew", '''
+echo "$*" >> "$PROBE_LOG"
+case "$*" in
+  "list --versions fmt") exit "$FMT_STATUS" ;;
+  "unlink fmt") exit "$UNLINK_STATUS" ;;
+  *) exit 99 ;;
+esac
+''')
+            for installed, unlink_status in ((True, 0), (False, 0), (True, 2)):
+                with self.subTest(installed=installed, unlink_status=unlink_status):
+                    log = root / "calls"
+                    log.write_text("")
+                    env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}",
+                               PROBE_LOG=str(log), FMT_STATUS="0" if installed else "1",
+                               UNLINK_STATUS=str(unlink_status))
+                    result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
+                                            env=env, capture_output=True)
+                    self.assertEqual(result.returncode, unlink_status if installed else 0)
+                    self.assertEqual(log.read_text().splitlines(),
+                                     ["list --versions fmt"] + (["unlink fmt"] if installed else []))
+
     def test_compiler_cache_key_partitions_lane_runner_qt_compiler_and_week(self):
         script = self.step_script(self.workflow, "Select compiler cache key")
         prefixes = set()

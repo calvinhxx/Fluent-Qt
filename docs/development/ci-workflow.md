@@ -165,6 +165,11 @@ ccache initializes, before the first CMake configure. Cache setup and transfer
 failures fall back to ordinary compilation. The installed first-window trial
 clears the launchers so that it times an uncached application build.
 
+On macOS runners, ccache's Homebrew installation can also expose a newer `fmt`
+in the global compiler include path. CI unlinks that formula from Homebrew's
+prefix before configuring the project. Its installed keg remains available to
+ccache, while Gallery uses matching headers and libraries from vcpkg.
+
 Windows lanes stay on Visual Studio/MSBuild without a compiler cache. MSBuild
 has no CMake compiler launcher. Moving to Ninja would change the generator,
 architecture selection and debug-information format of presets shared with
