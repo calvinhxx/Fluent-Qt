@@ -68,19 +68,28 @@ class PreviewClient:
         deadline = time.monotonic() + timeout
         try:
             while time.monotonic() < deadline:
-                if response.is_file():
-                    reply = json.loads(response.read_text(encoding="utf-8"))
-                    if reply.get("id") != identity or reply.get("session_id") != metadata["session_id"]:
-                        raise RuntimeError("Session changed; inspect the preview again.")
-                    result = reply["result"]
-                    if "error" in result:
-                        raise RuntimeError(json.dumps(result, ensure_ascii=False))
-                    return result
-                current = self.metadata()
-                if (current["session_id"] != metadata["session_id"]
-                        and (method not in {"editor_apply", "editor_revert", "editor_undo"}
-                             or current.get("pid") != metadata.get("pid"))):
-                    raise RuntimeError("Preview restarted; inspect it again before editing.")
+                try:
+                    if response.is_file():
+                        reply = json.loads(response.read_text(encoding="utf-8"))
+                        if reply.get("id") != identity or reply.get("session_id") != metadata["session_id"]:
+                            raise RuntimeError("Session changed; inspect the preview again.")
+                        result = reply["result"]
+                        if "error" in result:
+                            raise RuntimeError(json.dumps(result, ensure_ascii=False))
+                        return result
+                    current = self.metadata()
+                    if (current["session_id"] != metadata["session_id"]
+                            and (method not in {"editor_apply", "editor_revert", "editor_undo"}
+                                 or current.get("pid") != metadata.get("pid"))):
+                        raise RuntimeError("Preview restarted; inspect it again before editing.")
+                except PermissionError:
+                    # A file replacement can briefly exclude readers on Windows.
+                    # Retry the read within this deadline without resending the edit.
+                    pass
+                except RuntimeError as error:
+                    # metadata() preserves its user-facing error while chaining the IO cause.
+                    if not isinstance(error.__cause__, PermissionError):
+                        raise
                 time.sleep(0.025)
             raise RuntimeError("Preview command timed out; check that its window is still running.")
         finally:
