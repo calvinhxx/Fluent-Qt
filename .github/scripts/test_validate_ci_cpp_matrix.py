@@ -96,6 +96,73 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
                     message in error for error in MODULE.validate_catalog(catalog)
                 ))
 
+    def compiler_cache_errors_after(self, scenario_id, **fields):
+        catalog = copy.deepcopy(self.catalog)
+        self.scenario(catalog, scenario_id).update(fields)
+        return [error for error in MODULE.validate_catalog(catalog) if "compiler cache" in error
+                or "compiler_cache" in error]
+
+    def test_fast_pr_lanes_reuse_identical_full_lane_snapshots(self):
+        # The fast tier never runs on main, so it can only restore a full-tier owner.
+        for fast_id, owner_id in (("linux-x64-qt62-fast", "linux-x64-qt62-full"),
+                                  ("mac-arm64-qt62-build", "mac-arm64-qt62-full")):
+            with self.subTest(lane=fast_id):
+                fast = self.scenario(self.catalog, fast_id)
+                owner = self.scenario(self.catalog, owner_id)
+                self.assertEqual(fast["compiler_cache"], owner_id)
+                self.assertEqual(owner["compiler_cache"], owner_id)
+                self.assertEqual(owner["mode"], "full")
+                selected = select_matrix(self.catalog, "fast", *CppTestSelection("none").output_values())
+                job = next(job for job in selected["include"] if job["id"] == fast_id)
+                self.assertEqual(job["compiler_cache"], owner_id)
+
+    def test_compiler_cache_is_unix_only(self):
+        for scenario in self.catalog["scenarios"]:
+            if scenario["os"].startswith("windows"):
+                self.assertEqual((scenario["compiler_cache"], scenario["compiler_cache_max_size"]), ("", ""))
+        errors = self.compiler_cache_errors_after(
+            "win-x64-qt62-platform", compiler_cache="win-x64-qt62-platform",
+            compiler_cache_max_size="256M")
+        self.assertTrue(any("MSBuild has no compiler launcher" in error for error in errors), errors)
+
+    def test_compiler_cache_owner_must_be_a_full_lane(self):
+        errors = self.compiler_cache_errors_after(
+            "linux-x64-qt62-fast", compiler_cache="linux-x64-qt62-fast")
+        self.assertTrue(any("owned by a full lane" in error for error in errors), errors)
+
+    def test_compiler_cache_reference_must_name_a_compatible_owner(self):
+        for owner, message in (
+            ("linux-x64-qt62-missing", "must name a lane that owns that cache"),
+            ("win-x64-qt62-fast", "must name a lane that owns that cache"),
+            ("linux-x64-qt515-full", "must share qt_version"),
+            ("linux-arm64-qt62-full", "must share os"),
+        ):
+            with self.subTest(owner=owner):
+                errors = self.compiler_cache_errors_after(
+                    "linux-x64-qt62-fast", compiler_cache=owner)
+                self.assertTrue(any(message in error for error in errors), errors)
+
+    def test_compiler_cache_size_is_explicit_and_consistent(self):
+        for scenario_id, fields, message in (
+            ("linux-x64-qt62-full", {"compiler_cache_max_size": "1G"}, "whole number of megabytes"),
+            ("linux-x64-qt62-full", {"compiler_cache_max_size": ""}, "whole number of megabytes"),
+            ("linux-x64-qt62-fast", {"compiler_cache_max_size": "256M"}, "must match linux-x64-qt62-full"),
+            ("win-x64-qt62-fast", {"compiler_cache_max_size": "256M"}, "requires an enabled compiler cache"),
+            ("linux-x64-qt62-full", {"compiler_cache": None}, "must be strings"),
+        ):
+            with self.subTest(lane=scenario_id, fields=fields):
+                errors = self.compiler_cache_errors_after(scenario_id, **fields)
+                self.assertTrue(any(message in error for error in errors), errors)
+
+    def test_compiler_cache_owners_stay_inside_the_repository_budget(self):
+        owners = [item for item in self.catalog["scenarios"] if item["compiler_cache"] == item["id"]]
+        used = sum(int(item["compiler_cache_max_size"][:-1]) for item in owners)
+        self.assertLessEqual(used, MODULE.COMPILER_CACHE_BUDGET_MB)
+        errors = self.compiler_cache_errors_after(
+            "mac-x64-qt62-gallery",
+            compiler_cache_max_size=f"{MODULE.COMPILER_CACHE_BUDGET_MB - used + 193}M")
+        self.assertTrue(any("repository budget" in error for error in errors), errors)
+
     def test_pr_selection_preserves_baseline_targets_and_labels_in_both_tiers(self):
         for tier in ("fast", "full"):
             owner = f"linux-x64-qt62-{tier}"

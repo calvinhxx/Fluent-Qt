@@ -291,6 +291,7 @@ def verify_index(
         reports.append(
             {
                 "distribution": distribution,
+                "complete": actual.keys() == expected[distribution].keys(),
                 "expected_files": len(expected[distribution]),
                 "actual_files": len(actual),
             }

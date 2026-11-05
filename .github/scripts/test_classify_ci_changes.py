@@ -5,6 +5,7 @@ import importlib.util
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -706,6 +707,119 @@ class ClassifyCiChangesTest(unittest.TestCase):
         self.assertEqual(len(output), 6)
         for value in output[3:]:
             self.assertNotIn("\r", value)
+
+
+class ClassifyPushEventTest(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.repository = Path(temporary.name)
+        self.git("init", "--quiet")
+        self.write("src/components/basicinput/Button.cpp", "// button\n")
+        self.write("tools/site/release-history.json", "{}\n")
+        self.before = self.commit("base")
+
+    def git(self, *arguments):
+        return subprocess.run(
+            ["git", "-c", "user.name=CI", "-c", "user.email=ci@example.invalid",
+             "-c", "commit.gpgsign=false", *arguments],
+            cwd=self.repository,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+
+    def write(self, path, text):
+        target = self.repository / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text)
+
+    def commit(self, message):
+        self.git("add", "--all")
+        self.git("commit", "--quiet", "--allow-empty", "-m", message)
+        return self.git("rev-parse", "HEAD")
+
+    def classify(self, event):
+        return MODULE.classify_push_event(event, self.repository)
+
+    def test_documentation_push_keeps_only_the_pages_web_gallery(self):
+        self.write("tools/site/release-history.json", '{"published": true}\n')
+        after = self.commit("docs")
+        result, cpp_tests = self.classify({"before": self.before, "after": after})
+        self.assertEqual(result, MODULE.ChangeClassification(False, False, True))
+        self.assertEqual(cpp_tests, MODULE.CppTestSelection("none"))
+
+    def test_product_push_selects_native_lanes_and_owned_tests(self):
+        self.write("src/components/basicinput/Button.cpp", "// changed\n")
+        after = self.commit("fix")
+        result, cpp_tests = self.classify({"before": self.before, "after": after})
+        self.assertEqual(result, MODULE.ChangeClassification(True, True, True))
+        self.assertEqual(cpp_tests.output_values()[0], "selected")
+
+    def test_rename_classifies_both_paths(self):
+        self.git("mv", "tools/site/release-history.json", "src/history.json")
+        after = self.commit("move")
+        result, _ = self.classify({"before": self.before, "after": after})
+        self.assertTrue(result.should_build)
+
+    def test_unknown_or_unchanged_history_requires_the_complete_matrix(self):
+        same_tree = self.commit("empty")
+        missing = "1" * 40
+        for event in (
+            {"before": "0" * 40, "after": same_tree},
+            {"before": missing, "after": same_tree},
+            {"before": self.before, "after": same_tree},
+            {"before": self.before.upper(), "after": same_tree},
+            {"before": self.before},
+            [self.before, same_tree],
+            None,
+        ):
+            with self.subTest(event=event):
+                self.assertIsNone(self.classify(event))
+
+    def test_cli_falls_back_to_full_validation_without_a_comparable_tip(self):
+        event = self.repository / "event.json"
+        event.write_text('{"before": "' + "0" * 40 + '"}')
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT), "--push-event", str(event)],
+            cwd=self.repository,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            ["should_build=true", "should_build_pyside=true", "should_build_wasm=true",
+             "cpp_test_scope=none", "cpp_test_label_regex=", "cpp_test_targets="],
+        )
+        self.assertIn("::warning::", completed.stderr)
+
+    def test_cli_classifies_a_documentation_push(self):
+        self.write("docs/releases/v9.9.9.md", "# Notes\n")
+        after = self.commit("notes")
+        event = self.repository / "event.json"
+        event.write_text(f'{{"before": "{self.before}", "after": "{after}"}}')
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT), "--push-event", str(event)],
+            cwd=self.repository,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        self.assertEqual(completed.stdout.splitlines()[:3],
+                         ["should_build=false", "should_build_pyside=false",
+                          "should_build_wasm=true"])
+
+    def test_push_event_cannot_mix_pull_request_inputs(self):
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT), "--push-event", "event.json",
+             "--github-files-json", "--expected-count", "1"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("cannot be combined", completed.stderr)
 
 
 if __name__ == "__main__":
