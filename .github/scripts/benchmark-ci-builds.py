@@ -284,8 +284,14 @@ def main(argv=None):
                         "--timeout", str(scenario["ctest_timeout"]), "--output-on-failure", "--no-tests=error"]
                 measurement.run(prefix + "-test", test, env, required=False)
             elif args.lane == "python-pch":
+                # Match ci-python.yml: use PySide's runtime instead of the SDK
+                # plugin paths exported by install-qt-action for compilation.
+                test_env = dict(env)
+                for name in ("PYTHONPATH", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH",
+                             "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH"):
+                    test_env.pop(name, None)
                 measurement.run(prefix + "-test", ["ctest", "--test-dir", str(build), "-L", "^pyside$",
-                                                  "--output-on-failure", "--no-tests=error"], env, required=False)
+                                                  "--output-on-failure", "--no-tests=error"], test_env, required=False)
             measurement.persist()
     finally:
         subprocess.run(["git", "checkout", "--force", "--detach", original_head], cwd=root, check=True)
