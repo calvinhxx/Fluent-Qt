@@ -1,10 +1,6 @@
 name: CI build performance
 
 on:
-  # One-time registration on the working branch; remove after this first run starts.
-  push:
-    branches: [release/1.11.x]
-    paths: [.github/workflows/ci-performance.yml]
   workflow_dispatch:
     inputs:
       suite:
@@ -73,6 +69,9 @@ jobs:
           "EM_CACHE=$(Join-Path $env:RUNNER_TEMP 'emscripten-cache')" >> $env:GITHUB_ENV
           "QT_WASM_ROOT=$(Join-Path $env:RUNNER_TEMP 'Qt/6.9.3/wasm_singlethread')" >> $env:GITHUB_ENV
           "FLUENT_QT_WASM_SOURCE_CACHE=$(Join-Path $env:RUNNER_TEMP 'fluentqt-qt-source-cache')" >> $env:GITHUB_ENV
+          # Runner-local dependency outputs are not comparison source changes.
+          # Keep the driver's clean-checkout guard for every other path.
+          @('/.vcpkg-binary-cache/', '/aqtinstall.log') | Add-Content .git/info/exclude
       - name: Fetch immutable comparison sources
         shell: bash
         run: |
