@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <QOpenGLContext>
 #include <QPointer>
 #include <QSignalSpy>
 #include <QApplication>
@@ -14,6 +13,9 @@
 #include "components/layout/Card.h"
 #include "components/particles/ParticleBackdrop.h"
 #include "components/windowing/Window.h"
+// Qt 6.2's OpenGL headers import Windows SDK macros such as "small".
+// Parse Fluent headers before those macros become visible.
+#include <QOpenGLContext>
 
 using namespace fluent;
 
