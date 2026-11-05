@@ -23,6 +23,8 @@ using fluent::overlay::OverlayScrim;
 
 // ── FluentTestWindow ─────────────────────────────────────────────────────────
 
+namespace {
+
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -32,6 +34,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 // ── Test fixture ─────────────────────────────────────────────────────────────
 
@@ -92,8 +96,7 @@ TEST_F(DialogTest, Contract_OpenStateAndAliases)
     QObject::connect(&dialog, &Dialog::isOpenChanged, [&](bool open) {
         EXPECT_EQ(dialog.isOpen(), open);
         EXPECT_EQ(dialog.isVisible(), !open);
-        order << (open ? QStringLiteral("isOpenChanged(true)")
-                       : QStringLiteral("isOpenChanged(false)"));
+        order << (open ? QStringLiteral("isOpenChanged(true)") : QStringLiteral("isOpenChanged(false)"));
     });
     QObject::connect(&dialog, &Dialog::opened, [&] {
         EXPECT_TRUE(dialog.isOpen());
@@ -105,8 +108,7 @@ TEST_F(DialogTest, Contract_OpenStateAndAliases)
         EXPECT_TRUE(dialog.isVisible());
         order << QStringLiteral("closing");
     });
-    QObject::connect(&dialog, &Dialog::aboutToHide,
-                     [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&dialog, &Dialog::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
     QObject::connect(&dialog, &Dialog::closed, [&] {
         EXPECT_FALSE(dialog.isOpen());
         EXPECT_FALSE(dialog.isVisible());
@@ -117,12 +119,13 @@ TEST_F(DialogTest, Contract_OpenStateAndAliases)
     QApplication::processEvents();
     EXPECT_TRUE(dialog.isOpen());
     EXPECT_TRUE(dialog.isVisible());
-    EXPECT_EQ(order, (QStringList{
-                         QStringLiteral("opening"),
-                         QStringLiteral("aboutToShow"),
-                         QStringLiteral("isOpenChanged(true)"),
-                         QStringLiteral("opened"),
-                     }));
+    EXPECT_EQ(order,
+        (QStringList{
+            QStringLiteral("opening"),
+            QStringLiteral("aboutToShow"),
+            QStringLiteral("isOpenChanged(true)"),
+            QStringLiteral("opened"),
+        }));
 
     const int openSignals = order.count();
     dialog.open();
@@ -132,16 +135,17 @@ TEST_F(DialogTest, Contract_OpenStateAndAliases)
     QApplication::processEvents();
     EXPECT_FALSE(dialog.isOpen());
     EXPECT_FALSE(dialog.isVisible());
-    EXPECT_EQ(order, (QStringList{
-                         QStringLiteral("opening"),
-                         QStringLiteral("aboutToShow"),
-                         QStringLiteral("isOpenChanged(true)"),
-                         QStringLiteral("opened"),
-                         QStringLiteral("closing"),
-                         QStringLiteral("aboutToHide"),
-                         QStringLiteral("isOpenChanged(false)"),
-                         QStringLiteral("closed"),
-                     }));
+    EXPECT_EQ(order,
+        (QStringList{
+            QStringLiteral("opening"),
+            QStringLiteral("aboutToShow"),
+            QStringLiteral("isOpenChanged(true)"),
+            QStringLiteral("opened"),
+            QStringLiteral("closing"),
+            QStringLiteral("aboutToHide"),
+            QStringLiteral("isOpenChanged(false)"),
+            QStringLiteral("closed"),
+        }));
 }
 
 TEST_F(DialogTest, Contract_CloseWhileOpeningCancelsEntrance)
@@ -155,12 +159,10 @@ TEST_F(DialogTest, Contract_CloseWhileOpeningCancelsEntrance)
 
     QStringList order;
     QObject::connect(&dialog, &Dialog::opening, [&] { order << QStringLiteral("opening"); });
-    QObject::connect(&dialog, &Dialog::aboutToShow,
-                     [&] { order << QStringLiteral("aboutToShow"); });
+    QObject::connect(&dialog, &Dialog::aboutToShow, [&] { order << QStringLiteral("aboutToShow"); });
     QObject::connect(&dialog, &Dialog::opened, [&] { order << QStringLiteral("opened"); });
     QObject::connect(&dialog, &Dialog::closing, [&] { order << QStringLiteral("closing"); });
-    QObject::connect(&dialog, &Dialog::aboutToHide,
-                     [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&dialog, &Dialog::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
     QObject::connect(&dialog, &Dialog::closed, [&] { order << QStringLiteral("closed"); });
     QObject::connect(&dialog, &Dialog::opening, &dialog, [&]() { dialog.done(QDialog::Rejected); });
 
@@ -168,12 +170,13 @@ TEST_F(DialogTest, Contract_CloseWhileOpeningCancelsEntrance)
     QApplication::processEvents();
     EXPECT_FALSE(dialog.isOpen());
     EXPECT_FALSE(dialog.isVisible());
-    EXPECT_EQ(order, (QStringList{
-                         QStringLiteral("opening"),
-                         QStringLiteral("closing"),
-                         QStringLiteral("aboutToHide"),
-                         QStringLiteral("closed"),
-                     }));
+    EXPECT_EQ(order,
+        (QStringList{
+            QStringLiteral("opening"),
+            QStringLiteral("closing"),
+            QStringLiteral("aboutToHide"),
+            QStringLiteral("closed"),
+        }));
 }
 
 TEST_F(DialogTest, Contract_NotifyNoOpsAndSmokeBundle)
@@ -236,9 +239,8 @@ TEST_F(DialogTest, Contract_ThemeChangeDoesNotMutateOpenState)
     QSignalSpy closed(&dialog, &Dialog::closed);
 
     const auto previous = fluent::FluentElement::currentTheme();
-    fluent::FluentElement::setTheme(previous == fluent::FluentElement::Light
-                                        ? fluent::FluentElement::Dark
-                                        : fluent::FluentElement::Light);
+    fluent::FluentElement::setTheme(
+        previous == fluent::FluentElement::Light ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
     dialog.onThemeUpdated();
 
     EXPECT_TRUE(dialog.isOpen());
@@ -390,12 +392,12 @@ TEST_F(DialogTest, Contract_ExecPreservesSynchronousCloseResult)
 {
     for (const int result : {QDialog::Accepted, QDialog::Rejected}) {
         for (const bool closeOnOpened : {false, true}) {
-            SCOPED_TRACE(::testing::Message()
-                         << "result=" << result << ", closeOnOpened=" << closeOnOpened);
+            SCOPED_TRACE(::testing::Message() << "result=" << result << ", closeOnOpened=" << closeOnOpened);
             Dialog dialog(window);
             dialog.setAnimationEnabled(false);
-            QObject::connect(&dialog, closeOnOpened ? &Dialog::opened : &Dialog::opening, &dialog,
-                             [&] { dialog.done(result); });
+            QObject::connect(&dialog, closeOnOpened ? &Dialog::opened : &Dialog::opening, &dialog, [&] {
+                dialog.done(result);
+            });
 
             bool enteredEventLoop = false;
             QTimer::singleShot(0, &dialog, [&] {
@@ -498,8 +500,7 @@ TEST_F(DialogTest, SameWindowDialogRepositionsInsideOwnerSurface)
     EXPECT_EQ(dialog.parentWidget(), window);
     EXPECT_EQ(dialog.windowType(), Qt::Widget);
 
-    const QPoint expected((window->width() - dialog.width()) / 2,
-                          (window->height() - dialog.height()) / 2);
+    const QPoint expected((window->width() - dialog.width()) / 2, (window->height() - dialog.height()) / 2);
     EXPECT_EQ(dialog.pos(), expected);
     EXPECT_TRUE(window->rect().contains(dialog.geometry()));
 
@@ -567,8 +568,7 @@ TEST_F(DialogTest, SmokeDialogBlocksScrimClicks)
 
     // Trackpad/mouse wheel input must not leak through the modal smoke into a scrollable owner.
     // zh_CN: 触控板/滚轮输入不得穿过模态 smoke 继续滚动宿主界面。
-    FLUENT_MAKE_WHEEL_EVENT(wheel, smoke->rect().center().x(), smoke->rect().center().y(), -120,
-                            Qt::NoModifier);
+    FLUENT_MAKE_WHEEL_EVENT(wheel, smoke->rect().center().x(), smoke->rect().center().y(), -120, Qt::NoModifier);
     wheel.ignore();
     QApplication::sendEvent(smoke, &wheel);
     EXPECT_TRUE(wheel.isAccepted());
@@ -589,8 +589,7 @@ TEST_F(DialogTest, ClosingSmokeOverlayImmediatelyReleasesOwnerInput)
     dialog.open();
     QApplication::processEvents();
 
-    QPointer<OverlayScrim> smoke =
-        window->findChild<OverlayScrim*>(QStringLiteral("DialogSmokeScrim"));
+    QPointer<OverlayScrim> smoke = window->findChild<OverlayScrim*>(QStringLiteral("DialogSmokeScrim"));
     ASSERT_FALSE(smoke.isNull());
     ASSERT_TRUE(smoke->isVisible());
     EXPECT_FALSE(smoke->testAttribute(Qt::WA_TransparentForMouseEvents));
@@ -634,8 +633,7 @@ TEST_F(DialogTest, ExecSmokeDialogDoesNotPromoteOwnerContentToNative)
 
     EXPECT_FALSE(content->testAttribute(Qt::WA_NativeWindow))
         << "owner content widget was promoted to a native window by the dialog";
-    EXPECT_EQ(content->windowHandle(), nullptr)
-        << "owner content widget acquired its own native window handle";
+    EXPECT_EQ(content->windowHandle(), nullptr) << "owner content widget acquired its own native window handle";
     EXPECT_FALSE(inner->testAttribute(Qt::WA_NativeWindow));
 }
 
@@ -760,8 +758,7 @@ TEST_F(DialogTest, SequentialExecDialogsLeaveNoSmokeSurface)
 
         EXPECT_EQ(dialog.exec(), QDialog::Rejected);
         EXPECT_TRUE(overlayPresentWhileOpen);
-        EXPECT_TRUE(
-            window->findChildren<OverlayScrim*>(QStringLiteral("DialogSmokeScrim")).isEmpty())
+        EXPECT_TRUE(window->findChildren<OverlayScrim*>(QStringLiteral("DialogSmokeScrim")).isEmpty())
             << "Sequential dialog " << index << " left an owner smoke surface";
     }
 }
@@ -815,8 +812,8 @@ TEST_F(DialogTest, VisualCheck)
 
     QObject::connect(themeBtn, &Button::clicked, [this]() {
         auto theme = fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                         ? fluent::FluentElement::Dark
-                         : fluent::FluentElement::Light;
+            ? fluent::FluentElement::Dark
+            : fluent::FluentElement::Light;
         fluent::FluentElement::setTheme(theme);
         window->onThemeUpdated();
     });

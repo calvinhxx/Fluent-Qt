@@ -34,21 +34,24 @@ RadioButton, RatingControl, Slider, ToggleButton, and ToggleSwitch.
 
 ## Find the Test Binary
 
-Default build output uses the `vcpkg-osx` preset:
+Test modules of one category and CI tier share an executable named
+`test_group_<category>_<tier>`, where `<tier>` is `ci_fast`, `ci_full`, or
+`local`. Select the component with its GTest suite. CTest prints the executable
+that owns a test:
 
 ```bash
-./build/vcpkg-osx/tests/components/<category>/test_<snake_case_name>
+ctest --preset vcpkg-osx -N -V -R '^ComboBoxTest\.VisualCheck' | grep 'Test command'
 ```
 
-Examples:
+Examples for the default `vcpkg-osx` preset:
 
 ```bash
-./build/vcpkg-osx/tests/components/basicinput/test_combo_box
-./build/vcpkg-osx/tests/components/collections/test_list_view
-./build/vcpkg-osx/tests/components/collections/test_tree_view
-./build/vcpkg-osx/tests/components/dialogs_flyouts/test_popup
-./build/vcpkg-osx/tests/components/navigation/test_navigation_view
-./build/vcpkg-osx/tests/components/date_time/test_calendar_date_picker
+./build/vcpkg-osx/tests/components/basicinput/test_group_basicinput_ci_full --gtest_filter='ComboBoxTest.*'
+./build/vcpkg-osx/tests/components/collections/test_group_collections_ci_full --gtest_filter='ListViewTest.*'
+./build/vcpkg-osx/tests/components/collections/test_group_collections_local --gtest_filter='TreeViewTest.*'
+./build/vcpkg-osx/tests/components/dialogs_flyouts/test_group_dialogs_flyouts_ci_full --gtest_filter='PopupTest.*'
+./build/vcpkg-osx/tests/components/navigation/test_group_navigation_ci_full --gtest_filter='NavigationViewTest.*'
+./build/vcpkg-osx/tests/components/date_time/test_group_date_time_ci_full --gtest_filter='CalendarDatePickerTest.*'
 ```
 
 If another preset is used, replace `vcpkg-osx` in the path with that preset name.
@@ -72,7 +75,7 @@ cmake --build --preset vcpkg-osx
 Run only VisualCheck tests. The window closes when the reviewer closes it.
 
 ```bash
-./build/vcpkg-osx/tests/components/<category>/test_<name> --gtest_filter="*VisualCheck*"
+./build/vcpkg-osx/tests/components/<category>/test_group_<category>_<tier> --gtest_filter="<Suite>.*VisualCheck*"
 ```
 
 Do not set `SKIP_VISUAL_TEST` for manual review. Automated CTest runs set

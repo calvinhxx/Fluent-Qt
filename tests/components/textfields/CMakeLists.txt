@@ -1,7 +1,7 @@
 add_qt_test_module(test_label TestLabel.cpp)
 add_qt_test_module(test_code_block TestCodeBlock.cpp)
 if(WIN32)
-    target_link_libraries(test_code_block PRIVATE user32)
+    target_link_libraries(test_code_block_objects PRIVATE user32)
 endif()
 add_qt_test_module(test_editing_command_router TestEditingCommandRouter.cpp)
 add_qt_test_module(test_line_edit TestLineEdit.cpp)

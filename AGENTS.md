@@ -88,7 +88,10 @@ Read the owning code and the guide sections relevant to the task below.
   demonstrations belong in Gallery samples.
 - Do not keep empty component directories. A category addition/removal updates
   the README overview, tests CMake, and this map.
-- Register tests with `add_qt_test_module`. Shared QApplication, resources,
+- Register tests with `add_qt_test_module`. Modules of one directory and CI
+  tier share an executable: customize `test_<name>_objects`, use
+  `${test_<name>_EXECUTABLE}` in custom commands, and keep test-local helpers
+  in anonymous namespaces. Shared QApplication, resources,
   style, and fonts belong in [QtGTestMain.cpp](tests/support/QtGTestMain.cpp);
   `SetUpTestSuite()` is for component-specific setup.
 

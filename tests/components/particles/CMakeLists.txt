@@ -1,4 +1,4 @@
 add_qt_test_module(test_particle_backdrop TestParticleBackdrop.cpp)
-target_link_libraries(test_particle_backdrop PRIVATE FluentQt::Particles)
+target_link_libraries(test_particle_backdrop_objects PRIVATE FluentQt::Particles)
 add_qt_test_module(test_particles_plugin TestParticlesPlugin.cpp)
-target_link_libraries(test_particles_plugin PRIVATE FluentQt::Particles)
+target_link_libraries(test_particles_plugin_objects PRIVATE FluentQt::Particles)

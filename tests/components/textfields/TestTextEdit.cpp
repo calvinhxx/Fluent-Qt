@@ -34,6 +34,8 @@ using namespace fluent::textfields;
 using namespace fluent::basicinput;
 using namespace fluent;
 
+namespace {
+
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -43,6 +45,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 class TextEditTest : public ::testing::Test {
 protected:

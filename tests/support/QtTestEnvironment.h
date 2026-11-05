@@ -10,6 +10,13 @@
 
 class QWidget;
 
+// add_qt_test_module compiles each module with its own name. Modules can share
+// an executable, so snapshot identities use this name at the call site and fall
+// back to the executable name for support code outside a module.
+#ifndef FLUENT_QT_TEST_MODULE
+#define FLUENT_QT_TEST_MODULE nullptr
+#endif
+
 namespace tests::support {
 
 enum class VisualSnapshotTheme { Light, Dark };
@@ -52,14 +59,17 @@ bool shouldRunVisualGate();
 // compare or update this baseline set.
 bool isVisualGateApprovalHost();
 QString visualSnapshotDirectory();
-QString visualSnapshotFilePath(const QString& variant = QString());
+// Snapshot names are <module>__<suite>__<test>[__<variant>].png.
+QString visualSnapshotFilePath(const QString& variant = QString(), const char* testModule = FLUENT_QT_TEST_MODULE);
 QString visualBaselineDirectory();
-QString visualBaselineFilePath(const QString& variant = QString());
+QString visualBaselineFilePath(const QString& variant = QString(), const char* testModule = FLUENT_QT_TEST_MODULE);
 ::testing::AssertionResult compareVisualImages(const QImage& actual, const QImage& expected);
 ::testing::AssertionResult compareVisualSnapshotToBaseline(const QString& actualPath,
-    const QString& variant = QString());
+    const QString& variant = QString(),
+    const char* testModule = FLUENT_QT_TEST_MODULE);
 ::testing::AssertionResult captureVisualSnapshot(QWidget* window,
-    const VisualSnapshotOptions& options = VisualSnapshotOptions());
+    const VisualSnapshotOptions& options = VisualSnapshotOptions(),
+    const char* testModule = FLUENT_QT_TEST_MODULE);
 
 } // namespace tests::support
 

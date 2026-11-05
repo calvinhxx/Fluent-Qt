@@ -61,6 +61,8 @@ TEST(InputMetricsTest, StandardSingleLineControlsAlignWithoutPerSampleSizing)
     }
 }
 
+namespace {
+
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -70,6 +72,8 @@ public:
         setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
     }
 };
+
+} // namespace
 
 class LineEditTest : public ::testing::Test {
 protected:

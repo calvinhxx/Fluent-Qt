@@ -79,7 +79,13 @@ synchronization, use [Testing Workflow](testing-workflow.md).
 - Build manual demonstration controls inside the guarded `VisualCheck` body,
   not in fixture `SetUp()`, so automated cases do not construct an unused demo.
 - Register component tests with `add_qt_test_module(test_<name> Test<Name>.cpp
-  [extra sources...])`.
+  [extra sources...])`. Customize the module through `test_<name>_objects`;
+  modules of one directory and CI tier share an executable, as described in
+  [Testing Workflow](testing-workflow.md#ctest-labels).
+- Put test-local helper classes, such as a themed `FluentTestWindow`, and inline
+  or template helper functions in an anonymous namespace. A helper with the
+  same name in another module of the shared executable would otherwise be
+  merged silently by the linker.
 - Test binaries share Qt setup through `tests/support/QtGTestMain.cpp`; do not
   create `QApplication`, call `Q_INIT_RESOURCE(resources)`, set the app style,
   or load bundled fonts in individual test files.
