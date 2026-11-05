@@ -169,8 +169,9 @@ def main(argv=None):
     root = args.root.resolve()
     if root != Path(os.environ["GITHUB_WORKSPACE"]).resolve():
         parser.error("--root must be this runner's GITHUB_WORKSPACE")
-    if checked_output(["git", "status", "--porcelain"], root):
-        parser.error("The disposable checkout must start clean")
+    dirty = checked_output(["git", "status", "--porcelain"], root)
+    if dirty:
+        parser.error("The disposable checkout must start clean:\n" + dirty)
     output = args.output.resolve()
     if output.is_relative_to(root):
         parser.error("Reports must be outside the checkout")
