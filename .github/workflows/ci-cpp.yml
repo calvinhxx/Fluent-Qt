@@ -169,32 +169,59 @@ jobs:
             qml6-module-qtqml-models \
             qml6-module-qtqml-workerscript
 
-      - name: Select sanitizer cache key
-        id: cache_key
-        if: ${{ matrix.id == 'linux-x64-qt62-contract-sanitizers' }}
+      # matrix.compiler_cache names the full lane that owns the snapshot. Fast
+      # PR lanes reuse an identically configured full lane because only the
+      # full tier runs on main.
+      - name: Select compiler cache key
+        id: compiler_cache_key
+        if: ${{ matrix.compiler_cache != '' }}
+        continue-on-error: true
         shell: bash
-        run: date -u '+key=fluentqt-ccache-linux-qt62-asan-v1-%G-%V' >> "$GITHUB_OUTPUT"
+        env:
+          CACHE_LANE: ${{ matrix.compiler_cache }}
+          CACHE_QT_VERSION: ${{ matrix.qt_version }}
+        run: |
+          compiler="$(c++ --version 2>/dev/null | head -n 1 || true)"
+          compiler_id="$(printf '%s' "$compiler" | shasum -a 256 | cut -c 1-12)"
+          echo "Compiler cache identity: ${compiler:-unknown} ($compiler_id)"
+          prefix="fluentqt-ccache-v2-$CACHE_LANE-$RUNNER_OS-$RUNNER_ARCH-qt$CACHE_QT_VERSION-$compiler_id-"
+          {
+            echo "prefix=$prefix"
+            echo "key=$prefix$(date -u '+%G-%V')"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Restore sanitizer compiler cache
+      - name: Restore compiler cache
         id: compiler_cache
-        if: ${{ steps.cache_key.outputs.key != '' }}
+        if: ${{ steps.compiler_cache_key.outputs.key != '' }}
         continue-on-error: true
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/ccache
-          key: ${{ steps.cache_key.outputs.key }}
-          restore-keys: fluentqt-ccache-linux-qt62-asan-v1-
+          key: ${{ steps.compiler_cache_key.outputs.key }}
+          restore-keys: ${{ steps.compiler_cache_key.outputs.prefix }}
 
-      - name: Enable sanitizer compiler cache
+      # Hosted runners use the same absolute workspace path for every run. No
+      # base_dir is set: it would pass relative paths to the compiler, and
+      # tests resolve repository files from __FILE__.
+      - name: Enable compiler cache
         if: ${{ steps.compiler_cache.outcome == 'success' }}
         shell: bash
         env:
           CCACHE_DIR: ${{ runner.temp }}/ccache
-          CCACHE_MAXSIZE: 512M
+          CCACHE_MAXSIZE: ${{ matrix.compiler_cache_max_size }}
+          CCACHE_NOHASHDIR: "1"
+          CCACHE_COMPRESSLEVEL: "5"
         run: |
-          if ! command -v ccache >/dev/null && ! sudo apt-get install -y --no-install-recommends ccache; then
-            echo "::warning::ccache is unavailable. Compiling normally."
-            exit 0
+          if ! command -v ccache >/dev/null; then
+            if [[ "$RUNNER_OS" == "macOS" ]]; then
+              install=(env HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install ccache)
+            else
+              install=(sudo apt-get install -y --no-install-recommends ccache)
+            fi
+            if ! "${install[@]}"; then
+              echo "::warning::ccache is unavailable. Compiling normally."
+              exit 0
+            fi
           fi
           if ! mkdir -p "$CCACHE_DIR" || ! ccache --zero-stats; then
             echo "::warning::Could not initialize ccache. Compiling normally."
@@ -203,6 +230,8 @@ jobs:
           {
             echo "CCACHE_DIR=$CCACHE_DIR"
             echo "CCACHE_MAXSIZE=$CCACHE_MAXSIZE"
+            echo "CCACHE_NOHASHDIR=$CCACHE_NOHASHDIR"
+            echo "CCACHE_COMPRESSLEVEL=$CCACHE_COMPRESSLEVEL"
             echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
             echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
           } >> "$GITHUB_ENV"
@@ -543,6 +572,9 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
+          # Time an uncached application build, as a new user would see it.
+          Remove-Item Env:CMAKE_C_COMPILER_LAUNCHER, Env:CMAKE_CXX_COMPILER_LAUNCHER `
+            -ErrorAction SilentlyContinue
           $installPrefix = Join-Path `
             $env:RUNNER_TEMP `
             "fluentqt-first-window-install"
@@ -589,17 +621,19 @@ jobs:
         if: ${{ !cancelled() && env.CCACHE_DIR != '' }}
         continue-on-error: true
         shell: bash
-        run: ccache --show-stats
+        run: ccache --show-stats --verbose
 
-      - name: Save sanitizer compiler cache
+      # Only the owner lane writes, once per ISO week, from a successful main run.
+      - name: Save compiler cache
         if: >-
           ${{ success() && env.CCACHE_DIR != '' && steps.compiler_cache.outputs.cache-hit != 'true' &&
+              matrix.compiler_cache == matrix.id &&
               github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule') }}
         continue-on-error: true
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/ccache
-          key: ${{ steps.cache_key.outputs.key }}
+          key: ${{ steps.compiler_cache_key.outputs.key }}
 
       - name: Upload diagnostics
         if: failure()

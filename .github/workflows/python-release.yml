@@ -327,6 +327,9 @@ jobs:
     needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      testpypi_complete: ${{ steps.indexes.outputs.testpypi_complete }}
+      pypi_complete: ${{ steps.indexes.outputs.pypi_complete }}
     steps:
       - name: Checkout selected release ref
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -369,6 +372,7 @@ jobs:
           )
 
       - name: Verify package-index preconditions
+        id: indexes
         env:
           RELEASE_STAGE: ${{ needs.preflight.outputs.stage }}
           RECOVERY: ${{ needs.preflight.outputs.recovery }}
@@ -377,37 +381,29 @@ jobs:
           set -euo pipefail
           candidate="${RUNNER_TEMP}/fluentqt-python-publish-candidate"
           manifest="$candidate/python-release-manifest.json"
-          if [[ "$RELEASE_STAGE" == "testpypi" || "$RELEASE_STAGE" == "all" ]]; then
+          verify_index() {
+            local index="$1" url="$2" mode="$3"
+            local report="$RUNNER_TEMP/$index-preflight.json" complete
             python3 .github/scripts/verify-python-package-index.py \
-              --manifest "$manifest" \
-              --bundle "$candidate" \
-              --index-json-url https://test.pypi.org/pypi \
-              --mode subset
-            production_mode=absent
-            if [[ "$RELEASE_STAGE" == "all" ]]; then
-              production_mode=subset
-            fi
-            python3 .github/scripts/verify-python-package-index.py \
-              --manifest "$manifest" \
-              --bundle "$candidate" \
-              --index-json-url https://pypi.org/pypi \
-              --mode "$production_mode"
-          else
-            python3 .github/scripts/verify-python-package-index.py \
-              --manifest "$manifest" \
-              --bundle "$candidate" \
-              --index-json-url https://test.pypi.org/pypi \
-              --mode complete
-            production_mode=absent
-            if [[ "$RECOVERY" == "true" ]]; then
-              production_mode=subset
-            fi
-            python3 .github/scripts/verify-python-package-index.py \
-              --manifest "$manifest" \
-              --bundle "$candidate" \
-              --index-json-url https://pypi.org/pypi \
-              --mode "$production_mode"
-          fi
+              --manifest "$manifest" --bundle "$candidate" \
+              --index-json-url "$url" --mode "$mode" --report "$report"
+            complete="$(jq -ce '[.distributions[] | select(.complete) | .distribution]' "$report")"
+            echo "${index}_complete=$complete" >> "$GITHUB_OUTPUT"
+          }
+
+          test_mode=subset
+          production_mode=absent
+          case "$RELEASE_STAGE" in
+            testpypi) ;;
+            all) production_mode=subset ;;
+            pypi)
+              test_mode=complete
+              if [[ "$RECOVERY" == "true" ]]; then production_mode=subset; fi
+              ;;
+            *) exit 1 ;;
+          esac
+          verify_index testpypi https://test.pypi.org/pypi "$test_mode"
+          verify_index pypi https://pypi.org/pypi "$production_mode"
 
       - name: Upload vetted publication candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -457,12 +453,14 @@ jobs:
       id-token: write
     steps:
       - name: Download publisher-scoped candidate
+        if: ${{ !contains(fromJSON(needs.prepare.outputs.testpypi_complete), matrix.distribution) }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ matrix.candidate_artifact }}
           path: publisher-candidate
 
       - name: Publish signed ${{ matrix.distribution }} wheels to TestPyPI
+        if: ${{ !contains(fromJSON(needs.prepare.outputs.testpypi_complete), matrix.distribution) }}
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
@@ -592,12 +590,14 @@ jobs:
       id-token: write
     steps:
       - name: Download publisher-scoped candidate
+        if: ${{ !contains(fromJSON(needs.prepare.outputs.pypi_complete), matrix.distribution) }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ matrix.candidate_artifact }}
           path: publisher-candidate
 
       - name: Publish signed ${{ matrix.distribution }} wheels to PyPI
+        if: ${{ !contains(fromJSON(needs.prepare.outputs.pypi_complete), matrix.distribution) }}
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         with:
           packages-dir: publisher-candidate/

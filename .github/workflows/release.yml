@@ -595,71 +595,71 @@ jobs:
         id: python_release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+          SOURCE_RUN_ID: ${{ steps.candidate.outputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ steps.candidate.outputs.source_run_attempt }}
         shell: bash
         run: |
           set -euo pipefail
 
-          tag="${{ needs.preflight.outputs.tag }}"
-          tag_sha="${{ needs.preflight.outputs.tag_sha }}"
           release_json="$(
-            gh release view "$tag" \
+            gh release view "$RELEASE_TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --json isDraft,isPrerelease,tagName
           )"
           jq -e \
-            --arg tag "$tag" \
+            --arg tag "$RELEASE_TAG" \
             '.tagName == $tag and .isDraft == false and .isPrerelease == false' \
             <<< "$release_json" >/dev/null || {
               echo "::error::Python publication requires a public stable GitHub Release."
               exit 1
             }
 
-          run_url="$(
-            gh workflow run python-release.yml \
-              --repo "$GITHUB_REPOSITORY" \
-              --ref "$tag" \
-              -f stage=all \
-              -f recovery=false \
-              -f source_run_id="${{ steps.candidate.outputs.source_run_id }}" \
-              -f source_run_attempt="${{ steps.candidate.outputs.source_run_attempt }}"
+          run_id="$(
+            gh api --method POST -H 'X-GitHub-Api-Version: 2026-03-10' \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/python-release.yml/dispatches" \
+              -f ref="$RELEASE_TAG" -f 'inputs[stage]=all' -f 'inputs[recovery]=false' \
+              -f "inputs[source_run_id]=$SOURCE_RUN_ID" \
+              -f "inputs[source_run_attempt]=$SOURCE_RUN_ATTEMPT" \
+              --jq '.workflow_run_id'
           )"
-          if [[ ! "$run_url" =~ /actions/runs/([0-9]+)$ ]]; then
-            for discovery_attempt in {1..12}; do
-              run_url="$(
-                gh run list \
-                  --repo "$GITHUB_REPOSITORY" \
-                  --workflow python-release.yml \
-                  --event workflow_dispatch \
-                  --commit "$tag_sha" \
-                  --limit 20 \
-                  --json databaseId,displayTitle,url \
-                  --jq \
-                    'map(select(.displayTitle == "Python all release from '"$tag"'")) |
-                     sort_by(.databaseId) | reverse | .[0].url // empty'
-              )"
-              if [[ "$run_url" =~ /actions/runs/([0-9]+)$ ]]; then
-                break
-              fi
-              if (( discovery_attempt < 12 )); then
-                sleep 5
-              fi
-            done
-          fi
-          if [[ ! "$run_url" =~ /actions/runs/([0-9]+)$ ]]; then
-            echo "::error::Python Release was dispatched, but its run could not be resolved."
+          if [[ ! "$run_id" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::GitHub did not return a Python publication run ID."
             exit 1
           fi
-          run_id="${BASH_REMATCH[1]}"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$run_id"
+          echo "Dispatched Python publication: $run_url"
           {
             echo "run_id=$run_id"
             echo "run_url=$run_url"
           } >> "$GITHUB_OUTPUT"
 
-          gh run watch "$run_id" \
-            --repo "$GITHUB_REPOSITORY" \
-            --compact \
-            --interval 10 \
-            --exit-status
+      - name: Wait for the dispatched Python publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.python_release.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          read_failures=0
+          while true; do
+            if state="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
+                --jq 'if .status == "completed" then (.conclusion // "unknown") else "pending" end')"; then
+              read_failures=0
+              case "$state" in
+                success) exit 0 ;;
+                pending) ;;
+                *) echo "::error::Python publication $RUN_ID concluded: $state"; exit 1 ;;
+              esac
+            else
+              read_failures=$((read_failures + 1))
+              if (( read_failures >= 6 )); then
+                echo "::error::Could not read Python publication $RUN_ID after six attempts."
+                exit 1
+              fi
+            fi
+            sleep 10
+          done
 
       - name: Summarize Python publication
         shell: bash

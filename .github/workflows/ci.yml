@@ -87,78 +87,6 @@ jobs:
           --repository "$GITHUB_REPOSITORY"
           --base-ref "${{ github.base_ref }}"
           --head-sha "${{ github.event.pull_request.head.sha }}"
-      - name: Classify pull-request changes
-        id: changes
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          classification=$'should_build=true\nshould_build_pyside=true\nshould_build_wasm=true\ncpp_test_scope=none\ncpp_test_label_regex=\ncpp_test_targets='
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            changed_files_json="$(
-              gh api --paginate --slurp \
-                "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
-                --header "X-GitHub-Api-Version: 2022-11-28"
-            )"
-            if [[ -z "$changed_files_json" ]]; then
-              echo "::error::The pull request did not report any changed files."
-              exit 1
-            fi
-            classification="$(
-              python3 .github/scripts/classify_ci_changes.py --github-files-json \
-                --expected-count "$PR_CHANGED_FILES" \
-                <<< "$changed_files_json"
-            )"
-          fi
-
-          output_value() { sed -n "s/^$1=//p" <<< "$classification"; }
-          should_build="$(output_value should_build)"
-          should_build_pyside="$(output_value should_build_pyside)"
-          should_build_wasm="$(output_value should_build_wasm)"
-          cpp_test_scope="$(output_value cpp_test_scope)"
-          cpp_test_label_regex="$(output_value cpp_test_label_regex)"
-          cpp_test_targets="$(output_value cpp_test_targets)"
-          for value in "$should_build" "$should_build_pyside" "$should_build_wasm"; do
-            [[ "$value" == "true" || "$value" == "false" ]] || {
-              echo "::error::Invalid CI change classification value: $value"
-              exit 1
-            }
-          done
-          if [[ "$should_build" == "false" && \
-                ("$should_build_pyside" == "true" || "$should_build_wasm" == "true") ]]; then
-            echo "::error::A specialized module cannot run when native validation is skipped."
-            exit 1
-          fi
-          label_pattern='^[a-z0-9_^$()|]*$'
-          target_pattern='^[a-z0-9_ ]*$'
-          [[ "$cpp_test_label_regex" =~ $label_pattern &&
-             "$cpp_test_targets" =~ $target_pattern ]] || {
-            echo "::error::Unsafe C++ test selection output."
-            exit 1
-          }
-          case "$cpp_test_scope" in
-            none)
-              [[ -z "$cpp_test_label_regex" && -z "$cpp_test_targets" ]] || exit 1
-              ;;
-            selected)
-              [[ -n "$cpp_test_label_regex" && -n "$cpp_test_targets" &&
-                 "$should_build" == "true" ]] || exit 1
-              ;;
-            all)
-              [[ "$cpp_test_label_regex" == '^qt$' &&
-                 "$cpp_test_targets" == 'fluent_qt_all_tests' &&
-                 "$should_build" == "true" ]] || exit 1
-              ;;
-            *)
-              echo "::error::Invalid C++ test scope: $cpp_test_scope"
-              exit 1
-              ;;
-          esac
-          printf '%s\n' "$classification" >> "$GITHUB_OUTPUT"
-          echo "CI selection: native=$should_build, PySide6=$should_build_pyside, WebAssembly=$should_build_wasm, C++ tests=$cpp_test_scope."
       - name: Select validation tier
         id: mode
         env:
@@ -205,6 +133,79 @@ jobs:
           echo "python_release_bundle=$python_release_bundle" >> "$GITHUB_OUTPUT"
           echo "release_candidate_expected=$release_candidate_expected" >> "$GITHUB_OUTPUT"
           echo "Selected $mode validation (Python release bundle: $python_release_bundle; release candidate expected: $release_candidate_expected)."
+      - name: Classify changes
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          classification=$'should_build=true\nshould_build_pyside=true\nshould_build_wasm=true\ncpp_test_scope=none\ncpp_test_label_regex=\ncpp_test_targets='
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            changed_files_json="$(
+              gh api --paginate --slurp \
+                "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
+                --header "X-GitHub-Api-Version: 2022-11-28"
+            )"
+            if [[ -z "$changed_files_json" ]]; then
+              echo "::error::The pull request did not report any changed files."
+              exit 1
+            fi
+            classification="$(
+              python3 .github/scripts/classify_ci_changes.py --github-files-json \
+                --expected-count "$PR_CHANGED_FILES" \
+                <<< "$changed_files_json"
+            )"
+          elif [[ "${{ github.event_name }}" == "push" && "${{ steps.mode.outputs.release_candidate_expected }}" != "true" ]]; then
+            classification="$(python3 .github/scripts/classify_ci_changes.py --push-event "$GITHUB_EVENT_PATH")"
+          fi
+
+          output_value() { sed -n "s/^$1=//p" <<< "$classification"; }
+          should_build="$(output_value should_build)"
+          should_build_pyside="$(output_value should_build_pyside)"
+          should_build_wasm="$(output_value should_build_wasm)"
+          cpp_test_scope="$(output_value cpp_test_scope)"
+          cpp_test_label_regex="$(output_value cpp_test_label_regex)"
+          cpp_test_targets="$(output_value cpp_test_targets)"
+          for value in "$should_build" "$should_build_pyside" "$should_build_wasm"; do
+            [[ "$value" == "true" || "$value" == "false" ]] || {
+              echo "::error::Invalid CI change classification value: $value"
+              exit 1
+            }
+          done
+          if [[ "$should_build" == "false" && "$should_build_pyside" == "true" ]]; then
+            echo "::error::PySide6 validation cannot run when native validation is skipped."
+            exit 1
+          fi
+          label_pattern='^[a-z0-9_^$()|]*$'
+          target_pattern='^[a-z0-9_ ]*$'
+          [[ "$cpp_test_label_regex" =~ $label_pattern &&
+             "$cpp_test_targets" =~ $target_pattern ]] || {
+            echo "::error::Unsafe C++ test selection output."
+            exit 1
+          }
+          case "$cpp_test_scope" in
+            none)
+              [[ -z "$cpp_test_label_regex" && -z "$cpp_test_targets" ]] || exit 1
+              ;;
+            selected)
+              [[ -n "$cpp_test_label_regex" && -n "$cpp_test_targets" &&
+                 "$should_build" == "true" ]] || exit 1
+              ;;
+            all)
+              [[ "$cpp_test_label_regex" == '^qt$' &&
+                 "$cpp_test_targets" == 'fluent_qt_all_tests' &&
+                 "$should_build" == "true" ]] || exit 1
+              ;;
+            *)
+              echo "::error::Invalid C++ test scope: $cpp_test_scope"
+              exit 1
+              ;;
+          esac
+          printf '%s\n' "$classification" >> "$GITHUB_OUTPUT"
+          echo "CI selection: native=$should_build, PySide6=$should_build_pyside, WebAssembly=$should_build_wasm, C++ tests=$cpp_test_scope."
 
   cpp:
     name: C++ validation
@@ -319,8 +320,8 @@ jobs:
   release-ready:
     name: Release ready
     needs: [plan, ci-gate]
-    # Release evidence stays bound to a full run of the exact pushed commit.
-    if: ${{ always() && needs.plan.outputs.mode == 'full' && github.event_name != 'pull_request' }}
+    # Release evidence stays bound to an unclassified full run of the exact pushed commit.
+    if: ${{ always() && needs.plan.outputs.mode == 'full' && (github.event_name != 'push' || needs.plan.outputs.release_candidate_expected == 'true') && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

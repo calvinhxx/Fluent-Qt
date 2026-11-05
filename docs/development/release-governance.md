@@ -18,9 +18,10 @@ represent supported patch lines, not Git Flow release branches.
 ## Branches
 
 - `main` is the default branch, the stable-tag source, and the latest promoted
-  baseline. A push to `main` runs both the standard full validation gate and,
-  for an untagged project version, the immutable desktop/Python release
-  candidate build.
+  baseline. A release-candidate push to `main` (curated notes, untagged
+  version) runs both the standard full validation gate and the immutable
+  desktop/Python release candidate build. Other pushes, such as post-release
+  history updates, use path classification and do not produce `Release ready`.
 - `release/<major>.<minor>.x` branches are long-lived patch lines. The highest
   active version is the normal working branch for features, fixes, CI,
   packaging, documentation, and other maintenance.
@@ -271,8 +272,13 @@ Before creating a stable tag:
    without these curated notes.
 3. Open the `release/X.Y.x` → `main` pull request and wait for its full
    `CI Gate`. Fix failures on the release branch; rerun failed jobs for an
-   external failure. Then rebase-merge the approved commit into `main`; do not
-   tag the pre-merge release-branch SHA.
+   external failure. Record the reviewed head SHA and watch the checks with
+   `gh pr checks <pr> --required --watch --interval 10`. When the full gate
+   passes, rebase with `gh pr merge <pr> --rebase --match-head-commit <sha>`.
+   An administrator using an authorized review exception must first verify that
+   the review count is the only blocker and all required checks passed on that
+   head. In that case use the same pinned merge with `--admin`. Tag the final
+   `main` commit after steps 5 and 6.
 4. Confirm `main` and the worktree are clean, point at the intended commit, and
    declare the intended CMake project version.
 5. Wait for the automatic `CI full` run triggered by the `main` push. If a

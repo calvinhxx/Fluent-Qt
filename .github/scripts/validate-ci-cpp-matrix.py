@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -64,6 +65,8 @@ REQUIRED_FIELDS = {
     "test",
     "build_targets",
     "build_parallel",
+    "compiler_cache",
+    "compiler_cache_max_size",
     "test_labels",
     "exclude_labels",
     "ctest_timeout",
@@ -101,6 +104,66 @@ REQUIRED_EXECUTION_LANES = {
         "exclude_labels": "^(known_contract_gap|manual_visual|local_desktop)$",
     },
 }
+
+
+# Sum of the owner lanes' local ccache limits, in ccache's decimal megabytes.
+# The repository shares one 10 GiB Actions cache with Qt, Python, vcpkg and
+# WebAssembly caches, whose current entries held about 7.5 GiB in November 2026.
+COMPILER_CACHE_BUDGET_MB = 2048
+COMPILER_CACHE_SIZE = re.compile(r"[1-9][0-9]*M")
+# Fields that must match for a lane to reuse another lane's compiler output.
+COMPILER_CACHE_SHARED_FIELDS = ("os", "preset", "qt_version", "qt_source", "qt_arch")
+
+
+def compiler_cache_errors(scenarios: list[Any]) -> list[str]:
+    """Keep ccache snapshots main-owned, Unix-only and inside the cache budget."""
+    errors: list[str] = []
+    by_id = {
+        scenario["id"]: scenario
+        for scenario in scenarios
+        if isinstance(scenario, dict) and isinstance(scenario.get("id"), str)
+    }
+    budget = 0
+    for scenario_id, scenario in by_id.items():
+        context = f"{scenario_id}.compiler_cache"
+        owner_id = scenario.get("compiler_cache")
+        size = scenario.get("compiler_cache_max_size")
+        if not isinstance(owner_id, str) or not isinstance(size, str):
+            errors.append(f"{context} and its max size must be strings")
+            continue
+        if not owner_id:
+            if size:
+                errors.append(f"{context}_max_size requires an enabled compiler cache")
+            continue
+        if str(scenario.get("os", "")).startswith("windows"):
+            errors.append(
+                f"{context} must stay empty on Windows; MSBuild has no compiler launcher"
+            )
+        if not COMPILER_CACHE_SIZE.fullmatch(size):
+            errors.append(f"{context}_max_size must be a whole number of megabytes, such as 384M")
+        owner = by_id.get(owner_id)
+        if owner is None or owner.get("compiler_cache") != owner_id:
+            errors.append(f"{context} must name a lane that owns that cache")
+            continue
+        if owner.get("mode") != "full":
+            errors.append(
+                f"{context} must be owned by a full lane; only full runs save from main"
+            )
+        if owner_id == scenario_id:
+            if COMPILER_CACHE_SIZE.fullmatch(size):
+                budget += int(size[:-1])
+            continue
+        for field in COMPILER_CACHE_SHARED_FIELDS:
+            if scenario.get(field) != owner.get(field):
+                errors.append(f"{context} must share {field} with {owner_id}")
+        if size != owner.get("compiler_cache_max_size"):
+            errors.append(f"{context}_max_size must match {owner_id}")
+    if budget > COMPILER_CACHE_BUDGET_MB:
+        errors.append(
+            f"compiler cache owners use {budget}M; the repository budget is "
+            f"{COMPILER_CACHE_BUDGET_MB}M"
+        )
+    return errors
 
 
 def ctest_parallel_errors(context: str, scenario: dict[str, Any]) -> list[str]:
@@ -206,6 +269,8 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(
                 f"{context} ci_full selection must not build the exhaustive local test set"
             )
+
+    errors.extend(compiler_cache_errors(scenarios))
 
     for mode, expected_ids in EXPECTED_IDS.items():
         actual_ids = ids_by_mode[mode]

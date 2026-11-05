@@ -19,7 +19,8 @@ belong to [release governance](release-governance.md).
 |---|---|---|
 | Pull request | `fast`; path classification may skip native builds | Disabled |
 | Release pull request (`release/*` → `main`, same repository) | `full`; path classification still applies; no `Release ready` | Disabled |
-| Push to `main` | `full` | Built separately by Release Candidate for an untagged release version |
+| Push to `main` for a release candidate (curated notes, version not yet tagged) | `full`; no path classification | Built separately by Release Candidate |
+| Other push to `main` | `full`; path classification against the previous `main` tip; WebAssembly stays enabled for Pages; no `Release ready` | Disabled |
 | Weekly schedule | `full` | Enabled |
 | Manual CI | `fast` by default; `full` selectable | Opt in with `python_release_bundle=true`; requires `full` |
 
@@ -34,7 +35,17 @@ Linux job in either tier also runs the C++ tests selected by the changed paths.
 Both macOS ARM64 tiers move the installed development SDK and build an external
 consumer. The Linux and Windows Python compatibility jobs install the core wheel
 and run the first-window trial before full validation adds the Gallery wheel to
-the same environment. Only a successful non-PR full run supplies `Release ready`.
+the same environment. Only a successful unclassified full run supplies
+`Release ready`: a release-candidate push, the weekly schedule, or a manual
+full run.
+
+Other pushes to `main`, such as post-release history updates, compare the
+pushed commit with the previous `main` tip. Pages deploys the website and Web
+Gallery from one run, so these pushes always keep the WebAssembly lane. A new
+branch, rewritten history, an identical tree, or an unavailable previous tip
+runs the complete matrix. Classification does not re-check a failed earlier
+`main` run; the weekly schedule and the next release candidate still run the
+full matrix.
 
 `ci_fast` and `ci_full` are curated CTest subsets. `local_full` is the exhaustive
 non-manual host set; a full CI run is not an exhaustive local or native visual
@@ -117,7 +128,9 @@ host and focused contract validation.
 
 Build `fluent_qt_ci_full_tests` when selecting `^ci_full$`. Compiling
 `fluent_qt_all_tests` for that selection adds local-only binaries that the job
-never runs. Exhaustive local builds remain available through `fluent_qt_all_tests`;
+never runs. Test modules link into one executable per test directory and CI
+tier, so the aggregates link a few dozen executables rather than one per
+module; see [shared test executables](testing-workflow.md#ctest-labels). Exhaustive local builds remain available through `fluent_qt_all_tests`;
 the sanitizer lane still builds its separate contract aggregate.
 
 CI may pin build parallelism to its measured runner capacity. Local builds and
@@ -131,12 +144,32 @@ each lane's build capacity. Windows and native display lanes run tests serially.
 Tests sharing settings, files or desktop focus must use a CTest `RESOURCE_LOCK`
 or `RUN_SERIAL`. See the [testing workflow](testing-workflow.md#ctest-labels).
 
-Only the Linux x64 Qt 6.2 sanitizer lane uses ccache. It restores the latest
-available snapshot and enables compiler launchers after ccache initializes.
-A successful push or scheduled run on `main` can save one snapshot per UTC ISO
-week, with a 512 MB local cache limit. PRs only read the cache. Cache setup
-and transfer failures allow ordinary compilation to continue. Compare ccache
-hits, total job time and repository cache use before expanding the trial.
+Linux and macOS lanes use ccache. A lane's `compiler_cache` names the full lane
+that owns its snapshot. The cache key combines that lane, runner OS and
+architecture, Qt version, a hash of the `c++ --version` line, and the UTC ISO
+week. A successful push or scheduled run on `main` saves the owner's snapshot
+once a week. Pull requests, including release pull requests, only restore.
+The fast tier never runs on `main`. Its Linux x64 and macOS ARM64 lanes therefore
+reuse the identically configured full-lane snapshots.
+
+Each owner sets `compiler_cache_max_size`. The matrix validator keeps the total
+within the 2048 MB ccache budget, leaving room for the other caches under the
+repository's 10 GiB limit. ccache stores entries at zstd level 5; measured on
+local Debug objects, this is about 18% smaller than the default level.
+
+Hosted runners reuse the same absolute workspace path, so keys stay stable
+without `base_dir`. Do not set it: ccache would pass relative paths to the
+compiler, and tests such as `TestQtCompat` locate repository files from
+`__FILE__`. Directory hashing is disabled. Launchers are enabled only after
+ccache initializes, before the first CMake configure. Cache setup and transfer
+failures fall back to ordinary compilation. The installed first-window trial
+clears the launchers so that it times an uncached application build.
+
+Windows lanes stay on Visual Studio/MSBuild without a compiler cache. MSBuild
+has no CMake compiler launcher. Moving to Ninja would change the generator,
+architecture selection and debug-information format of presets shared with
+desktop packaging. Track ccache hit rates, `Build` step times and repository
+cache use after a warm `main` run before changing a lane's limit.
 
 Full Python validation also builds the optional Spatial binding on one Linux
 Qt 6.9 lane. It checks the binding and Gallery contracts offscreen, then OpenGL
@@ -201,6 +234,10 @@ The critical Windows ARM64 lane is queued first. Consult the wheel matrix for
 supported ABIs and the
 [Python publishing runbook](../../bindings/pyside6/PUBLISHING.md) for promotion,
 index verification, and recovery.
+
+Both macOS stable-ABI wheel jobs precompile the generated Shiboken module
+header once per build. Each wrapper still compiles separately. The compiler
+tracks header changes within that build, and each new runner starts from source.
 
 A release push starts Release Candidate and full CI together. They share
 hosted-runner capacity, including the account's platform-specific limits. A
