@@ -1265,6 +1265,14 @@ if(BUILD_TESTING)
             LABELS "pyside;unit;ci_fast"
             TIMEOUT 60)
 
+        add_test(
+            NAME test_pyside6_preview_client
+            COMMAND "${Python_EXECUTABLE}"
+                "${PROJECT_SOURCE_DIR}/tools/dev/test_fluent_qt_preview_client.py")
+        set_tests_properties(test_pyside6_preview_client PROPERTIES
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 30)
+
         # The checked-in WebAssembly teaching catalog is produced by the
         # official PySide6 release runtime. Older, non-published Qt 6.2
         # compatibility wheels can render equivalent enum expressions with
