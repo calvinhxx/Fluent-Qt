@@ -293,6 +293,18 @@ if (!paletteGuard) {
                                  remove="all"/>
             </object-type>
             <object-type name="ComboBox">
+                <modify-function signature="setTrailingWidget(QWidget*,fluent::WidgetOwnership)"
+                                 rename="_setTrailingWidgetWithOwnership"/>
+                <modify-function signature="trailingWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeTrailingWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
                 <!-- ComboBox overrides QComboBox::setModel(). Repeat the
                      caller-owned keep-reference contract on the derived
                      wrapper so replacing a Python model releases the old
@@ -1651,6 +1663,18 @@ if (resolvedOwner) {
                 <enum-type name="TextColorRole"/>
             </object-type>
             <object-type name="LineEdit">
+                <modify-function signature="setTrailingWidget(QWidget*,fluent::WidgetOwnership)"
+                                 rename="_setTrailingWidgetWithOwnership"/>
+                <modify-function signature="trailingWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeTrailingWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
                 <!-- Theme refresh belongs to the C++ styling pipeline. Keep
                      it out of every Python text-field subclass, including
                      AutoSuggestBox through inherited method lookup. -->

@@ -32,6 +32,45 @@ using namespace fluent::basicinput;
 using namespace fluent::textfields;
 using fluent::collections::ListView;
 
+TEST(AutoSuggestBoxTrailingContentTest, LogicalAndLegacyPositionsReserveSeparateAreas)
+{
+    using Placement = AutoSuggestBox::QueryButtonPlacement;
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        for (auto placement : {Placement::Left, Placement::Right, Placement::Leading, Placement::Trailing}) {
+            AutoSuggestBox box;
+            box.setHeader("Projects");
+            box.setText("Fluent");
+            box.setQueryButtonPlacement(placement);
+            box.setLayoutDirection(direction);
+            box.setTrailingText("3 results");
+            box.resize(280, box.sizeHint().height());
+            box.show();
+            QApplication::processEvents();
+            auto* query = box.findChild<Button*>("AutoSuggestBoxQueryButton");
+            auto* clear = box.findChild<Button*>("AutoSuggestBoxClearButton");
+            auto* suffix = box.findChild<Label*>("fluentFieldTrailingText");
+            ASSERT_NE(query, nullptr);
+            ASSERT_NE(clear, nullptr);
+            ASSERT_NE(suffix, nullptr);
+            EXPECT_FALSE(query->geometry().intersects(clear->geometry()));
+            EXPECT_FALSE(suffix->geometry().intersects(query->geometry()));
+            EXPECT_FALSE(suffix->geometry().intersects(clear->geometry()));
+            EXPECT_GE(suffix->y(), 24);
+            const bool physicalLeft = placement == Placement::Left
+                || (placement == Placement::Leading && direction == Qt::LeftToRight)
+                || (placement == Placement::Trailing && direction == Qt::RightToLeft);
+            EXPECT_EQ(query->geometry().center().x() < box.width() / 2, physicalLeft);
+            box.setClearButtonAccessibleName("Clear project");
+            box.setClearButtonFocusPolicy(Qt::StrongFocus);
+            EXPECT_EQ(clear->accessibleName(), QString("Clear project"));
+            EXPECT_EQ(clear->focusPolicy(), Qt::StrongFocus);
+            box.clear();
+            EXPECT_TRUE(clear->isHidden());
+            EXPECT_FALSE(suffix->geometry().intersects(query->geometry()));
+        }
+    }
+}
+
 class AutoSuggestBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;

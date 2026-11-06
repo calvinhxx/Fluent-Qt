@@ -290,7 +290,18 @@
       "suggestionFontRole",
       "suggestionItemHeight",
       "suggestionModel",
-      "suggestions"
+      "suggestions",
+      "trailingText",
+      "setTrailingText",
+      "trailingWidget",
+      "trailingWidgetOwnership",
+      "setTrailingWidget",
+      "takeTrailingWidget",
+      "releaseTrailingWidget",
+      "clearButtonAccessibleName",
+      "setClearButtonAccessibleName",
+      "clearButtonFocusPolicy",
+      "setClearButtonFocusPolicy"
     ],
     "Button": [
       "fontRole",
@@ -625,7 +636,14 @@
       "setPopupOffset",
       "setPressProgress",
       "setRootModelIndex",
-      "showPopup"
+      "showPopup",
+      "trailingText",
+      "setTrailingText",
+      "trailingWidget",
+      "trailingWidgetOwnership",
+      "setTrailingWidget",
+      "takeTrailingWidget",
+      "releaseTrailingWidget"
     ],
     "MultiSelectComboBox": [
       "clearSelection",
@@ -1825,7 +1843,18 @@
       "selectedItems",
       "selectedKeys",
       "selectedTexts",
-      "setSelectedItems"
+      "setSelectedItems",
+      "trailingText",
+      "setTrailingText",
+      "trailingWidget",
+      "trailingWidgetOwnership",
+      "setTrailingWidget",
+      "takeTrailingWidget",
+      "releaseTrailingWidget",
+      "clearButtonAccessibleName",
+      "setClearButtonAccessibleName",
+      "clearButtonFocusPolicy",
+      "setClearButtonFocusPolicy"
     ],
     "RangeSlider": [
       "orientation",
@@ -1950,7 +1979,44 @@
       "isScrubbing",
       "scrubHandleRect",
       "cancelScrub",
-      "commitInput"
+      "commitInput",
+      "trailingText",
+      "setTrailingText",
+      "trailingWidget",
+      "trailingWidgetOwnership",
+      "setTrailingWidget",
+      "takeTrailingWidget",
+      "releaseTrailingWidget",
+      "clearButtonAccessibleName",
+      "setClearButtonAccessibleName",
+      "clearButtonFocusPolicy",
+      "setClearButtonFocusPolicy"
+    ],
+    "LineEdit": [
+      "trailingText",
+      "setTrailingText",
+      "trailingWidget",
+      "trailingWidgetOwnership",
+      "setTrailingWidget",
+      "takeTrailingWidget",
+      "releaseTrailingWidget",
+      "clearButtonAccessibleName",
+      "setClearButtonAccessibleName",
+      "clearButtonFocusPolicy",
+      "setClearButtonFocusPolicy"
+    ],
+    "PasswordBox": [
+      "trailingText",
+      "setTrailingText",
+      "trailingWidget",
+      "trailingWidgetOwnership",
+      "setTrailingWidget",
+      "takeTrailingWidget",
+      "releaseTrailingWidget",
+      "clearButtonAccessibleName",
+      "setClearButtonAccessibleName",
+      "clearButtonFocusPolicy",
+      "setClearButtonFocusPolicy"
     ]
   },
   "optional_modules": {

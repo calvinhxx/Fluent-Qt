@@ -190,6 +190,17 @@ CLASS_METHOD_SIGNATURES = {
     ("fluentqt.design", "ThemeTokens", "__getattr__"):
         "(self, name: str) -> Any",
 }
+for _module_name in (*NATIVE_MODULE_NAMES, "fluentqt.basicinput"):
+    for _class_name in ("LineEdit", "AutoSuggestBox", "NumberBox", "PasswordBox", "TagInput", "ComboBox"):
+        CLASS_METHOD_SIGNATURES.update({
+            (_module_name, _class_name, "setTrailingWidget"):
+                "(self, widget: PySide6.QtWidgets.QWidget | None, "
+                "ownership: _native.fluent.WidgetOwnership) -> bool",
+            (_module_name, _class_name, "takeTrailingWidget"):
+                "(self) -> PySide6.QtWidgets.QWidget | None",
+            (_module_name, _class_name, "releaseTrailingWidget"): "(self) -> None",
+        })
+
 CLASS_ATTRIBUTE_TYPES = {
     ("fluentqt.plugins", "PluginMetadata", "id"): "str",
     ("fluentqt.plugins", "PluginMetadata", "name"): "str",

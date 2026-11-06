@@ -7,8 +7,10 @@
 #include <QPoint>
 #include <QPointer>
 #include <QStyledItemDelegate>
+#include <memory>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 #include "design/Typography.h"
 #include "design/Spacing.h"
 
@@ -17,12 +19,18 @@ class QPropertyAnimation;
 class QKeyEvent;
 class QLineEdit;
 class QWheelEvent;
+namespace fluent::detail {
+class FieldTrailingContent;
+}
 
 namespace fluent::textfields {
 class LineEdit;
 }
 
 namespace fluent::basicinput {
+namespace detail {
+class ComboBoxAccessible;
+}
 
 // ─── ComboBox popup delegate. zh_CN: ComboBox 弹层代理 ─────────────────────
 
@@ -99,6 +107,11 @@ class ComboBox : public QComboBox, public FluentElement, public QMLPlus {
      * zh_CN: 自绘表面使用的按压动画进度。
     */
     Q_PROPERTY(qreal pressProgress READ pressProgress WRITE setPressProgress)
+    Q_PROPERTY(QString trailingText READ trailingText WRITE setTrailingText NOTIFY trailingTextChanged)
+    Q_PROPERTY(QWidget* trailingWidget READ trailingWidget NOTIFY trailingWidgetChanged)
+    Q_PROPERTY(fluent::WidgetOwnership trailingWidgetOwnership
+        READ trailingWidgetOwnership
+        NOTIFY trailingWidgetOwnershipChanged)
 
 public:
     explicit ComboBox(QWidget* parent = nullptr);
@@ -153,6 +166,24 @@ public:
 
     fluent::textfields::LineEdit* fluentLineEdit() const;
 
+    QString trailingText() const;
+    /** @brief Displays a plain-text suffix in both editing modes without changing item values.
+     * zh_CN: 在两种编辑模式中显示纯文字尾缀，不改变选项值。 */
+    void setTrailingText(const QString& text);
+    QWidget* trailingWidget() const;
+    WidgetOwnership trailingWidgetOwnership() const;
+    /** @brief Hosts one trailing widget outside the editor, replacing suffix text.
+     * zh_CN: 在编辑器之外承载一个尾部控件，并替换文字尾缀。
+     * Uses explicit ownership; take the widget before changing its lifetime policy.
+     * zh_CN: 使用显式所有权；改变生命周期策略前须先取出控件。 */
+    bool setTrailingWidget(QWidget* widget, WidgetOwnership ownership);
+    /** @brief Detaches custom trailing content and transfers it to the caller.
+     * zh_CN: 脱离自定义尾部内容并交回调用方。 */
+    QWidget* takeTrailingWidget();
+    /** @brief Releases custom trailing content according to its recorded ownership policy.
+     * zh_CN: 按记录的所有权策略释放自定义尾部内容。 */
+    void releaseTrailingWidget();
+
     // --- QComboBox overrides ---
     QAbstractItemModel* model() const { return QComboBox::model(); }
     void setModel(QAbstractItemModel* model) FLUENT_QT6_ONLY_OVERRIDE;
@@ -160,11 +191,15 @@ public:
     void hidePopup() override;
 
     QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
 
 signals:
     void fontRoleChanged();
     void layoutChanged();
     void chevronChanged();
+    void trailingTextChanged();
+    void trailingWidgetChanged();
+    void trailingWidgetOwnershipChanged();
 
 protected:
     bool event(QEvent* event) override;
@@ -184,6 +219,8 @@ protected:
 
 private:
     friend class ComboBoxPopup;
+    friend class detail::ComboBoxAccessible;
+    QWidget* accessiblePopupWidget() const;
     void initAnimation();
     void onPopupHidden();
     void synchronizeLineEdit();
@@ -219,6 +256,8 @@ private:
     QPointer<QObject> m_observedLineEdit;
     bool m_editorMutationInProgress = false;
     bool m_editorLayoutInProgress = false;
+    std::unique_ptr<::fluent::detail::FieldTrailingContent> m_trailingContent;
+    int m_trailingContentWidth = 0;
 
     // --- Popup ---
     class ComboBoxPopup;

@@ -308,9 +308,13 @@ void TagInput::layoutTags()
     const int gap = 4;
     const int rowHeight = qMax(28, fontMetrics().height() + 8);
     const int query = isQueryIconVisible() ? queryButtonSize() + 6 : 0;
-    const int leading = edge + (queryButtonPlacement() == QueryButtonPlacement::Left ? query : 0);
-    const int trailing = edge + (queryButtonPlacement() == QueryButtonPlacement::Right ? query : 0);
-    const int right = width() - trailing;
+    const auto placement = queryButtonPlacement();
+    const bool queryLeading = placement == QueryButtonPlacement::Leading
+        || (placement == QueryButtonPlacement::Left && layoutDirection() == Qt::LeftToRight)
+        || (placement == QueryButtonPlacement::Right && layoutDirection() == Qt::RightToLeft);
+    const int leading = edge + (queryLeading ? query : 0);
+    const int trailing = edge + (queryLeading ? 0 : query);
+    const int right = width() - trailing - trailingContentWidth();
     const int available = qMax(1, right - leading);
     const int top = height() - inputHeight();
     int x = leading;
@@ -333,7 +337,7 @@ void TagInput::layoutTags()
             x = leading;
             y += rowHeight + gap;
         }
-        const QRect bounds(leading, top, available, inputHeight());
+        const QRect bounds(0, top, width(), inputHeight());
         tag->setGeometry(QStyle::visualRect(layoutDirection(), bounds, QRect(x, top + y, w, rowHeight)));
         x += w + gap;
     }
@@ -357,6 +361,12 @@ void TagInput::layoutTags()
     m_layouting = false;
     updateGeometry();
     update();
+}
+
+void TagInput::trailingContentGeometryChanged()
+{
+    AutoSuggestBox::trailingContentGeometryChanged();
+    layoutTags();
 }
 
 void TagInput::resizeEvent(QResizeEvent* event)
@@ -492,8 +502,13 @@ bool TagInput::eventFilter(QObject* watched, QEvent* event)
 
 bool TagInput::focusNextPrevChild(bool next)
 {
-    if (QApplication::focusWidget() && isAncestorOf(QApplication::focusWidget()))
-        setFocus(Qt::OtherFocusReason);
+    QWidget* focused = QApplication::focusWidget();
+    for (QWidget* tag : std::as_const(m_tags)) {
+        if (focused && (focused == tag || tag->isAncestorOf(focused))) {
+            setFocus(Qt::OtherFocusReason);
+            break;
+        }
+    }
     return AutoSuggestBox::focusNextPrevChild(next);
 }
 

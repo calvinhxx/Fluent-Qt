@@ -127,6 +127,18 @@ the 11-pixel selector chrome inset that positions the ComboBox chevron.
 geometry is adapted without replacing Qt text, cursor, selection or IME painting.
 Leading icons, tags and segmented date/time fields retain their explicit spaces.
 
+LineEdit and ComboBox expose one logical trailing-content slot. `setTrailingText`
+and `setTrailingWidget` replace each other; the text getter reports only the
+configured plain-text suffix, and the widget getter reports only caller-supplied
+content. Custom widgets use explicit `WidgetOwnership`; reinstalling the same
+widget with a different policy requires `takeTrailingWidget()` first.
+`takeTrailingWidget()` always transfers content, while `releaseTrailingWidget()`
+applies the recorded policy. Empty text or a null widget clears the slot. Suffixes
+never become editor values. Components reserve native chrome and hosted content
+before computing the editable rectangle, without writing caller text margins.
+Application layouts must honor minimum size hints for custom action hit targets;
+an explicitly undersized fixed widget cannot preserve arbitrary content sizes.
+
 Derived text inputs must honor LineEdit's `frameVisible` surface contract.
 NumberBox exposes `commitInput()` for consumers that must read the numeric value
 before focus-out, including item delegates. Keep model commits in the delegate:
