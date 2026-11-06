@@ -5017,6 +5017,28 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(index_changes[-1:], [1])
         self.assertEqual(text_changes[-1:], ["Beta"])
 
+    def test_combo_box_editable_selection_preserves_editor_geometry(self):
+        host = QWidget()
+        combo = fluentqt.ComboBox(host)
+        combo.setEditable(True)
+        combo.addItems(["640", "1280", "1536"])
+        combo.setCurrentIndex(1)
+        combo.resize(160, 32)
+        try:
+            host.show()
+            QCoreApplication.processEvents()
+            editor = combo.lineEdit()
+            expected = editor.geometry()
+            changes = []
+            combo.currentIndexChanged.connect(changes.append)
+            for index in (0, 1, 1, 2):
+                QComboBox.setCurrentIndex(combo, index)
+                self.assertEqual(editor.geometry(), expected)
+                self.assertEqual(editor.text(), combo.itemText(index))
+            self.assertEqual(changes, [0, 1, 2])
+        finally:
+            host.close()
+
     def test_combo_box_explicit_font_reaches_editor_and_dropdown(self):
         previous_theme = fluentqt.current_theme()
         host = QWidget()
