@@ -218,6 +218,7 @@ private:
     // --- Editable ---
     QPointer<QObject> m_observedLineEdit;
     bool m_editorMutationInProgress = false;
+    bool m_editorLayoutInProgress = false;
 
     // --- Popup ---
     class ComboBoxPopup;

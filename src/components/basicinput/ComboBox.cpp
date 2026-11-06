@@ -6,6 +6,7 @@
 #include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QMoveEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPersistentModelIndex>
@@ -744,6 +745,8 @@ QLineEdit* ComboBox::observedLineEdit() const
 
 void ComboBox::layoutLineEdit()
 {
+    if (m_editorLayoutInProgress)
+        return;
     synchronizeLineEdit();
     QLineEdit* editor = observedLineEdit();
     if (!editor)
@@ -759,7 +762,13 @@ void ComboBox::layoutLineEdit()
         geometry.setLeft(qMax(geometry.left(), textRect.left()));
     else
         geometry.setRight(qMin(geometry.right(), textRect.right()));
+    if (editor->geometry() == geometry)
+        return;
+    const QPointer<ComboBox> guard(this);
+    m_editorLayoutInProgress = true;
     editor->setGeometry(geometry);
+    if (guard)
+        m_editorLayoutInProgress = false;
 }
 
 void ComboBox::applyLineEditStyle()
@@ -940,7 +949,24 @@ void ComboBox::mouseMoveEvent(QMouseEvent* event)
 bool ComboBox::eventFilter(QObject* watched, QEvent* event)
 {
     if (auto* editor = watched == m_observedLineEdit ? observedLineEdit() : nullptr) {
-        if (event->type() == QEvent::FontChange && editor->font() != font()) {
+        if ((event->type() == QEvent::Move || event->type() == QEvent::Resize) && !m_editorLayoutInProgress) {
+            // QComboBox reapplies its native editor rectangle on selection/model
+            // changes, including a repeated index that emits no change signal.
+            // Discard that superseded event; our corrected geometry sends its own.
+            // zh_CN: Qt 会在选择/模型变化（含不发信号的同索引设置）后重置编辑框矩形；
+            // 修正后的几何会发送新事件，旧几何事件不再交给编辑器处理。
+            const QPointer<ComboBox> guard(this);
+            const QPointer<QLineEdit> editorGuard(editor);
+            layoutLineEdit();
+            if (!guard || !editorGuard)
+                return true;
+            // Qt may still send the original Resize after we correct Move.
+            // zh_CN: 修正 Move 后，Qt 仍可能继续派发携带旧尺寸的 Resize。
+            if ((event->type() == QEvent::Move && static_cast<QMoveEvent*>(event)->pos() != editorGuard->pos())
+                || (event->type() == QEvent::Resize
+                    && static_cast<QResizeEvent*>(event)->size() != editorGuard->size()))
+                return true;
+        } else if (event->type() == QEvent::FontChange && editor->font() != font()) {
             // The embedded Fluent editor also refreshes independently.
             // zh_CN: 内嵌 Fluent 编辑框也独立刷新主题，字体始终跟随 ComboBox。
             editor->setFont(font());
