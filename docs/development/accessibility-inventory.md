@@ -39,7 +39,9 @@ Editors and selection fields share the 9 logical-pixel horizontal text inset
 in `Spacing::Padding::TextFieldHorizontal`. `LineEditMetricsCompat_p.h` removes
 Qt's additional editor padding; explicit content margins, including zero, refer
 to the resulting text area. ComboBox uses the same text rectangle in painted
-and editable modes, including immediately after padding changes. LineEdit,
+and editable modes, including immediately after padding changes and selection
+commits. Repeated indices, model updates and popup selection preserve editor
+geometry and caller-owned text margins. LineEdit,
 PasswordBox, NumberBox, AutoSuggestBox, empty TagInput, TreeSelect, MultiSelectComboBox
 and TextEdit are covered by `InputTextInsetsTest`. Prefix icons, tags and picker
 segments retain their own reserved space. These painting changes preserve native

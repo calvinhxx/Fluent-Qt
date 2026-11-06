@@ -191,6 +191,39 @@ TEST_F(InputTextInsetsTest, Contract_ExplicitInsetsAndPlaceholderMatchPaintedFie
     }
 }
 
+TEST_F(InputTextInsetsTest, Contract_EditableSelectionKeepsPaintedTextStart)
+{
+    for (auto appearance : {FluentElement::Light, FluentElement::Dark}) {
+        FluentElement::setTheme(appearance);
+        QWidget host;
+        ComboBox reference(&host);
+        ComboBox editable(&host);
+        editable.setEditable(true);
+        for (auto* combo : {&reference, &editable}) {
+            combo->addItems({"640", "1280", "1536"});
+            combo->setCurrentIndex(1);
+        }
+        host.setFocusPolicy(Qt::StrongFocus);
+        host.resize(320, 100);
+        for (int width : {160, 280}) {
+            reference.setGeometry(0, 0, width, 32);
+            editable.setGeometry(0, 40, width, 32);
+            host.show();
+            host.setFocus();
+            QApplication::processEvents();
+            for (int index : {0, 1, 1, 2}) {
+                SCOPED_TRACE(
+                    ::testing::Message() << "theme=" << appearance << " width=" << width << " index=" << index);
+                reference.setCurrentIndex(index);
+                editable.setCurrentIndex(index);
+                editable.lineEdit()->deselect();
+                for (qreal dpr : {1.0, 1.25, 2.0})
+                    expectSameTextStart(reference, editable, dpr);
+            }
+        }
+    }
+}
+
 TEST_F(InputTextInsetsTest, Contract_EditableFieldsTrackInsetsWithoutResize)
 {
     QWidget host;

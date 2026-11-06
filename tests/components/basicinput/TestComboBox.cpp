@@ -15,8 +15,10 @@
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMoveEvent>
 #include <QPixmap>
 #include <QPointer>
+#include <QResizeEvent>
 #include <QSignalSpy>
 #include <QStandardItem>
 #include <QStandardItemModel>
@@ -195,6 +197,25 @@ void sendWheel(QWidget* target, int angleDeltaY)
         Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::sendEvent(target, &event);
 }
+
+class ComboBoxGeometryRecordingEditor : public QLineEdit {
+public:
+    QList<QPair<QPoint, QPoint>> moves;
+    QList<QPair<QSize, QSize>> resizes;
+
+protected:
+    void moveEvent(QMoveEvent* event) override
+    {
+        moves.append(qMakePair(event->pos(), pos()));
+        QLineEdit::moveEvent(event);
+    }
+
+    void resizeEvent(QResizeEvent* event) override
+    {
+        resizes.append(qMakePair(event->size(), size()));
+        QLineEdit::resizeEvent(event);
+    }
+};
 } // namespace
 
 // ─── 基础功能测试 ────────────────────────────────────────────────────────────
@@ -773,6 +794,99 @@ TEST_F(ComboBoxTest, EditableSelectUpdatesLineEdit)
     cb.repaint();
 }
 
+TEST_F(ComboBoxTest, Contract_EditableGeometrySurvivesSelectionAndModelChanges)
+{
+    for (bool nativeEditor : {false, true}) {
+        for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            SCOPED_TRACE(::testing::Message() << "nativeEditor=" << nativeEditor << " direction=" << direction);
+            ComboBox combo(window);
+            combo.setEditable(true);
+            if (nativeEditor)
+                combo.setLineEdit(new QLineEdit);
+            combo.setLayoutDirection(direction);
+            combo.addItems({"640", "1280", "1536"});
+            combo.setCurrentIndex(1);
+            QComboBox* base = &combo;
+            QLineEdit* editor = combo.lineEdit();
+            const QMargins extra(5, 0, 7, 0);
+            editor->setTextMargins(extra);
+            window->show();
+            combo.show();
+            for (int width : {160, 280}) {
+                combo.resize(width, combo.height());
+                QApplication::processEvents();
+                const QRect expected = editor->geometry();
+                for (int index : {0, 1, 1, 2}) {
+                    SCOPED_TRACE(index);
+                    base->setCurrentIndex(index);
+                    EXPECT_EQ(editor->geometry(), expected);
+                    EXPECT_EQ(editor->text(), combo.itemText(index));
+                    QApplication::processEvents();
+                    EXPECT_EQ(editor->geometry(), expected);
+                    EXPECT_EQ(editor->textMargins(), extra);
+                }
+                combo.setItemText(combo.currentIndex(), QStringLiteral("Updated"));
+                EXPECT_EQ(editor->geometry(), expected);
+                EXPECT_EQ(editor->text(), QStringLiteral("Updated"));
+                combo.removeItem(combo.currentIndex());
+                EXPECT_EQ(editor->geometry(), expected);
+                combo.addItem(QStringLiteral("1536"));
+            }
+        }
+    }
+}
+
+TEST_F(ComboBoxTest, Contract_CustomEditorReceivesCurrentGeometryEvents)
+{
+    ComboBox combo(window);
+    auto* editor = new ComboBoxGeometryRecordingEditor;
+    combo.setLineEdit(editor);
+    combo.setContentPaddingH(17);
+    combo.addItems({"640", "1280", "1536"});
+    combo.setCurrentIndex(1);
+    combo.setGeometry(40, 40, 160, Spacing::ControlHeight::Standard);
+    window->show();
+    combo.show();
+    QApplication::processEvents();
+    const QRect expected = editor->geometry();
+    for (int row : {0, 1, 1, 2}) {
+        SCOPED_TRACE(row);
+        editor->moves.clear();
+        editor->resizes.clear();
+        combo.setCurrentIndex(row);
+        EXPECT_EQ(editor->geometry(), expected);
+        for (const auto& observation : editor->moves)
+            EXPECT_EQ(observation.first, observation.second) << "Move payload must match the current position";
+        for (const auto& observation : editor->resizes)
+            EXPECT_EQ(observation.first, observation.second) << "Resize payload must match the current size";
+    }
+}
+
+TEST_F(ComboBoxTest, Contract_EditablePopupCommitsPreserveTextGeometry)
+{
+    ComboBox combo(window);
+    combo.setEditable(true);
+    combo.addItems({"640", "1280", "1536"});
+    combo.setCurrentIndex(1);
+    combo.setGeometry(40, 40, 160, Spacing::ControlHeight::Standard);
+    ASSERT_TRUE(focusComboBoxForPopupInput(&combo, window));
+    const QRect expected = combo.lineEdit()->geometry();
+    for (int row : {0, 1, 1, 2}) {
+        SCOPED_TRACE(row);
+        auto* popup = openPopupFor(&combo, window);
+        ASSERT_NE(popup, nullptr);
+        auto* list = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+        ASSERT_NE(list, nullptr);
+        const QModelIndex index = list->model()->index(row, 0);
+        const QRect itemRect = static_cast<QAbstractItemView*>(list)->visualRect(index);
+        QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, itemRect.center());
+        EXPECT_FALSE(popup->isOpen());
+        EXPECT_EQ(combo.currentIndex(), row);
+        EXPECT_EQ(combo.lineEdit()->text(), combo.itemText(row));
+        EXPECT_EQ(combo.lineEdit()->geometry(), expected);
+    }
+}
+
 // ─── Flyout 弹层行为测试 ────────────────────────────────────────────────────
 
 TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle)
@@ -1026,6 +1140,7 @@ TEST_F(ComboBoxTest, Contract_PopupKeyboardUpdatesEditableText)
     ASSERT_TRUE(focusComboBoxForPopupInput(&cb, window));
     auto* editor = cb.lineEdit();
     ASSERT_NE(editor, nullptr);
+    const QRect expectedEditorGeometry = editor->geometry();
     editor->setFocus(Qt::OtherFocusReason);
     ASSERT_TRUE(QTest::qWaitFor([editor] { return editor->hasFocus(); }, 1000));
     auto* popup = openPopupFor(&cb, window);
@@ -1040,6 +1155,7 @@ TEST_F(ComboBoxTest, Contract_PopupKeyboardUpdatesEditableText)
     EXPECT_EQ(cb.currentIndex(), 1);
     EXPECT_EQ(cb.currentText(), QStringLiteral("Beta"));
     EXPECT_EQ(editor->text(), QStringLiteral("Beta"));
+    EXPECT_EQ(editor->geometry(), expectedEditorGeometry);
     EXPECT_FALSE(popup->isOpen());
     EXPECT_TRUE(editor->hasFocus());
 }
