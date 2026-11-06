@@ -573,14 +573,17 @@ void NumberBox::paintEvent(QPaintEvent* event)
     LineEdit::paintEvent(event);
     if (m_scrubbingEnabled) {
         QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
         const auto& colors = themeColorsRef();
         painter.setPen(QPen(isEnabled() && !isReadOnly() ? colors.textSecondary : colors.textDisabled, 1.5));
-        const QPoint center = scrubHandleRect().center();
-        painter.drawLine(center + QPoint(-6, 0), center + QPoint(6, 0));
-        painter.drawLine(center + QPoint(-6, 0), center + QPoint(-3, -3));
-        painter.drawLine(center + QPoint(-6, 0), center + QPoint(-3, 3));
-        painter.drawLine(center + QPoint(6, 0), center + QPoint(3, -3));
-        painter.drawLine(center + QPoint(6, 0), center + QPoint(3, 3));
+        // Center on the full extent; QRect's integer center biases even-sized handles up/left.
+        // zh_CN: 按完整尺寸居中，避免 QRect 整数中心使偶数尺寸的手柄偏向左上。
+        const QPointF center = QRectF(scrubHandleRect()).center();
+        painter.drawLine(center + QPointF(-6, 0), center + QPointF(6, 0));
+        painter.drawLine(center + QPointF(-6, 0), center + QPointF(-3, -3));
+        painter.drawLine(center + QPointF(-6, 0), center + QPointF(-3, 3));
+        painter.drawLine(center + QPointF(6, 0), center + QPointF(3, -3));
+        painter.drawLine(center + QPointF(6, 0), center + QPointF(3, 3));
     }
 }
 

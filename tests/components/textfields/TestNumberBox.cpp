@@ -5,11 +5,13 @@
 #include <QImage>
 #include <QIntValidator>
 #include <QPalette>
+#include <QPainter>
 #include <QPointer>
 #include <QSignalBlocker>
 #include <QTimer>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
+#include <QtMath>
 
 #include <cmath>
 #include <limits>
@@ -132,6 +134,51 @@ TEST_F(NumberBoxTest, Contract_FrameVisibilityControlsTheWholeNumericSurface)
     surface.render(&image);
     for (const auto point : {QPoint(2, 2), QPoint(80, 3), QPoint(160, 28)})
         EXPECT_EQ(image.pixelColor(box.mapTo(&surface, point)), backdrop);
+}
+
+TEST_F(NumberBoxTest, Contract_ScrubIndicatorCentersOnInputAtEveryScale)
+{
+    NumberBox box;
+    box.setFocusPolicy(Qt::NoFocus);
+    box.setFixedWidth(260);
+    box.setValue(std::numeric_limits<double>::quiet_NaN());
+    const auto render = [&](qreal dpr) {
+        QImage image(QSize(qCeil(box.width() * dpr), qCeil(box.height() * dpr)), QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(dpr);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        box.render(&painter);
+        return image;
+    };
+    for (auto appearance : {FluentElement::Light, FluentElement::Dark}) {
+        FluentElement::setTheme(appearance);
+        for (bool header : {false, true}) {
+            box.setHeader(header ? QStringLiteral("Rotation angle") : QString());
+            for (bool enabled : {true, false}) {
+                box.setEnabled(enabled);
+                for (qreal dpr : {1.0, 1.25, 1.5, 2.0, 3.0}) {
+                    SCOPED_TRACE(::testing::Message()
+                        << "theme=" << appearance << " header=" << header << " enabled=" << enabled << " dpr=" << dpr);
+                    box.setScrubbingEnabled(false);
+                    const QImage plain = render(dpr);
+                    box.setScrubbingEnabled(true);
+                    const QRectF handle(box.scrubHandleRect());
+                    const QImage decorated = render(dpr);
+                    QRect ink;
+                    for (int y = qCeil(handle.top() * dpr); y < qFloor(handle.bottom() * dpr); ++y) {
+                        for (int x = qCeil(handle.left() * dpr); x < qFloor(handle.right() * dpr); ++x) {
+                            if (plain.pixel(x, y) != decorated.pixel(x, y))
+                                ink |= QRect(x, y, 1, 1);
+                        }
+                    }
+                    ASSERT_FALSE(ink.isEmpty());
+                    const QPointF paintedCenter = QRectF(ink).center();
+                    EXPECT_NEAR(paintedCenter.y(), handle.center().y() * dpr, 0.5);
+                    EXPECT_NEAR(paintedCenter.x(), handle.center().x() * dpr, 0.5);
+                }
+            }
+        }
+    }
 }
 
 TEST_F(NumberBoxTest, Contract_ScrubbingCommitCancelAndTextSelection)
