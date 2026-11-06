@@ -4282,16 +4282,20 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             menu_bar.addMenu(edit_menu)
 
             line_edit = fluentqt.LineEdit()
+            line_edit.setAccessibleName("Single line")
             line_edit.setText("Edit this line")
             line_edit.setFixedWidth(360)
+            line_label = fluentqt.Label("LineEdit — single line")
+            line_label.setBuddy(line_edit)
 
             text_edit = fluentqt.TextEdit()
+            text_edit.setAccessibleName("Multiple lines")
             text_edit.setPlainText(
                 "The same actions follow this editor."
             )
-            text_edit.setMinVisibleLines(2)
-            text_edit.setMaxVisibleLines(2)
             text_edit.setFixedWidth(360)
+            text_label = fluentqt.Label("TextEdit — multiple lines")
+            text_label.setBuddy(text_edit)
 
             status = fluentqt.Label("No editing target")
             router.activeTargetChanged.connect(
