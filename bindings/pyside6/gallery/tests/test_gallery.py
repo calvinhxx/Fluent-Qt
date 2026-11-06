@@ -2631,6 +2631,30 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertEqual(hierarchy_changes.count(), changes_before_teardown,
                              "Teardown must not notify slots using the destroyed TreeView")
 
+    def test_editing_command_sample_keeps_default_text_edit_sizing(self):
+        entry = ENTRY_BY_ROUTE_ID["line-edit"]
+        sample = next(s for s in entry.samples if s.id == "line-edit-editing-commands")
+        card, result = _build_sample_card(entry, sample, None)
+        defaults = fluentqt.TextEdit()
+        try:
+            editor = card.findChild(fluentqt.TextEdit)
+            line = card.findChild(fluentqt.LineEdit)
+            self.assertIsNotNone(editor)
+            self.assertIsNotNone(line)
+            self.assertEqual(editor.minVisibleLines(), defaults.minVisibleLines())
+            self.assertEqual(editor.maxVisibleLines(), defaults.maxVisibleLines())
+            self.assertEqual(editor.isAutoResizeEnabled(), defaults.isAutoResizeEnabled())
+            labels = card.findChildren(fluentqt.Label)
+            self.assertTrue(any(label.buddy() is line and "LineEdit" in label.text() for label in labels))
+            self.assertTrue(any(label.buddy() is editor and "TextEdit" in label.text() for label in labels))
+            self.assertNotIn("setMinVisibleLines(2)", result.source)
+            self.assertNotIn("setMaxVisibleLines(2)", result.source)
+        finally:
+            card.close()
+            card.deleteLater()
+            defaults.deleteLater()
+            QApplication.processEvents()
+
     def test_command_bar_reuses_the_gallery_window_editing_router(self):
         window = GalleryWindow(startup_visuals=False)
         window.show()

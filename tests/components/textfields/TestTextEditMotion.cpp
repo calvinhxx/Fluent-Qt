@@ -7,6 +7,7 @@
 #include <QTextCursor>
 #include <QTextEdit>
 #include <QVariantAnimation>
+#include <QVBoxLayout>
 #include <QWidget>
 #include <QtTest/QTest>
 #include <gtest/gtest.h>
@@ -82,9 +83,11 @@ TEST(TextEditMotionTest, Contract_FocusedEditsAnimateRetargetAndCollapseVisibleL
     MotionModeRestorer restoreMotionMode;
     QWidget window;
     TextEdit edit(&window);
-    edit.setLineHeight(32);
-    edit.setMinVisibleLines(1);
-    edit.setMaxVisibleLines(4);
+    auto* layout = new QVBoxLayout(&window);
+    layout->addWidget(&edit);
+    ASSERT_TRUE(edit.isAutoResizeEnabled());
+    ASSERT_EQ(edit.minVisibleLines(), 1);
+    ASSERT_EQ(edit.maxVisibleLines(), 4);
     showFocusedEditor(window, edit);
 
     QTextEdit* inner = innerTextEdit(&edit);

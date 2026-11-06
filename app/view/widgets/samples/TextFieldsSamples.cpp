@@ -543,8 +543,8 @@ QVector<GallerySample> lineEditSamples()
                 return surface;
             }),
         makeSample(QStringLiteral("line-edit-editing-commands"), QStringLiteral("Window-scoped editing commands"),
-            QStringLiteral("One stable action set can be reused by menus and "
-                           "shortcuts while following the focused Fluent editor."),
+            QStringLiteral("One Edit menu follows focus between the single-line LineEdit and multi-line TextEdit. "
+                           "TextEdit keeps its default height animation as you add or remove lines."),
             QStringLiteral(
                 "using Command = EditingCommandRouter::Command;\n"
                 "\n"
@@ -566,14 +566,18 @@ QVector<GallerySample> lineEditSamples()
                 "menuBar->addMenu(editMenu);\n"
                 "\n"
                 "auto* lineEdit = new LineEdit(this);\n"
+                "lineEdit->setAccessibleName(\"Single line\");\n"
                 "lineEdit->setText(\"Edit this line\");\n"
                 "lineEdit->setFixedWidth(360);\n"
+                "auto* lineLabel = new Label(\"LineEdit — single line\", this);\n"
+                "lineLabel->setBuddy(lineEdit);\n"
                 "\n"
                 "auto* textEdit = new TextEdit(this);\n"
+                "textEdit->setAccessibleName(\"Multiple lines\");\n"
                 "textEdit->setPlainText(\"The same actions follow this editor.\");\n"
-                "textEdit->setMinVisibleLines(2);\n"
-                "textEdit->setMaxVisibleLines(2);\n"
                 "textEdit->setFixedWidth(360);\n"
+                "auto* textLabel = new Label(\"TextEdit — multiple lines\", this);\n"
+                "textLabel->setBuddy(textEdit);\n"
                 "\n"
                 "auto* statusLabel = new Label(\"No editing target\", this);\n"
                 "connect(router, &EditingCommandRouter::activeTargetChanged,\n"
@@ -606,14 +610,18 @@ QVector<GallerySample> lineEditSamples()
                 menuBar->addMenu(editMenu);
 
                 auto* lineEdit = new LineEdit(surface);
+                lineEdit->setAccessibleName(QStringLiteral("Single line"));
                 lineEdit->setText(QStringLiteral("Edit this line"));
                 lineEdit->setFixedWidth(360);
+                auto* lineLabel = new Label(QStringLiteral("LineEdit — single line"), surface);
+                lineLabel->setBuddy(lineEdit);
 
                 auto* textEdit = new TextEdit(surface);
+                textEdit->setAccessibleName(QStringLiteral("Multiple lines"));
                 textEdit->setPlainText(QStringLiteral("The same actions follow this editor."));
-                textEdit->setMinVisibleLines(2);
-                textEdit->setMaxVisibleLines(2);
                 textEdit->setFixedWidth(360);
+                auto* textLabel = new Label(QStringLiteral("TextEdit — multiple lines"), surface);
+                textLabel->setBuddy(textEdit);
 
                 auto* status = makeStatusLabel(surface, QStringLiteral("No editing target"));
                 QObject::connect(router, &EditingCommandRouter::activeTargetChanged, status, [status](bool active) {
@@ -622,7 +630,9 @@ QVector<GallerySample> lineEditSamples()
                 });
 
                 layout->addWidget(menuBar);
+                layout->addWidget(lineLabel);
                 layout->addWidget(lineEdit);
+                layout->addWidget(textLabel);
                 layout->addWidget(textEdit);
                 layout->addWidget(status);
                 return surface;

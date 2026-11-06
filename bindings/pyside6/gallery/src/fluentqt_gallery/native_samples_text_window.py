@@ -905,20 +905,24 @@ register_source_samples(
                 edit_menu.addAction(router.action(Command.SelectAll))
                 menu_bar.addMenu(edit_menu)
                 line_edit = fluentqt.LineEdit(root)
+                line_edit.setAccessibleName("Single line")
                 line_edit.setText("Edit this line")
                 line_edit.setFixedWidth(360)
+                line_label = fluentqt.Label("LineEdit — single line", root)
+                line_label.setBuddy(line_edit)
                 text_edit = fluentqt.TextEdit(root)
+                text_edit.setAccessibleName("Multiple lines")
                 text_edit.setPlainText("The same actions follow this editor.")
-                text_edit.setMinVisibleLines(2)
-                text_edit.setMaxVisibleLines(2)
                 text_edit.setFixedWidth(360)
+                text_label = fluentqt.Label("TextEdit — multiple lines", root)
+                text_label.setBuddy(text_edit)
                 status = make_status_label(root, "No editing target")
                 router.activeTargetChanged.connect(
                     lambda active: status.setText(
                         "Editing target active" if active else "No editing target"
                     )
                 )
-                for widget in (menu_bar, line_edit, text_edit, status):
+                for widget in (menu_bar, line_label, line_edit, text_label, text_edit, status):
                     layout.addWidget(widget)
                 """,
             ),

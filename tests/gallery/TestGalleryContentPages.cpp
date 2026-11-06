@@ -42,6 +42,7 @@
 #include <QStringList>
 #include <QTest>
 #include <QTextDocument>
+#include <QTextEdit>
 #include <QTimer>
 #include <QVector>
 #include <QVariantAnimation>
@@ -2899,6 +2900,59 @@ TEST_F(GalleryContentPagesTest, EditingCommandSampleReusesRouterActions)
     ASSERT_TRUE(QTest::qWaitFor([textEdit] { return textEdit->hasFocus(); }, 1000));
     EXPECT_TRUE(router->hasActiveTarget());
     EXPECT_EQ(router->scopeWindow(), card.window());
+}
+
+TEST_F(GalleryContentPagesTest, EditingCommandSampleKeepsDefaultTextEditHeightMotion)
+{
+    struct MotionModeRestore {
+        fluent::MotionPolicy::Mode previous = fluent::MotionPolicy::instance().mode();
+        ~MotionModeRestore() { fluent::MotionPolicy::instance().setMode(previous); }
+    } restoreMotionMode;
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("line-edit"), QStringLiteral("line-edit-editing-commands"), &sample));
+    GallerySampleCard card(sample);
+    card.resize(800, card.sizeHint().height());
+    card.show();
+    card.activateWindow();
+    QApplication::processEvents();
+    auto* edit = card.findChild<TextEdit*>();
+    ASSERT_NE(edit, nullptr);
+    TextEdit defaults;
+    EXPECT_EQ(edit->minVisibleLines(), defaults.minVisibleLines());
+    EXPECT_EQ(edit->maxVisibleLines(), defaults.maxVisibleLines());
+    EXPECT_EQ(edit->isAutoResizeEnabled(), defaults.isAutoResizeEnabled());
+    EXPECT_TRUE(sample.description.contains(QStringLiteral("single-line LineEdit")));
+    EXPECT_TRUE(sample.description.contains(QStringLiteral("multi-line TextEdit")));
+    auto* inner = edit->findChild<QTextEdit*>();
+    auto* animation = edit->findChild<QVariantAnimation*>(QStringLiteral("fluentTextEditHeightAnimation"));
+    ASSERT_NE(inner, nullptr);
+    ASSERT_NE(animation, nullptr);
+    edit->setPlainText(QStringLiteral("Alpha"));
+    inner->moveCursor(QTextCursor::End);
+    edit->setFocus(Qt::OtherFocusReason);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return inner->hasFocus(); }, 1000));
+    QApplication::processEvents();
+    const int initialHeight = edit->height();
+    const int initialCardHeight = card.height();
+    QTest::keyClick(inner, Qt::Key_Return);
+    QTest::keyClicks(inner, "Beta");
+    QApplication::processEvents();
+    ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
+    const int expandedHeight = animation->endValue().toInt();
+    EXPECT_GT(expandedHeight, initialHeight);
+    EXPECT_LT(edit->height(), expandedHeight);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return edit->height() == expandedHeight; }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return card.height() > initialCardHeight; }, 1000));
+    EXPECT_TRUE(mappedRectInAncestor(card.previewWidget(), &card).contains(mappedRectInAncestor(edit, &card)));
+    inner->moveCursor(QTextCursor::StartOfBlock);
+    QTest::keyClick(inner, Qt::Key_Backspace);
+    QApplication::processEvents();
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return edit->height() == initialHeight; }, 1000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return card.height() == initialCardHeight; }, 1000));
+    EXPECT_EQ(edit->toPlainText(), QStringLiteral("AlphaBeta"));
+    EXPECT_TRUE(inner->hasFocus());
 }
 
 TEST_F(GalleryContentPagesTest, EditingCommandSamplesShareOneRouterPerGalleryWindow)
