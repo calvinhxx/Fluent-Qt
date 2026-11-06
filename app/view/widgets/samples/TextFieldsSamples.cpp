@@ -1,6 +1,7 @@
 #include "TextFieldsSamples.h"
 #include "MemberSelectionSample.h"
 #include "AsyncSearchSample.h"
+#include "InputSampleColumns.h"
 
 #include <cmath>
 
@@ -342,10 +343,8 @@ QVector<GallerySample> autoSuggestBoxSamples()
     source.open(QIODevice::ReadOnly);
     auto async = makeSample(
         QStringLiteral("auto-suggest-box-async"), QStringLiteral("Search a project directory"),
-        QStringLiteral(
-            "A simulated service demonstrates loading, paged results, empty results and retry. "
-            "Quickly changing the query discards older replies."),
-        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new AsyncSearchSample(parent); }, true);
+        QStringLiteral("Find a project, see matching results and keep typing while it loads."),
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new AsyncSearchSample(parent); }, true, true);
     async.usageSnippet = QStringLiteral(
         "auto* box = new AutoSuggestBox(this);\n"
         "box->setSuggestionModel(projectModel);\n"
@@ -361,8 +360,12 @@ QVector<GallerySample> autoSuggestBoxSamples()
         "box->completeSuggestionRequest(requestId, hasMore);\n"
         "// On failure: box->failSuggestionRequest(requestId, \"Couldn’t load projects\");\n"
         "// Full example includes the simulated service and retry controls.");
+    QFile columnsSource(QStringLiteral(":/app/samples/InputSampleColumns.h"));
+    columnsSource.open(QIODevice::ReadOnly);
     async.sourceFiles = {
-        {QStringLiteral("AsyncSearchSample.h"), QStringLiteral("cpp"), async.codeSnippet, async.usageSnippet}};
+        {QStringLiteral("AsyncSearchSample.h"), QStringLiteral("cpp"), async.codeSnippet, async.usageSnippet},
+        {QStringLiteral("InputSampleColumns.h"), QStringLiteral("cpp"), QString::fromUtf8(columnsSource.readAll()),
+            QString()}};
     samples.append(async);
     return samples;
 }
@@ -433,8 +436,9 @@ QVector<GallerySample> labelSamples()
 QVector<GallerySample> lineEditSamples()
 {
     return {
-        makeSample(QStringLiteral("line-edit-trailing-content"), QStringLiteral("Units and inline actions"),
-            QStringLiteral("Trailing content shares space with the clear button without changing the editable value."),
+        makeSample(
+            QStringLiteral("line-edit-trailing-content"), QStringLiteral("Units and inline actions"),
+            QStringLiteral("Keep the value easy to read, with its context close at hand."),
             QStringLiteral(
                 "auto* width = new LineEdit(this);\n"
                 "width->setAccessibleName(\"Canvas width\");\n"
@@ -445,32 +449,51 @@ QVector<GallerySample> lineEditSamples()
                 "auto* name = new LineEdit(this);\n"
                 "name->setAccessibleName(\"Export name\");\n"
                 "name->setText(\"gallery-preview-v2\");\n"
+                "name->setClearButtonEnabled(false);\n"
                 "auto* reset = new Button(\"Reset\");\n"
                 "reset->setFluentStyle(Button::Subtle);\n"
                 "reset->setFluentSize(Button::Small);\n"
+                "reset->setFontRole(Typography::FontRole::Caption);\n"
+                "auto actionFont = reset->font();\n"
+                "actionFont.setStyleName(QString());\n"
+                "actionFont.setWeight(QFont::DemiBold);\n"
+                "reset->setFont(actionFont);\n"
+                "reset->setTextColorRole(Button::TextColorRole::Accent);\n"
+                "reset->setFixedSize(Spacing::XXLarge, Spacing::ControlHeight::Small);\n"
+                "reset->setFocusVisual(true);\n"
                 "reset->setAccessibleName(\"Reset export name\");\n"
                 "name->setTrailingWidget(reset, WidgetOwnership::Owned);\n"
                 "connect(reset, &Button::clicked, name, [name] {\n"
                 "    name->setText(\"gallery-preview\");\n"
                 "});"),
             [](QWidget* parent) {
-                auto* surface = textFieldSurface(parent);
-                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
-                auto* width = new LineEdit(surface);
+                auto* surface = new InputSampleColumns(parent);
+                auto* widthColumn = surface->addColumn();
+                auto* nameColumn = surface->addColumn();
+                auto* width = new LineEdit(widthColumn);
                 width->setObjectName(QStringLiteral("galleryTrailingWidth"));
                 width->setAccessibleName(QStringLiteral("Canvas width"));
                 width->setText(QStringLiteral("1280"));
                 width->setTrailingText(QStringLiteral("px"));
                 width->setClearButtonAccessibleName(QStringLiteral("Clear canvas width"));
                 width->setClearButtonFocusPolicy(Qt::StrongFocus);
-                auto* name = new LineEdit(surface);
+                auto* name = new LineEdit(nameColumn);
                 name->setObjectName(QStringLiteral("galleryTrailingName"));
                 name->setAccessibleName(QStringLiteral("Export name"));
                 name->setText(QStringLiteral("gallery-preview-v2"));
+                name->setClearButtonEnabled(false);
                 auto* reset = new Button(QStringLiteral("Reset"));
                 reset->setObjectName(QStringLiteral("galleryTrailingReset"));
                 reset->setFluentStyle(Button::Subtle);
                 reset->setFluentSize(Button::Small);
+                reset->setFontRole(Typography::FontRole::Caption);
+                auto actionFont = reset->font();
+                actionFont.setStyleName(QString());
+                actionFont.setWeight(QFont::DemiBold);
+                reset->setFont(actionFont);
+                reset->setTextColorRole(Button::TextColorRole::Accent);
+                reset->setFixedSize(::Spacing::XXLarge, ::Spacing::ControlHeight::Small);
+                reset->setFocusVisual(true);
                 reset->setAccessibleName(QStringLiteral("Reset export name"));
                 name->setTrailingWidget(reset, WidgetOwnership::Owned);
                 QObject::connect(reset, &Button::clicked, name, [name] {
@@ -480,12 +503,16 @@ QVector<GallerySample> lineEditSamples()
                     field->setMaximumWidth(370);
                     field->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                 }
-                layout->addWidget(new Label(QStringLiteral("Canvas width"), surface));
-                layout->addWidget(width);
-                layout->addWidget(new Label(QStringLiteral("Export name"), surface));
-                layout->addWidget(name);
+                for (auto* field : {width, name}) {
+                    auto* label = new Label(field->accessibleName(), field->parentWidget());
+                    label->setMinimumHeight(Typography::LineHeight::Body);
+                    label->setBuddy(field);
+                    field->parentWidget()->layout()->addWidget(label);
+                    field->parentWidget()->layout()->addWidget(field);
+                }
                 return surface;
-            }),
+            },
+            true, true),
         makeSample(QStringLiteral("line-edit-clear"), QStringLiteral("Input with clear button"),
             QStringLiteral("The clear button appears when text is present and text changes are easy to observe."),
             QStringLiteral(

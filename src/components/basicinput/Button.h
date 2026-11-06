@@ -48,6 +48,11 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
+     * @brief Semantic foreground for unfilled, unchecked buttons; filled and disabled states keep their contrast roles.
+     * zh_CN: 非填充、未选中按钮的语义前景色；填充和禁用状态仍使用对应对比色。
+     */
+    Q_PROPERTY(TextColorRole textColorRole READ textColorRole WRITE setTextColorRole NOTIFY textColorRoleChanged)
+    /**
      * @brief Content layout for text and icon placement.
      * zh_CN: 文本与图标的内容排列方式。
      */
@@ -126,6 +131,10 @@ public:
     enum ButtonLayout { TextOnly, IconBefore, IconOnly, IconAfter };
     Q_ENUM(ButtonLayout)
 
+    /** @brief Semantic text and icon emphasis. zh_CN: 文字与图标的语义强调层级。 */
+    enum class TextColorRole { Primary, Secondary, Accent };
+    Q_ENUM(TextColorRole)
+
     /**
      * @brief Paint-state override used before falling back to real hover/press state.
      * zh_CN: 绘制状态覆盖值；为 Rest 时再回退到真实 hover/press 状态。
@@ -146,6 +155,8 @@ public:
 
     Typography::FontRole fontRole() const { return m_fontRole; }
     void setFontRole(Typography::FontRole role);
+    TextColorRole textColorRole() const { return m_textColorRole; }
+    void setTextColorRole(TextColorRole role);
 
     /**
      * @brief Sets an explicit font that remains unchanged by later theme refreshes.
@@ -212,6 +223,7 @@ signals:
     void fluentStyleChanged();
     void fluentSizeChanged();
     void fontRoleChanged();
+    void textColorRoleChanged();
     void fluentLayoutChanged();
     void focusVisualChanged();
     void interactionStateChanged();
@@ -274,6 +286,7 @@ private:
     ButtonStyle m_style = Standard;
     ButtonSize m_size = StandardSize;
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
+    TextColorRole m_textColorRole = TextColorRole::Primary;
     ButtonLayout m_layout = TextOnly;
     InteractionState m_interactionState = Rest;
     bool m_focusVisual = false;

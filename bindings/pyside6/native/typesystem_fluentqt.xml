@@ -272,6 +272,7 @@ if (!paletteGuard) {
                 <enum-type name="ButtonStyle"/>
                 <enum-type name="ButtonSize"/>
                 <enum-type name="ButtonLayout"/>
+                <enum-type name="TextColorRole"/>
                 <enum-type name="InteractionState"/>
             </object-type>
             <object-type name="CheckBox"/>

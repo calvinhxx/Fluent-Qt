@@ -72,7 +72,7 @@ public:
      * 指定任一角色则改用标签自身的样式表上色,使祖先样式表(会安装 QStyleSheetStyle 并让 Qt 忽略子 palette)无法丢弃它
      * ——修复那些坐在带样式表的预览面上、深色主题里渲染成近黑的取值/状态标签。
      */
-    enum class TextColorRole { Default, Primary, Secondary, Tertiary, Disabled, OnAccent, Accent };
+    enum class TextColorRole { Default, Primary, Secondary, Tertiary, Disabled, OnAccent, Accent, Critical };
 
     TextColorRole textColorRole() const { return m_textColorRole; }
     void setTextColorRole(TextColorRole role);

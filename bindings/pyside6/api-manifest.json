@@ -305,7 +305,9 @@
     ],
     "Button": [
       "fontRole",
-      "setFontRole"
+      "setFontRole",
+      "setTextColorRole",
+      "textColorRole"
     ],
     "CommandBar": [
       "addAction",

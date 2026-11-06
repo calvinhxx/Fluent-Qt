@@ -2927,13 +2927,53 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_input_examples_keep_visible_fields_when_columns_wrap(self):
+        scenes = (
+            ("line-edit", "line-edit-trailing-content", "galleryTrailingWidth", "galleryTrailingName"),
+            ("auto-suggest-box", "auto-suggest-box-async", "asyncProjectSearch", "asyncProjectSearchSlow"),
+            ("combobox", "combobox-editable", "galleryEditableComboBox", "galleryCustomComboBox"),
+        )
+        for route, sample_id, first_name, second_name in scenes:
+            entry = ENTRY_BY_ROUTE_ID[route]
+            sample = next(sample for sample in entry.samples if sample.id == sample_id)
+            card, result = _build_sample_card(entry, sample, None)
+            try:
+                first = card.findChild(QWidget, first_name)
+                second = card.findChild(QWidget, second_name)
+                self.assertIsNotNone(first)
+                self.assertIsNotNone(second)
+                for direction in (Qt.LeftToRight, Qt.RightToLeft):
+                    card.setLayoutDirection(direction)
+                    for width in (900, 420):
+                        with self.subTest(sample=sample_id, direction=direction, width=width):
+                            card.resize(width, card.sizeHint().height())
+                            card.show()
+                            QApplication.processEvents()
+                            a = first.mapTo(card, QPoint())
+                            b = second.mapTo(card, QPoint())
+                            self.assertEqual(first.height(), 32)
+                            self.assertEqual(second.height(), 32)
+                            self.assertTrue(card.rect().contains(a))
+                            self.assertTrue(card.rect().contains(b))
+                            if width == 900:
+                                self.assertEqual(first.width(), 370)
+                                self.assertEqual(second.width(), 370)
+                                self.assertEqual(a.y(), b.y())
+                                self.assertEqual(a.x() < b.x(), direction == Qt.LeftToRight)
+                            else:
+                                self.assertGreater(b.y(), a.y() + first.height())
+            finally:
+                card.close()
+                card.deleteLater()
+                QApplication.processEvents()
+
     def test_native_root_group_layout_contract_is_applied(self):
         grouped_samples = {
             key: sample
             for key, sample in SAMPLE_BY_KEY.items()
             if sample.preview_orientation is not None
         }
-        self.assertEqual(len(grouped_samples), 79)
+        self.assertEqual(len(grouped_samples), 78)
         expected_types = {
             "horizontal": QHBoxLayout,
             "vertical": QVBoxLayout,

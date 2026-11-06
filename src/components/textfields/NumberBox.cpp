@@ -1110,7 +1110,6 @@ void NumberBox::paintInputFrame(QPainter& painter)
     state.focused = m_focused;
     state.hovered = m_hovered || m_spinnerHovered;
     state.pressed = m_pressed || m_spinnerPressed;
-    state.dark = effectiveThemeUsesDarkAppearance();
     ::fluent::detail::paintTextInputFrame(painter, QRectF(inputRect()), themeColorsRef(), themeRadius().control, state);
 }
 

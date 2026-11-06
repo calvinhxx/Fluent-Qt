@@ -1,5 +1,6 @@
 #include "view/support/GalleryToast.h"
 #include "BasicInputSamples.h"
+#include "InputSampleColumns.h"
 #include "TeamSelectionSample.h"
 #include <QFile>
 #include <cmath>
@@ -574,69 +575,89 @@ QVector<GallerySample> comboBoxSamples()
                 group->layout()->addWidget(status);
                 return group;
             }),
-        makeSample(QStringLiteral("combobox-editable"), QStringLiteral("Custom value with suggestions"),
-            QStringLiteral("Type any value or choose a suggested size. Custom text stays valid "
-                           "without being added to the suggestion list."),
+        makeSample(
+            QStringLiteral("combobox-editable"), QStringLiteral("Choose a size or type your own"),
+            QStringLiteral("Start with a preset, then refine the value without losing the unit."),
             QStringLiteral(
-                "auto* row = new QWidget(this);\n"
-                "auto* layout = new QVBoxLayout(row);\n"
-                "layout->setContentsMargins(0, 0, 0, 0);\n"
-                "layout->setSpacing(8);\n\n"
-                "auto* comboBox = new ComboBox(row);\n"
-                "comboBox->setAccessibleName(\"Editable size value\");\n"
-                "comboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\n"
-                "comboBox->setEditable(true);\n"
-                "comboBox->setTrailingText(\"pt\");\n"
-                "comboBox->lineEdit()->setAccessibleName(\"Editable size value\");\n"
-                "comboBox->setInsertPolicy(QComboBox::NoInsert);\n"
-                "comboBox->setCurrentIndex(4);\n"
-                "comboBox->setFixedWidth(200);\n\n"
-                "auto* status = new Label(row);\n"
-                "status->setFixedWidth(200);\n"
-                "status->setTextElideMode(Qt::ElideRight);\n\n"
-                "auto updateStatus = [comboBox, status](const QString& text) {\n"
-                "    const bool suggested = comboBox->findText(\n"
+                "auto* preset = new ComboBox(this);\n"
+                "auto* custom = new ComboBox(this);\n"
+                "for (auto* box : {preset, custom}) {\n"
+                "    box->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\n"
+                "    box->setEditable(true);\n"
+                "    box->setTrailingText(\"pt\");\n"
+                "    box->setPopupOffset(Spacing::Gap::Tight);\n"
+                "    box->setInsertPolicy(QComboBox::NoInsert);\n"
+                "    box->setCurrentIndex(4);\n"
+                "}\n"
+                "preset->setAccessibleName(\"Editable size value\");\n"
+                "preset->lineEdit()->setAccessibleName(\"Editable size value\");\n"
+                "custom->setAccessibleName(\"Custom size value\");\n"
+                "custom->lineEdit()->setAccessibleName(\"Custom size value\");\n"
+                "custom->setEditText(\"13.5\");\n\n"
+                "auto* status = new Label(this);\n"
+                "status->setFluentTypography(Typography::FontRole::Caption);\n"
+                "status->setTextColorRole(Label::TextColorRole::Secondary);\n"
+                "auto updateStatus = [preset, status](const QString& text) {\n"
+                "    const bool suggested = preset->findText(\n"
                 "        text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;\n"
                 "    status->setText(QStringLiteral(\"%1 value: %2\").arg(\n"
                 "        suggested ? QStringLiteral(\"Suggested\") : QStringLiteral(\"Custom\"),\n"
                 "        text.isEmpty() ? QStringLiteral(\"(empty)\") : text));\n"
                 "};\n"
-                "QObject::connect(comboBox, &QComboBox::editTextChanged,\n"
-                "                 status, updateStatus);\n"
-                "updateStatus(comboBox->currentText());\n\n"
-                "layout->addWidget(comboBox);\n"
-                "layout->addWidget(status);"),
+                "connect(preset, &QComboBox::editTextChanged, status, updateStatus);\n"
+                "updateStatus(preset->currentText());"),
             [](QWidget* parent) {
-                QWidget* group = verticalGroup(parent, 8);
-                auto* comboBox = makeComboBox(group,
-                    {QStringLiteral("8"), QStringLiteral("9"), QStringLiteral("10"), QStringLiteral("11"),
-                        QStringLiteral("12"), QStringLiteral("14"), QStringLiteral("16")},
-                    4);
-                comboBox->setObjectName(QStringLiteral("galleryEditableComboBox"));
-                comboBox->setAccessibleName(QStringLiteral("Editable size value"));
-                comboBox->setEditable(true);
-                comboBox->setTrailingText(QStringLiteral("pt"));
-                comboBox->lineEdit()->setAccessibleName(QStringLiteral("Editable size value"));
-                comboBox->setInsertPolicy(QComboBox::NoInsert);
-
-                auto* status = makeValueLabel(group, QString());
-                status->setObjectName(QStringLiteral("galleryEditableComboBoxStatus"));
-                status->setFixedWidth(200);
-                status->setTextElideMode(Qt::ElideRight);
-
-                auto updateStatus = [comboBox, status](const QString& text) {
-                    const bool suggested = comboBox->findText(text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;
-                    status->setText(QStringLiteral("%1 value: %2")
-                            .arg(suggested ? QStringLiteral("Suggested") : QStringLiteral("Custom"),
-                                text.isEmpty() ? QStringLiteral("(empty)") : text));
-                };
-                QObject::connect(comboBox, &QComboBox::editTextChanged, status, updateStatus);
-                updateStatus(comboBox->currentText());
-
-                group->layout()->addWidget(comboBox);
-                group->layout()->addWidget(status);
+                auto* group = new InputSampleColumns(parent);
+                for (bool custom : {false, true}) {
+                    auto* column = group->addColumn();
+                    auto* label = new Label(custom ? QStringLiteral("Custom value") : QStringLiteral("Preset sizes"),
+                        column);
+                    label->setMinimumHeight(Typography::LineHeight::Body);
+                    column->layout()->addWidget(label);
+                    auto* box = new ComboBox(column);
+                    box->addItems({QStringLiteral("8"), QStringLiteral("9"), QStringLiteral("10"), QStringLiteral("11"),
+                        QStringLiteral("12"), QStringLiteral("14"), QStringLiteral("16")});
+                    box->setObjectName(
+                        custom ? QStringLiteral("galleryCustomComboBox") : QStringLiteral("galleryEditableComboBox"));
+                    const QString accessible =
+                        custom ? QStringLiteral("Custom size value") : QStringLiteral("Editable size value");
+                    box->setAccessibleName(accessible);
+                    box->setEditable(true);
+                    box->setTrailingText(QStringLiteral("pt"));
+                    box->setPopupOffset(::Spacing::Gap::Tight);
+                    box->lineEdit()->setAccessibleName(accessible);
+                    box->setInsertPolicy(QComboBox::NoInsert);
+                    box->setCurrentIndex(4);
+                    box->setMaximumWidth(370);
+                    box->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+                    label->setBuddy(box);
+                    if (custom)
+                        box->setEditText(QStringLiteral("13.5"));
+                    column->layout()->addWidget(box);
+                    auto* status = new Label(column);
+                    status->setFluentTypography(Typography::FontRole::Caption);
+                    status->setTextColorRole(Label::TextColorRole::Secondary);
+                    status->setWordWrap(true);
+                    if (custom) {
+                        status->setText(QStringLiteral(
+                            "Type a value such as 13.5. The “pt” label stays separate from your input."));
+                    } else {
+                        status->setObjectName(QStringLiteral("galleryEditableComboBoxStatus"));
+                        auto updateStatus = [box, status](const QString& text) {
+                            const bool suggested = box->findText(text, Qt::MatchFixedString | Qt::MatchCaseSensitive)
+                                >= 0;
+                            status->setText(QStringLiteral("%1 value: %2")
+                                    .arg(suggested ? QStringLiteral("Suggested") : QStringLiteral("Custom"),
+                                        text.isEmpty() ? QStringLiteral("(empty)") : text));
+                        };
+                        QObject::connect(box, &QComboBox::editTextChanged, status, updateStatus);
+                        updateStatus(box->currentText());
+                    }
+                    column->layout()->addWidget(status);
+                }
                 return group;
-            }),
+            },
+            true, true),
         makeSample(QStringLiteral("combobox-many-items"), QStringLiteral("Popup with many items"),
             QStringLiteral("Long option lists use the ComboBox popup ListView and keep the "
                            "selected item visible."),

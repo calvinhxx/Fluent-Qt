@@ -159,6 +159,8 @@ QColor Label::resolveTextColor() const
         return c.textOnAccent;
     case TextColorRole::Accent:
         return c.textAccentPrimary;
+    case TextColorRole::Critical:
+        return c.systemCritical;
     case TextColorRole::Primary:
     case TextColorRole::Default:
     default:

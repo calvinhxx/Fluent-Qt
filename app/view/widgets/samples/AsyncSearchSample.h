@@ -6,6 +6,7 @@
 #include <QStandardItemModel>
 #include <QTimer>
 #include <QVBoxLayout>
+#include "InputSampleColumns.h"
 
 namespace fluent::gallery {
 
@@ -18,83 +19,90 @@ public:
         setObjectName(QStringLiteral("asyncSearchSample"));
         setProperty("staleResponsesIgnored", 0);
         auto* layout = new QVBoxLayout(this);
-        layout->setContentsMargins(16, 16, 16, 16);
-        layout->setSpacing(12);
-        auto* title = new textfields::Label(QStringLiteral("Project directory"), this);
-        title->setFluentTypography(Typography::FontRole::BodyStrong);
-        m_search = new textfields::AutoSuggestBox(this);
-        m_search->setObjectName(QStringLiteral("asyncProjectSearch"));
-        m_search->setAccessibleName(QStringLiteral("Search projects"));
-        m_search->setPlaceholderText(QStringLiteral("Search projects"));
-        m_search->setQueryButtonPlacement(textfields::AutoSuggestBox::QueryButtonPlacement::Leading);
-        m_search->setSuggestionItemHeight(36);
-        m_search->setMaximumWidth(320);
-        m_search->setMinimumWidth(180);
-        m_search->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        m_search->setLoadingText(QStringLiteral("Searching projects…"));
-        m_search->setEmptyText(QStringLiteral("No projects found"));
-        m_search->setEmptyDescription(QStringLiteral("Try a different name."));
-        m_model = new QStandardItemModel(this);
-        m_search->setSuggestionModel(m_model);
-        m_search->setAsyncSuggestionsEnabled(true);
-        auto* trailing = new QWidget;
-        trailing->setObjectName(QStringLiteral("asyncSearchTrailingStatus"));
-        trailing->setAttribute(Qt::WA_TransparentForMouseEvents);
-        trailing->setFixedSize(64, 24);
-        auto* trailingLayout = new QHBoxLayout(trailing);
-        trailingLayout->setContentsMargins(0, 0, 0, 0);
-        auto* ring = new status_info::ProgressRing(trailing);
-        ring->setFixedSize(20, 20);
-        ring->setStrokeWidth(2);
-        ring->setAccessibleName(QStringLiteral("Searching projects"));
-        auto* count = new textfields::Label(trailing);
-        count->setTextColorRole(textfields::Label::TextColorRole::Secondary);
-        count->setAlignment(Qt::AlignCenter);
-        trailingLayout->addWidget(ring, 0, Qt::AlignCenter);
-        trailingLayout->addWidget(count);
-        m_search->setTrailingWidget(trailing, WidgetOwnership::Owned);
-        const auto updateTrailing = [this, ring, count] {
-            using State = textfields::AutoSuggestBox::LoadState;
-            const State state = m_search->loadState();
-            const bool loading = state == State::Loading;
-            ring->setIsActive(loading);
-            ring->setVisible(loading);
-            count->setVisible(!loading);
-            count->setText(state == State::Ready ? QStringLiteral("%1 shown").arg(m_search->suggestionCount())
-                    : state == State::Failed
-                    ? QStringLiteral("Failed")
-                    : QString());
-        };
-        connect(m_search, &textfields::AutoSuggestBox::loadStateChanged, trailing, updateTrailing);
-        connect(m_search, &textfields::AutoSuggestBox::suggestionCountChanged, trailing, updateTrailing);
-        updateTrailing();
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(::Spacing::Standard);
+        auto* columns = new InputSampleColumns(this);
+        layout->addWidget(columns);
         m_failNext = new basicinput::CheckBox(QStringLiteral("Fail next search"), this);
         m_failNext->setObjectName(QStringLiteral("asyncFailNext"));
         m_failNext->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-        m_status = new textfields::Label(QStringLiteral("Try Aurora for paged results, or zzz for no results."), this);
-        m_status->setObjectName(QStringLiteral("asyncSearchResult"));
-        m_status->setWordWrap(true);
-        m_status->setFluentTypography(Typography::FontRole::Caption);
-        m_status->setTextColorRole(textfields::Label::TextColorRole::Secondary);
-        layout->addWidget(title);
-        layout->addWidget(m_status);
-        layout->addWidget(m_search);
         layout->addWidget(m_failNext);
+        createSearch(columns->addColumn(), false);
+        createSearch(columns->addColumn(), true);
+    }
 
-        connect(m_search, &textfields::AutoSuggestBox::suggestionsRequested, this,
-            [this](const QString& query, quint64 token, bool append) {
+private:
+    textfields::AutoSuggestBox* createSearch(QWidget* column, bool slow)
+    {
+        auto* layout = column->layout();
+        auto* title = new textfields::Label(slow ? QStringLiteral("While searching") : QStringLiteral("Suggestions"),
+            column);
+        title->setMinimumHeight(Typography::LineHeight::Body);
+        auto* search = new textfields::AutoSuggestBox(column);
+        search->setObjectName(slow ? QStringLiteral("asyncProjectSearchSlow") : QStringLiteral("asyncProjectSearch"));
+        search->setAccessibleName(slow ? QStringLiteral("Search projects slowly") : QStringLiteral("Search projects"));
+        search->setPlaceholderText(QStringLiteral("Search projects"));
+        search->setQueryButtonPlacement(textfields::AutoSuggestBox::QueryButtonPlacement::Leading);
+        search->setSuggestionItemHeight(::Spacing::ControlHeight::Standard);
+        search->setMaximumWidth(370);
+        search->setMinimumWidth(180);
+        search->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        search->setLoadingText(QStringLiteral("Searching projects…"));
+        search->setEmptyText(QStringLiteral("No projects found"));
+        search->setEmptyDescription(QStringLiteral("Try a different name."));
+        title->setBuddy(search);
+        auto* model = new QStandardItemModel(this);
+        search->setSuggestionModel(model);
+        search->setAsyncSuggestionsEnabled(true);
+        auto* count = new textfields::Label;
+        count->setObjectName(
+            slow ? QStringLiteral("asyncSearchSlowTrailingStatus") : QStringLiteral("asyncSearchTrailingStatus"));
+        count->setFluentTypography(Typography::FontRole::Caption);
+        count->setTextColorRole(textfields::Label::TextColorRole::Secondary);
+        count->setAttribute(Qt::WA_TransparentForMouseEvents);
+        count->setFocusPolicy(Qt::NoFocus);
+        search->setTrailingWidget(count, WidgetOwnership::Owned);
+        const auto updateTrailing = [search, count] {
+            using State = textfields::AutoSuggestBox::LoadState;
+            const State state = search->loadState();
+            count->setText(state == State::Ready ? QStringLiteral("%1 shown").arg(search->suggestionCount())
+                    : state == State::Failed
+                    ? QStringLiteral("Failed")
+                    : QString());
+            count->setTextColorRole(state == State::Failed
+                    ? textfields::Label::TextColorRole::Critical
+                    : textfields::Label::TextColorRole::Secondary);
+            count->setVisible(!count->text().isEmpty());
+        };
+        connect(search, &textfields::AutoSuggestBox::loadStateChanged, count, updateTrailing);
+        connect(search, &textfields::AutoSuggestBox::suggestionCountChanged, count, updateTrailing);
+        updateTrailing();
+        auto* status = new textfields::Label(slow
+                ? QStringLiteral("Keep typing while we search your projects.")
+                : QStringLiteral("Try Aurora for paged results, or zzz for no results."),
+            column);
+        status->setObjectName(slow ? QStringLiteral("asyncSearchSlowResult") : QStringLiteral("asyncSearchResult"));
+        status->setWordWrap(true);
+        status->setFluentTypography(Typography::FontRole::Caption);
+        status->setTextColorRole(textfields::Label::TextColorRole::Secondary);
+        layout->addWidget(title);
+        layout->addWidget(search);
+        layout->addWidget(status);
+
+        connect(search, &textfields::AutoSuggestBox::suggestionsRequested, this,
+            [this, search, model, slow](const QString& query, quint64 token, bool append) {
                 const bool fail = m_failNext->isChecked();
                 m_failNext->setChecked(false);
                 // Short queries deliberately finish later to demonstrate stale-result rejection.
-                const int delay = query.size() < 3 ? 850 : 350;
-                QTimer::singleShot(delay, this, [this, query, token, append, fail] {
+                const int delay = slow ? 1500 : (query.size() < 3 ? 850 : 350);
+                QTimer::singleShot(delay, this, [this, search, model, query, token, append, fail] {
                     // Check before touching the caller-owned model, not only before changing UI state.
-                    if (!m_search->isSuggestionRequestCurrent(token)) {
+                    if (!search->isSuggestionRequestCurrent(token)) {
                         setProperty("staleResponsesIgnored", ++m_ignoredResponses);
                         return;
                     }
                     if (fail) {
-                        m_search->failSuggestionRequest(token, QStringLiteral("Couldn’t load projects"),
+                        search->failSuggestionRequest(token, QStringLiteral("Couldn’t load projects"),
                             QStringLiteral("Try again in a moment."));
                         return;
                     }
@@ -104,26 +112,26 @@ public:
                             matches.append(name);
                     }
                     if (!append)
-                        m_model->removeRows(0, m_model->rowCount());
-                    const int end = qMin(m_model->rowCount() + 4, matches.size());
-                    for (int row = m_model->rowCount(); row < end; ++row) {
+                        model->removeRows(0, model->rowCount());
+                    const int end = qMin(model->rowCount() + 4, matches.size());
+                    for (int row = model->rowCount(); row < end; ++row) {
                         auto* item = new QStandardItem(matches.at(row));
                         item->setData(QStringLiteral("project-%1").arg(projectNames().indexOf(matches.at(row)) + 1),
                             Qt::UserRole);
-                        m_model->appendRow(item);
+                        model->appendRow(item);
                     }
-                    m_search->completeSuggestionRequest(token, end < matches.size());
+                    search->completeSuggestionRequest(token, end < matches.size());
                 });
             });
-        connect(m_search, &textfields::AutoSuggestBox::querySubmitted, this,
-            [this](const QString& query, const QVariant& chosen) {
-                m_status->setText(!chosen.toString().isEmpty()
+        connect(search, &textfields::AutoSuggestBox::querySubmitted, this,
+            [status](const QString& query, const QVariant& chosen) {
+                status->setText(!chosen.toString().isEmpty()
                         ? QStringLiteral("Selected: %1").arg(query)
                         : QStringLiteral("Search: %1").arg(query));
             });
+        return search;
     }
 
-private:
     static const QStringList& projectNames()
     {
         static const QStringList names{QStringLiteral("Aurora Workspace"), QStringLiteral("Aurora Mobile"),
@@ -133,10 +141,7 @@ private:
             QStringLiteral("Harbor")};
         return names;
     }
-    textfields::AutoSuggestBox* m_search = nullptr;
-    QStandardItemModel* m_model = nullptr;
     basicinput::CheckBox* m_failNext = nullptr;
-    textfields::Label* m_status = nullptr;
     int m_ignoredResponses = 0;
 };
 

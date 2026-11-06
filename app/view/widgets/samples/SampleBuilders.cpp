@@ -69,10 +69,7 @@ private:
         return m_direction == QBoxLayout::LeftToRight || m_direction == QBoxLayout::RightToLeft;
     }
 
-    static bool isSpacingWidget(QWidget* widget)
-    {
-        return widget && widget->property(kSpacingWidgetProperty).toBool();
-    }
+    static bool isSpacingWidget(QWidget* widget) { return widget && widget->property(kSpacingWidgetProperty).toBool(); }
 
     static bool isContentItem(QLayoutItem* item)
     {
@@ -118,8 +115,7 @@ private:
         m_insertingSpacer = true;
         for (int i = 1; i < count(); ++i) {
             if (isContentItem(itemAt(i - 1)) && isContentItem(itemAt(i))) {
-                QBoxLayout::insertWidget(
-                    i, createSpacingWidget(spacingBetween(itemAt(i - 1), itemAt(i))));
+                QBoxLayout::insertWidget(i, createSpacingWidget(spacingBetween(itemAt(i - 1), itemAt(i))));
                 ++i;
             }
         }
@@ -145,8 +141,7 @@ qreal samplePixmapDevicePixelRatio()
 QPixmap makeCanvas(const QSize& size)
 {
     const qreal dpr = samplePixmapDevicePixelRatio();
-    QPixmap pixmap(
-        QSize(qMax(1, qRound(size.width() * dpr)), qMax(1, qRound(size.height() * dpr))));
+    QPixmap pixmap(QSize(qMax(1, qRound(size.width() * dpr)), qMax(1, qRound(size.height() * dpr))));
     pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(Qt::transparent);
     return pixmap;
@@ -154,9 +149,13 @@ QPixmap makeCanvas(const QSize& size)
 
 } // namespace
 
-GallerySample makeSample(const QString& id, const QString& title, const QString& description,
-                         const QString& codeSnippet,
-                         std::function<QWidget*(QWidget*)> createPreview, bool fillAvailableWidth)
+GallerySample makeSample(const QString& id,
+    const QString& title,
+    const QString& description,
+    const QString& codeSnippet,
+    std::function<QWidget*(QWidget*)> createPreview,
+    bool fillAvailableWidth,
+    bool inlinePreview)
 {
     GallerySample sample;
     sample.id = id;
@@ -165,6 +164,7 @@ GallerySample makeSample(const QString& id, const QString& title, const QString&
     sample.codeSnippet = codeSnippet;
     sample.createPreview = std::move(createPreview);
     sample.fillAvailableWidth = fillAvailableWidth;
+    sample.inlinePreview = inlinePreview;
     return sample;
 }
 
@@ -199,8 +199,7 @@ QPixmap glyphPixmap(const QString& glyph, const QColor& background, int size)
     QFont iconFont = Typography::Icons::font(qRound(size * 0.55));
     painter.setFont(iconFont);
     painter.setPen(Qt::white);
-    painter.drawText(tile, Qt::AlignCenter,
-                     Typography::Icons::glyphForSize(glyph, iconFont.pixelSize()));
+    painter.drawText(tile, Qt::AlignCenter, Typography::Icons::glyphForSize(glyph, iconFont.pixelSize()));
     return pixmap;
 }
 
@@ -230,8 +229,7 @@ QPixmap initialsAvatar(const QString& name, const QColor& background, int size)
     return pixmap;
 }
 
-QPixmap gradientPixmap(const QSize& size, const QColor& from, const QColor& to,
-                       const QString& caption)
+QPixmap gradientPixmap(const QSize& size, const QColor& from, const QColor& to, const QString& caption)
 {
     QPixmap pixmap = makeCanvas(size);
     QPainter painter(&pixmap);
@@ -253,8 +251,7 @@ QPixmap gradientPixmap(const QSize& size, const QColor& from, const QColor& to,
         font.setWeight(QFont::DemiBold);
         painter.setFont(font);
         painter.setPen(QColor(255, 255, 255, 230));
-        painter.drawText(surface.adjusted(16, 12, -16, -12), Qt::AlignLeft | Qt::AlignBottom,
-                         caption);
+        painter.drawText(surface.adjusted(16, 12, -16, -12), Qt::AlignLeft | Qt::AlignBottom, caption);
     }
     return pixmap;
 }

@@ -58,11 +58,16 @@ and adds logical Leading/Trailing positions. The trailing-content tests cover
 native action coexistence, headers, RTL, inherited chrome, keyboard exit,
 replacement and ownership. Gallery demonstrates units and actions at
 `line-edit-trailing-content`, a size unit at `combobox-editable`, and an inline
-loading/count indicator at `auto-suggest-box-async`.
+loading/count indicator at `auto-suggest-box-async`. AutoSuggestBox owns a single
+non-focusable loading indicator in its input; the popup keeps status text and
+retry/paging actions. Cancel, disable, read-only and teardown stop that indicator.
+Inline actions retain a 24-pixel target even with 12-pixel icons and captions.
+The three examples wrap their field columns at narrow widths and preserve RTL order.
 ComboBox's accessible adapter enumerates actual editor and trailing-content
 children rather than Qt's unused fallback popup. It preserves the ComboBox role,
 field name/value and open-menu actions, and reports the Fluent popup's expanded
-state and controller relation. Tests verify hosted action names, focus and popup
+state and controller relation. Its focusable option list has a translated name.
+Tests verify hosted action names, focus and popup
 state in editable and non-editable modes; native screen-reader certification is
 still a separate platform review.
 

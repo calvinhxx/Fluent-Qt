@@ -6550,6 +6550,7 @@
         "ButtonStyle",
         "ButtonSize",
         "ButtonLayout",
+        "TextColorRole",
         "InteractionState"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/Button.h"

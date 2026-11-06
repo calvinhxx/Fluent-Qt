@@ -5,6 +5,7 @@ from __future__ import annotations
 from textwrap import dedent
 
 from .native_samples import register_source_samples
+from .native_sample_layouts import input_columns_script
 
 
 def _script(body: str, imports: str = "") -> str:
@@ -566,44 +567,57 @@ register_source_samples(
         ),
         "combobox-editable": (
             "root",
-            _script(
-                """
-                root = QWidget()
-                layout = QVBoxLayout(root)
-                combo_box = fluentqt.ComboBox(root)
-                combo_box.setAccessibleName("Editable size value")
-                combo_box.addItems(["8", "9", "10", "11", "12", "14", "16"])
-                combo_box.setEditable(True)
-                combo_box.setTrailingText("pt")
-                combo_box.lineEdit().setAccessibleName("Editable size value")
-                combo_box.setInsertPolicy(fluentqt.ComboBox.InsertPolicy.NoInsert)
-                combo_box.setCurrentIndex(4)
-                combo_box.setFixedWidth(200)
-                status = fluentqt.Label(root)
-                status.setFluentTypography(fluentqt.FontRole.Body)
-                status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
-                status.setFixedWidth(200)
-                status.setTextElideMode(Qt.TextElideMode.ElideRight)
-
-                def update_status(text):
-                    match = (
-                        Qt.MatchFlag.MatchFixedString
-                        | Qt.MatchFlag.MatchCaseSensitive
+            _script(input_columns_script("""
+                root = InputSampleColumns(globals().get("gallery_parent"))
+                preset = fluentqt.ComboBox()
+                custom_value = fluentqt.ComboBox()
+                for custom, box in ((False, preset), (True, custom_value)):
+                    column = root.add_column()
+                    label = fluentqt.Label(
+                        "Custom value" if custom else "Preset sizes", column
                     )
-                    kind = (
-                        "Suggested"
-                        if combo_box.findText(text, match) >= 0
-                        else "Custom"
+                    label.setMinimumHeight(20)
+                    column.layout().addWidget(label)
+                    box.setParent(column)
+                    box.addItems(["8", "9", "10", "11", "12", "14", "16"])
+                    box.setObjectName(
+                        "galleryCustomComboBox" if custom else "galleryEditableComboBox"
                     )
-                    status.setText(f"{kind} value: {text or '(empty)'}")
+                    accessible = "Custom size value" if custom else "Editable size value"
+                    box.setAccessibleName(accessible)
+                    box.setEditable(True)
+                    box.setTrailingText("pt")
+                    box.setPopupOffset(fluentqt.Spacing.Gap.Tight)
+                    box.lineEdit().setAccessibleName(accessible)
+                    box.setInsertPolicy(fluentqt.ComboBox.InsertPolicy.NoInsert)
+                    box.setCurrentIndex(4)
+                    box.setMaximumWidth(370)
+                    box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                    label.setBuddy(box)
+                    if custom:
+                        box.setEditText("13.5")
+                    column.layout().addWidget(box)
+                    status = fluentqt.Label(column)
+                    status.setFluentTypography(fluentqt.FontRole.Caption)
+                    status.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                    status.setWordWrap(True)
+                    if custom:
+                        status.setText(
+                            "Type a value such as 13.5. The “pt” label stays separate "
+                            "from your input."
+                        )
+                    else:
+                        status.setObjectName("galleryEditableComboBoxStatus")
 
-                combo_box.editTextChanged.connect(update_status)
-                update_status(combo_box.currentText())
-                layout.addWidget(combo_box)
-                layout.addWidget(status)
-                """,
-                "from PySide6.QtCore import Qt\n" + _WIDGETS,
-            ),
+                        def update_status(text, preset=box, output=status):
+                            match = Qt.MatchFixedString | Qt.MatchCaseSensitive
+                            kind = "Suggested" if preset.findText(text, match) >= 0 else "Custom"
+                            output.setText(f"{kind} value: {text or '(empty)'}")
+
+                        box.editTextChanged.connect(update_status)
+                        update_status(box.currentText())
+                    column.layout().addWidget(status)
+                """)),
         ),
         "combobox-many-items": (
             "combo_box",

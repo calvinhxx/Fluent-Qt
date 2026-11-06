@@ -136,6 +136,11 @@ widget with a different policy requires `takeTrailingWidget()` first.
 applies the recorded policy. Empty text or a null widget clears the slot. Suffixes
 never become editor values. Components reserve native chrome and hosted content
 before computing the editable rectangle, without writing caller text margins.
+Plain suffixes use the Caption typography role and secondary text color. Disabled
+fields dim them without changing the value. Custom widgets keep their own fonts.
+For inline commands, Button's `textColorRole` selects Primary, Secondary or Accent
+on an unfilled, unchecked button; filled, disabled and critical states retain
+their contrast colors. Label's Critical role uses the theme's error color.
 Application layouts must honor minimum size hints for custom action hit targets;
 an explicitly undersized fixed widget cannot preserve arbitrary content sizes.
 
