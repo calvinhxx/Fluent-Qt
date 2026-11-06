@@ -306,6 +306,10 @@ platform assistive-technology certification. Input-method preedit leaves the
 wrapper height stable until composition commits, so candidate exploration does
 not repeatedly reflow the surrounding form.
 
+The LineEdit Gallery's window-scoped editing example labels both editor types
+and preserves TextEdit's default automatic height and visible-line range. Its
+growth and collapse use the component's motion policy, with no sample animation.
+
 When the initial editor viewport is shorter than a fallback-font caret, height
 growth restores the whole caret instead of retaining Qt's temporary scroll
 offset. Later resizing preserves an ordinary user scroll position. These
