@@ -610,7 +610,6 @@ void TextEdit::paintFrame(QPainter& painter)
     state.focused = m_isFocused;
     state.hovered = m_isHovered;
     state.pressed = false;
-    state.dark = effectiveThemeUsesDarkAppearance();
     state.normalWidth = m_unfocusedBorderWidth;
     state.focusedWidth = m_focusedBorderWidth;
     ::fluent::detail::paintTextInputFrame(painter, QRectF(rect()), themeColorsRef(), themeRadius().control, state);

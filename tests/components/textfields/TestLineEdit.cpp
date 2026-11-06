@@ -51,6 +51,7 @@ TEST(FieldTrailingContentTest, TextIsDecorationAndPreservesCallerMargins)
         ASSERT_NE(label, nullptr);
         EXPECT_EQ(label->text(), QString("px"));
         EXPECT_FALSE(label->isTextElided());
+        EXPECT_EQ(label->font().pixelSize(), Typography::FontSize::Caption);
         EXPECT_EQ(edit.text(), QString("1280"));
         EXPECT_EQ(edit.textMargins(), margins);
         EXPECT_EQ(values.count(), 0);
@@ -58,6 +59,10 @@ TEST(FieldTrailingContentTest, TextIsDecorationAndPreservesCallerMargins)
         EXPECT_TRUE(edit.rect().contains(label->geometry()));
         EXPECT_EQ(label->focusPolicy(), Qt::NoFocus);
         EXPECT_EQ(label->geometry().center().x() > edit.width() / 2, direction == Qt::LeftToRight);
+        edit.setEnabled(false);
+        EXPECT_EQ(label->textColorRole(), Label::TextColorRole::Disabled);
+        edit.setEnabled(true);
+        EXPECT_EQ(label->textColorRole(), Label::TextColorRole::Secondary);
         edit.selectAll();
         EXPECT_EQ(edit.selectedText(), QString("1280"));
         edit.setTrailingText(QString());

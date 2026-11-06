@@ -2514,7 +2514,7 @@ TEST_F(GalleryContentPagesTest, EditableComboBoxSampleMakesCustomValueContractVi
 {
     fluent::gallery::GallerySample sample;
     ASSERT_TRUE(findSampleById(QStringLiteral("combobox"), QStringLiteral("combobox-editable"), &sample));
-    EXPECT_TRUE(sample.description.contains(QStringLiteral("Type any value")));
+    EXPECT_TRUE(sample.description.contains(QStringLiteral("refine the value")));
     for (const QString& sourceFragment : {QStringLiteral("setEditable(true)"),
              QStringLiteral("setInsertPolicy(QComboBox::NoInsert)"), QStringLiteral("QComboBox::editTextChanged"),
              QStringLiteral("findText("), QStringLiteral("Suggested"), QStringLiteral("Custom")}) {
@@ -2528,8 +2528,11 @@ TEST_F(GalleryContentPagesTest, EditableComboBoxSampleMakesCustomValueContractVi
     ASSERT_NE(comboBox, nullptr);
     ASSERT_NE(status, nullptr);
     EXPECT_TRUE(comboBox->isEditable());
-    EXPECT_EQ(comboBox->width(), 200);
-    EXPECT_EQ(status->width(), 200);
+    preview->resize(764, preview->sizeHint().height());
+    preview->show();
+    QApplication::processEvents();
+    EXPECT_EQ(comboBox->width(), 370);
+    EXPECT_EQ(status->width(), 370);
     EXPECT_EQ(comboBox->insertPolicy(), QComboBox::NoInsert);
     EXPECT_EQ(status->text(), QStringLiteral("Suggested value: 12"));
 
@@ -3738,6 +3741,56 @@ TEST_F(GalleryContentPagesTest, SampleCardHeightChangeSynchronizesEnclosingScrol
     EXPECT_GT(content->height(), initialContentHeight);
     EXPECT_GE(content->height(), contentLayout->minimumSize().height());
     EXPECT_GE(content->height(), tail->geometry().bottom() + 1 + contentLayout->contentsMargins().bottom());
+}
+
+TEST_F(GalleryContentPagesTest, InputExamplesWrapWithoutLosingFieldWidthOrOrder)
+{
+    struct Scene {
+        const char* route;
+        const char* sample;
+        const char* first;
+        const char* second;
+    };
+    const Scene scenes[] = {
+        {"line-edit", "line-edit-trailing-content", "galleryTrailingWidth", "galleryTrailingName"},
+        {"auto-suggest-box", "auto-suggest-box-async", "asyncProjectSearch", "asyncProjectSearchSlow"},
+        {"combobox", "combobox-editable", "galleryEditableComboBox", "galleryCustomComboBox"},
+    };
+    for (const auto& scene : scenes) {
+        SCOPED_TRACE(scene.sample);
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(QString::fromLatin1(scene.route), QString::fromLatin1(scene.sample), &sample));
+        ASSERT_TRUE(sample.inlinePreview);
+        fluent::gallery::GallerySampleCard card(QString::fromLatin1(scene.route), sample);
+        auto* first = card.findChild<QWidget*>(QString::fromLatin1(scene.first));
+        auto* second = card.findChild<QWidget*>(QString::fromLatin1(scene.second));
+        ASSERT_NE(first, nullptr);
+        ASSERT_NE(second, nullptr);
+        for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            card.setLayoutDirection(direction);
+            for (int width : {900, 420}) {
+                card.resize(width, card.sizeHint().height());
+                card.show();
+                QApplication::processEvents();
+                const QRect a(first->mapTo(&card, QPoint()), first->size());
+                const QRect b(second->mapTo(&card, QPoint()), second->size());
+                EXPECT_TRUE(card.rect().contains(a));
+                EXPECT_TRUE(card.rect().contains(b));
+                EXPECT_FALSE(a.intersects(b));
+                EXPECT_EQ(first->height(), Spacing::ControlHeight::Standard);
+                EXPECT_EQ(second->height(), Spacing::ControlHeight::Standard);
+                if (width == 900) {
+                    EXPECT_EQ(first->width(), 370);
+                    EXPECT_EQ(second->width(), 370);
+                    EXPECT_EQ(a.top(), b.top());
+                    EXPECT_EQ(a.left() < b.left(), direction == Qt::LeftToRight);
+                } else {
+                    EXPECT_GT(b.top(), a.bottom());
+                    EXPECT_LE(first->width(), 370);
+                }
+            }
+        }
+    }
 }
 
 TEST_F(GalleryContentPagesTest, CodeBlockSampleUsesPublicComponentAndWrapControl)

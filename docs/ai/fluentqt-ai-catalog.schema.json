@@ -244,7 +244,8 @@
           "items": { "$ref": "#/$defs/sourceFile" }
         },
         "preview_layout": { "$ref": "#/$defs/previewLayout" },
-        "fill_available_width": { "type": "boolean" }
+        "fill_available_width": { "type": "boolean" },
+        "inline_preview": { "type": "boolean" }
       }
     },
     "component": {

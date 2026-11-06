@@ -114,6 +114,18 @@ def wait_for_events(duration_ms):
 
 
 class FluentQtBindingTest(unittest.TestCase):
+    def test_inline_action_semantic_color_is_available_in_native_bindings(self):
+        button = fluentqt.Button("Reset")
+        changes = []
+        button.textColorRoleChanged.connect(lambda: changes.append(True))
+        button.setTextColorRole(fluentqt.Button.TextColorRole.Accent)
+        button.setTextColorRole(fluentqt.Button.TextColorRole.Accent)
+        self.assertEqual(button.textColorRole(), fluentqt.Button.TextColorRole.Accent)
+        self.assertEqual(len(changes), 1)
+        label = fluentqt.Label("Failed")
+        label.setTextColorRole(fluentqt.Label.TextColorRole.Critical)
+        self.assertEqual(label.textColorRole(), fluentqt.Label.TextColorRole.Critical)
+
     def test_field_trailing_text_preserves_value_and_custom_widget_identity(self):
         for field_type in (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.ComboBox):
             with self.subTest(field=field_type.__name__):

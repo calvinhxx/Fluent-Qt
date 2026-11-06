@@ -41,8 +41,9 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
     m_clearButton->setAccessibleName(tr("Clear text"));
     m_clearButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);
+    m_clearButton->setTextColorRole(::fluent::basicinput::Button::TextColorRole::Secondary);
     m_clearButton->setFocusPolicy(Qt::NoFocus);
-    m_clearButton->setIconGlyph(::Typography::Icons::Dismiss, ::Typography::IconSize::Standard,
+    m_clearButton->setIconGlyph(::Typography::Icons::Dismiss, ::Typography::IconSize::Compact,
         ::Typography::FontFamily::FluentIcons);
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     m_clearButton->hide();
@@ -281,7 +282,6 @@ void LineEdit::paintFrame(QPainter& painter)
     state.focused = m_isFocused;
     state.hovered = m_isHovered;
     state.pressed = false;
-    state.dark = effectiveThemeUsesDarkAppearance();
     state.normalWidth = m_unfocusedBorderWidth;
     state.focusedWidth = m_focusedBorderWidth;
     ::fluent::detail::paintTextInputFrame(painter, QRectF(rect()), themeColorsRef(), themeRadius().control, state);

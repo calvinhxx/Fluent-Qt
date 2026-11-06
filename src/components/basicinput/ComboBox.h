@@ -229,6 +229,8 @@ private:
     void applyLineEditStyle();
     void applyFontRole();
     void synchronizeFont();
+    int chevronAreaWidth() const;
+    QRect chevronButtonRect() const;
 
     // --- Configurable design tokens ---
     Typography::FontRole m_fontRole = Typography::FontRole::Body;

@@ -109,6 +109,11 @@ these overrides. Changing copy does not start or cancel a request.
 LineEdit (including AutoSuggestBox, NumberBox, PasswordBox and TagInput) and
 ComboBox support trailing text and custom widgets through the same C++
 implementation. Python retains hosted wrappers and Reparented restore targets.
+Plain suffixes use Caption typography; supplied widgets keep their own fonts.
+`Button.TextColorRole` supports semantic Primary, Secondary and Accent foregrounds
+without overriding filled/disabled contrast. `Label.TextColorRole.Critical` is
+available for inline error feedback. AutoSuggestBox shows one built-in loading
+indicator in the field, leaving popup text and retry/paging actions intact.
 `setTrailingWidget(widget, WidgetOwnership)` returns false for invalid containment
 or an in-place ownership change; take the widget first to change policy.
 Replacement, explicit release and host destruction apply the recorded native
