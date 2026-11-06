@@ -22,6 +22,7 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/status_info/ProgressRing.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
 #include "design/Spacing.h"
@@ -150,7 +151,7 @@ TEST_F(AutoSuggestBoxTest, DefaultsAndButtons)
     QTest::keyClick(&box, Qt::Key_Down);
     popup = window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
     ASSERT_NE(popup, nullptr);
-    EXPECT_EQ(popup->anchorOffset(), Spacing::Gap::Normal);
+    EXPECT_EQ(popup->anchorOffset(), Spacing::Gap::Tight);
     box.cancelSuggestions();
     QTest::keyClick(&box, Qt::Key_Down);
     EXPECT_EQ(window->findChildren<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup").size(), 1);
@@ -306,7 +307,7 @@ TEST_F(AutoSuggestBoxTest, QueryButtonPlacementSupportsLeftAndRight)
     EXPECT_LT(queryButton->geometry().center().x(), box.rect().center().x());
     EXPECT_GT(clearButton->geometry().center().x(), box.rect().center().x());
     EXPECT_LT(queryButton->geometry().right(), clearButton->geometry().left());
-    EXPECT_EQ(box.contentMargins().left(), 4 + box.queryButtonSize() + 2);
+    EXPECT_EQ(box.contentMargins().left(), Spacing::XSmall + box.queryButtonSize() + Spacing::Gap::Tight);
     EXPECT_GT(box.contentMargins().right(), Spacing::Padding::TextFieldHorizontal);
 
     box.setQueryButtonPlacement(AutoSuggestBox::QueryButtonPlacement::Right);
@@ -365,7 +366,7 @@ TEST_F(AutoSuggestBoxTest, FieldPopupStaysBoundedAndReflowsWithItsHost)
         else
             EXPECT_EQ(card.right(), box.geometry().right());
         const bool above = popup->placement() == fluent::dialogs_flyouts::Flyout::Top;
-        EXPECT_EQ(above ? box.y() - card.bottom() - 1 : card.top() - box.geometry().bottom() - 1, Spacing::Gap::Normal);
+        EXPECT_EQ(above ? box.y() - card.bottom() - 1 : card.top() - box.geometry().bottom() - 1, Spacing::Gap::Tight);
         EXPECT_EQ(QApplication::focusWidget(), &box);
     }
 }
@@ -691,6 +692,52 @@ TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions)
     QApplication::processEvents();
 
     EXPECT_FALSE(box->isSuggestionListOpen());
+}
+
+TEST_F(AutoSuggestBoxTest, Contract_SingleInlineProgressPreservesTrailingActionsAndStops)
+{
+    using Placement = AutoSuggestBox::QueryButtonPlacement;
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        for (auto placement : {Placement::Left, Placement::Right, Placement::Leading, Placement::Trailing}) {
+            SCOPED_TRACE(static_cast<int>(direction));
+            SCOPED_TRACE(static_cast<int>(placement));
+            auto* box = new AutoSuggestBox(window);
+            box->setGeometry(20, 20, 240, 32);
+            box->setLayoutDirection(direction);
+            box->setQueryButtonPlacement(placement);
+            box->setTrailingText(QStringLiteral("unit"));
+            box->setAsyncSuggestionsEnabled(true);
+            box->setDebounceInterval(0);
+            QSignalSpy requests(box, &AutoSuggestBox::suggestionsRequested);
+            box->show();
+            ASSERT_TRUE(showAndFocus(box));
+            QTest::keyClicks(box, "Aurora");
+            ASSERT_TRUE(QTest::qWaitFor([&] { return !requests.isEmpty(); }, 1000));
+            auto* progress = box->findChild<fluent::status_info::ProgressRing*>("AutoSuggestBoxLoading");
+            ASSERT_NE(progress, nullptr);
+            EXPECT_TRUE(progress->isVisible());
+            EXPECT_TRUE(progress->isActive());
+            EXPECT_EQ(window->findChildren<fluent::status_info::ProgressRing*>("AutoSuggestBoxLoading").size(), 1);
+            auto* suffix = box->findChild<Label*>("fluentFieldTrailingText");
+            ASSERT_NE(suffix, nullptr);
+            EXPECT_FALSE(progress->geometry().intersects(suffix->geometry()));
+            for (const auto* name : {"AutoSuggestBoxQueryButton", "AutoSuggestBoxClearButton"}) {
+                auto* button = box->findChild<Button*>(name);
+                ASSERT_NE(button, nullptr);
+                EXPECT_FALSE(progress->geometry().intersects(button->geometry()));
+            }
+            const auto token = requests.last().at(1).toULongLong();
+            ASSERT_TRUE(box->setSuggestionsForRequest(token, {QStringLiteral("Aurora Workspace")}, true));
+            EXPECT_FALSE(progress->isActive());
+            EXPECT_TRUE(progress->isHidden());
+            box->loadMoreSuggestions();
+            ASSERT_TRUE(QTest::qWaitFor([&] { return progress->isActive(); }, 1000));
+            box->hide();
+            EXPECT_FALSE(progress->isActive());
+            EXPECT_TRUE(progress->isHidden());
+            delete box;
+        }
+    }
 }
 
 TEST_F(AutoSuggestBoxTest, Contract_AccessibilityAsyncDebounceAndStaleResults)

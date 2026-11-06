@@ -37,6 +37,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     metrics.py
     motion.py
     native_samples.py
+    native_sample_layouts.py
     native_samples_basic.py
     native_samples_charts.py
     native_samples_files.py

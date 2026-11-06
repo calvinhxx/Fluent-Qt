@@ -86,13 +86,16 @@ void FieldTrailingContent::setText(const QString& text)
             m_label->setObjectName(QStringLiteral("fluentFieldTrailingText"));
             m_label->setTextFormat(Qt::PlainText);
             m_label->setTextElideMode(Qt::ElideRight);
+            m_label->setFluentTypography(Typography::FontRole::Caption);
             m_label->setTextColorRole(textfields::Label::TextColorRole::Secondary);
             m_label->setAttribute(Qt::WA_TransparentForMouseEvents);
             m_label->setFocusPolicy(Qt::NoFocus);
             m_label->installEventFilter(this);
         }
-        m_label->setFont(m_host->font());
         m_label->setText(text);
+        m_label->setTextColorRole(m_host->isEnabled()
+                ? textfields::Label::TextColorRole::Secondary
+                : textfields::Label::TextColorRole::Disabled);
         m_label->setAccessibleName(text);
         m_label->show();
     } else if (m_label) {
@@ -178,9 +181,9 @@ QSize FieldTrailingContent::sizeHint() const
         // Rounded integer advances can elide even a two-letter unit. Leave the
         // same small raster clearance used by the closed ComboBox text surface.
         // zh_CN: 整数取整可能让两个字母的单位也被省略；保留与 ComboBox 文字表面相同的小幅栅格余量。
-        const QFontMetricsF metrics(m_host->font());
+        const QFontMetricsF metrics(child->font());
         const int width = qCeil(qMax(metrics.horizontalAdvance(m_text), metrics.boundingRect(m_text).width())) + 2;
-        return QSize(width, m_host->fontMetrics().height());
+        return QSize(width, child->fontMetrics().height());
     }
     return child->sizeHint()
         .expandedTo(child->minimumSizeHint())
@@ -213,13 +216,17 @@ int FieldTrailingContent::layout(const QRect& available, Qt::LayoutDirection dir
 
 void FieldTrailingContent::refreshFont()
 {
-    if (m_label && m_label->font() != m_host->font())
-        m_label->setFont(m_host->font());
+    if (m_label)
+        m_label->setFluentTypography(Typography::FontRole::Caption);
 }
 
 bool FieldTrailingContent::eventFilter(QObject* watched, QEvent* event)
 {
     const QPointer<QObject> guard(watched);
+    if (watched == m_host && event->type() == QEvent::EnabledChange && m_label)
+        m_label->setTextColorRole(m_host->isEnabled()
+                ? textfields::Label::TextColorRole::Secondary
+                : textfields::Label::TextColorRole::Disabled);
     if (watched == m_widget && event->type() == QEvent::ParentChange && m_widget->parentWidget() != m_host) {
         const State previous = state();
         QObject::disconnect(m_destroyed);

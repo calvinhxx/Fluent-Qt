@@ -169,6 +169,45 @@ protected:
     void TearDown() override { ThemeRegistry::instance().resetToDefaults(); }
 };
 
+TEST_F(ButtonTest, SemanticForegroundTracksThemeWithoutOverridingStateContrast)
+{
+    Button button(QStringLiteral("Reset"));
+    button.setFixedSize(80, 32);
+    button.setFluentStyle(Button::Subtle);
+    QSignalSpy changed(&button, &Button::textColorRoleChanged);
+    button.setTextColorRole(Button::TextColorRole::Accent);
+    button.setTextColorRole(Button::TextColorRole::Accent);
+    EXPECT_EQ(changed.count(), 1);
+    for (auto theme : {FluentElement::Light, FluentElement::Dark}) {
+        button.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        button.onThemeUpdated();
+        const QColor accent = button.themeColorsRef().textAccentPrimary;
+        const auto accentPixels = [&] {
+            const QImage image = renderButtonToImage(button);
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y)
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor pixel = image.pixelColor(x, y);
+                    if (pixel.alpha() > 180 && qAbs(pixel.red() - accent.red()) < 12
+                        && qAbs(pixel.green() - accent.green()) < 12 && qAbs(pixel.blue() - accent.blue()) < 12)
+                        ++count;
+                }
+            return count;
+        };
+        button.setTextColorRole(Button::TextColorRole::Accent);
+        button.setEnabled(true);
+        button.setFluentStyle(Button::Subtle);
+        EXPECT_GT(accentPixels(), 0);
+        button.setEnabled(false);
+        EXPECT_EQ(accentPixels(), 0);
+        button.setEnabled(true);
+        button.setFluentStyle(Button::Accent);
+        const QImage filled = renderButtonToImage(button);
+        button.setTextColorRole(Button::TextColorRole::Primary);
+        EXPECT_EQ(renderButtonToImage(button), filled);
+    }
+}
+
 TEST_F(ButtonTest, DefaultFontRoleUsesBodyTypography)
 {
     Button emptyButton;

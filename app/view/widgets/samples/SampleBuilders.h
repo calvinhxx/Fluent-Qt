@@ -17,10 +17,13 @@ namespace fluent::gallery::samples {
  * @brief Assembles a GallerySample record from metadata plus a preview factory.
  * zh_CN: 由元数据和预览工厂组装一个 GallerySample 记录。
  */
-GallerySample makeSample(const QString& id, const QString& title, const QString& description,
-                         const QString& codeSnippet,
-                         std::function<QWidget*(QWidget*)> createPreview,
-                         bool fillAvailableWidth = false);
+GallerySample makeSample(const QString& id,
+    const QString& title,
+    const QString& description,
+    const QString& codeSnippet,
+    std::function<QWidget*(QWidget*)> createPreview,
+    bool fillAvailableWidth = false,
+    bool inlinePreview = false);
 
 /**
  * @brief Transparent container with a top-left aligned vertical layout.
@@ -54,8 +57,7 @@ QPixmap initialsAvatar(const QString& name, const QColor& background, int size =
  * @brief Smooth diagonal gradient used as a photo stand-in, with optional caption.
  * zh_CN: 平滑对角渐变，用作照片占位，支持可选标题文字。
  */
-QPixmap gradientPixmap(const QSize& size, const QColor& from, const QColor& to,
-                       const QString& caption = QString());
+QPixmap gradientPixmap(const QSize& size, const QColor& from, const QColor& to, const QString& caption = QString());
 
 } // namespace fluent::gallery::samples
 

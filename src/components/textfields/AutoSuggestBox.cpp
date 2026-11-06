@@ -38,6 +38,7 @@
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/foundation/overlay/FieldPopupGeometry_p.h"
+#include "components/foundation/overlay/FieldPopupSurface_p.h"
 #include "components/textfields/private/AutoSuggestBoxAccessibility_p.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -93,7 +94,7 @@ public:
         const bool hovered = option.state & QStyle::State_MouseOver;
         const bool enabled = option.state & QStyle::State_Enabled;
 
-        const QRectF bgRect = QRectF(option.rect).adjusted(2, 3, -2, -3);
+        const QRectF bgRect = QRectF(option.rect).adjusted(4, 1, -4, -1);
         QColor bgColor = Qt::transparent;
         QColor textColor = enabled ? colors.textPrimary : colors.textDisabled;
         if (enabled && selected)
@@ -134,7 +135,7 @@ public:
         setObjectName("AutoSuggestBoxSuggestionPopup");
         setAnimationEnabled(false);
         setPlacement(fluent::dialogs_flyouts::Flyout::Auto);
-        setAnchorOffset(::Spacing::Gap::Normal);
+        setAnchorOffset(::Spacing::Gap::Tight);
         setModal(false);
         setDim(false);
         setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
@@ -231,6 +232,7 @@ public:
             close();
             return;
         }
+        setLayoutDirection(m_owner->layoutDirection());
         syncModel();
         const int shadow = ::Spacing::Standard;
         const int count = m_owner->suggestionCount();
@@ -256,7 +258,6 @@ public:
             m_statusRow->show();
         } else if (m_statusRow) {
             m_statusRow->hide();
-            m_progress->setIsActive(false);
         }
         const int desiredHeight = listHeight + statusHeight + padY * 2;
         setPlacement(space.opensAbove(desiredHeight) ? Flyout::Top : Flyout::Bottom);
@@ -332,11 +333,11 @@ protected:
         return Flyout::eventFilter(watched, event);
     }
 
-    void hideEvent(QHideEvent* event) override
+    void paintEvent(QPaintEvent*) override
     {
-        if (m_progress)
-            m_progress->setIsActive(false);
-        Flyout::hideEvent(event);
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        ::fluent::overlay::paintFieldPopupSurface(painter, rect(), *this);
     }
 
 private:
@@ -351,11 +352,6 @@ private:
         auto* row = new QHBoxLayout(m_statusRow);
         row->setContentsMargins(::Spacing::Medium, ::Spacing::Medium / 2, ::Spacing::Medium, ::Spacing::Medium / 2);
         row->setSpacing(::Spacing::Small);
-        m_progress = new fluent::status_info::ProgressRing(m_statusRow);
-        m_progress->setObjectName(QStringLiteral("AutoSuggestBoxLoading"));
-        m_progress->setFixedSize(16, 16);
-        m_progress->setStrokeWidth(2);
-        m_progress->setBackgroundVisible(false);
         m_errorIcon = new fluent::FontIcon(Typography::Icons::ErrorIcon, m_statusRow);
         m_errorIcon->setFixedSize(16, 16);
         m_errorIcon->setIconSize(16);
@@ -385,7 +381,6 @@ private:
         m_statusAction->setMinimumHeight(::Spacing::ControlHeight::Small);
         m_statusAction->setFocusPolicy(Qt::StrongFocus);
         m_statusAction->installEventFilter(this);
-        row->addWidget(m_progress);
         row->addWidget(m_errorIcon);
         row->addLayout(copy, 1);
         row->addWidget(m_statusAction);
@@ -405,8 +400,6 @@ private:
         const bool loading = state == State::Loading;
         const bool failed = state == State::Failed;
         const bool more = state == State::Ready && m_owner->m_hasMore;
-        m_progress->setVisible(loading);
-        m_progress->setIsActive(loading);
         m_errorIcon->setVisible(failed);
         m_statusAction->setVisible(failed || more);
         m_statusAction->setText(failed ? m_owner->retryText() : m_owner->loadMoreText());
@@ -451,7 +444,6 @@ private:
     fluent::collections::ListView* m_listView = nullptr;
     AutoSuggestItemDelegate* m_itemDelegate = nullptr;
     QWidget* m_statusRow = nullptr;
-    fluent::status_info::ProgressRing* m_progress = nullptr;
     fluent::FontIcon* m_errorIcon = nullptr;
     Label* m_statusTitle = nullptr;
     Label* m_statusDetails = nullptr;
@@ -726,8 +718,17 @@ void AutoSuggestBox::setLoadState(LoadState state)
     if (m_loadState == state)
         return;
     m_loadState = state;
+    const QPointer<AutoSuggestBox> guard(this);
+    updateButtonState();
+    if (!guard)
+        return;
+    updateTextMargins();
+    if (!guard)
+        return;
+    update();
     detail::notifyAutoSuggestSuggestionsChanged(this);
-    emit loadStateChanged(state);
+    if (guard)
+        emit loadStateChanged(state);
 }
 
 void AutoSuggestBox::setHasMoreSuggestions(bool more)
@@ -1292,6 +1293,8 @@ void AutoSuggestBox::changeEvent(QEvent* event)
     } else if (event->type() == QEvent::LayoutDirectionChange) {
         updateButtonGeometry();
         updateTextMargins();
+        if (isSuggestionListOpen())
+            m_suggestionPopup->showForOwner();
     }
 }
 
@@ -1353,6 +1356,7 @@ void AutoSuggestBox::initializeButtons()
     m_queryButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_queryButton->setFluentLayout(::fluent::basicinput::Button::IconOnly);
     m_queryButton->setFluentSize(::fluent::basicinput::Button::Small);
+    m_queryButton->setTextColorRole(::fluent::basicinput::Button::TextColorRole::Secondary);
     m_queryButton->setFocusPolicy(Qt::NoFocus);
     m_queryButton->setAccessibleName(tr("Submit query"));
     m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
@@ -1370,11 +1374,23 @@ void AutoSuggestBox::initializeButtons()
     m_clearButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_clearButton->setFluentLayout(::fluent::basicinput::Button::IconOnly);
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);
+    m_clearButton->setTextColorRole(::fluent::basicinput::Button::TextColorRole::Secondary);
     m_clearButton->setFocusPolicy(Qt::NoFocus);
     m_clearButton->setAccessibleName(tr("Clear text"));
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
-    m_clearButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard,
+    m_clearButton->setIconGlyph(Typography::Icons::Dismiss, Typography::IconSize::Compact,
         Typography::FontFamily::FluentIcons);
+
+    m_loadingIndicator = new ::fluent::status_info::ProgressRing(this);
+    m_loadingIndicator->setObjectName(QStringLiteral("AutoSuggestBoxLoading"));
+    m_loadingIndicator->setFixedSize(Typography::IconSize::Standard, Typography::IconSize::Standard);
+    m_loadingIndicator->setStrokeWidth(2);
+    m_loadingIndicator->setBackgroundVisible(false);
+    m_loadingIndicator->setAccessibleName(tr("Loading suggestions"));
+    m_loadingIndicator->setAttribute(Qt::WA_TransparentForMouseEvents);
+    m_loadingIndicator->setFocusPolicy(Qt::NoFocus);
+    m_loadingIndicator->setIsActive(false);
+    m_loadingIndicator->hide();
 
     connect(m_clearButton, &::fluent::basicinput::Button::clicked, this, [this]() {
         QPointer<AutoSuggestBox> guard(this);
@@ -1425,16 +1441,38 @@ void AutoSuggestBox::updateButtonGeometry()
         m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
         const int y = input.top() + (input.height() - m_clearButtonSize) / 2;
         const int right = queryVisible && !queryButtonOnLeadingSide() && m_queryButton
-            ? input.right() - kButtonEdgeMargin - m_queryButtonSize
+            ? input.right() + 1 - kButtonEdgeMargin - m_queryButtonSize - kTextButtonGap
             : input.right() + 1 - kButtonEdgeMargin;
         const int x = right - m_clearButtonSize;
         m_clearButton->setGeometry(
             QStyle::visualRect(buttonLayoutDirection(), input, QRect(x, y, m_clearButtonSize, m_clearButtonSize)));
     }
+
+    if (m_loadingIndicator) {
+        int right = input.right() + 1 - kButtonEdgeMargin;
+        if (m_queryIconVisible && !queryButtonOnLeadingSide())
+            right -= m_queryButtonSize + kTextButtonGap;
+        if (m_inlineClearEnabled && !text().isEmpty() && isEnabled() && !isReadOnly())
+            right -= m_clearButtonSize + ::Spacing::XSmall;
+        const QSize size = m_loadingIndicator->size();
+        m_loadingIndicator->setGeometry(QStyle::visualRect(buttonLayoutDirection(), input,
+            QRect(right - size.width(), input.top() + (input.height() - size.height()) / 2, size.width(),
+                size.height())));
+    }
+}
+
+bool AutoSuggestBox::showsLoadingIndicator() const
+{
+    return m_asyncEnabled && m_loadState == LoadState::Loading && isEnabled() && !isReadOnly();
 }
 
 void AutoSuggestBox::updateButtonState()
 {
+    if (m_loadingIndicator) {
+        const bool loading = showsLoadingIndicator();
+        m_loadingIndicator->setIsActive(loading);
+        m_loadingIndicator->setVisible(loading);
+    }
     if (m_queryButton) {
         m_queryButton->setVisible(m_queryIconVisible && !m_queryIconDecorative);
         if (m_queryDecoration) {
@@ -1454,23 +1492,18 @@ void AutoSuggestBox::updateButtonState()
 void AutoSuggestBox::updateTextMargins()
 {
     int leftMargin = ::Spacing::Padding::TextFieldHorizontal;
-    int rightMargin = ::Spacing::Padding::TextFieldHorizontal;
-    const bool clearVisible = m_inlineClearEnabled && !text().isEmpty() && isEnabled() && !isReadOnly();
-
+    int trailing = kButtonEdgeMargin;
     if (m_queryIconVisible) {
-        const int queryReserve = kButtonEdgeMargin + m_queryButtonSize + kTextButtonGap;
-        if (queryButtonOnLeadingSide()) {
-            leftMargin = qMax(leftMargin, queryReserve);
-        } else {
-            rightMargin += queryReserve;
-        }
+        if (queryButtonOnLeadingSide())
+            leftMargin = qMax(leftMargin, kButtonEdgeMargin + m_queryButtonSize + kTextButtonGap);
+        else
+            trailing += m_queryButtonSize + kTextButtonGap;
     }
-
-    if (clearVisible) {
-        rightMargin += m_clearButtonSize + kTextButtonGap;
-        if (!m_queryIconVisible || queryButtonOnLeadingSide())
-            rightMargin += kButtonEdgeMargin;
-    }
+    if (m_inlineClearEnabled && !text().isEmpty() && isEnabled() && !isReadOnly())
+        trailing += m_clearButtonSize + kTextButtonGap;
+    if (showsLoadingIndicator())
+        trailing += Typography::IconSize::Standard + kTextButtonGap;
+    int rightMargin = qMax(::Spacing::Padding::TextFieldHorizontal, trailing);
 
     QMargins margins = contentMargins();
     // Legacy Left/Right positions remain physical; new positions mirror with the field.
@@ -1673,11 +1706,11 @@ void AutoSuggestBox::paintInputFrame(QPainter& painter)
 {
     ::fluent::detail::TextInputFrameState state;
     state.enabled = isEnabled();
+    state.invalid = m_loadState == LoadState::Failed;
     state.readOnly = isReadOnly();
     state.focused = m_focused || (QApplication::focusWidget() && isAncestorOf(QApplication::focusWidget()));
     state.hovered = m_hovered;
     state.pressed = false;
-    state.dark = effectiveThemeUsesDarkAppearance();
     ::fluent::detail::paintTextInputFrame(painter, QRectF(inputRect()), themeColorsRef(), themeRadius().control, state);
 }
 

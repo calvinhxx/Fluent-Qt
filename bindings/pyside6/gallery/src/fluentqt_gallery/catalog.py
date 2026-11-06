@@ -24,6 +24,7 @@ class GallerySampleEntry:
     preview_orientation: str | None
     preview_spacing: int | None
     fill_available_width: bool = False
+    inline_preview: bool = False
 
 
 @dataclass(frozen=True)
@@ -145,6 +146,7 @@ ENTRIES = tuple(
                 ),
                 preview_spacing=(sample.get("preview_layout") or {}).get("spacing"),
                 fill_available_width=sample.get("fill_available_width", False),
+                inline_preview=sample.get("inline_preview", False),
             )
             for sample in component["samples"]
         ),

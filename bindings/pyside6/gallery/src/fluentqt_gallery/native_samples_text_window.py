@@ -5,6 +5,7 @@ from __future__ import annotations
 from textwrap import dedent
 
 from .native_samples import register_source_samples
+from .native_sample_layouts import input_columns_script
 
 
 def async_search_source_files(result):
@@ -537,76 +538,21 @@ register_source_samples(
     {
         "auto-suggest-box-async": (
             "root",
-            _script(
-                """
+            _script(input_columns_script("""
+                from PySide6.QtCore import QTimer
+                from PySide6.QtGui import QStandardItem, QStandardItemModel
                 root = QWidget(globals().get("gallery_parent"))
                 root.setObjectName("asyncSearchSample")
                 root.setProperty("staleResponsesIgnored", 0)
                 layout = QVBoxLayout(root)
-                layout.setContentsMargins(16, 16, 16, 16)
-                layout.setSpacing(12)
-                title = fluentqt.Label("Project directory", root)
-                title.setFluentTypography(fluentqt.FontRole.BodyStrong)
-                box = fluentqt.AutoSuggestBox(root)
-                box.setObjectName("asyncProjectSearch")
-                box.setAccessibleName("Search projects")
-                box.setPlaceholderText("Search projects")
-                box.setQueryButtonPlacement(
-                    fluentqt.AutoSuggestBox.QueryButtonPlacement.Leading
-                )
-                box.setSuggestionItemHeight(36)
-                box.setMaximumWidth(320)
-                box.setMinimumWidth(180)
-                box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                box.setLoadingText("Searching projects…")
-                box.setEmptyText("No projects found")
-                box.setEmptyDescription("Try a different name.")
-                model = QStandardItemModel(root)
-                box.setSuggestionModel(model)
-                box.setAsyncSuggestionsEnabled(True)
-                trailing = QWidget()
-                trailing.setObjectName("asyncSearchTrailingStatus")
-                trailing.setAttribute(Qt.WA_TransparentForMouseEvents)
-                trailing.setFixedSize(64, 24)
-                trailing_layout = QHBoxLayout(trailing)
-                trailing_layout.setContentsMargins(0, 0, 0, 0)
-                ring = fluentqt.ProgressRing(trailing)
-                ring.setFixedSize(20, 20)
-                ring.setStrokeWidth(2)
-                ring.setAccessibleName("Searching projects")
-                count = fluentqt.Label(trailing)
-                count.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
-                count.setAlignment(Qt.AlignCenter)
-                trailing_layout.addWidget(ring, 0, Qt.AlignCenter)
-                trailing_layout.addWidget(count)
-                box.setTrailingWidget(trailing, fluentqt.WidgetOwnership.Owned)
-
-                def update_trailing(*_args):
-                    state = box.loadState()
-                    State = fluentqt.AutoSuggestBox.LoadState
-                    loading = state == State.Loading
-                    ring.setIsActive(loading)
-                    ring.setVisible(loading)
-                    count.setVisible(not loading)
-                    count.setText(f"{box.suggestionCount()} shown" if state == State.Ready
-                                  else "Failed" if state == State.Failed else "")
-
-                box.loadStateChanged.connect(update_trailing)
-                box.suggestionCountChanged.connect(update_trailing)
-                update_trailing()
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(fluentqt.Spacing.Standard)
+                columns = InputSampleColumns(root)
+                layout.addWidget(columns)
                 fail_next = fluentqt.CheckBox("Fail next search", root)
                 fail_next.setObjectName("asyncFailNext")
                 fail_next.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-                status = fluentqt.Label(
-                    "Try Aurora for paged results, or zzz for no results.", root
-                )
-                status.setObjectName("asyncSearchResult")
-                status.setWordWrap(True)
-                status.setFluentTypography(fluentqt.FontRole.Caption)
-                status.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
-                for widget in (title, status, box, fail_next):
-                    layout.addWidget(widget)
-
+                layout.addWidget(fail_next)
                 projects = [
                     "Aurora Workspace", "Aurora Mobile", "Aurora API",
                     "Aurora Docs", "Aurora Design", "Aurora Analytics",
@@ -614,57 +560,119 @@ register_source_samples(
                     "Canvas Studio", "Delta", "Harbor",
                 ]
 
-                def search(query, token, append):
-                    fail = fail_next.isChecked()
-                    fail_next.setChecked(False)
-                    # Each simulated request is owned by the sample lifetime.
-                    timer = QTimer(root)
-                    timer.setSingleShot(True)
-
-                    def finish():
-                        timer.deleteLater()
-                        # Validate before changing the application-owned model.
-                        if not box.isSuggestionRequestCurrent(token):
-                            root.setProperty(
-                                "staleResponsesIgnored",
-                                root.property("staleResponsesIgnored") + 1,
-                            )
-                            return
-                        if fail:
-                            box.failSuggestionRequest(
-                                token, "Couldn’t load projects",
-                                "Try again in a moment.",
-                            )
-                            return
-                        matches = []
-                        for name in projects:
-                            if query.strip().casefold() in name.casefold():
-                                matches.append(name)
-                        if not append:
-                            model.removeRows(0, model.rowCount())
-                        end = min(model.rowCount() + 4, len(matches))
-                        for name in matches[model.rowCount():end]:
-                            item = QStandardItem(name)
-                            item.setData(
-                                f"project-{projects.index(name) + 1}", Qt.UserRole
-                            )
-                            model.appendRow(item)
-                        box.completeSuggestionRequest(token, end < len(matches))
-
-                    timer.timeout.connect(finish)
-                    timer.start(850 if len(query) < 3 else 350)
-
-                box.suggestionsRequested.connect(search)
-                box.querySubmitted.connect(
-                    lambda query, chosen: status.setText(
-                        f"Selected: {query}" if chosen else f"Search: {query}"
+                def create_search(column, slow):
+                    title = fluentqt.Label(
+                        "While searching" if slow else "Suggestions", column
                     )
-                )
-                """,
-                "from PySide6.QtCore import Qt, QTimer\n"
-                "from PySide6.QtGui import QStandardItem, QStandardItemModel\n"
-                "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget",
-            ),
+                    title.setMinimumHeight(20)
+                    box = fluentqt.AutoSuggestBox(column)
+                    box.setObjectName(
+                        "asyncProjectSearchSlow" if slow else "asyncProjectSearch"
+                    )
+                    box.setAccessibleName(
+                        "Search projects slowly" if slow else "Search projects"
+                    )
+                    box.setPlaceholderText("Search projects")
+                    box.setQueryButtonPlacement(
+                        fluentqt.AutoSuggestBox.QueryButtonPlacement.Leading
+                    )
+                    box.setSuggestionItemHeight(fluentqt.Spacing.ControlHeight.Standard)
+                    box.setMaximumWidth(370)
+                    box.setMinimumWidth(180)
+                    box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                    box.setLoadingText("Searching projects…")
+                    box.setEmptyText("No projects found")
+                    box.setEmptyDescription("Try a different name.")
+                    title.setBuddy(box)
+                    model = QStandardItemModel(root)
+                    box.setSuggestionModel(model)
+                    box.setAsyncSuggestionsEnabled(True)
+                    count = fluentqt.Label()
+                    count.setObjectName(
+                        "asyncSearchSlowTrailingStatus" if slow
+                        else "asyncSearchTrailingStatus"
+                    )
+                    count.setFluentTypography(fluentqt.FontRole.Caption)
+                    count.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                    count.setAttribute(Qt.WA_TransparentForMouseEvents)
+                    count.setFocusPolicy(Qt.NoFocus)
+                    box.setTrailingWidget(count, fluentqt.WidgetOwnership.Owned)
+
+                    def update_trailing(*_args):
+                        state = box.loadState()
+                        State = fluentqt.AutoSuggestBox.LoadState
+                        count.setText(
+                            f"{box.suggestionCount()} shown" if state == State.Ready
+                            else "Failed" if state == State.Failed else ""
+                        )
+                        count.setTextColorRole(
+                            fluentqt.Label.TextColorRole.Critical if state == State.Failed
+                            else fluentqt.Label.TextColorRole.Secondary
+                        )
+                        count.setVisible(bool(count.text()))
+
+                    box.loadStateChanged.connect(update_trailing)
+                    box.suggestionCountChanged.connect(update_trailing)
+                    update_trailing()
+                    status = fluentqt.Label(
+                        "Keep typing while we search your projects." if slow
+                        else "Try Aurora for paged results, or zzz for no results.", column
+                    )
+                    status.setObjectName(
+                        "asyncSearchSlowResult" if slow else "asyncSearchResult"
+                    )
+                    status.setWordWrap(True)
+                    status.setFluentTypography(fluentqt.FontRole.Caption)
+                    status.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                    for widget in (title, box, status):
+                        column.layout().addWidget(widget)
+
+                    def search(query, token, append):
+                        fail = fail_next.isChecked()
+                        fail_next.setChecked(False)
+                        timer = QTimer(root)
+                        timer.setSingleShot(True)
+
+                        def finish():
+                            timer.deleteLater()
+                            if not box.isSuggestionRequestCurrent(token):
+                                root.setProperty(
+                                    "staleResponsesIgnored",
+                                    root.property("staleResponsesIgnored") + 1,
+                                )
+                                return
+                            if fail:
+                                box.failSuggestionRequest(
+                                    token, "Couldn’t load projects", "Try again in a moment."
+                                )
+                                return
+                            matches = [
+                                name for name in projects
+                                if query.strip().casefold() in name.casefold()
+                            ]
+                            if not append:
+                                model.removeRows(0, model.rowCount())
+                            end = min(model.rowCount() + 4, len(matches))
+                            for name in matches[model.rowCount():end]:
+                                item = QStandardItem(name)
+                                item.setData(f"project-{projects.index(name) + 1}", Qt.UserRole)
+                                model.appendRow(item)
+                            box.completeSuggestionRequest(token, end < len(matches))
+
+                        timer.timeout.connect(finish)
+                        timer.start(1500 if slow else 850 if len(query) < 3 else 350)
+
+                    box.suggestionsRequested.connect(search)
+                    box.querySubmitted.connect(
+                        lambda query, chosen: status.setText(
+                            f"Selected: {query}" if chosen else f"Search: {query}"
+                        )
+                    )
+                    return box
+
+                create_search(columns.add_column(), False)
+                create_search(columns.add_column(), True)
+                """)),
         ),
         "auto-suggest-box-suggestions": (
             "root",
@@ -815,36 +823,49 @@ register_source_samples(
     {
         "line-edit-trailing-content": (
             "root",
-            _text_script(
-                """
-                root, layout = make_text_surface()
-                width = fluentqt.LineEdit(root)
+            _script(input_columns_script("""
+                from PySide6.QtGui import QFont
+                root = InputSampleColumns(globals().get("gallery_parent"))
+                width_column = root.add_column()
+                name_column = root.add_column()
+                width = fluentqt.LineEdit(width_column)
                 width.setObjectName("galleryTrailingWidth")
                 width.setAccessibleName("Canvas width")
                 width.setText("1280")
                 width.setTrailingText("px")
                 width.setClearButtonAccessibleName("Clear canvas width")
                 width.setClearButtonFocusPolicy(Qt.StrongFocus)
-                name = fluentqt.LineEdit(root)
+                name = fluentqt.LineEdit(name_column)
                 name.setObjectName("galleryTrailingName")
                 name.setAccessibleName("Export name")
                 name.setText("gallery-preview-v2")
+                name.setClearButtonEnabled(False)
                 reset = fluentqt.Button("Reset")
                 reset.setObjectName("galleryTrailingReset")
                 reset.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
                 reset.setFluentSize(fluentqt.Button.ButtonSize.Small)
+                reset.setFontRole(fluentqt.FontRole.Caption)
+                action_font = reset.font()
+                action_font.setStyleName("")
+                action_font.setWeight(QFont.DemiBold)
+                reset.setFont(action_font)
+                reset.setTextColorRole(fluentqt.Button.TextColorRole.Accent)
+                reset.setFixedSize(fluentqt.Spacing.XXLarge,
+                                   fluentqt.Spacing.ControlHeight.Small)
+                reset.setFocusVisual(True)
                 reset.setAccessibleName("Reset export name")
                 name.setTrailingWidget(reset, fluentqt.WidgetOwnership.Owned)
                 reset.clicked.connect(lambda: name.setText("gallery-preview"))
                 for field in (width, name):
                     field.setMaximumWidth(370)
                     field.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                layout.addWidget(fluentqt.Label("Canvas width", root))
-                layout.addWidget(width)
-                layout.addWidget(fluentqt.Label("Export name", root))
-                layout.addWidget(name)
-                """
-            ),
+                    column = field.parentWidget()
+                    label = fluentqt.Label(field.accessibleName(), column)
+                    label.setMinimumHeight(20)
+                    label.setBuddy(field)
+                    column.layout().addWidget(label)
+                    column.layout().addWidget(field)
+                """)),
         ),
         "line-edit-clear": (
             "root",

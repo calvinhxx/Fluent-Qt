@@ -194,6 +194,15 @@ void Button::setFont(const QFont& font)
     QPushButton::setFont(font);
 }
 
+void Button::setTextColorRole(TextColorRole role)
+{
+    if (m_textColorRole == role)
+        return;
+    m_textColorRole = role;
+    update();
+    emit textColorRoleChanged();
+}
+
 void Button::onThemeUpdated()
 {
     if (!m_hasExplicitFont)
@@ -463,6 +472,13 @@ void Button::paintButton(InteractionState state)
             borderColor = colors.strokeDivider; // Pressed border fades and flattens. zh_CN: 按下时边框颜色变淡且扁平。
             textColor = colors.textSecondary;   // Text dims slightly. zh_CN: 文字稍微变淡。
         }
+    }
+
+    if (!filled && !checked) {
+        if (m_textColorRole == TextColorRole::Secondary)
+            textColor = colors.textSecondary;
+        else if (m_textColorRole == TextColorRole::Accent)
+            textColor = colors.textAccentPrimary;
     }
 
     // Disabled and critical-hover overrides. zh_CN: 禁用与危险悬停覆盖。

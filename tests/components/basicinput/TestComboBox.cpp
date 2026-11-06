@@ -141,7 +141,16 @@ TEST(ComboBoxTrailingContentTest, AccessibilityExposesHostedActionAndActualPopup
         accessible->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
         QApplication::processEvents();
         EXPECT_TRUE(accessible->state().expanded);
-        EXPECT_FALSE(accessible->relations(QAccessible::Controller).isEmpty());
+        const auto controlled = accessible->relations(QAccessible::Controller);
+        ASSERT_FALSE(controlled.isEmpty());
+        ASSERT_NE(controlled.last().first, nullptr);
+        auto* popup = qobject_cast<QWidget*>(controlled.last().first->object());
+        ASSERT_NE(popup, nullptr);
+        auto* options = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+        ASSERT_NE(options, nullptr);
+        auto* optionsAccessible = QAccessible::queryAccessibleInterface(options);
+        ASSERT_NE(optionsAccessible, nullptr);
+        EXPECT_EQ(optionsAccessible->text(QAccessible::Name), QString("Options"));
         combo.hidePopup();
         EXPECT_FALSE(accessible->state().expanded);
         EXPECT_TRUE(accessible->state().collapsed);
@@ -277,7 +286,7 @@ bool isAccentLike(const QColor& pixel, const QColor& accent)
         && qAbs(pixel.blue() - accent.blue()) <= 10;
 }
 
-qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const QColor& accent)
+QRectF accentBoundsInViewport(fluent::collections::ListView* listView, const QColor& accent)
 {
     const QPixmap pixmap = listView->viewport()->grab();
     const QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
@@ -285,16 +294,20 @@ qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const Q
 
     int minX = image.width();
     int maxX = -1;
+    int minY = image.height();
+    int maxY = -1;
     for (int y = 0; y < image.height(); ++y) {
         for (int x = 0; x < image.width(); ++x) {
             if (!isAccentLike(QColor::fromRgba(image.pixel(x, y)), accent))
                 continue;
             minX = qMin(minX, x);
             maxX = qMax(maxX, x);
+            minY = qMin(minY, y);
+            maxY = qMax(maxY, y);
         }
     }
 
-    return maxX >= minX ? (maxX - minX + 1) / dpr : 0.0;
+    return maxX >= minX ? QRectF(minX / dpr, minY / dpr, (maxX - minX + 1) / dpr, (maxY - minY + 1) / dpr) : QRectF();
 }
 
 void sendWheel(QWidget* target, int angleDeltaY)
@@ -1105,7 +1118,7 @@ TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses)
     ASSERT_NE(listView, nullptr);
     EXPECT_EQ(listView->spacing(), 0);
 
-    const QPoint rowTwoCenter(24, Spacing::ControlHeight::Large * 2 + Spacing::ControlHeight::Large / 2);
+    const QPoint rowTwoCenter = static_cast<QListView*>(listView)->visualRect(listView->model()->index(2, 0)).center();
     QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, rowTwoCenter);
     QApplication::processEvents();
 
@@ -1514,7 +1527,7 @@ TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth)
 
     auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
     ASSERT_NE(listView, nullptr);
-    const int popupContentInset = Spacing::XSmall / 2;
+    const int popupContentInset = Spacing::XSmall;
     const QRect listGeometry = listView->geometry();
     EXPECT_EQ(listGeometry.left(), Spacing::Standard + popupContentInset);
     EXPECT_EQ(listGeometry.right(), popup->rect().right() - Spacing::Standard - popupContentInset);
@@ -1524,9 +1537,10 @@ TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth)
     auto* scrollBar = listView->verticalFluentScrollBar();
     ASSERT_NE(scrollBar, nullptr);
     ASSERT_TRUE(scrollBar->isVisible());
-    EXPECT_EQ(scrollBar->geometry().right(), listView->rect().right() - popupContentInset);
+    EXPECT_EQ(scrollBar->geometry().right(), listView->rect().right() - Spacing::XSmall / 2);
     const int scrollBarRightInPopup = listGeometry.left() + scrollBar->geometry().right();
-    EXPECT_EQ(popup->rect().right() - Spacing::Standard - scrollBarRightInPopup, Spacing::XSmall);
+    EXPECT_EQ(popup->rect().right() - Spacing::Standard - scrollBarRightInPopup,
+        popupContentInset + Spacing::XSmall / 2);
 }
 
 TEST_F(ComboBoxTest, PopupFlipsAboveNearBottomEdge)
@@ -1550,7 +1564,7 @@ TEST_F(ComboBoxTest, PopupFitIncludesAnchorGapAndSurfaceMargin)
     ComboBox* cb = new ComboBox(window);
     // Six visible rows fit below by card height alone, but not once the popup
     // gap and window margin are included. There is ample room above.
-    cb->setGeometry(40, 317, 184, Spacing::ControlHeight::Standard);
+    cb->setGeometry(40, 365, 184, Spacing::ControlHeight::Standard);
     cb->addItems({"Follow system (100%)", "110%", "125%", "150%", "175%", "200%", "250%", "300%"});
 
     auto* popup = openPopupFor(cb, window);
@@ -1575,10 +1589,13 @@ TEST_F(ComboBoxTest, ScrollingPopupWidensForItsLongestLabel)
     const QRect row = static_cast<QListView*>(listView)->visualRect(longest);
     ASSERT_FALSE(row.isEmpty());
 
-    int rightInset = 5;
+    int rightInset = 0;
     if (auto* scrollBar = listView->verticalFluentScrollBar())
         rightInset += scrollBar->thickness();
-    const int textWidth = row.adjusted(5, 3, -rightInset, -3).adjusted(16, 0, -8, 0).width();
+    const int textWidth =
+        row.adjusted(0, 1, -rightInset, -1)
+            .adjusted(Spacing::Small, 0, -Spacing::Small - Typography::IconSize::Compact - Spacing::Small, 0)
+            .width();
     const QString label = longest.data(Qt::DisplayRole).toString();
     const QFontMetrics metrics(listView->font());
 
@@ -1652,45 +1669,30 @@ TEST_F(ComboBoxTest, OwnerPressDismissesWithoutImmediateReopen)
     EXPECT_FALSE(popup->isOpen());
 }
 
-TEST_F(ComboBoxTest, PopupSelectedIndicatorPaintsSinglePill)
+TEST_F(ComboBoxTest, PopupSelectedCheckmarkIsSingleAndFollowsReadingDirection)
 {
-    ComboBox* cb = new ComboBox(window);
-    cb->setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
-    cb->addItems({"Yellow", "Green", "Blue", "Red"});
-    cb->setCurrentIndex(1);
-
-    auto* popup = openPopupFor(cb, window);
-    ASSERT_NE(popup, nullptr);
-    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
-    ASSERT_NE(listView, nullptr);
-
-    listView->setSelectedIndicatorAnimationEnabled(false);
-    QApplication::processEvents();
-
-    const qreal accentWidth = accentSpanWidthInViewport(listView, cb->themeColors().accentDefault);
-    EXPECT_GT(accentWidth, 0.0);
-    EXPECT_LE(accentWidth, 4.5)
-        << "ComboBox popup selected indicator should be painted once, not by "
-           "both ListView and the item delegate";
-}
-
-TEST_F(ComboBoxTest, PopupIndicatorStaysCenteredForLabelsWithDescenders)
-{
-    ComboBox* cb = new ComboBox(window);
-    cb->setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
-    cb->addItems({"Home", "Settings", "Scrolling"});
-    for (int row = 0; row < cb->count(); ++row) {
-        cb->setCurrentIndex(row);
-        auto* popup = openPopupFor(cb, window);
-        ASSERT_NE(popup, nullptr);
-        auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
-        ASSERT_NE(listView, nullptr);
-        listView->setSelectedIndicatorAnimationEnabled(false);
-        QApplication::processEvents();
-        const QModelIndex index = listView->model()->index(row, 0);
-        const QRectF rowRect = static_cast<QListView*>(listView)->visualRect(index);
-        EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), rowRect.center().y(), 0.5);
-        cb->hidePopup();
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
+    cb.addItems({"Home", "Settings", "Scrolling"});
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        cb.setLayoutDirection(direction);
+        for (int row = 0; row < cb.count(); ++row) {
+            cb.setCurrentIndex(row);
+            auto* popup = openPopupFor(&cb, window);
+            ASSERT_NE(popup, nullptr);
+            auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+            ASSERT_NE(listView, nullptr);
+            QApplication::processEvents();
+            EXPECT_FALSE(listView->selectionIndicatorVisible());
+            const QRectF marker = accentBoundsInViewport(listView, cb.themeColorsRef().accentDefault);
+            EXPECT_GT(marker.width(), 4.5);
+            EXPECT_LE(marker.width(), Typography::IconSize::Compact);
+            EXPECT_LE(marker.height(), Typography::IconSize::Compact);
+            EXPECT_EQ(marker.center().x() > listView->viewport()->width() / 2, direction == Qt::LeftToRight);
+            const QRectF item = static_cast<QListView*>(listView)->visualRect(listView->model()->index(row, 0));
+            EXPECT_NEAR(marker.center().y(), item.center().y(), 2.0);
+            cb.hidePopup();
+        }
     }
 }
 

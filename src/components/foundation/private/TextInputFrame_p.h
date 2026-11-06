@@ -13,7 +13,7 @@ struct TextInputFrameState {
     bool focused = false;
     bool hovered = false;
     bool pressed = false;
-    bool dark = false;
+    bool invalid = false;
     int normalWidth = 1;
     int focusedWidth = 2;
 };
@@ -35,21 +35,26 @@ inline void paintTextInputFrame(QPainter& painter,
         background = colors.controlDisabled;
         stroke = bottom = colors.strokeDivider;
     } else if (state.readOnly) {
-        background = colors.controlAltSecondary;
+        background = colors.controlDefault;
         stroke = colors.strokeDefault;
-        bottom = colors.strokeDivider;
+        bottom = colors.strokeStrong;
     } else if (state.focused) {
-        background = state.dark ? colors.bgSolid : colors.controlDefault;
-        stroke = colors.strokeSecondary;
+        background = colors.controlDefault;
+        stroke = colors.strokeDefault;
         bottom = colors.accentDefault;
         bottomWidth = state.focusedWidth;
     } else if (state.pressed || state.hovered) {
         background = state.pressed ? colors.controlTertiary : colors.controlSecondary;
-        stroke = bottom = colors.strokeSecondary;
+        stroke = colors.strokeDefault;
+        bottom = colors.strokeStrong;
     } else {
         background = colors.controlDefault;
         stroke = colors.strokeDefault;
-        bottom = colors.strokeDivider;
+        bottom = colors.strokeStrong;
+    }
+    if (state.enabled && state.invalid) {
+        bottom = colors.systemCritical;
+        bottomWidth = state.focusedWidth;
     }
     QPainterPath frame;
     frame.addRoundedRect(border.rect, radius, radius);
@@ -59,7 +64,7 @@ inline void paintTextInputFrame(QPainter& painter,
     painter.setBrush(Qt::NoBrush);
     painter.setPen(QPen(stroke, border.width));
     painter.drawPath(frame);
-    if (state.enabled && !state.readOnly) {
+    if (state.enabled) {
         const auto underline = metrics.alignedStroke(bounds, bottomWidth);
         QPen pen(bottom, underline.width);
         pen.setCapStyle(Qt::RoundCap);

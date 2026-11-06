@@ -21,6 +21,10 @@ namespace fluent::basicinput {
 class Button;
 }
 
+namespace fluent::status_info {
+class ProgressRing;
+}
+
 namespace fluent {
 class FontIcon;
 }
@@ -316,7 +320,7 @@ private:
     static constexpr int kHeaderHeight = 20;
     static constexpr int kHeaderGap = 4;
     static constexpr int kButtonEdgeMargin = 4;
-    static constexpr int kTextButtonGap = 2;
+    static constexpr int kTextButtonGap = 4;
 
     QRect inputRect() const;
     int inputTop() const;
@@ -328,6 +332,7 @@ private:
     void initializeButtons();
     void updateButtonGeometry();
     void updateButtonState();
+    bool showsLoadingIndicator() const;
     void updateTextMargins();
     void updateHeaderTextMargins();
     void updateSuggestionMetrics();
@@ -393,6 +398,7 @@ private:
 
     ::fluent::basicinput::Button* m_queryButton = nullptr;
     ::fluent::basicinput::Button* m_clearButton = nullptr;
+    ::fluent::status_info::ProgressRing* m_loadingIndicator = nullptr;
     QPointer<SuggestionListPopup> m_suggestionPopup;
 
     TextChangeReason m_nextChangeReason = TextChangeReason::ProgrammaticChange;

@@ -34,7 +34,7 @@ QString renderedLabelText(const Label* label)
 fluent::status_info::ToolTip* elideToolTip(Label* label)
 {
     return label->findChild<fluent::status_info::ToolTip*>(QStringLiteral("LabelElideToolTip"),
-                                                           Qt::FindDirectChildrenOnly);
+        Qt::FindDirectChildrenOnly);
 }
 
 void sendEnter(QWidget* widget)
@@ -98,8 +98,7 @@ TEST_F(LabelTest, SelectableTextUsesSharedFluentContextMenu)
     bool sawCopy = false;
     bool sawSelectAll = false;
     QTimer::singleShot(0, [&]() {
-        auto* menu =
-            qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(QApplication::activePopupWidget());
         sawFluentMenu = menu != nullptr;
         if (!menu)
             return;
@@ -114,18 +113,16 @@ TEST_F(LabelTest, SelectableTextUsesSharedFluentContextMenu)
             EXPECT_LT(menu->actionGeometry(action).height(), ::Spacing::ControlHeight::Standard);
             ASSERT_FALSE(action->icon().isNull());
             const QSize iconSize = action->icon().actualSize(QSize(64, 64));
-            const int maximumBackingExtent =
-                qCeil(Typography::IconSize::Standard * qMax<qreal>(1.0, menu->devicePixelRatioF()));
+            const int maximumBackingExtent = qCeil(
+                Typography::IconSize::Standard * qMax<qreal>(1.0, menu->devicePixelRatioF()));
             EXPECT_LE(iconSize.width(), maximumBackingExtent);
             EXPECT_LE(iconSize.height(), maximumBackingExtent);
 
-            if (action->shortcut().matches(QKeySequence(QKeySequence::Copy)) ==
-                QKeySequence::ExactMatch) {
+            if (action->shortcut().matches(QKeySequence(QKeySequence::Copy)) == QKeySequence::ExactMatch) {
                 sawCopy = true;
                 EXPECT_TRUE(action->isEnabled());
                 action->trigger();
-            } else if (action->shortcut().matches(QKeySequence(QKeySequence::SelectAll)) ==
-                       QKeySequence::ExactMatch) {
+            } else if (action->shortcut().matches(QKeySequence(QKeySequence::SelectAll)) == QKeySequence::ExactMatch) {
                 sawSelectAll = true;
                 EXPECT_TRUE(action->isEnabled());
             }
@@ -134,8 +131,7 @@ TEST_F(LabelTest, SelectableTextUsesSharedFluentContextMenu)
     });
 
     const QPoint localPosition = label->rect().center();
-    QContextMenuEvent event(QContextMenuEvent::Mouse, localPosition,
-                            label->mapToGlobal(localPosition));
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPosition, label->mapToGlobal(localPosition));
     QApplication::sendEvent(label, &event);
 
     EXPECT_TRUE(event.isAccepted());
@@ -213,6 +209,24 @@ TEST_F(LabelTest, TextColorRoleColorsViaOwnStyleSheet)
     EXPECT_TRUE(label->styleSheet().contains(QStringLiteral("color:")));
 }
 
+TEST_F(LabelTest, CriticalTextKeepsSemanticColorUnderAncestorStyleSheet)
+{
+    window->setStyleSheet(QStringLiteral("QWidget { color: black; }"));
+    Label label(QStringLiteral("Failed"), window);
+    label.setTextColorRole(Label::TextColorRole::Critical);
+    for (auto theme : {FluentElement::Light, FluentElement::Dark}) {
+        label.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        label.onThemeUpdated();
+        label.ensurePolished();
+        const QColor color = label.themeColorsRef().systemCritical;
+        EXPECT_TRUE(label.styleSheet().contains(QStringLiteral("rgba(%1, %2, %3, %4)")
+                .arg(color.red())
+                .arg(color.green())
+                .arg(color.blue())
+                .arg(color.alpha())));
+    }
+}
+
 TEST_F(LabelTest, Contract_DefaultTextColorRoleRemovesOwnedColorStyle)
 {
     Label* label = new Label(QStringLiteral("Role text"), window);
@@ -265,8 +279,7 @@ TEST_F(LabelTest, ElideRightRendersConstrainedTextAndKeepsFullText)
     label->setTextElideMode(Qt::ElideRight);
 
     const QString expected =
-        QFontMetrics(label->font())
-            .elidedText(fullText, Qt::ElideRight, label->contentsRect().width());
+        QFontMetrics(label->font()).elidedText(fullText, Qt::ElideRight, label->contentsRect().width());
 
     EXPECT_NE(expected, fullText);
     EXPECT_EQ(label->text(), fullText);
@@ -337,14 +350,12 @@ TEST_F(LabelTest, ElideStateRecomputesWhenInputsChange)
 
     label->setFluentTypography(Typography::FontRole::Title);
     QString expected =
-        QFontMetrics(label->font())
-            .elidedText(updatedLongText, Qt::ElideRight, label->contentsRect().width());
+        QFontMetrics(label->font()).elidedText(updatedLongText, Qt::ElideRight, label->contentsRect().width());
     EXPECT_EQ(renderedLabelText(label), expected);
     EXPECT_EQ(label->isTextElided(), expected != updatedLongText);
 
     label->onThemeUpdated();
-    expected = QFontMetrics(label->font())
-                   .elidedText(updatedLongText, Qt::ElideRight, label->contentsRect().width());
+    expected = QFontMetrics(label->font()).elidedText(updatedLongText, Qt::ElideRight, label->contentsRect().width());
     EXPECT_EQ(renderedLabelText(label), expected);
     EXPECT_EQ(label->isTextElided(), expected != updatedLongText);
 }
@@ -362,8 +373,7 @@ TEST_F(LabelTest, VisualCheck)
     constexpr int kElideCaptionX = 650;
     constexpr int kElideValueX = 790;
 
-    auto createTypographyLabel = [&](const QString& text, Typography::FontRole role,
-                                     QWidget* anchor, int margin = 20) {
+    auto createTypographyLabel = [&](const QString& text, Typography::FontRole role, QWidget* anchor, int margin = 20) {
         Label* l = new Label(text + " (" + Typography::fontRoleKey(role) + ")", window);
         // --- 核心修复：使用属性接口，内部会自动记忆并在切换主题时持久化 ---
         l->setFluentTypography(role);
@@ -374,29 +384,29 @@ TEST_F(LabelTest, VisualCheck)
         return l;
     };
 
-    auto createElideRow = [&](const QString& captionText, const QString& valueText,
-                              Qt::TextElideMode elideMode, int valueWidth, QWidget* anchor,
-                              int margin = 16) {
-        Label* captionLabel = new Label(captionText, window);
-        captionLabel->setFluentTypography(Typography::FontRole::Caption);
-        captionLabel->setFixedSize(130, 28);
-        captionLabel->anchors()->top = {anchor, Edge::Bottom, margin};
-        captionLabel->anchors()->left = {window, Edge::Left, kElideCaptionX};
-        layout->addWidget(captionLabel);
+    auto createElideRow =
+        [&](const QString& captionText, const QString& valueText, Qt::TextElideMode elideMode, int valueWidth,
+            QWidget* anchor, int margin = 16) {
+            Label* captionLabel = new Label(captionText, window);
+            captionLabel->setFluentTypography(Typography::FontRole::Caption);
+            captionLabel->setFixedSize(130, 28);
+            captionLabel->anchors()->top = {anchor, Edge::Bottom, margin};
+            captionLabel->anchors()->left = {window, Edge::Left, kElideCaptionX};
+            layout->addWidget(captionLabel);
 
-        Label* valueLabel = new Label(valueText, window);
-        valueLabel->setFluentTypography(Typography::FontRole::Body);
-        valueLabel->setTextElideMode(elideMode);
-        valueLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
-        valueLabel->setContentsMargins(6, 0, 6, 0);
-        valueLabel->setFrameShape(QFrame::Box);
-        valueLabel->setLineWidth(1);
-        valueLabel->setFixedSize(valueWidth, 30);
-        valueLabel->anchors()->top = {captionLabel, Edge::Top, 0};
-        valueLabel->anchors()->left = {window, Edge::Left, kElideValueX};
-        layout->addWidget(valueLabel);
-        return valueLabel;
-    };
+            Label* valueLabel = new Label(valueText, window);
+            valueLabel->setFluentTypography(Typography::FontRole::Body);
+            valueLabel->setTextElideMode(elideMode);
+            valueLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+            valueLabel->setContentsMargins(6, 0, 6, 0);
+            valueLabel->setFrameShape(QFrame::Box);
+            valueLabel->setLineWidth(1);
+            valueLabel->setFixedSize(valueWidth, 30);
+            valueLabel->anchors()->top = {captionLabel, Edge::Top, 0};
+            valueLabel->anchors()->left = {window, Edge::Left, kElideValueX};
+            layout->addWidget(valueLabel);
+            return valueLabel;
+        };
 
     // 1. Display (最顶层锚定)
     Label* display = new Label("Fluent UI (Display)", window);
@@ -406,20 +416,17 @@ TEST_F(LabelTest, VisualCheck)
     layout->addWidget(display);
 
     // 2. 其余阶梯
-    Label* titleLarge =
-        createTypographyLabel("Large Title", Typography::FontRole::TitleLarge, display);
+    Label* titleLarge = createTypographyLabel("Large Title", Typography::FontRole::TitleLarge, display);
     Label* title = createTypographyLabel("Standard Title", Typography::FontRole::Title, titleLarge);
     Label* subtitle = createTypographyLabel("Subtitle Text", Typography::FontRole::Subtitle, title);
-    Label* bodyStrong =
-        createTypographyLabel("Strong Body Text", Typography::FontRole::BodyStrong, subtitle);
+    Label* bodyStrong = createTypographyLabel("Strong Body Text", Typography::FontRole::BodyStrong, subtitle);
 
     Label* body = new Label("Standard Body Text (Default)", window);
     body->anchors()->top = {bodyStrong, Edge::Bottom, 20};
     body->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(body);
 
-    Label* caption =
-        createTypographyLabel("Small Caption Text", Typography::FontRole::Caption, body);
+    Label* caption = createTypographyLabel("Small Caption Text", Typography::FontRole::Caption, body);
 
     Label* elideTitle = new Label("Elide + ToolTip", window);
     elideTitle->setFluentTypography(Typography::FontRole::Title);
@@ -435,22 +442,18 @@ TEST_F(LabelTest, VisualCheck)
 
     const QString releaseText =
         "Quarterly release note summary with a long title that does not fit in the compact column";
-    Label* rightElide =
-        createElideRow("ElideRight", releaseText, Qt::ElideRight, 190, elideHint, 22);
+    Label* rightElide = createElideRow("ElideRight", releaseText, Qt::ElideRight, 190, elideHint, 22);
 
-    createElideRow("ElideMiddle",
-                   "/Users/calvinhxx/Ws/Fluent-QT/src/components/textfields/Label.cpp",
-                   Qt::ElideMiddle, 260, rightElide);
+    createElideRow("ElideMiddle", "/Users/calvinhxx/Ws/Fluent-QT/src/components/textfields/Label.cpp", Qt::ElideMiddle,
+        260, rightElide);
 
-    createElideRow("ElideLeft", "Build pipeline artifact Fluent-Qt-macos-debug-test-label-bundle",
-                   Qt::ElideLeft, 240, rightElide, 64);
+    createElideRow("ElideLeft", "Build pipeline artifact Fluent-Qt-macos-debug-test-label-bundle", Qt::ElideLeft, 240,
+        rightElide, 64);
 
-    Label* fitLabel =
-        createElideRow("Fits", "Short value with no tooltip", Qt::ElideRight, 260, rightElide, 106);
+    Label* fitLabel = createElideRow("Fits", "Short value with no tooltip", Qt::ElideRight, 260, rightElide, 106);
 
-    Label* resizeDemo = createElideRow(
-        "Resizable", "Click the button to switch this label between clipped and full width",
-        Qt::ElideRight, 170, fitLabel, 18);
+    Label* resizeDemo = createElideRow("Resizable",
+        "Click the button to switch this label between clipped and full width", Qt::ElideRight, 170, fitLabel, 18);
 
     Button* widthBtn = new Button("Toggle Width", window);
     widthBtn->setFixedSize(120, 32);
@@ -477,10 +480,9 @@ TEST_F(LabelTest, VisualCheck)
     layout->addWidget(themeBtn);
 
     QObject::connect(themeBtn, &Button::clicked, []() {
-        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() ==
-                                                fluent::FluentElement::Light
-                                            ? fluent::FluentElement::Dark
-                                            : fluent::FluentElement::Light);
+        fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
 
     window->show();
