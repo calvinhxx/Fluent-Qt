@@ -1289,12 +1289,42 @@ void AutoSuggestBox::changeEvent(QEvent* event)
         update();
     } else if (event->type() == QEvent::FontChange) {
         updateTextMargins();
+    } else if (event->type() == QEvent::LayoutDirectionChange) {
+        updateButtonGeometry();
+        updateTextMargins();
     }
+}
+
+QRect AutoSuggestBox::trailingContentBounds() const
+{
+    return inputRect();
+}
+
+void AutoSuggestBox::trailingContentGeometryChanged()
+{
+    const int preferred = totalPreferredHeight();
+    if (height() != preferred)
+        setFixedHeight(preferred);
+    updateButtonGeometry();
+}
+
+bool AutoSuggestBox::queryButtonOnLeadingSide() const
+{
+    return m_queryButtonPlacement == QueryButtonPlacement::Left
+        || m_queryButtonPlacement == QueryButtonPlacement::Leading;
+}
+
+Qt::LayoutDirection AutoSuggestBox::buttonLayoutDirection() const
+{
+    return m_queryButtonPlacement == QueryButtonPlacement::Leading
+            || m_queryButtonPlacement == QueryButtonPlacement::Trailing
+        ? layoutDirection()
+        : Qt::LeftToRight;
 }
 
 QRect AutoSuggestBox::inputRect() const
 {
-    return QRect(0, inputTop(), width(), m_inputHeight);
+    return QRect(0, inputTop(), width(), totalPreferredHeight() - inputTop());
 }
 
 int AutoSuggestBox::inputTop() const
@@ -1304,14 +1334,15 @@ int AutoSuggestBox::inputTop() const
 
 int AutoSuggestBox::totalPreferredHeight() const
 {
-    return inputTop() + m_inputHeight;
+    return inputTop()
+        + qMax(m_inputHeight, trailingContentSizeHint().height() + 2 * ::Spacing::Padding::TextFieldVertical);
 }
 
 int AutoSuggestBox::inputTextVerticalPadding() const
 {
     const QFont inputFont = themeFont(fontRole()).toQFont();
     const int textHeight = QFontMetrics(inputFont).height();
-    const int centeredPadding = qMax(0, (m_inputHeight - textHeight) / 2);
+    const int centeredPadding = qMax(0, (inputRect().height() - textHeight) / 2);
     return qMin(::Spacing::Padding::TextFieldVertical, centeredPadding);
 }
 
@@ -1380,10 +1411,11 @@ void AutoSuggestBox::updateButtonGeometry()
     if (m_queryButton) {
         m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
         const int y = input.top() + (input.height() - m_queryButtonSize) / 2;
-        const int x = m_queryButtonPlacement == QueryButtonPlacement::Left
+        const int x = queryButtonOnLeadingSide()
             ? input.left() + kButtonEdgeMargin
             : input.right() + 1 - kButtonEdgeMargin - m_queryButtonSize;
-        m_queryButton->setGeometry(x, y, m_queryButtonSize, m_queryButtonSize);
+        m_queryButton->setGeometry(
+            QStyle::visualRect(buttonLayoutDirection(), input, QRect(x, y, m_queryButtonSize, m_queryButtonSize)));
         if (m_queryDecoration)
             m_queryDecoration->setGeometry(m_queryButton->geometry());
     }
@@ -1392,11 +1424,12 @@ void AutoSuggestBox::updateButtonGeometry()
         const bool queryVisible = m_queryIconVisible;
         m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
         const int y = input.top() + (input.height() - m_clearButtonSize) / 2;
-        const int right = queryVisible && m_queryButtonPlacement == QueryButtonPlacement::Right && m_queryButton
-            ? m_queryButton->geometry().left() - 1
+        const int right = queryVisible && !queryButtonOnLeadingSide() && m_queryButton
+            ? input.right() - kButtonEdgeMargin - m_queryButtonSize
             : input.right() + 1 - kButtonEdgeMargin;
         const int x = right - m_clearButtonSize;
-        m_clearButton->setGeometry(x, y, m_clearButtonSize, m_clearButtonSize);
+        m_clearButton->setGeometry(
+            QStyle::visualRect(buttonLayoutDirection(), input, QRect(x, y, m_clearButtonSize, m_clearButtonSize)));
     }
 }
 
@@ -1426,7 +1459,7 @@ void AutoSuggestBox::updateTextMargins()
 
     if (m_queryIconVisible) {
         const int queryReserve = kButtonEdgeMargin + m_queryButtonSize + kTextButtonGap;
-        if (m_queryButtonPlacement == QueryButtonPlacement::Left) {
+        if (queryButtonOnLeadingSide()) {
             leftMargin = qMax(leftMargin, queryReserve);
         } else {
             rightMargin += queryReserve;
@@ -1435,11 +1468,15 @@ void AutoSuggestBox::updateTextMargins()
 
     if (clearVisible) {
         rightMargin += m_clearButtonSize + kTextButtonGap;
-        if (!m_queryIconVisible || m_queryButtonPlacement == QueryButtonPlacement::Left)
+        if (!m_queryIconVisible || queryButtonOnLeadingSide())
             rightMargin += kButtonEdgeMargin;
     }
 
     QMargins margins = contentMargins();
+    // Legacy Left/Right positions remain physical; new positions mirror with the field.
+    // zh_CN: 保留旧 Left/Right 的物理方向，新位置随字段方向镜像。
+    if (buttonLayoutDirection() != layoutDirection())
+        qSwap(leftMargin, rightMargin);
     const int verticalPadding = inputTextVerticalPadding();
     margins.setLeft(leftMargin);
     margins.setRight(rightMargin);

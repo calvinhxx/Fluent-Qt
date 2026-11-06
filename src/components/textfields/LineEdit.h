@@ -6,8 +6,10 @@
 #include <QMargins>
 #include <QPoint>
 #include <QString>
+#include <memory>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -18,6 +20,9 @@ class QContextMenuEvent;
 
 namespace fluent::basicinput {
 class Button;
+}
+namespace fluent::detail {
+class FieldTrailingContent;
 }
 
 namespace fluent::textfields {
@@ -85,9 +90,23 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
      * zh_CN: LineEdit 是否绘制输入框外框和焦点下划线。
      */
     Q_PROPERTY(bool frameVisible READ isFrameVisible WRITE setFrameVisible NOTIFY frameVisibleChanged)
+    Q_PROPERTY(QString trailingText READ trailingText WRITE setTrailingText NOTIFY trailingTextChanged)
+    Q_PROPERTY(QWidget* trailingWidget READ trailingWidget NOTIFY trailingWidgetChanged)
+    Q_PROPERTY(fluent::WidgetOwnership trailingWidgetOwnership
+        READ trailingWidgetOwnership
+        NOTIFY trailingWidgetOwnershipChanged)
+    Q_PROPERTY(QString clearButtonAccessibleName
+        READ clearButtonAccessibleName
+        WRITE setClearButtonAccessibleName
+        NOTIFY clearButtonAccessibleNameChanged)
+    Q_PROPERTY(Qt::FocusPolicy clearButtonFocusPolicy
+        READ clearButtonFocusPolicy
+        WRITE setClearButtonFocusPolicy
+        NOTIFY clearButtonFocusPolicyChanged)
 
 public:
     explicit LineEdit(QWidget* parent = nullptr);
+    ~LineEdit() override;
 
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
@@ -118,6 +137,28 @@ public:
     bool isFrameVisible() const { return m_frameVisible; }
     void setFrameVisible(bool visible);
 
+    QString trailingText() const;
+    /** @brief Displays a plain-text suffix without changing the editable value; replaces hosted content.
+     * zh_CN: 显示纯文字尾缀，不改变可编辑值，并替换已承载的控件内容。 */
+    void setTrailingText(const QString& text);
+    QWidget* trailingWidget() const;
+    WidgetOwnership trailingWidgetOwnership() const;
+    /** @brief Hosts one trailing widget using explicit ownership; rejects the host and its ancestors.
+     * zh_CN: 按显式所有权承载一个尾部控件；拒绝宿主自身及祖先控件。
+     * Take the widget before changing its ownership policy. Read-only fields preserve custom actions.
+     * zh_CN: 改变所有权策略前须先取出控件；只读字段保留自定义操作。 */
+    bool setTrailingWidget(QWidget* widget, WidgetOwnership ownership);
+    /** @brief Detaches the custom trailing widget and transfers it to the caller.
+     * zh_CN: 脱离并将自定义尾部控件交回调用方。 */
+    QWidget* takeTrailingWidget();
+    /** @brief Releases custom trailing content according to its recorded ownership policy.
+     * zh_CN: 按记录的所有权策略释放自定义尾部内容。 */
+    void releaseTrailingWidget();
+    QString clearButtonAccessibleName() const;
+    void setClearButtonAccessibleName(const QString& name);
+    Qt::FocusPolicy clearButtonFocusPolicy() const;
+    void setClearButtonFocusPolicy(Qt::FocusPolicy policy);
+
 signals:
     void contentMarginsChanged();
     void fontRoleChanged();
@@ -127,8 +168,14 @@ signals:
     void focusedBorderWidthChanged();
     void unfocusedBorderWidthChanged();
     void frameVisibleChanged();
+    void trailingTextChanged();
+    void trailingWidgetChanged();
+    void trailingWidgetOwnershipChanged();
+    void clearButtonAccessibleNameChanged();
+    void clearButtonFocusPolicyChanged();
 
 protected:
+    bool event(QEvent* event) override;
     void changeEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
@@ -140,12 +187,20 @@ protected:
     /** @brief Paints the input surface when frameVisible is enabled.
      * zh_CN: frameVisible 启用时绘制输入表面，派生输入框可复用同一开关。 */
     virtual void paintFrame(QPainter& painter);
+    virtual QRect trailingContentBounds() const { return rect(); }
+    virtual void trailingContentGeometryChanged();
+    int trailingContentWidth() const { return m_trailingContentWidth; }
+    QSize trailingContentSizeHint() const;
+    void updateTrailingContentGeometry();
+    virtual ::fluent::basicinput::Button* clearActionButton() const { return m_clearButton; }
 
 private:
     void applyThemeStyle();
+    void applyTextPadding();
     void applyThemePalette();
     void updateClearButtonVisibility();
     void updateClearButtonGeometry();
+    QMargins chromeContentMargins() const;
 
     QMargins m_contentMargins = QMargins(::Spacing::Padding::TextFieldHorizontal,
         ::Spacing::Padding::TextFieldVertical,
@@ -161,6 +216,9 @@ private:
     bool m_frameVisible = true;
     bool m_isHovered = false;
     bool m_isFocused = false;
+    std::unique_ptr<::fluent::detail::FieldTrailingContent> m_trailingContent;
+    int m_trailingContentWidth = 0;
+    bool m_updatingTrailingContent = false;
 };
 
 } // namespace fluent::textfields

@@ -251,6 +251,8 @@ signals:
     void scrubFinished(double initialValue, double finalValue, bool canceled);
 
 protected:
+    QRect trailingContentBounds() const override;
+    void trailingContentGeometryChanged() override;
     bool event(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;

@@ -1,5 +1,7 @@
 #include "components/foundation/private/TextInputFrame_p.h"
 #include "components/foundation/private/ControlMetrics_p.h"
+#include "components/foundation/private/FieldTrailingContent_p.h"
+#include "components/foundation/private/FieldTextGeometry_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "compatibility/private/LineEditMetricsCompat_p.h"
 #include "LineEdit.h"
@@ -51,13 +53,95 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
     });
     connect(this, &QLineEdit::textChanged, this, [this]() { updateClearButtonVisibility(); });
 
+    m_trailingContent = std::make_unique<::fluent::detail::FieldTrailingContent>(this);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::geometryChanged, this,
+        &LineEdit::updateTrailingContentGeometry);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::textChanged, this,
+        &LineEdit::trailingTextChanged);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::widgetChanged, this,
+        &LineEdit::trailingWidgetChanged);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::ownershipChanged, this,
+        &LineEdit::trailingWidgetOwnershipChanged);
+
     applyThemeStyle();
+}
+
+LineEdit::~LineEdit() = default;
+
+QString LineEdit::trailingText() const
+{
+    return m_trailingContent->text();
+}
+void LineEdit::setTrailingText(const QString& text)
+{
+    m_trailingContent->setText(text);
+}
+QWidget* LineEdit::trailingWidget() const
+{
+    return m_trailingContent->widget();
+}
+WidgetOwnership LineEdit::trailingWidgetOwnership() const
+{
+    return m_trailingContent->ownership();
+}
+bool LineEdit::setTrailingWidget(QWidget* widget, WidgetOwnership ownership)
+{
+    return m_trailingContent->setWidget(widget, ownership);
+}
+QWidget* LineEdit::takeTrailingWidget()
+{
+    return m_trailingContent->takeWidget();
+}
+void LineEdit::releaseTrailingWidget()
+{
+    m_trailingContent->releaseWidget();
+}
+
+QString LineEdit::clearButtonAccessibleName() const
+{
+    const auto* button = clearActionButton();
+    return button ? button->accessibleName() : QString();
+}
+
+void LineEdit::setClearButtonAccessibleName(const QString& name)
+{
+    auto* button = clearActionButton();
+    if (!button || button->accessibleName() == name)
+        return;
+    button->setAccessibleName(name);
+    emit clearButtonAccessibleNameChanged();
+}
+
+Qt::FocusPolicy LineEdit::clearButtonFocusPolicy() const
+{
+    const auto* button = clearActionButton();
+    return button ? button->focusPolicy() : Qt::NoFocus;
+}
+
+void LineEdit::setClearButtonFocusPolicy(Qt::FocusPolicy policy)
+{
+    auto* button = clearActionButton();
+    if (!button || button->focusPolicy() == policy)
+        return;
+    button->setFocusPolicy(policy);
+    updateClearButtonVisibility();
+    emit clearButtonFocusPolicyChanged();
+}
+
+QSize LineEdit::trailingContentSizeHint() const
+{
+    return m_trailingContent ? m_trailingContent->sizeHint() : QSize(0, 0);
 }
 
 QSize LineEdit::sizeHint() const
 {
     QSize hint = QLineEdit::sizeHint();
     hint.setHeight(qMax(hint.height(), ::fluent::detail::standardControlHeight(fontMetrics())));
+    const QSize trailing = trailingContentSizeHint();
+    if (trailing.width() > 0) {
+        hint.rwidth() += qMax(0, trailing.width() + ::Spacing::XSmall - m_trailingContentWidth);
+        hint.setHeight(qMax(hint.height(), trailing.height() + m_contentMargins.top() + m_contentMargins.bottom()));
+    }
     return hint;
 }
 
@@ -65,7 +149,28 @@ QSize LineEdit::minimumSizeHint() const
 {
     QSize hint = QLineEdit::minimumSizeHint();
     hint.setHeight(qMax(hint.height(), ::fluent::detail::standardControlHeight(fontMetrics())));
+    const QSize trailing = trailingContentSizeHint();
+    if (trailing.width() > 0) {
+        const QMargins margins = chromeContentMargins() + textMargins()
+            + compatibility::detail::lineEditSideActionMargins(*this);
+        const int trailingWidth = trailingWidget() ? trailing.width() : qMin(trailing.width(), 24);
+        hint.setWidth(qMax(hint.width(),
+            margins.left() + margins.right() + trailingWidth + ::Spacing::XSmall
+                + fontMetrics().horizontalAdvance(QLatin1Char('M')) * 4));
+        hint.setHeight(qMax(hint.height(), trailing.height() + m_contentMargins.top() + m_contentMargins.bottom()));
+    }
     return hint;
+}
+
+bool LineEdit::event(QEvent* event)
+{
+    const QPointer<LineEdit> guard(this);
+    const bool handled = QLineEdit::event(event);
+    if (guard && event
+        && (event->type() == QEvent::ActionAdded || event->type() == QEvent::ActionRemoved
+            || event->type() == QEvent::ActionChanged || event->type() == QEvent::ContentsRectChange))
+        updateTrailingContentGeometry();
+    return handled;
 }
 
 void LineEdit::changeEvent(QEvent* event)
@@ -79,6 +184,10 @@ void LineEdit::changeEvent(QEvent* event)
     if (event->type() == QEvent::LayoutDirectionChange) {
         updateClearButtonGeometry();
     }
+    if (event->type() == QEvent::LayoutDirectionChange || event->type() == QEvent::FontChange)
+        updateTrailingContentGeometry();
+    if (event->type() == QEvent::ReadOnlyChange || event->type() == QEvent::EnabledChange)
+        updateClearButtonVisibility();
 }
 
 void LineEdit::paintEvent(QPaintEvent* event)
@@ -98,6 +207,7 @@ void LineEdit::resizeEvent(QResizeEvent* event)
 {
     QLineEdit::resizeEvent(event);
     updateClearButtonGeometry();
+    updateTrailingContentGeometry();
 }
 
 void LineEdit::contextMenuEvent(QContextMenuEvent* event)
@@ -119,11 +229,49 @@ void LineEdit::updateClearButtonGeometry()
     if (!m_clearButton)
         return;
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
-    int x = width() - m_clearButtonSize - m_clearButtonOffset.x();
+    const QMargins native = compatibility::detail::lineEditSideActionMargins(*this);
+    const int actionWidth = layoutDirection() == Qt::RightToLeft ? native.left() : native.right();
+    int x = width() - m_clearButtonSize - m_clearButtonOffset.x() - actionWidth;
     int y = (height() - m_clearButtonSize) / 2 + m_clearButtonOffset.y();
     m_clearButton->setGeometry(
         QStyle::visualRect(layoutDirection(), rect(), QRect(x, y, m_clearButtonSize, m_clearButtonSize)));
 }
+
+QMargins LineEdit::chromeContentMargins() const
+{
+    QMargins padding = m_contentMargins;
+    if (m_clearButtonEnabled)
+        padding.setRight(padding.right() + m_clearButtonSize + m_clearButtonOffset.x());
+    return padding;
+}
+
+void LineEdit::updateTrailingContentGeometry()
+{
+    if (!m_trailingContent || m_updatingTrailingContent)
+        return;
+    const QPointer<LineEdit> guard(this);
+    m_updatingTrailingContent = true;
+    m_trailingContent->refreshFont();
+    const QRect available =
+        ::fluent::detail::fieldTextRect(trailingContentBounds(), layoutDirection(), chromeContentMargins())
+            .marginsRemoved(compatibility::detail::lineEditSideActionMargins(*this));
+    const int reserved = m_trailingContent->layout(available, layoutDirection(),
+        fontMetrics().horizontalAdvance(QLatin1Char('M')) * 4);
+    if (!guard)
+        return;
+    m_trailingContentWidth = reserved;
+    updateClearButtonGeometry();
+    applyTextPadding();
+    if (!guard)
+        return;
+    trailingContentGeometryChanged();
+    if (guard) {
+        m_updatingTrailingContent = false;
+        updateGeometry();
+    }
+}
+
+void LineEdit::trailingContentGeometryChanged() {}
 
 void LineEdit::paintFrame(QPainter& painter)
 {
@@ -281,13 +429,18 @@ void LineEdit::applyThemePalette()
 
 void LineEdit::applyThemeStyle()
 {
+    setFont(themeFont(m_fontRole).toQFont());
+    updateTrailingContentGeometry();
+    applyTextPadding();
+}
+
+void LineEdit::applyTextPadding()
+{
     const auto& c = themeColorsRef();
-    QMargins padding = m_contentMargins;
-    if (m_clearButtonEnabled) {
-        // QStyleSheetStyle mirrors its contents rectangle for RTL itself.
-        // zh_CN: QStyleSheetStyle 自行镜像 RTL 内容矩形，无需再次交换留白。
-        padding.setRight(padding.right() + m_clearButtonSize + m_clearButtonOffset.x());
-    }
+    QMargins padding = chromeContentMargins();
+    // QSS mirrors logical padding itself; textMargins remain caller-owned.
+    // zh_CN: QSS 自行镜像逻辑边距；textMargins 仍归调用方所有。
+    padding.setRight(padding.right() + m_trailingContentWidth);
     padding = compatibility::detail::lineEditStylePadding(padding);
 
     // Do not set the generic QSS `color`: QStyleSheetStyle on Qt 5 and Qt 6.2
@@ -318,9 +471,9 @@ void LineEdit::applyThemeStyle()
     // zh_CN: 设置样式表会触发重新 polish，QStyleSheetStyle 可能用默认黑色覆盖
     // palette 前景色。先应用只负责几何的样式表，再恢复语义调色板，保证位于带样式
     // 表的 Gallery 卡片中或透明嵌入 ComboBox 时文字仍遵循当前主题。
-    setStyleSheet(qss);
+    if (styleSheet() != qss)
+        setStyleSheet(qss);
     applyThemePalette();
-    setFont(themeFont(m_fontRole).toQFont());
 }
 
 void LineEdit::updateClearButtonVisibility()
@@ -328,7 +481,8 @@ void LineEdit::updateClearButtonVisibility()
     if (!m_clearButton)
         return;
     bool hasText = !text().isEmpty();
-    bool visible = m_clearButtonEnabled && hasText && !isReadOnly() && (m_isFocused || m_isHovered);
+    bool visible = m_clearButtonEnabled && hasText && !isReadOnly() && isEnabled()
+        && (m_isFocused || m_isHovered || m_clearButton->focusPolicy() != Qt::NoFocus);
     m_clearButton->setVisible(visible);
 }
 

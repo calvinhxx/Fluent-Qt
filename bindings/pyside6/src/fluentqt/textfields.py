@@ -2,6 +2,9 @@
 
 from . import _fluentqt as _native
 from ._fluentqt import FontRole
+from ._field_trailing import install_trailing_content_api
+
+install_trailing_content_api(_native.fluent.LineEdit)
 
 AutoSuggestBox = _native.fluent.AutoSuggestBox
 TagInput = _native.fluent.TagInput

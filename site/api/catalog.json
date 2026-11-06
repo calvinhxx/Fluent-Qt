@@ -5882,7 +5882,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestLineEdit.cpp"
         }
       ],
-      "sample_count": 4,
+      "sample_count": 5,
       "documentation": {
         "name": {
           "en": "LineEdit",
@@ -5898,7 +5898,7 @@
         },
         "preview": {
           "alt": {
-            "en": "LineEdit: Input with clear button",
+            "en": "LineEdit: Units and inline actions",
             "zh": "单行输入框的真实 Gallery 示例"
           },
           "light": {

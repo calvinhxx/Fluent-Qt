@@ -1,5 +1,7 @@
 #include "compatibility/InputEventCompat.h"
 #include "ComboBox.h"
+#include "private/ComboBoxAccessibility_p.h"
+#include "components/foundation/private/FieldTrailingContent_p.h"
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QFontMetrics>
@@ -462,6 +464,7 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
 
 ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
 {
+    detail::ensureComboBoxAccessibilityFactory();
     setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
     // QComboBox defaults to WheelFocus, which grants focus before wheelEvent and changes the
@@ -469,6 +472,17 @@ ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
     // after deliberate click/tab focus. zh_CN: QComboBox 默认 WheelFocus，会在 wheelEvent 前先抢
     // 焦点，导致仅悬停滚轮就切换选项；Fluent ComboBox 只接受点击/Tab 明确取得焦点后的滚轮输入。
     setFocusPolicy(Qt::StrongFocus);
+    m_trailingContent = std::make_unique<::fluent::detail::FieldTrailingContent>(this);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::geometryChanged, this,
+        &ComboBox::synchronizeFont);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::textChanged, this,
+        &ComboBox::trailingTextChanged);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::widgetChanged, this,
+        &ComboBox::trailingWidgetChanged);
+    connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::ownershipChanged, this,
+        &ComboBox::trailingWidgetOwnershipChanged);
+    connect(this, &ComboBox::trailingWidgetChanged, this, [this] { detail::notifyComboBoxContentChanged(this); });
+    connect(this, &ComboBox::trailingTextChanged, this, [this] { detail::notifyComboBoxContentChanged(this); });
     applyFontRole();
     setFixedHeight(::Spacing::ControlHeight::Standard);
 
@@ -479,6 +493,42 @@ ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
 ComboBox::~ComboBox()
 {
     delete m_popup.data();
+}
+
+QWidget* ComboBox::accessiblePopupWidget() const
+{
+    return m_popup.data();
+}
+
+QString ComboBox::trailingText() const
+{
+    return m_trailingContent->text();
+}
+void ComboBox::setTrailingText(const QString& text)
+{
+    m_trailingContent->setText(text);
+}
+QWidget* ComboBox::trailingWidget() const
+{
+    return m_trailingContent->widget();
+}
+WidgetOwnership ComboBox::trailingWidgetOwnership() const
+{
+    return m_trailingContent->ownership();
+}
+bool ComboBox::setTrailingWidget(QWidget* widget, WidgetOwnership ownership)
+{
+    if (widget && widget == lineEdit())
+        return false;
+    return m_trailingContent->setWidget(widget, ownership);
+}
+QWidget* ComboBox::takeTrailingWidget()
+{
+    return m_trailingContent->takeWidget();
+}
+void ComboBox::releaseTrailingWidget()
+{
+    m_trailingContent->releaseWidget();
 }
 
 void ComboBox::initAnimation()
@@ -637,10 +687,27 @@ QSize ComboBox::sizeHint() const
     // small clearance so integer layout/raster rounding cannot make an item
     // that nominally fits cross the elision boundary on another platform.
     // zh_CN: 为字形逻辑宽度预留少量余量，避免不同平台的整数布局和栅格化舍入触发省略号。
-    const int w = m_contentPaddingH + maxTextW + kClosedFieldTextFitClearance + chevronArea;
-    const int h = qMax(::fluent::detail::standardControlHeight(fm),
-        qMax(sp.controlHeight.standard, fm.height() + 2 * m_contentPaddingV));
+    const QSize trailing = m_trailingContent ? m_trailingContent->sizeHint() : QSize(0, 0);
+    const int w = m_contentPaddingH + maxTextW + kClosedFieldTextFitClearance + chevronArea
+        + (trailing.width() > 0 ? trailing.width() + ::Spacing::XSmall : 0);
+    const int h = qMax(trailing.height() + 2 * m_contentPaddingV,
+        qMax(::fluent::detail::standardControlHeight(fm),
+            qMax(sp.controlHeight.standard, fm.height() + 2 * m_contentPaddingV)));
     return QSize(w, h);
+}
+
+QSize ComboBox::minimumSizeHint() const
+{
+    QSize hint = QComboBox::minimumSizeHint();
+    if (m_trailingContent && m_trailingContent->sizeHint().width() > 0) {
+        const int width =
+            trailingWidget() ? m_trailingContent->sizeHint().width() : qMin(24, m_trailingContent->sizeHint().width());
+        hint.setWidth(qMax(hint.width(),
+            m_contentPaddingH + m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight + width + ::Spacing::XSmall
+                + fontMetrics().horizontalAdvance(QLatin1Char('M')) * 4));
+        hint.setHeight(qMax(hint.height(), sizeHint().height()));
+    }
+    return hint;
 }
 
 // ── Editable ─────────────────────────────────────────────────────────────────
@@ -747,13 +814,27 @@ void ComboBox::layoutLineEdit()
 {
     if (m_editorLayoutInProgress)
         return;
+    const QPointer<ComboBox> guard(this);
+    m_editorLayoutInProgress = true;
     synchronizeLineEdit();
-    QLineEdit* editor = observedLineEdit();
-    if (!editor)
-        return;
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
+    if (m_trailingContent) {
+        m_trailingContent->refreshFont();
+        const QRect available = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
+            QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW, m_contentPaddingV));
+        const int reserved = m_trailingContent->layout(available, layoutDirection(),
+            fontMetrics().horizontalAdvance(QLatin1Char('M')) * 4);
+        if (!guard)
+            return;
+        m_trailingContentWidth = reserved;
+    }
+    QLineEdit* editor = observedLineEdit();
+    if (!editor) {
+        m_editorLayoutInProgress = false;
+        return;
+    }
     const QRect textRect = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
-        QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW, m_contentPaddingV));
+        QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW + m_trailingContentWidth, m_contentPaddingV));
     // Only the leading edge needs the native text inset; keep the chevron side
     // at the text slot so the editor never takes the chevron's hit area.
     // zh_CN: 仅首端需要补偿原生文字留白；箭头一侧保持在文字区域边界，编辑框不占用箭头的点击区域。
@@ -762,11 +843,8 @@ void ComboBox::layoutLineEdit()
         geometry.setLeft(qMax(geometry.left(), textRect.left()));
     else
         geometry.setRight(qMin(geometry.right(), textRect.right()));
-    if (editor->geometry() == geometry)
-        return;
-    const QPointer<ComboBox> guard(this);
-    m_editorLayoutInProgress = true;
-    editor->setGeometry(geometry);
+    if (editor->geometry() != geometry)
+        editor->setGeometry(geometry);
     if (guard)
         m_editorLayoutInProgress = false;
 }
@@ -819,8 +897,10 @@ void ComboBox::showPopup()
 
     QPointer<ComboBox> guard(this);
     m_popup->showForComboBox();
-    if (guard)
+    if (guard) {
         update();
+        detail::notifyComboBoxPopupChanged(this);
+    }
 }
 
 void ComboBox::hidePopup()
@@ -838,6 +918,8 @@ void ComboBox::hidePopup()
 
     update();
     QComboBox::hidePopup();
+    if (guard)
+        detail::notifyComboBoxPopupChanged(this);
 }
 
 // Private helper called from the popup close lifecycle.
@@ -846,8 +928,10 @@ void ComboBox::onPopupHidden()
     const bool needsUpdate = m_popupVisible || m_pressed;
     m_popupVisible = false;
     m_pressed = false;
-    if (needsUpdate)
+    if (needsUpdate) {
         update();
+        detail::notifyComboBoxPopupChanged(this);
+    }
 }
 
 // ── Input events. zh_CN: 输入事件 ────────────────────────────────────────────
@@ -1088,7 +1172,7 @@ void ComboBox::paintEvent(QPaintEvent*)
     // Chevron area calculation
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
     const QRectF textSlot = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
-        QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW, m_contentPaddingV));
+        QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW + m_trailingContentWidth, m_contentPaddingV));
 
     // In editable mode, QLineEdit handles text display
     if (!editor) {

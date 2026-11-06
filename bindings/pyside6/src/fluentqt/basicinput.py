@@ -1,6 +1,9 @@
 """Basic-input components."""
 
 from . import _fluentqt as _native
+from ._field_trailing import install_trailing_content_api
+
+install_trailing_content_api(_native.fluent.ComboBox)
 
 Button = _native.fluent.Button
 CheckBox = _native.fluent.CheckBox

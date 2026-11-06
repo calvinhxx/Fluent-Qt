@@ -182,10 +182,11 @@
     },
     {
       "id": "combobox",
-      "classification": "native",
+      "classification": "adapter",
       "risk": "medium",
       "status": "covered",
       "evidence": [
+        "src/components/basicinput/private/ComboBoxAccessibility_p.cpp",
         "src/components/basicinput/ComboBox.h",
         "tests/components/basicinput/TestComboBox.cpp"
       ],
@@ -298,7 +299,7 @@
       "evidence": [
         "src/components/dialogs_flyouts/Dialog.h",
         "tests/components/dialogs_flyouts/TestOverlayContract.cpp",
-          "tests/components/windowing/TestWindowWin.cpp",
+        "tests/components/windowing/TestWindowWin.cpp",
         "tests/gallery/TestGalleryOverlaySamples.cpp"
       ],
       "gap": ""

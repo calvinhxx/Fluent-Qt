@@ -136,7 +136,7 @@ public:
     enum class TextChangeReason { UserInput, ProgrammaticChange, SuggestionChosen };
     Q_ENUM(TextChangeReason)
 
-    enum class QueryButtonPlacement { Right, Left };
+    enum class QueryButtonPlacement { Right, Left, Leading, Trailing };
     Q_ENUM(QueryButtonPlacement)
 
     /** @brief State of the current asynchronous query; Ready may contain no rows.
@@ -288,6 +288,9 @@ signals:
     void suggestionRequestCanceled(quint64 requestId);
 
 protected:
+    QRect trailingContentBounds() const override;
+    void trailingContentGeometryChanged() override;
+    ::fluent::basicinput::Button* clearActionButton() const override { return m_clearButton; }
     // Composed selectors keep the query slot as decoration and own one input target.
     void setQueryIconDecorative(bool decorative);
     void paintEvent(QPaintEvent* event) override;
@@ -319,6 +322,8 @@ private:
     int inputTop() const;
     int totalPreferredHeight() const;
     int inputTextVerticalPadding() const;
+    bool queryButtonOnLeadingSide() const;
+    Qt::LayoutDirection buttonLayoutDirection() const;
 
     void initializeButtons();
     void updateButtonGeometry();

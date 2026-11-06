@@ -58,6 +58,7 @@ signals:
     void tokensSubmitted(const QStringList& tokens);
 
 protected:
+    void trailingContentGeometryChanged() override;
     void resizeEvent(QResizeEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void inputMethodEvent(QInputMethodEvent* event) override;

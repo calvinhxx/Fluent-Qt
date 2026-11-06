@@ -574,6 +574,7 @@ register_source_samples(
                 combo_box.setAccessibleName("Editable size value")
                 combo_box.addItems(["8", "9", "10", "11", "12", "14", "16"])
                 combo_box.setEditable(True)
+                combo_box.setTrailingText("pt")
                 combo_box.lineEdit().setAccessibleName("Editable size value")
                 combo_box.setInsertPolicy(fluentqt.ComboBox.InsertPolicy.NoInsert)
                 combo_box.setCurrentIndex(4)

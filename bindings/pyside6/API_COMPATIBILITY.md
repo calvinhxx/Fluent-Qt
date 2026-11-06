@@ -106,6 +106,15 @@ matching text setters in Python, including `setLoadingMoreText`,
 `setMoreResultsText`, `setRetryText` and `setLoadMoreText`. TagInput inherits
 these overrides. Changing copy does not start or cancel a request.
 
+LineEdit (including AutoSuggestBox, NumberBox, PasswordBox and TagInput) and
+ComboBox support trailing text and custom widgets through the same C++
+implementation. Python retains hosted wrappers and Reparented restore targets.
+`setTrailingWidget(widget, WidgetOwnership)` returns false for invalid containment
+or an in-place ownership change; take the widget first to change policy.
+Replacement, explicit release and host destruction apply the recorded native
+policy. `takeTrailingWidget()` returns a parentless Python-owned widget. The
+Gallery includes matching Python units, inline actions and query-status examples.
+
 Every new installed C++ component or non-trivial public API records one of
 these decisions before release:
 

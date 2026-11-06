@@ -172,6 +172,8 @@ void PasswordBox::changeEvent(QEvent* event)
     LineEdit::changeEvent(event);
     if (!event)
         return;
+    if (event->type() == QEvent::LayoutDirectionChange)
+        updateTextMargins();
     if (event->type() == QEvent::EnabledChange || event->type() == QEvent::ReadOnlyChange) {
         if (!canPeekReveal())
             setPeekActive(false);
@@ -202,7 +204,19 @@ bool PasswordBox::eventFilter(QObject* watched, QEvent* event)
 
 QRect PasswordBox::inputRect() const
 {
-    return QRect(0, inputTop(), width(), kInputHeight);
+    return QRect(0, inputTop(), width(), totalPreferredHeight() - inputTop());
+}
+
+QRect PasswordBox::trailingContentBounds() const
+{
+    return inputRect();
+}
+
+void PasswordBox::trailingContentGeometryChanged()
+{
+    if (height() != totalPreferredHeight())
+        setFixedHeight(totalPreferredHeight());
+    updateRevealButtonGeometry();
 }
 
 int PasswordBox::inputTop() const
@@ -212,7 +226,8 @@ int PasswordBox::inputTop() const
 
 int PasswordBox::totalPreferredHeight() const
 {
-    return inputTop() + kInputHeight;
+    return inputTop()
+        + qMax(kInputHeight, trailingContentSizeHint().height() + 2 * ::Spacing::Padding::TextFieldVertical);
 }
 
 void PasswordBox::initializeRevealButton()
@@ -285,6 +300,11 @@ void PasswordBox::updateTextMargins()
     QMargins margins = contentMargins();
     margins.setLeft(::Spacing::Padding::TextFieldHorizontal);
     margins.setRight(rightMargin);
+    if (layoutDirection() == Qt::RightToLeft) {
+        const int left = margins.left();
+        margins.setLeft(margins.right());
+        margins.setRight(left);
+    }
     margins.setTop(::Spacing::Padding::TextFieldVertical);
     margins.setBottom(::Spacing::Padding::TextFieldVertical);
     setContentMargins(margins);

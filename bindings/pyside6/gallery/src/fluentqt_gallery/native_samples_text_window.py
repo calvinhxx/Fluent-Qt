@@ -552,7 +552,7 @@ register_source_samples(
                 box.setAccessibleName("Search projects")
                 box.setPlaceholderText("Search projects")
                 box.setQueryButtonPlacement(
-                    fluentqt.AutoSuggestBox.QueryButtonPlacement.Left
+                    fluentqt.AutoSuggestBox.QueryButtonPlacement.Leading
                 )
                 box.setSuggestionItemHeight(36)
                 box.setMaximumWidth(320)
@@ -564,6 +564,36 @@ register_source_samples(
                 model = QStandardItemModel(root)
                 box.setSuggestionModel(model)
                 box.setAsyncSuggestionsEnabled(True)
+                trailing = QWidget()
+                trailing.setObjectName("asyncSearchTrailingStatus")
+                trailing.setAttribute(Qt.WA_TransparentForMouseEvents)
+                trailing.setFixedSize(64, 24)
+                trailing_layout = QHBoxLayout(trailing)
+                trailing_layout.setContentsMargins(0, 0, 0, 0)
+                ring = fluentqt.ProgressRing(trailing)
+                ring.setFixedSize(20, 20)
+                ring.setStrokeWidth(2)
+                ring.setAccessibleName("Searching projects")
+                count = fluentqt.Label(trailing)
+                count.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                count.setAlignment(Qt.AlignCenter)
+                trailing_layout.addWidget(ring, 0, Qt.AlignCenter)
+                trailing_layout.addWidget(count)
+                box.setTrailingWidget(trailing, fluentqt.WidgetOwnership.Owned)
+
+                def update_trailing(*_args):
+                    state = box.loadState()
+                    State = fluentqt.AutoSuggestBox.LoadState
+                    loading = state == State.Loading
+                    ring.setIsActive(loading)
+                    ring.setVisible(loading)
+                    count.setVisible(not loading)
+                    count.setText(f"{box.suggestionCount()} shown" if state == State.Ready
+                                  else "Failed" if state == State.Failed else "")
+
+                box.loadStateChanged.connect(update_trailing)
+                box.suggestionCountChanged.connect(update_trailing)
+                update_trailing()
                 fail_next = fluentqt.CheckBox("Fail next search", root)
                 fail_next.setObjectName("asyncFailNext")
                 fail_next.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
@@ -633,7 +663,7 @@ register_source_samples(
                 """,
                 "from PySide6.QtCore import Qt, QTimer\n"
                 "from PySide6.QtGui import QStandardItem, QStandardItemModel\n"
-                "from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget",
+                "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget",
             ),
         ),
         "auto-suggest-box-suggestions": (
@@ -783,6 +813,39 @@ register_source_samples(
     "line-edit",
     ("LineEdit",),
     {
+        "line-edit-trailing-content": (
+            "root",
+            _text_script(
+                """
+                root, layout = make_text_surface()
+                width = fluentqt.LineEdit(root)
+                width.setObjectName("galleryTrailingWidth")
+                width.setAccessibleName("Canvas width")
+                width.setText("1280")
+                width.setTrailingText("px")
+                width.setClearButtonAccessibleName("Clear canvas width")
+                width.setClearButtonFocusPolicy(Qt.StrongFocus)
+                name = fluentqt.LineEdit(root)
+                name.setObjectName("galleryTrailingName")
+                name.setAccessibleName("Export name")
+                name.setText("gallery-preview-v2")
+                reset = fluentqt.Button("Reset")
+                reset.setObjectName("galleryTrailingReset")
+                reset.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+                reset.setFluentSize(fluentqt.Button.ButtonSize.Small)
+                reset.setAccessibleName("Reset export name")
+                name.setTrailingWidget(reset, fluentqt.WidgetOwnership.Owned)
+                reset.clicked.connect(lambda: name.setText("gallery-preview"))
+                for field in (width, name):
+                    field.setMaximumWidth(370)
+                    field.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                layout.addWidget(fluentqt.Label("Canvas width", root))
+                layout.addWidget(width)
+                layout.addWidget(fluentqt.Label("Export name", root))
+                layout.addWidget(name)
+                """
+            ),
+        ),
         "line-edit-clear": (
             "root",
             _text_script(
