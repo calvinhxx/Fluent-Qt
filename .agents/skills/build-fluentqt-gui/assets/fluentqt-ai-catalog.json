@@ -1868,7 +1868,7 @@
           "id": "combobox-editable",
           "title": "Custom value with suggestions",
           "description": "Type any value or choose a suggested size. Custom text stays valid without being added to the suggestion list.",
-          "cpp_snippet": "auto* row = new QWidget(this);\nauto* layout = new QVBoxLayout(row);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(8);\n\nauto* comboBox = new ComboBox(row);\ncomboBox->setAccessibleName(\"Editable size value\");\ncomboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\ncomboBox->setEditable(true);\ncomboBox->lineEdit()->setAccessibleName(\"Editable size value\");\ncomboBox->setInsertPolicy(QComboBox::NoInsert);\ncomboBox->setCurrentIndex(4);\ncomboBox->setFixedWidth(200);\n\nauto* status = new Label(row);\nstatus->setFixedWidth(200);\nstatus->setTextElideMode(Qt::ElideRight);\n\nauto updateStatus = [comboBox, status](const QString& text) {\n    const bool suggested = comboBox->findText(\n        text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;\n    status->setText(QStringLiteral(\"%1 value: %2\").arg(\n        suggested ? QStringLiteral(\"Suggested\") : QStringLiteral(\"Custom\"),\n        text.isEmpty() ? QStringLiteral(\"(empty)\") : text));\n};\nQObject::connect(comboBox, &QComboBox::editTextChanged,\n                 status, updateStatus);\nupdateStatus(comboBox->currentText());\n\nlayout->addWidget(comboBox);\nlayout->addWidget(status);",
+          "cpp_snippet": "auto* row = new QWidget(this);\nauto* layout = new QVBoxLayout(row);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(8);\n\nauto* comboBox = new ComboBox(row);\ncomboBox->setAccessibleName(\"Editable size value\");\ncomboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\ncomboBox->setEditable(true);\ncomboBox->setTrailingText(\"pt\");\ncomboBox->lineEdit()->setAccessibleName(\"Editable size value\");\ncomboBox->setInsertPolicy(QComboBox::NoInsert);\ncomboBox->setCurrentIndex(4);\ncomboBox->setFixedWidth(200);\n\nauto* status = new Label(row);\nstatus->setFixedWidth(200);\nstatus->setTextElideMode(Qt::ElideRight);\n\nauto updateStatus = [comboBox, status](const QString& text) {\n    const bool suggested = comboBox->findText(\n        text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;\n    status->setText(QStringLiteral(\"%1 value: %2\").arg(\n        suggested ? QStringLiteral(\"Suggested\") : QStringLiteral(\"Custom\"),\n        text.isEmpty() ? QStringLiteral(\"(empty)\") : text));\n};\nQObject::connect(comboBox, &QComboBox::editTextChanged,\n                 status, updateStatus);\nupdateStatus(comboBox->currentText());\n\nlayout->addWidget(comboBox);\nlayout->addWidget(status);",
           "preview_layout": {
             "orientation": "vertical",
             "spacing": 8
@@ -10455,7 +10455,7 @@
           "id": "auto-suggest-box-async",
           "title": "Search a project directory",
           "description": "A simulated service demonstrates loading, paged results, empty results and retry. Quickly changing the query discards older replies.",
-          "cpp_snippet": "#ifndef GALLERY_ASYNCSEARCHSAMPLE_H\n#define GALLERY_ASYNCSEARCHSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QStandardItemModel>\n#include <QTimer>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\n// A simulated application service. The component owns neither requests nor data.\n// zh_CN: 模拟应用服务；控件不拥有网络请求或业务数据。\nclass AsyncSearchSample final : public QWidget {\npublic:\n    explicit AsyncSearchSample(QWidget* parent = nullptr) : QWidget(parent)\n    {\n        setObjectName(QStringLiteral(\"asyncSearchSample\"));\n        setProperty(\"staleResponsesIgnored\", 0);\n        auto* layout = new QVBoxLayout(this);\n        layout->setContentsMargins(16, 16, 16, 16);\n        layout->setSpacing(12);\n        auto* title = new textfields::Label(QStringLiteral(\"Project directory\"), this);\n        title->setFluentTypography(Typography::FontRole::BodyStrong);\n        m_search = new textfields::AutoSuggestBox(this);\n        m_search->setObjectName(QStringLiteral(\"asyncProjectSearch\"));\n        m_search->setAccessibleName(QStringLiteral(\"Search projects\"));\n        m_search->setPlaceholderText(QStringLiteral(\"Search projects\"));\n        m_search->setQueryButtonPlacement(textfields::AutoSuggestBox::QueryButtonPlacement::Left);\n        m_search->setSuggestionItemHeight(36);\n        m_search->setMaximumWidth(320);\n        m_search->setMinimumWidth(180);\n        m_search->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n        m_search->setLoadingText(QStringLiteral(\"Searching projects…\"));\n        m_search->setEmptyText(QStringLiteral(\"No projects found\"));\n        m_search->setEmptyDescription(QStringLiteral(\"Try a different name.\"));\n        m_model = new QStandardItemModel(this);\n        m_search->setSuggestionModel(m_model);\n        m_search->setAsyncSuggestionsEnabled(true);\n        m_failNext = new basicinput::CheckBox(QStringLiteral(\"Fail next search\"), this);\n        m_failNext->setObjectName(QStringLiteral(\"asyncFailNext\"));\n        m_failNext->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);\n        m_status = new textfields::Label(QStringLiteral(\"Try Aurora for paged results, or zzz for no results.\"), this);\n        m_status->setObjectName(QStringLiteral(\"asyncSearchResult\"));\n        m_status->setWordWrap(true);\n        m_status->setFluentTypography(Typography::FontRole::Caption);\n        m_status->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        layout->addWidget(title);\n        layout->addWidget(m_status);\n        layout->addWidget(m_search);\n        layout->addWidget(m_failNext);\n\n        connect(m_search, &textfields::AutoSuggestBox::suggestionsRequested, this,\n            [this](const QString& query, quint64 token, bool append) {\n                const bool fail = m_failNext->isChecked();\n                m_failNext->setChecked(false);\n                // Short queries deliberately finish later to demonstrate stale-result rejection.\n                const int delay = query.size() < 3 ? 850 : 350;\n                QTimer::singleShot(delay, this, [this, query, token, append, fail] {\n                    // Check before touching the caller-owned model, not only before changing UI state.\n                    if (!m_search->isSuggestionRequestCurrent(token)) {\n                        setProperty(\"staleResponsesIgnored\", ++m_ignoredResponses);\n                        return;\n                    }\n                    if (fail) {\n                        m_search->failSuggestionRequest(token, QStringLiteral(\"Couldn’t load projects\"),\n                            QStringLiteral(\"Try again in a moment.\"));\n                        return;\n                    }\n                    QStringList matches;\n                    for (const QString& name : projectNames()) {\n                        if (name.contains(query.trimmed(), Qt::CaseInsensitive))\n                            matches.append(name);\n                    }\n                    if (!append)\n                        m_model->removeRows(0, m_model->rowCount());\n                    const int end = qMin(m_model->rowCount() + 4, matches.size());\n                    for (int row = m_model->rowCount(); row < end; ++row) {\n                        auto* item = new QStandardItem(matches.at(row));\n                        item->setData(QStringLiteral(\"project-%1\").arg(projectNames().indexOf(matches.at(row)) + 1),\n                            Qt::UserRole);\n                        m_model->appendRow(item);\n                    }\n                    m_search->completeSuggestionRequest(token, end < matches.size());\n                });\n            });\n        connect(m_search, &textfields::AutoSuggestBox::querySubmitted, this,\n            [this](const QString& query, const QVariant& chosen) {\n                m_status->setText(!chosen.toString().isEmpty()\n                        ? QStringLiteral(\"Selected: %1\").arg(query)\n                        : QStringLiteral(\"Search: %1\").arg(query));\n            });\n    }\n\nprivate:\n    static const QStringList& projectNames()\n    {\n        static const QStringList names{QStringLiteral(\"Aurora Workspace\"), QStringLiteral(\"Aurora Mobile\"),\n            QStringLiteral(\"Aurora API\"), QStringLiteral(\"Aurora Docs\"), QStringLiteral(\"Aurora Design\"),\n            QStringLiteral(\"Aurora Analytics\"), QStringLiteral(\"Aurora Release\"), QStringLiteral(\"Aurora Support\"),\n            QStringLiteral(\"Canvas\"), QStringLiteral(\"Canvas Studio\"), QStringLiteral(\"Delta\"),\n            QStringLiteral(\"Harbor\")};\n        return names;\n    }\n    textfields::AutoSuggestBox* m_search = nullptr;\n    QStandardItemModel* m_model = nullptr;\n    basicinput::CheckBox* m_failNext = nullptr;\n    textfields::Label* m_status = nullptr;\n    int m_ignoredResponses = 0;\n};\n\n} // namespace fluent::gallery\n#endif\n",
+          "cpp_snippet": "#ifndef GALLERY_ASYNCSEARCHSAMPLE_H\n#define GALLERY_ASYNCSEARCHSAMPLE_H\n\n#include <FluentQt/FluentQt.h>\n#include <QHBoxLayout>\n#include <QStandardItemModel>\n#include <QTimer>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\n// A simulated application service. The component owns neither requests nor data.\n// zh_CN: 模拟应用服务；控件不拥有网络请求或业务数据。\nclass AsyncSearchSample final : public QWidget {\npublic:\n    explicit AsyncSearchSample(QWidget* parent = nullptr) : QWidget(parent)\n    {\n        setObjectName(QStringLiteral(\"asyncSearchSample\"));\n        setProperty(\"staleResponsesIgnored\", 0);\n        auto* layout = new QVBoxLayout(this);\n        layout->setContentsMargins(16, 16, 16, 16);\n        layout->setSpacing(12);\n        auto* title = new textfields::Label(QStringLiteral(\"Project directory\"), this);\n        title->setFluentTypography(Typography::FontRole::BodyStrong);\n        m_search = new textfields::AutoSuggestBox(this);\n        m_search->setObjectName(QStringLiteral(\"asyncProjectSearch\"));\n        m_search->setAccessibleName(QStringLiteral(\"Search projects\"));\n        m_search->setPlaceholderText(QStringLiteral(\"Search projects\"));\n        m_search->setQueryButtonPlacement(textfields::AutoSuggestBox::QueryButtonPlacement::Leading);\n        m_search->setSuggestionItemHeight(36);\n        m_search->setMaximumWidth(320);\n        m_search->setMinimumWidth(180);\n        m_search->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n        m_search->setLoadingText(QStringLiteral(\"Searching projects…\"));\n        m_search->setEmptyText(QStringLiteral(\"No projects found\"));\n        m_search->setEmptyDescription(QStringLiteral(\"Try a different name.\"));\n        m_model = new QStandardItemModel(this);\n        m_search->setSuggestionModel(m_model);\n        m_search->setAsyncSuggestionsEnabled(true);\n        auto* trailing = new QWidget;\n        trailing->setObjectName(QStringLiteral(\"asyncSearchTrailingStatus\"));\n        trailing->setAttribute(Qt::WA_TransparentForMouseEvents);\n        trailing->setFixedSize(64, 24);\n        auto* trailingLayout = new QHBoxLayout(trailing);\n        trailingLayout->setContentsMargins(0, 0, 0, 0);\n        auto* ring = new status_info::ProgressRing(trailing);\n        ring->setFixedSize(20, 20);\n        ring->setStrokeWidth(2);\n        ring->setAccessibleName(QStringLiteral(\"Searching projects\"));\n        auto* count = new textfields::Label(trailing);\n        count->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        count->setAlignment(Qt::AlignCenter);\n        trailingLayout->addWidget(ring, 0, Qt::AlignCenter);\n        trailingLayout->addWidget(count);\n        m_search->setTrailingWidget(trailing, WidgetOwnership::Owned);\n        const auto updateTrailing = [this, ring, count] {\n            using State = textfields::AutoSuggestBox::LoadState;\n            const State state = m_search->loadState();\n            const bool loading = state == State::Loading;\n            ring->setIsActive(loading);\n            ring->setVisible(loading);\n            count->setVisible(!loading);\n            count->setText(state == State::Ready ? QStringLiteral(\"%1 shown\").arg(m_search->suggestionCount())\n                    : state == State::Failed\n                    ? QStringLiteral(\"Failed\")\n                    : QString());\n        };\n        connect(m_search, &textfields::AutoSuggestBox::loadStateChanged, trailing, updateTrailing);\n        connect(m_search, &textfields::AutoSuggestBox::suggestionCountChanged, trailing, updateTrailing);\n        updateTrailing();\n        m_failNext = new basicinput::CheckBox(QStringLiteral(\"Fail next search\"), this);\n        m_failNext->setObjectName(QStringLiteral(\"asyncFailNext\"));\n        m_failNext->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);\n        m_status = new textfields::Label(QStringLiteral(\"Try Aurora for paged results, or zzz for no results.\"), this);\n        m_status->setObjectName(QStringLiteral(\"asyncSearchResult\"));\n        m_status->setWordWrap(true);\n        m_status->setFluentTypography(Typography::FontRole::Caption);\n        m_status->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        layout->addWidget(title);\n        layout->addWidget(m_status);\n        layout->addWidget(m_search);\n        layout->addWidget(m_failNext);\n\n        connect(m_search, &textfields::AutoSuggestBox::suggestionsRequested, this,\n            [this](const QString& query, quint64 token, bool append) {\n                const bool fail = m_failNext->isChecked();\n                m_failNext->setChecked(false);\n                // Short queries deliberately finish later to demonstrate stale-result rejection.\n                const int delay = query.size() < 3 ? 850 : 350;\n                QTimer::singleShot(delay, this, [this, query, token, append, fail] {\n                    // Check before touching the caller-owned model, not only before changing UI state.\n                    if (!m_search->isSuggestionRequestCurrent(token)) {\n                        setProperty(\"staleResponsesIgnored\", ++m_ignoredResponses);\n                        return;\n                    }\n                    if (fail) {\n                        m_search->failSuggestionRequest(token, QStringLiteral(\"Couldn’t load projects\"),\n                            QStringLiteral(\"Try again in a moment.\"));\n                        return;\n                    }\n                    QStringList matches;\n                    for (const QString& name : projectNames()) {\n                        if (name.contains(query.trimmed(), Qt::CaseInsensitive))\n                            matches.append(name);\n                    }\n                    if (!append)\n                        m_model->removeRows(0, m_model->rowCount());\n                    const int end = qMin(m_model->rowCount() + 4, matches.size());\n                    for (int row = m_model->rowCount(); row < end; ++row) {\n                        auto* item = new QStandardItem(matches.at(row));\n                        item->setData(QStringLiteral(\"project-%1\").arg(projectNames().indexOf(matches.at(row)) + 1),\n                            Qt::UserRole);\n                        m_model->appendRow(item);\n                    }\n                    m_search->completeSuggestionRequest(token, end < matches.size());\n                });\n            });\n        connect(m_search, &textfields::AutoSuggestBox::querySubmitted, this,\n            [this](const QString& query, const QVariant& chosen) {\n                m_status->setText(!chosen.toString().isEmpty()\n                        ? QStringLiteral(\"Selected: %1\").arg(query)\n                        : QStringLiteral(\"Search: %1\").arg(query));\n            });\n    }\n\nprivate:\n    static const QStringList& projectNames()\n    {\n        static const QStringList names{QStringLiteral(\"Aurora Workspace\"), QStringLiteral(\"Aurora Mobile\"),\n            QStringLiteral(\"Aurora API\"), QStringLiteral(\"Aurora Docs\"), QStringLiteral(\"Aurora Design\"),\n            QStringLiteral(\"Aurora Analytics\"), QStringLiteral(\"Aurora Release\"), QStringLiteral(\"Aurora Support\"),\n            QStringLiteral(\"Canvas\"), QStringLiteral(\"Canvas Studio\"), QStringLiteral(\"Delta\"),\n            QStringLiteral(\"Harbor\")};\n        return names;\n    }\n    textfields::AutoSuggestBox* m_search = nullptr;\n    QStandardItemModel* m_model = nullptr;\n    basicinput::CheckBox* m_failNext = nullptr;\n    textfields::Label* m_status = nullptr;\n    int m_ignoredResponses = 0;\n};\n\n} // namespace fluent::gallery\n#endif\n",
           "fill_available_width": true
         }
       ]
@@ -10731,6 +10731,7 @@
       ],
       "search_terms": [
         "action",
+        "actions",
         "appears",
         "behavior.",
         "border",
@@ -10739,11 +10740,13 @@
         "button.",
         "can",
         "changes",
+        "changing",
         "clear",
         "clear-button",
         "commands",
         "content",
         "easy",
+        "editable",
         "editing",
         "editor.",
         "fields",
@@ -10753,12 +10756,14 @@
         "frame",
         "host",
         "independently.",
+        "inline",
         "input",
         "keeping",
         "line-edit",
         "line-edit-clear",
         "line-edit-editing-commands",
         "line-edit-frame-metrics",
+        "line-edit-trailing-content",
         "line-edit-validator",
         "lineedit",
         "margins",
@@ -10770,21 +10775,27 @@
         "present",
         "reused",
         "set",
+        "shares",
         "shortcuts",
         "single-line",
+        "space",
         "stable",
         "styling",
         "text",
         "text-and-numeric-input",
+        "trailing",
         "tuned",
+        "units",
         "validated",
         "validator",
+        "value.",
         "visibility",
         "visuals",
         "when",
         "while",
         "widths",
-        "window-scoped"
+        "window-scoped",
+        "without"
       ],
       "cpp": {
         "public_header": "<FluentQt/TextFields.h>",
@@ -10811,6 +10822,12 @@
         "control_image": "app/assets/control_images/text-fields/LineEdit.png"
       },
       "samples": [
+        {
+          "id": "line-edit-trailing-content",
+          "title": "Units and inline actions",
+          "description": "Trailing content shares space with the clear button without changing the editable value.",
+          "cpp_snippet": "auto* width = new LineEdit(this);\nwidth->setAccessibleName(\"Canvas width\");\nwidth->setText(\"1280\");\nwidth->setTrailingText(\"px\");\nwidth->setClearButtonAccessibleName(\"Clear canvas width\");\nwidth->setClearButtonFocusPolicy(Qt::StrongFocus);\n\nauto* name = new LineEdit(this);\nname->setAccessibleName(\"Export name\");\nname->setText(\"gallery-preview-v2\");\nauto* reset = new Button(\"Reset\");\nreset->setFluentStyle(Button::Subtle);\nreset->setFluentSize(Button::Small);\nreset->setAccessibleName(\"Reset export name\");\nname->setTrailingWidget(reset, WidgetOwnership::Owned);\nconnect(reset, &Button::clicked, name, [name] {\n    name->setText(\"gallery-preview\");\n});"
+        },
         {
           "id": "line-edit-clear",
           "title": "Input with clear button",
@@ -12611,7 +12628,7 @@
   "summary": {
     "route_count": 124,
     "component_count": 98,
-    "sample_count": 285,
+    "sample_count": 286,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,

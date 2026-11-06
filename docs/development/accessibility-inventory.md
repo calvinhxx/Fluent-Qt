@@ -47,6 +47,25 @@ and TextEdit are covered by `InputTextInsetsTest`. Prefix icons, tags and picker
 segments retain their own reserved space. These painting changes preserve native
 editing, selection, ownership, accessible names and hit targets.
 
+LineEdit and its derived fields, plus both ComboBox editing modes, support one
+logical trailing text or widget slot. Suffix text is a non-focusable label and
+does not enter the editor value, selection, validation or clipboard text. Custom
+widgets keep their own focus policy and accessible name; disabled hosts disable
+their children, while read-only fields leave application actions available.
+Clear-action names and focus policies are configurable without changing their
+existing defaults. AutoSuggestBox preserves physical Left/Right query positions
+and adds logical Leading/Trailing positions. The trailing-content tests cover
+native action coexistence, headers, RTL, inherited chrome, keyboard exit,
+replacement and ownership. Gallery demonstrates units and actions at
+`line-edit-trailing-content`, a size unit at `combobox-editable`, and an inline
+loading/count indicator at `auto-suggest-box-async`.
+ComboBox's accessible adapter enumerates actual editor and trailing-content
+children rather than Qt's unused fallback popup. It preserves the ComboBox role,
+field name/value and open-menu actions, and reports the Fluent popup's expanded
+state and controller relation. Tests verify hosted action names, focus and popup
+state in editable and non-editable modes; native screen-reader certification is
+still a separate platform review.
+
 ## Hierarchical selection
 
 `TreeSelect` exposes a ComboBox role, selected full paths, expanded/read-only

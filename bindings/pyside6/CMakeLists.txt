@@ -565,6 +565,7 @@ set_target_properties(_fluentqt PROPERTIES
 file(MAKE_DIRECTORY "${FLUENTQT_PYSIDE6_PACKAGE_DIR}")
 set(FLUENTQT_PYSIDE6_PYTHON_FILES
     __init__.py
+    _field_trailing.py
     _qt_compat.py
     _qt_events.py
     _qt_painting.py
@@ -586,6 +587,7 @@ set(FLUENTQT_PYSIDE6_PYTHON_FILES
     py.typed)
 set(FLUENTQT_PYSIDE6_STUB_FILES
     __init__.pyi
+    _field_trailing.pyi
     _fluentqt.pyi
     _qt_compat.pyi
     _qt_events.pyi

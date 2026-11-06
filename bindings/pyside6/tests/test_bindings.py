@@ -114,6 +114,100 @@ def wait_for_events(duration_ms):
 
 
 class FluentQtBindingTest(unittest.TestCase):
+    def test_field_trailing_text_preserves_value_and_custom_widget_identity(self):
+        for field_type in (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.ComboBox):
+            with self.subTest(field=field_type.__name__):
+                field = field_type()
+                if isinstance(field, fluentqt.ComboBox):
+                    field.addItems(["12", "14"])
+                    value = field.currentText()
+                else:
+                    field.setText("12")
+                    value = field.text()
+                field.setTrailingText("pt")
+                self.assertEqual(field.trailingText(), "pt")
+                self.assertIsNone(field.trailingWidget())
+                button = fluentqt.Button("Reset")
+                self.assertTrue(field.setTrailingWidget(button, fluentqt.WidgetOwnership.Borrowed))
+                self.assertIs(field.trailingWidget(), button)
+                self.assertEqual(field.trailingText(), "")
+                self.assertFalse(field.setTrailingWidget(button, fluentqt.WidgetOwnership.Owned))
+                self.assertIs(field.takeTrailingWidget(), button)
+                self.assertIsNone(button.parent())
+                field.setTrailingText("px")
+                self.assertEqual(field.currentText() if isinstance(field, fluentqt.ComboBox) else field.text(), value)
+
+    def test_field_trailing_widget_lifetime_policies(self):
+        for field_type in (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.ComboBox):
+            for policy in (fluentqt.WidgetOwnership.Borrowed, fluentqt.WidgetOwnership.Reparented,
+                           fluentqt.WidgetOwnership.Owned):
+                with self.subTest(field=field_type.__name__, policy=policy):
+                    parent = QWidget()
+                    button = fluentqt.Button("Reset", parent)
+                    field = field_type()
+                    self.assertTrue(field.setTrailingWidget(button, policy))
+                    field.releaseTrailingWidget()
+                    if policy == fluentqt.WidgetOwnership.Owned:
+                        self.assertFalse(shiboken6.isValid(button))
+                    else:
+                        self.assertTrue(shiboken6.isValid(button))
+                        self.assertIs(button.parent(), parent if policy == fluentqt.WidgetOwnership.Reparented else None)
+
+    def test_field_trailing_python_subclass_survives_gc_until_released(self):
+        class Content(QWidget):
+            def sizeHint(self):
+                return QSize(48, 24)
+
+        for field_type in (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.ComboBox):
+            field = field_type()
+            child = Content()
+            reference = weakref.ref(child)
+            field.setTrailingWidget(child, fluentqt.WidgetOwnership.Borrowed)
+            del child
+            gc.collect()
+            self.assertIsNotNone(reference())
+            self.assertEqual(field.trailingWidget().sizeHint(), QSize(48, 24))
+            field.setTrailingText("px")
+            gc.collect()
+            self.assertIsNone(reference())
+
+    def test_field_trailing_borrowed_content_survives_host_destruction(self):
+        for field_type in (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.ComboBox):
+            child = QWidget()
+            field = field_type()
+            field.setTrailingWidget(child, fluentqt.WidgetOwnership.Borrowed)
+            delete_qobject(field)
+            self.assertTrue(shiboken6.isValid(child))
+            self.assertIsNone(child.parent())
+
+    def test_field_trailing_gc_applies_host_ownership_policy(self):
+        for field_type in (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.ComboBox):
+            for policy in (fluentqt.WidgetOwnership.Borrowed, fluentqt.WidgetOwnership.Reparented,
+                           fluentqt.WidgetOwnership.Owned):
+                with self.subTest(field=field_type.__name__, policy=policy):
+                    original = QWidget()
+                    child = QWidget(original)
+                    field = field_type()
+                    field.setTrailingWidget(child, policy)
+                    reference = weakref.ref(field)
+                    del field
+                    gc.collect()
+                    self.assertIsNone(reference())
+                    if policy == fluentqt.WidgetOwnership.Owned:
+                        self.assertFalse(shiboken6.isValid(child))
+                    else:
+                        self.assertTrue(shiboken6.isValid(child))
+                        self.assertIs(child.parent(), original if policy == fluentqt.WidgetOwnership.Reparented else None)
+
+    def test_field_trailing_logical_query_placement_and_clear_accessibility(self):
+        box = fluentqt.AutoSuggestBox()
+        box.setQueryButtonPlacement(box.QueryButtonPlacement.Trailing)
+        box.setClearButtonAccessibleName("Clear project")
+        box.setClearButtonFocusPolicy(Qt.StrongFocus)
+        self.assertEqual(box.queryButtonPlacement(), box.QueryButtonPlacement.Trailing)
+        self.assertEqual(box.clearButtonAccessibleName(), "Clear project")
+        self.assertEqual(box.clearButtonFocusPolicy(), Qt.StrongFocus)
+
     def test_all_dedicated_charts_export_images_and_original_data(self):
         model = fluentqt.ChartModel()
         model.setName("Primary")

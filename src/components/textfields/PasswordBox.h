@@ -74,6 +74,8 @@ signals:
     void passwordRevealModeChanged();
 
 protected:
+    QRect trailingContentBounds() const override;
+    void trailingContentGeometryChanged() override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;

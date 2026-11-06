@@ -433,6 +433,59 @@ QVector<GallerySample> labelSamples()
 QVector<GallerySample> lineEditSamples()
 {
     return {
+        makeSample(QStringLiteral("line-edit-trailing-content"), QStringLiteral("Units and inline actions"),
+            QStringLiteral("Trailing content shares space with the clear button without changing the editable value."),
+            QStringLiteral(
+                "auto* width = new LineEdit(this);\n"
+                "width->setAccessibleName(\"Canvas width\");\n"
+                "width->setText(\"1280\");\n"
+                "width->setTrailingText(\"px\");\n"
+                "width->setClearButtonAccessibleName(\"Clear canvas width\");\n"
+                "width->setClearButtonFocusPolicy(Qt::StrongFocus);\n\n"
+                "auto* name = new LineEdit(this);\n"
+                "name->setAccessibleName(\"Export name\");\n"
+                "name->setText(\"gallery-preview-v2\");\n"
+                "auto* reset = new Button(\"Reset\");\n"
+                "reset->setFluentStyle(Button::Subtle);\n"
+                "reset->setFluentSize(Button::Small);\n"
+                "reset->setAccessibleName(\"Reset export name\");\n"
+                "name->setTrailingWidget(reset, WidgetOwnership::Owned);\n"
+                "connect(reset, &Button::clicked, name, [name] {\n"
+                "    name->setText(\"gallery-preview\");\n"
+                "});"),
+            [](QWidget* parent) {
+                auto* surface = textFieldSurface(parent);
+                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+                auto* width = new LineEdit(surface);
+                width->setObjectName(QStringLiteral("galleryTrailingWidth"));
+                width->setAccessibleName(QStringLiteral("Canvas width"));
+                width->setText(QStringLiteral("1280"));
+                width->setTrailingText(QStringLiteral("px"));
+                width->setClearButtonAccessibleName(QStringLiteral("Clear canvas width"));
+                width->setClearButtonFocusPolicy(Qt::StrongFocus);
+                auto* name = new LineEdit(surface);
+                name->setObjectName(QStringLiteral("galleryTrailingName"));
+                name->setAccessibleName(QStringLiteral("Export name"));
+                name->setText(QStringLiteral("gallery-preview-v2"));
+                auto* reset = new Button(QStringLiteral("Reset"));
+                reset->setObjectName(QStringLiteral("galleryTrailingReset"));
+                reset->setFluentStyle(Button::Subtle);
+                reset->setFluentSize(Button::Small);
+                reset->setAccessibleName(QStringLiteral("Reset export name"));
+                name->setTrailingWidget(reset, WidgetOwnership::Owned);
+                QObject::connect(reset, &Button::clicked, name, [name] {
+                    name->setText(QStringLiteral("gallery-preview"));
+                });
+                for (auto* field : {width, name}) {
+                    field->setMaximumWidth(370);
+                    field->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+                }
+                layout->addWidget(new Label(QStringLiteral("Canvas width"), surface));
+                layout->addWidget(width);
+                layout->addWidget(new Label(QStringLiteral("Export name"), surface));
+                layout->addWidget(name);
+                return surface;
+            }),
         makeSample(QStringLiteral("line-edit-clear"), QStringLiteral("Input with clear button"),
             QStringLiteral("The clear button appears when text is present and text changes are easy to observe."),
             QStringLiteral(

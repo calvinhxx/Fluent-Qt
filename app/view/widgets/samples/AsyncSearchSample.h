@@ -2,6 +2,7 @@
 #define GALLERY_ASYNCSEARCHSAMPLE_H
 
 #include <FluentQt/FluentQt.h>
+#include <QHBoxLayout>
 #include <QStandardItemModel>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -25,7 +26,7 @@ public:
         m_search->setObjectName(QStringLiteral("asyncProjectSearch"));
         m_search->setAccessibleName(QStringLiteral("Search projects"));
         m_search->setPlaceholderText(QStringLiteral("Search projects"));
-        m_search->setQueryButtonPlacement(textfields::AutoSuggestBox::QueryButtonPlacement::Left);
+        m_search->setQueryButtonPlacement(textfields::AutoSuggestBox::QueryButtonPlacement::Leading);
         m_search->setSuggestionItemHeight(36);
         m_search->setMaximumWidth(320);
         m_search->setMinimumWidth(180);
@@ -36,6 +37,37 @@ public:
         m_model = new QStandardItemModel(this);
         m_search->setSuggestionModel(m_model);
         m_search->setAsyncSuggestionsEnabled(true);
+        auto* trailing = new QWidget;
+        trailing->setObjectName(QStringLiteral("asyncSearchTrailingStatus"));
+        trailing->setAttribute(Qt::WA_TransparentForMouseEvents);
+        trailing->setFixedSize(64, 24);
+        auto* trailingLayout = new QHBoxLayout(trailing);
+        trailingLayout->setContentsMargins(0, 0, 0, 0);
+        auto* ring = new status_info::ProgressRing(trailing);
+        ring->setFixedSize(20, 20);
+        ring->setStrokeWidth(2);
+        ring->setAccessibleName(QStringLiteral("Searching projects"));
+        auto* count = new textfields::Label(trailing);
+        count->setTextColorRole(textfields::Label::TextColorRole::Secondary);
+        count->setAlignment(Qt::AlignCenter);
+        trailingLayout->addWidget(ring, 0, Qt::AlignCenter);
+        trailingLayout->addWidget(count);
+        m_search->setTrailingWidget(trailing, WidgetOwnership::Owned);
+        const auto updateTrailing = [this, ring, count] {
+            using State = textfields::AutoSuggestBox::LoadState;
+            const State state = m_search->loadState();
+            const bool loading = state == State::Loading;
+            ring->setIsActive(loading);
+            ring->setVisible(loading);
+            count->setVisible(!loading);
+            count->setText(state == State::Ready ? QStringLiteral("%1 shown").arg(m_search->suggestionCount())
+                    : state == State::Failed
+                    ? QStringLiteral("Failed")
+                    : QString());
+        };
+        connect(m_search, &textfields::AutoSuggestBox::loadStateChanged, trailing, updateTrailing);
+        connect(m_search, &textfields::AutoSuggestBox::suggestionCountChanged, trailing, updateTrailing);
+        updateTrailing();
         m_failNext = new basicinput::CheckBox(QStringLiteral("Fail next search"), this);
         m_failNext->setObjectName(QStringLiteral("asyncFailNext"));
         m_failNext->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);

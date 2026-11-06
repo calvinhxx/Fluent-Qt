@@ -586,6 +586,7 @@ QVector<GallerySample> comboBoxSamples()
                 "comboBox->setAccessibleName(\"Editable size value\");\n"
                 "comboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\n"
                 "comboBox->setEditable(true);\n"
+                "comboBox->setTrailingText(\"pt\");\n"
                 "comboBox->lineEdit()->setAccessibleName(\"Editable size value\");\n"
                 "comboBox->setInsertPolicy(QComboBox::NoInsert);\n"
                 "comboBox->setCurrentIndex(4);\n"
@@ -614,6 +615,7 @@ QVector<GallerySample> comboBoxSamples()
                 comboBox->setObjectName(QStringLiteral("galleryEditableComboBox"));
                 comboBox->setAccessibleName(QStringLiteral("Editable size value"));
                 comboBox->setEditable(true);
+                comboBox->setTrailingText(QStringLiteral("pt"));
                 comboBox->lineEdit()->setAccessibleName(QStringLiteral("Editable size value"));
                 comboBox->setInsertPolicy(QComboBox::NoInsert);
 

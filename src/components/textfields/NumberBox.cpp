@@ -744,9 +744,10 @@ void NumberBox::changeEvent(QEvent* event)
     LineEdit::changeEvent(event);
     if (!event)
         return;
-    if (event->type() == QEvent::FontChange) {
+    if (event->type() == QEvent::FontChange || event->type() == QEvent::LayoutDirectionChange) {
         setFixedHeight(totalPreferredHeight());
         updateChildGeometry();
+        updateTextMarginsForChrome();
         updateGeometry();
     }
     if (event->type() == QEvent::EnabledChange || event->type() == QEvent::ReadOnlyChange) {
@@ -794,7 +795,19 @@ bool NumberBox::eventFilter(QObject* watched, QEvent* event)
 
 QRect NumberBox::inputRect() const
 {
-    return QRect(0, inputTop(), width(), ::fluent::detail::standardControlHeight(fontMetrics()));
+    return QRect(0, inputTop(), width(), totalPreferredHeight() - inputTop());
+}
+
+QRect NumberBox::trailingContentBounds() const
+{
+    return inputRect();
+}
+
+void NumberBox::trailingContentGeometryChanged()
+{
+    if (height() != totalPreferredHeight())
+        setFixedHeight(totalPreferredHeight());
+    updateChildGeometry();
 }
 
 int NumberBox::inputTop() const
@@ -804,7 +817,9 @@ int NumberBox::inputTop() const
 
 int NumberBox::totalPreferredHeight() const
 {
-    return inputTop() + ::fluent::detail::standardControlHeight(fontMetrics());
+    return inputTop()
+        + qMax(::fluent::detail::standardControlHeight(fontMetrics()),
+            trailingContentSizeHint().height() + 2 * ::Spacing::Padding::TextFieldVertical);
 }
 
 void NumberBox::initializeSpinnerButtons()
@@ -912,6 +927,11 @@ void NumberBox::updateTextMarginsForChrome()
     QMargins margins = contentMargins();
     margins.setLeft(::Spacing::Padding::TextFieldHorizontal + (m_scrubbingEnabled ? 24 : 0));
     margins.setRight(rightMargin);
+    if (layoutDirection() == Qt::RightToLeft) {
+        const int left = margins.left();
+        margins.setLeft(margins.right());
+        margins.setRight(left);
+    }
     margins.setTop(::Spacing::Padding::TextFieldVertical);
     margins.setBottom(::Spacing::Padding::TextFieldVertical);
     setContentMargins(margins);

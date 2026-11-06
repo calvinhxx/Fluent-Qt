@@ -4,6 +4,7 @@
 #include "components/textfields/Label.h"
 
 #include <QAction>
+#include <QAccessible>
 #include <QApplication>
 #include <QComboBox>
 #include <QContextMenuEvent>
@@ -45,6 +46,112 @@
 
 using namespace fluent;
 using namespace fluent::basicinput;
+
+TEST(ComboBoxTrailingContentTest, BothModesAndNativeGeometryChangesKeepSuffixOutsideEditor)
+{
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        ComboBox combo;
+        combo.setLayoutDirection(direction);
+        combo.addItems({"12", "14", "16"});
+        combo.resize(220, 32);
+        combo.setTrailingText("pt");
+        combo.show();
+        QApplication::processEvents();
+        auto* suffix = combo.findChild<fluent::textfields::Label*>("fluentFieldTrailingText");
+        ASSERT_NE(suffix, nullptr);
+        EXPECT_FALSE(suffix->isTextElided());
+        const QRect suffixGeometry = suffix->geometry();
+        combo.setEditable(true);
+        auto* editor = combo.lineEdit();
+        ASSERT_NE(editor, nullptr);
+        const QRect editorGeometry = editor->geometry();
+        EXPECT_FALSE(editorGeometry.intersects(suffixGeometry));
+        for (int index : {1, 1, 0}) {
+            combo.setCurrentIndex(index);
+            EXPECT_EQ(editor->geometry(), editorGeometry);
+            EXPECT_EQ(suffix->geometry(), suffixGeometry);
+        }
+        combo.setItemText(0, "13.5");
+        combo.removeItem(0);
+        EXPECT_EQ(editor->geometry(), editorGeometry);
+        auto* replacement = new QLineEdit;
+        replacement->setTextMargins(2, 0, 3, 0);
+        combo.setLineEdit(replacement);
+        EXPECT_FALSE(replacement->geometry().intersects(suffixGeometry));
+        EXPECT_EQ(replacement->textMargins(), QMargins(2, 0, 3, 0));
+        combo.setEditable(false);
+        EXPECT_EQ(suffix->geometry(), suffixGeometry);
+        EXPECT_EQ(suffix->text(), QString("pt"));
+    }
+}
+
+TEST(ComboBoxTrailingContentTest, CustomActionDoesNotOpenPopupOrFollowEditorLifetime)
+{
+    ComboBox combo;
+    combo.addItems({"12", "14"});
+    combo.resize(240, 32);
+    QPointer<Button> action = new Button("Reset");
+    action->setFixedSize(48, 24);
+    ASSERT_TRUE(combo.setTrailingWidget(action, WidgetOwnership::Borrowed));
+    combo.setEditable(true);
+    EXPECT_FALSE(combo.setTrailingWidget(combo.lineEdit(), WidgetOwnership::Owned));
+    combo.setEditable(false);
+    ASSERT_FALSE(action.isNull());
+    combo.show();
+    QApplication::processEvents();
+    QSignalSpy clicked(action, &Button::clicked);
+    QTest::mouseClick(action, Qt::LeftButton);
+    EXPECT_EQ(clicked.count(), 1);
+    EXPECT_EQ(combo.currentIndex(), 0);
+    for (auto* widget : QApplication::allWidgets()) {
+        auto* popup = qobject_cast<fluent::dialogs_flyouts::Flyout*>(widget);
+        if (popup && popup->anchor() == &combo)
+            EXPECT_FALSE(popup->isOpen());
+    }
+    combo.releaseTrailingWidget();
+    EXPECT_EQ(action->parentWidget(), nullptr);
+    delete action.data();
+}
+
+TEST(ComboBoxTrailingContentTest, AccessibilityExposesHostedActionAndActualPopupState)
+{
+    for (bool editable : {false, true}) {
+        ComboBox combo;
+        combo.setAccessibleName("Size");
+        combo.addItems({"12", "14"});
+        combo.setEditable(editable);
+        auto* accessible = QAccessible::queryAccessibleInterface(&combo);
+        ASSERT_NE(accessible, nullptr);
+        auto* action = new Button("Reset");
+        action->setAccessibleName("Reset size");
+        action->setFocusPolicy(Qt::StrongFocus);
+        action->setFixedSize(48, 24);
+        ASSERT_TRUE(combo.setTrailingWidget(action, WidgetOwnership::Owned));
+        combo.resize(240, 32);
+        combo.show();
+        QApplication::processEvents();
+        auto* child = QAccessible::queryAccessibleInterface(action);
+        ASSERT_NE(child, nullptr);
+        EXPECT_GE(accessible->indexOfChild(child), 0);
+        EXPECT_EQ(accessible->role(), QAccessible::ComboBox);
+        EXPECT_EQ(accessible->text(QAccessible::Name), QString("Size"));
+        EXPECT_EQ(accessible->text(QAccessible::Value), QString("12"));
+        EXPECT_EQ(accessible->state().editable, editable);
+        EXPECT_EQ(child->text(QAccessible::Name), QString("Reset size"));
+        accessible->actionInterface()->doAction(QAccessibleActionInterface::showMenuAction());
+        QApplication::processEvents();
+        EXPECT_TRUE(accessible->state().expanded);
+        EXPECT_FALSE(accessible->relations(QAccessible::Controller).isEmpty());
+        combo.hidePopup();
+        EXPECT_FALSE(accessible->state().expanded);
+        EXPECT_TRUE(accessible->state().collapsed);
+        QApplication::setActiveWindow(&combo);
+        action->setFocus(Qt::TabFocusReason);
+        ASSERT_TRUE(QTest::qWaitFor([action] { return action->hasFocus(); }, 1000));
+        ASSERT_NE(accessible->focusChild(), nullptr);
+        EXPECT_EQ(accessible->focusChild()->object(), action);
+    }
+}
 
 TEST(ComboBoxSurfaceTest, Contract_LayoutContainsBoundsAndBothEditorModesShowFocus)
 {

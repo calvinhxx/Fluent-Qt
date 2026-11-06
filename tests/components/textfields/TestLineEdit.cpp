@@ -4,6 +4,8 @@
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/MultiSelectComboBox.h"
 #include "components/textfields/NumberBox.h"
+#include "components/textfields/PasswordBox.h"
+#include "components/textfields/TagInput.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -20,6 +22,7 @@
 #include <QHBoxLayout>
 #include <QMenu>
 #include <QTimer>
+#include <QToolButton>
 #include <QtMath>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -28,6 +31,217 @@
 using namespace fluent::textfields;
 using namespace fluent::basicinput;
 using namespace fluent;
+
+TEST(FieldTrailingContentTest, TextIsDecorationAndPreservesCallerMargins)
+{
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        LineEdit edit;
+        edit.resize(240, 32);
+        edit.setLayoutDirection(direction);
+        edit.setText("1280");
+        const QMargins margins(3, 1, 5, 2);
+        edit.setTextMargins(margins);
+        QSignalSpy values(&edit, &QLineEdit::textChanged);
+        QSignalSpy suffix(&edit, &LineEdit::trailingTextChanged);
+        edit.setTrailingText("px");
+        edit.setTrailingText("px");
+        edit.show();
+        QApplication::processEvents();
+        auto* label = edit.findChild<Label*>("fluentFieldTrailingText");
+        ASSERT_NE(label, nullptr);
+        EXPECT_EQ(label->text(), QString("px"));
+        EXPECT_FALSE(label->isTextElided());
+        EXPECT_EQ(edit.text(), QString("1280"));
+        EXPECT_EQ(edit.textMargins(), margins);
+        EXPECT_EQ(values.count(), 0);
+        EXPECT_EQ(suffix.count(), 1);
+        EXPECT_TRUE(edit.rect().contains(label->geometry()));
+        EXPECT_EQ(label->focusPolicy(), Qt::NoFocus);
+        EXPECT_EQ(label->geometry().center().x() > edit.width() / 2, direction == Qt::LeftToRight);
+        edit.selectAll();
+        EXPECT_EQ(edit.selectedText(), QString("1280"));
+        edit.setTrailingText(QString());
+        EXPECT_TRUE(label->isHidden());
+        EXPECT_EQ(edit.textMargins(), margins);
+    }
+}
+
+TEST(FieldTrailingContentTest, OwnershipReplacementTakeAndHostDestruction)
+{
+    for (auto ownership : {WidgetOwnership::Borrowed, WidgetOwnership::Reparented, WidgetOwnership::Owned}) {
+        QWidget original;
+        auto* edit = new LineEdit;
+        QPointer<Button> child = new Button("Action", &original);
+        ASSERT_TRUE(edit->setTrailingWidget(child, ownership));
+        EXPECT_EQ(child->parentWidget(), edit);
+        EXPECT_FALSE(edit->setTrailingWidget(edit, ownership));
+        EXPECT_FALSE(edit->setTrailingWidget(child,
+            ownership == WidgetOwnership::Owned ? WidgetOwnership::Borrowed : WidgetOwnership::Owned));
+        delete edit;
+        if (ownership == WidgetOwnership::Owned) {
+            EXPECT_TRUE(child.isNull());
+        } else {
+            ASSERT_FALSE(child.isNull());
+            EXPECT_EQ(child->parentWidget(), ownership == WidgetOwnership::Reparented ? &original : nullptr);
+            delete child.data();
+        }
+    }
+    LineEdit edit;
+    QPointer<Button> owned = new Button("Action");
+    ASSERT_TRUE(edit.setTrailingWidget(owned, WidgetOwnership::Owned));
+    EXPECT_EQ(edit.takeTrailingWidget(), owned.data());
+    EXPECT_EQ(owned->parentWidget(), nullptr);
+    ASSERT_TRUE(edit.setTrailingWidget(owned, WidgetOwnership::Owned));
+    edit.setTrailingText("px");
+    EXPECT_TRUE(owned.isNull());
+    EXPECT_EQ(edit.trailingWidget(), nullptr);
+    EXPECT_EQ(edit.trailingText(), QString("px"));
+}
+
+TEST(FieldTrailingContentTest, WidgetSizeVisibilityAndExternalDeletionUpdateReservation)
+{
+    LineEdit edit;
+    edit.resize(320, 40);
+    auto* button = new Button("Reset");
+    button->setFixedSize(48, 24);
+    ASSERT_TRUE(edit.setTrailingWidget(button, WidgetOwnership::Borrowed));
+    edit.show();
+    QApplication::processEvents();
+    EXPECT_EQ(button->width(), 48);
+    const QString firstStyle = edit.styleSheet();
+    button->setFixedWidth(80);
+    QApplication::processEvents();
+    EXPECT_NE(edit.styleSheet(), firstStyle);
+    const QString wideStyle = edit.styleSheet();
+    button->hide();
+    QApplication::processEvents();
+    EXPECT_NE(edit.styleSheet(), wideStyle);
+    button->show();
+    QApplication::processEvents();
+    EXPECT_EQ(edit.styleSheet(), wideStyle);
+    QSignalSpy changed(&edit, &LineEdit::trailingWidgetChanged);
+    delete button;
+    EXPECT_EQ(edit.trailingWidget(), nullptr);
+    EXPECT_EQ(changed.count(), 1);
+}
+
+TEST(FieldTrailingContentTest, NativeActionsAndClearRemainSeparateFromSuffix)
+{
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        LineEdit edit;
+        edit.setLayoutDirection(direction);
+        edit.resize(320, 32);
+        edit.setText("1280");
+        edit.setClearButtonFocusPolicy(Qt::StrongFocus);
+        edit.setClearButtonAccessibleName("Clear width");
+        edit.setTrailingText("px");
+        QPixmap pixmap(16, 16);
+        pixmap.fill(Qt::blue);
+        auto* action = edit.addAction(QIcon(pixmap), QLineEdit::TrailingPosition);
+        edit.show();
+        QApplication::processEvents();
+        auto* suffix = edit.findChild<Label*>("fluentFieldTrailingText");
+        auto* clear = edit.findChild<Button*>("fluentLineEditClearButton");
+        ASSERT_NE(suffix, nullptr);
+        ASSERT_NE(clear, nullptr);
+        EXPECT_EQ(clear->accessibleName(), QString("Clear width"));
+        EXPECT_EQ(clear->focusPolicy(), Qt::StrongFocus);
+        EXPECT_FALSE(suffix->geometry().intersects(clear->geometry()));
+        bool found = false;
+        for (auto* native : edit.findChildren<QToolButton*>()) {
+            if (native->defaultAction() == action) {
+                found = true;
+                EXPECT_FALSE(native->geometry().intersects(clear->geometry()));
+                EXPECT_FALSE(native->geometry().intersects(suffix->geometry()));
+            }
+        }
+        EXPECT_TRUE(found);
+        edit.removeAction(action);
+        delete action;
+        QApplication::processEvents();
+        EXPECT_FALSE(suffix->geometry().intersects(clear->geometry()));
+    }
+}
+
+TEST(FieldTrailingContentTest, ExternalReparentAndReentrantNotificationPreserveLifetime)
+{
+    LineEdit edit;
+    QWidget destination;
+    Button child("Action");
+    ASSERT_TRUE(edit.setTrailingWidget(&child, WidgetOwnership::Borrowed));
+    child.setParent(&destination);
+    EXPECT_EQ(edit.trailingWidget(), nullptr);
+    EXPECT_EQ(child.parentWidget(), &destination);
+    child.setParent(nullptr);
+    auto* container = new QWidget;
+    auto* nested = new Button("Nested", container);
+    ASSERT_TRUE(edit.setTrailingWidget(container, WidgetOwnership::Owned));
+    EXPECT_FALSE(edit.setTrailingWidget(nested, WidgetOwnership::Owned));
+    EXPECT_EQ(edit.trailingWidget(), container);
+    QPointer<LineEdit> host = new LineEdit;
+    auto* action = new Button("Action");
+    QObject::connect(host, &LineEdit::trailingWidgetChanged, host, [host] { delete host.data(); });
+    host->setTrailingWidget(action, WidgetOwnership::Borrowed);
+    EXPECT_TRUE(host.isNull());
+    EXPECT_EQ(action->parentWidget(), nullptr);
+    delete action;
+}
+
+TEST(FieldTrailingContentTest, KeyboardCanLeaveCustomActionInDerivedFields)
+{
+    for (int kind = 0; kind < 3; ++kind) {
+        QWidget host;
+        QHBoxLayout layout(&host);
+        LineEdit* edit = kind == 0 ? new LineEdit : kind == 1 ? new AutoSuggestBox : new TagInput;
+        edit->setClearButtonEnabled(false);
+        auto* action = new Button("Reset");
+        action->setFixedSize(48, 24);
+        action->setFocusPolicy(Qt::StrongFocus);
+        edit->setTrailingWidget(action, WidgetOwnership::Owned);
+        Button after("Next");
+        layout.addWidget(edit);
+        layout.addWidget(&after);
+        host.show();
+        QApplication::setActiveWindow(&host);
+        action->setFocus(Qt::TabFocusReason);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return action->hasFocus(); }, 1000));
+        QTest::keyClick(action, Qt::Key_Tab);
+        EXPECT_TRUE(after.hasFocus());
+        QTest::keyClick(&after, Qt::Key_Backtab);
+        EXPECT_TRUE(action->hasFocus());
+    }
+}
+
+TEST(FieldTrailingContentTest, DerivedFieldsReserveChromeAndHeaderSpace)
+{
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        NumberBox number;
+        PasswordBox password;
+        TagInput tags;
+        number.setHeader("Width");
+        password.setHeader("Password");
+        password.setText("example");
+        tags.setHeader("Members");
+        tags.addItem("ada", "Ada");
+        for (LineEdit* edit :
+            {static_cast<LineEdit*>(&number), static_cast<LineEdit*>(&password), static_cast<LineEdit*>(&tags)}) {
+            edit->setLayoutDirection(direction);
+            edit->resize(280, edit->sizeHint().height());
+            edit->setTrailingText("unit");
+            edit->show();
+            QApplication::processEvents();
+            auto* suffix = edit->findChild<Label*>("fluentFieldTrailingText");
+            ASSERT_NE(suffix, nullptr);
+            EXPECT_TRUE(edit->rect().contains(suffix->geometry()));
+            EXPECT_GE(suffix->y(), 24);
+            for (auto* child : edit->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
+                if (child != suffix && child->isVisible()
+                    && (qobject_cast<Button*>(child) || child->objectName() == "TagInputTag"))
+                    EXPECT_FALSE(suffix->geometry().intersects(child->geometry())) << child->objectName().toStdString();
+            }
+        }
+    }
+}
 
 TEST(InputMetricsTest, StandardSingleLineControlsAlignWithoutPerSampleSizing)
 {
