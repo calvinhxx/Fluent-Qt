@@ -844,9 +844,7 @@ class _GallerySampleCardLayout(QVBoxLayout):
                 gap = (card._DESCRIPTION_SPACING if widget is card._gallery_description
                        else card._SPACING)
                 anchored_y = previous.geometry().bottom() + 1 + gap
-                if card._inline_preview and widget is card._gallery_source_expander:
-                    widget.setGeometry(0, anchored_y, card.width(), widget.height())
-                elif widget.y() != anchored_y:
+                if widget.y() != anchored_y:
                     widget.move(widget.x(), anchored_y)
             previous = widget
 
@@ -875,7 +873,6 @@ class _GallerySampleCard(QFrame):
         self._gallery_source_expander: QWidget | None = None
         self._layout_update_queued = False
         self._updating_layout = False
-        self._inline_preview = False
         self.refresh_theme()
 
     @staticmethod
@@ -898,10 +895,7 @@ class _GallerySampleCard(QFrame):
             self._gallery_source_expander,
         )
         heights = [
-            self._preferred_height(
-                widget, width if self._inline_preview and widget is self._gallery_source_expander
-                else content_width
-            )
+            self._preferred_height(widget, content_width)
             for widget in widgets
             if widget is not None
         ]
@@ -1013,17 +1007,6 @@ class _GallerySampleCard(QFrame):
         super().showEvent(event)
         self._update_anchored_layout(synchronize_ancestors=True)
 
-    def paintEvent(self, event) -> None:
-        super().paintEvent(event)
-        if self._inline_preview and self._gallery_source_expander is not None:
-            from .foundation_pages import _theme_tokens
-
-            painter = QPainter(self)
-            painter.setPen(QColor(_theme_tokens(self)["strokeDivider"]))
-            y = self._gallery_source_expander.y() - 1
-            painter.drawLine(1, y, self.width() - 2, y)
-            painter.end()
-
     def refresh_theme(self) -> None:
         colors = gallery_colors()
         self.setStyleSheet(
@@ -1057,13 +1040,6 @@ def _build_sample_card(
 ) -> tuple[QFrame, PreviewResult]:
     card = _GallerySampleCard(parent)
     card.setProperty("gallerySampleId", sample.id)
-    if sample.inline_preview:
-        card._LEFT_MARGIN = card._TOP_MARGIN = 24
-        card._RIGHT_MARGIN = 24
-        card._BOTTOM_MARGIN = 4
-        card._inline_preview = True
-        card._SPACING = 24
-        card._DESCRIPTION_SPACING = 8
     card.setProperty("galleryRouteId", entry.route_id)
     card_layout = _GallerySampleCardLayout(card)
     card_layout.setContentsMargins(
@@ -1073,9 +1049,7 @@ def _build_sample_card(
 
     title = fluentqt.Label(sample.title, card)
     title.setObjectName("gallerySampleCardTitle")
-    title.setFluentTypography(
-        fluentqt.FontRole.Subtitle if sample.inline_preview else fluentqt.FontRole.BodyStrong
-    )
+    title.setFluentTypography(fluentqt.FontRole.BodyStrong)
     card_layout.addWidget(title)
     description = None
     if sample.description:
@@ -1092,15 +1066,10 @@ def _build_sample_card(
     preview_surface.setObjectName("gallerySampleCardPreview")
     preview_surface.setProperty("gallerySampleId", sample.id)
     preview_surface.setProperty("galleryRouteId", entry.route_id)
-    preview_surface.setAppearance(
-        fluentqt.Card.Appearance.Layer if sample.inline_preview else fluentqt.Card.Appearance.LayerAlt
-    )
-    if sample.inline_preview:
-        preview_surface.setBorderVisible(False)
+    preview_surface.setAppearance(fluentqt.Card.Appearance.LayerAlt)
     preview_surface.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     preview_layout = QHBoxLayout(preview_surface)
-    margin = 0 if sample.inline_preview else 20
-    preview_layout.setContentsMargins(margin, margin, margin, margin)
+    preview_layout.setContentsMargins(20, 20, 20, 20)
     preview_layout.setSpacing(16)
     result = build_sample(entry.route_id, sample.id, preview_surface)
     _preserve_backgroundless_collection_surfaces(result.widget)
@@ -1126,12 +1095,6 @@ def _build_sample_card(
         full_code=full_code,
         source_files=source_files,
     )
-    if sample.inline_preview:
-        source_expander.setAppearance(fluentqt.Card.Appearance.Layer)
-        source_expander.setBorderVisible(False)
-        caption = source_expander.findChild(fluentqt.Label, "galleryCodeBlockCaption")
-        if caption:
-            caption.setFluentTypography(fluentqt.FontRole.Caption)
     source_expander.setObjectName("galleryCodeBlock")
     source_expander.setProperty("gallerySampleId", sample.id)
     source_expander.setProperty("galleryRouteId", entry.route_id)

@@ -554,15 +554,10 @@ def _samples_in_body(
                 raise ValueError("QmlBridge sample has no parsed source files: " + sample_id)
             sample["source_files"] = source_files[sample_id]
         if len(arguments) > 5:
-            if len(arguments) not in {6, 7} or arguments[5].strip() not in {"true", "false"}:
+            if len(arguments) != 6 or arguments[5].strip() not in {"true", "false"}:
                 raise ValueError("makeSample fillAvailableWidth must be a boolean literal")
             if arguments[5].strip() == "true":
                 sample["fill_available_width"] = True
-        if len(arguments) > 6:
-            if arguments[6].strip() not in {"true", "false"}:
-                raise ValueError("makeSample inlinePreview must be a boolean literal")
-            if arguments[6].strip() == "true":
-                sample["inline_preview"] = True
         preview_layout = _preview_layout(arguments[4])
         if preview_layout is not None:
             sample["preview_layout"] = preview_layout

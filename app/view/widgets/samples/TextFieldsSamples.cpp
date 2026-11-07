@@ -345,7 +345,7 @@ QVector<GallerySample> autoSuggestBoxSamples()
     auto async = makeSample(
         QStringLiteral("auto-suggest-box-async"), QStringLiteral("Search a project directory"),
         QStringLiteral("Find a project, see matching results and keep typing while it loads."),
-        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new AsyncSearchSample(parent); }, true, true);
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new AsyncSearchSample(parent); }, true);
     async.usageSnippet = QStringLiteral(
         "auto* box = new AutoSuggestBox(this);\n"
         "box->setSuggestionModel(projectModel);\n"
@@ -513,7 +513,7 @@ QVector<GallerySample> lineEditSamples()
                 }
                 return surface;
             },
-            true, true),
+            true),
         makeSample(QStringLiteral("line-edit-clear"), QStringLiteral("Input with clear button"),
             QStringLiteral("The clear button appears when text is present and text changes are easy to observe."),
             QStringLiteral(

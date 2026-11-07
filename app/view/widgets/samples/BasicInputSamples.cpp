@@ -657,7 +657,7 @@ QVector<GallerySample> comboBoxSamples()
                 }
                 return group;
             },
-            true, true),
+            true),
         makeSample(QStringLiteral("combobox-many-items"), QStringLiteral("Popup with many items"),
             QStringLiteral("Long option lists use the ComboBox popup ListView and keep the "
                            "selected item visible."),

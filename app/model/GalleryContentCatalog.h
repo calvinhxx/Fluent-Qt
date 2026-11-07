@@ -53,9 +53,6 @@ struct GallerySample {
     // Opt in to using the complete preview row; existing samples retain their right spacer.
     // zh_CN: 显式选择铺满预览行；既有示例保留右侧留白。
     bool fillAvailableWidth = false;
-    // Inline examples share the card surface instead of adding another framed panel.
-    // zh_CN: 行内示例直接使用卡片表面，不再叠加带框预览面板。
-    bool inlinePreview = false;
     // Optional focused C++ excerpt; codeSnippet retains the complete example.
     // zh_CN: 可选的 C++ 核心用法摘录；codeSnippet 保留完整示例。
     QString usageSnippet;
