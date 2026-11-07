@@ -782,6 +782,15 @@ FileListView keeps status beside its supporting text and retains 32-pixel action
 targets in compact rows. Long text still wraps fully, and keyboard focus remains
 visible independently of hover.
 
+Transfer composes named native search editors, multi-select ListViews, and
+Fluent buttons. Membership is distinct from the temporary selection within each
+list; unavailable model rows cannot be moved by user actions. Counts remain
+visible while filtering. Focused tests query the child list interface and exercise
+keyboard selection and transfers. Direction buttons use icons with stable geometry;
+their accessible names and tooltips describe the destination and selected count.
+This does not establish native screen-reader
+acceptance on every supported platform.
+
 <!-- docs-nav:bottom:start -->
 ---
 [← Accessibility Contract](accessibility-contract.md) · [Contents](../SUMMARY.md) · [Development index](README.md)

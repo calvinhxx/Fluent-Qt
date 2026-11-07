@@ -57,6 +57,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
                 {QStringLiteral("grid-view"), QStringLiteral("GridView"), Typography::Icons::Grid},
                 {QStringLiteral("list-view"), QStringLiteral("ListView"), Typography::Icons::List},
                 {QStringLiteral("timeline"), QStringLiteral("Timeline"), Typography::Icons::Clock},
+                {QStringLiteral("transfer"), QStringLiteral("Transfer"), Typography::Icons::Forward},
                 {QStringLiteral("split-view"), QStringLiteral("SplitView"), Typography::Icons::BackToWindow},
                 {QStringLiteral("stack-view"), QStringLiteral("StackView"), Typography::Icons::AllApps},
                 {QStringLiteral("tree-view"), QStringLiteral("TreeView"), Typography::Icons::Folder}}},

@@ -596,6 +596,11 @@
           "component_id": "timeline",
           "choose_when": "Ordered model rows need a timeline rail, supporting text and status.",
           "avoid_when": "The application needs a workflow navigation control instead of a record view."
+        },
+        {
+          "component_id": "transfer",
+          "choose_when": "Users search and move multiple keyed items between available and selected lists while the source model stays caller-owned.",
+          "avoid_when": "Selection belongs inside one list, a compact dropdown, or a hierarchical tree."
         }
       ]
     },

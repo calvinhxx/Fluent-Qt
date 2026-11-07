@@ -640,6 +640,11 @@
           "component_id": "timeline",
           "choose_when": "Ordered model rows need a timeline rail, supporting text and status.",
           "avoid_when": "The application needs a workflow navigation control instead of a record view."
+        },
+        {
+          "component_id": "transfer",
+          "choose_when": "Users search and move multiple keyed items between available and selected lists while the source model stays caller-owned.",
+          "avoid_when": "Selection belongs inside one list, a compact dropdown, or a hierarchical tree."
         }
       ]
     },
@@ -1126,6 +1131,7 @@
         "grid-view",
         "list-view",
         "timeline",
+        "transfer",
         "split-view",
         "stack-view",
         "tree-view"
@@ -4911,6 +4917,75 @@
           "title": "Alternating content",
           "description": "The same model can place content on alternating sides of the rail; RTL mirrors its logical layout.",
           "cpp_snippet": "auto* timeline = new Timeline(this);\nauto* model = new QStandardItemModel(3, 1, this);\nfor (int i = 0; i < 3; ++i) {\n    model->setData(model->index(i, 0), QString(\"Node %1\").arg(i + 1));\n    model->setData(model->index(i, 0), \"Optional supporting content supplied by the application.\", Timeline::DescriptionRole);\n    model->setData(model->index(i, 0), QString(\"Time label %1\").arg(i + 1), Timeline::TimestampRole);\n}\nmodel->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);\ntimeline->setModel(model);\nconnect(changeState, &Button::clicked, model, [model] {\n    const auto index = model->index(1, 0);\n    model->setData(index, model->data(index, Timeline::StatusRole).toInt() == Timeline::Active\n        ? Timeline::Success : Timeline::Active, Timeline::StatusRole);\n});\ntimeline->setNodeAlignment(Timeline::Alternate);\n",
+          "fill_available_width": true
+        }
+      ]
+    },
+    {
+      "id": "transfer",
+      "title": "Transfer",
+      "category_id": "collections",
+      "description": "Search and move items between two lists without changing the source model.",
+      "capabilities": [
+        "collections"
+      ],
+      "search_terms": [
+        "between",
+        "changing",
+        "choose",
+        "collections",
+        "disabled",
+        "either",
+        "items",
+        "list",
+        "lists",
+        "members",
+        "model.",
+        "move",
+        "project",
+        "search",
+        "select",
+        "source",
+        "stay",
+        "team",
+        "them",
+        "together.",
+        "transfer",
+        "transfer-project-members",
+        "two",
+        "unavailable.",
+        "without"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "declaration": "src/components/collections/Transfer.h",
+        "qualified_type": "fluent::collections::Transfer",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "Transfer",
+        "import_statement": "from fluentqt.collections import Transfer"
+      },
+      "tests": [
+        {
+          "target": "test_transfer",
+          "source": "tests/components/collections/TestTransfer.cpp",
+          "ctest_label": "test_transfer"
+        }
+      ],
+      "gallery": {
+        "route_id": "transfer",
+        "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
+        "control_image": "app/assets/control_images/collections/Transfer.png"
+      },
+      "samples": [
+        {
+          "id": "transfer-project-members",
+          "title": "Choose a project team",
+          "description": "Search either list, select members, and move them together. Disabled members stay unavailable.",
+          "cpp_snippet": "#pragma once\n\n#include <FluentQt/FluentQt.h>\n#include <QItemSelectionModel>\n#include <QStandardItemModel>\n#include <QVBoxLayout>\n\nnamespace fluent::gallery {\n\nclass TransferSample final : public QWidget {\npublic:\n    explicit TransferSample(QWidget* parent = nullptr) : QWidget(parent)\n    {\n        setObjectName(QStringLiteral(\"transferSample\"));\n        setMaximumWidth(740);\n        auto* layout = new QVBoxLayout(this);\n        layout->setContentsMargins(0, 0, 0, 0);\n        layout->setSpacing(::Spacing::Standard);\n        auto* model = new QStandardItemModel(this);\n        const QList<QStringList> members{{\"lin\", \"Lin Xiao\", \"Design\"}, {\"lin-yue\", \"Lin Yue\", \"Engineering\"},\n            {\"xu\", \"Xu An\", \"QA\"}, {\"song\", \"Song Ke\", \"Unavailable\"}, {\"zhou\", \"Zhou Ning\", \"Engineering\"},\n            {\"shen\", \"Shen Yi\", \"Product\"}};\n        for (const auto& member : members) {\n            auto* item = new QStandardItem(member.at(1));\n            item->setData(member.at(0), Qt::UserRole);\n            item->setData(member.at(2), Qt::UserRole + 1);\n            item->setEnabled(member.at(0) != QStringLiteral(\"song\"));\n            model->appendRow(item);\n        }\n        auto* transfer = new collections::Transfer(this);\n        transfer->setObjectName(QStringLiteral(\"projectMemberTransfer\"));\n        transfer->setAccessibleName(QStringLiteral(\"Project members\"));\n        transfer->setSourceHeader(QStringLiteral(\"Available members\"));\n        transfer->setTargetHeader(QStringLiteral(\"Project members\"));\n        transfer->setSearchPlaceholderText(QStringLiteral(\"Search members\"));\n        transfer->setDescriptionRole(Qt::UserRole + 1);\n        transfer->setModel(model);\n        transfer->setSelectedKeys({QStringLiteral(\"zhou\"), QStringLiteral(\"shen\")});\n        layout->addWidget(transfer);\n        auto* status = new textfields::Label(this);\n        status->setObjectName(QStringLiteral(\"transferMemberCount\"));\n        status->setFluentTypography(Typography::FontRole::Caption);\n        status->setTextColorRole(textfields::Label::TextColorRole::Secondary);\n        status->setWordWrap(true);\n        const auto updateStatus = [transfer, status]() {\n            status->setText(\n                QStringLiteral(\"%1 project members · Source data stays unchanged\").arg(transfer->selectedCount()));\n        };\n        connect(transfer, &collections::Transfer::countsChanged, status, updateStatus);\n        updateStatus();\n        layout->addWidget(status);\n    }\n};\n\n} // namespace fluent::gallery\n",
           "fill_available_width": true
         }
       ]
@@ -11994,6 +12069,15 @@
       "description": "Presents caller-owned model rows as a timeline with text, time labels and node states."
     },
     {
+      "id": "transfer",
+      "title": "Transfer",
+      "kind": "component",
+      "parent_id": "collections",
+      "group": "Collections",
+      "depth": 1,
+      "description": "Search and move items between two lists without changing the source model."
+    },
+    {
       "id": "split-view",
       "title": "SplitView",
       "kind": "component",
@@ -12627,12 +12711,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 124,
-    "component_count": 98,
-    "sample_count": 286,
+    "route_count": 125,
+    "component_count": 99,
+    "sample_count": 287,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,
-    "guided_component_count": 98
+    "guided_component_count": 99
   }
 }

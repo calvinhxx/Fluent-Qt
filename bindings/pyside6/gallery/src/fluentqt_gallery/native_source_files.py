@@ -4,6 +4,7 @@ from importlib import import_module
 
 
 _FACTORIES = {
+    "transfer-project-members": ("collections", "transfer_source_files"),
     "command-palette-shared-actions": ("navigation", "command_palette_source_files"),
     "field-connection-form": ("layout", "connection_form_source_files"),
     "tag-input-project-members": ("text_window", "member_selection_source_files"),

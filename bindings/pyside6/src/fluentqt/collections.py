@@ -14,6 +14,7 @@ _NativeDrawerView = _native.fluent.DrawerView
 _NativeFlipView = _native.fluent.FlipView
 _NativeFlowView = _native.fluent.FlowView
 _NativeGridView = _native.fluent.GridView
+Transfer = _native.fluent.Transfer
 _NativeListView = _native.fluent.ListView
 _NativeFileListView = _native.fluent.FileListView
 _NativeTimeline = _native.fluent.Timeline
@@ -1532,6 +1533,7 @@ __all__ = [
     "ListView",
     "FileListView",
     "Timeline",
+    "Transfer",
     "SelectionMode",
     "SplitView",
     "SplitViewPaneOptions",
