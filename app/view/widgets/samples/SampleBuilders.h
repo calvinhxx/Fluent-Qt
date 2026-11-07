@@ -22,8 +22,7 @@ GallerySample makeSample(const QString& id,
     const QString& description,
     const QString& codeSnippet,
     std::function<QWidget*(QWidget*)> createPreview,
-    bool fillAvailableWidth = false,
-    bool inlinePreview = false);
+    bool fillAvailableWidth = false);
 
 /**
  * @brief Transparent container with a top-left aligned vertical layout.

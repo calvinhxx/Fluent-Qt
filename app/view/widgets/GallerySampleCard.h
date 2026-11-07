@@ -75,7 +75,6 @@ private:
     QMargins m_cardMargins{20, 18, 20, 18};
     int m_cardSpacing = 12;
     int m_descriptionSpacing = 12;
-    bool m_inlinePreview = false;
 };
 
 } // namespace fluent::gallery

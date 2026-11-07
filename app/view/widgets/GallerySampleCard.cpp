@@ -68,20 +68,11 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
     setFrameShape(QFrame::NoFrame);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    if (sample.inlinePreview) {
-        m_inlinePreview = true;
-        m_cardMargins = QMargins(::Spacing::Large, ::Spacing::Large, ::Spacing::Large, ::Spacing::Large);
-        m_cardMargins.setBottom(::Spacing::XSmall);
-        m_cardSpacing = ::Spacing::Large;
-        m_descriptionSpacing = ::Spacing::Small;
-    }
-
     auto* layout = new AnchorLayout(this);
 
     m_titleLabel = new fluent::textfields::Label(sample.title, this);
     m_titleLabel->setObjectName(QStringLiteral("gallerySampleCardTitle"));
-    m_titleLabel->setFluentTypography(
-        sample.inlinePreview ? Typography::FontRole::Subtitle : Typography::FontRole::BodyStrong);
+    m_titleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
 
     if (!sample.description.isEmpty()) {
         m_descriptionLabel = new fluent::textfields::Label(sample.description, this);
@@ -91,15 +82,9 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
     }
 
     m_previewSurface = new SamplePreviewSurface(this);
-    if (sample.inlinePreview) {
-        auto* surface = static_cast<SamplePreviewSurface*>(m_previewSurface);
-        surface->setAppearance(fluent::layout::Card::Layer);
-        surface->setBorderVisible(false);
-    }
     m_previewSurface->installEventFilter(this);
     auto* previewLayout = new QHBoxLayout(m_previewSurface);
-    const int previewMargin = sample.inlinePreview ? 0 : 20;
-    previewLayout->setContentsMargins(previewMargin, previewMargin, previewMargin, previewMargin);
+    previewLayout->setContentsMargins(20, 20, 20, 20);
     previewLayout->setSpacing(16);
 
     const bool expandingPreview = sample.fillAvailableWidth;
@@ -128,13 +113,6 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
     if (!sample.codeSnippet.isEmpty()) {
         const QString pythonCode = routeId.isEmpty() ? QString() : galleryPythonSnippet(routeId, sample.id);
         m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, pythonCode, this);
-        if (sample.inlinePreview) {
-            m_codeBlock->setAppearance(fluent::layout::Card::Layer);
-            m_codeBlock->setBorderVisible(false);
-            if (auto* caption = m_codeBlock->findChild<fluent::textfields::Label*>(
-                    QStringLiteral("galleryCodeBlockCaption")))
-                caption->setFluentTypography(Typography::FontRole::Caption);
-        }
         m_codeBlock->setCppExcerpt(sample.usageSnippet);
         if (!sample.sourceFiles.isEmpty())
             m_codeBlock->setSourceFiles(sample.sourceFiles, galleryPythonSourceFiles(routeId, sample.id));
@@ -169,8 +147,8 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
 
     if (m_codeBlock) {
         AnchorLayout::Anchors codeAnchors;
-        codeAnchors.left = {this, Edge::Left, m_inlinePreview ? 0 : m_cardMargins.left()};
-        codeAnchors.right = {this, Edge::Right, m_inlinePreview ? 0 : -m_cardMargins.right()};
+        codeAnchors.left = {this, Edge::Left, m_cardMargins.left()};
+        codeAnchors.right = {this, Edge::Right, -m_cardMargins.right()};
         codeAnchors.top = {previous, Edge::Bottom, m_cardSpacing};
         layout->addAnchoredWidget(m_codeBlock, codeAnchors);
     }
@@ -250,11 +228,6 @@ void GallerySampleCard::paintEvent(QPaintEvent* event)
 {
     if (!depth::enabled(this)) {
         QFrame::paintEvent(event);
-        if (m_inlinePreview && m_codeBlock) {
-            QPainter painter(this);
-            painter.setPen(themeColorsRef().strokeDivider);
-            painter.drawLine(1, m_codeBlock->y() - 1, width() - 2, m_codeBlock->y() - 1);
-        }
         return;
     }
     QPainter painter(this);
@@ -386,7 +359,7 @@ int GallerySampleCard::calculatedHeightForWidth(int width) const
             return;
         if (visibleItemCount > 0)
             height += widget == m_descriptionLabel ? m_descriptionSpacing : m_cardSpacing;
-        height += preferredHeightForWidget(widget, m_inlinePreview && widget == m_codeBlock ? width : contentWidth);
+        height += preferredHeightForWidget(widget, contentWidth);
         ++visibleItemCount;
     };
 

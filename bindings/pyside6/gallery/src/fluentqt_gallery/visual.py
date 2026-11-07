@@ -2014,6 +2014,7 @@ class GalleryCodeBlock(fluentqt.CodeBlock):
         self._source_selector = fluentqt.SelectorBar(content)
         self._source_selector.setObjectName("galleryCodeBlockSourceSelector")
         self._source_selector.setAccessibleName("Source detail")
+        self._source_selector.setBackgroundVisible(False)
         self._source_selector.setItemFontRole(fluentqt.FontRole.Caption)
         self._source_selector.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         self._source_selector.addItem("Key usage")
