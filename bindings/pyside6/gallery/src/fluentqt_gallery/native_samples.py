@@ -2273,6 +2273,18 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             """,
             imports="from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel",
         )
+    if key == ("transfer", "transfer-project-members"):
+        return focused(
+            """
+            transfer = fluentqt.Transfer(self)
+            transfer.setModel(member_model)
+            transfer.setDescriptionRole(Qt.UserRole + 1)
+            transfer.setSelectedKeys(["zhou", "shen"])
+            transfer.selectedKeysChanged.connect(save_project_members)
+            # Full example includes the caller-owned model and named panels.
+            """,
+            imports="from PySide6.QtCore import Qt",
+        )
     if key == ("auto-suggest-box", "auto-suggest-box-async"):
         return focused(
             """

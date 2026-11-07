@@ -140,6 +140,7 @@
         "scrollbar",
         "stack-view",
         "timeline",
+        "transfer",
         "tree-view"
       ],
       "required_states": [
@@ -1762,6 +1763,33 @@
         "coverage": "all-required-states",
         "surface": "visual-check",
         "test_case": "ToolTipTest.VisualGallery"
+      }
+    },
+    {
+      "id": "transfer",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "TransferTest.Contract_NarrowLayoutAndBorrowedModelSurviveTeardown",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TransferTest.Contract_MoveSearchAndDisabledItems",
+          "states": [
+            "selection"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
       }
     },
     {

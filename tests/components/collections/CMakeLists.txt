@@ -29,3 +29,4 @@ add_qt_test_module(test_drawer_view TestDrawerView.cpp)
 
 # DataGrid
 add_qt_test_module(test_data_grid TestDataGrid.cpp)
+add_qt_test_module(test_transfer TestTransfer.cpp)

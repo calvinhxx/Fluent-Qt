@@ -1,4 +1,6 @@
 #include "CollectionsSamples.h"
+#include "TransferSample.h"
+#include <QFile>
 #include "FilesSamples.h"
 #include "SequenceSamples.h"
 
@@ -2087,10 +2089,33 @@ QVector<GallerySample> stackViewSamples()
             })};
 }
 
+QVector<GallerySample> transferSamples()
+{
+    QFile source(QStringLiteral(":/app/samples/TransferSample.h"));
+    source.open(QIODevice::ReadOnly);
+    auto sample = makeSample(
+        QStringLiteral("transfer-project-members"), QStringLiteral("Choose a project team"),
+        QStringLiteral(
+            "Search either list, select members, and move them together. Disabled members stay unavailable."),
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new TransferSample(parent); }, true);
+    sample.usageSnippet = QStringLiteral(
+        "auto* transfer = new Transfer(this);\n"
+        "transfer->setModel(memberModel); // Borrowed model with unique keys in Qt::UserRole.\n"
+        "transfer->setDescriptionRole(Qt::UserRole + 1);\n"
+        "transfer->setSelectedKeys({\"zhou\", \"shen\"});\n"
+        "connect(transfer, &Transfer::selectedKeysChanged, this, saveProjectMembers);");
+    sample.sourceFiles = {
+        {QStringLiteral("TransferSample.h"), QStringLiteral("cpp"), sample.codeSnippet, sample.usageSnippet}};
+    return {sample};
+}
+
 } // namespace
 
 QVector<GallerySample> collectionsSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("transfer"))
+        return transferSamples();
+
     if (routeId == QStringLiteral("timeline"))
         return timelineSamples();
     if (routeId == QStringLiteral("file-list-view"))

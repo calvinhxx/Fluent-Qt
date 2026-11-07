@@ -623,6 +623,13 @@ if (!paletteGuard) {
         </namespace-type>
 
         <namespace-type name="collections" visible="no">
+            <object-type name="Transfer">
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
             <object-type name="Timeline">
                 <enum-type name="NodeAlignment"/>
                 <enum-type name="Status"/>

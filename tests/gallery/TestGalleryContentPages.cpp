@@ -72,6 +72,7 @@
 #include "components/date_time/DateTimeRangePicker.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
+#include "components/collections/Transfer.h"
 #include "components/collections/TreeView.h"
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/foundation/FluentElement.h"
@@ -335,6 +336,29 @@ public:
 
     void trackSecondary(fluent::textfields::Label* label) { trackLabelColor(label, TextRole::Secondary); }
 };
+
+TEST_F(GalleryContentPagesTest, Contract_TransferSampleUsesBorrowedModelAndStableMembership)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("transfer"), QStringLiteral("transfer-project-members"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    auto* transfer = preview->findChild<fluent::collections::Transfer*>();
+    ASSERT_NE(transfer, nullptr);
+    ASSERT_EQ(transfer->model()->rowCount(), 6);
+    EXPECT_EQ(transfer->selectedKeys(), (QStringList{"zhou", "shen"}));
+    transfer->setSourceFilter(QStringLiteral("Lin Xiao"));
+    ASSERT_EQ(transfer->sourceView()->model()->rowCount(), 1);
+    transfer->sourceView()->selectionModel()->select(transfer->sourceView()->model()->index(0, 0),
+        QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    transfer->addSelected();
+    EXPECT_TRUE(transfer->selectedKeys().contains(QStringLiteral("lin")));
+    EXPECT_EQ(transfer->model()->rowCount(), 6);
+    auto* status = preview->findChild<fluent::textfields::Label*>(QStringLiteral("transferMemberCount"));
+    ASSERT_NE(status, nullptr);
+    EXPECT_TRUE(status->text().startsWith(QStringLiteral("3 project members")));
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("setSelectedKeys")));
+    EXPECT_EQ(sample.sourceFiles.size(), 1);
+}
 
 TEST_F(GalleryContentPagesTest, DateTimeRangeSamplesUseNativeNullableValues)
 {
