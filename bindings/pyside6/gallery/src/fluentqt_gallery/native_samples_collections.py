@@ -8,6 +8,11 @@ from .native_samples import register_source_samples
 from .native_samples_overlays import overlay_effects_source
 
 
+def transfer_source_files(result):
+    from .native_source_files import complete_sample_source_files
+    return complete_sample_source_files(result, "member_transfer.py", root_name="root")
+
+
 def data_grid_source_files(result):
     from .native_source_files import complete_sample_source_files
     return complete_sample_source_files(result, "data_grid_workspace.py", root_name="workspace")
@@ -2557,3 +2562,54 @@ register_source_samples(
         ),
     },
 )
+
+register_source_samples("transfer", ("Transfer",), {
+    "transfer-project-members": ("root", _script(
+        """
+        root = QWidget()
+        root.setObjectName("transferSample")
+        root.setMaximumWidth(740)
+        layout = QVBoxLayout(root)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(fluentqt.Spacing.Standard)
+        model = QStandardItemModel(root)
+        members = [
+            ("lin", "Lin Xiao", "Design"),
+            ("lin-yue", "Lin Yue", "Engineering"),
+            ("xu", "Xu An", "QA"),
+            ("song", "Song Ke", "Unavailable"),
+            ("zhou", "Zhou Ning", "Engineering"),
+            ("shen", "Shen Yi", "Product"),
+        ]
+        for key, name, role in members:
+            item = QStandardItem(name)
+            item.setData(key, Qt.ItemDataRole.UserRole)
+            item.setData(role, Qt.ItemDataRole.UserRole + 1)
+            item.setEnabled(key != "song")
+            model.appendRow(item)
+        transfer = fluentqt.Transfer(root)
+        transfer.setObjectName("projectMemberTransfer")
+        transfer.setAccessibleName("Project members")
+        transfer.setSourceHeader("Available members")
+        transfer.setTargetHeader("Project members")
+        transfer.setSearchPlaceholderText("Search members")
+        transfer.setDescriptionRole(Qt.ItemDataRole.UserRole + 1)
+        transfer.setModel(model)
+        transfer.setSelectedKeys(["zhou", "shen"])
+        layout.addWidget(transfer)
+        status = fluentqt.Label(root)
+        status.setObjectName("transferMemberCount")
+        status.setFluentTypography(fluentqt.FontRole.Caption)
+        status.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+        status.setWordWrap(True)
+        def update_status():
+            status.setText(f"{transfer.selectedCount()} project members · Source data stays unchanged")
+        transfer.countsChanged.connect(update_status)
+        update_status()
+        layout.addWidget(status)
+        """,
+        "from PySide6.QtCore import Qt\n"
+        "from PySide6.QtGui import QStandardItem, QStandardItemModel\n"
+        "from PySide6.QtWidgets import QVBoxLayout, QWidget",
+    )),
+})

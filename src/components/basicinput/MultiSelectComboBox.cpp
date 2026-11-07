@@ -1,4 +1,5 @@
 #include "components/foundation/private/ControlMetrics_p.h"
+#include "components/foundation/private/SelectionCheckIndicator_p.h"
 #include "components/foundation/private/FieldTextGeometry_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "compatibility/WidgetCompat.h"
@@ -253,36 +254,8 @@ public:
             kCheckBoxSize);
         const QRect checkRect = QStyle::visualRect(option.direction, option.rect, logicalCheck);
 
-        QColor checkFill;
-        QColor checkStroke;
-        QColor checkGlyph;
-        if (!enabled) {
-            checkFill = colors.controlDisabled;
-            checkStroke = colors.strokeDivider;
-            checkGlyph = colors.textDisabled;
-        } else if (selected) {
-            checkFill = hovered ? colors.accentSecondary : colors.accentDefault;
-            checkStroke = Qt::transparent;
-            checkGlyph = colors.textOnAccent;
-        } else {
-            checkFill = hovered ? colors.controlSecondary : colors.controlDefault;
-            checkStroke = hovered ? colors.strokeStrong : colors.strokeDefault;
-            checkGlyph = Qt::transparent;
-        }
-
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(checkFill);
-        painter->drawRoundedRect(checkRect, radius.control, radius.control);
-        if (checkStroke != Qt::transparent) {
-            painter->setPen(QPen(checkStroke, 1.0));
-            painter->setBrush(Qt::NoBrush);
-            painter->drawRoundedRect(QRectF(checkRect).adjusted(0.5, 0.5, -0.5, -0.5), radius.control, radius.control);
-        }
-        if (selected) {
-            painter->setPen(checkGlyph);
-            Typography::Icons::paintGlyph(*painter, QRectF(checkRect), Typography::Icons::CheckMark,
-                Typography::IconSize::Compact, Qt::AlignCenter);
-        }
+        ::fluent::detail::paintSelectionCheckIndicator(*painter, checkRect, colors, radius.control, selected, hovered,
+            enabled);
 
         int logicalTextLeft = logicalCheck.right() + 1 + kOptionTextGap;
         const QVariant decoration = index.data(Qt::DecorationRole);

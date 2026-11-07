@@ -83,6 +83,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/collections/SplitView.h
     src/components/collections/StackView.h
     src/components/collections/TreeView.h
+    src/components/collections/Transfer.h
 
     src/components/date_time/CalendarDatePicker.h
     src/components/date_time/CalendarView.h

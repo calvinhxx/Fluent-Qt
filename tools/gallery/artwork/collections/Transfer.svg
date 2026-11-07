@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Transfer</title>
+  <defs>
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ce9afa"/>
+      <stop offset="1" stop-color="#61418f"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e6d7f5"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="66" height="66" rx="5" fill="url(#tile)"/>
+  <rect x="11" y="17" width="20" height="38" rx="4" fill="url(#panel)"/>
+  <rect x="41" y="17" width="20" height="38" rx="4" fill="url(#panel)"/>
+  <path d="M16 26h10M16 33h10M16 40h7M46 26h10M46 33h10M46 40h7" fill="none" stroke="#8d64b4" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="26" y="42" width="20" height="17" rx="4" fill="#6f469a"/>
+  <path d="M30 50h12m-4-4 4 4-4 4" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

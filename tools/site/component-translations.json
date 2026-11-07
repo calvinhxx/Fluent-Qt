@@ -639,5 +639,10 @@
     "description": "显示内置 Fluent 图标或应用自定义字体中的字形。",
     "example": "不同尺寸",
     "usage": "默认按尺寸选择内置 Fluent 字形。应用注册自定义字体后，通过 setFontFamily() 指定字体族并传入真实字形；清空字体族恢复默认行为。"
+  },
+  "transfer": {
+    "name": "Transfer 双栏选择",
+    "description": "两侧搜索、批量移动和禁用项；通过稳定键维护归属，源模型保持调用方所有。",
+    "sample": "transfer-project-members"
   }
 }

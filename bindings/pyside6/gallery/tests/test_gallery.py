@@ -4951,7 +4951,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         contract_source = (result.preview_source
                                            if entry.category_id in {"spatial", "qml-bridge"}
                                            else result.source)
-                        if sample.id in {"tree-select-project-teams", "tag-input-project-members", "auto-suggest-box-async", "field-connection-form", "list-detail-file-browser", "data-grid-tool-bar-basic", "command-palette-shared-actions", "popup-modal-dim",
+                        if sample.id in {"transfer-project-members", "tree-select-project-teams", "tag-input-project-members", "auto-suggest-box-async", "field-connection-form", "list-detail-file-browser", "data-grid-tool-bar-basic", "command-palette-shared-actions", "popup-modal-dim",
                                          "dialog-backdrop-effects", "drawer-view-backdrop-effects",
                                          "property-panel-chart-workbench"}:
                             contract_source = result.preview_source

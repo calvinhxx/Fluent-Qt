@@ -11277,5 +11277,30 @@ class FluentQtBindingTest(unittest.TestCase):
 
 
 
+    def test_transfer_model_lifetime_search_and_membership(self):
+        from PySide6.QtGui import QStandardItem, QStandardItemModel
+        from PySide6.QtCore import QItemSelectionModel
+        transfer = fluentqt.Transfer()
+        model = QStandardItemModel()
+        for key, name in (("a", "Alpha"), ("b", "Beta")):
+            item = QStandardItem(name)
+            item.setData(key, Qt.UserRole)
+            model.appendRow(item)
+        transfer.setModel(model)
+        transfer.setSelectedKeys(["b", "b", "missing"])
+        self.assertEqual(transfer.selectedKeys(), ["b"])
+        transfer.setSourceFilter("ALPHA")
+        view = transfer.sourceView()
+        self.assertEqual(view.model().rowCount(), 1)
+        view.selectionModel().select(view.model().index(0, 0), QItemSelectionModel.Select | QItemSelectionModel.Rows)
+        transfer.addSelected()
+        self.assertEqual(transfer.selectedKeys(), ["b", "a"])
+        self.assertEqual(model.rowCount(), 2)
+        transfer.setModel(None)
+        self.assertEqual(transfer.selectedKeys(), [])
+        delete_qobject(transfer)
+        self.assertEqual(model.rowCount(), 2)
+        delete_qobject(model)
+
 if __name__ == "__main__":
     unittest.main()

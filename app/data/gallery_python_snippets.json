@@ -2,9 +2,9 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 98,
+    "component_count": 99,
     "foundation_topic_count": 1,
-    "sample_count": 298
+    "sample_count": 299
   },
   "samples": [
     {
@@ -527,6 +527,19 @@
       "route_id": "timeline",
       "sample_id": "timeline-alternate",
       "source": "from PySide6.QtGui import QStandardItemModel\n\ntimeline = fluentqt.Timeline()\nroles = fluentqt.Timeline.DataRole\nstates = fluentqt.Timeline.Status\nmodel = QStandardItemModel(3, 1, root)\ndetail = 'Optional supporting content supplied by the application.'\nfor i in range(3):\n    index = model.index(i, 0)\n    model.setData(index, f'Node {i + 1}')\n    model.setData(index, detail, roles.DescriptionRole)\n    model.setData(\n        index,\n        f'Time label {i + 1}',\n        roles.TimestampRole\n    )\nmodel.setData(model.index(1, 0), states.Active, roles.StatusRole)\ntimeline.setModel(model)\nchange = fluentqt.Button('Change node state')\ndef change_state():\n    index = model.index(1, 0)\n    active = index.data(roles.StatusRole) == states.Active\n    state = states.Success if active else states.Active\n    model.setData(index, state, roles.StatusRole)\nchange.clicked.connect(change_state)\ntimeline.setNodeAlignment(fluentqt.Timeline.NodeAlignment.Alternate)\n"
+    },
+    {
+      "route_id": "transfer",
+      "sample_id": "transfer-project-members",
+      "source": "from PySide6.QtCore import Qt\n\ntransfer = fluentqt.Transfer(self)\ntransfer.setModel(member_model)\ntransfer.setDescriptionRole(Qt.UserRole + 1)\ntransfer.setSelectedKeys([\"zhou\", \"shen\"])\ntransfer.selectedKeysChanged.connect(save_project_members)\n# Full example includes the caller-owned model and named panels.\n",
+      "source_files": [
+        {
+          "name": "member_transfer.py",
+          "language": "python",
+          "code": "import fluentqt\nfrom PySide6.QtWidgets import QApplication\napplication = QApplication.instance()\nif application is None:\n    fluentqt.prepare_high_dpi_application()\n    application = QApplication([])\n    fluentqt.initialize_resources()\n    application.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel\nfrom PySide6.QtWidgets import QVBoxLayout, QWidget\n\nroot = QWidget(globals().get('gallery_parent'))\nroot.setObjectName(\"transferSample\")\nroot.setMaximumWidth(740)\nlayout = QVBoxLayout(root)\nlayout.setContentsMargins(0, 0, 0, 0)\nlayout.setSpacing(fluentqt.Spacing.Standard)\nmodel = QStandardItemModel(root)\nmembers = [\n    (\"lin\", \"Lin Xiao\", \"Design\"),\n    (\"lin-yue\", \"Lin Yue\", \"Engineering\"),\n    (\"xu\", \"Xu An\", \"QA\"),\n    (\"song\", \"Song Ke\", \"Unavailable\"),\n    (\"zhou\", \"Zhou Ning\", \"Engineering\"),\n    (\"shen\", \"Shen Yi\", \"Product\"),\n]\nfor key, name, role in members:\n    item = QStandardItem(name)\n    item.setData(key, Qt.ItemDataRole.UserRole)\n    item.setData(role, Qt.ItemDataRole.UserRole + 1)\n    item.setEnabled(key != \"song\")\n    model.appendRow(item)\ntransfer = fluentqt.Transfer(root)\ntransfer.setObjectName(\"projectMemberTransfer\")\ntransfer.setAccessibleName(\"Project members\")\ntransfer.setSourceHeader(\"Available members\")\ntransfer.setTargetHeader(\"Project members\")\ntransfer.setSearchPlaceholderText(\"Search members\")\ntransfer.setDescriptionRole(Qt.ItemDataRole.UserRole + 1)\ntransfer.setModel(model)\ntransfer.setSelectedKeys([\"zhou\", \"shen\"])\nlayout.addWidget(transfer)\nstatus = fluentqt.Label(root)\nstatus.setObjectName(\"transferMemberCount\")\nstatus.setFluentTypography(fluentqt.FontRole.Caption)\nstatus.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\nstatus.setWordWrap(True)\ndef update_status():\n    status.setText(f\"{transfer.selectedCount()} project members · Source data stays unchanged\")\ntransfer.countsChanged.connect(update_status)\nupdate_status()\nlayout.addWidget(status)\n\nif __name__ == \"__main__\":\n    root.show()\n    application.exec()\n",
+          "usage_snippet": "from PySide6.QtCore import Qt\n\ntransfer = fluentqt.Transfer(self)\ntransfer.setModel(member_model)\ntransfer.setDescriptionRole(Qt.UserRole + 1)\ntransfer.setSelectedKeys([\"zhou\", \"shen\"])\ntransfer.selectedKeysChanged.connect(save_project_members)\n# Full example includes the caller-owned model and named panels.\n"
+        }
+      ]
     },
     {
       "route_id": "split-view",

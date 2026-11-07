@@ -974,7 +974,8 @@
       "evidence": [
         "src/components/textfields/TextEdit.h",
         "tests/components/textfields/TestTextEdit.cpp",
-        "tests/components/textfields/TestTextEditMotion.cpp"
+        "tests/components/textfields/TestTextEditMotion.cpp",
+        "tests/components/textfields/TestTextEditCaret.cpp"
       ],
       "gap": ""
     },
@@ -1062,6 +1063,17 @@
       "evidence": [
         "src/components/status_info/private/ToolTipAccessibility_p.cpp",
         "tests/components/TestAuxiliarySurfaceAccessibility.cpp"
+      ],
+      "gap": ""
+    },
+    {
+      "id": "transfer",
+      "classification": "augmented",
+      "risk": "medium",
+      "status": "covered",
+      "evidence": [
+        "src/components/collections/Transfer.cpp",
+        "tests/components/collections/TestTransfer.cpp"
       ],
       "gap": ""
     },

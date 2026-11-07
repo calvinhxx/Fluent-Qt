@@ -23,8 +23,8 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 98,
-    "public_headers": 177,
+    "components": 99,
+    "public_headers": 178,
     "categories": 16
   },
   "categories": [
@@ -41,7 +41,7 @@
     {
       "id": "collections",
       "title": "Collections",
-      "component_count": 11
+      "component_count": 12
     },
     {
       "id": "date-time",
@@ -2302,6 +2302,67 @@
           },
           "dark": {
             "url": "../assets/component-previews/timeline/basic-dark.png"
+          }
+        }
+      }
+    },
+    {
+      "id": "transfer",
+      "title": "Transfer",
+      "category_id": "collections",
+      "description": "Search and move items between two lists without changing the source model.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/Transfer.h>",
+        "qualified_type": "fluent::collections::Transfer",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/Transfer.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "Transfer",
+        "import_statement": "from fluentqt.collections import Transfer"
+      },
+      "gallery": {
+        "route_id": "transfer",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=transfer",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_transfer",
+          "ctest_label": "test_transfer",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestTransfer.cpp"
+        }
+      ],
+      "sample_count": 1,
+      "documentation": {
+        "name": {
+          "en": "Transfer",
+          "zh": "Transfer 双栏选择"
+        },
+        "description": {
+          "en": "Search and move items between two lists without changing the source model.",
+          "zh": "两侧搜索、批量移动和禁用项；通过稳定键维护归属，源模型保持调用方所有。"
+        },
+        "urls": {
+          "en": "transfer/",
+          "zh": "../zh-CN/api/transfer/"
+        },
+        "preview": {
+          "alt": {
+            "en": "Transfer: Choose a project team",
+            "zh": "Transfer 双栏选择的真实 Gallery 示例"
+          },
+          "light": {
+            "url": "../assets/component-previews/transfer/basic-light.png"
+          },
+          "dark": {
+            "url": "../assets/component-previews/transfer/basic-dark.png"
           }
         }
       }
@@ -6947,6 +7008,15 @@
         "DropMode"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/TreeView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/Transfer.h>",
+      "source": "src/components/collections/Transfer.h",
+      "summary": "Searchable dual-list selection backed by a caller-owned flat model.",
+      "declarations": [
+        "Transfer"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/Transfer.h"
     },
     {
       "include": "<FluentQt/components/date_time/CalendarDatePicker.h>",

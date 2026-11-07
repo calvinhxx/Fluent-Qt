@@ -177,6 +177,14 @@ Unchanged formatted text must not reduce the stored value's precision.
   Do not create one persistent widget per row or cell, and do not copy model
   data into a second component-owned store merely to style it.
 
+Transfer borrows one flat item model and stores only selected string keys.
+Column zero supplies the label and a unique nonempty key in `keyRole` (default
+`Qt::UserRole`). Duplicate or empty keys are excluded; changing or removing a
+key reconciles membership. Search filters visibility, not membership, and both
+move actions honor enabled/selectable flags. Programmatic membership can include
+disabled items. `sourceView()` and `targetView()` expose owned views for delegates
+and temporary row selection; keep their internal proxy models installed.
+
 ## Accessibility
 
 - Every public visible Gallery component must have exactly one entry in the

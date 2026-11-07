@@ -38,6 +38,8 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("foundation-spacing"),
             QStringLiteral("The 4 px spacing scale, component padding, gaps, and "
                            "standard control heights.")},
+        {QStringLiteral("transfer"),
+            QStringLiteral("Search and move items between two lists without changing the source model.")},
         // Categories
         {QStringLiteral("charts"),
             QStringLiteral("Model-backed charts for trends, comparisons, distributions and proportions.")},
