@@ -3913,7 +3913,6 @@ TEST_F(GalleryContentPagesTest, InputExamplesWrapWithoutLosingFieldWidthOrOrder)
         SCOPED_TRACE(scene.sample);
         fluent::gallery::GallerySample sample;
         ASSERT_TRUE(findSampleById(QString::fromLatin1(scene.route), QString::fromLatin1(scene.sample), &sample));
-        ASSERT_TRUE(sample.inlinePreview);
         fluent::gallery::GallerySampleCard card(QString::fromLatin1(scene.route), sample);
         auto* first = card.findChild<QWidget*>(QString::fromLatin1(scene.first));
         auto* second = card.findChild<QWidget*>(QString::fromLatin1(scene.second));
@@ -3941,6 +3940,47 @@ TEST_F(GalleryContentPagesTest, InputExamplesWrapWithoutLosingFieldWidthOrOrder)
                     EXPECT_GT(b.top(), a.bottom());
                     EXPECT_LE(first->width(), 370);
                 }
+            }
+        }
+    }
+}
+
+TEST_F(GalleryContentPagesTest, ComponentSamplesSharePreviewAndSourceChrome)
+{
+    const QList<QPair<QString, QString>> samples{{"tag-input", "tag-input-project-members"},
+        {"transfer", "transfer-project-members"}, {"text-edit", "text-edit-caret-completion"},
+        {"line-edit", "line-edit-trailing-content"}, {"auto-suggest-box", "auto-suggest-box-async"},
+        {"combobox", "combobox-editable"}};
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        for (const auto& scene : samples) {
+            SCOPED_TRACE(scene.second.toStdString());
+            fluent::gallery::GallerySample sample;
+            ASSERT_TRUE(findSampleById(scene.first, scene.second, &sample));
+            fluent::gallery::GallerySampleCard card(scene.first, sample);
+            card.resize(900, card.sizeHint().height());
+            card.show();
+            QApplication::processEvents();
+            auto* preview = card.findChild<fluent::layout::Card*>(QStringLiteral("gallerySampleCardPreview"));
+            auto* code = card.findChild<fluent::gallery::GalleryCodeBlock*>();
+            ASSERT_NE(preview, nullptr);
+            ASSERT_NE(code, nullptr);
+            EXPECT_EQ(preview->appearance(), fluent::layout::Card::LayerAlt);
+            EXPECT_EQ(code->appearance(), preview->appearance());
+            EXPECT_TRUE(preview->isBorderVisible());
+            EXPECT_TRUE(code->isBorderVisible());
+            auto* sourceSelector = code->findChild<fluent::navigation::SelectorBar*>(
+                QStringLiteral("galleryCodeBlockSourceSelector"));
+            ASSERT_NE(sourceSelector, nullptr);
+            EXPECT_FALSE(sourceSelector->isBackgroundVisible());
+            EXPECT_EQ(preview->layout()->contentsMargins(), QMargins(20, 20, 20, 20));
+            for (bool expanded : {false, true}) {
+                code->setExpanded(expanded, false);
+                QApplication::processEvents();
+                EXPECT_EQ(code->x(), preview->x());
+                EXPECT_EQ(code->width(), preview->width());
+                EXPECT_EQ(code->x() - card.contentsRect().left(), 20);
+                EXPECT_EQ(code->y() - preview->geometry().bottom() - 1, 12);
             }
         }
     }

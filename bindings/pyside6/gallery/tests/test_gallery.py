@@ -504,6 +504,34 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(editor.toPlainText(), text)
         root.close()
 
+    def test_component_samples_share_preview_and_source_chrome(self):
+        scenes = (("tag-input", "tag-input-project-members"), ("transfer", "transfer-project-members"),
+                  ("text-edit", "text-edit-caret-completion"), ("line-edit", "line-edit-trailing-content"),
+                  ("auto-suggest-box", "auto-suggest-box-async"), ("combobox", "combobox-editable"))
+        for route, sample_id in scenes:
+            with self.subTest(sample=sample_id):
+                card, result = _build_sample_card(ENTRY_BY_ROUTE_ID[route], SAMPLE_BY_KEY[(route, sample_id)], None)
+                self.addCleanup(card.deleteLater)
+                card.resize(900, card.sizeHint().height())
+                card.show()
+                QApplication.processEvents()
+                preview, code = card._gallery_preview_surface, card._gallery_source_expander
+                self.assertEqual(preview.appearance(), fluentqt.Card.Appearance.LayerAlt)
+                self.assertEqual(code.appearance(), preview.appearance())
+                self.assertTrue(preview.isBorderVisible())
+                self.assertTrue(code.isBorderVisible())
+                self.assertFalse(code._source_selector.isBackgroundVisible())
+                self.assertEqual(preview.layout().contentsMargins(), QMargins(20, 20, 20, 20))
+                code.setAnimationEnabled(False)
+                for expanded in (False, True):
+                    code.setExpanded(expanded)
+                    QApplication.processEvents()
+                    self.assertEqual(code.x(), preview.x())
+                    self.assertEqual(code.width(), preview.width())
+                    self.assertEqual(code.x() - card.contentsRect().left(), 20)
+                    self.assertEqual(code.y() - preview.geometry().bottom() - 1, 12)
+                card.close()
+
     def test_radio_selection_keeps_centered_preview_geometry_stable(self):
         from fluentqt_gallery.native_samples import build_native_sample
         for direction in (Qt.LeftToRight, Qt.RightToLeft):

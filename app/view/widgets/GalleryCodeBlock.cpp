@@ -70,6 +70,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
     m_sourceSelector = new navigation::SelectorBar(m_contentInner);
     m_sourceSelector->setObjectName(QStringLiteral("galleryCodeBlockSourceSelector"));
     m_sourceSelector->setAccessibleName(QStringLiteral("Source detail"));
+    m_sourceSelector->setBackgroundVisible(false);
     m_sourceSelector->setItemFontRole(Typography::FontRole::Caption);
     m_sourceSelector->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     m_sourceSelector->addItem(QStringLiteral("Key usage"));
