@@ -1356,6 +1356,7 @@ _PREVIEW_LAYOUT_METHODS = {
 # source to the user-facing teaching snippet.
 _CPP_DISPLAY_MEMBER_ALIASES = {
     "indexOf": ("index",),
+    "lastIndexOf": ("rfind",),
     "addItem": ("addOwnedItem",),
     "addPage": ("addOwnedPage",),
     "addPane": ("addOwnedPane",),
@@ -2272,6 +2273,19 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             box.tokensSubmitted.connect(resolve_member_emails)
             """,
             imports="from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel",
+        )
+    if key == ("text-edit", "text-edit-caret-completion"):
+        return focused(
+            """
+            editor = fluentqt.TextEdit(self)
+            editor.setPlaceholderText("Type @ to mention a member")
+            editor.cursorRectChanged.connect(update_popup_position)
+            caret = editor.cursorRect()
+            popup.setPosition(editor, caret.bottomLeft() + QPoint(0, 8))
+            # Full example includes matching, keyboard navigation, IME,
+            # window containment, and undoable insertion.
+            """,
+            imports="from PySide6.QtCore import QPoint",
         )
     if key == ("transfer", "transfer-project-members"):
         return focused(
