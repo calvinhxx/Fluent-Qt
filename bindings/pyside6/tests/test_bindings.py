@@ -11302,5 +11302,24 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         delete_qobject(model)
 
+    def test_text_edit_public_caret_geometry(self):
+        edit = fluentqt.TextEdit()
+        edit.setPlainText("First line\nSecond line")
+        edit.resize(300, edit.height())
+        edit.show()
+        QApplication.processEvents()
+        first = edit.cursorRect()
+        seen = []
+        edit.cursorRectChanged.connect(lambda: seen.append(edit.cursorRect()))
+        cursor = edit.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        edit.setTextCursor(cursor)
+        QApplication.processEvents()
+        self.assertNotEqual(edit.cursorRect(), first)
+        self.assertTrue(seen)
+        self.assertEqual(edit.property("cursorRect"), edit.cursorRect())
+        delete_qobject(edit)
+
+
 if __name__ == "__main__":
     unittest.main()

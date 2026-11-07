@@ -8,6 +8,11 @@ from .native_samples import register_source_samples
 from .native_sample_layouts import input_columns_script
 
 
+def caret_completion_source_files(result):
+    from .native_source_files import complete_sample_source_files
+    return complete_sample_source_files(result, "caret_completion.py", root_name="root")
+
+
 def async_search_source_files(result):
     from .native_source_files import complete_sample_source_files
     return complete_sample_source_files(result, "async_project_search.py", root_name="root")
@@ -1570,3 +1575,214 @@ register_source_samples(
         ),
     },
 )
+
+register_source_samples("text-edit", ("TextEdit",), {
+    "text-edit-caret-completion": ("root", _script(
+        r'''
+        class CompletionPopup(fluentqt.Popup):
+            def __init__(self, parent):
+                super().__init__(parent)
+                self.setModal(False)
+                self.setDim(False)
+                self._setFocusOnOpenEnabled(False)
+                self.setAnimationEnabled(False)
+                self.setClosePolicy(fluentqt.Popup.CloseFlag.CloseOnPressOutside |
+                                    fluentqt.Popup.CloseFlag.CloseOnEscape)
+
+        class CaretCompletionDemo(QWidget):
+            def __init__(self):
+                super().__init__()
+                self.setObjectName("caretCompletionSample")
+                self.setMaximumWidth(740)
+                self.pending = False
+                self.composing = False
+                self.dismissed = False
+                self.committing = False
+                self.query = None
+                self.start = -1
+                self.host = None
+                layout = QVBoxLayout(self)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(fluentqt.Spacing.Standard)
+                self.editor = fluentqt.TextEdit(self)
+                self.editor.setObjectName("caretCompletionEditor")
+                self.editor.setAccessibleName("Review comment")
+                self.editor.setAccessibleDescription("Type @ to mention a member. Use Up and Down to choose, Enter to insert, and Escape to dismiss.")
+                self.editor.setPlaceholderText("Type @ to mention a member")
+                self.editor.setMinVisibleLines(3)
+                self.editor.setMaxVisibleLines(5)
+                self.editor.setPlainText("Ready for the next design review.\nPlease review with @lin")
+                cursor = self.editor.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                self.editor.setTextCursor(cursor)
+                layout.addWidget(self.editor)
+                layout.addSpacing(160)
+                hint = fluentqt.Label("Type @lin, @zhou or a name with no matches. The popup follows the caret.", self)
+                hint.setFluentTypography(fluentqt.FontRole.Caption)
+                hint.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                hint.setWordWrap(True)
+                layout.addWidget(hint)
+                self.popup = CompletionPopup(self)
+                self.popup.setObjectName("caretCompletionPopup")
+                self.popup.setThemeSource(self.editor)
+                self.destroyed.connect(self.popup.deleteLater)
+                box = QVBoxLayout(self.popup)
+                box.setContentsMargins(4, 8, 4, 8)
+                box.setSpacing(4)
+                heading = fluentqt.Label("Mention a member", self.popup)
+                heading.setContentsMargins(8, 0, 8, 0)
+                heading.setFluentTypography(fluentqt.FontRole.Caption)
+                heading.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)
+                box.addWidget(heading)
+                self.model = QStandardItemModel(self)
+                self.results = fluentqt.ListView(self.popup)
+                self.results.setObjectName("caretCompletionResults")
+                self.results.setAccessibleName("Mention suggestions")
+                self.results.setModel(self.model)
+                self.results.setTrailingTextRole(Qt.ItemDataRole.UserRole)
+                self.results.setSelectionIndicatorVisible(False)
+                self.results.setBorderVisible(False)
+                self.results.setBackgroundVisible(False)
+                self.results.setProperty("fluentPreserveParentSurface", True)
+                self.results.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                self.results.setPlaceholderText("No matching members")
+                box.addWidget(self.results)
+                self.editor.focusProxy().installEventFilter(self)
+                self.editor.textChanged.connect(self.text_changed)
+                self.editor.cursorPositionChanged.connect(self.schedule)
+                self.editor.cursorRectChanged.connect(self.schedule)
+                self.results.clicked.connect(self.insert_member)
+                self.popup.isOpenChanged.connect(self.open_changed)
+                self.timer = QTimer(self)
+                self.timer.setSingleShot(True)
+                self.timer.timeout.connect(self.update_suggestions)
+
+            def showEvent(self, event):
+                super().showEvent(event)
+                if self.host is not self.window():
+                    if self.host is not None:
+                        self.host.removeEventFilter(self)
+                    self.host = self.window()
+                    self.host.installEventFilter(self)
+
+            def hideEvent(self, event):
+                self.popup.close()
+                super().hideEvent(event)
+
+            def open_changed(self, opened):
+                self.setProperty("completionOpen", opened)
+                if not opened:
+                    self.dismissed = True
+
+            def text_changed(self):
+                if not self.committing:
+                    self.dismissed = False
+                    self.schedule()
+
+            def schedule(self):
+                self.timer.start(0)
+
+            def eventFilter(self, obj, event):
+                kind = event.type()
+                if obj is self.host and kind == QEvent.Type.Resize:
+                    self.schedule()
+                if obj is not self.editor.focusProxy():
+                    return super().eventFilter(obj, event)
+                if kind == QEvent.Type.InputMethod:
+                    self.composing = bool(event.preeditString())
+                    self.schedule()
+                elif kind == QEvent.Type.FocusIn:
+                    self.dismissed = False
+                    self.schedule()
+                elif kind in (QEvent.Type.FocusOut, QEvent.Type.EnabledChange):
+                    self.schedule()
+                elif kind in (QEvent.Type.KeyPress, QEvent.Type.ShortcutOverride) and self.popup.isOpen() and not self.composing:
+                    key = event.key()
+                    keys = (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Escape)
+                    if (event.modifiers() & ~Qt.KeyboardModifier.KeypadModifier) != Qt.KeyboardModifier.NoModifier or key not in keys:
+                        return False
+                    if not self.model.rowCount() and key != Qt.Key.Key_Escape:
+                        return False
+                    if kind == QEvent.Type.ShortcutOverride:
+                        event.accept()
+                        return True
+                    if key == Qt.Key.Key_Escape:
+                        self.popup.close()
+                    elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                        self.insert_member(self.results.currentIndex())
+                    else:
+                        row = max(0, self.results.currentIndex().row())
+                        row = (row + (1 if key == Qt.Key.Key_Down else -1)) % self.model.rowCount()
+                        self.results.setCurrentIndex(self.model.index(row, 0))
+                    event.accept()
+                    return True
+                return super().eventFilter(obj, event)
+
+            def update_suggestions(self):
+                editor = self.editor
+                if (not self.isVisible() or not editor.hasFocus() or not editor.isEnabled() or
+                        editor.isReadOnly() or self.composing or self.dismissed or editor.textCursor().hasSelection()):
+                    self.popup.close()
+                    return
+                cursor = editor.textCursor()
+                before = editor.toPlainText().encode("utf-16-le")[:cursor.position() * 2].decode("utf-16-le")
+                match = QRegularExpression(r"(?:^|[\s(，。])@([^\s@，。]{0,32})$").match(before)
+                caret = editor.cursorRect()
+                if not match.hasMatch() or not caret.intersects(editor.rect()):
+                    self.popup.close()
+                    return
+                self.start = len(before[:before.rfind("@")].encode("utf-16-le")) // 2
+                query = match.captured(1)
+                if query != self.query:
+                    self.query = query
+                    self.model.clear()
+                    for name, role in (("Lin Xiao", "Design"), ("Lin Yue", "Engineering"),
+                                       ("Zhou Ning", "Engineering"), ("Xu An", "QA")):
+                        if query.casefold() in name.casefold():
+                            item = QStandardItem(name)
+                            item.setData(role, Qt.ItemDataRole.UserRole)
+                            self.model.appendRow(item)
+                    if self.model.rowCount():
+                        self.results.setCurrentIndex(self.model.index(0, 0))
+                self.results.setFixedHeight(max(40, self.model.rowCount() * 40))
+                margins = self.popup.contentsMargins()
+                card_width = min(300, max(160, self.window().width() - 16))
+                self.popup.setFixedWidth(card_width + margins.left() + margins.right())
+                self.popup.adjustSize()
+                card_height = self.popup.height() - margins.top() - margins.bottom()
+                bottom = editor.mapTo(self.window(), caret.bottomLeft())
+                top = editor.mapTo(self.window(), caret.topLeft())
+                x = bottom.x() - card_width if self.layoutDirection() == Qt.LayoutDirection.RightToLeft else bottom.x()
+                x = max(8, min(x, self.window().width() - card_width - 8))
+                y = bottom.y() + 8
+                if y + card_height > self.window().height() - 8:
+                    y = top.y() - card_height - 8
+                y = max(8, min(y, self.window().height() - card_height - 8))
+                self.popup.setPosition(editor, editor.mapFrom(self.window(), QPoint(x, y)))
+                if not self.popup.isOpen():
+                    self.popup.open()
+
+            def insert_member(self, index):
+                if not index.isValid() or self.start < 0 or self.composing or self.editor.isReadOnly():
+                    return
+                name = index.data()
+                cursor = self.editor.textCursor()
+                end = cursor.position()
+                cursor.setPosition(self.start)
+                cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+                self.committing = True
+                cursor.beginEditBlock()
+                cursor.insertText("@" + name + " ")
+                cursor.endEditBlock()
+                self.editor.setTextCursor(cursor)
+                self.committing = False
+                self.popup.close()
+                self.editor.setFocus()
+
+        root = CaretCompletionDemo()
+        ''',
+        "from PySide6.QtCore import QEvent, QPoint, QRegularExpression, QTimer, Qt\n"
+        "from PySide6.QtGui import QStandardItem, QStandardItemModel, QTextCursor\n"
+        "from PySide6.QtWidgets import QVBoxLayout, QWidget",
+    )),
+})

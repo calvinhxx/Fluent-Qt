@@ -1345,7 +1345,9 @@
       "setFrameVisible",
       "setTextCursor",
       "textCursor",
-      "verticalScrollBar"
+      "verticalScrollBar",
+      "cursorRect",
+      "cursorRectChanged"
     ],
     "ScrollView": [
       "contentOwnership",

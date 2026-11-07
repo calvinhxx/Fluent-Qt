@@ -344,12 +344,18 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
         if (!hasActivePreedit)
             scheduleHeightForContentUpdate();
         emit textChanged();
+        scheduleCursorRectUpdate();
     });
     connect(m_editor, &QTextEdit::cursorPositionChanged, this, &TextEdit::cursorPositionChanged);
+    connect(m_editor, &QTextEdit::cursorPositionChanged, this, &TextEdit::scheduleCursorRectUpdate);
     connect(m_editor, &QTextEdit::selectionChanged, this, &TextEdit::selectionChanged);
     connect(m_editor->document()->documentLayout(), &QAbstractTextDocumentLayout::documentSizeChanged, this,
-        [this](const QSizeF&) { scheduleHeightForContentUpdate(); });
+        [this](const QSizeF&) {
+            scheduleHeightForContentUpdate();
+            scheduleCursorRectUpdate();
+        });
     m_editor->installEventFilter(this);
+    m_editor->viewport()->installEventFilter(this);
 
     // Custom fluent scroll bar. zh_CN: 自定义 Fluent 滚动条。
     m_vScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Vertical, this);
@@ -376,7 +382,9 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
     connect(innerVBar, &QScrollBar::valueChanged, this, [this](int v) {
         if (m_vScrollBar && m_vScrollBar->value() != v)
             m_vScrollBar->setValue(v);
+        scheduleCursorRectUpdate();
     });
+    connect(m_editor->horizontalScrollBar(), &QScrollBar::valueChanged, this, &TextEdit::scheduleCursorRectUpdate);
     connect(m_vScrollBar, &QScrollBar::valueChanged, this, [innerVBar](int v) {
         if (innerVBar->value() != v)
             innerVBar->setValue(v);
@@ -429,6 +437,26 @@ void TextEdit::setFrameVisible(bool visible)
 QTextCursor TextEdit::textCursor() const
 {
     return m_editor->textCursor();
+}
+
+QRect TextEdit::cursorRect() const
+{
+    return m_editor->cursorRect().translated(m_editor->viewport()->mapTo(this, QPoint()));
+}
+
+void TextEdit::scheduleCursorRectUpdate()
+{
+    if (m_cursorRectUpdateScheduled)
+        return;
+    m_cursorRectUpdateScheduled = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_cursorRectUpdateScheduled = false;
+        const QRect current = cursorRect();
+        if (current == m_lastCursorRect)
+            return;
+        m_lastCursorRect = current;
+        emit cursorRectChanged();
+    });
 }
 
 void TextEdit::setTextCursor(const QTextCursor& cursor)
@@ -645,6 +673,20 @@ void TextEdit::focusOutEvent(QFocusEvent* event)
 
 bool TextEdit::eventFilter(QObject* obj, QEvent* event)
 {
+    if (obj == m_editor || obj == m_editor->viewport()) {
+        switch (event->type()) {
+        case QEvent::Resize:
+        case QEvent::Move:
+        case QEvent::Show:
+        case QEvent::FontChange:
+        case QEvent::LayoutRequest:
+        case QEvent::InputMethod:
+            scheduleCursorRectUpdate();
+            break;
+        default:
+            break;
+        }
+    }
     if (obj == m_editor) {
         if (event->type() == QEvent::FocusIn) {
             m_isFocused = true;

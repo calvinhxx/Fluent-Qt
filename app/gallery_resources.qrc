@@ -2,6 +2,7 @@
 <RCC version="1.0">
     <qresource prefix="/app">
         <file alias="samples/AsyncSearchSample.h">view/widgets/samples/AsyncSearchSample.h</file>
+        <file alias="samples/CaretCompletionSample.h">view/widgets/samples/CaretCompletionSample.h</file>
         <file alias="samples/TransferSample.h">view/widgets/samples/TransferSample.h</file>
         <file alias="samples/InputSampleColumns.h">view/widgets/samples/InputSampleColumns.h</file>
         <file alias="samples/MemberSelectionSample.h">view/widgets/samples/MemberSelectionSample.h</file>

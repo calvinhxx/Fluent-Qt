@@ -185,6 +185,12 @@ move actions honor enabled/selectable flags. Programmatic membership can include
 disabled items. `sourceView()` and `targetView()` expose owned views for delegates
 and temporary row selection; keep their internal proxy models installed.
 
+TextEdit exposes an unclipped `cursorRect()` in its own widget coordinates.
+`cursorRectChanged()` coalesces effective changes after cursor movement, text
+layout, viewport resize, and scrolling. Trigger parsing, completion data and
+text insertion remain application policy; the Gallery example preserves native
+editing focus and suppresses completion during input-method preedit.
+
 ## Accessibility
 
 - Every public visible Gallery component must have exactly one entry in the

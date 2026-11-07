@@ -4,6 +4,7 @@ from importlib import import_module
 
 
 _FACTORIES = {
+    "text-edit-caret-completion": ("text_window", "caret_completion_source_files"),
     "transfer-project-members": ("collections", "transfer_source_files"),
     "command-palette-shared-actions": ("navigation", "command_palette_source_files"),
     "field-connection-form": ("layout", "connection_form_source_files"),

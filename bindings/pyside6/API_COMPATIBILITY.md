@@ -74,9 +74,10 @@ replacement disconnects the previous binding on that target property; an invalid
 registration leaves it intact. The legacy C++ `bind()` initial synchronization
 without NOTIFY is not part of the Python binding contract.
 
-`Transfer` is supported in Python in the same slice as C++. It retains the
-Python wrapper for its borrowed model without changing Qt parentage. Both
-Galleries include the matching member-selection example.
+`Transfer` and TextEdit's `cursorRect()` / `cursorRectChanged()` are supported in
+Python in the same slice as C++. Transfer retains the Python wrapper for its
+borrowed model without changing Qt parentage. Both Galleries include matching
+member-selection and caret-completion examples.
 
 `Timeline`, `Stepper` and `StepperItem` are supported in Python in the same
 slice as C++. Timeline borrows the native Qt model and delegate; Stepper owns
