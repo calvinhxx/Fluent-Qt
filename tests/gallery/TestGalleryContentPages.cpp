@@ -21,6 +21,7 @@
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
 #include <QImage>
+#include <QInputMethodEvent>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -73,6 +74,8 @@
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
 #include "components/collections/Transfer.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
+#include "components/dialogs_flyouts/Popup.h"
 #include "components/collections/TreeView.h"
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/foundation/FluentElement.h"
@@ -358,6 +361,78 @@ TEST_F(GalleryContentPagesTest, Contract_TransferSampleUsesBorrowedModelAndStabl
     EXPECT_TRUE(status->text().startsWith(QStringLiteral("3 project members")));
     EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("setSelectedKeys")));
     EXPECT_EQ(sample.sourceFiles.size(), 1);
+}
+
+TEST_F(GalleryContentPagesTest, Contract_CaretCompletionPreservesPopupSurfaceInCompositedWindow)
+{
+    QWidget host;
+    host.setAttribute(Qt::WA_TranslucentBackground);
+    fluent::windowing::BackdropState state;
+    state.surfaceMode = fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    fluent::windowing::publishWindowBackdropState(&host, state);
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("text-edit"), QStringLiteral("text-edit-caret-completion"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(&host));
+    auto* results = preview->findChild<fluent::collections::ListView*>(QStringLiteral("caretCompletionResults"));
+    ASSERT_NE(results, nullptr);
+    EXPECT_EQ(results->window(), &host);
+    EXPECT_FALSE(fluent::collections::detail::shouldClearCompositedViewport(results));
+}
+
+TEST_F(GalleryContentPagesTest, Contract_CaretCompletionPreservesFocusInsertionUndoAndIme)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("text-edit"), QStringLiteral("text-edit-caret-completion"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    preview->resize(740, 400);
+    preview->show();
+    preview->activateWindow();
+    auto* editor = preview->findChild<fluent::textfields::TextEdit*>(QStringLiteral("caretCompletionEditor"));
+    ASSERT_NE(editor, nullptr);
+    editor->setFocus();
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return preview->property("completionOpen").toBool(); }, 1500));
+    EXPECT_EQ(QApplication::focusWidget(), editor->focusProxy());
+    auto* results = preview->findChild<fluent::collections::ListView*>(QStringLiteral("caretCompletionResults"));
+    ASSERT_NE(results, nullptr);
+    const QString originalText = editor->toPlainText();
+    const int originalPosition = editor->textCursor().position();
+    for (const auto modifiers : {Qt::NoModifier, Qt::KeypadModifier}) {
+        SCOPED_TRACE(static_cast<int>(modifiers));
+        results->setCurrentIndex(results->model()->index(0, 0));
+        for (const auto step :
+            {std::make_pair(Qt::Key_Down, 1), std::make_pair(Qt::Key_Up, 0), std::make_pair(Qt::Key_Up, 1)}) {
+            QTest::keyClick(editor->focusProxy(), step.first, modifiers);
+            EXPECT_EQ(results->currentIndex().row(), step.second);
+            EXPECT_EQ(editor->textCursor().position(), originalPosition);
+            EXPECT_EQ(editor->toPlainText(), originalText);
+            EXPECT_EQ(QApplication::focusWidget(), editor->focusProxy());
+        }
+    }
+    QTest::keyClick(editor->focusProxy(), Qt::Key_Enter, Qt::KeypadModifier);
+    EXPECT_TRUE(editor->toPlainText().endsWith(QStringLiteral("@Lin Yue ")));
+    EXPECT_EQ(QApplication::focusWidget(), editor->focusProxy());
+    editor->textCursor().document()->undo();
+    EXPECT_TRUE(editor->toPlainText().endsWith(QStringLiteral("@lin")));
+
+    editor->setPlainText(QString::fromUtf8("🙂 Review @zhou"));
+    auto cursor = editor->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    editor->setTextCursor(cursor);
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return preview->property("completionOpen").toBool(); }, 1000));
+    QTest::keyClick(editor->focusProxy(), Qt::Key_Return);
+    EXPECT_EQ(editor->toPlainText(), QString::fromUtf8("🙂 Review @Zhou Ning "));
+
+    editor->setPlainText(QStringLiteral("Review @lin"));
+    cursor = editor->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    editor->setTextCursor(cursor);
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return preview->property("completionOpen").toBool(); }, 1000));
+    QInputMethodEvent preedit(QStringLiteral("林"), {});
+    QApplication::sendEvent(editor->focusProxy(), &preedit);
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return !preview->property("completionOpen").toBool(); }, 1000));
+    EXPECT_TRUE(editor->toPlainText().endsWith(QStringLiteral("@lin")));
+    QInputMethodEvent cancel;
+    QApplication::sendEvent(editor->focusProxy(), &cancel);
 }
 
 TEST_F(GalleryContentPagesTest, DateTimeRangeSamplesUseNativeNullableValues)

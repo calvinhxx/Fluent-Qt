@@ -478,6 +478,32 @@ def _wait_until(
 
 
 class PythonGalleryTest(unittest.TestCase):
+    def test_caret_completion_handles_navigation_location_modifiers(self):
+        result = build_sample("text-edit", "text-edit-caret-completion")
+        root = result.widget
+        self.addCleanup(root.deleteLater)
+        root.resize(740, 400)
+        root.show()
+        root.activateWindow()
+        editor = root.findChild(fluentqt.TextEdit, "caretCompletionEditor")
+        results = root.findChild(fluentqt.ListView, "caretCompletionResults")
+        editor.setFocus()
+        self.assertTrue(_wait_until(lambda: bool(root.property("completionOpen"))))
+        position, text = editor.textCursor().position(), editor.toPlainText()
+        for modifiers in (Qt.KeyboardModifier.NoModifier, Qt.KeyboardModifier.KeypadModifier):
+            results.setCurrentIndex(results.model().index(0, 0))
+            for key, row in ((Qt.Key_Down, 1), (Qt.Key_Up, 0), (Qt.Key_Up, 1)):
+                QTest.keyClick(editor.focusProxy(), key, modifiers)
+                self.assertEqual(results.currentIndex().row(), row)
+                self.assertEqual(editor.textCursor().position(), position)
+                self.assertEqual(editor.toPlainText(), text)
+                self.assertIs(QApplication.focusWidget(), editor.focusProxy())
+        QTest.keyClick(editor.focusProxy(), Qt.Key_Enter, Qt.KeyboardModifier.KeypadModifier)
+        self.assertTrue(editor.toPlainText().endswith("@Lin Yue "))
+        editor.textCursor().document().undo()
+        self.assertEqual(editor.toPlainText(), text)
+        root.close()
+
     def test_radio_selection_keeps_centered_preview_geometry_stable(self):
         from fluentqt_gallery.native_samples import build_native_sample
         for direction in (Qt.LeftToRight, Qt.RightToLeft):
@@ -4951,7 +4977,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         contract_source = (result.preview_source
                                            if entry.category_id in {"spatial", "qml-bridge"}
                                            else result.source)
-                        if sample.id in {"transfer-project-members", "tree-select-project-teams", "tag-input-project-members", "auto-suggest-box-async", "field-connection-form", "list-detail-file-browser", "data-grid-tool-bar-basic", "command-palette-shared-actions", "popup-modal-dim",
+                        if sample.id in {"text-edit-caret-completion", "transfer-project-members", "tree-select-project-teams", "tag-input-project-members", "auto-suggest-box-async", "field-connection-form", "list-detail-file-browser", "data-grid-tool-bar-basic", "command-palette-shared-actions", "popup-modal-dim",
                                          "dialog-backdrop-effects", "drawer-view-backdrop-effects",
                                          "property-panel-chart-workbench"}:
                             contract_source = result.preview_source

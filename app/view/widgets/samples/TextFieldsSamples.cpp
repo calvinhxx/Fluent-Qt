@@ -1,6 +1,7 @@
 #include "TextFieldsSamples.h"
 #include "MemberSelectionSample.h"
 #include "AsyncSearchSample.h"
+#include "CaretCompletionSample.h"
 #include "InputSampleColumns.h"
 
 #include <cmath>
@@ -928,7 +929,7 @@ QVector<GallerySample> passwordBoxSamples()
 
 QVector<GallerySample> textEditSamples()
 {
-    return {
+    QVector<GallerySample> samples{
         makeSample(QStringLiteral("text-edit-visible-lines"), QStringLiteral("Auto height from visible lines"),
             QStringLiteral("TextEdit grows between min and max visible lines before scrolling is needed."),
             QStringLiteral(
@@ -1049,6 +1050,21 @@ QVector<GallerySample> textEditSamples()
                 textEdit->setFixedWidth(360);
                 return textEdit;
             })};
+    QFile source(QStringLiteral(":/app/samples/CaretCompletionSample.h"));
+    source.open(QIODevice::ReadOnly);
+    auto completion = makeSample(
+        QStringLiteral("text-edit-caret-completion"), QStringLiteral("Mention people while you write"),
+        QStringLiteral("Type @ to find a member. Suggestions follow the caret while the editor keeps focus."),
+        QString::fromUtf8(source.readAll()), [](QWidget* parent) { return new CaretCompletionSample(parent); }, true);
+    completion.usageSnippet = QStringLiteral(
+        "connect(editor, &TextEdit::cursorRectChanged, this, updatePopupPosition);\n"
+        "const QRect caret = editor->cursorRect();\n"
+        "popup->setPosition(editor, caret.bottomLeft() + QPoint(0, 8));\n"
+        "// Full example includes matching, window containment, keyboard navigation, and insertion.");
+    completion.sourceFiles = {{QStringLiteral("CaretCompletionSample.h"), QStringLiteral("cpp"), completion.codeSnippet,
+        completion.usageSnippet}};
+    samples.append(completion);
+    return samples;
 }
 
 QVector<GallerySample> codeBlockSamples()

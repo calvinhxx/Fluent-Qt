@@ -6126,7 +6126,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestTextEdit.cpp"
         }
       ],
-      "sample_count": 4,
+      "sample_count": 5,
       "documentation": {
         "name": {
           "en": "TextEdit",

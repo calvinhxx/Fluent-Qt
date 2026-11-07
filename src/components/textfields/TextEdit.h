@@ -3,6 +3,7 @@
 
 #include "compatibility/InputEventCompat.h"
 #include <QMargins>
+#include <QRect>
 #include <QWidget>
 #include <QString>
 #include <QTextCursor>
@@ -107,6 +108,12 @@ public:
     /** @brief Returns the current editing cursor, including its selection.
      * zh_CN: 返回包含选区的当前编辑光标。 */
     QTextCursor textCursor() const;
+    /** @brief Current caret rectangle in this widget's coordinates, including scroll offsets.
+     * zh_CN: 当前光标在本控件坐标系中的矩形，包含滚动偏移。
+     * The rectangle is not clipped; an offscreen caret can lie outside the widget.
+     * zh_CN: 矩形不做裁剪，滚出视口的光标可能位于控件范围之外。 */
+    Q_PROPERTY(QRect cursorRect READ cursorRect NOTIFY cursorRectChanged)
+    QRect cursorRect() const;
     /** @brief Sets a cursor belonging to this editor's document.
      * zh_CN: 设置属于本编辑器文档的光标。 */
     void setTextCursor(const QTextCursor& cursor);
@@ -172,6 +179,9 @@ signals:
     void frameVisibleChanged();
     void textChanged();
     void cursorPositionChanged();
+    /** @brief Emitted after the caret's effective geometry changes; updates are coalesced.
+     * zh_CN: 光标的实际几何发生变化后发出，同一轮布局更新会合并通知。 */
+    void cursorRectChanged();
     void selectionChanged();
     void contentMarginsChanged();
     void fontRoleChanged();
@@ -197,6 +207,7 @@ private:
     void paintFrame(QPainter& painter);
     void scheduleHeightForContentUpdate();
     void updateHeightForContent();
+    void scheduleCursorRectUpdate();
 
     /**
      * @brief Applies requested text insets, remaining vertical centering, and
@@ -214,6 +225,8 @@ private:
     bool m_updatingHeight = false;
     bool m_heightUpdateScheduled = false;
     bool m_scrollEnabled = false;
+    bool m_cursorRectUpdateScheduled = false;
+    QRect m_lastCursorRect;
 
     QMargins m_contentMargins = QMargins(::Spacing::Padding::TextFieldHorizontal,
         ::Spacing::Padding::TextFieldVertical,
