@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <utility>
 
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/Label.h"
@@ -12,6 +13,7 @@
 #include <QHBoxLayout>
 #include <QImage>
 #include <QItemSelectionModel>
+#include <QJsonObject>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
@@ -282,24 +284,62 @@ bool isAccentLike(const QColor& pixel, const QColor& accent)
 {
     if (pixel.alpha() < 120)
         return false;
-    return qAbs(pixel.red() - accent.red()) <= 10 && qAbs(pixel.green() - accent.green()) <= 10
-        && qAbs(pixel.blue() - accent.blue()) <= 10;
+    // Compact glyphs can contain only antialiased pixels. Neutral surface blending
+    // preserves their hue, while an exact RGB comparison requires an opaque core.
+    // zh_CN: 紧凑字形可能全是抗锯齿像素；中性背景混色保留色相，不保证存在完全不透明的中心像素。
+    const int low = qMin(pixel.red(), qMin(pixel.green(), pixel.blue()));
+    const int chroma = qMax(pixel.red(), qMax(pixel.green(), pixel.blue())) - low;
+    const int accentLow = qMin(accent.red(), qMin(accent.green(), accent.blue()));
+    const int accentChroma = qMax(accent.red(), qMax(accent.green(), accent.blue())) - accentLow;
+    if (accentChroma == 0 || chroma < accentChroma / 2)
+        return false;
+    for (const auto channel : {std::make_pair(pixel.red(), accent.red()), std::make_pair(pixel.green(), accent.green()),
+             std::make_pair(pixel.blue(), accent.blue())}) {
+        if (qAbs(qreal(channel.first - low) / chroma - qreal(channel.second - accentLow) / accentChroma) > 0.08)
+            return false;
+    }
+    return true;
 }
 
-QRectF accentBoundsInViewport(fluent::collections::ListView* listView, const QColor& accent)
+QRectF accentBoundsInViewport(ComboBox* comboBox, fluent::collections::ListView* listView)
 {
+    // Keep selection and text identical in both frames; hide only the accent ink.
+    // This isolates the full subpixel glyph without counting a changed row surface.
+    // zh_CN: 两帧保留相同选中态和文字，仅隐藏强调色墨迹，测量完整子像素字形而不混入行底色变化。
+    const QColor accent = comboBox->themeColorsRef().accentDefault;
+    const QJsonObject overrides = comboBox->themeOverrides();
+    QJsonObject hiddenMarkerOverrides = overrides;
+    for (const auto* theme : {"light", "dark"}) {
+        QJsonObject colors = hiddenMarkerOverrides.value(theme).toObject();
+        colors.insert("accentDefault", "#00000000");
+        hiddenMarkerOverrides.insert(theme, colors);
+    }
+    comboBox->setThemeOverrides(hiddenMarkerOverrides);
+    const QImage withoutMarker = listView->viewport()->grab().toImage().convertToFormat(QImage::Format_ARGB32);
+    comboBox->setThemeOverrides(overrides);
     const QPixmap pixmap = listView->viewport()->grab();
     const QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
     const qreal dpr = pixmap.devicePixelRatioF();
+    if (withoutMarker.size() != image.size())
+        return {};
 
     int minX = image.width();
     int maxX = -1;
     int minY = image.height();
     int maxY = -1;
+    bool containsAccent = false;
     for (int y = 0; y < image.height(); ++y) {
         for (int x = 0; x < image.width(); ++x) {
-            if (!isAccentLike(QColor::fromRgba(image.pixel(x, y)), accent))
+            const QColor pixel = QColor::fromRgba(image.pixel(x, y));
+            const QColor baseline = QColor::fromRgba(withoutMarker.pixel(x, y));
+            const int difference = qMax(qAbs(pixel.red() - baseline.red()),
+                qMax(qAbs(pixel.green() - baseline.green()), qAbs(pixel.blue() - baseline.blue())));
+            if (difference <= 32)
                 continue;
+            // Include subpixel edges in the geometry, but require accent ink
+            // within the changed region rather than accepting any dark shape.
+            // zh_CN: 几何包含子像素边缘，同时要求变化区域存在强调色墨迹。
+            containsAccent = containsAccent || isAccentLike(pixel, accent);
             minX = qMin(minX, x);
             maxX = qMax(maxX, x);
             minY = qMin(minY, y);
@@ -307,7 +347,9 @@ QRectF accentBoundsInViewport(fluent::collections::ListView* listView, const QCo
         }
     }
 
-    return maxX >= minX ? QRectF(minX / dpr, minY / dpr, (maxX - minX + 1) / dpr, (maxY - minY + 1) / dpr) : QRectF();
+    return containsAccent && maxX >= minX
+        ? QRectF(minX / dpr, minY / dpr, (maxX - minX + 1) / dpr, (maxY - minY + 1) / dpr)
+        : QRectF();
 }
 
 void sendWheel(QWidget* target, int angleDeltaY)
@@ -1674,24 +1716,34 @@ TEST_F(ComboBoxTest, PopupSelectedCheckmarkIsSingleAndFollowsReadingDirection)
     ComboBox cb(window);
     cb.setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
     cb.addItems({"Home", "Settings", "Scrolling"});
-    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
-        cb.setLayoutDirection(direction);
-        for (int row = 0; row < cb.count(); ++row) {
-            cb.setCurrentIndex(row);
-            auto* popup = openPopupFor(&cb, window);
-            ASSERT_NE(popup, nullptr);
-            auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
-            ASSERT_NE(listView, nullptr);
-            QApplication::processEvents();
-            EXPECT_FALSE(listView->selectionIndicatorVisible());
-            const QRectF marker = accentBoundsInViewport(listView, cb.themeColorsRef().accentDefault);
-            EXPECT_GT(marker.width(), 4.5);
-            EXPECT_LE(marker.width(), Typography::IconSize::Compact);
-            EXPECT_LE(marker.height(), Typography::IconSize::Compact);
-            EXPECT_EQ(marker.center().x() > listView->viewport()->width() / 2, direction == Qt::LeftToRight);
-            const QRectF item = static_cast<QListView*>(listView)->visualRect(listView->model()->index(row, 0));
-            EXPECT_NEAR(marker.center().y(), item.center().y(), 2.0);
-            cb.hidePopup();
+    for (bool strongSelectedBackground : {false, true}) {
+        SCOPED_TRACE(strongSelectedBackground);
+        if (strongSelectedBackground) {
+            ASSERT_TRUE(cb.setThemeOverrides({{"light", QJsonObject{{"subtleSecondary", "#808080"}}},
+                {"dark", QJsonObject{{"subtleSecondary", "#808080"}}}}));
+            ASSERT_EQ(cb.themeColorsRef().subtleSecondary, QColor("#808080"));
+        }
+        for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            SCOPED_TRACE(direction);
+            cb.setLayoutDirection(direction);
+            for (int row = 0; row < cb.count(); ++row) {
+                SCOPED_TRACE(row);
+                cb.setCurrentIndex(row);
+                auto* popup = openPopupFor(&cb, window);
+                ASSERT_NE(popup, nullptr);
+                auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+                ASSERT_NE(listView, nullptr);
+                QApplication::processEvents();
+                EXPECT_FALSE(listView->selectionIndicatorVisible());
+                const QRectF marker = accentBoundsInViewport(&cb, listView);
+                EXPECT_GT(marker.width(), 4.5);
+                EXPECT_LE(marker.width(), Typography::IconSize::Compact);
+                EXPECT_LE(marker.height(), Typography::IconSize::Compact);
+                EXPECT_EQ(marker.center().x() > listView->viewport()->width() / 2, direction == Qt::LeftToRight);
+                const QRectF item = static_cast<QListView*>(listView)->visualRect(listView->model()->index(row, 0));
+                EXPECT_NEAR(marker.center().y(), item.center().y(), 2.0);
+                cb.hidePopup();
+            }
         }
     }
 }
