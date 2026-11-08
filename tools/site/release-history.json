@@ -2,6 +2,57 @@
   "schema_version": 1,
   "versions": [
     {
+      "version": "1.11.3",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "0773471ebdda5983cad47dd24041902969ce3a6800f232d373574fa18e98d7c9",
+      "summary": {
+        "en": "Adds trailing content for input fields, Transfer dual-list selection and caret completion, with editable-field and Gallery compatibility fixes.",
+        "zh": "新增输入框尾部内容、Transfer 双栏选择和光标补全示例，修复可编辑字段与 Gallery 兼容性问题。"
+      },
+      "related": [
+        "line-edit",
+        "combobox",
+        "number-box",
+        "text-edit",
+        "transfer",
+        "auto-suggest-box"
+      ],
+      "headers": [
+        "src/components/textfields/LineEdit.h",
+        "src/components/basicinput/ComboBox.h",
+        "src/components/textfields/TextEdit.h",
+        "src/components/collections/Transfer.h"
+      ],
+      "changes": [
+        {
+          "en": "LineEdit and ComboBox support plain-text suffixes and custom trailing widgets without changing edited values or caller ownership.",
+          "zh": "LineEdit 与 ComboBox 支持独立于编辑值的文字尾缀和自定义尾部控件，并保留调用方的所有权约定。"
+        },
+        {
+          "en": "Editable ComboBox geometry stays stable after selection and model changes; the NumberBox drag indicator is centered across display scales.",
+          "zh": "可编辑 ComboBox 在选项和模型变化后保持文字区域稳定，NumberBox 拖动指示器在不同显示倍率下垂直居中。"
+        },
+        {
+          "en": "Transfer provides searchable lists and batch selection transfers backed by stable keys, while preserving the source model and disabled states.",
+          "zh": "Transfer 支持两侧搜索与批量移动，通过稳定键记录选择，保留源模型和禁用状态。"
+        },
+        {
+          "en": "TextEdit caret geometry supports an editor-focused member-completion example with keyboard navigation and undo; the editing-command example retains height animation.",
+          "zh": "TextEdit 光标几何接口支持保持编辑焦点的成员补全示例，提供键盘导航与撤销；编辑命令示例保留高度动画。"
+        },
+        {
+          "en": "Gallery previews and source blocks use one shared frame, with responsive input examples and corrected redirected clipping on older Qt versions.",
+          "zh": "Gallery 示例预览和代码块采用统一框架，输入示例保留响应式布局，并修复旧版 Qt 的重定向裁剪。"
+        },
+        {
+          "en": "Build and release validation reuse compiler output and grouped test executables, with paired performance measurements and the existing validation coverage.",
+          "zh": "构建和发布验证复用编译结果、共享测试可执行程序，提供成对性能测量并保留现有检查覆盖。"
+        }
+      ],
+      "migrations": []
+    },
+    {
       "version": "1.11.2",
       "status": "published",
       "published_at": "2026-11-04T15:17:21Z",
