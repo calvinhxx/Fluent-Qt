@@ -734,18 +734,23 @@ TEST_F(TreeViewTest, AnimatedCollapseDefersModelCollapseUntilFinished)
     showOffscreen(window);
 
     const QModelIndex work = model->index(0, 0);
-    tv->toggleExpanded(work);
+    // Start from a settled expansion; reversing a just-started reveal can finish
+    // its collapse in one tick and does not exercise a full collapse transition.
+    // zh_CN: 从稳定展开态开始，避免刚开始的展开动画被反转后在一帧内结束。
+    tv->expandAll();
     processEvents();
-    EXPECT_TRUE(tv->isExpanded(work));
+    ASSERT_TRUE(tv->isExpanded(work));
+    QSignalSpy collapsed(tv, &QTreeView::collapsed);
 
     // Collapse is animated while on screen: the row stays expanded mid-flight.
     tv->toggleExpanded(work);
-    processEvents();
     EXPECT_TRUE(tv->isExpanded(work));
+    EXPECT_EQ(collapsed.count(), 0);
 
     // After the reveal finishes the real collapse lands.
-    for (int i = 0; i < 60 && tv->isExpanded(work); ++i)
-        QTest::qWait(10);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !tv->isExpanded(work); }, 1000));
+    ASSERT_EQ(collapsed.count(), 1);
+    EXPECT_EQ(collapsed.first().first().value<QModelIndex>(), work);
     EXPECT_FALSE(tv->isExpanded(work));
 }
 

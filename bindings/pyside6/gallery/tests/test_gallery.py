@@ -500,8 +500,9 @@ class PythonGalleryTest(unittest.TestCase):
                 self.assertIs(QApplication.focusWidget(), editor.focusProxy())
         QTest.keyClick(editor.focusProxy(), Qt.Key_Enter, Qt.KeyboardModifier.KeypadModifier)
         self.assertTrue(editor.toPlainText().endswith("@Lin Yue "))
-        editor.textCursor().document().undo()
+        QTest.keySequence(editor.focusProxy(), QKeySequence(QKeySequence.Undo))
         self.assertEqual(editor.toPlainText(), text)
+        self.assertIs(QApplication.focusWidget(), editor.focusProxy())
         root.close()
 
     def test_component_samples_share_preview_and_source_chrome(self):
@@ -3026,7 +3027,15 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         with self.subTest(sample=sample_id, direction=direction, width=width):
                             card.resize(width, card.sizeHint().height())
                             card.show()
+                            self.assertTrue(QTest.qWaitForWindowExposed(card))
+                            self.assertTrue(_wait_until(lambda: card.width() == width))
                             QApplication.processEvents()
+                            # Nested layout requests can arrive after the native resize.
+                            self.assertTrue(_wait_until(lambda: (
+                                first.width() == 370 and second.width() == 370
+                                if width == 900 else
+                                second.mapTo(card, QPoint()).y() > first.mapTo(card, QPoint()).y() + first.height()
+                            )))
                             a = first.mapTo(card, QPoint())
                             b = second.mapTo(card, QPoint())
                             self.assertEqual(first.height(), 32)
