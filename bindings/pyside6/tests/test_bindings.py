@@ -165,6 +165,40 @@ class FluentQtBindingTest(unittest.TestCase):
                         self.assertTrue(shiboken6.isValid(button))
                         self.assertIs(button.parent(), parent if policy == fluentqt.WidgetOwnership.Reparented else None)
 
+    def test_field_trailing_affinity_does_not_wrap_the_application_thread(self):
+        from PySide6.QtCore import QThread
+
+        def forbidden_thread_wrapper():
+            raise AssertionError("Affinity validation must not materialize a Python QThread wrapper")
+
+        for field_type in (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.ComboBox):
+            with self.subTest(field=field_type.__name__):
+                original = QWidget()
+                child = QWidget(original)
+                field = field_type()
+                field.thread = forbidden_thread_wrapper
+                child.thread = forbidden_thread_wrapper
+                self.assertTrue(field.setTrailingWidget(child, fluentqt.WidgetOwnership.Reparented))
+                self.assertIs(child.parentWidget(), field)
+                field.releaseTrailingWidget()
+                self.assertIs(child.parentWidget(), original)
+
+                results = []
+
+                class Worker(QThread):
+                    def run(self):
+                        results.append(field.setTrailingWidget(child, fluentqt.WidgetOwnership.Reparented))
+
+                worker = Worker()
+                worker.start()
+                self.assertTrue(worker.wait(2000))
+                self.assertEqual(results, [False])
+                self.assertIsNone(field.trailingWidget())
+                self.assertIs(child.parentWidget(), original)
+                delete_qobject(worker)
+                delete_qobject(field)
+                delete_qobject(original)
+
     def test_field_trailing_python_subclass_survives_gc_until_released(self):
         class Content(QWidget):
             def sizeHint(self):

@@ -35,9 +35,14 @@ def install_trailing_content_api(native_type: type) -> None:
         """Replace the suffix using Owned, Borrowed, or Reparented lifetime semantics."""
         if ownership not in (WidgetOwnership.Owned, WidgetOwnership.Borrowed, WidgetOwnership.Reparented):
             raise ValueError("Unknown trailing widget ownership")
-        if widget is self or (widget is not None and widget.isAncestorOf(self)):
+        # Check affinity without wrapping process-lifetime QThread objects.
+        # Both objects must belong to the calling thread before Python reparents;
+        # the native setter only compares the widget's thread with the host's.
+        if not _native.objectHasCurrentThreadAffinityForBinding(self):
             return False
-        if widget is not None and widget.thread() is not self.thread():
+        if widget is not None and not _native.objectHasCurrentThreadAffinityForBinding(widget):
+            return False
+        if widget is self or (widget is not None and widget.isAncestorOf(self)):
             return False
         if isinstance(self, _native.fluent.ComboBox) and widget is not None and widget is self.lineEdit():
             return False

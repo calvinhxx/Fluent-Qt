@@ -253,6 +253,7 @@ def main():
     expected_stubs = {
         "__init__.pyi",
         "_fluentqt.pyi",
+        "_field_trailing.pyi",
         "_qt_compat.pyi",
         "_qt_events.pyi",
         "_qt_painting.pyi",

@@ -55,6 +55,8 @@ REQUIRED_PACKAGE_FILES = {
     "__init__.py",
     "__init__.pyi",
     "_fluentqt.pyi",
+    "_field_trailing.py",
+    "_field_trailing.pyi",
     "_qt_compat.py",
     "_qt_compat.pyi",
     "_qt_events.py",
