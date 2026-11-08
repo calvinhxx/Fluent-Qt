@@ -3,8 +3,8 @@
   "versions": [
     {
       "version": "1.11.3",
-      "status": "candidate",
-      "published_at": null,
+      "status": "published",
+      "published_at": "2026-11-08T17:24:53Z",
       "source_sha256": "0773471ebdda5983cad47dd24041902969ce3a6800f232d373574fa18e98d7c9",
       "summary": {
         "en": "Adds trailing content for input fields, Transfer dual-list selection and caret completion, with editable-field and Gallery compatibility fixes.",
@@ -922,7 +922,7 @@
     }
   ],
   "unreleased": {
-    "after": "1.11.2",
+    "after": "1.11.3",
     "related": [],
     "headers": [],
     "changes": [],
