@@ -424,6 +424,7 @@ set_property(SOURCE ${FLUENTQT_PYSIDE6_GENERATED_SOURCES}
 
 set(FLUENTQT_PYSIDE6_NATIVE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/native/BindingApi.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/native/PaintEngineBinding.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/InterfaceZoomBinding.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/native/PluginBindingApi.cpp")
 add_library(_fluentqt MODULE

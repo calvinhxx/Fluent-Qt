@@ -4,6 +4,8 @@
 #include <QFont>
 #include <QMargins>
 #include <QObject>
+#include <QPaintEngine>
+#include <QPainter>
 #include <QPointer>
 #include <QSizeF>
 #include <QStringList>
@@ -221,6 +223,10 @@ private:
 } // namespace fluent::binding
 
 void prepareHighDpiApplication();
+
+// Keep the borrowed source painter inside C++; legacy Shiboken can invalidate its wrapper.
+// zh_CN: 借用的源画笔仅在 C++ 内访问，避免旧版 Shiboken 使其包装对象失效。
+void forwardPaintEngineClipForBinding(QPainter& target, const QPaintEngineState& state);
 
 /** @brief Python Gallery entry to support::interfacezoom::isSupported().
  * zh_CN: Python Gallery 调用 support::interfacezoom::isSupported() 的入口。

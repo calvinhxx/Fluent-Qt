@@ -10,6 +10,7 @@ import weakref
 from collections import OrderedDict
 from zlib import adler32
 
+from fluentqt import _fluentqt as _native
 from fluentqt._qt_painting import (
     device_pixel_ratio_metric, forward_paint_array, forward_paint_polygon, forwarding_paint_engine_features,
     image_device_pixel_ratio, region_rects,
@@ -179,12 +180,9 @@ class _GlyphPaintEngine(QPaintEngine):
             painter.setCompositionMode(state.compositionMode())
         if dirty & QPaintEngine.DirtyOpacity:
             painter.setOpacity(state.opacity())
-        if dirty & QPaintEngine.DirtyClipRegion:
-            painter.setClipRegion(state.clipRegion(), state.clipOperation())
-        if dirty & QPaintEngine.DirtyClipPath:
-            painter.setClipPath(state.clipPath(), state.clipOperation())
-        if dirty & QPaintEngine.DirtyClipEnabled:
-            painter.setClipping(state.isClipEnabled())
+        if dirty & (QPaintEngine.DirtyClipRegion | QPaintEngine.DirtyClipPath | QPaintEngine.DirtyClipEnabled):
+            # The shared adapter keeps the borrowed source painter entirely in C++.
+            _native._forwardPaintEngineClip(painter, state)
 
     def _restore_system_clip(self):
         if not self.system_clip_applied:

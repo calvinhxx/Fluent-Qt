@@ -1,6 +1,7 @@
 #include "SpatialTextureHost.h"
 #include "components/spatial/SpatialRuntime.h"
 #include "components/windowing/Window.h"
+#include "compatibility/private/PaintEngineStateCompat_p.h"
 // Parse Fluent declarations before Qt OpenGL headers expose the Windows `small` macro.
 // zh_CN: 先解析 Fluent 声明，避免 Qt OpenGL 头文件引入的 Windows small 宏污染字段名。
 #include "compatibility/private/spatial/GraphicsEffectRegionCompat_p.h"
@@ -12,6 +13,11 @@
 #include <utility>
 
 namespace fluent::spatial {
+void detail::forwardPaintEngineClip(QPainter& target, const QPaintEngineState& state)
+{
+    ::compatibility::detail::forwardPaintEngineClip(target, state);
+}
+
 namespace {
 using TextureBackend = ::compatibility::detail::SpatialTextureBackend;
 }

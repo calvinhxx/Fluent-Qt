@@ -11,6 +11,7 @@
 #include <QtMath>
 #include "compatibility/TextPaintCompat.h"
 #include "components/spatial/SpatialRuntime.h"
+#include "support/spatial/SpatialTextureHost.h"
 #include "GalleryGlyphImageCache.h"
 
 namespace fluent::gallery::spatial_render {
@@ -157,12 +158,7 @@ private:
                 painter.setCompositionMode(state.compositionMode());
             if (dirty & DirtyOpacity)
                 painter.setOpacity(state.opacity());
-            if (dirty & DirtyClipRegion)
-                painter.setClipRegion(state.clipRegion(), state.clipOperation());
-            if (dirty & DirtyClipPath)
-                painter.setClipPath(state.clipPath(), state.clipOperation());
-            if (dirty & DirtyClipEnabled)
-                painter.setClipping(state.isClipEnabled());
+            spatial::detail::forwardPaintEngineClip(painter, state);
         }
 
         void drawRects(const QRect* rects, int count) override

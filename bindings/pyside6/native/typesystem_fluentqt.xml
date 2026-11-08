@@ -100,6 +100,9 @@ if (!paletteGuard) {
                function-name="^setItems$"/>
 
     <function signature="prepareHighDpiApplication()"/>
+    <function signature="forwardPaintEngineClipForBinding(QPainter&amp;,const QPaintEngineState&amp;)">
+        <modify-function rename="_forwardPaintEngineClip"/>
+    </function>
     <function signature="supportsInterfaceZoomForBinding()"/>
     <function signature="applyInterfaceZoomForBinding(qreal)"/>
     <function signature="prepareInterfaceZoomForBinding(qreal)"/>

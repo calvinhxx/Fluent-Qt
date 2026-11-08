@@ -2,6 +2,9 @@
 #include <FluentQt/FluentQt.h>
 #include <QOpenGLWidget>
 #include <QPainter>
+#include <QApplication>
+#include <QGraphicsEffect>
+#include <QWidget>
 #include <QScopeGuard>
 #include <QTest>
 #include "compatibility/TextPaintCompat.h"
@@ -181,6 +184,80 @@ TEST(GalleryGlyphCacheTest, RetainedRasterTilesPreserveShapingAndFractionalCover
             EXPECT_EQ(warm.imageKeys(), cold.imageKeys());
             EXPECT_EQ(submittedImages.entryCount(), coldEntries);
             EXPECT_LE(submittedImages.cost(), kGlyphCacheBytes);
+        }
+    }
+}
+
+TEST(GalleryGlyphCacheTest, RedirectedClipRestorePreservesChildrenAcrossPartialRows)
+{
+    class Capture final : public QGraphicsEffect {
+    public:
+        QPoint origin;
+        void draw(QPainter* painter) override
+        {
+            painter->save();
+            painter->translate(origin);
+            drawSource(painter);
+            painter->restore();
+        }
+    };
+    class ClippedPanel final : public QWidget {
+    public:
+        using QWidget::QWidget;
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter painter(this);
+            painter.fillRect(rect(), Qt::gray);
+            painter.save();
+            QPainterPath clip;
+            clip.addRoundedRect(rect().adjusted(5, 5, -5, -5), 4, 4);
+            painter.setClipPath(clip);
+            painter.fillRect(rect(), Qt::darkGray);
+            painter.restore();
+        }
+    };
+    class Child final : public QWidget {
+    public:
+        using QWidget::QWidget;
+        void paintEvent(QPaintEvent*) override
+        {
+            QPainter painter(this);
+            painter.fillRect(rect(), Qt::blue);
+        }
+    };
+    QWidget root;
+    root.resize(400, 400);
+    auto* panel = new ClippedPanel(&root);
+    panel->setGeometry(30, 40, 340, 320);
+    auto* child = new Child(panel);
+    child->setGeometry(40, 140, 120, 32);
+    auto* capture = new Capture;
+    root.setGraphicsEffect(capture);
+    root.show();
+    QApplication::processEvents();
+    for (qreal dpr : {1., 1.25, 1.5, 2.}) {
+        for (int top : {0, 170, 180}) {
+            SCOPED_TRACE(::testing::Message() << "dpr=" << dpr << " top=" << top);
+            const int height = top ? 64 : root.height();
+            QImage expected(qCeil(root.width() * dpr), qCeil(height * dpr), QImage::Format_ARGB32_Premultiplied);
+            expected.setDevicePixelRatio(dpr);
+            expected.fill(Qt::transparent);
+            QImage actual = expected.copy();
+            const auto paint = [&](QPaintDevice* target) {
+                QPainter painter(target);
+                painter.setClipRect(QRect(0, 0, root.width(), height));
+                capture->origin = QPoint(0, top);
+                root.render(&painter, QPoint(), QRegion(QRect(0, top, root.width(), height)), QWidget::DrawChildren);
+            };
+            paint(&expected);
+            GalleryGlyphPaintDevice device(actual, dpr, QPointF(0, top));
+            paint(&device);
+            EXPECT_EQ(actual, expected) << "Restoring the parent's clip must not erase later child painting";
+            int blue = 0;
+            for (int y = 0; y < actual.height(); ++y)
+                for (int x = 0; x < actual.width(); ++x)
+                    blue += actual.pixelColor(x, y) == QColor(Qt::blue);
+            EXPECT_GT(blue, 3000 * dpr * dpr);
         }
     }
 }
