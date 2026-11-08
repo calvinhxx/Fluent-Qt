@@ -2280,6 +2280,104 @@ TEST_F(GallerySpatialTest, GpuCacheRepaintsOnlyDamagedRowsOfTheChangedPanel)
     controller.cancelTransition();
 }
 
+TEST_F(GallerySpatialTest, NativeButtonPageHoverKeepsTheAccentInPartialFrames)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires the native Gallery compositor and projected hover input";
+    auto& settings = GallerySettings::instance();
+    settings.setHomeParticlesEnabled(false);
+    settings.setSpatialModeEnabled(true);
+    GalleryWindow window;
+    window.resize(1200, qMin(750, window.screen()->availableGeometry().height() - 40));
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(window.selectRoute("button"));
+    auto* controller = window.findChild<GallerySpatialController*>();
+    ASSERT_NE(controller, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            auto* canvas = window.findChild<QWidget*>("gallerySpatialSurface");
+            return canvas && canvas->property("presenting").toBool();
+        },
+        5000));
+    controller->cancelTransition();
+    auto* surface = window.findChild<QWidget*>("gallerySpatialSurface");
+    basicinput::Button* accent = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            auto* page = window.currentContentPage();
+            if (!page)
+                return false;
+            for (auto* button : page->findChildren<basicinput::Button*>()) {
+                if (button->text() == QLatin1String("Accent") && button->isVisible()) {
+                    accent = button;
+                    return true;
+                }
+            }
+            return false;
+        },
+        10000));
+    const auto accentPixels = [&](bool native) {
+        const QImage frame = native ? window.screen()->grabWindow(window.winId()).toImage() : spatialFrame(surface);
+        const qreal dpr = native ? frame.devicePixelRatioF() : surface->devicePixelRatioF();
+        QPolygon polygon;
+        const QRect inside = accent->rect().adjusted(4, 4, -4, -4);
+        for (const QPoint& corner : {inside.topLeft(), inside.topRight(), inside.bottomRight(), inside.bottomLeft()}) {
+            const QPoint inWindow = controller->projectedPosition(accent, corner);
+            const QPoint projected = native ? inWindow : surface->mapFrom(&window, inWindow);
+            polygon << QPoint(qRound(projected.x() * dpr), qRound(projected.y() * dpr));
+        }
+        int blue = 0;
+        const QRect bounds = polygon.boundingRect().intersected(frame.rect());
+        for (int y = bounds.top(); y <= bounds.bottom(); ++y)
+            for (int x = bounds.left(); x <= bounds.right(); ++x) {
+                const QColor color = frame.pixelColor(x, y);
+                if (polygon.containsPoint(QPoint(x, y), Qt::OddEvenFill) && color.blue() > color.red() + 45)
+                    ++blue;
+            }
+        if (blue <= 100) {
+            const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+            if (!dir.isEmpty()) {
+                QDir().mkpath(dir);
+                frame.save(dir + (native ? "/button-hover-native.png" : "/button-hover-texture.png"));
+            }
+        }
+        return blue;
+    };
+    for (int width : {1200, 1000}) {
+        SCOPED_TRACE(width);
+        window.resize(width, window.height());
+        for (const auto theme : {GallerySettings::ThemeMode::Light, GallerySettings::ThemeMode::Dark}) {
+            SCOPED_TRACE(theme == GallerySettings::ThemeMode::Light ? "Light" : "Dark");
+            settings.setThemeMode(theme);
+            QTest::qWait(350);
+            ASSERT_GT(accentPixels(false), 100) << "The button must be cached before the hover update";
+            ASSERT_GT(accentPixels(true), 100) << "The button must be visible before the hover update";
+            for (int move = 0; move < 4; ++move) {
+                const QPoint point =
+                    move % 2 ? QPoint(400, 115) : controller->projectedPosition(accent, accent->rect().center());
+                QTest::mouseMove(window.windowHandle(), point);
+                for (int frame = 0; frame < 5; ++frame) {
+                    QTest::qWait(30);
+                    EXPECT_GT(accentPixels(false), 100) << "Hover must retain the cached button row";
+                    EXPECT_GT(accentPixels(true), 100) << "Native composition must not cover the button row";
+                }
+            }
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
+                QDir().mkpath(dir);
+                const auto name =
+                    QStringLiteral("/button-hover-%1-%2.png")
+                        .arg(width)
+                        .arg(theme == GallerySettings::ThemeMode::Light ? "light" : "dark");
+                window.screen()->grabWindow(window.winId()).save(dir + name);
+            }
+        }
+    }
+}
+
 TEST_F(GallerySpatialTest, SlowNativeDensityFramesAreJudgedPerFrame)
 {
     using namespace spatial_render;

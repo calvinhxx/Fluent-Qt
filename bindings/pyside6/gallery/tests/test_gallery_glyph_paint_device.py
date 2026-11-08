@@ -13,6 +13,7 @@ if __name__ == "__main__":
     faulthandler.dump_traceback_later(45)
 
 import fluentqt
+from fluentqt._qt_compat import delete_qobject
 import shiboken6
 
 from PySide6.QtCore import QLineF, QPoint, QPointF, QRect, QRectF, Qt
@@ -554,6 +555,73 @@ class GalleryGlyphPaintDeviceTest(unittest.TestCase):
                 self.assertEqual(actual, expected)
                 self.assertGreater(device.engine.glyph_items, 0)
         self.assertEqual(capture.completed, 4)
+
+    def test_redirected_clip_restore_preserves_children_across_partial_rows(self):
+        class Capture(QGraphicsEffect):
+            origin = QPoint()
+
+            def draw(self, painter):
+                painter.save()
+                painter.translate(self.origin)
+                self.drawSource(painter)
+                painter.restore()
+
+        class Panel(QWidget):
+            def paintEvent(self, event):
+                painter = QPainter(self)
+                painter.fillRect(self.rect(), Qt.gray)
+                painter.save()
+                clip = QPainterPath()
+                clip.addRoundedRect(QRectF(self.rect().adjusted(5, 5, -5, -5)), 4, 4)
+                painter.setClipPath(clip)
+                painter.fillRect(self.rect(), Qt.darkGray)
+                painter.restore()
+                painter.end()
+
+        class Child(QWidget):
+            def paintEvent(self, event):
+                painter = QPainter(self)
+                painter.fillRect(self.rect(), Qt.blue)
+                painter.end()
+
+        root = QWidget()
+        root.resize(400, 400)
+        panel = Panel(root)
+        panel.setGeometry(30, 40, 340, 320)
+        child = Child(panel)
+        child.setGeometry(40, 140, 120, 32)
+        capture = Capture()
+        root.setGraphicsEffect(capture)
+        root.show()
+        self.app.processEvents()
+        try:
+            for dpr in (1, 1.25, 1.5, 2):
+                for top in (0, 170, 180):
+                    with self.subTest(dpr=dpr, top=top):
+                        height = 64 if top else root.height()
+                        expected = QImage(round(400 * dpr), round(height * dpr),
+                                          QImage.Format_ARGB32_Premultiplied)
+                        expected.setDevicePixelRatio(dpr)
+                        expected.fill(Qt.transparent)
+                        actual = expected.copy()
+
+                        def paint(target):
+                            painter = QPainter(target)
+                            painter.setClipRect(QRect(0, 0, 400, height))
+                            capture.origin = QPoint(0, top)
+                            root.render(painter, QPoint(), QRegion(QRect(0, top, 400, height)),
+                                        QWidget.DrawChildren)
+                            painter.end()
+
+                        paint(expected)
+                        device = GlyphPaintDevice(actual, dpr, QPointF(0, top))
+                        paint(device)
+                        self.assertEqual(actual, expected)
+                        self.assertEqual(actual.pixelColor(round(100 * dpr), round((196 - top) * dpr)),
+                                         QColor(Qt.blue))
+        finally:
+            root.close()
+            delete_qobject(root)
 
     def test_paint_device_has_no_engine_reference_cycle(self):
         image = QImage(40, 40, QImage.Format_ARGB32_Premultiplied)

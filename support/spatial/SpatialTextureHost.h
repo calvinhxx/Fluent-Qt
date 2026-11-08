@@ -9,12 +9,19 @@
 #include <memory>
 
 class QPainter;
+class QPaintEngineState;
 
 namespace fluent::windowing {
 class Window;
 }
 
 namespace fluent::spatial {
+namespace detail {
+// Forward native painter clipping for application-owned texture paint devices.
+// zh_CN: 为应用侧纹理绘制设备转发原生画笔裁剪；不属于安装后的公共 API。
+void forwardPaintEngineClip(QPainter& target, const QPaintEngineState& state);
+} // namespace detail
+
 // Internal texture compositor shared by native hosts and the Python Gallery.
 // Not part of the installed API. Widgets paint only when their revision changes;
 // perspective and material animation run on the GPU without recapturing widgets.
