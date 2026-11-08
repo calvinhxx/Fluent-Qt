@@ -115,7 +115,8 @@ GallerySampleCard::GallerySampleCard(const QString& routeId, const GallerySample
         m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, pythonCode, this);
         m_codeBlock->setCppExcerpt(sample.usageSnippet);
         if (!sample.sourceFiles.isEmpty())
-            m_codeBlock->setSourceFiles(sample.sourceFiles, galleryPythonSourceFiles(routeId, sample.id));
+            m_codeBlock->setSourceFiles(sample.sourceFiles,
+                routeId.isEmpty() ? QVector<GallerySourceFile>() : galleryPythonSourceFiles(routeId, sample.id));
         connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this, [this]() {
             updateCodeBlockTransitionLayout();
         });
