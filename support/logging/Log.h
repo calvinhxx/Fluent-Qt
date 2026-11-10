@@ -12,15 +12,7 @@ namespace fluent::support::logging {
  * @brief Logging severity level shared by LOG_* macros and the spdlog backend.
  * zh_CN: LOG_* 宏和 spdlog 后端共用的日志级别。
  */
-enum class Level {
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-    Critical,
-    Off
-};
+enum class Level { Trace, Debug, Info, Warn, Error, Critical, Off };
 
 /**
  * @brief Runtime logging configuration.
@@ -78,22 +70,26 @@ void log(Level level, const char* file, int line, const char* function, const ch
 
 } // namespace fluent::support::logging
 
-#define LOG_TRACE(message) \
-    ::fluent::support::logging::log(::fluent::support::logging::Level::Trace, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+#define LOG_TRACE(message)                                                                                             \
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Trace, __FILE__, __LINE__, Q_FUNC_INFO,         \
+        (message))
 
-#define LOG_DEBUG(message) \
-    ::fluent::support::logging::log(::fluent::support::logging::Level::Debug, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+#define LOG_DEBUG(message)                                                                                             \
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Debug, __FILE__, __LINE__, Q_FUNC_INFO,         \
+        (message))
 
-#define LOG_INFO(message) \
+#define LOG_INFO(message)                                                                                              \
     ::fluent::support::logging::log(::fluent::support::logging::Level::Info, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
-#define LOG_WARN(message) \
+#define LOG_WARN(message)                                                                                              \
     ::fluent::support::logging::log(::fluent::support::logging::Level::Warn, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
-#define LOG_ERROR(message) \
-    ::fluent::support::logging::log(::fluent::support::logging::Level::Error, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+#define LOG_ERROR(message)                                                                                             \
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Error, __FILE__, __LINE__, Q_FUNC_INFO,         \
+        (message))
 
-#define LOG_CRITICAL(message) \
-    ::fluent::support::logging::log(::fluent::support::logging::Level::Critical, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+#define LOG_CRITICAL(message)                                                                                          \
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Critical, __FILE__, __LINE__, Q_FUNC_INFO,      \
+        (message))
 
 #endif // FLUENTQT_SUPPORT_LOGGING_LOG_H

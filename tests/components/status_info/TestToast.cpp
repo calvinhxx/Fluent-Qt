@@ -31,8 +31,7 @@ namespace {
 
 class MotionPolicyScope final {
 public:
-    explicit MotionPolicyScope(fluent::MotionPolicy::Mode mode)
-        : m_previous(fluent::MotionPolicy::instance().mode())
+    explicit MotionPolicyScope(fluent::MotionPolicy::Mode mode) : m_previous(fluent::MotionPolicy::instance().mode())
     {
         fluent::MotionPolicy::instance().setMode(mode);
     }
@@ -50,10 +49,7 @@ void flushDeferredDeletes()
 }
 
 struct ScopedMaximumVisible {
-    explicit ScopedMaximumVisible(int count) : previous(Toast::maximumVisible())
-    {
-        Toast::setMaximumVisible(count);
-    }
+    explicit ScopedMaximumVisible(int count) : previous(Toast::maximumVisible()) { Toast::setMaximumVisible(count); }
 
     ~ScopedMaximumVisible() { Toast::setMaximumVisible(previous); }
 
@@ -66,8 +62,7 @@ struct AccessibleEventRecord {
     QObject* object = nullptr;
     QAccessible::Event type = QAccessible::InvalidEvent;
     QString announcement;
-    FluentAccessibleAnnouncementPoliteness politeness =
-        FluentAccessibleAnnouncementPoliteness::Unspecified;
+    FluentAccessibleAnnouncementPoliteness politeness = FluentAccessibleAnnouncementPoliteness::Unspecified;
 };
 
 QVector<AccessibleEventRecord> g_accessibleEvents;
@@ -205,12 +200,10 @@ TEST(ToastTest, Contract_PresentAnnouncesAccessibleContent)
     EXPECT_EQ(toast.accessibleName(), QStringLiteral("Sync complete: 12 files are available"));
 
     if (capture.eventDeliveryActive) {
-        const auto match =
-            std::find_if(g_accessibleEvents.cbegin(), g_accessibleEvents.cend(),
-                         [&toast](const AccessibleEventRecord& record) {
-                             return record.object == &toast &&
-                                    record.type == fluentAccessibleAnnouncementEventType();
-                         });
+        const auto match = std::find_if(g_accessibleEvents.cbegin(), g_accessibleEvents.cend(),
+            [&toast](const AccessibleEventRecord& record) {
+                return record.object == &toast && record.type == fluentAccessibleAnnouncementEventType();
+            });
         ASSERT_NE(match, g_accessibleEvents.cend());
         if (fluentAccessibleAnnouncementSupportsDetails()) {
             EXPECT_EQ(match->announcement, QStringLiteral("Sync complete: 12 files are available"));
@@ -246,8 +239,7 @@ TEST(ToastTest, Contract_ShortMessageDoesNotWrap)
     toast.setAnimationEnabled(false);
     ASSERT_TRUE(toast.present(&host));
 
-    auto* message =
-        toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
+    auto* message = toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
     ASSERT_NE(message, nullptr);
     EXPECT_FALSE(message->wordWrap());
     EXPECT_EQ(message->text().count(QLatin1Char('\n')), 0);
@@ -303,9 +295,9 @@ TEST(ToastTest, Contract_ContentResizeKeepsCornerVisibleDuringReflow)
         ASSERT_TRUE(toast.present(&host));
         toast.setAnimationEnabled(true);
         for (const QString& message :
-             {QStringLiteral("Your changes are saved. This longer confirmation wraps onto several "
-                             "lines while the close button stays inside the window."),
-              QStringLiteral("Saved")}) {
+            {QStringLiteral("Your changes are saved. This longer confirmation wraps onto several "
+                            "lines while the close button stays inside the window."),
+                QStringLiteral("Saved")}) {
             toast.setMessage(message);
             const QRect card = fluent::overlay::visibleCardGeometry(toast.geometry());
             EXPECT_TRUE(host.rect().contains(card));
@@ -412,16 +404,14 @@ TEST(ToastTest, Contract_ActionIsBorrowedAndReportsDismissReason)
     toast.setAnimationEnabled(false);
 
     int actionChangedCount = 0;
-    QObject::connect(&toast, &Toast::actionChanged, &host,
-                     [&actionChangedCount](QAction*) { ++actionChangedCount; });
+    QObject::connect(&toast, &Toast::actionChanged, &host, [&actionChangedCount](QAction*) { ++actionChangedCount; });
     toast.setAction(&action);
     EXPECT_EQ(toast.action(), &action);
     EXPECT_EQ(action.parent(), &host);
     EXPECT_EQ(actionChangedCount, 1);
     EXPECT_FALSE(toast.testAttribute(Qt::WA_TransparentForMouseEvents));
 
-    auto* button =
-        toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+    auto* button = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
     ASSERT_NE(button, nullptr);
     EXPECT_EQ(button->text(), QStringLiteral("Retry"));
     EXPECT_EQ(button->accessibleName(), QStringLiteral("Retry"));
@@ -431,11 +421,10 @@ TEST(ToastTest, Contract_ActionIsBorrowedAndReportsDismissReason)
     Toast::DismissReason reason = Toast::Programmatic;
     QObject::connect(&action, &QAction::triggered, &host, [&triggerCount]() { ++triggerCount; });
     QObject::connect(&action, &QAction::triggered, &toast, &Toast::dismiss);
-    QObject::connect(&toast, &Toast::dismissedWithReason, &host,
-                     [&reasonCount, &reason](Toast::DismissReason value) {
-                         ++reasonCount;
-                         reason = value;
-                     });
+    QObject::connect(&toast, &Toast::dismissedWithReason, &host, [&reasonCount, &reason](Toast::DismissReason value) {
+        ++reasonCount;
+        reason = value;
+    });
 
     ASSERT_TRUE(toast.present(&host));
     QTest::mouseClick(button, Qt::LeftButton);
@@ -463,8 +452,7 @@ TEST(ToastTest, Contract_ActionReusesFluentButtonWithLocalNeutralStyling)
         toast.setAction(&retry);
         toast.onThemeUpdated();
 
-        auto* button =
-            toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+        auto* button = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
         ASSERT_NE(button, nullptr);
         EXPECT_EQ(button->fluentStyle(), fluent::basicinput::Button::Standard);
         EXPECT_FALSE(button->themeOverrides().isEmpty());
@@ -507,9 +495,9 @@ TEST(ToastTest, Contract_CloseButtonIsOptionalAndReportsOneDismissal)
         EXPECT_EQ(card.right() - button.right(), 8);
     };
     expectTopCorner();
-    toast.setMessage(
-        QStringLiteral("Your changes are saved. This longer confirmation wraps "
-                       "onto several lines while the close button stays in its corner."));
+    toast.setMessage(QStringLiteral(
+        "Your changes are saved. This longer confirmation wraps "
+        "onto several lines while the close button stays in its corner."));
     QApplication::processEvents();
     EXPECT_GT(fluent::overlay::visibleCardGeometry(toast.geometry()).height(), 52);
     expectTopCorner();
@@ -538,8 +526,7 @@ TEST(ToastTest, Contract_NarrowHostWrapsFullTextWithActionBelow)
     QAction action(QStringLiteral("Try again"), &host);
     Toast toast(&host);
     toast.setTitle(QStringLiteral("The connection was interrupted while uploading your files"));
-    toast.setMessage(
-        QStringLiteral("Your connection was lost. Try again to resume product-shot.png."));
+    toast.setMessage(QStringLiteral("Your connection was lost. Try again to resume product-shot.png."));
     toast.setClosable(true);
     toast.setAction(&action);
     toast.setDuration(0);
@@ -548,10 +535,8 @@ TEST(ToastTest, Contract_NarrowHostWrapsFullTextWithActionBelow)
     QApplication::processEvents();
 
     auto* title = toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastTitle"));
-    auto* message =
-        toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
-    auto* button =
-        toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+    auto* message = toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
+    auto* button = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
     auto* close = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastClose"));
     ASSERT_NE(title, nullptr);
     ASSERT_NE(message, nullptr);
@@ -617,10 +602,8 @@ TEST(ToastTest, Contract_NarrowHostKeepsLongActionCaptionReadable)
     ASSERT_TRUE(toast.present(&host));
     QApplication::processEvents();
 
-    auto* message =
-        toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
-    auto* button =
-        toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+    auto* message = toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
+    auto* button = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
     ASSERT_NE(message, nullptr);
     ASSERT_NE(button, nullptr);
     QString displayedCaption = button->text();
@@ -665,8 +648,7 @@ TEST(ToastTest, Contract_StackReflowsContinuouslyAndLocalDisableSettlesPosition)
     const QPoint before = second.pos();
     first.dismiss();
     EXPECT_EQ(second.pos(), before);
-    auto* animation =
-        second.findChild<QVariantAnimation*>(QStringLiteral("fluentToastPositionAnimation"));
+    auto* animation = second.findChild<QVariantAnimation*>(QStringLiteral("fluentToastPositionAnimation"));
     ASSERT_NE(animation, nullptr);
     ASSERT_EQ(animation->state(), QAbstractAnimation::Running);
     animation->setCurrentTime(animation->duration() / 2);
@@ -688,8 +670,7 @@ TEST(ToastTest, Contract_ReversingDismissalKeepsPresentationContinuous)
     toast.setDuration(0);
     QSignalSpy dismissedSpy(&toast, &Toast::dismissed);
     ASSERT_TRUE(toast.present(&host));
-    auto* animation =
-        toast.findChild<QPropertyAnimation*>(QStringLiteral("fluentToastPresentationAnimation"));
+    auto* animation = toast.findChild<QPropertyAnimation*>(QStringLiteral("fluentToastPresentationAnimation"));
     ASSERT_NE(animation, nullptr);
     animation->setCurrentTime(animation->duration() / 2);
     const qreal visibleProgress = toast.toastProgress();
@@ -725,8 +706,7 @@ TEST(ToastTest, Contract_ReducedMotionFadesWithoutTranslationAndHiddenMotionSett
     toast.setMessage(QStringLiteral("Changes saved"));
     toast.setDuration(0);
     ASSERT_TRUE(toast.present(&host));
-    auto* animation =
-        toast.findChild<QPropertyAnimation*>(QStringLiteral("fluentToastPresentationAnimation"));
+    auto* animation = toast.findChild<QPropertyAnimation*>(QStringLiteral("fluentToastPresentationAnimation"));
     ASSERT_NE(animation, nullptr);
     EXPECT_LE(animation->duration(), 50);
     EXPECT_EQ(fluent::overlay::visibleCardGeometry(toast.geometry()).top(), 16);
@@ -775,11 +755,10 @@ TEST(ToastTest, Contract_TimeoutReportsDismissReason)
 
     Toast::DismissReason reason = Toast::Programmatic;
     int reasonCount = 0;
-    QObject::connect(&toast, &Toast::dismissedWithReason, &host,
-                     [&reasonCount, &reason](Toast::DismissReason value) {
-                         ++reasonCount;
-                         reason = value;
-                     });
+    QObject::connect(&toast, &Toast::dismissedWithReason, &host, [&reasonCount, &reason](Toast::DismissReason value) {
+        ++reasonCount;
+        reason = value;
+    });
     ASSERT_TRUE(toast.present(&host));
     ASSERT_TRUE(QTest::qWaitFor([&] { return !toast.isOpen(); }, 500));
     EXPECT_EQ(reasonCount, 1);
@@ -821,8 +800,7 @@ TEST(ToastTest, Contract_SeverityUsesFontIcon)
     auto* icon = badge->findChild<fluent::FontIcon*>(QStringLiteral("fluentToastIcon"));
     ASSERT_NE(icon, nullptr);
     EXPECT_EQ(icon->size(), QSize(16, 16));
-    const QString successGlyph =
-        Typography::Icons::glyph(QStringLiteral("ic_fluent_checkmark_circle_16_regular"));
+    const QString successGlyph = Typography::Icons::glyph(QStringLiteral("ic_fluent_checkmark_circle_16_regular"));
     ASSERT_FALSE(successGlyph.isEmpty());
     EXPECT_EQ(icon->glyph(), successGlyph);
 
@@ -836,8 +814,7 @@ TEST(ToastTest, Contract_ManagedToastsStackUntilMaximumVisible)
     QWidget host;
     host.resize(640, 480);
 
-    QPointer<Toast> first =
-        Toast::showToast(&host, QStringLiteral("First"), Toast::Informational, 0);
+    QPointer<Toast> first = Toast::showToast(&host, QStringLiteral("First"), Toast::Informational, 0);
     QPointer<Toast> second = Toast::showToast(&host, QStringLiteral("Second"), Toast::Success, 0);
     ASSERT_FALSE(first.isNull());
     ASSERT_FALSE(second.isNull());
@@ -851,10 +828,10 @@ TEST(ToastTest, Contract_ManagedToastsStackUntilMaximumVisible)
     int firstDismissCount = 0;
     Toast::DismissReason firstReason = Toast::Programmatic;
     QObject::connect(first.data(), &Toast::dismissedWithReason, &host,
-                     [&firstDismissCount, &firstReason](Toast::DismissReason reason) {
-                         ++firstDismissCount;
-                         firstReason = reason;
-                     });
+        [&firstDismissCount, &firstReason](Toast::DismissReason reason) {
+            ++firstDismissCount;
+            firstReason = reason;
+        });
 
     QPointer<Toast> third = Toast::showToast(&host, QStringLiteral("Third"), Toast::Warning, 0);
     flushDeferredDeletes();
@@ -883,27 +860,23 @@ TEST(ToastTest, Contract_UpdateKeyRefreshesInPlaceWithinStackScope)
     QWidget secondHost;
     secondHost.resize(640, 480);
 
-    QPointer<Toast> first =
-        Toast::showOrUpdateToast(&firstHost, QStringLiteral("sync"), QStringLiteral("Uploading"),
-                                 Toast::Informational, 0, Toast::TopEnd);
+    QPointer<Toast> first = Toast::showOrUpdateToast(&firstHost, QStringLiteral("sync"), QStringLiteral("Uploading"),
+        Toast::Informational, 0, Toast::TopEnd);
     ASSERT_FALSE(first.isNull());
     EXPECT_EQ(first->updateKey(), QStringLiteral("sync"));
 
     QSignalSpy updatedSpy(first.data(), &Toast::updated);
-    Toast* updated = Toast::showOrUpdateToast(&firstHost, QStringLiteral("sync"),
-                                              QStringLiteral("Upload complete"), Toast::Success, 0,
-                                              Toast::TopEnd);
+    Toast* updated = Toast::showOrUpdateToast(&firstHost, QStringLiteral("sync"), QStringLiteral("Upload complete"),
+        Toast::Success, 0, Toast::TopEnd);
     ASSERT_EQ(updated, first.data());
     EXPECT_EQ(updatedSpy.count(), 1);
     EXPECT_EQ(first->message(), QStringLiteral("Upload complete"));
     EXPECT_EQ(first->severity(), Toast::Success);
 
     QPointer<Toast> otherPlacement = Toast::showOrUpdateToast(&firstHost, QStringLiteral("sync"),
-                                                              QStringLiteral("Bottom status"),
-                                                              Toast::Warning, 0, Toast::BottomEnd);
+        QStringLiteral("Bottom status"), Toast::Warning, 0, Toast::BottomEnd);
     QPointer<Toast> otherHost = Toast::showOrUpdateToast(&secondHost, QStringLiteral("sync"),
-                                                         QStringLiteral("Other window"),
-                                                         Toast::Informational, 0, Toast::TopEnd);
+        QStringLiteral("Other window"), Toast::Informational, 0, Toast::TopEnd);
     ASSERT_FALSE(otherPlacement.isNull());
     ASSERT_FALSE(otherHost.isNull());
     EXPECT_NE(otherPlacement.data(), first.data());
@@ -924,14 +897,11 @@ TEST(ToastTest, Contract_StackOffsetsFollowPlacementDirection)
     QWidget host;
     host.resize(800, 600);
 
-    QPointer<Toast> topA =
-        Toast::showToast(&host, QStringLiteral("Top A"), Toast::Informational, 0, Toast::TopEnd);
-    QPointer<Toast> topB =
-        Toast::showToast(&host, QStringLiteral("Top B"), Toast::Success, 0, Toast::TopEnd);
-    QPointer<Toast> bottomA =
-        Toast::showToast(&host, QStringLiteral("Bottom A"), Toast::Warning, 0, Toast::BottomStart);
-    QPointer<Toast> bottomB =
-        Toast::showToast(&host, QStringLiteral("Bottom B"), Toast::Error, 0, Toast::BottomStart);
+    QPointer<Toast> topA = Toast::showToast(&host, QStringLiteral("Top A"), Toast::Informational, 0, Toast::TopEnd);
+    QPointer<Toast> topB = Toast::showToast(&host, QStringLiteral("Top B"), Toast::Success, 0, Toast::TopEnd);
+    QPointer<Toast> bottomA = Toast::showToast(&host, QStringLiteral("Bottom A"), Toast::Warning, 0,
+        Toast::BottomStart);
+    QPointer<Toast> bottomB = Toast::showToast(&host, QStringLiteral("Bottom B"), Toast::Error, 0, Toast::BottomStart);
     ASSERT_FALSE(topA.isNull());
     ASSERT_FALSE(topB.isNull());
     ASSERT_FALSE(bottomA.isNull());

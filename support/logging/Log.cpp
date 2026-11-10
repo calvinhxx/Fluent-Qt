@@ -97,9 +97,7 @@ std::shared_ptr<spdlog::logger> createLogger(const fluent::support::logging::Ini
 #endif
 
     // 显式 logFilePath 优先；其次读 SPDLOG_FILE 环境变量
-    const QString filePath = options.logFilePath.isEmpty()
-        ? qEnvironmentVariable(kFileEnvVar)
-        : options.logFilePath;
+    const QString filePath = options.logFilePath.isEmpty() ? qEnvironmentVariable(kFileEnvVar) : options.logFilePath;
     if (!filePath.isEmpty()) {
         const QFileInfo fileInfo(filePath);
         const QString dirPath = fileInfo.absolutePath();
@@ -111,22 +109,20 @@ std::shared_ptr<spdlog::logger> createLogger(const fluent::support::logging::Ini
             // so the on-disk total is maxRotatedFiles + 1.
             // zh_CN: spdlog 保留当前文件加 maxRotatedFiles 个编号备份，
             // 磁盘文件总数为 maxRotatedFiles + 1。
-            const auto maxFileSize = static_cast<std::size_t>(
-                std::max<qint64>(options.maxFileSizeBytes, 1024));
-            const auto maxFiles = static_cast<std::size_t>(
-                std::max(options.maxRotatedFiles, 1));
-            sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-                filePath.toStdString(), maxFileSize, maxFiles));
+            const auto maxFileSize = static_cast<std::size_t>(std::max<qint64>(options.maxFileSizeBytes, 1024));
+            const auto maxFiles = static_cast<std::size_t>(std::max(options.maxRotatedFiles, 1));
+            sinks.push_back(
+                std::make_shared<spdlog::sinks::rotating_file_sink_mt>(filePath.toStdString(), maxFileSize, maxFiles));
         } catch (const spdlog::spdlog_ex& ex) {
-            std::fprintf(stderr, "spdlog: failed to open log file '%s': %s\n",
-                         filePath.toLocal8Bit().constData(), ex.what());
+            std::fprintf(stderr, "spdlog: failed to open log file '%s': %s\n", filePath.toLocal8Bit().constData(),
+                ex.what());
         }
     }
 
     auto created = std::make_shared<spdlog::logger>(kLoggerName, sinks.begin(), sinks.end());
     created->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v");
-    created->set_level(toSpdlogLevel(fluent::support::logging::levelFromName(
-        qEnvironmentVariable(kLevelEnvVar), options.defaultLevel)));
+    created->set_level(toSpdlogLevel(
+        fluent::support::logging::levelFromName(qEnvironmentVariable(kLevelEnvVar), options.defaultLevel)));
     // Flush from info up: lifecycle lines reach the file as they happen, and an
     // abnormal exit cannot lose them. Volume at info level is low enough that
     // per-line flushing costs nothing noticeable; debug/trace bursts stay buffered.
@@ -167,11 +163,8 @@ void writeQtMessage(QtMsgType type, const QMessageLogContext& context, const QSt
     const QString categorizedMessage = context.category && *context.category
         ? QStringLiteral("[%1] %2").arg(QString::fromLatin1(context.category), message)
         : message;
-    fluent::support::logging::log(level,
-                              context.file ? context.file : "",
-                              context.line,
-                              context.function ? context.function : "",
-                              categorizedMessage);
+    fluent::support::logging::log(level, context.file ? context.file : "", context.line,
+        context.function ? context.function : "", categorizedMessage);
 
     g_inQtMessageHandler = false;
 }
@@ -283,11 +276,9 @@ void installQtMessageHandler()
 
 QString defaultLogFilePath()
 {
-    const QString appName = QCoreApplication::applicationName().isEmpty()
-        ? QStringLiteral("app")
-        : QCoreApplication::applicationName();
-    const QString dir =
-        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    const QString appName =
+        QCoreApplication::applicationName().isEmpty() ? QStringLiteral("app") : QCoreApplication::applicationName();
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     if (dir.isEmpty())
         return {};
     return dir + QStringLiteral("/logs/") + appName + QStringLiteral(".log");
@@ -299,9 +290,8 @@ void log(Level level, const char* file, int line, const char* function, const QS
         initialize();
 
     if (const auto activeLogger = logger()) {
-        activeLogger->log(spdlog::source_loc(file ? file : "", line, function ? function : ""),
-                          toSpdlogLevel(level),
-                          "{}", message.toStdString());
+        activeLogger->log(spdlog::source_loc(file ? file : "", line, function ? function : ""), toSpdlogLevel(level),
+            "{}", message.toStdString());
     }
 }
 
