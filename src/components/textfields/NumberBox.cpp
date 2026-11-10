@@ -1,4 +1,3 @@
-#include "components/foundation/private/TextInputFrame_p.h"
 #include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "NumberBox.h"
@@ -589,7 +588,8 @@ void NumberBox::paintEvent(QPaintEvent* event)
 
 void NumberBox::paintFrame(QPainter& painter)
 {
-    paintInputFrame(painter);
+    LineEdit::paintInputFrame(painter, QRectF(inputRect()), m_focused, m_hovered || m_spinnerHovered,
+        m_pressed || m_spinnerPressed);
 }
 
 void NumberBox::resizeEvent(QResizeEvent* event)
@@ -1103,17 +1103,6 @@ bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTex
         emit valueChanged(m_value);
     }
     return changed;
-}
-
-void NumberBox::paintInputFrame(QPainter& painter)
-{
-    ::fluent::detail::TextInputFrameState state;
-    state.enabled = isEnabled();
-    state.readOnly = isReadOnly();
-    state.focused = m_focused;
-    state.hovered = m_hovered || m_spinnerHovered;
-    state.pressed = m_pressed || m_spinnerPressed;
-    ::fluent::detail::paintTextInputFrame(painter, QRectF(inputRect()), themeColorsRef(), themeRadius().control, state);
 }
 
 void NumberBox::paintHeader(QPainter& painter)

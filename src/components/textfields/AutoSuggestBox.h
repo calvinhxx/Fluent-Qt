@@ -298,6 +298,7 @@ protected:
     // Composed selectors keep the query slot as decoration and own one input target.
     void setQueryIconDecorative(bool decorative);
     void paintEvent(QPaintEvent* event) override;
+    void paintFrame(QPainter& painter) override;
     void resizeEvent(QResizeEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void inputMethodEvent(QInputMethodEvent* event) override;
@@ -357,7 +358,6 @@ private:
     void setHasMoreSuggestions(bool hasMore);
     bool canShowSuggestions() const;
 
-    void paintInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
 
     QStringList m_suggestions;

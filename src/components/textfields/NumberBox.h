@@ -288,7 +288,6 @@ private:
     void setFormattedText(const QString& text);
     bool parseInputText(const QString& input, double* result) const;
     bool setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN);
-    void paintInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
     bool hasSpinnerButtonsVisible() const;
     int inlineSpinnerWidth() const;

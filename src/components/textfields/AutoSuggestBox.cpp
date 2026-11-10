@@ -1,4 +1,3 @@
-#include "components/foundation/private/TextInputFrame_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "AutoSuggestBox.h"
 
@@ -1094,10 +1093,8 @@ void AutoSuggestBox::paintEvent(QPaintEvent* event)
         painter.setRenderHint(QPainter::Antialiasing);
         if (!m_header.isEmpty())
             paintHeader(painter);
-        if (isFrameVisible())
-            paintInputFrame(painter);
     }
-    QLineEdit::paintEvent(event);
+    LineEdit::paintEvent(event);
 }
 
 void AutoSuggestBox::resizeEvent(QResizeEvent* event)
@@ -1702,16 +1699,11 @@ void AutoSuggestBox::setTextWithReason(const QString& value, TextChangeReason re
     setText(value);
 }
 
-void AutoSuggestBox::paintInputFrame(QPainter& painter)
+void AutoSuggestBox::paintFrame(QPainter& painter)
 {
-    ::fluent::detail::TextInputFrameState state;
-    state.enabled = isEnabled();
-    state.invalid = m_loadState == LoadState::Failed;
-    state.readOnly = isReadOnly();
-    state.focused = m_focused || (QApplication::focusWidget() && isAncestorOf(QApplication::focusWidget()));
-    state.hovered = m_hovered;
-    state.pressed = false;
-    ::fluent::detail::paintTextInputFrame(painter, QRectF(inputRect()), themeColorsRef(), themeRadius().control, state);
+    const bool focused = m_focused || (QApplication::focusWidget() && isAncestorOf(QApplication::focusWidget()));
+    LineEdit::paintInputFrame(painter, QRectF(inputRect()), focused, m_hovered, false,
+        m_loadState == LoadState::Failed);
 }
 
 void AutoSuggestBox::paintHeader(QPainter& painter)

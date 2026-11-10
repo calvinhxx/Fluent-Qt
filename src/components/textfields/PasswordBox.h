@@ -77,6 +77,7 @@ protected:
     QRect trailingContentBounds() const override;
     void trailingContentGeometryChanged() override;
     void paintEvent(QPaintEvent* event) override;
+    void paintFrame(QPainter& painter) override;
     void resizeEvent(QResizeEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
@@ -100,7 +101,6 @@ private:
     void updateHeaderTextMargins();
     void updateEchoMode();
     void setPeekActive(bool active);
-    void paintInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
     bool canPeekReveal() const;
 
