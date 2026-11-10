@@ -11,7 +11,7 @@ from pathlib import Path
 import subprocess
 import sys
 import threading
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from serve import SiteHandler
 
@@ -35,6 +35,99 @@ def prepare_site_theme_contract(project_root: Path) -> None:
         cwd=project_root,
         check=True,
     )
+
+
+def check_release_anchor_navigation(page: object, site_url: str) -> None:
+    """Direct links reveal their target; subsequent filters own the resulting URL."""
+    base = site_url + 'api/releases/'
+
+    def open_page(suffix):
+        page.goto(base + suffix, wait_until='domcontentloaded')
+        page.wait_for_selector('[data-release-filters]:not([hidden])')
+
+    def selected_scope():
+        return page.locator('[data-release-scope-filter]:checked').input_value()
+
+    def assert_revealed(anchor):
+        if not page.locator(f'[id="{anchor}"]').is_visible():
+            raise RuntimeError(f'Direct release link hid its target: {anchor}')
+        if selected_scope() != 'all' or urlsplit(page.url).query or urlsplit(page.url).fragment != anchor:
+            raise RuntimeError(f'Revealing a hidden target lost the anchor or retained conflicting filters: {anchor}')
+        page.wait_for_function('''id => {
+            const rect = document.getElementById(id).getBoundingClientRect();
+            return rect.top >= 0 && rect.top < innerHeight;
+        }''', arg=anchor)
+
+    for anchor in ('v1.7.1', 'gallery-private-qt-headers'):
+        # Exercise both a hidden version and a hidden group inside a visible version.
+        open_page('?scope=uilib#' + anchor)
+        assert_revealed(anchor)
+        page.reload(wait_until='domcontentloaded')
+        page.wait_for_selector('[data-release-filters]:not([hidden])')
+        assert_revealed(anchor)
+        page.locator('[data-release-scope-filter][value="uilib"] + span').click()
+        if urlsplit(page.url).fragment or page.locator(f'[id="{anchor}"]').is_visible():
+            raise RuntimeError(f'Switching scope retained a hidden release anchor: {anchor}')
+        page.reload(wait_until='domcontentloaded')
+        page.wait_for_selector('[data-release-filters]:not([hidden])')
+        if (selected_scope() != 'uilib' or urlsplit(page.url).fragment
+                or page.locator(f'[id="{anchor}"]').is_visible()):
+            raise RuntimeError('Reloading a filtered release URL restored a stale anchor or cleared its scope')
+
+    open_page('?scope=uilib&from=1.11.3&change=missing&breaking=1#v1.7.1')
+    assert_revealed('v1.7.1')
+
+    # A matching anchor must not clear useful filters, including on refresh.
+    open_page('?scope=uilib&change=ComboBox#v1.11.3')
+    page.reload(wait_until='domcontentloaded')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if (selected_scope() != 'uilib' or page.locator('[data-release-query]').input_value() != 'ComboBox'
+            or urlsplit(page.url).fragment != 'v1.11.3'
+            or not page.locator('[id="v1.11.3"]').is_visible()):
+        raise RuntimeError('A visible version anchor cleared matching filters on reload')
+    page.locator('[data-release-query]').fill('LineEdit')
+    if urlsplit(page.url).fragment != 'v1.11.3':
+        raise RuntimeError('Changing to another matching query cleared a visible anchor')
+    page.locator('[data-release-query]').fill('')
+    page.locator('[data-release-scope-filter][value="gallery"] + span').click()
+    if urlsplit(page.url).fragment != 'v1.11.3':
+        raise RuntimeError('Switching to another matching scope cleared a visible anchor')
+    page.reload(wait_until='domcontentloaded')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if (selected_scope() != 'gallery' or urlsplit(page.url).fragment != 'v1.11.3'
+            or not page.locator('[id="v1.11.3"]').is_visible()):
+        raise RuntimeError('Reloading lost the matching scope or visible anchor')
+
+    for key, value in (('change', 'no-such-component'), ('from', '1.11.3'), ('breaking', '1')):
+        open_page('?scope=uilib#v1.11.3')
+        if key == 'change':
+            page.locator('[data-release-query]').fill(value)
+        elif key == 'from':
+            page.locator('[data-release-from]').select_option(value)
+        else:
+            page.locator('[data-release-breaking]').check()
+        if urlsplit(page.url).fragment or page.locator('[id="v1.11.3"]').is_visible():
+            raise RuntimeError(f'{key} filter retained a hidden version anchor')
+        page.reload(wait_until='domcontentloaded')
+        page.wait_for_selector('[data-release-filters]:not([hidden])')
+        params = parse_qs(urlsplit(page.url).query)
+        restored = (page.locator('[data-release-query]').input_value() if key == 'change'
+                    else page.locator('[data-release-from]').input_value() if key == 'from'
+                    else '1' if page.locator('[data-release-breaking]').is_checked() else '')
+        if (params.get(key) != [value] or restored != value or selected_scope() != 'uilib'
+                or urlsplit(page.url).fragment or page.locator('[id="v1.11.3"]').is_visible()):
+            raise RuntimeError(f'Reloading lost the {key} filter')
+
+    # Same-document navigation still reveals a migration excluded by the active scope.
+    open_page('?scope=uilib')
+    page.goto(base + '?scope=uilib#gallery-private-qt-headers', wait_until='domcontentloaded')
+    assert_revealed('gallery-private-qt-headers')
+
+    for anchor in ('missing-version', 'bad%ZZ', 'content'):
+        open_page('?scope=uilib#' + anchor)
+        page.locator('[data-release-scope-filter][value="gallery"] + span').click()
+        if selected_scope() != 'gallery' or urlsplit(page.url).fragment != anchor:
+            raise RuntimeError('Filtering changed an unknown or unrelated page anchor')
 
 
 def check_release_documents(page: object, site_url: str, language: str, output: Path) -> None:
@@ -138,6 +231,7 @@ def check_release_documents(page: object, site_url: str, language: str, output: 
         anchor = urlsplit(page.url).fragment
         if not page.locator(f'[data-release-entry][id="{anchor}"]').is_visible():
             raise RuntimeError('The API notice did not reach its pending change')
+    check_release_anchor_navigation(page, site_url)
 
 
 def check_directory_hierarchy(page: object, site_url: str) -> None:

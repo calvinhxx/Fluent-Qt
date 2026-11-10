@@ -411,6 +411,15 @@ function setupReleaseHistory() {
     }
     return false;
   };
+  function releaseAnchor() {
+    let anchor;
+    try { anchor = decodeURIComponent(location.hash.slice(1)); } catch { return null; }
+    const target = document.getElementById(anchor);
+    const entry = target?.closest('[data-release-entry]');
+    if (!entry) return null;
+    const section = target.closest('[data-release-scope]');
+    return {target, hidden: entry.hidden || Boolean(section?.hidden)};
+  }
   function filter(updateUrl = false) {
     const term = normalize(query.value.trim());
     const scope = selectedScope();
@@ -439,6 +448,8 @@ function setupReleaseHistory() {
           ['breaking', breaking.checked ? '1' : ''], ['scope', selectedScope() === 'all' ? '' : selectedScope()]]) {
         if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
       }
+      // A deliberate filter change must not leave a hidden target in shared URLs.
+      if (releaseAnchor()?.hidden) url.hash = '';
       history.replaceState(null, '', url);
     }
   }
@@ -454,21 +465,16 @@ function setupReleaseHistory() {
     scopes.forEach(control => { control.checked = control.value === 'all'; });
     filter(true);
   });
-  function revealAnchor(initial = false) {
-    let anchor;
-    try { anchor = decodeURIComponent(location.hash.slice(1)); } catch { return; }
-    const target = document.getElementById(anchor);
-    const entry = target?.closest('[data-release-entry]');
-    const section = target?.closest('[data-release-scope]');
-    // Keep old migration links readable even when the URL selects another scope.
-    // A version anchor left over from a search must not clear that search on reload.
-    if ((entry?.hidden || section?.hidden) && (!initial || target !== entry)) {
+  function revealAnchor() {
+    const anchor = releaseAnchor();
+    // Incoming version and migration links take precedence over conflicting filters.
+    if (anchor?.hidden) {
       form.reset();
-      queueMicrotask(() => target.scrollIntoView({block: 'start'}));
+      queueMicrotask(() => anchor.target.scrollIntoView({block: 'start'}));
     }
   }
-  window.addEventListener('hashchange', () => revealAnchor());
+  window.addEventListener('hashchange', revealAnchor);
   filter();
-  revealAnchor(true);
+  revealAnchor();
 }
 setupReleaseHistory();
