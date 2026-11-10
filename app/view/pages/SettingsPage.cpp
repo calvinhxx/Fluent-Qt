@@ -81,8 +81,12 @@ private:
 
 class SettingsRow final : public fluent::layout::Card {
 public:
-    SettingsRow(const QString& icon, const QString& title, const QString& subtitle,
-                QWidget* trailing, QWidget* parent, fluent::textfields::Label* status = nullptr)
+    SettingsRow(const QString& icon,
+        const QString& title,
+        const QString& subtitle,
+        QWidget* trailing,
+        QWidget* parent,
+        fluent::textfields::Label* status = nullptr)
         : Card(parent), m_trailing(trailing)
     {
         setObjectName(QStringLiteral("gallerySettingsRow"));
@@ -184,8 +188,7 @@ private:
 
 } // namespace
 
-SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
-    : QWidget(parent), m_routeId(item.id)
+SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent) : QWidget(parent), m_routeId(item.id)
 {
     setObjectName(QStringLiteral("gallerySettingsPage"));
     setProperty("galleryRouteId", m_routeId);
@@ -200,8 +203,7 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
     scrollArea->setHorizontalScrollMode(fluent::scrolling::ScrollView::ScrollMode::Disabled);
-    scrollArea->setHorizontalScrollBarVisibility(
-        fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
+    scrollArea->setHorizontalScrollBarVisibility(fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
 
     m_viewport = new QWidget(scrollArea);
     m_viewport->setObjectName(QStringLiteral("gallerySettingsViewport"));
@@ -222,40 +224,36 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     auto* settings = &GallerySettings::instance();
     const auto& runtime = platform::capabilities();
     m_themeChoice = createChoiceBox(QStringLiteral("gallerySettingsThemeChoice"),
-                                    {QStringLiteral("Use system setting"), QStringLiteral("Light"),
-                                     QStringLiteral("Dark"), QStringLiteral("High contrast")},
-                                    static_cast<int>(settings->themeMode()));
+        {QStringLiteral("Use system setting"), QStringLiteral("Light"), QStringLiteral("Dark"),
+            QStringLiteral("High contrast")},
+        static_cast<int>(settings->themeMode()));
     if (runtime.hostControlsTheme) {
         m_themeChoice->setEnabled(false);
         m_themeChoice->setToolTip(QStringLiteral("The embedded Gallery follows the website theme"));
     }
-    m_motionChoice = createChoiceBox(
-        QStringLiteral("gallerySettingsMotionChoice"),
+    m_motionChoice = createChoiceBox(QStringLiteral("gallerySettingsMotionChoice"),
         {QStringLiteral("Full"), QStringLiteral("Reduced"), QStringLiteral("Disabled")},
         static_cast<int>(settings->motionMode()));
     auto* homeParticles = new fluent::basicinput::ToggleSwitch(this);
     homeParticles->setObjectName(QStringLiteral("gallerySettingsHomeParticlesToggle"));
     homeParticles->setAccessibleName(QStringLiteral("Home particle effects"));
-    homeParticles->setAccessibleDescription(
-        QStringLiteral("Show animated particles in the home banner"));
+    homeParticles->setAccessibleDescription(QStringLiteral("Show animated particles in the home banner"));
     homeParticles->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     homeParticles->setIsOn(settings->homeParticlesEnabled());
     connect(homeParticles, &fluent::basicinput::ToggleSwitch::toggled, settings,
-            &GallerySettings::setHomeParticlesEnabled);
+        &GallerySettings::setHomeParticlesEnabled);
     connect(settings, &GallerySettings::homeParticlesEnabledChanged, homeParticles,
-            &fluent::basicinput::ToggleSwitch::setIsOn);
+        &fluent::basicinput::ToggleSwitch::setIsOn);
     auto* spatialMode = new fluent::basicinput::ToggleSwitch(this);
     spatialMode->setObjectName(QStringLiteral("gallerySettingsSpatialModeToggle"));
     spatialMode->setAccessibleName(QStringLiteral("3D Gallery"));
     spatialMode->setAccessibleDescription(
         QStringLiteral("Switch the Gallery and all Spatial examples between 2D and 3D."));
     spatialMode->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    connect(spatialMode, &fluent::basicinput::ToggleSwitch::toggled, settings,
-            &GallerySettings::setSpatialModeEnabled);
+    connect(spatialMode, &fluent::basicinput::ToggleSwitch::toggled, settings, &GallerySettings::setSpatialModeEnabled);
     const auto updateSpatialAvailability = [spatialMode, settings]() {
-        const bool policyAllows =
-            fluent::MotionPolicy::instance().mode() == fluent::MotionPolicy::Mode::Full &&
-            fluent::FluentElement::currentTheme() != fluent::FluentElement::HighContrast;
+        const bool policyAllows = fluent::MotionPolicy::instance().mode() == fluent::MotionPolicy::Mode::Full
+            && fluent::FluentElement::currentTheme() != fluent::FluentElement::HighContrast;
         const bool canTry = settings->spatialAvailable() || settings->spatialAvailabilityPending();
         const bool available = canTry && policyAllows;
         // Display the effective state without overwriting a preference from another machine.
@@ -263,22 +261,18 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         const QSignalBlocker blocker(spatialMode);
         spatialMode->setIsOn(available && settings->spatialModeEnabled());
         spatialMode->setEnabled(available);
-        spatialMode->setToolTip(
-            !canTry ? settings->spatialUnavailableReason()
-            : !policyAllows
+        spatialMode->setToolTip(!canTry ? settings->spatialUnavailableReason()
+                : !policyAllows
                 ? QStringLiteral("Use Full motion and a Light or Dark theme to enable 3D")
                 : QString());
-        spatialMode->setAccessibleDescription(
-            available
+        spatialMode->setAccessibleDescription(available
                 ? QStringLiteral("Switch the Gallery and all Spatial examples between 2D and 3D.")
                 : spatialMode->toolTip());
     };
-    connect(settings, &GallerySettings::spatialModeEnabledChanged, spatialMode,
-            updateSpatialAvailability);
-    connect(settings, &GallerySettings::spatialAvailabilityChanged, spatialMode,
-            updateSpatialAvailability);
+    connect(settings, &GallerySettings::spatialModeEnabledChanged, spatialMode, updateSpatialAvailability);
+    connect(settings, &GallerySettings::spatialAvailabilityChanged, spatialMode, updateSpatialAvailability);
     connect(&fluent::MotionPolicy::instance(), &fluent::MotionPolicy::modeChanged, spatialMode,
-            updateSpatialAvailability);
+        updateSpatialAvailability);
     connect(settings, &GallerySettings::themeModeChanged, spatialMode, updateSpatialAvailability);
     updateSpatialAvailability();
     auto* spatialControl = new QWidget(this);
@@ -298,117 +292,97 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     // zh_CN: 对齐原生 WinUI Gallery，导航样式只暴露 “Left” 与 “Top” 两项。“Left” 映射到响应式 Auto
     // （按宽度 展开→紧凑→最小，与 WinUI 的 PaneDisplayMode.Auto 一致）；“Top” 为顶部横条。内部更细的枚举
     // （Left/LeftCompact/LeftMinimal）仍保留用于配置兼容与响应式求解，但不再作为手动选项暴露。
-    m_navigationChoice = createChoiceBox(
-        QStringLiteral("gallerySettingsNavigationChoice"),
+    m_navigationChoice = createChoiceBox(QStringLiteral("gallerySettingsNavigationChoice"),
         {QStringLiteral("Left"), QStringLiteral("Top")},
         settings->navigationStyle() == GallerySettings::NavigationStyle::Top ? 1 : 0);
-    m_effectChoice = createChoiceBox(
-        QStringLiteral("gallerySettingsEffectChoice"),
+    m_effectChoice = createChoiceBox(QStringLiteral("gallerySettingsEffectChoice"),
         {QStringLiteral("Normal"), QStringLiteral("Mica"), QStringLiteral("Acrylic")},
         static_cast<int>(settings->windowEffect()));
     if (runtime.exposesCloseBehavior) {
-        m_closeBehaviorChoice = createChoiceBox(
-            QStringLiteral("gallerySettingsCloseBehaviorChoice"), closebehaviorui::choices(),
-            static_cast<int>(settings->closeBehavior()));
+        m_closeBehaviorChoice = createChoiceBox(QStringLiteral("gallerySettingsCloseBehaviorChoice"),
+            closebehaviorui::choices(), static_cast<int>(settings->closeBehavior()));
     }
     if (runtime.checksForUpdates)
         m_updateChecker = new UpdateChecker(this);
 
-    connect(m_themeChoice, qOverload<int>(&QComboBox::currentIndexChanged), this,
-            [settings](int index) {
-                QTimer::singleShot(0, settings, [settings, index]() {
-                    settings->setThemeMode(static_cast<GallerySettings::ThemeMode>(index));
-                });
-            });
-    connect(m_motionChoice, qOverload<int>(&QComboBox::currentIndexChanged), settings,
-            [settings](int index) {
-                settings->setMotionMode(static_cast<GallerySettings::MotionMode>(index));
-            });
-    connect(m_navigationChoice, qOverload<int>(&QComboBox::currentIndexChanged), this,
-            [settings](int index) {
-                settings->setNavigationStyle(index == 1 ? GallerySettings::NavigationStyle::Top
-                                                        : GallerySettings::NavigationStyle::Auto);
-            });
-    connect(settings, &GallerySettings::themeModeChanged, this,
-            [this](GallerySettings::ThemeMode mode) {
-                const QSignalBlocker blocker(m_themeChoice);
-                m_themeChoice->setCurrentIndex(static_cast<int>(mode));
-            });
-    connect(settings, &GallerySettings::motionModeChanged, this,
-            [this](GallerySettings::MotionMode mode) {
-                const QSignalBlocker blocker(m_motionChoice);
-                m_motionChoice->setCurrentIndex(static_cast<int>(mode));
-            });
-    connect(settings, &GallerySettings::navigationStyleChanged, this,
-            [this](GallerySettings::NavigationStyle style) {
-                const QSignalBlocker blocker(m_navigationChoice);
-                m_navigationChoice->setCurrentIndex(
-                    style == GallerySettings::NavigationStyle::Top ? 1 : 0);
-            });
-    connect(m_effectChoice, qOverload<int>(&QComboBox::currentIndexChanged), this,
-            [settings](int index) {
-                settings->setWindowEffect(static_cast<fluent::windowing::BackdropEffect>(index));
-            });
-    connect(settings, &GallerySettings::windowEffectChanged, this,
-            [this](fluent::windowing::BackdropEffect effect) {
-                const QSignalBlocker blocker(m_effectChoice);
-                m_effectChoice->setCurrentIndex(static_cast<int>(effect));
-            });
+    connect(m_themeChoice, qOverload<int>(&QComboBox::currentIndexChanged), this, [settings](int index) {
+        QTimer::singleShot(0, settings, [settings, index]() {
+            settings->setThemeMode(static_cast<GallerySettings::ThemeMode>(index));
+        });
+    });
+    connect(m_motionChoice, qOverload<int>(&QComboBox::currentIndexChanged), settings, [settings](int index) {
+        settings->setMotionMode(static_cast<GallerySettings::MotionMode>(index));
+    });
+    connect(m_navigationChoice, qOverload<int>(&QComboBox::currentIndexChanged), this, [settings](int index) {
+        settings->setNavigationStyle(
+            index == 1 ? GallerySettings::NavigationStyle::Top : GallerySettings::NavigationStyle::Auto);
+    });
+    connect(settings, &GallerySettings::themeModeChanged, this, [this](GallerySettings::ThemeMode mode) {
+        const QSignalBlocker blocker(m_themeChoice);
+        m_themeChoice->setCurrentIndex(static_cast<int>(mode));
+    });
+    connect(settings, &GallerySettings::motionModeChanged, this, [this](GallerySettings::MotionMode mode) {
+        const QSignalBlocker blocker(m_motionChoice);
+        m_motionChoice->setCurrentIndex(static_cast<int>(mode));
+    });
+    connect(settings, &GallerySettings::navigationStyleChanged, this, [this](GallerySettings::NavigationStyle style) {
+        const QSignalBlocker blocker(m_navigationChoice);
+        m_navigationChoice->setCurrentIndex(style == GallerySettings::NavigationStyle::Top ? 1 : 0);
+    });
+    connect(m_effectChoice, qOverload<int>(&QComboBox::currentIndexChanged), this, [settings](int index) {
+        settings->setWindowEffect(static_cast<fluent::windowing::BackdropEffect>(index));
+    });
+    connect(settings, &GallerySettings::windowEffectChanged, this, [this](fluent::windowing::BackdropEffect effect) {
+        const QSignalBlocker blocker(m_effectChoice);
+        m_effectChoice->setCurrentIndex(static_cast<int>(effect));
+    });
     if (m_closeBehaviorChoice) {
-        connect(m_closeBehaviorChoice, qOverload<int>(&QComboBox::currentIndexChanged), this,
-                [settings](int index) {
-                    settings->setCloseBehavior(static_cast<GallerySettings::CloseBehavior>(index));
-                    settings->setCloseBehaviorConfirmed(true);
-                });
+        connect(m_closeBehaviorChoice, qOverload<int>(&QComboBox::currentIndexChanged), this, [settings](int index) {
+            settings->setCloseBehavior(static_cast<GallerySettings::CloseBehavior>(index));
+            settings->setCloseBehaviorConfirmed(true);
+        });
         connect(settings, &GallerySettings::closeBehaviorChanged, this,
-                [this](GallerySettings::CloseBehavior behavior) {
-                    const QSignalBlocker blocker(m_closeBehaviorChoice);
-                    m_closeBehaviorChoice->setCurrentIndex(static_cast<int>(behavior));
-                });
+            [this](GallerySettings::CloseBehavior behavior) {
+                const QSignalBlocker blocker(m_closeBehaviorChoice);
+                m_closeBehaviorChoice->setCurrentIndex(static_cast<int>(behavior));
+            });
     }
     m_accentControl = new AccentColorControl(this);
 
     m_contentLayout->addWidget(createSectionTitle(QStringLiteral("Appearance & behavior")));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::Brightness, QStringLiteral("App theme"),
-        runtime.hostControlsTheme ? QStringLiteral("Follows the website theme while embedded")
-                                  : QStringLiteral("Select which app theme to display"),
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Brightness, QStringLiteral("App theme"),
+        runtime.hostControlsTheme
+            ? QStringLiteral("Follows the website theme while embedded")
+            : QStringLiteral("Select which app theme to display"),
         m_themeChoice));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::Brush, QStringLiteral("Accent color"),
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Brush, QStringLiteral("Accent color"),
         QStringLiteral("Choose the accent used by the Fluent interface"), m_accentControl));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::Play, QStringLiteral("Motion"),
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Play, QStringLiteral("Motion"),
         QStringLiteral("Choose full, reduced, or disabled interface motion"), m_motionChoice));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::Grid, QStringLiteral("3D Gallery"),
-        QStringLiteral("Add depth to navigation, pages and all Spatial examples."),
-        spatialControl));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::FavoriteStar, QStringLiteral("Home particle effects"),
-        QStringLiteral("Show animated particles in the home banner"), homeParticles));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::List, QStringLiteral("Navigation style"),
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Grid, QStringLiteral("3D Gallery"),
+        QStringLiteral("Add depth to navigation, pages and all Spatial examples."), spatialControl));
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::FavoriteStar,
+        QStringLiteral("Home particle effects"), QStringLiteral("Show animated particles in the home banner"),
+        homeParticles));
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::List, QStringLiteral("Navigation style"),
         QStringLiteral("Choose how the navigation pane is presented"), m_navigationChoice));
-    m_contentLayout->addWidget(
-        createSettingsRow(Typography::Icons::Grid, QStringLiteral("Window background effect"),
-                          QStringLiteral("Uses the system compositor when available, otherwise a "
-                                         "software Fluent material"),
-                          m_effectChoice));
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Grid, QStringLiteral("Window background effect"),
+        QStringLiteral(
+            "Uses the system compositor when available, otherwise a "
+            "software Fluent material"),
+        m_effectChoice));
     if (m_closeBehaviorChoice) {
         m_contentLayout->addSpacing(10);
         m_contentLayout->addWidget(createSectionTitle(QStringLiteral("App behavior")));
-        m_contentLayout->addWidget(
-            createSettingsRow(Typography::Icons::Power, QStringLiteral("Close button behavior"),
-                              QStringLiteral("Choose what happens when the main window is closed"),
-                              m_closeBehaviorChoice));
+        m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Power, QStringLiteral("Close button behavior"),
+            QStringLiteral("Choose what happens when the main window is closed"), m_closeBehaviorChoice));
     }
     m_contentLayout->addSpacing(10);
     m_contentLayout->addWidget(createSectionTitle(runtime.distributionSectionTitle));
     auto* updateControl = createUpdateCheckControl();
-    m_contentLayout->addWidget(new SettingsRow(
-        runtime.checksForUpdates ? Typography::Icons::Sync : Typography::Icons::Link,
-        runtime.distributionTitle, {}, updateControl, this, m_updateStatusLabel));
+    m_contentLayout->addWidget(
+        new SettingsRow(runtime.checksForUpdates ? Typography::Icons::Sync : Typography::Icons::Link,
+            runtime.distributionTitle, {}, updateControl, this, m_updateStatusLabel));
     m_contentLayout->addStretch(1);
 
     scrollArea->setWidget(m_viewport);
@@ -416,8 +390,7 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
 
     applyPalette();
     updateResponsiveLayout();
-    LOG_DEBUG(
-        QStringLiteral("SettingsPage created routeId=%1 title=%2").arg(m_routeId, item.title));
+    LOG_DEBUG(QStringLiteral("SettingsPage created routeId=%1 title=%2").arg(m_routeId, item.title));
 }
 
 void SettingsPage::onThemeUpdated()
@@ -442,8 +415,9 @@ void SettingsPage::applyPalette()
     currentPalette.setColor(QPalette::Window, Qt::transparent);
     currentPalette.setColor(QPalette::WindowText, colors.textPrimary);
     setPalette(currentPalette);
-    setStyleSheet(QStringLiteral("#gallerySettingsPage, #gallerySettingsViewport "
-                                 "{ background: transparent; }"));
+    setStyleSheet(QStringLiteral(
+        "#gallerySettingsPage, #gallerySettingsViewport "
+        "{ background: transparent; }"));
     if (m_viewport) {
         m_viewport->setPalette(currentPalette);
         m_viewport->setAutoFillBackground(false);
@@ -475,9 +449,8 @@ QWidget* SettingsPage::createSectionTitle(const QString& title)
     return label;
 }
 
-fluent::basicinput::ComboBox* SettingsPage::createChoiceBox(const QString& objectName,
-                                                            const QStringList& choices,
-                                                            int currentIndex)
+fluent::basicinput::ComboBox*
+SettingsPage::createChoiceBox(const QString& objectName, const QStringList& choices, int currentIndex)
 {
     auto* choice = new fluent::basicinput::ComboBox(this);
     choice->setObjectName(objectName);
@@ -505,9 +478,8 @@ QWidget* SettingsPage::createUpdateCheckControl()
     // zh_CN: 版本及更新状态作为行副标题，仅操作按钮占据尾部列。
     m_updateStatusLabel = new SecondaryLabel(
         QStringLiteral("Version %1 · %2")
-            .arg(m_updateChecker ? m_updateChecker->currentVersion()
-                                 : QCoreApplication::applicationVersion(),
-                 m_updateChecker ? m_updateChecker->platformLabel() : runtime.runtimeLabel),
+            .arg(m_updateChecker ? m_updateChecker->currentVersion() : QCoreApplication::applicationVersion(),
+                m_updateChecker ? m_updateChecker->platformLabel() : runtime.runtimeLabel),
         this);
     m_updateStatusLabel->setObjectName(QStringLiteral("gallerySettingsUpdateStatus"));
     m_updateStatusLabel->setToolTip(runtime.distributionDescription);
@@ -537,8 +509,7 @@ QWidget* SettingsPage::createUpdateCheckControl()
         m_updateButton->setText(QStringLiteral("Checking"));
         m_updateButton->setEnabled(false);
     });
-    connect(m_updateChecker, &UpdateChecker::checkFinished, this,
-            &SettingsPage::handleUpdateCheckFinished);
+    connect(m_updateChecker, &UpdateChecker::checkFinished, this, &SettingsPage::handleUpdateCheckFinished);
 
     layout->addWidget(m_updateButton, 0, Qt::AlignRight);
     return panel;
@@ -564,24 +535,21 @@ void SettingsPage::handleUpdateCheckFinished(const UpdateChecker::Result& result
     switch (result.status) {
     case UpdateChecker::Result::Status::UpdateAvailable:
         m_updateActionUrl = result.assetUrl.isValid() ? result.assetUrl : result.releaseUrl;
-        m_updateStatusLabel->setText(
-            result.assetUrl.isValid()
+        m_updateStatusLabel->setText(result.assetUrl.isValid()
                 ? QStringLiteral("Version %1 available · %2")
                       .arg(result.latestVersion, m_updateChecker->platformLabel())
                 : QStringLiteral("Version %1 available").arg(result.latestVersion));
         m_updateButton->setFluentStyle(fluent::basicinput::Button::Accent);
-        m_updateButton->setText(result.assetUrl.isValid() ? QStringLiteral("Download")
-                                                          : QStringLiteral("Open release"));
-        m_updateButton->setIconGlyph(result.assetUrl.isValid() ? Typography::Icons::Download
-                                                               : Typography::Icons::Link,
-                                     Typography::IconSize::Standard);
+        m_updateButton->setText(
+            result.assetUrl.isValid() ? QStringLiteral("Download") : QStringLiteral("Open release"));
+        m_updateButton->setIconGlyph(result.assetUrl.isValid() ? Typography::Icons::Download : Typography::Icons::Link,
+            Typography::IconSize::Standard);
         if (m_updateActionUrl.isValid())
             m_updateButton->setToolTip(m_updateActionUrl.toString());
         break;
     case UpdateChecker::Result::Status::UpToDate:
         m_updateActionUrl = QUrl();
-        m_updateStatusLabel->setText(
-            QStringLiteral("Latest version %1").arg(result.currentVersion));
+        m_updateStatusLabel->setText(QStringLiteral("Latest version %1").arg(result.currentVersion));
         m_updateButton->setFluentStyle(fluent::basicinput::Button::Standard);
         m_updateButton->setText(QStringLiteral("Check again"));
         m_updateButton->setIconGlyph(Typography::Icons::Refresh, Typography::IconSize::Standard);
@@ -609,8 +577,8 @@ void SettingsPage::openUpdateTarget()
     }
 }
 
-QWidget* SettingsPage::createSettingsRow(const QString& icon, const QString& title,
-                                         const QString& subtitle, QWidget* trailing)
+QWidget*
+SettingsPage::createSettingsRow(const QString& icon, const QString& title, const QString& subtitle, QWidget* trailing)
 {
     return new SettingsRow(icon, title, subtitle, trailing, this);
 }
