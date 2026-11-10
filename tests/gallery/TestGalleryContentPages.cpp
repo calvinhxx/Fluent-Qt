@@ -1,5 +1,9 @@
 #include <gtest/gtest.h>
 
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+#include <FluentQt/QmlBridge.h>
+#endif
+
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -324,6 +328,18 @@ template <typename PageType> PageType* waitForCurrentPage(GalleryWindow& window,
 
 class GalleryContentPagesTest : public ::testing::Test {
 protected:
+    static void SetUpTestSuite()
+    {
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+        // Route sweeps create Quick surfaces without the Gallery application entry point.
+        // Match its default shared OpenGL backend before the first QML page is built.
+        // zh_CN: 路由遍历绕过 Gallery 应用入口；创建首个 QML 页面前选择相同的默认共享 OpenGL 后端。
+        fluent::qmlbridge::QmlSession::prepareApplication();
+        ASSERT_TRUE(
+            fluent::qmlbridge::QmlSession::isGraphicsApiCompatible(fluent::qmlbridge::QmlSession::GraphicsApi::OpenGL));
+#endif
+    }
+
     void SetUp() override { fluent::FluentElement::setTheme(fluent::FluentElement::Light); }
 
     void TearDown() override { fluent::FluentElement::setTheme(fluent::FluentElement::Light); }
