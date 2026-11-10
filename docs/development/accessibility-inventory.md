@@ -631,6 +631,13 @@ and native background updates retain the window, geometry, alpha format and focu
 Hidden native-surface preparation also preserves the caller's requested geometry
 when configuring the title bar, so first-show navigation and focus targets use the
 intended window size. The Windows native window regression covers this ordering.
+On Windows 11, the existing maximize/restore control also advertises the native
+Snap Layouts hit target. Its accessible name, role and action remain those of
+the same Fluent button. The Windows adapter returns pointer interactions to
+that button and cancels capture safely when it is blocked or destroyed.
+`WindowsSnapLayoutTest` covers hit geometry, modal occlusion, single-action
+clicks and capture cleanup; shell flyout visibility and layout selection require
+the separate native desktop check.
 The low-DPI text adapter reports only its actual backend's paint capabilities,
 so focused native editors do not request unsupported XOR caret drawing in 3D.
 Automated input checks cover text fields, editable ComboBox and collection-cell

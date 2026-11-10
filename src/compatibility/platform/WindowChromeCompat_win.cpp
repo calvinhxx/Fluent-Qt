@@ -11,6 +11,8 @@
 
 #include <QtMath>
 #include <QGuiApplication>
+#include <QEnterEvent>
+#include <QMouseEvent>
 #include <QResizeEvent>
 #include <QVariant>
 #include <QWindow>
@@ -305,6 +307,222 @@ QPoint logicalClientPointForNativeScreenPoint(QWidget* window, HWND hwnd, const 
     return QPoint(qFloor(static_cast<qreal>(nativeClientPoint.x) * logicalSize.width() / nativeWidth),
         qFloor(static_cast<qreal>(nativeClientPoint.y) * logicalSize.height() / nativeHeight));
 }
+
+// Windows routes HTMAXBUTTON input through the non-client path. Translate it
+// back to the borrowed Qt button so its existing command, signals and painting
+// remain authoritative, while native hover messages still reach the shell.
+// zh_CN: Windows 将 HTMAXBUTTON 输入送入非客户区；转交借用的 Qt 按钮以保留原有命令、
+// 信号和绘制，同时让原生悬停消息继续到达系统 Snap Layouts。
+class WindowsCaptionButtonState final : public QObject {
+public:
+    explicit WindowsCaptionButtonState(QWidget* window) : QObject(window), m_window(window)
+    {
+        window->installEventFilter(this);
+    }
+
+    ~WindowsCaptionButtonState() override
+    {
+        const HWND capture = m_capture;
+        m_capture = nullptr;
+        m_pressed = false;
+        m_button.clear();
+        m_window.clear();
+        if (capture && GetCapture() == capture)
+            ReleaseCapture();
+    }
+
+    static WindowsCaptionButtonState* find(QWidget* window)
+    {
+        for (QObject* child : window->children()) {
+            if (auto* state = dynamic_cast<WindowsCaptionButtonState*>(child))
+                return state;
+        }
+        return nullptr;
+    }
+
+    static bool supported()
+    {
+        static const auto version = currentWindowsVersion();
+        return platformProvidesHwnd() && version.valid
+            && (version.major > 10 || (version.major == 10 && version.build >= 22000));
+    }
+
+    void configure(const WindowChromeOptions& options)
+    {
+        const QPointer<WindowsCaptionButtonState> guard(this);
+        if (m_button != options.maximizeButton) {
+            cancel();
+            if (!guard)
+                return;
+            if (m_button)
+                m_button->removeEventFilter(this);
+            QObject::disconnect(m_buttonDestroyed);
+            m_button = options.maximizeButton;
+            if (m_button) {
+                m_button->installEventFilter(this);
+                m_buttonDestroyed = connect(m_button, &QObject::destroyed, this, [this] { cancel(); });
+            }
+        }
+        m_interactive = options.useCustomWindowChrome && options.chromeInteractive;
+        if (!eligible())
+            cancel();
+    }
+
+    bool contains(const QPoint& point) const
+    {
+        if (!eligible() || !QRect(m_button->mapTo(m_window, QPoint()), m_button->size()).contains(point))
+            return false;
+        const auto* target = m_window->childAt(point);
+        return target == m_button || (target && m_button->isAncestorOf(target));
+    }
+
+    bool handle(MSG* message, FluentNativeEventResult* result)
+    {
+        const UINT type = message->message;
+        if (type == WM_CANCELMODE || type == WM_NCDESTROY || (type == WM_CAPTURECHANGED && m_pressed)) {
+            cancel();
+            return false;
+        }
+        if (type == WM_NCMOUSELEAVE && !m_pressed) {
+            const QPointer<WindowsCaptionButtonState> guard(this);
+            setHovered(false, QPoint());
+            return !guard;
+        }
+        const bool clientMove = type == WM_MOUSEMOVE && m_pressed;
+        const bool clientRelease = type == WM_LBUTTONUP && m_pressed;
+        if (type != WM_NCMOUSEMOVE && type != WM_NCLBUTTONDOWN && type != WM_NCLBUTTONDBLCLK && type != WM_NCLBUTTONUP
+            && !clientMove && !clientRelease)
+            return false;
+
+        POINT position = {GET_X_LPARAM(message->lParam), GET_Y_LPARAM(message->lParam)};
+        if (clientMove || clientRelease)
+            ClientToScreen(message->hwnd, &position);
+        const QPoint local = logicalClientPointForNativeScreenPoint(m_window, message->hwnd,
+            QPoint(position.x, position.y));
+        const bool inside = contains(local)
+            && (clientMove || clientRelease || m_pressed || message->wParam == HTMAXBUTTON);
+        const QPointer<WindowsCaptionButtonState> guard(this);
+        *result = 0;
+        if (type == WM_NCMOUSEMOVE || clientMove) {
+            setHovered(inside, local);
+            if (!guard)
+                return true;
+            if (m_pressed) {
+                sendMouse(QEvent::MouseMove, local, Qt::NoButton, Qt::LeftButton, message->time);
+                return true;
+            }
+            if (inside) {
+                TRACKMOUSEEVENT tracking = {sizeof(TRACKMOUSEEVENT), TME_LEAVE | TME_NONCLIENT, message->hwnd, 0};
+                TrackMouseEvent(&tracking);
+            }
+            return false;
+        }
+        if ((type == WM_NCLBUTTONDOWN || type == WM_NCLBUTTONDBLCLK) && message->wParam == HTMAXBUTTON && inside) {
+            m_pressed = true;
+            m_capture = message->hwnd;
+            SetCapture(m_capture);
+            if (!guard)
+                return true;
+            setHovered(true, local);
+            if (guard)
+                sendMouse(QEvent::MouseButtonPress, local, Qt::LeftButton, Qt::LeftButton, message->time);
+            return true;
+        }
+        if ((type == WM_NCLBUTTONUP || clientRelease) && m_pressed) {
+            m_pressed = false;
+            const HWND capture = m_capture;
+            m_capture = nullptr;
+            if (GetCapture() == capture)
+                ReleaseCapture();
+            if (!guard)
+                return true;
+            setHovered(inside, local);
+            if (guard && m_button) {
+                if (!inside)
+                    m_button->setDown(false);
+                sendMouse(QEvent::MouseButtonRelease, local, Qt::LeftButton, Qt::NoButton, message->time);
+            }
+            return true;
+        }
+        return false;
+    }
+
+protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+        if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate
+            || (event->type() == QEvent::EnabledChange && !eligible())
+            || (object == m_window && event->type() == QEvent::WindowStateChange)) {
+            const QPointer<QObject> guard(object);
+            cancel();
+            return !guard;
+        }
+        return false;
+    }
+
+private:
+    bool eligible() const
+    {
+        return m_interactive && m_window && m_button && m_window->isVisible() && m_window->isEnabled()
+            && !m_window->isFullScreen() && m_window->isAncestorOf(m_button) && m_button->window() == m_window
+            && m_button->isVisibleTo(m_window) && m_button->isEnabled()
+            && m_window->minimumWidth() < m_window->maximumWidth()
+            && m_window->minimumHeight() < m_window->maximumHeight();
+    }
+
+    void sendMouse(QEvent::Type type, const QPoint& point, Qt::MouseButton button, Qt::MouseButtons buttons, DWORD time)
+    {
+        if (!m_button || !m_window)
+            return;
+        const QPoint local = m_button->mapFrom(m_window, point);
+        QMouseEvent event(type, QPointF(local), QPointF(point), QPointF(m_window->mapToGlobal(point)), button, buttons,
+            QGuiApplication::queryKeyboardModifiers());
+        event.setTimestamp(time);
+        QCoreApplication::sendEvent(m_button, &event);
+    }
+
+    void setHovered(bool hovered, const QPoint& point)
+    {
+        if (m_hovered == hovered)
+            return;
+        m_hovered = hovered;
+        if (!m_button || !m_window)
+            return;
+        m_button->setAttribute(Qt::WA_UnderMouse, hovered);
+        m_button->update();
+        if (hovered) {
+            QEnterEvent event(QPointF(m_button->mapFrom(m_window, point)), QPointF(point),
+                QPointF(m_window->mapToGlobal(point)));
+            QCoreApplication::sendEvent(m_button, &event);
+        } else {
+            QEvent event(QEvent::Leave);
+            QCoreApplication::sendEvent(m_button, &event);
+        }
+    }
+
+    void cancel()
+    {
+        m_pressed = false;
+        const HWND capture = m_capture;
+        m_capture = nullptr;
+        const QPointer<WindowsCaptionButtonState> guard(this);
+        if (capture && GetCapture() == capture)
+            ReleaseCapture();
+        if (!guard)
+            return;
+        if (m_button)
+            m_button->setDown(false);
+        setHovered(false, QPoint());
+    }
+
+    QPointer<QWidget> m_window;
+    QPointer<QAbstractButton> m_button;
+    QMetaObject::Connection m_buttonDestroyed;
+    HWND m_capture = nullptr;
+    bool m_interactive = false;
+    bool m_hovered = false;
+    bool m_pressed = false;
+};
 
 bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result)
 {
@@ -615,6 +833,15 @@ bool handlePlatformNativeEvent(QWidget* window,
     if (!options.useCustomWindowChrome)
         return false;
 
+    if (auto* caption = WindowsCaptionButtonState::find(window)) {
+        const QPointer<QWidget> guard(window);
+        const bool handled = caption->handle(msg, result);
+        if (!guard)
+            *result = 0;
+        if (handled || !guard)
+            return true;
+    }
+
     // A native handle/state transition in Qt 5 or Qt 6.2 may restore Qt's
     // default Win32 style after the window was shown. Repair the resize style
     // at the point of use as a final guard; ensureDwmChromeStyle is a no-op when
@@ -672,16 +899,18 @@ bool handlePlatformNativeEvent(QWidget* window,
     if (msg->message != WM_NCHITTEST)
         return false;
 
-    // Our own Fluent caption buttons live in the client area (added to the title bar's drag
-    // exclusions), so classifyHitTest returns HTCLIENT over them and they receive clicks
-    // normally — no DWM button hit-testing needed (the native glass buttons are suppressed).
-    // zh_CN: 自绘 Fluent 标题栏按钮位于客户区（已加入标题栏拖拽排除区），classifyHitTest 在其上返回
-    // HTCLIENT，按钮正常收到点击——无需 DWM 按钮命中测试（原生玻璃按钮已抑制）。
     const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
     const QPoint localPos = logicalClientPointForNativeScreenPoint(window, msg->hwnd, globalPos);
     // Convert the repository-level hit-test result to the native HT* code expected by Windows.
     // zh_CN: 将项目内逻辑命中结果转换为 Windows 期望的原生 HT* code。
     const auto hitTest = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);
+
+    if (hitTest == WindowChromeCompat::HitTest::Client) {
+        if (auto* caption = WindowsCaptionButtonState::find(window); caption && caption->contains(localPos)) {
+            *result = HTMAXBUTTON;
+            return true;
+        }
+    }
 
     *result = static_cast<FluentNativeEventResult>(toNativeHitTest(hitTest));
     return true;
@@ -797,6 +1026,18 @@ bool restorePlatformMaximizedFrame(QWidget* window)
 
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options)
 {
+    if (!window)
+        return;
+    if (WindowsCaptionButtonState::supported()) {
+        auto* caption = WindowsCaptionButtonState::find(window);
+        if (!caption && options.useCustomWindowChrome && options.maximizeButton)
+            caption = new WindowsCaptionButtonState(window);
+        const QPointer<QWidget> guard(window);
+        if (caption)
+            caption->configure(options);
+        if (!guard)
+            return;
+    }
     if (!options.useCustomWindowChrome)
         return;
 
