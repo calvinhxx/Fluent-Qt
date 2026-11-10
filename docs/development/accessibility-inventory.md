@@ -47,6 +47,12 @@ and TextEdit are covered by `InputTextInsetsTest`. Prefix icons, tags and picker
 segments retain their own reserved space. These painting changes preserve native
 editing, selection, ownership, accessible names and hit targets.
 
+Setting LineEdit's `focusedBorderWidth` or `unfocusedBorderWidth` to zero
+suppresses the underline in the corresponding state. The shared input-frame
+painter draws the background and rounded outline separately from that underline.
+`LineEditTest.Contract_ZeroBorderWidthOmitsUnderlineWithoutPaintingTopEdge`
+covers both focus states in Light and Dark at integer and fractional pixel ratios.
+
 LineEdit and its derived fields, plus both ComboBox editing modes, support one
 logical trailing text or widget slot. Suffix text is a non-focusable label and
 does not enter the editor value, selection, validation or clipboard text. Custom
