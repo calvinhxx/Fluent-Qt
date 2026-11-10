@@ -2,6 +2,83 @@
   "schema_version": 2,
   "versions": [
     {
+      "version": "1.11.4",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "b50e4acac4801165b375424130380f34d67d07ef85e0ca4c5c4d6f4e53d59f48",
+      "groups": [
+        {
+          "scope": "uilib",
+          "related": [
+            "window",
+            "line-edit",
+            "auto-suggest-box",
+            "number-box",
+            "password-box",
+            "tag-input",
+            "toast"
+          ],
+          "headers": [
+            "src/utils/DiagnosticSession.h"
+          ],
+          "changes": [
+            {
+              "en": "`DiagnosticSession` records recent UI events and widget snapshots into an in-memory ZIP archive.",
+              "zh": "新增 `DiagnosticSession`，将近期交互事件与控件快照打包为内存 ZIP。"
+            },
+            {
+              "en": "Hover over the maximize button on a resizable `Window` to use Windows 11 Snap Layouts.",
+              "zh": "在 Windows 11 上，将鼠标悬停于可调整大小的 `Window` 最大化按钮，可打开系统分屏菜单。"
+            },
+            {
+              "en": "Text fields share `LineEdit` frame settings. The unfocused underline defaults to zero width, and zero-width borders no longer paint a hairline.",
+              "zh": "输入框共用 `LineEdit` 边框设置。未聚焦时默认不画底边，边框宽度设为零时也不再残留细线。"
+            },
+            {
+              "en": "`Toast` fixes action-widget ownership and layout in narrow windows.",
+              "zh": "修复 `Toast` 操作控件的生命周期和窄窗口布局。"
+            }
+          ],
+          "migrations": [],
+          "summary": {
+            "en": "Diagnostic reports, Windows 11 Snap Layouts and shared text-field frame settings.",
+            "zh": "新增诊断报告和 Windows 11 分屏菜单，统一输入框边框设置。"
+          }
+        },
+        {
+          "scope": "gallery",
+          "related": [],
+          "headers": [],
+          "changes": [
+            {
+              "en": "Desktop Gallery's Report a problem copies a diagnostic ZIP, including matching local crash reports, to the clipboard. Choose Open GitHub issue in the notification to open GitHub.",
+              "zh": "桌面版 Gallery 的“反馈问题”会将诊断包（含匹配的本地崩溃报告）复制到剪贴板。在提示中点击“Open GitHub issue”后才打开 GitHub。"
+            },
+            {
+              "en": "WebAssembly Gallery downloads the diagnostic ZIP for attachment to an issue.",
+              "zh": "WebAssembly Gallery 下载诊断 ZIP，供用户附加到议题。"
+            }
+          ],
+          "migrations": [],
+          "summary": {
+            "en": "Report Gallery problems with a ZIP of recent diagnostics.",
+            "zh": "通过诊断 ZIP 向 GitHub 反馈 Gallery 问题。"
+          }
+        },
+        {
+          "scope": "project",
+          "summary": {
+            "en": "Website release history separates UILib and Gallery updates, with scope filters and stable version and migration links.",
+            "zh": "官网版本记录分别展示 UILib 和 Gallery 更新，支持范围筛选及版本、迁移直达链接。"
+          },
+          "related": [],
+          "headers": [],
+          "changes": [],
+          "migrations": []
+        }
+      ]
+    },
+    {
       "version": "1.11.3",
       "status": "published",
       "published_at": "2026-11-08T17:24:53Z",
@@ -1329,33 +1406,6 @@
   ],
   "unreleased": {
     "after": "1.11.3",
-    "groups": [
-      {
-        "scope": "uilib",
-        "related": [],
-        "headers": [
-          "src/utils/DiagnosticSession.h"
-        ],
-        "changes": [
-          {
-            "en": "`DiagnosticSession` records recent UI events and widget snapshots into an in-memory ZIP archive.",
-            "zh": "新增 `DiagnosticSession`，将近期交互事件与控件快照打包为内存 ZIP。"
-          }
-        ],
-        "migrations": []
-      },
-      {
-        "scope": "gallery",
-        "related": [],
-        "headers": [],
-        "changes": [
-          {
-            "en": "Desktop Gallery's Report a problem copies a diagnostic ZIP, including matching local crash reports, to the clipboard. Choose Open GitHub issue in the notification to open GitHub.",
-            "zh": "桌面版 Gallery 的“反馈问题”会将诊断包（含匹配的本地崩溃报告）复制到剪贴板。在提示中点击“Open GitHub issue”后才打开 GitHub。"
-          }
-        ],
-        "migrations": []
-      }
-    ]
+    "groups": []
   }
 }
