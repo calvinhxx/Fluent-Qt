@@ -5,6 +5,7 @@
 #include <QLineEdit>
 #include <QMargins>
 #include <QPoint>
+#include <QRectF>
 #include <QString>
 #include <memory>
 #include "components/foundation/FluentElement.h"
@@ -78,8 +79,8 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
         WRITE setFocusedBorderWidth
         NOTIFY focusedBorderWidthChanged)
     /**
-     * @brief Bottom border width while not focused.
-     * zh_CN: 未聚焦时底部边框宽度。
+     * @brief Bottom border width while not focused; defaults to zero (no underline).
+     * zh_CN: 未聚焦时底部边框宽度，默认零表示不绘制下划线。
      */
     Q_PROPERTY(int unfocusedBorderWidth
         READ unfocusedBorderWidth
@@ -187,6 +188,14 @@ protected:
     /** @brief Paints the input surface when frameVisible is enabled.
      * zh_CN: frameVisible 启用时绘制输入表面，派生输入框可复用同一开关。 */
     virtual void paintFrame(QPainter& painter);
+    /** @brief Paints custom input bounds using inherited frame widths and theme tokens.
+     * zh_CN: 为自定义输入区域绘制边框，统一使用继承的线宽配置与主题令牌。 */
+    void paintInputFrame(QPainter& painter,
+        const QRectF& bounds,
+        bool focused,
+        bool hovered,
+        bool pressed = false,
+        bool invalid = false);
     virtual QRect trailingContentBounds() const { return rect(); }
     virtual void trailingContentGeometryChanged();
     int trailingContentWidth() const { return m_trailingContentWidth; }
@@ -212,7 +221,7 @@ private:
     int m_clearButtonSize = 24;
     QPoint m_clearButtonOffset = QPoint(::Spacing::XSmall, 0);
     int m_focusedBorderWidth = ::Spacing::Border::Focused;
-    int m_unfocusedBorderWidth = ::Spacing::Border::Normal;
+    int m_unfocusedBorderWidth = 0;
     bool m_frameVisible = true;
     bool m_isHovered = false;
     bool m_isFocused = false;

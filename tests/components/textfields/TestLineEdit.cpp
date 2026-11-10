@@ -3,6 +3,7 @@
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/MultiSelectComboBox.h"
+#include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/NumberBox.h"
 #include "components/textfields/PasswordBox.h"
 #include "components/textfields/TagInput.h"
@@ -555,7 +556,7 @@ TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters)
     EXPECT_EQ(edit->clearButtonSize(), 24);
     EXPECT_EQ(edit->clearButtonOffset(), QPoint(Spacing::XSmall, 0));
     EXPECT_EQ(edit->focusedBorderWidth(), Spacing::Border::Focused);
-    EXPECT_EQ(edit->unfocusedBorderWidth(), Spacing::Border::Normal);
+    EXPECT_EQ(edit->unfocusedBorderWidth(), 0);
     EXPECT_EQ(edit->fontRole(), Typography::FontRole::Body);
 
     QSignalSpy spyOffset(edit, SIGNAL(clearButtonOffsetChanged()));
@@ -588,6 +589,8 @@ TEST_F(LineEditTest, Contract_ZeroBorderWidthOmitsUnderlineWithoutPaintingTopEdg
     LineEdit edit(window);
     edit.setGeometry(20, 20, 240, 40);
     edit.setClearButtonEnabled(false);
+    const int defaultFocusedWidth = edit.focusedBorderWidth();
+    const int defaultUnfocusedWidth = edit.unfocusedBorderWidth();
     window->show();
     window->activateWindow();
     QApplication::processEvents();
@@ -614,6 +617,17 @@ TEST_F(LineEditTest, Contract_ZeroBorderWidthOmitsUnderlineWithoutPaintingTopEdg
                     edit.render(&painter);
                     return image;
                 };
+                edit.setFocusedBorderWidth(defaultFocusedWidth);
+                edit.setUnfocusedBorderWidth(defaultUnfocusedWidth);
+                const QImage defaultFrame = render();
+                const int middle = defaultFrame.width() / 2;
+                if (focused)
+                    EXPECT_NE(defaultFrame.pixelColor(middle, 0),
+                        defaultFrame.pixelColor(middle, defaultFrame.height() - 1));
+                else
+                    EXPECT_EQ(defaultFrame.pixelColor(middle, 0),
+                        defaultFrame.pixelColor(middle, defaultFrame.height() - 1));
+
                 edit.setFocusedBorderWidth(2);
                 edit.setUnfocusedBorderWidth(2);
                 const QImage visible = render();
@@ -628,6 +642,86 @@ TEST_F(LineEditTest, Contract_ZeroBorderWidthOmitsUnderlineWithoutPaintingTopEdg
                 EXPECT_EQ(hidden.pixelColor(x, bottom), visible.pixelColor(x, 0));
                 EXPECT_NE(hidden.pixelColor(x, bottom), visible.pixelColor(x, bottom));
                 EXPECT_EQ(hidden.pixelColor(x, hidden.height() / 2), visible.pixelColor(x, visible.height() / 2));
+            }
+        }
+    }
+}
+
+TEST_F(LineEditTest, Contract_DerivedInputsHonorInheritedFrameConfiguration)
+{
+    LineEdit reference(window);
+    const QVector<LineEdit*> inputs{new AutoSuggestBox(window), new NumberBox(window), new PasswordBox(window),
+        new TagInput(window)};
+    for (auto* input : inputs)
+        input->hide();
+    reference.hide();
+    window->show();
+    window->activateWindow();
+    QTest::mouseMove(window, QPoint(1, 1));
+    QApplication::processEvents();
+
+    for (auto* input : inputs) {
+        SCOPED_TRACE(input->metaObject()->className());
+        EXPECT_TRUE(input->isFrameVisible());
+        EXPECT_EQ(input->unfocusedBorderWidth(), 0);
+        EXPECT_EQ(input->focusedBorderWidth(), Spacing::Border::Focused);
+        const int inputHeight = input->sizeHint().height();
+        for (bool header : {false, true}) {
+            SCOPED_TRACE(header);
+            const QString text = header ? QStringLiteral("Input header") : QString();
+            if (auto* suggest = qobject_cast<AutoSuggestBox*>(input))
+                suggest->setHeader(text);
+            else if (auto* number = qobject_cast<NumberBox*>(input))
+                number->setHeader(text);
+            else if (auto* password = qobject_cast<PasswordBox*>(input))
+                password->setHeader(text);
+            input->setGeometry(20, 20, 240, input->sizeHint().height());
+            reference.setGeometry(20, 20, 240, inputHeight);
+
+            for (auto theme : {FluentElement::Light, FluentElement::Dark}) {
+                SCOPED_TRACE(static_cast<int>(theme));
+                for (auto* edit : {&reference, input})
+                    edit->setProperty("fluentThemeOverride", static_cast<int>(theme));
+                for (bool focused : {false, true}) {
+                    SCOPED_TRACE(focused);
+                    for (const auto widths : {QPair<int, int>{0, 2}, {3, 4}, {0, 0}}) {
+                        SCOPED_TRACE(::testing::Message() << widths.first << "/" << widths.second);
+                        for (bool frameVisible : {true, false}) {
+                            SCOPED_TRACE(frameVisible);
+                            for (qreal dpr : {1.0, 1.5, 2.0}) {
+                                SCOPED_TRACE(dpr);
+                                const auto render = [&](LineEdit* edit) {
+                                    edit->setUnfocusedBorderWidth(widths.first);
+                                    edit->setFocusedBorderWidth(widths.second);
+                                    edit->setFrameVisible(frameVisible);
+                                    edit->show();
+                                    edit->setFocus(Qt::OtherFocusReason);
+                                    if (!focused)
+                                        edit->clearFocus();
+                                    QApplication::processEvents();
+                                    EXPECT_EQ(edit->hasFocus(), focused);
+                                    QImage image(qRound(edit->width() * dpr), qRound(edit->height() * dpr),
+                                        QImage::Format_ARGB32_Premultiplied);
+                                    image.setDevicePixelRatio(dpr);
+                                    image.fill(Qt::transparent);
+                                    QPainter painter(&image);
+                                    edit->render(&painter);
+                                    edit->hide();
+                                    return image;
+                                };
+                                const QImage expected = render(&reference);
+                                const QImage actual = render(input);
+                                const int x = actual.width() / 2;
+                                const int top = actual.height() - expected.height();
+                                for (int offset = 0; offset < qRound(5 * dpr); ++offset) {
+                                    EXPECT_EQ(actual.pixelColor(x, top + offset), expected.pixelColor(x, offset));
+                                    EXPECT_EQ(actual.pixelColor(x, actual.height() - 1 - offset),
+                                        expected.pixelColor(x, expected.height() - 1 - offset));
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

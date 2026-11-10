@@ -276,15 +276,22 @@ void LineEdit::trailingContentGeometryChanged() {}
 
 void LineEdit::paintFrame(QPainter& painter)
 {
+    paintInputFrame(painter, QRectF(rect()), m_isFocused, m_isHovered);
+}
+
+void LineEdit::
+    paintInputFrame(QPainter& painter, const QRectF& bounds, bool focused, bool hovered, bool pressed, bool invalid)
+{
     ::fluent::detail::TextInputFrameState state;
     state.enabled = isEnabled();
     state.readOnly = isReadOnly();
-    state.focused = m_isFocused;
-    state.hovered = m_isHovered;
-    state.pressed = false;
+    state.focused = focused;
+    state.hovered = hovered;
+    state.pressed = pressed;
+    state.invalid = invalid;
     state.normalWidth = m_unfocusedBorderWidth;
     state.focusedWidth = m_focusedBorderWidth;
-    ::fluent::detail::paintTextInputFrame(painter, QRectF(rect()), themeColorsRef(), themeRadius().control, state);
+    ::fluent::detail::paintTextInputFrame(painter, bounds, themeColorsRef(), themeRadius().control, state);
 }
 
 void LineEdit::enterEvent(FluentEnterEvent* event)

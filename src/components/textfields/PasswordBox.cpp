@@ -7,7 +7,6 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
-#include <QPainterPath>
 #include <QResizeEvent>
 #include "components/basicinput/Button.h"
 
@@ -20,7 +19,6 @@ PasswordBox::PasswordBox(QWidget* parent) : LineEdit(parent)
 {
     setAttribute(Qt::WA_Hover);
     setClearButtonEnabled(false);
-    setFrameVisible(false);
     setEchoMode(QLineEdit::Password);
     setFixedHeight(totalPreferredHeight());
 
@@ -102,7 +100,6 @@ void PasswordBox::paintEvent(QPaintEvent* event)
         painter.setRenderHint(QPainter::Antialiasing);
         if (!m_header.isEmpty())
             paintHeader(painter);
-        paintInputFrame(painter);
     }
     LineEdit::paintEvent(event);
 }
@@ -341,63 +338,9 @@ bool PasswordBox::canPeekReveal() const
     return isEnabled() && !isReadOnly() && !text().isEmpty();
 }
 
-void PasswordBox::paintInputFrame(QPainter& painter)
+void PasswordBox::paintFrame(QPainter& painter)
 {
-    const auto& colors = themeColorsRef();
-    const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
-
-    QColor bgColor;
-    QColor borderColor;
-    QColor bottomColor;
-    int bottomWidth = ::Spacing::Border::Normal;
-
-    if (!isEnabled()) {
-        bgColor = colors.controlDisabled;
-        borderColor = colors.strokeDivider;
-        bottomColor = borderColor;
-    } else if (isReadOnly()) {
-        bgColor = colors.controlAltSecondary;
-        borderColor = colors.strokeDefault;
-        bottomColor = colors.strokeDivider;
-    } else if (m_focused) {
-        bgColor = effectiveThemeUsesDarkAppearance() ? colors.bgSolid : colors.controlDefault;
-        borderColor = colors.strokeSecondary;
-        bottomColor = colors.accentDefault;
-        bottomWidth = ::Spacing::Border::Focused;
-    } else if (m_pressed) {
-        bgColor = colors.controlTertiary;
-        borderColor = colors.strokeSecondary;
-        bottomColor = colors.strokeSecondary;
-    } else if (m_hovered) {
-        bgColor = colors.controlSecondary;
-        borderColor = colors.strokeSecondary;
-        bottomColor = colors.strokeSecondary;
-    } else {
-        bgColor = colors.controlDefault;
-        borderColor = colors.strokeDefault;
-        bottomColor = colors.strokeDivider;
-    }
-
-    const qreal radius = themeRadius().control;
-    QPainterPath framePath;
-    framePath.addRoundedRect(frameRect, radius, radius);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(bgColor);
-    painter.drawPath(framePath);
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(borderColor, 1));
-    painter.drawPath(framePath);
-
-    if (isEnabled() && !isReadOnly()) {
-        QPen bottomPen(bottomColor, bottomWidth);
-        bottomPen.setCapStyle(Qt::RoundCap);
-        painter.setPen(bottomPen);
-        const qreal bottomY = frameRect.bottom() - (bottomWidth > 1 ? (bottomWidth - 1) / 2.0 : 0);
-        QPainterPath bottomPath;
-        bottomPath.moveTo(frameRect.left() + radius, bottomY);
-        bottomPath.lineTo(frameRect.right() - radius, bottomY);
-        painter.drawPath(bottomPath);
-    }
+    LineEdit::paintInputFrame(painter, QRectF(inputRect()), m_focused, m_hovered, m_pressed);
 }
 
 void PasswordBox::paintHeader(QPainter& painter)
