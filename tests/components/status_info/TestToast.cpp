@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QLayout>
 #include <QGraphicsOpacityEffect>
 #include <QPointer>
 #include <QPropertyAnimation>
@@ -726,12 +727,16 @@ TEST(ToastTest, Contract_HoverPausePreservesRemainingDuration)
 
     Toast toast(&host);
     toast.setMessage(QStringLiteral("Hover to inspect"));
-    toast.setDuration(90);
+    toast.setDuration(0);
     toast.setAnimationEnabled(false);
     toast.setPauseOnHoverEnabled(true);
     ASSERT_FALSE(toast.testAttribute(Qt::WA_TransparentForMouseEvents));
     ASSERT_TRUE(toast.present(&host));
 
+    // Finish initial native painting before starting the short hover timeout.
+    // zh_CN: 原生窗口首次绘制完成后再启动短超时，避免绘制耗时吞掉悬停阶段。
+    QTest::qWait(20);
+    toast.setDuration(90);
     QTest::qWait(20);
     FLUENT_MAKE_ENTER_EVENT(enter, 4, 4);
     QCoreApplication::sendEvent(&toast, &enter);
@@ -920,4 +925,44 @@ TEST(ToastTest, Contract_StackOffsetsFollowPlacementDirection)
     EXPECT_EQ(bottomACard.left(), surface.left() + 16);
     EXPECT_EQ(bottomBCard.left(), surface.left() + 16);
     EXPECT_GT(bottomACard.bottom(), bottomBCard.bottom());
+}
+
+TEST(ToastTest, Contract_ToastOwnedActionDoesNotAccessDestroyedChildren)
+{
+    QWidget host;
+    auto* toast = new Toast(&host);
+    auto* action = new QAction(QStringLiteral("Show file"), toast);
+    toast->setAction(action);
+    QPointer<QAction> actionGuard(action);
+    QPointer<Toast> toastGuard(toast);
+    delete toast;
+    EXPECT_TRUE(toastGuard.isNull());
+    EXPECT_TRUE(actionGuard.isNull());
+}
+
+TEST(ToastTest, Contract_WidgetWidthLimitConstrainsTheCardAndWrappedAction)
+{
+    QWidget host;
+    host.resize(640, 400);
+    host.show();
+    Toast toast;
+    const auto shadow = toast.layout()->contentsMargins();
+    toast.setMaximumWidth(300 + shadow.left() + shadow.right());
+    toast.setTitle(QStringLiteral("Copied to clipboard"));
+    toast.setMessage(QStringLiteral("Paste the diagnostic ZIP into your issue."));
+    toast.setClosable(true);
+    toast.setAnimationEnabled(false);
+    QAction action(QStringLiteral("Open the issue and attach the diagnostic report"), &host);
+    toast.setAction(&action);
+    ASSERT_TRUE(toast.present(&host));
+    auto* card = toast.findChild<QWidget*>(QStringLiteral("fluentToastCard"));
+    auto* button = toast.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentToastAction"));
+    ASSERT_NE(card, nullptr);
+    ASSERT_NE(button, nullptr);
+    EXPECT_LE(card->width(), 300);
+    EXPECT_TRUE(card->rect().contains(QRect(button->mapTo(card, QPoint()), button->size())));
+    host.resize(260, 400);
+    QTest::qWait(30);
+    EXPECT_LE(card->width(), 228);
+    EXPECT_TRUE(card->rect().contains(QRect(button->mapTo(card, QPoint()), button->size())));
 }

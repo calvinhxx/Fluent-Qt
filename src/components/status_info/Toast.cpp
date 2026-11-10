@@ -271,6 +271,10 @@ Toast::Toast(QWidget* parent) : QWidget(parent)
 Toast::~Toast()
 {
     QObject::disconnect(m_animationFinishedConnection);
+    // An action may be parented to this toast and destroyed after its UI children.
+    // zh_CN: 动作可能以 Toast 为父对象，并在界面子控件之后析构。
+    QObject::disconnect(m_actionChangedConnection);
+    QObject::disconnect(m_actionDestroyedConnection);
     if (m_isOpen) {
         QWidget* host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : parentWidget();
         const Placement placement = m_placement;
@@ -742,7 +746,9 @@ void Toast::updateMessageWrapping()
         hasTitle ? textfields::Label::TextColorRole::Secondary : textfields::Label::TextColorRole::Primary);
     m_actionArea->setVisible(hasAction);
 
-    int maximumWidth = toast_tokens::maximumWidth;
+    // QWidget's limit includes the shadow; constrain the visible card before measuring wrapped text.
+    // zh_CN: QWidget 的宽度上限包含阴影，测量换行前先限制可见卡片宽度。
+    int maximumWidth = qMin(toast_tokens::maximumWidth, qMax(1, this->maximumWidth() - 2 * kShadowMargin));
     QWidget* host = m_overlayCoordinator ? m_overlayCoordinator->topLevelWidget() : nullptr;
     if (host) {
         const int available = overlay::overlaySurfaceRect(host).width() - m_placementMargins.left()
