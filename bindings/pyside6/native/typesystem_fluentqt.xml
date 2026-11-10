@@ -212,7 +212,7 @@ if (!paletteGuard) {
         <namespace-type name="diagnostics" visible="no">
             <object-type name="DiagnosticSession">
                 <modify-function signature="messageSink()const" remove="all"/>
-                <modify-function signature="createBundle(const QVariantMap&amp;,const QVariantMap&amp;)" allow-thread="yes"/>
+                <modify-function signature="^createBundle\(.*$" allow-thread="yes"/>
                 <modify-function signature="start(QWidget*,bool,int)">
                     <modify-argument index="1"><define-ownership owner="default"/></modify-argument>
                 </modify-function>

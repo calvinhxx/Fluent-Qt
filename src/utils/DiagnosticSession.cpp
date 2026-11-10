@@ -37,7 +37,7 @@ QVariantMap rectangle(const QRect& rect)
 QString boundedText(const QString& text, int limit)
 {
     QString result = text.left(limit);
-    if (!result.isEmpty() && result.back().isHighSurrogate())
+    if (!result.isEmpty() && result.at(result.size() - 1).isHighSurrogate())
         result.chop(1);
     return result;
 }
