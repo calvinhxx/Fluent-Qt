@@ -226,6 +226,12 @@ class SiteGenerationTest(unittest.TestCase):
             self.build(failing="tools/ai/generate_ai_catalog.py")
         self.stage.assert_not_called()
 
+    def test_invalid_release_copy_stops_before_catalogs_or_page_generation(self):
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.build(failing="tools/site/release_history.py")
+        self.assertEqual(self.commands, [("tools/site/release_history.py",)])
+        self.stage.assert_not_called()
+
     def test_failed_recapture_never_stages_a_stale_site(self):
         with self.assertRaises(subprocess.CalledProcessError):
             self.build("--gallery", "/tmp/current-gallery", current=False,

@@ -16,6 +16,87 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE = 'tools/site/release-history.json'
 REPOSITORY = 'https://github.com/calvinhxx/Fluent-Qt'
 LANGUAGES = ('en', 'zh')
+MAX_CHANGES_PER_ENTRY = 6
+FIELD_BUDGETS = {
+    'summary': {'en': 250, 'zh': 125},
+    'change': {'en': 185, 'zh': 95},
+    'migration.title': {'en': 70, 'zh': 40},
+    'migration.impact': {'en': 220, 'zh': 115},
+    'migration.action': {'en': 220, 'zh': 115},
+}
+UNQUOTED_API_TYPES = (
+    'Accordion', 'AnchorLayout', 'AreaChart', 'AutoSuggestBox', 'BarChart',
+    'CalendarDatePicker', 'CalendarView', 'ChartView', 'CheckBox', 'CoachMark',
+    'CodeBlock', 'ColorPicker', 'ComboBox', 'CommandBar', 'CommandBarFlyout',
+    'CommandPalette', 'CompoundButton', 'ContentDialog', 'DataGrid', 'DataGridToolBar',
+    'DatePicker', 'DateTimeRangePicker', 'DiagnosticSession', 'Divider', 'DonutChart',
+    'DrawerView', 'DropDownButton', 'EditingCommandRouter', 'Expander', 'FileDropZone',
+    'FileListView', 'FlipView', 'FlowView', 'FluentElement', 'FluentMenu', 'FontIcon',
+    'FormController', 'GridView', 'HorizontalBarChart', 'HyperlinkButton', 'ImageViewer',
+    'InfoBadge', 'InfoBar', 'LineChart', 'LineEdit', 'ListDetailView', 'ListView',
+    'MotionPolicy', 'MultiSelectComboBox', 'NavigationView', 'NumberBox',
+    'ParticleBackdrop', 'ParticlesSession', 'PasswordBox', 'PieChart', 'PipsPager',
+    'ProgressBar', 'ProgressRing', 'PropertyPanel', 'QmlSession', 'QmlView',
+    'RadioButton', 'RangeSlider', 'RatingControl', 'RepeatButton', 'ScatterChart',
+    'ScrollBar', 'ScrollView', 'SegmentedControl', 'SelectorBar', 'Sparkline',
+    'SpatialItem', 'SpatialSession', 'SpatialView', 'SplashScreen', 'SplitButton',
+    'SplitView', 'StackView', 'Stepper', 'TabView', 'TagInput', 'TeachingTip',
+    'TextEdit', 'ThemeRegistry', 'TimePicker', 'Timeline', 'TitleBar',
+    'ToggleSplitButton', 'ToggleSwitch', 'Transfer', 'TreeSelect', 'TreeView',
+    'UserTheme', 'WidgetOwnership',
+)
+UNQUOTED_API_RE = re.compile(
+    # API names use ASCII boundaries even when adjacent prose is Chinese.
+    r'\b(?:'
+    + '|'.join(UNQUOTED_API_TYPES)
+    + r'|FLUENT_QT_[A-Z0-9_]+|qt(?:base5|6-base)-private-dev|[A-Za-z_]\w*::[A-Za-z_]\w*)\b'
+    r'|<FluentQt/[^>]+>',
+    re.ASCII,
+)
+BANNED_EN_RE = re.compile(
+    r'\b(?:'
+    r'while preserving|without changing|existing (?:validation |check )?coverage|'
+    r'grouped test executables|compiler parallelism|in order to|'
+    r'seamless(?:ly)?|comprehensive(?:ly)?|streamlined?|robust(?:ness)?|'
+    r'leverages?|leveraging|empowers?|empowering'
+    r')\b',
+    re.I,
+)
+BANNED_ZH_RE = re.compile(
+    r'保留调用方的|保留现有检查|有容量上限的|支持保持|独立于编辑值的|成对性能测量|'
+    r'全方位|无缝|赋能|旨在|致力于|进一步提升|显著提升|全面提升'
+)
+
+
+def validate_prose_field(value, kind, location):
+    bilingual(value, location)
+    budgets = FIELD_BUDGETS[kind]
+    for lang in LANGUAGES:
+        text = value[lang]
+        if '\n' in text:
+            raise ValueError(f'Keep {location} ({lang}) on a single line')
+        if text.count('`') % 2 != 0 or '``' in text:
+            raise ValueError(f'Unbalanced or empty inline code span in {location} ({lang})')
+        prose_len = len(re.sub(r'`[^`]+`', 'code' if lang == 'en' else '名', text))
+        if prose_len > budgets[lang]:
+            raise ValueError(
+                f'{location} ({lang}) prose length is {prose_len} (limit {budgets[lang]}); tighten the prose'
+            )
+        outside_code = re.sub(r'`[^`]+`', ' ', text)
+        unquoted = UNQUOTED_API_RE.search(outside_code)
+        if unquoted:
+            raise ValueError(
+                f'Wrap identifier `{unquoted.group(0)}` in backticks in {location} ({lang})'
+            )
+        if kind == 'change' and any(mark in outside_code for mark in (';', '；')):
+            raise ValueError(
+                f'Keep one topic per bullet instead of semicolon-splicing in {location} ({lang})'
+            )
+        banned = (BANNED_EN_RE if lang == 'en' else BANNED_ZH_RE).search(outside_code)
+        if banned:
+            raise ValueError(
+                f'Avoid AI-slop or internal-plumbing phrasing "{banned.group(0)}" in {location} ({lang})'
+            )
 
 
 def normalized_note(text):
@@ -56,7 +137,7 @@ def load_history(root=ROOT):
             raise ValueError(f'Review the bilingual summary after changing {path.relative_to(root)}')
         if re.search(r'^##[ \t]+breaking\b', note, re.M | re.I) and not item.get('migrations'):
             raise ValueError(f'Breaking release {item["version"]} needs a bilingual migration record')
-        bilingual(item['summary'], item['version'])
+        validate_prose_field(item['summary'], 'summary', f'{item["version"]} summary')
         if item['status'] not in ('published', 'archive', 'candidate'):
             raise ValueError(f'Invalid release status: {item["version"]}')
         if item['status'] == 'published':
@@ -68,11 +149,15 @@ def load_history(root=ROOT):
     if data['unreleased']['after'] != data['latest']:
         raise ValueError('Move shipped changes out of Unreleased and update its baseline')
     for item in [data['unreleased'], *versions]:
-        for index, change in enumerate(item.get('changes', [])):
-            bilingual(change, f'{item.get("version", "unreleased")} change {index}')
+        label = item.get('version', 'unreleased')
+        changes = item.get('changes', [])
+        if len(changes) > MAX_CHANGES_PER_ENTRY:
+            raise ValueError(f'{label} has {len(changes)} change bullets (limit {MAX_CHANGES_PER_ENTRY})')
+        for index, change in enumerate(changes):
+            validate_prose_field(change, 'change', f'{label} change {index}')
         for migration in item.get('migrations', []):
             for field in ('title', 'impact', 'action'):
-                bilingual(migration[field], f'migration {migration["id"]} {field}')
+                validate_prose_field(migration[field], f'migration.{field}', f'migration {migration["id"]} {field}')
             if not re.fullmatch(r'[a-z][a-z0-9-]*', migration['id']):
                 raise ValueError('Migration anchors must be stable slugs')
             if not migration.get('before') or not migration.get('after'):

@@ -7,8 +7,8 @@
       "published_at": "2026-11-08T17:24:53Z",
       "source_sha256": "0773471ebdda5983cad47dd24041902969ce3a6800f232d373574fa18e98d7c9",
       "summary": {
-        "en": "Adds trailing content for input fields, Transfer dual-list selection and caret completion, with editable-field and Gallery compatibility fixes.",
-        "zh": "新增输入框尾部内容、Transfer 双栏选择和光标补全示例，修复可编辑字段与 Gallery 兼容性问题。"
+        "en": "Adds `Transfer`, unit suffixes and trailing widgets for `LineEdit` and `ComboBox`, `TextEdit` caret geometry, and editable-field layout fixes.",
+        "zh": "新增 `Transfer` 双栏穿梭框、`LineEdit` 与 `ComboBox` 尾部内容，以及 `TextEdit` 光标位置接口，并修复可编辑输入框布局问题。"
       },
       "related": [
         "line-edit",
@@ -26,28 +26,20 @@
       ],
       "changes": [
         {
-          "en": "LineEdit and ComboBox support plain-text suffixes and custom trailing widgets without changing edited values or caller ownership.",
-          "zh": "LineEdit 与 ComboBox 支持独立于编辑值的文字尾缀和自定义尾部控件，并保留调用方的所有权约定。"
+          "en": "`LineEdit` and `ComboBox` display unit suffixes such as `px` (kept separate from the edited text) or host a custom trailing widget.",
+          "zh": "`LineEdit` 与 `ComboBox` 支持显示不计入文本值的单位后缀（如 `px`），也可嵌入自定义尾部控件。"
         },
         {
-          "en": "Editable ComboBox geometry stays stable after selection and model changes; the NumberBox drag indicator is centered across display scales.",
-          "zh": "可编辑 ComboBox 在选项和模型变化后保持文字区域稳定，NumberBox 拖动指示器在不同显示倍率下垂直居中。"
+          "en": "`Transfer` moves items between two searchable lists using stable keys and skips disabled entries.",
+          "zh": "`Transfer` 支持两侧列表搜索与批量穿梭移动，按稳定键记录选中项并跳过禁用项。"
         },
         {
-          "en": "Transfer provides searchable lists and batch selection transfers backed by stable keys, while preserving the source model and disabled states.",
-          "zh": "Transfer 支持两侧搜索与批量移动，通过稳定键记录选择，保留源模型和禁用状态。"
+          "en": "`TextEdit` exposes its caret rectangle and change signal for inline completion popups, with an `@` mention sample in the Gallery.",
+          "zh": "`TextEdit` 开放光标矩形与变化信号，便于定位行内补全浮层，Gallery 新增 `@` 成员提及示例。"
         },
         {
-          "en": "TextEdit caret geometry supports an editor-focused member-completion example with keyboard navigation and undo; the editing-command example retains height animation.",
-          "zh": "TextEdit 光标几何接口支持保持编辑焦点的成员补全示例，提供键盘导航与撤销；编辑命令示例保留高度动画。"
-        },
-        {
-          "en": "Gallery previews and source blocks use one shared frame, with responsive input examples and corrected redirected clipping on older Qt versions.",
-          "zh": "Gallery 示例预览和代码块采用统一框架，输入示例保留响应式布局，并修复旧版 Qt 的重定向裁剪。"
-        },
-        {
-          "en": "Build and release validation reuse compiler output and grouped test executables, with paired performance measurements and the existing validation coverage.",
-          "zh": "构建和发布验证复用编译结果、共享测试可执行程序，提供成对性能测量并保留现有检查覆盖。"
+          "en": "Fixes editable `ComboBox` text bounds after selection or model updates, `NumberBox` drag-icon centering across scales, and Qt 5 redirected clipping in the Gallery.",
+          "zh": "修复可编辑 `ComboBox` 切换选项或更新模型后的文本区域偏移、`NumberBox` 拖动图标跨倍率居中，以及旧版 Qt 下 Gallery 的重定向裁剪。"
         }
       ],
       "migrations": []
@@ -58,31 +50,14 @@
       "published_at": "2026-11-04T15:17:21Z",
       "source_sha256": "8fcefe1ba8b9ed3b84dddf3832d4d16359bbadcbc0610bb8def780abe22accff",
       "summary": {
-        "en": "Fixes Windows headless window handling and adds disabled checkbox examples in the C++ and PySide6 Gallery.",
-        "zh": "修复 Windows 无界面环境下的窗口句柄处理，C++ 和 PySide6 Gallery 新增禁用复选框示例。"
+        "en": "Skips native Win32 styling and backdrop calls on synthetic `offscreen` and `minimal` window IDs, and adds disabled states to the `CheckBox` Gallery sample.",
+        "zh": "Windows 的 `offscreen` 与 `minimal` 平台不再对模拟窗口 ID 调用原生样式和背景接口，C++ 与 PySide6 Gallery 补充禁用态 `CheckBox` 示例。"
       },
       "related": [
         "window",
         "checkbox"
       ],
-      "changes": [
-        {
-          "en": "Windows offscreen and minimal Qt windows skip native window styling and backdrop calls when Qt assigns a synthetic window ID.",
-          "zh": "Windows 上使用 offscreen 或 minimal 插件时，Qt 分配的模拟窗口 ID 不再传给原生窗口样式和背景效果接口。"
-        },
-        {
-          "en": "The two-state checkbox example shows disabled checked and unchecked controls in both Gallery implementations.",
-          "zh": "两个 Gallery 的双态复选框示例均展示禁用状态下选中和未选中的控件。"
-        },
-        {
-          "en": "The website offers an embedded Ko-fi tip panel and QR code alongside the existing CNY support options.",
-          "zh": "官网在人民币打赏方式旁提供 Ko-fi 页内打赏面板和二维码。"
-        },
-        {
-          "en": "WebAssembly browser checks run in parallel on a shared build, and release CI reuses compatible wheels and candidate builds.",
-          "zh": "WebAssembly 浏览器检查基于同一次构建并行运行，发布 CI 复用兼容的 Python wheel 和候选构建。"
-        }
-      ],
+      "changes": [],
       "migrations": []
     },
     {
@@ -91,8 +66,8 @@
       "published_at": "2026-11-04T03:09:52Z",
       "source_sha256": "98ae8140d20282e53244e45d0e612fb7ecd297696b054a402b9c2bc44b52eb88",
       "summary": {
-        "en": "Adds RangeSlider and ImageViewer, saved desktop Gallery zoom and paged search, with fixes for text alignment, overlays, and low-scale rendering.",
-        "zh": "新增 RangeSlider 和 ImageViewer，桌面 Gallery 支持保存界面缩放和分页搜索，并修复文字对齐、浮层和低倍率绘制问题。"
+        "en": "Adds `RangeSlider` and `ImageViewer`, saved 50%–200% zoom and paged search in the desktop Gallery, and rendering fixes at fractional and sub-100% scales.",
+        "zh": "新增 `RangeSlider` 和 `ImageViewer`，桌面版 Gallery 支持保存 50%–200% 界面缩放与分页搜索，并修复分数及低倍率缩放下的绘制问题。"
       },
       "related": [
         "range-slider",
@@ -119,68 +94,40 @@
       ],
       "changes": [
         {
-          "en": "RangeSlider provides two values, minimum spacing, keyboard steps and accessible thumbs; it shares the Slider appearance.",
-          "zh": "RangeSlider 提供上下限、最小间距、键盘步长和可访问的双手柄，与 Slider 共用外观。"
+          "en": "`RangeSlider` selects a lower and upper value with minimum spacing, keyboard steps, value tips, and accessible dual thumbs.",
+          "zh": "`RangeSlider` 支持上下限双滑块选择、最小间距、键盘步长、数值提示与无障碍读屏。"
         },
         {
-          "en": "ImageViewer adds pointer-centered zoom, panning, fit modes, keyboard and pinch input, and cached thumbnails, including use inside FlipView.",
-          "zh": "ImageViewer 支持围绕指针缩放、平移、适应视口、键盘与捏合操作和缩略图缓存，也可用于 FlipView。"
+          "en": "`ImageViewer` adds pointer-centered zoom, panning, fit modes, pinch and keyboard navigation, and cached thumbnails, including inside `FlipView`.",
+          "zh": "`ImageViewer` 支持以指针为中心缩放、平移、适应视口、捏合与键盘操作及缩略图缓存，可嵌入 `FlipView`。"
         },
         {
-          "en": "Desktop Gallery saves 50%–200% interface zoom, preserves the native window frame and restored placement, and keeps editor focus when showing zoom controls.",
-          "zh": "桌面 Gallery 可保存 50%–200% 的界面缩放，保持原生窗口外框和恢复位置，显示缩放控件时保留编辑器焦点。"
+          "en": "Desktop Gallery persists 50%–200% interface zoom inside the native window frame and pages component search results.",
+          "zh": "桌面版 Gallery 可保存 50%–200% 界面缩放且不影响原生窗口外框，组件与示例搜索改为分页加载。"
         },
         {
-          "en": "Fractional and low-DPR rendering repairs preserve local paint regions. GPU-only frames do not force a full-window widget repaint.",
-          "zh": "分数倍率和低 DPR 绘制修复保留局部刷新，纯 GPU 帧不会强制触发整窗控件重绘。"
+          "en": "Fixes fractional and sub-100% scale artifacts with local-region repaints, and avoids full-window widget repaints on GPU-only frames.",
+          "zh": "修复分数倍率与低于 100% 缩放下的残影并改为局部重绘，纯 GPU 帧不再触发整窗控件重绘。"
         },
         {
-          "en": "Gallery search pages component and example results, cancels stale requests, and keeps browser accessibility geometry current.",
-          "zh": "Gallery 分页显示组件和示例搜索结果，取消过期请求，并同步浏览器无障碍几何信息。"
-        },
-        {
-          "en": "Text and editable-field alignment, menu icon placement, SelectorBar overflow focus, popup effect captures, and native window geometry are corrected.",
-          "zh": "修正文字与可编辑输入框对齐、菜单图标位置、SelectorBar 溢出焦点、浮层效果截图和原生窗口几何。"
-        },
-        {
-          "en": "Desktop Gallery source builds require matching Qt private development headers; the base Widgets library still supports Qt 5.15+ and 6.2+ without this dependency.",
-          "zh": "从源码构建桌面 Gallery 需要与 Qt 配套的内部开发头文件；基础 Widgets 库仍支持 Qt 5.15+ 和 6.2+，不增加该依赖。"
-        },
-        {
-          "en": "Preview tools handle UTF-8 consistently, unchanged generated Python wrappers keep their timestamps, and local WSL validation reuses Linux-native workspaces.",
-          "zh": "预览工具统一使用 UTF-8，未变化的 Python 生成封装保留时间戳，本地 WSL 验证复用 Linux 原生工作目录。"
-        },
-        {
-          "en": "Project updates now live in Releases and migrations. The standalone roadmap is removed; its old URLs open the release history in the same language.",
-          "zh": "官网项目更新统一在“版本记录与迁移”查看。独立路线图页已移除，旧地址跳转到对应语言的版本记录。"
-        },
-        {
-          "en": "The documentation sidebar now groups component categories under Components, icons under Foundations, and each extension guide with its components. Search expands matching branches and restores your expanded sections when cleared.",
-          "zh": "文档侧栏按层级组织：控件分类归入“组件”，图标归入“基础能力”，扩展模块的概述与组件放在一起。搜索自动展开匹配分支，清空后恢复原来的展开状态。"
-        },
-        {
-          "en": "Live component examples now take the height their sample needs, so tall charts, grids and pickers no longer scroll inside a short frame. Dialog, menu and window examples keep extra room for their overlays.",
-          "zh": "组件文档里的实时示例会按示例内容自动调整高度，图表、表格和选择器不再挤在过矮的窗口里滚动。对话框、菜单和窗口类示例仍保留浮层所需的空间。"
-        },
-        {
-          "en": "The GitHub Sponsor button now lists a short link for each support tier. Each opens the homepage in your browser's language with that tier already selected.",
-          "zh": "GitHub 的 Sponsor 小爱心现在为每个投喂档位列出一个短链接，点开后按浏览器语言打开官网，并自动选好对应档位。"
+          "en": "Fixes compact-control text alignment, menu icon insets, `SelectorBar` overflow focus, and popup backdrop captures.",
+          "zh": "修正紧凑控件文字对齐、菜单图标边距、`SelectorBar` 溢出项焦点及浮层背景采样。"
         }
       ],
       "migrations": [
         {
           "id": "gallery-private-qt-headers",
           "title": {
-            "en": "Install matching Qt private headers for desktop Gallery",
-            "zh": "构建桌面 Gallery 时安装配套 Qt 内部开发头文件"
+            "en": "Desktop Gallery builds require Qt private headers",
+            "zh": "源码构建桌面版 Gallery 需安装 Qt 私有头文件"
           },
           "impact": {
-            "en": "A desktop Gallery source build without the matching private development headers now fails configuration. Base-library and ordinary binding consumers are unaffected.",
-            "zh": "桌面 Gallery 源码构建缺少匹配的内部开发头文件时会在配置阶段报错；基础库和普通绑定使用方不受影响。"
+            "en": "Building the C++ or PySide6 desktop Gallery from source now fails at CMake configure time if matching Qt private headers are missing. `FluentQt` library consumers are unaffected.",
+            "zh": "从源码构建 C++ 或 PySide6 桌面版 Gallery 时，若缺少对应版本的 Qt 私有开发头文件，CMake 配置会直接报错。仅使用 `FluentQt` 库的项目不受影响。"
           },
           "action": {
-            "en": "Install qtbase5-private-dev or qt6-base-private-dev matching the selected Qt kit, or disable both Gallery build options for library-only use.",
-            "zh": "安装与当前 Qt 配套的 qtbase5-private-dev 或 qt6-base-private-dev；只构建库时可关闭两个 Gallery 构建选项。"
+            "en": "Install `qtbase5-private-dev` or `qt6-base-private-dev` matching your Qt kit, or disable both Gallery build options for library-only builds.",
+            "zh": "安装与当前 Qt 匹配的 `qtbase5-private-dev` 或 `qt6-base-private-dev`；仅构建组件库时可按下方参数关闭两个 Gallery 构建选项。"
           },
           "before": "Desktop Gallery with public Qt development headers only",
           "after": "# Debian / Ubuntu, matching the selected Qt version:\nsudo apt install qtbase5-private-dev\n# or:\nsudo apt install qt6-base-private-dev\n# Library-only alternative:\n-DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=OFF"
@@ -188,6 +135,14 @@
       ]
     },
     {
+      "version": "1.11.0",
+      "status": "published",
+      "published_at": "2026-10-30T14:30:39Z",
+      "source_sha256": "71c569029fef813333fa055be8dfd45bcebb6667381e4740b321430bc7bae158",
+      "summary": {
+        "en": "Extracts particle effects into the optional `FluentQt::Particles` module, adds custom icon fonts to `FontIcon`, optimizes 3D Gallery texture updates, and ships stable-ABI Python wheels.",
+        "zh": "将粒子特效拆分为可选模块 `FluentQt::Particles`，`FontIcon` 支持自定义图标字体，优化 3D Gallery 纹理更新，并改发稳定 ABI 的 Python wheel。"
+      },
       "related": [
         "font-icon",
         "foundation-iconography",
@@ -206,62 +161,46 @@
       ],
       "changes": [
         {
-          "en": "`FontIcon` adds `fontFamily()` and `setFontFamily()` for application-provided fonts. Pass the font's Unicode glyph directly; an empty family keeps the existing bundled Fluent icon rendering. C++ and PySide6 Gallery include a custom-font example.",
-          "zh": "`FontIcon` 新增 `fontFamily()` 和 `setFontFamily()`，支持应用自定义字体。传入该字体的 Unicode 字形即可；字体族为空时保持原有的内置 Fluent 图标绘制。C++ 和 PySide6 Gallery 均提供自定义字体示例。"
+          "en": "`FontIcon` adds `fontFamily()` and `setFontFamily()` for custom icon fonts. Pass the glyph's Unicode character directly, or leave the family empty to use bundled Fluent icons.",
+          "zh": "`FontIcon` 新增 `fontFamily()` 与 `setFontFamily()`，支持自定义图标字体。直接传入字形字符即可，字体族留空时仍使用内置 Fluent 图标。"
         },
         {
-          "en": "Particle effects move out of the core library into the optional Particles module.",
-          "zh": "粒子特效从核心库移到可选的 Particles 模块。"
+          "en": "Particle effects move from the core library into the optional `FluentQt::Particles` target (`fluentqt.particles` in Python).",
+          "zh": "粒子特效从核心库拆分为可选目标 `FluentQt::Particles`（Python 包路径为 `fluentqt.particles`）。"
         },
         {
-          "en": "Gallery 3D uploads only the texture rows that changed, sharpens frames once motion stops, keeps its cache within a memory budget, and switches to 2D if rendering stays slow.",
-          "zh": "Gallery 3D 只上传有变化的纹理行，交互停止后恢复清晰画面，缓存控制在内存预算内，渲染持续过慢时切回 2D。"
+          "en": "3D Gallery uploads only changed texture rows, restores crisp rendering when motion settles, caps texture cache memory, and falls back to 2D on sustained slow frames.",
+          "zh": "3D Gallery 仅上传发生变化的纹理行，交互停止后恢复清晰画面，限制纹理缓存体积，并在帧率持续过低时自动切回 2D。"
         },
         {
-          "en": "Desktop Debug builds link the release Qt runtime by default. Set `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF` to use a debug Qt.",
-          "zh": "桌面 Debug 构建默认链接 release 版 Qt。需要 debug 版 Qt 时，设置 `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF`。"
+          "en": "Desktop Debug builds link the release Qt runtime by default. Set `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF` to link debug Qt libraries.",
+          "zh": "桌面端 Debug 构建默认链接 Release 版 Qt 运行时。如需链接 Debug 版 Qt，请设置 `FLUENT_QT_DEBUG_RELEASE_RUNTIME=OFF`。"
         },
         {
-          "en": "Open overlays follow their host surface; scrollbar thumb painting matches native hit testing, and PySide6 extension widgets enforce ownership boundaries.",
-          "zh": "打开的浮层跟随宿主表面变化，滚动条绘制与原生命中区域对齐，PySide6 扩展控件加强创建和所有权检查。"
-        },
-        {
-          "en": "Six stable-ABI native wheel builds retain 17 platform/interpreter installation checks. Immutable candidates are promoted without recompiling; CI uses bounded compiler parallelism and targeted website validation.",
-          "zh": "原生 wheel 由 17 次独立编译缩为 6 个稳定 ABI 构建，仍保留 17 组平台／Python 安装验证。发布复用不可变候选产物，CI 限制编译并行度并按改动选择网站验证。"
-        },
-        {
-          "en": "The website adds bilingual version history, migration comparisons, a roadmap and API notices for pending changes. Source-driven generation checks translation freshness.",
-          "zh": "官网新增双语版本记录、迁移对照、路线图和 API 未发布提示，由源码生成并检查译文是否及时更新。"
+          "en": "Open overlays track host-surface moves, scrollbar thumbs align with hit-test bounds, and Python wheels use the CPython stable ABI (`abi3`).",
+          "zh": "打开的浮层跟随宿主表面移动，滚动条滑块绘制与点击热区对齐，Python wheel 改用 CPython 稳定 ABI（`abi3`）。"
         }
       ],
       "migrations": [
         {
           "id": "particles-module",
           "title": {
-            "en": "ParticleBackdrop moves to the Particles module",
-            "zh": "ParticleBackdrop 移到 Particles 模块"
+            "en": "`ParticleBackdrop` moves to the Particles module",
+            "zh": "`ParticleBackdrop` 迁入 Particles 模块"
           },
           "impact": {
-            "en": "The `fluent::layout` names and import paths are gone. Linking only `FluentQt::FluentQt` no longer includes particle effects.",
-            "zh": "`fluent::layout` 下的名称和导入路径已删除。只链接 `FluentQt::FluentQt` 时不再包含粒子特效。"
+            "en": "`fluent::layout::ParticleBackdrop` and `fluentqt.layout.ParticleBackdrop` are removed. Linking `FluentQt::FluentQt` alone no longer includes particle effects.",
+            "zh": "`fluent::layout::ParticleBackdrop` 与 `fluentqt.layout.ParticleBackdrop` 已移除，仅链接 `FluentQt::FluentQt` 不再包含粒子特效。"
           },
           "action": {
-            "en": "When building from source, turn on `FLUENT_QT_BUILD_PARTICLES`. With an installed SDK, request `COMPONENTS Particles` and link `FluentQt::Particles`. Then update includes, namespaces and Python imports as shown below.",
-            "zh": "从源码集成时打开 `FLUENT_QT_BUILD_PARTICLES`；使用已安装的 SDK 时，在 `find_package` 中加上 `COMPONENTS Particles` 并链接 `FluentQt::Particles`。头文件、命名空间和 Python 导入按下面的写法修改。"
+            "en": "Enable `FLUENT_QT_BUILD_PARTICLES` in source builds or request `COMPONENTS Particles` and link `FluentQt::Particles`, then update includes, namespaces, and imports.",
+            "zh": "源码构建时开启 `FLUENT_QT_BUILD_PARTICLES`，使用安装包时在 `find_package` 中添加 `COMPONENTS Particles` 并链接 `FluentQt::Particles`，并更新头文件与导入路径。"
           },
           "before": "FluentQt::FluentQt\n#include <FluentQt/Layout.h>\nfluent::layout::ParticleBackdrop\nfrom fluentqt.layout import ParticleBackdrop",
           "after": "find_package(FluentQt CONFIG REQUIRED COMPONENTS Particles)\ntarget_link_libraries(app PRIVATE FluentQt::Particles)\n#include <FluentQt/Particles.h>\nfluent::particles::ParticleBackdrop\nfrom fluentqt.particles import ParticleBackdrop",
           "commit": "b674c944078c65f92aaa71df95ddf5050a6ecc62"
         }
-      ],
-      "version": "1.11.0",
-      "status": "published",
-      "published_at": "2026-10-30T14:30:39Z",
-      "source_sha256": "71c569029fef813333fa055be8dfd45bcebb6667381e4740b321430bc7bae158",
-      "summary": {
-        "en": "Makes particles optional, adds application-provided icon fonts, improves 3D rendering, and introduces stable-ABI Python wheels and bilingual upgrade guidance.",
-        "zh": "粒子特效拆为可选模块，FontIcon 支持应用字体，3D 渲染减少重复工作；Python 改用稳定 ABI wheel，官网新增双语版本与迁移说明。"
-      }
+      ]
     },
     {
       "version": "1.10.3",
@@ -552,8 +491,8 @@
       "published_at": "2026-09-01T16:37:24Z",
       "source_sha256": "6a36a4124687e2f3db2a9ea9ca7c0e95ed3b85394821b97847f268472f2ee08e",
       "summary": {
-        "en": "`MultiSelectComboBox` joins selected labels with `、` instead of a translated “and”. Pickers and command bars drop duplicated internal code without behavior changes, and icon-only `TabView` buttons get accessible names. Release workflows pin their actions to reviewed revisions.",
-        "zh": "`MultiSelectComboBox` 改用“、”连接选中项，不再出现翻译出来的连接词。选择器和命令栏去掉了重复实现，行为不变；`TabView` 的纯图标按钮补上了无障碍名称。发布流程使用的 Actions 固定到已审查的版本。"
+        "en": "`MultiSelectComboBox` joins selected labels with `、` instead of a translated “and”, and icon-only `TabView` buttons expose accessible names.",
+        "zh": "`MultiSelectComboBox` 改用 `、` 连接选中项，不再出现翻译出来的连接词；`TabView` 的纯图标按钮补上了无障碍名称。"
       },
       "related": [],
       "changes": [],
@@ -565,8 +504,8 @@
       "published_at": "2026-08-30T14:40:04Z",
       "source_sha256": "60760127f1e879f45c88795159148e7ba0e4aff47fffffd49f4cae89cd8ae211",
       "summary": {
-        "en": "Buttons, toggle switches and date/time pickers follow the same `fontRole` rules, and an explicit `setFont()` still wins. Gallery samples behave the same in C++, PySide6 and WebAssembly. The `build-fluentqt-gui` Skill now runs from project analysis through independent review.",
-        "zh": "按钮、开关和日期/时间选择器统一遵循 `fontRole`，显式调用 `setFont()` 仍然优先。Gallery 示例在 C++、PySide6 和 WebAssembly 中行为一致。`build-fluentqt-gui` Skill 覆盖从项目分析到独立评审的完整流程。"
+        "en": "Buttons, toggle switches and date/time pickers follow the same `fontRole` rules, and an explicit `setFont()` still wins. Gallery samples behave the same in C++, PySide6 and WebAssembly. The `build-fluentqt-gui` Skill covers project analysis through independent review.",
+        "zh": "按钮、开关和日期/时间选择器统一遵循 `fontRole`，显式调用 `setFont()` 仍然优先。Gallery 示例在 C++、PySide6 和 WebAssembly 中行为一致。`build-fluentqt-gui` Skill 补齐从项目分析到独立评审的流程。"
       },
       "related": [],
       "changes": [],
@@ -578,8 +517,8 @@
       "published_at": "2026-08-28T19:14:29Z",
       "source_sha256": "49eb5d2545052dbf1735a9c3e5d0eb8605a1f664634d3e75635b0e90d242ab28",
       "summary": {
-        "en": "Native Gallery previews can replay pointer and keyboard actions before a capture, and reports include widget geometry and Inspector findings. Menu access keys keep working while menus animate. Local builds choose a parallel job count from available CPU and memory.",
-        "zh": "原生 Gallery 预览可以在截图前回放鼠标和键盘操作，报告附带控件几何信息和 Inspector 检查结果。菜单动画期间访问键不再失效。本地构建会按 CPU 和内存自动选择并行数。"
+        "en": "Native Gallery previews replay pointer and keyboard actions before capture and report widget geometry and Inspector findings. Menu access keys keep working while menus animate.",
+        "zh": "原生 Gallery 预览支持在截图前回放鼠标和键盘操作，并输出控件几何信息与 Inspector 检查结果。菜单动画期间访问键保持可用。"
       },
       "related": [],
       "changes": [],
@@ -929,8 +868,12 @@
     ],
     "changes": [
       {
-        "en": "Adds a bounded diagnostic collector and ZIP report builder, with automatic local Gallery history and one-click GitHub feedback. Desktop reports copy a ZIP file and include matching existing crash reports or dumps; native dump capture is not enabled.",
-        "zh": "新增有容量上限的诊断采集与 ZIP 打包能力，Gallery 自动保留本地近期记录并支持一键 GitHub 反馈。桌面版复制 ZIP 文件并收集匹配的已有崩溃报告或 dump，尚未启用原生 dump 捕获。"
+        "en": "`DiagnosticSession` records recent UI events and widget snapshots into an in-memory ZIP archive.",
+        "zh": "新增 `DiagnosticSession`，将近期交互事件与控件快照打包为内存 ZIP。"
+      },
+      {
+        "en": "Desktop Gallery's Report a problem copies a diagnostic ZIP, including matching local crash reports, to the clipboard. Choose Open GitHub issue in the notification to open GitHub.",
+        "zh": "桌面版 Gallery 的“反馈问题”会将诊断包（含匹配的本地崩溃报告）复制到剪贴板。在提示中点击“Open GitHub issue”后才打开 GitHub。"
       }
     ],
     "migrations": []

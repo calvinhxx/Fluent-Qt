@@ -97,6 +97,8 @@ class ReleasePreflightTest(unittest.TestCase):
         checks = MODULE.lightweight_checks(context, root / "notes.md")
         self.assertEqual(checks[:len(shared)], shared)
         self.assertEqual(sum(label == "Gallery wheel builder" for label, _ in checks), 1)
+        self.assertEqual([command for label, command in checks if label == "website release history"],
+                         [[sys.executable, "tools/site/test_release_history.py"]])
         self.assertTrue({"Gallery artwork validator", "Gallery artwork source contracts", "Gallery artwork inventory"}.issubset(dict(shared)))
 
     def test_integration_checks_start_with_compatibility_boundaries_and_self_tests(self):
