@@ -77,6 +77,12 @@ badges. Scope, keyword, upgrade baseline and migration-only filters combine and
 persist in the URL. Existing version and migration anchors stay stable; without
 JavaScript, all groups remain readable.
 
+Opening a version or migration link reveals its target, clearing conflicting
+filters if needed. When a reader changes a filter and hides the current target,
+remove that anchor from the URL so a later reload keeps the chosen filters.
+Keep anchors whose targets remain visible, and leave unknown or unrelated page
+anchors untouched.
+
 When preparing a release:
 
 1. Add the canonical release note and its English and Chinese summary. Mark a
