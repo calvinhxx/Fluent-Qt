@@ -80,8 +80,48 @@ When preparing a release:
    to development-only changes.
 5. Run `python3 tools/site/build_site.py --prepare` and
    `python3 tools/site/test_release_history.py`. These checks require every
-   version note to have a current translation. Website artifacts must include
-   both languages of the version history and the legacy roadmap redirects.
+   version note to have a current translation and pass the copy-quality gate.
+   Website artifacts must include both languages of the version history and the
+   legacy roadmap redirects.
+
+### Release and migration writing rules
+
+`tools/site/release_history.py` enforces deterministic copy checks during website
+preparation and release preflight. Follow these authoring rules when writing or
+updating `tools/site/release-history.json`:
+
+- **Write for upgraders, not repository maintainers.** Include public APIs,
+  component behavior, packaging/CMake changes, and user-visible Gallery features
+  or fixes. Omit internal CI caching, grouped test executables, benchmark
+  workflows, sponsor widgets, and documentation-chrome tweaks.
+- **Scale detail to the release.** Put small patch releases directly in
+  `summary` with `"changes": []` instead of repeating the summary in bullets.
+  Keep larger releases to at most 6 `changes` bullets, one topic per bullet; do
+  not splice unrelated fixes with `;` or `；` in either language. Semicolons
+  inside inline code are allowed.
+- **Format every identifier as inline code.** Wrap component and session classes
+  (`` `LineEdit` ``, `` `Transfer` ``, `` `DiagnosticSession` ``), qualified
+  symbols (`` `FontIcon::setFontFamily()` ``), CMake options
+  (`` `FLUENT_QT_BUILD_GALLERY` ``), headers (`` `<FluentQt/Particles.h>` ``),
+  and system packages (`` `qt6-base-private-dev` ``) in backticks. Inline code
+  spans count as a single word toward the prose length budget, so naming exact
+  APIs is never penalized. Known API names also require backticks when directly
+  adjacent to Chinese prose; a name inside a longer ASCII identifier is not a match.
+- **Cut defensive filler and Doxygen jargon.** Avoid LLM boilerplate such as
+  `without changing ...`, `while preserving ...`, `seamless`, `comprehensive`,
+  `robust`, or raw header-comment terms like `bounded collector`. When an edge
+  condition matters to callers, state the concrete fact plainly (for example,
+  `unit suffixes such as px (kept separate from the edited text)`). Neutral
+  technical verbs such as `deliver`, `delivers`, and `delivering` are allowed
+  for event or signal delivery; promotional qualifiers remain subject to the gate.
+- **Author Chinese natively.** Write `zh` from the engineering meaning rather than translating English clauses word for word; avoid stacked modifiers and calques such as `保留调用方的所有权约定`, `有容量上限的诊断采集`, or `支持保持编辑焦点的成员补全示例`.
+
+| Avoid | Prefer |
+|---|---|
+| `LineEdit and ComboBox support plain-text suffixes and custom trailing widgets without changing edited values or caller ownership.` | `` `LineEdit` and `ComboBox` display unit suffixes such as `px` (kept separate from the edited text) or host a custom trailing widget. `` |
+| `Editable ComboBox geometry stays stable after selection and model changes; the NumberBox drag indicator is centered across display scales.` | Split unrelated fixes or group them under a clear `Fixes ...` lead without semicolon splicing, with `` `ComboBox` `` and `` `NumberBox` `` in backticks. |
+| `Build and release validation reuse compiler output and grouped test executables, with paired performance measurements and the existing validation coverage.` | Omit internal CI/test-runner plumbing from public upgrade notes. |
+| `新增有容量上限的诊断采集与 ZIP 打包能力` | ``新增 `DiagnosticSession`，将近期交互事件与控件快照打包为内存 ZIP。`` |
 
 Keep engineering plans in `docs/development/technical-debt-roadmap.md`; the
 website does not duplicate this internal maintenance queue as a public roadmap.

@@ -111,7 +111,12 @@ class ReleaseHistoryTest(unittest.TestCase):
         body = release_pages.history_body(data, 'zh', 'zh-CN/api/releases/index.html')
         self.assertIn('id="v1.7.0"', body)
         self.assertIn('id="particles-module"', body)
-        self.assertIn('尚未确定发布版本', body)
+        self.assertIn(f'自 {data["latest"]} 发布以来已合入源码的改动：', body)
+        empty_unreleased = copy.deepcopy(data)
+        empty_unreleased['unreleased']['changes'] = []
+        empty_unreleased['unreleased']['migrations'] = []
+        empty_body = release_pages.history_body(empty_unreleased, 'en', 'api/releases/index.html')
+        self.assertIn(f'No unreleased public changes since {data["latest"]}.', empty_body)
         self.assertIn('&lt;FluentQt/Particles.h&gt;', body)
         self.assertIn('2026-10-27', body)
         self.assertIn('setFontFamily', body.split('id="unreleased"', 1)[1].split('id="v1.10.3"', 1)[0])
@@ -131,6 +136,129 @@ class ReleaseHistoryTest(unittest.TestCase):
             history.validate_related_documents({'unreleased': {'related': ['retired-widget']}, 'versions': []}, ['button'])
         history.validate_related_documents({'unreleased': {}, 'versions': [{'related': ['retired-widget']}],
                                             'retired_document_ids': ['retired-widget']}, ['button'])
+
+
+    def test_api_identifiers_use_ascii_boundaries_next_to_chinese(self):
+        for identifier in ('LineEdit', 'FLUENT_QT_BUILD_GALLERY', 'FontIcon::setFontFamily',
+                           'qt6-base-private-dev', '<FluentQt/Particles.h>'):
+            for surrounding in ('新增{}。', '{}支持此功能。', '新增{}支持此功能。'):
+                for quoted in (False, True):
+                    with self.subTest(identifier=identifier, surrounding=surrounding, quoted=quoted):
+                        token = f'`{identifier}`' if quoted else identifier
+                        self.data['unreleased']['changes'] = [{'en': 'Adds a feature.', 'zh': surrounding.format(token)}]
+                        self.write()
+                        if quoted:
+                            history.load_history(self.root)
+                        else:
+                            with self.assertRaisesRegex(ValueError, 'Wrap identifier'):
+                                history.load_history(self.root)
+        # A known name embedded in a larger ASCII identifier is not that API.
+        for identifier in ('MyLineEdit', 'LineEditor', 'LineEdit2', '_LineEdit'):
+            with self.subTest(larger_identifier=identifier):
+                history.validate_prose_field({'en': f'Updates {identifier}.', 'zh': '更新示例。'}, 'change', 'example')
+
+    def test_both_semicolon_forms_are_checked_in_both_languages(self):
+        for lang in history.LANGUAGES:
+            for mark in (';', '；'):
+                with self.subTest(lang=lang, mark=mark):
+                    value = {'en': 'Fixes `ComboBox` and `LineEdit`.', 'zh': '修复 `ComboBox` 与 `LineEdit`。'}
+                    value[lang] = (f'Fixes `ComboBox`{mark} fixes `LineEdit`.' if lang == 'en'
+                                   else f'修复 `ComboBox`{mark}修复 `LineEdit`。')
+                    self.data['unreleased']['changes'] = [value]
+                    self.write()
+                    with self.assertRaisesRegex(ValueError, 'semicolon-splicing'):
+                        history.load_history(self.root)
+                    history.validate_prose_field(value, 'migration.action', 'migration')
+                    value[lang] = (f'Handles the literal `{mark}` in text.' if lang == 'en'
+                                   else f'处理文本中的 `{mark}` 字符。')
+                    self.write()
+                    history.load_history(self.root)
+
+    def test_event_delivery_verbs_are_allowed_but_promotional_copy_is_rejected(self):
+        for english in ('`TextEdit` now delivers key events to its completion popup.',
+                        'Deliver queued signals on the UI thread.',
+                        'Fixes a crash while delivering queued events.'):
+            with self.subTest(english=english):
+                self.data['unreleased']['changes'] = [{'en': english, 'zh': '修复事件传递。'}]
+                self.write()
+                history.load_history(self.root)
+        for english in ('`TextEdit` delivers a seamless experience.',
+                        'Delivers comprehensive improvements.',
+                        'Improves editing while preserving caller ownership.'):
+            with self.subTest(english=english):
+                self.data['unreleased']['changes'] = [{'en': english, 'zh': '更新编辑功能。'}]
+                self.write()
+                with self.assertRaisesRegex(ValueError, 'AI-slop or internal-plumbing phrasing'):
+                    history.load_history(self.root)
+
+    def test_feedback_release_note_requires_the_explicit_issue_action(self):
+        data = history.load_history(self.root)
+        entry = next(item for item in [data['unreleased'], *data['versions']]
+                     if 'src/utils/DiagnosticSession.h' in item.get('headers', []))
+        for lang, action, old_claim in (
+            ('en', 'Choose Open GitHub issue in the notification', 'and opens GitHub Issues'),
+            ('zh', '在提示中点击“Open GitHub issue”后才打开 GitHub', '复制到剪贴板并打开 GitHub'),
+        ):
+            with self.subTest(lang=lang):
+                rendered = release_pages.release_entry(entry, lang, history.page_path('releases', lang), data['latest'])
+                self.assertIn(action, rendered)
+                self.assertNotIn(old_claim, rendered)
+
+    def test_copy_rules_reject_ai_slop_unquoted_apis_and_bloated_entries(self):
+        baseline = json.loads((history.ROOT / history.SOURCE).read_text(encoding='utf-8'))
+
+        def assert_rejected(mutate, pattern):
+            self.data = copy.deepcopy(baseline)
+            mutate(self.data)
+            self.write()
+            with self.assertRaisesRegex(ValueError, pattern):
+                history.load_history(self.root)
+
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({'en': 'LineEdit adds suffixes.', 'zh': '`LineEdit` 新增后缀。'}),
+            'Wrap identifier `LineEdit` in backticks',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({'en': 'Use FLUENT_QT_BUILD_GALLERY.', 'zh': '使用 `FLUENT_QT_BUILD_GALLERY`。'}),
+            'Wrap identifier `FLUENT_QT_BUILD_GALLERY` in backticks',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({'en': 'Fixes `ComboBox`; fixes `LineEdit`.', 'zh': '修复 `ComboBox` 与 `LineEdit`。'}),
+            'semicolon-splicing',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({'en': 'Fixes `ComboBox` and `LineEdit`.', 'zh': '修复 `ComboBox`；修复 `LineEdit`。'}),
+            'semicolon-splicing',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({
+                'en': '`LineEdit` adds suffixes without changing caller ownership.',
+                'zh': '`LineEdit` 新增后缀。',
+            }),
+            'AI-slop or internal-plumbing phrasing',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({
+                'en': '`LineEdit` adds suffixes.',
+                'zh': '`LineEdit` 新增后缀，并保留调用方的所有权约定。',
+            }),
+            'AI-slop or internal-plumbing phrasing',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0].__setitem__(
+                'changes',
+                [{'en': f'Item {index}.', 'zh': f'第 {index} 项。'} for index in range(history.MAX_CHANGES_PER_ENTRY + 1)],
+            ),
+            'change bullets',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({'en': 'Unclosed `LineEdit span.', 'zh': '`LineEdit` 正常。'}),
+            'Unbalanced or empty inline code span',
+        )
+        assert_rejected(
+            lambda d: d['versions'][0]['changes'].append({'en': 'word ' * 50, 'zh': '简短说明。'}),
+            'tighten the prose',
+        )
 
 
 if __name__ == '__main__':

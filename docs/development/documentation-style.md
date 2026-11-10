@@ -45,8 +45,10 @@ Keep Chinese example text in code spans or fenced code blocks.
 - Keep one idea per paragraph. Remove restatements of the heading.
 - Prefer a short table for repeated fields and a checklist for ordered work.
 - Use concrete component, file, command, and test names.
-- Avoid promotional adjectives, invented maturity labels, and long chains of
-  abstract nouns.
+- Avoid promotional adjectives, invented maturity labels, defensive non-change
+  boilerplate (`without changing ...`, `while preserving ...`), and long chains
+  of abstract nouns. For website version history and migration copy, follow the
+  [release and migration writing rules](release-governance.md#release-and-migration-writing-rules).
 - Do not describe a completed implementation as a future plan.
 - Keep Chinese prose and Chinese list items on one source line per logical
   paragraph. Do not hard-wrap CJK text to an English column width; let the

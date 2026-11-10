@@ -71,11 +71,14 @@ def release_entry(item, language, page, latest):
     heading = version or ('开发中' if zh else 'Unreleased')
     if version:
         summary = item['summary'][language]
-    else:
-        summary = (f'当前源码相对 {latest} 的改动，尚未确定发布版本。' if zh else
-                   f'Changes in current source since {latest}. Not yet assigned to a release.')
+    elif item.get('changes') or migrations:
+        summary = (f'自 {latest} 发布以来已合入源码的改动：' if zh else
+                   f'Merged into source since {latest}:')
         if migrations:
-            summary += '从源码构建前，请先阅读下面的迁移说明。' if zh else ' Read the migration notes below before building from source.'
+            summary += '从源码构建前请先查看下方迁移说明。' if zh else ' Check the migration notes below before building from source.'
+    else:
+        summary = (f'{latest} 发布后暂无未发布的公开改动。' if zh else
+                   f'No unreleased public changes since {latest}.')
     terms = ' '.join([version or 'unreleased 开发中', *item.get('related', []), *item.get('headers', []), plain(summary),
                       *[plain(change[language]) for change in item.get('changes', [])],
                       *[plain(m[field][language]) for m in migrations for field in ('title', 'impact', 'action')],
@@ -148,7 +151,7 @@ def generated_outputs(documents, catalog, render_shell):
         page = page_path('releases', language)
         context = {'id': 'releases', 'catalog': catalog, 'component': {'category_id': 'project'}}
         title = '版本记录与迁移' if zh else 'Releases and migrations'
-        description = '每个版本改了什么，升级时需要改哪些代码。' if zh else 'What changed in each release, and what to change in your code when you upgrade.'
+        description = '各版本更新内容与升级迁移说明。' if zh else 'Release highlights and upgrade notes for each version.'
         body = history_body(data, language, page)
         toc = [('unreleased', '开发中' if zh else 'Unreleased')]
         toc += [('v' + v['version'], v['version']) for v in data['versions']]
