@@ -118,6 +118,7 @@ WASM_CI_FILES = {
     ".github/scripts/wasm_gallery_ready.py",
     ".github/scripts/wasm_chart_workbench.py",
     ".github/scripts/wasm_data_grid.py",
+    ".github/scripts/wasm_diagnostics.py",
     ".github/scripts/wasm_auto_suggest.py",
     ".github/scripts/wasm_tree_select.py",
     ".github/scripts/wasm_tag_input.py",
