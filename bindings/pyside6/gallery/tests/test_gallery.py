@@ -618,6 +618,39 @@ class PythonGalleryTest(unittest.TestCase):
             self.assertTrue(recorder.session.isRecording())
             delete_qobject(root)
 
+    def test_diagnostics_clipboard_failure_keeps_a_local_retry(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from fluentqt_gallery.diagnostics import FeedbackButton, ensure_diagnostics
+        root = QWidget()
+        root.resize(500, 360)
+        anchor = FeedbackButton(root)
+        anchor.move(24, 300)
+        root.show()
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = ensure_diagnostics(root, directory)
+            recorder.feedback_anchor = anchor
+            recorder.feedback_visible = True
+            archive = Path(directory) / "report.zip"
+            archive.write_bytes(b"synthetic ZIP")
+            with patch("fluentqt_gallery.diagnostics._native._clipboardWriteSucceeded", return_value=False), \
+                    patch("fluentqt_gallery.diagnostics.QApplication.clipboard") as clipboard, \
+                    patch("fluentqt_gallery.diagnostics.QDesktopServices.openUrl") as opened:
+                recorder._feedback_ready(True, str(archive))
+                tip = root.findChild(QWidget, "galleryFeedbackTip")
+                self.assertEqual(tip.title(), "Couldn’t prepare report")
+                self.assertIn("clipboard", tip.message())
+                self.assertEqual(tip.content.action.text(), "Try again")
+                self.assertEqual(tip.artifactName(), "")
+                clipboard.return_value.setMimeData.assert_called_once()
+                opened.assert_not_called()
+                with patch.object(recorder, "report_problem") as retry:
+                    tip.content.action.click()
+                    self.assertTrue(_wait_until(lambda: retry.call_count == 1))
+                    retry.assert_called_once_with(anchor)
+            delete_qobject(root)
+
     def test_diagnostics_open_failure_keeps_a_retry_action(self):
         import tempfile
         from unittest.mock import patch

@@ -225,6 +225,10 @@ private:
 
 void prepareHighDpiApplication();
 
+// Share native clipboard write confirmation with application-side Python code.
+// zh_CN: 向 Python 应用层提供共享的原生剪贴板写入确认。
+bool clipboardWriteSucceededForBinding();
+
 // Keep the borrowed source painter inside C++; legacy Shiboken can invalidate its wrapper.
 // zh_CN: 借用的源画笔仅在 C++ 内访问，避免旧版 Shiboken 使其包装对象失效。
 void forwardPaintEngineClipForBinding(QPainter& target, const QPaintEngineState& state);

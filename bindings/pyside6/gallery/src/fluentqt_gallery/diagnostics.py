@@ -19,7 +19,9 @@ from PySide6.QtCore import (QAbstractAnimation, QByteArray, QCoreApplication, QE
 from PySide6.QtGui import QColor, QDesktopServices, QFont, QKeySequence
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 import fluentqt
+from fluentqt import _fluentqt as _native
 from fluentqt._qt_compat import single_shot
+from shiboken6 import isValid
 
 _save_workers = set()
 _MAX_CRASH_BYTES = 16 * 1024 * 1024
@@ -933,9 +935,13 @@ class DiagnosticRecorder(QObject):
             mime.setUrls([url])
             mime.setData("x-special/gnome-copied-files", b"copy\n" + bytes(url.toEncoded()))
             QApplication.clipboard().setMimeData(mime)
-            self._show_prepared()
-            return
-        tip = self._show_feedback("Couldn’t save report", "Logs are still available.", True)
+            if not isValid(self) or self.closed:
+                return
+            if _native._clipboardWriteSucceeded():
+                self._show_prepared()
+                return
+            detail = "Could not copy the report to the clipboard. Try again."
+        tip = self._show_feedback("Couldn’t prepare report", detail or "Logs are still available.", True)
         if tip:
             tip.set_action("Try again", "ic_fluent_arrow_clockwise_20_regular", self._retry)
 

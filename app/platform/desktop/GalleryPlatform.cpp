@@ -1,4 +1,5 @@
 #include "platform/GalleryPlatform.h"
+#include "support/clipboard/ClipboardSupport.h"
 #include "compatibility/WindowGeometryCompat.h"
 
 #include <QCoreApplication>
@@ -172,11 +173,18 @@ void prepareDiagnosticFeedback(QWidget* context,
     });
     QObject::connect(worker, &QThread::finished, context, [=] {
         if (*ok) {
+            const QPointer<QWidget> guard(context);
             auto* mime = new QMimeData;
             const auto url = QUrl::fromLocalFile(*result);
             mime->setUrls({url});
             mime->setData("x-special/gnome-copied-files", "copy\n" + url.toEncoded());
             QGuiApplication::clipboard()->setMimeData(mime);
+            if (!guard)
+                return;
+            if (!support::clipboard::writeSucceeded()) {
+                finished(false, QObject::tr("Could not copy the report to the clipboard. Try again."));
+                return;
+            }
         }
         finished(*ok, *result);
     });

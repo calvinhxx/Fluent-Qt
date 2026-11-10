@@ -14,6 +14,8 @@
 #include <QJsonObject>
 #include <QKeySequence>
 #include <QMimeData>
+#include <QPointer>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QUrlQuery>
@@ -28,6 +30,14 @@
 #include "viewmodel/GalleryDiagnostics.h"
 #include "view/shell/GalleryWindow.h"
 #include "viewmodel/GallerySettings.h"
+
+#if defined(Q_OS_WIN)
+#include <qt_windows.h>
+#undef small
+#include <chrono>
+#include <future>
+#include <thread>
+#endif
 
 namespace {
 class FeedbackUrlReceiver : public QObject {
@@ -152,6 +162,68 @@ TEST(GalleryDiagnosticsTest, CrashCollectionRequiresIdentityAndTimeAndSkipsLinks
     EXPECT_TRUE(fluent::gallery::platform::existingCrashAttachments({identity}, directory.path()).isEmpty());
     EXPECT_TRUE(fluent::gallery::platform::existingCrashAttachments({}, directory.path()).isEmpty());
 }
+
+TEST(GalleryDiagnosticsTest, ClipboardNotificationCanDestroyFeedbackContext)
+{
+    RestoreFeedbackClipboard restoreClipboard;
+    QTemporaryDir directory;
+    QPointer<QWidget> context = new QWidget;
+    QObject::connect(QApplication::clipboard(), &QClipboard::dataChanged, context, [&] { delete context.data(); });
+    fluent::gallery::platform::prepareDiagnosticFeedback(context, {{"session_id", "synthetic"}}, {}, {},
+        directory.path(), [&](bool, const QString&) { EXPECT_FALSE(context.isNull()); });
+    ASSERT_TRUE(QTest::qWaitFor([&] { return context.isNull(); }, 5000));
+}
+
+#if defined(Q_OS_WIN)
+TEST(GalleryDiagnosticsTest, WindowsClipboardLockReportsFailureInsteadOfSuccess)
+{
+    if (QGuiApplication::platformName() != QStringLiteral("windows"))
+        GTEST_SKIP() << "Requires the native Windows clipboard.";
+    std::promise<bool> locked;
+    std::promise<void> release;
+    auto ready = locked.get_future();
+    auto released = release.get_future();
+    std::thread holder([&] {
+        HWND window = CreateWindowExW(0, L"STATIC", L"Gallery clipboard test", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+            nullptr, nullptr);
+        bool acquired = false;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (window && std::chrono::steady_clock::now() < deadline) {
+            if (OpenClipboard(window)) {
+                acquired = true;
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        locked.set_value(acquired);
+        released.wait();
+        if (acquired)
+            CloseClipboard();
+        if (window)
+            DestroyWindow(window);
+    });
+    const auto cleanup = qScopeGuard([&] {
+        release.set_value();
+        holder.join();
+    });
+    ASSERT_TRUE(ready.get());
+    QTemporaryDir directory;
+    QWidget context;
+    bool completed = false;
+    bool success = true;
+    QString detail;
+    fluent::gallery::platform::prepareDiagnosticFeedback(&context, {{"session_id", "synthetic"}}, {}, {},
+        directory.path(), [&](bool ok, const QString& message) {
+            completed = true;
+            success = ok;
+            detail = message;
+        });
+    ASSERT_TRUE(QTest::qWaitFor([&] { return completed; }, 5000));
+    EXPECT_FALSE(success);
+    EXPECT_TRUE(detail.contains("clipboard"));
+    EXPECT_EQ(QDir(directory.filePath("reports")).entryList({"*.zip"}, QDir::Files).size(), 1);
+}
+#endif
 
 TEST(GalleryDiagnosticsTest, FeedbackEntryFitsExpandedCompactAndTopNavigation)
 {
@@ -305,7 +377,7 @@ TEST(GalleryDiagnosticsTest, FailedPreparationStaysLocalAndCanRetry)
     auto* toast = dynamic_cast<fluent::gallery::GalleryFeedbackTip*>(
         root.findChild<fluent::dialogs_flyouts::TeachingTip*>("galleryFeedbackTip"));
     ASSERT_NE(toast, nullptr);
-    ASSERT_TRUE(QTest::qWaitFor([&] { return toast->title() == "Couldn’t save report"; }, 5000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return toast->title() == "Couldn’t prepare report"; }, 5000));
     EXPECT_TRUE(browser.opened.isEmpty());
     ASSERT_NE(toast->actionButton(), nullptr);
     EXPECT_EQ(toast->actionButton()->text(), "Try again");
@@ -539,7 +611,11 @@ TEST(GalleryDiagnosticsTest, FeedbackEntryWorksInRealGalleryAcrossThemes)
         EXPECT_EQ(tip->preferredPlacement(), fluent::dialogs_flyouts::TeachingTip::TopRight);
         const QRect card(tip->contentHost()->mapTo(&window, QPoint()), tip->cardSize());
         EXPECT_TRUE(window.rect().contains(card));
-        EXPECT_LT(card.right(), 260);
+        const auto* pane = button->parentWidget();
+        ASSERT_NE(pane, nullptr);
+        const QRect paneRect(pane->mapTo(&window, QPoint()), pane->size());
+        EXPECT_GE(card.left(), paneRect.left());
+        EXPECT_LE(card.right(), paneRect.right());
         if (!directory.isEmpty()) {
             QDir().mkpath(directory);
             const QString mode = theme == fluent::FluentElement::Light ? "light" : "dark";

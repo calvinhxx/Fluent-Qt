@@ -101,6 +101,9 @@ if (!paletteGuard) {
                function-name="^setItems$"/>
 
     <function signature="prepareHighDpiApplication()"/>
+    <function signature="clipboardWriteSucceededForBinding()">
+        <modify-function rename="_clipboardWriteSucceeded"/>
+    </function>
     <function signature="forwardPaintEngineClipForBinding(QPainter&amp;,const QPaintEngineState&amp;)">
         <modify-function rename="_forwardPaintEngineClip"/>
     </function>

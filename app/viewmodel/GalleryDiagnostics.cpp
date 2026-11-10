@@ -198,7 +198,8 @@ void GalleryDiagnostics::reportProblem(QWidget* source)
                 showPreparedReport(url, detail.isEmpty());
                 return;
             }
-            auto* tip = showFeedback(tr("Couldn’t save report"), tr("Logs are still available."), true);
+            auto* tip = showFeedback(tr("Couldn’t prepare report"),
+                detail.isEmpty() ? tr("Logs are still available.") : detail, true);
             if (tip)
                 tip->setAction(tr("Try again"), QStringLiteral("ic_fluent_arrow_clockwise_20_regular"), this, [this] {
                     QTimer::singleShot(0, this, [this] { reportProblem(m_feedbackAnchor); });
