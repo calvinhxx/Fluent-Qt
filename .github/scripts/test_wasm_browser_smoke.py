@@ -51,7 +51,8 @@ class BrowserTierTest(unittest.TestCase):
         self.assertCountEqual(gallery, [
             MODULE.run_list_detail_contract, MODULE.run_auto_suggest_contract,
             MODULE.run_gallery_search_contract, MODULE.run_tag_input_contract,
-            MODULE.run_tree_select_contract, MODULE.run_chart_workbench_contract, *self.contracts("fast"),
+            MODULE.run_tree_select_contract, MODULE.run_chart_workbench_contract,
+            MODULE.run_diagnostics_contract, *self.contracts("fast"),
         ])
         self.assertCountEqual(interaction + gallery, self.contracts("full"))
         for mode in ("fast", "viewport"):

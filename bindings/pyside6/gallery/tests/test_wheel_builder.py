@@ -28,6 +28,7 @@ class GalleryWheelBuilderTest(unittest.TestCase):
             "__init__.py",
             "__main__.py",
             "application_controller.py",
+            "diagnostics.py",
             "app.py",
             "catalog.py",
             "contract.json",

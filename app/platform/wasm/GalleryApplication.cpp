@@ -21,6 +21,7 @@
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryWindow.h"
 #include "viewmodel/GallerySettings.h"
+#include "viewmodel/GalleryDiagnostics.h"
 
 #ifndef FLUENT_QT_GALLERY_VERSION
 #define FLUENT_QT_GALLERY_VERSION "0.0.0"
@@ -120,6 +121,7 @@ int runApplication(int argc, char** argv)
 
     GallerySettings::instance();
     galleryWindow = std::make_unique<GalleryWindow>();
+    GalleryDiagnostics::ensure(galleryWindow.get());
     const QString initialRoute = requestedRoute();
     if (!initialRoute.isEmpty() && !galleryWindow->selectRoute(initialRoute)) {
         LOG_WARN(QStringLiteral("GalleryApp ignored unknown requested route=%1").arg(initialRoute));

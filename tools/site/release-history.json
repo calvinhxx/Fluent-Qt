@@ -924,8 +924,15 @@
   "unreleased": {
     "after": "1.11.3",
     "related": [],
-    "headers": [],
-    "changes": [],
+    "headers": [
+      "src/utils/DiagnosticSession.h"
+    ],
+    "changes": [
+      {
+        "en": "Adds a bounded diagnostic collector and ZIP report builder, with automatic local Gallery history and one-click GitHub feedback. Desktop reports copy a ZIP file and include matching existing crash reports or dumps; native dump capture is not enabled.",
+        "zh": "新增有容量上限的诊断采集与 ZIP 打包能力，Gallery 自动保留本地近期记录并支持一键 GitHub 反馈。桌面版复制 ZIP 文件并收集匹配的已有崩溃报告或 dump，尚未启用原生 dump 捕获。"
+      }
+    ],
     "migrations": []
   }
 }

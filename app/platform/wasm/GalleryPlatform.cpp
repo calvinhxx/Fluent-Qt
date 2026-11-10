@@ -16,8 +16,10 @@
 #include <cstdlib>
 
 #include <utility>
+#include "utils/DiagnosticSession.h"
 
 namespace fluent::gallery::platform {
+
 namespace {
 
 QPointer<QObject> hostThemeContext;
@@ -25,6 +27,27 @@ HostThemeChangedHandler hostThemeChangedHandler;
 
 // clang-format off
 // EM_JS bodies are JavaScript; treating `===` as C++ tokens corrupts them.
+EM_JS(int, fluentQtGalleryDownloadDiagnosticReport, (const char* data, int length), {
+    let url;
+    let link;
+    try {
+        const blob = new Blob([HEAPU8.slice(data, data + length)], {type: 'application/zip'});
+        url = URL.createObjectURL(blob);
+        link = document.createElement('a');
+        link.href = url;
+        link.download = 'fluentqt-report.zip';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        return 1;
+    } catch (_) {
+        return 0;
+    } finally {
+        if (link) link.remove();
+        if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+});
+
 EM_JS(int, fluentQtGalleryEmbeddedHost, (), {
     return window.fluentQtEmbedded === true ? 1 : 0;
 });
@@ -58,6 +81,33 @@ EM_JS(void, fluentQtGalleryPublishHostTheme, (int value), {
 // clang-format on
 
 } // namespace
+
+void prepareDiagnosticFeedback(QWidget*,
+    const QVariantMap& report,
+    const QVariantMap& attachments,
+    const QVariantList&,
+    const QString&,
+    std::function<void(bool, const QString&)> finished)
+{
+    auto snapshot = report;
+    snapshot.insert("crash_files_included", 0);
+    const auto bytes = diagnostics::DiagnosticSession::createBundle(snapshot, attachments);
+    const bool requested = !bytes.isEmpty()
+        && fluentQtGalleryDownloadDiagnosticReport(bytes.constData(), bytes.size()) != 0;
+    finished(requested, requested ? QString() : QStringLiteral("Could not download the report. Try again."));
+}
+QString diagnosticStorageDirectory()
+{
+    return {};
+}
+QVariantMap diagnosticProcessIdentity()
+{
+    return {};
+}
+QVariantMap existingCrashAttachments(const QVariantList&, const QString&)
+{
+    return {};
+}
 
 QString graphicsRendererOverride()
 {

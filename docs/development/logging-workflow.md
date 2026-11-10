@@ -121,6 +121,14 @@ message bridge. Messages from Qt and all `fluentqt.*` categories then use the
 same sinks and retain their category name. Validate bridge behavior through
 `test_project_logging`; do not duplicate the bridge in component tests.
 
+## User support reports
+
+Gallery automatically retains bounded recent diagnostics. **Report a problem** beside
+Settings copies a ZIP file, then displays a notification beside the button. Its **Open GitHub
+issue** action opens the prefilled form; the user reviews and pastes the attachment. WebAssembly downloads the ZIP instead. Library consumers use the application-owned integration described in
+[Diagnostic sessions](../architecture/diagnostic-session.md). The collector does
+not install a global handler or modify category rules.
+
 ## Scope Control
 
 - Add logs near behavior being changed and retain only diagnostically useful

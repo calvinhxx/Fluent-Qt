@@ -1,4 +1,5 @@
 #include "GalleryTopNavigationPane.h"
+#include "view/widgets/GalleryFeedbackButton.h"
 
 #include <QAbstractAnimation>
 #include <QHBoxLayout>
@@ -100,6 +101,10 @@ GalleryTopNavigationPane::GalleryTopNavigationPane(const QVector<GalleryNavigati
         showChildFlyout(QStringLiteral("overflow"), m_moreButton);
     });
     layout->addWidget(m_moreButton);
+    if (m_items.size() == 1 && m_items.first().id == QStringLiteral("settings")) {
+        m_feedbackButton = new GalleryFeedbackButton(this);
+        layout->addWidget(m_feedbackButton);
+    }
     layout->addStretch(1);
     updateButtonStyles();
 }
@@ -130,13 +135,14 @@ QSize GalleryTopNavigationPane::sizeHint() const
         labelSpace += m_buttons.value(QStringLiteral("home"))->fontMetrics().horizontalAdvance(m_items.first().title)
             + 4;
     return QSize(2 * kBarHorizontalMargin + count * kButtonSize + qMax(0, count - 1) * kButtonSpacing + labelSpace
+            + (m_feedbackButton ? m_feedbackButton->width() + kButtonSpacing : 0)
             + (m_groupDivider ? 1 + kButtonSpacing : 0),
         kTopBarHeight);
 }
 
 QSize GalleryTopNavigationPane::minimumSizeHint() const
 {
-    return QSize(kButtonSize + 2 * kBarHorizontalMargin, kTopBarHeight);
+    return m_feedbackButton ? sizeHint() : QSize(kButtonSize + 2 * kBarHorizontalMargin, kTopBarHeight);
 }
 
 QString GalleryTopNavigationPane::visualRouteId() const
@@ -186,7 +192,8 @@ void GalleryTopNavigationPane::updateButtonLayout()
         widths.append(label ? qMax(kButtonSize, button->sizeHint().width()) : kButtonSize);
         button->setFixedSize(widths.last(), kButtonSize);
     }
-    const int available = qMax(0, width() - 2 * kBarHorizontalMargin);
+    const int available = qMax(0,
+        width() - 2 * kBarHorizontalMargin - (m_feedbackButton ? m_feedbackButton->width() + kButtonSpacing : 0));
     const auto occupied = [&](bool more) {
         int total = more ? kButtonSize + kButtonSpacing : 0;
         for (int i = 0; i < widths.size(); ++i) {

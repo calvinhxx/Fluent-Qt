@@ -195,6 +195,7 @@ endif()
 endif()
 
 add_qt_test_module(test_gallery_content_pages
+    TestGalleryDiagnostics.cpp
     TestFormSamples.cpp
     TestCommandPaletteSamples.cpp
     TestGalleryOverlaySamples.cpp

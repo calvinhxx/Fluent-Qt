@@ -26,6 +26,7 @@ from wasm_auto_suggest import run_auto_suggest_contract, run_gallery_search_cont
 from wasm_tag_input import run_tag_input_contract
 from wasm_tree_select import run_tree_select_contract
 from wasm_chart_workbench import run_chart_workbench_contract
+from wasm_diagnostics import run_diagnostics_contract
 
 
 DEFAULT_RENDER_PIXEL_BUDGET = 1_600_000
@@ -675,6 +676,7 @@ def run_fixed_viewport_contracts(
             ("gallery", run_tag_input_contract, "tag-input-validation"),
             ("gallery", run_tree_select_contract, "tree-select-validation"),
             ("gallery", run_chart_workbench_contract, "chart-workbench-validation"),
+            ("gallery", run_diagnostics_contract, "diagnostics-validation"),
         ):
             if group in ("all", owner):
                 run_timed_contract(contract, browser, base_url, root / artifact_dir)

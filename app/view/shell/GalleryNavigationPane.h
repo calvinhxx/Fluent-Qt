@@ -11,6 +11,7 @@
 #include "components/foundation/QMLPlus.h"
 #include "model/GalleryNavigationItem.h"
 
+class QBoxLayout;
 class QStandardItem;
 class QStandardItemModel;
 class QPropertyAnimation;
@@ -97,6 +98,7 @@ private:
     QVector<GalleryNavigationItem> m_items;
     QStandardItemModel* m_model = nullptr;
     fluent::collections::TreeView* m_treeView = nullptr;
+    QBoxLayout* m_footerActions = nullptr;
     GallerySpatialSupportBadge* m_spatialBadge = nullptr;
     fluent::layout::Divider* m_footerDivider = nullptr;
     fluent::dialogs_flyouts::Popup* m_compactFlyout = nullptr;

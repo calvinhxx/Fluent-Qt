@@ -51,6 +51,7 @@ private:
     QHash<QString, fluent::basicinput::Button*> m_buttons;
     QVector<GalleryNavigationItem> m_items;
     fluent::basicinput::Button* m_moreButton = nullptr;
+    basicinput::Button* m_feedbackButton = nullptr;
     QWidget* m_groupDivider = nullptr;
     QHash<QString, QVector<GalleryNavigationItem>> m_childItems;
     QHash<QString, QString> m_parentRoutes;

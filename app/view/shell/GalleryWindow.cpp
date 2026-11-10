@@ -652,6 +652,8 @@ void GalleryWindow::focusSearch()
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
 {
+    if (routeId != QStringLiteral("settings"))
+        setProperty("galleryLastContentRoute", routeId);
     if (m_splashScreen)
         m_splashScreen->clearDismissalContent();
     LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1").arg(routeId));
