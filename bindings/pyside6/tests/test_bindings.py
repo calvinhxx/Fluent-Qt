@@ -3652,6 +3652,65 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertFalse(Shiboken.isValid(action))
             del action
 
+    def test_diagnostic_session_excludes_text_and_preserves_borrowed_root(self):
+        from PySide6.QtCore import QtMsgType
+        root = QWidget()
+        root.setObjectName("private-customer")
+        session = fluentqt.DiagnosticSession()
+        self.assertTrue(session.start(root))
+        self.assertFalse(session.start(root, True))
+        session.recordMessage(QtMsgType.QtWarningMsg, "app.layout", "private-message")
+        session.stop()
+        report = session.report()
+        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(report["events"][0]["severity"], "warning")
+        self.assertNotIn("message", report["events"][0])
+        self.assertNotIn("private-customer", str(report))
+        self.assertIsNone(root.parent())
+        session.clear()
+        self.assertEqual(session.report()["events"], [])
+        self.assertTrue(session.start(root, True))
+        session.recordMessage(QtMsgType.QtInfoMsg, "app.layout", "review-this")
+        session.stop()
+        self.assertEqual(session.report()["events"][0]["message"], "review-this")
+        root.deleteLater()
+
+    def test_diagnostic_bundle_allows_python_progress_during_background_packaging(self):
+        import threading
+        import zipfile
+        import io
+
+        attachments = {"crash.dmp": QByteArray(b"x" * (16 * 1024 * 1024))}
+        entered = threading.Event()
+        finished = threading.Event()
+        result = []
+
+        def package():
+            entered.set()
+            try:
+                result.append(bytes(fluentqt.DiagnosticSession.createBundle({"schema_version": 1}, attachments)))
+            finally:
+                finished.set()
+
+        worker = threading.Thread(target=package)
+        original_interval = sys.getswitchinterval()
+        try:
+            # Exclude interpreter yields immediately before/after the native call;
+            # progress here must come from the binding releasing the GIL.
+            sys.setswitchinterval(30.0)
+            worker.start()
+            self.assertTrue(entered.wait(5))
+            progressed_while_packaging = not finished.is_set()
+        finally:
+            sys.setswitchinterval(original_interval)
+            worker.join(10)
+        self.assertFalse(worker.is_alive())
+        self.assertTrue(progressed_while_packaging, "Background ZIP packaging held the Python execution lock")
+        self.assertEqual(len(result), 1)
+        with zipfile.ZipFile(io.BytesIO(result[0])) as archive:
+            self.assertIsNone(archive.testzip())
+            self.assertEqual(archive.getinfo("crash.dmp").file_size, 16 * 1024 * 1024)
+
     def test_inspector_report_and_options(self):
         root = QWidget()
         root.setObjectName("bindingInspectorRoot")

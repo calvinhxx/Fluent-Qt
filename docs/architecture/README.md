@@ -45,6 +45,7 @@ flowchart TD
 | [Overlay behavior](overlay-behavior.md) | Popup, Flyout, Dialog, TeachingTip, dropdown, drawer, or another same-window transient surface |
 | [Window chrome](window-chrome.md) | Title bars, native move/resize, backdrops, hit testing, or platform window behavior |
 | [Typography resolution](typography-resolution.md) | Fonts, inherited application typography, role resolution, or text scaling |
+| [Diagnostic sessions](diagnostic-session.md) | Bounded recent history, support bundles and application-owned storage and export |
 | [Inspector report](inspector-report.md) · [schema](inspector-report.schema.json) | Diagnostic rules, findings, generated workbenches, or report consumers |
 
 Public compatibility rules and the source-layer ownership map are in the

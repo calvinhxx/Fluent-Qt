@@ -12705,6 +12705,7 @@
     "ChartData",
     "ChartModel",
     "CornerRadius",
+    "DiagnosticSession",
     "EditingCommandRouter",
     "FluentMenuItem",
     "FluentWidget",

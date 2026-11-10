@@ -82,6 +82,7 @@ from .dialogs_flyouts import (
     TeachingTip,
 )
 from .foundation import (
+    DiagnosticSession,
     AnchorEdge,
     AnchorLayout,
     AnchorSpec,
@@ -286,6 +287,7 @@ def inspect_widget(
 
 
 __all__ = [
+    "DiagnosticSession",
     "Accordion",
     "AnchorEdge",
     "AnchorLayout",

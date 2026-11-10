@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <typesystem package="_fluentqt">
     <load-typesystem name="typesystem_widgets.xml" generate="no"/>
+    <rejection class="fluent::diagnostics::DiagnosticSession" function-name="eventFilter"/>
     <!-- Optional plugin global functions. -->
 
     <template name="command_palette_references_before">
@@ -208,6 +209,15 @@ if (!paletteGuard) {
          Q_ENUM_NS wrappers when the windowing namespace is flattened. The
          fluentqt Python package re-exports the intended flat public API. -->
     <namespace-type name="fluent">
+        <namespace-type name="diagnostics" visible="no">
+            <object-type name="DiagnosticSession">
+                <modify-function signature="messageSink()const" remove="all"/>
+                <modify-function signature="createBundle(const QVariantMap&amp;,const QVariantMap&amp;)" allow-thread="yes"/>
+                <modify-function signature="start(QWidget*,bool,int)">
+                    <modify-argument index="1"><define-ownership owner="default"/></modify-argument>
+                </modify-function>
+            </object-type>
+        </namespace-type>
         <include file-name="BindingApi.h" location="global"/>
         <enum-type name="WidgetOwnership"/>
         <object-type name="FormController">

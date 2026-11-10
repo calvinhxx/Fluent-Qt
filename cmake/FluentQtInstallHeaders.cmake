@@ -199,6 +199,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/design/Typography.h
 
     src/utils/Inspector.h
+    src/utils/DiagnosticSession.h
 
 )
 

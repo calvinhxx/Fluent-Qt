@@ -129,6 +129,7 @@ set(FLUENTQT_PYSIDE6_GENERATED_ROOT
 set(FLUENTQT_PYSIDE6_GENERATED_DIR
     "${FLUENTQT_PYSIDE6_GENERATED_ROOT}/_fluentqt")
 set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_diagnostics_diagnosticsession_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/_fluentqt_module_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_anchorlayout_wrapper.cpp"

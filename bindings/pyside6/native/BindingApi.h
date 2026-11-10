@@ -11,6 +11,7 @@
 #include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
+#include <utils/DiagnosticSession.h>
 
 #include <components/charts/ChartModel.h>
 #include <components/charts/ChartView.h>

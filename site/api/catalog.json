@@ -24,7 +24,7 @@
   ],
   "summary": {
     "components": 99,
-    "public_headers": 178,
+    "public_headers": 179,
     "categories": 16
   },
   "categories": [
@@ -8072,6 +8072,15 @@
         "Inspector"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/utils/Inspector.h"
+    },
+    {
+      "include": "<FluentQt/utils/DiagnosticSession.h>",
+      "source": "src/utils/DiagnosticSession.h",
+      "summary": "Collects a bounded, opt-in diagnostic session without file or network I/O.",
+      "declarations": [
+        "DiagnosticSession"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/utils/DiagnosticSession.h"
     }
   ]
 }

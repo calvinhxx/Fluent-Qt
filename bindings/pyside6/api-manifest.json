@@ -41,6 +41,7 @@
     "DataGridToolBar",
     "DatePicker",
     "DateTimeRangePicker",
+    "DiagnosticSession",
     "Dialog",
     "Divider",
     "DonutChart",
@@ -2050,6 +2051,15 @@
       "removeSelected",
       "selectedKeysChanged",
       "countsChanged"
+    ],
+    "DiagnosticSession": [
+      "start",
+      "stop",
+      "clear",
+      "isRecording",
+      "report",
+      "environment",
+      "recordMessage"
     ]
   },
   "optional_modules": {

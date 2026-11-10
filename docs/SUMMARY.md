@@ -22,6 +22,7 @@ standalone reading tasks.
     - [Overlay Behavior Contract](architecture/overlay-behavior.md)
     - [Typography Resolution](architecture/typography-resolution.md)
     - [Inspector Report Contract](architecture/inspector-report.md)
+    - [Diagnostic reports](architecture/diagnostic-session.md)
     - [Charts](architecture/charts.md)
     - [Files and feedback](architecture/files-and-feedback.md)
     - [Form state and validation](architecture/form-state.md)

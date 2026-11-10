@@ -1,4 +1,6 @@
 source_group(TREE ${PROJECT_SOURCE_DIR}/src FILES ${SRC})
+set_source_files_properties(${PROJECT_SOURCE_DIR}/src/utils/DiagnosticSession.cpp PROPERTIES
+    COMPILE_DEFINITIONS "FLUENTQT_DIAGNOSTIC_VERSION=\"${PROJECT_VERSION}\"")
 
 add_library(FluentQt STATIC ${SRC} ${RESOURCES})
 add_library(FluentQt::FluentQt ALIAS FluentQt)

@@ -31,6 +31,7 @@
             "architecture/overlay-behavior.md",
             "architecture/typography-resolution.md",
             "architecture/inspector-report.md",
+            "architecture/diagnostic-session.md",
             "architecture/charts.md",
             "architecture/files-and-feedback.md",
             "architecture/form-state.md",
