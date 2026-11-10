@@ -64,7 +64,7 @@ inline void paintTextInputFrame(QPainter& painter,
     painter.setBrush(Qt::NoBrush);
     painter.setPen(QPen(stroke, border.width));
     painter.drawPath(frame);
-    if (state.enabled) {
+    if (state.enabled && bottomWidth > 0) {
         const auto underline = metrics.alignedStroke(bounds, bottomWidth);
         QPen pen(bottom, underline.width);
         pen.setCapStyle(Qt::RoundCap);

@@ -18,9 +18,11 @@
 #include <QAccessible>
 #include <QApplication>
 #include <QContextMenuEvent>
+#include <QImage>
 #include <QIntValidator>
 #include <QHBoxLayout>
 #include <QMenu>
+#include <QPainter>
 #include <QTimer>
 #include <QToolButton>
 #include <QtMath>
@@ -579,6 +581,56 @@ TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters)
     EXPECT_EQ(spyOffset.count(), 1);
     EXPECT_EQ(spyFocused.count(), 1);
     EXPECT_EQ(spyUnfocused.count(), 1);
+}
+
+TEST_F(LineEditTest, Contract_ZeroBorderWidthOmitsUnderlineWithoutPaintingTopEdge)
+{
+    LineEdit edit(window);
+    edit.setGeometry(20, 20, 240, 40);
+    edit.setClearButtonEnabled(false);
+    window->show();
+    window->activateWindow();
+    QApplication::processEvents();
+
+    for (auto theme : {FluentElement::Light, FluentElement::Dark}) {
+        SCOPED_TRACE(static_cast<int>(theme));
+        edit.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        for (bool focused : {false, true}) {
+            SCOPED_TRACE(focused);
+            edit.setFocus(Qt::OtherFocusReason);
+            if (!focused)
+                edit.clearFocus();
+            QApplication::processEvents();
+            ASSERT_EQ(edit.hasFocus(), focused);
+
+            for (qreal dpr : {1.0, 1.5, 2.0}) {
+                SCOPED_TRACE(dpr);
+                const auto render = [&] {
+                    QImage image(qRound(edit.width() * dpr), qRound(edit.height() * dpr),
+                        QImage::Format_ARGB32_Premultiplied);
+                    image.setDevicePixelRatio(dpr);
+                    image.fill(Qt::transparent);
+                    QPainter painter(&image);
+                    edit.render(&painter);
+                    return image;
+                };
+                edit.setFocusedBorderWidth(2);
+                edit.setUnfocusedBorderWidth(2);
+                const QImage visible = render();
+                if (focused)
+                    edit.setFocusedBorderWidth(0);
+                else
+                    edit.setUnfocusedBorderWidth(0);
+                const QImage hidden = render();
+                const int x = hidden.width() / 2;
+                const int bottom = hidden.height() - 1;
+                EXPECT_EQ(hidden.pixelColor(x, 0), visible.pixelColor(x, 0));
+                EXPECT_EQ(hidden.pixelColor(x, bottom), visible.pixelColor(x, 0));
+                EXPECT_NE(hidden.pixelColor(x, bottom), visible.pixelColor(x, bottom));
+                EXPECT_EQ(hidden.pixelColor(x, hidden.height() / 2), visible.pixelColor(x, visible.height() / 2));
+            }
+        }
+    }
 }
 
 TEST_F(LineEditTest, Contract_ClearButtonIsNamedAndUsable)
