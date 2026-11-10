@@ -216,6 +216,7 @@ EXPECTED_SUPPORT_TYPES = frozenset(
         "ChartData",
         "ChartModel",
         "CornerRadius",
+        "DiagnosticSession",
         "EditingCommandRouter",
         "FluentMenuItem",
         "FluentWidget",
@@ -478,6 +479,291 @@ def _wait_until(
 
 
 class PythonGalleryTest(unittest.TestCase):
+    def test_diagnostic_log_forwarding_drains_before_window_teardown(self):
+        import logging
+        import threading
+        from shiboken6 import Shiboken
+        from fluentqt_gallery.diagnostics import FeedbackButton, ensure_diagnostics
+        root = QWidget()
+        panel = FeedbackButton(root)
+        capture = ensure_diagnostics(root).capture
+        errors = []
+        capture.handleError = lambda record: errors.append(record.name)
+        started = threading.Event()
+        record = logging.LogRecord("test.diagnostics", logging.WARNING, "", 0, "synthetic", (), None)
+        def forward():
+            started.set()
+            for _ in range(1000):
+                capture.emit(record)
+        worker = threading.Thread(target=forward)
+        worker.start()
+        self.assertTrue(started.wait(2))
+        Shiboken.delete(root)
+        worker.join(2)
+        self.assertFalse(worker.is_alive())
+        self.assertFalse(capture.active)
+        self.assertEqual(errors, [])
+        QApplication.processEvents()
+
+    def test_diagnostics_survive_feedback_button_recreation(self):
+        import tempfile
+        from shiboken6 import Shiboken
+        from fluentqt_gallery.diagnostics import FeedbackButton, ensure_diagnostics
+        from PySide6.QtCore import QtMsgType
+        root = QWidget()
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = ensure_diagnostics(root, directory)
+            panel = FeedbackButton(root)
+            self.assertIs(ensure_diagnostics(panel), recorder)
+            session = recorder.session
+            session.recordMessage(QtMsgType.QtWarningMsg, "test", "before-opening-feedback")
+            Shiboken.delete(panel)
+            self.assertTrue(session.isRecording())
+            panel = FeedbackButton(root)
+            self.assertIs(ensure_diagnostics(root).session, session)
+            self.assertIn("before-opening-feedback", json.dumps(recorder.report()))
+            self.assertTrue(panel.isEnabled())
+            Shiboken.delete(root)
+            saved = list(Path(directory).glob("session-*.json"))
+            self.assertEqual(len(saved), 1)
+            self.assertIn("environment", json.loads(saved[0].read_text()))
+            self.assertIn("before-opening-feedback", saved[0].read_text())
+
+    def test_diagnostics_copies_zip_then_waits_for_tip_action(self):
+        import tempfile
+        import zipfile
+        from unittest.mock import patch
+        from PySide6.QtCore import QMimeData, QtMsgType, QUrlQuery
+        from shiboken6 import Shiboken
+        from fluentqt_gallery.diagnostics import FeedbackButton, ensure_diagnostics
+        clipboard = QApplication.clipboard()
+        original = clipboard.mimeData()
+        saved = {fmt: original.data(fmt) for fmt in original.formats()} if original else {}
+        def restore_clipboard():
+            # Destroy Python-owned MIME data before interpreter shutdown (offscreen QPA retains it).
+            clipboard.clear()
+            if saved:
+                mime = QMimeData()
+                for fmt, data in saved.items():
+                    mime.setData(fmt, data)
+                clipboard.setMimeData(mime)
+        self.addCleanup(restore_clipboard)
+        root = QWidget()
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = ensure_diagnostics(root, directory)
+            button = FeedbackButton(root)
+            root.resize(800, 480)
+            button.move(24, 420)
+            root.show()
+            recorder.session.recordMessage(QtMsgType.QtWarningMsg, "test", "synthetic-warning")
+            crash = Path(directory) / "sample.ips"
+            crash.write_text(json.dumps({"pid": recorder.identity["pid"], "procPath": recorder.identity["executable"]}))
+            with patch("fluentqt_gallery.diagnostics.crash_report_directory", return_value=directory), \
+                    patch("fluentqt_gallery.diagnostics.QDesktopServices.openUrl", return_value=True) as opened:
+                button.click()
+                button.click()  # Repeated input shares the in-flight report.
+                self.assertTrue(_wait_until(lambda: not recorder.preparing, 5000))
+                self.assertEqual(opened.call_count, 0)
+                toast = root.findChild(QWidget, "galleryFeedbackTip")
+                self.assertEqual(toast.title(), "Diagnostic ZIP ready")
+                shortcut = QKeySequence(QKeySequence.StandardKey.Paste).toString(
+                    QKeySequence.SequenceFormat.NativeText
+                ) or "Ctrl+V"
+                self.assertEqual(toast.message(), f"Press {shortcut} on GitHub to attach it.")
+                self.assertEqual(toast.artifactName(), "fluentqt-report.zip")
+                self.assertEqual(toast.artifactState(), "Copied to clipboard")
+                self.assertTrue(bool(toast.content.artifact_size.text()))
+                self.assertTrue(toast.isLightDismissEnabled())
+                self.assertIs(toast.target(), button)
+                self.assertTrue(toast.isOpen())
+                self.assertFalse(toast.isTailVisible())
+                self.assertEqual(toast.targetCardSize(), QSize(244, 140))
+                self.assertTrue(_wait_until(lambda: toast.cardSize() == QSize(244, 140)))
+                self.assertEqual(toast.content.status_badge.size(), QSize(24, 24))
+                self.assertEqual(toast.content.artifact_card.height(), 40)
+                self.assertEqual(toast.content.title_label.font().pixelSize(), 13)
+                self.assertEqual(toast.content.title_label.font().weight(), QFont.DemiBold)
+                self.assertEqual(toast.content.message_label.font().pixelSize(), 12)
+                self.assertEqual(toast.content.action.font().pixelSize(), 12)
+                self.assertEqual(toast.content.action.font().weight(), QFont.DemiBold)
+                self.assertEqual(toast.content.action.height(), 24)
+                self.assertEqual(toast.content.action.fluentStyle(), fluentqt.Button.Subtle)
+                self.assertEqual(toast.content.action.fluentLayout(), fluentqt.Button.IconAfter)
+                self.assertEqual(toast.content.action.text(), "Open GitHub issue")
+                self.assertEqual(
+                    toast.content.status_badge.mapTo(toast.content, QPoint()).x(),
+                    toast.content.artifact_card.mapTo(toast.content, QPoint()).x(),
+                )
+                self.assertEqual(
+                    toast.content.artifact_card.mapTo(toast.content, QPoint()).x(),
+                    toast.content.message_label.mapTo(toast.content, QPoint()).x(),
+                )
+                self.assertEqual(
+                    toast.content.action.mapTo(toast.content, QPoint()).x() + 8,
+                    toast.content.message_label.mapTo(toast.content, QPoint()).x(),
+                )
+                toast.findChild(fluentqt.Button, "galleryFeedbackAction").click()
+                self.assertEqual(opened.call_count, 1)
+                url = opened.call_args.args[0]
+                query = QUrlQuery(url)
+                self.assertEqual(query.queryItemValue("template"), "bug_report.yml")
+                self.assertIn(recorder.session_id, query.queryItemValue("evidence"))
+                self.assertNotIn("synthetic-warning", url.toString())
+            urls = QApplication.clipboard().mimeData().urls()
+            self.assertEqual(len(urls), 1)
+            with zipfile.ZipFile(urls[0].toLocalFile()) as archive:
+                self.assertIsNone(archive.testzip())
+                self.assertEqual(archive.read("crash-1.ips"), crash.read_bytes())
+                captured = json.loads(archive.read("report.json"))
+                self.assertIn("synthetic-warning", json.dumps(captured))
+                self.assertNotIn("_local_process", captured)
+                self.assertEqual(captured["crash_files_included"], 1)
+            self.assertTrue(recorder.session.isRecording())
+            Shiboken.delete(root)
+
+    def test_diagnostics_open_failure_keeps_a_retry_action(self):
+        import tempfile
+        from unittest.mock import patch
+        from shiboken6 import Shiboken
+        from fluentqt_gallery.diagnostics import ensure_diagnostics, issue_url
+        root = QWidget()
+        root.resize(500, 360)
+        root.show()
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = ensure_diagnostics(root, directory)
+            from fluentqt_gallery.diagnostics import FeedbackButton
+            anchor = FeedbackButton(root)
+            anchor.move(24, 300)
+            anchor.show()
+            recorder.feedback_anchor = anchor
+            recorder.feedback_visible = True
+            recorder.issue_target = issue_url(recorder.report())
+            recorder._show_prepared()
+            with patch("fluentqt_gallery.diagnostics.QDesktopServices.openUrl", return_value=False) as opened:
+                root.findChild(QWidget, "galleryFeedbackTip").findChild(fluentqt.Button, "galleryFeedbackAction").click()
+                self.assertTrue(_wait_until(lambda: any(t.isOpen() and t.title() == "Couldn’t open GitHub"
+                    for t in root.findChildren(QWidget, "galleryFeedbackTip"))))
+                self.assertEqual(opened.call_count, 1)
+                retry = next(t for t in root.findChildren(QWidget, "galleryFeedbackTip") if t.isOpen())
+                self.assertEqual(retry.artifactName(), "fluentqt-report.zip")
+                self.assertEqual(retry.artifactState(), "Copied to clipboard")
+                self.assertEqual(retry.content.action.text(), "Open GitHub issue")
+                self.assertIs(retry.target(), anchor)
+            Shiboken.delete(root)
+
+    def test_diagnostics_tip_tracks_anchor_and_respects_motion(self):
+        from fluentqt_gallery.diagnostics import _FeedbackTip, FeedbackButton
+        from shiboken6 import Shiboken
+        original = fluentqt.current_motion_mode()
+        root = QWidget()
+        root.resize(800, 480)
+        parent = QWidget(root)
+        parent.setGeometry(10, 300, 150, 150)
+        anchor = FeedbackButton(parent)
+        anchor.move(20, 80)
+        tip = _FeedbackTip(root)
+        root.show()
+        try:
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+            tip.configure("Preparing report ZIP…", "Packaging logs for clipboard…", True, False)
+            tip.show_for(anchor)
+            self.assertLess(tip.popupProgress(), 1.0)
+            self.assertEqual(tip._progress_animation.duration(), 220)
+            self.assertLess(tip.placementMargin(), 12)
+            self.assertTrue(_wait_until(lambda: tip.popupProgress() >= 1.0))
+            self.assertEqual(tip.placementMargin(), 12)
+            self.assertEqual(tip.cardSize(), QSize(244, 66))
+            self.assertEqual(tip.preferredPlacement(), tip.PreferredPlacement.Right)
+            tip.configure("Diagnostic ZIP ready", "Press ⌘V on GitHub to attach it.", False, False)
+            tip.set_artifact("fluentqt-report.zip", 233675, False)
+            tip.set_action("Open GitHub issue", "ic_fluent_open_16_regular", lambda: None)
+            self.assertEqual(tip.targetCardSize(), QSize(244, 140))
+            self.assertTrue(_wait_until(lambda: tip.cardSize() == QSize(244, 140)))
+            before = tip.x()
+            parent.move(30, 300)
+            self.assertTrue(_wait_until(lambda: tip.x() == before + 20))
+            parent.move(640, 0)
+            self.assertTrue(_wait_until(lambda: tip.preferredPlacement() == tip.PreferredPlacement.Left))
+            parent.move(208, 360)
+            self.assertTrue(_wait_until(lambda: tip.preferredPlacement() == tip.PreferredPlacement.TopRight))
+            parent.move(10, 360)
+            self.assertTrue(_wait_until(lambda: tip.preferredPlacement() == tip.PreferredPlacement.RightBottom))
+            parent.move(620, -68)
+            self.assertTrue(_wait_until(lambda: tip.preferredPlacement() == tip.PreferredPlacement.BottomRight))
+            root.resize(320, 480)
+            parent.move(130, 300)
+            self.assertTrue(_wait_until(lambda: tip.preferredPlacement() == tip.PreferredPlacement.Top))
+            self.assertTrue(root.rect().contains(QRect(tip.contentHost().mapTo(root, QPoint()), tip.cardSize())))
+            anchor.hide()
+            self.assertFalse(tip.isOpen())
+            _qwait(300)
+            anchor.show()
+            for mode in (fluentqt.MotionMode.Reduced, fluentqt.MotionMode.Disabled):
+                fluentqt.set_motion_mode(mode)
+                tip.show_for(anchor)
+                self.assertEqual(tip.placementMargin(), 12)
+                self.assertTrue(_wait_until(lambda: tip.popupProgress() >= 1.0))
+                tip.close()
+                _qwait(100)
+            tip.show_for(anchor)
+            Shiboken.delete(anchor)
+            self.assertFalse(tip.isOpen())
+        finally:
+            Shiboken.delete(root)
+            fluentqt.set_motion_mode(original)
+
+    def test_diagnostics_hidden_spinner_stays_stopped_after_motion_changes(self):
+        from fluentqt_gallery.diagnostics import _FeedbackTip, FeedbackButton
+        original = fluentqt.current_motion_mode()
+        root = QWidget()
+        root.resize(800, 480)
+        anchor = FeedbackButton(root)
+        anchor.move(24, 420)
+        root.show()
+        tip = _FeedbackTip(root)
+        try:
+            fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+            tip.configure("Preparing report ZIP…", "Packaging logs for clipboard…", True, False)
+            self.assertEqual(tip._spin_animation.state(), QAbstractAnimation.Stopped)
+            tip.show_for(anchor)
+            self.assertEqual(tip._spin_animation.state(), QAbstractAnimation.Running)
+            tip.close()
+            for mode in (fluentqt.MotionMode.Reduced, fluentqt.MotionMode.Full):
+                fluentqt.set_motion_mode(mode)
+            self.assertEqual(tip._spin_animation.state(), QAbstractAnimation.Stopped)
+            self.assertTrue(_wait_until(lambda: not tip.isVisible()))
+            for mode in (fluentqt.MotionMode.Disabled, fluentqt.MotionMode.Full):
+                fluentqt.set_motion_mode(mode)
+            self.assertEqual(tip._spin_animation.state(), QAbstractAnimation.Stopped)
+            self.assertEqual(tip.content.icon.rotation(), 0.0)
+            tip.show_for(anchor)
+            self.assertEqual(tip._spin_animation.state(), QAbstractAnimation.Running)
+            tip.configure("Diagnostic ZIP ready", "Attach it on GitHub.", False, False)
+            self.assertEqual(tip._spin_animation.state(), QAbstractAnimation.Stopped)
+        finally:
+            shiboken6.delete(root)
+            fluentqt.set_motion_mode(original)
+
+    def test_diagnostics_crash_matching_excludes_unrelated_files(self):
+        import tempfile
+        import time
+        from fluentqt_gallery.diagnostics import existing_crash_attachments
+        with tempfile.TemporaryDirectory() as directory:
+            now = int(time.time() * 1000)
+            identity = {"pid": 123, "executable": "/test/Python", "started_ms": now - 10000, "checkpoint_ms": now}
+            root = Path(directory)
+            (root / "python.ips").write_text('{}\n{"pid":123,"procPath":"/test/Python"}')
+            (root / "other.ips").write_text('{"pid":124,"procPath":"/test/Python"}')
+            (root / "Python.123.dmp").write_bytes(b"synthetic dump")
+            (root / "Python.124.dmp").write_bytes(b"unrelated dump")
+            (root / "linked.ips").symlink_to(root / "python.ips")
+            files = existing_crash_attachments([identity], directory)
+            self.assertEqual(len(files), 2)
+            self.assertIn(b"synthetic dump", [bytes(data) for data in files.values()])
+            self.assertEqual(existing_crash_attachments([], directory), {})
+            identity["started_ms"], identity["checkpoint_ms"] = now - 1000000, now - 900000
+            self.assertEqual(existing_crash_attachments([identity], directory), {})
+
     def test_caret_completion_handles_navigation_location_modifiers(self):
         result = build_sample("text-edit", "text-edit-caret-completion")
         root = result.widget

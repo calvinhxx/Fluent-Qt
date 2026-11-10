@@ -383,6 +383,7 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent) :
     m_contentLayout->addWidget(
         new SettingsRow(runtime.checksForUpdates ? Typography::Icons::Sync : Typography::Icons::Link,
             runtime.distributionTitle, {}, updateControl, this, m_updateStatusLabel));
+    m_contentLayout->addSpacing(10);
     m_contentLayout->addStretch(1);
 
     scrollArea->setWidget(m_viewport);

@@ -48,6 +48,7 @@ REQUIRED_PACKAGE_FILES = {
     "__init__.py",
     "__main__.py",
     "application_controller.py",
+    "diagnostics.py",
     "app.py",
     "catalog.py",
     "commands.py",

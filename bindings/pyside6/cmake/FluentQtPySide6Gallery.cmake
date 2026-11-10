@@ -21,6 +21,7 @@ endif()
 set(FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR
     "${PROJECT_BINARY_DIR}/python/fluentqt_gallery")
 set(FLUENTQT_PYSIDE6_GALLERY_FILES
+    diagnostics.py
     __init__.py
     __main__.py
     application_controller.py

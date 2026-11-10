@@ -11,6 +11,7 @@ else()
 endif()
 add_library(FluentQtLoggingSupport STATIC
     "${_fluent_qt_logging_source}"
+    "${PROJECT_SOURCE_DIR}/support/logging/DiagnosticSink.cpp"
     "${PROJECT_SOURCE_DIR}/support/logging/Log.h")
 set_target_properties(FluentQtLoggingSupport PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"

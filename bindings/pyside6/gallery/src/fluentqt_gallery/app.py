@@ -445,6 +445,9 @@ def main(argv: list[str] | None = None) -> int:
         settings.apply_theme_mode()
 
     window = GalleryWindow(startup_visuals=not automated)
+    if not automated:
+        from .diagnostics import ensure_diagnostics
+        ensure_diagnostics(window)
     placement = None
     application_controller = None
     restore_maximized = False

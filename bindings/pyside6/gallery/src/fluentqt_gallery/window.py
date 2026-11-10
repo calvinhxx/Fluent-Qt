@@ -3005,6 +3005,7 @@ class GalleryWindow(fluentqt.Window):
                 self._set_navigation_style,
                 self._set_effect,
                 self._set_close_behavior,
+                parent=self._content_host,
             )
         else:
             raise KeyError(
@@ -3077,6 +3078,8 @@ class GalleryWindow(fluentqt.Window):
             self._history.append(self._current_route)
         self._cancel_cold_navigation()
         self._current_route = route_id
+        if route_id != "settings":
+            self.setProperty("galleryLastContentRoute", route_id)
         self._navigation_request_id += 1
         request_id = self._navigation_request_id
         self._title_content.set_back_available(bool(self._history))

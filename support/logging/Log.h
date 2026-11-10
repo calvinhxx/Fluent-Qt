@@ -5,8 +5,15 @@
 #include <QtGlobal>
 
 #include <string>
+#include <functional>
 
 namespace fluent::support::logging {
+
+// Application-owned diagnostic tap; does not replace the Qt handler or sinks.
+// zh_CN: 应用持有的诊断旁路，不替换 Qt 处理器或现有日志输出。
+using DiagnosticSink = std::function<void(QtMsgType, const QString&, const QString&)>;
+void setDiagnosticSink(DiagnosticSink sink);
+void forwardDiagnosticMessage(QtMsgType type, const QString& category, const QString& message);
 
 /**
  * @brief Logging severity level shared by LOG_* macros and the spdlog backend.

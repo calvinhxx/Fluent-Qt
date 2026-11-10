@@ -5,6 +5,7 @@
 
 #include <QString>
 #include <QUrl>
+#include <QVariantMap>
 
 class QObject;
 class QSettings;
@@ -70,6 +71,18 @@ struct Capabilities {
  * 销毁后不再发送回调。
  */
 void chooseFiles(QWidget* context, const QString& filter, std::function<void(const QString&, qint64)> selected);
+
+// Prepares a persistent local ZIP and copies its file URL, or hands a ZIP to the browser.
+// zh_CN: 桌面保存持久的本地 ZIP 并复制文件，浏览器交由下载处理。
+void prepareDiagnosticFeedback(QWidget* context,
+    const QVariantMap& report,
+    const QVariantMap& attachments,
+    const QVariantList& identities,
+    const QString& directory,
+    std::function<void(bool, const QString&)> finished);
+QString diagnosticStorageDirectory();
+QVariantMap diagnosticProcessIdentity();
+QVariantMap existingCrashAttachments(const QVariantList& identities, const QString& directory);
 
 const Capabilities& capabilities();
 bool persistenceAvailable();

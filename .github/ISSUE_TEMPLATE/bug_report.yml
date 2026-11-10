@@ -1,76 +1,54 @@
-name: Bug report
-description: Report reproducible incorrect behavior in FluentQt.
+name: Bug report / 问题反馈
+description: Report incorrect behavior, a crash, or a rendering problem. / 反馈功能、崩溃或显示问题。
 title: "[Bug]: "
 body:
-  - type: dropdown
-    id: surface
+  - type: markdown
     attributes:
-      label: Affected surface
-      options:
-        - C++ library or Gallery
-        - PySide6 binding or Gallery
-        - WebAssembly Gallery
-        - Build or package
-        - Documentation or AI guidance
-        - Not sure
-    validations:
-      required: true
-  - type: input
-    id: version
+      value: |
+        **Using Gallery?** Click the Bug icon beside Settings, then choose **Open GitHub issue** in the success notification. Paste the copied ZIP into the attachment field below. The web Gallery downloads the ZIP instead.
+        **使用 Gallery？** 点击 Settings 旁的 Bug 图标，待提示复制成功后点击 **Open GitHub issue**，再在下方粘贴诊断 ZIP；网页版请附上下载的 ZIP。
+        Reports stay on your device until you attach them. Review logs and any crash files before sharing; issues and attachments are public.
+  - type: textarea
+    id: problem
     attributes:
-      label: FluentQt version or commit
-      placeholder: Release tag or git commit
-    validations:
-      required: true
-  - type: input
-    id: environment
-    attributes:
-      label: Environment
-      description: Include OS, architecture, Qt version, and Python/PySide6 version when applicable.
-      placeholder: macOS 15 arm64, Qt 6.8.3, Python 3.12, PySide6 6.8.3
-    validations:
-      required: true
-  - type: input
-    id: install
-    attributes:
-      label: Build or install route
-      placeholder: vcpkg-osx preset, installed CMake package, PyPI wheel, source build
+      label: What happened? / 问题现象
+      description: Describe what you expected and what happened instead. A screenshot or short recording helps with visual problems.
+      placeholder: "Expected… / Actual…"
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: Minimal reproduction
-      description: Provide commands, code, or a Gallery route and the exact interaction sequence.
+      label: Steps to reproduce / 复现步骤
+      description: Give the Gallery page and actions, or a minimal code sample. If it happened once, say what you were doing.
       placeholder: |
-        1. Build ...
-        2. Open route ...
-        3. Click or type ...
-    validations:
-      required: true
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected behavior
-    validations:
-      required: true
-  - type: textarea
-    id: actual
-    attributes:
-      label: Actual behavior
-    validations:
-      required: true
+        1. Open…
+        2. Click…
   - type: textarea
     id: evidence
     attributes:
-      label: Logs, screenshots, or sample project
-      description: Drag files here or link a minimal repository. Redact secrets and private data.
+      label: Diagnostic report or screenshots / 诊断包或截图
+      description: Paste or attach the ZIP from Gallery here. An environment summary or report ID alone does not upload the file. A report is optional; a minimal sample is also welcome.
+  - type: input
+    id: version
+    attributes:
+      label: FluentQt version or commit
+      description: Auto-filled from Gallery. If no report is attached, enter the version here.
+      placeholder: 1.11.3 or a commit
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment / 运行环境
+      description: Auto-filled from Gallery. Otherwise include OS, architecture, Qt version, display scaling, and Python/PySide6 versions if applicable.
+  - type: input
+    id: install
+    attributes:
+      label: Build or install route / 安装方式
+      placeholder: Gallery installer, PyPI wheel, vcpkg, or source build
   - type: checkboxes
     id: checks
     attributes:
-      label: Checks
+      label: Before submitting / 提交前确认
       options:
-        - label: I searched existing issues for the same behavior.
-          required: true
-        - label: I removed credentials, customer data, and other private information.
+        - label: I reviewed attachments and removed private data. / 已检查附件，不含不应公开的个人或业务信息。
           required: true

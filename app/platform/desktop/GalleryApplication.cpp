@@ -22,6 +22,7 @@
 #include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryWindowPlacement.h"
 #include "viewmodel/GallerySettings.h"
+#include "viewmodel/GalleryDiagnostics.h"
 
 #ifndef FLUENT_QT_GALLERY_VERSION
 #define FLUENT_QT_GALLERY_VERSION "0.0.0"
@@ -111,6 +112,7 @@ int runApplication(int argc, char** argv)
     }
 
     GalleryWindow window;
+    GalleryDiagnostics::ensure(&window);
     GalleryWindowPlacement placement(&window, &settings);
     GalleryApplicationController applicationController(&window, &app);
     QObject::connect(&singleInstance, &GallerySingleInstance::activationRequested, &applicationController,

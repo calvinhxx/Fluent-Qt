@@ -69,6 +69,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QGraphicsEffect,
     QGraphicsOpacityEffect,
+    QBoxLayout,
     QHBoxLayout,
     QLabel,
     QLayout,
@@ -3314,7 +3315,14 @@ class GalleryNavigationFooter(QWidget):
         delegate = _GalleryNavigationDelegate(tree)
         tree.setItemDelegate(delegate)
         tree.itemPressed.connect(self._activate_index)
-        layout.addWidget(tree)
+        from .diagnostics import FeedbackButton
+        self._actions = QBoxLayout(QBoxLayout.LeftToRight)
+        self._actions.setContentsMargins(0, 0, 8, 0)
+        self._actions.setSpacing(4)
+        tree.setFixedHeight(44)
+        self._actions.addWidget(tree, 1)
+        self._actions.addWidget(FeedbackButton(self), 0, Qt.AlignCenter)
+        layout.addLayout(self._actions)
         self._tree = tree
         self._model = model
         self._item = item
@@ -3454,6 +3462,11 @@ class GalleryNavigationFooter(QWidget):
             self._sync_compact_visual_properties()
             return
         self._compact = compact
+        self._actions.setDirection(QBoxLayout.TopToBottom if compact else QBoxLayout.LeftToRight)
+        self._actions.setSpacing(0 if compact else 4)
+        self._actions.setContentsMargins(0, 0, 0 if compact else 8, 0)
+        self.setMinimumHeight(73 if compact else 45)
+        self.updateGeometry()
         self._sync_compact_visual_properties()
         self._start_compact_visual_transition()
 
@@ -3661,6 +3674,7 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
         self._items = tuple(items)
         self._groups = dict(route_groups)
         self._group_divider: fluentqt.Divider | None = None
+        self._feedback_button = None
         self._more_button: fluentqt.Button | None = None
         self._updating_layout = False
         self._children: dict[str, tuple[tuple[str, str], ...]] = {}
@@ -3719,6 +3733,10 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
         more.clicked.connect(lambda: self._show_child_flyout("overflow", more))
         self._more_button = more
         layout.addWidget(more)
+        if len(self._items) == 1 and self._items[0][0] == "settings":
+            from .diagnostics import FeedbackButton
+            self._feedback_button = FeedbackButton(self)
+            layout.addWidget(self._feedback_button)
         layout.addStretch(1)
         self._update_button_styles()
 
@@ -3732,11 +3750,14 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
             2 * _TOP_NAV_HORIZONTAL_MARGIN
             + count * _TOP_NAV_BUTTON_SIZE
             + max(0, count - 1) * _TOP_NAV_BUTTON_SPACING + label_space
+            + (self._feedback_button.width() + _TOP_NAV_BUTTON_SPACING if self._feedback_button else 0)
             + (1 + _TOP_NAV_BUTTON_SPACING if self._group_divider is not None else 0),
             _TOP_NAV_BAR_HEIGHT,
         )
 
     def minimumSizeHint(self) -> QSize:
+        if self._feedback_button:
+            return self.sizeHint()
         return QSize(_TOP_NAV_BUTTON_SIZE + 2 * _TOP_NAV_HORIZONTAL_MARGIN, _TOP_NAV_BAR_HEIGHT)
 
     def _visual_route_id(self) -> str:
@@ -3775,7 +3796,7 @@ class GalleryTopNavigationPane(fluentqt.FluentWidget):
                 widths.append(max(_TOP_NAV_BUTTON_SIZE, button.sizeHint().width()) if label
                               else _TOP_NAV_BUTTON_SIZE)
                 button.setFixedSize(widths[-1], _TOP_NAV_BUTTON_SIZE)
-            available = max(0, self.width() - 2 * _TOP_NAV_HORIZONTAL_MARGIN)
+            available = max(0, self.width() - 2 * _TOP_NAV_HORIZONTAL_MARGIN - (self._feedback_button.width() + _TOP_NAV_BUTTON_SPACING if self._feedback_button else 0))
 
             def occupied(more):
                 total = _TOP_NAV_BUTTON_SIZE + _TOP_NAV_BUTTON_SPACING if more else 0

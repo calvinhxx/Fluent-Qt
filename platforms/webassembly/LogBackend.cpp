@@ -50,6 +50,8 @@ void writeQtMessage(QtMsgType type, const QMessageLogContext& context, const QSt
         return;
 
     g_inQtMessageHandler = true;
+    fluent::support::logging::forwardDiagnosticMessage(type,
+        QString::fromLatin1(context.category ? context.category : "default"), message);
     fluent::support::logging::Level messageLevel = fluent::support::logging::Level::Debug;
     switch (type) {
     case QtDebugMsg:
@@ -162,6 +164,13 @@ void installQtMessageHandler()
 
 void log(Level messageLevel, const char* file, int line, const char* function, const QString& message)
 {
+    if (!g_inQtMessageHandler && messageLevel != Level::Off)
+        forwardDiagnosticMessage(messageLevel >= Level::Error ? QtCriticalMsg
+                : messageLevel == Level::Warn                 ? QtWarningMsg
+                : messageLevel == Level::Info
+                ? QtInfoMsg
+                : QtDebugMsg,
+            QStringLiteral("gallery"), message);
     if (!isInitialized())
         initialize();
     if (g_level == Level::Off || levelRank(messageLevel) < levelRank(g_level))

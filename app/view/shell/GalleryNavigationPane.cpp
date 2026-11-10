@@ -1,4 +1,5 @@
 #include "GalleryNavigationPane.h"
+#include "view/widgets/GalleryFeedbackButton.h"
 
 #include <cmath>
 #include <QAbstractItemView>
@@ -105,6 +106,13 @@ void GalleryNavigationPane::setCompact(bool compact)
         return;
 
     m_compact = compact;
+    if (m_footerActions) {
+        m_footerActions->setDirection(compact ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+        m_footerActions->setSpacing(compact ? 0 : 4);
+        m_footerActions->setContentsMargins(0, 0, compact ? 0 : 8, 0);
+        setMinimumHeight(compact ? 73 : kRouteHeight + 9);
+        updateGeometry();
+    }
     hideCompactToolTip();
     LOG_DEBUG(QStringLiteral("GalleryNavigationPane compactChanged object=%1 compact=%2")
             .arg(objectName(), compact ? QStringLiteral("true") : QStringLiteral("false")));
@@ -389,7 +397,17 @@ void GalleryNavigationPane::rebuild()
         activateRouteIndex(index, true);
     });
 
-    outerLayout->addWidget(m_treeView);
+    if (isFooterOnly()) {
+        m_treeView->setFixedHeight(kRouteHeight + 8);
+        m_footerActions = new QBoxLayout(QBoxLayout::LeftToRight);
+        m_footerActions->setContentsMargins(0, 0, 8, 0);
+        m_footerActions->setSpacing(4);
+        m_footerActions->addWidget(m_treeView, 1);
+        m_footerActions->addWidget(new GalleryFeedbackButton(this), 0, Qt::AlignCenter);
+        outerLayout->addLayout(m_footerActions);
+    } else {
+        outerLayout->addWidget(m_treeView);
+    }
     updateButtonStyles();
     LOG_DEBUG(QStringLiteral("GalleryNavigationPane modelReady tree=%1 routes=%2 footerOnly=%3")
             .arg(m_treeView->objectName())

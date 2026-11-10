@@ -791,6 +791,19 @@ their accessible names and tooltips describe the destination and selected count.
 This does not establish native screen-reader
 acceptance on every supported platform.
 
+
+Gallery feedback uses a focusable icon Button named "Report a problem" beside Settings,
+including compact and top navigation. Enter/Space activate the same one-click flow.
+A closable TeachingTip beside the clicked button announces preparation, the packaged
+`fluentqt-report.zip` artifact and clipboard/download state, or failure without
+moving keyboard focus. Its action and close button remain focusable with 24 px
+targets. The file capsule and 12 px secondary paste hint stay readable in both
+themes. Escape and outside clicks dismiss it; reduced motion suppresses the slide,
+spinner, and height morph. The "Open GitHub issue" action is the only browser
+handoff; failures provide a retry action while keeping the ready ZIP capsule when
+available. Repeated input shares the pending operation. No recording or
+file-picker controls are required.
+
 <!-- docs-nav:bottom:start -->
 ---
 [← Accessibility Contract](accessibility-contract.md) · [Contents](../SUMMARY.md) · [Development index](README.md)

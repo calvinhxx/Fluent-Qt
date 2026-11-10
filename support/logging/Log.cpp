@@ -140,6 +140,8 @@ void writeQtMessage(QtMsgType type, const QMessageLogContext& context, const QSt
         return;
 
     g_inQtMessageHandler = true;
+    fluent::support::logging::forwardDiagnosticMessage(type,
+        QString::fromLatin1(context.category ? context.category : "default"), message);
 
     fluent::support::logging::Level level = fluent::support::logging::Level::Debug;
     switch (type) {
@@ -286,6 +288,13 @@ QString defaultLogFilePath()
 
 void log(Level level, const char* file, int line, const char* function, const QString& message)
 {
+    if (!g_inQtMessageHandler && level != Level::Off)
+        forwardDiagnosticMessage(level >= Level::Error ? QtCriticalMsg
+                : level == Level::Warn                 ? QtWarningMsg
+                : level == Level::Info
+                ? QtInfoMsg
+                : QtDebugMsg,
+            QStringLiteral("gallery"), message);
     if (!isInitialized())
         initialize();
 
