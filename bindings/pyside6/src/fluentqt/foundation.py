@@ -28,6 +28,7 @@ from ._fluentqt import (
 )
 from .design import ThemeTokens
 
+DiagnosticSession = _native.fluent.DiagnosticSession
 Theme = _native.fluent.Theme
 MotionMode = _native.fluent.MotionMode
 MotionKind = _native.fluent.MotionKind
@@ -808,6 +809,7 @@ def theme_revision():
 
 
 __all__ = [
+    "DiagnosticSession",
     "AnchorEdge",
     "AnchorLayout",
     "AnchorSpec",

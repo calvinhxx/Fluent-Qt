@@ -295,6 +295,19 @@ TagInput's keyboard-accessible removal buttons and wrapping layout.
 model's labels. Gallery uses English fixtures; callers and IME tests retain
 arbitrary Unicode values.
 
+
+## Application-owned diagnostics
+
+`fluentqt.DiagnosticSession` exposes the shared C++ bounded collector. The root
+widget remains borrowed; keep an unparented session wrapper alive while in use.
+No Qt message handler is installed by the library. Forward messages through
+`recordMessage` from the host application. A zero duration in `start(window, False, 0)`
+keeps bounded recent history; `captureReport()` snapshots without stopping.
+`createBundle()` builds a ZIP in memory from the report and optional QByteArray
+attachments; the host owns storage and submission.
+See [Diagnostic sessions](../../docs/architecture/diagnostic-session.md) for
+thread affinity, limits, privacy and the Gallery integration.
+
 <!-- docs-nav:bottom:start -->
 ---
 [Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [PySide6 manylinux build and audit policy →](MANYLINUX.md)
