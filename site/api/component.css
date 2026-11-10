@@ -865,7 +865,16 @@ pre {
 /* Version history shares the documentation typography and theme tokens. */
 .document-heading .document-version-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
 .release-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(140px, .55fr); align-items: center; gap: 14px 16px; margin: 4px 0 8px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 10px; }
-.release-filters[hidden], .release-entry[hidden], .release-empty[hidden], .release-result[hidden] { display: none; }
+.release-filters[hidden], .release-entry[hidden], .release-scope[hidden], .release-empty[hidden], .release-result[hidden] { display: none; }
+.release-audience { grid-column: 1 / -1; min-width: 0; margin: 0; padding: 0; border: 0; }
+.release-audience legend { margin-bottom: 8px; padding: 0; font-size: 13px; font-weight: 600; }
+.release-scope-options { display: flex; flex-wrap: wrap; gap: 4px 16px; border-bottom: 1px solid var(--line); }
+.release-filters .release-scope-options label { position: relative; cursor: pointer; }
+.release-scope-options input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.release-scope-options span { display: block; padding: 8px 2px 10px; border-bottom: 2px solid transparent; color: var(--muted); }
+.release-scope-options input:checked + span { color: var(--accent); border-bottom-color: var(--accent); }
+.release-scope-options label:hover span { color: var(--text); }
+.release-scope-options input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 .release-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
 .release-filters input[type="search"], .release-filters select { width: 100%; min-width: 0; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--canvas); color: var(--text); height: 36px; box-sizing: border-box; padding: 0 10px; font: inherit; font-size: 14px; caret-color: var(--accent); }
 .release-filters .release-checkbox { flex-direction: row; align-items: center; gap: 8px; font-weight: 400; }
@@ -876,8 +885,12 @@ pre {
 .release-result { grid-column: 1 / -1; margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .release-empty { color: var(--muted); }
 .release-entry { padding: 32px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
-.release-entry > p, .release-changes, .migration-note > p { max-width: 72ch; }
+.release-entry > p, .release-scope > p, .release-changes, .migration-note > p { max-width: 72ch; }
 .release-entry > p { margin: 12px 0 0; line-height: 1.7; }
+.release-scope { margin-top: 24px; }
+.release-scope-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.release-scope-heading h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.release-scope > p { margin: 8px 0 0; line-height: 1.7; }
 .release-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; }
 .release-heading h2 { margin: 0; font-size: 22px; font-variant-numeric: tabular-nums; }
 .release-heading h2 a { color: var(--text); text-decoration: none; }
@@ -891,13 +904,13 @@ pre {
 .release-entry :not(pre) > code, .migration-commit code { font-size: .88em; padding: 1px 4px; border-radius: 4px; background: var(--surface); overflow-wrap: anywhere; }
 .release-links { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; }
 .migration-note { margin-top: 22px; padding: 18px 20px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); scroll-margin-top: 20px; }
-.migration-note h3 { font-size: 16px; margin: 0 0 8px; }
-.migration-note h3 a { color: var(--text); text-decoration: none; }
-.migration-note h3 a:hover { text-decoration: underline; }
+.migration-note > h4 { font-size: 16px; margin: 0 0 8px; }
+.migration-note > h4 a { color: var(--text); text-decoration: none; }
+.migration-note > h4 a:hover { text-decoration: underline; }
 .migration-note > p { margin: 6px 0; line-height: 1.65; }
 .migration-note :not(pre) > code { background: var(--canvas); }
 .migration-comparison { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 16px; }
-.migration-comparison h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.migration-comparison h5 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .migration-comparison pre { margin: 0; padding: 12px 14px; background: var(--code); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.7; }
 .migration-commit { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
 .migration-commit code { background: var(--canvas); }

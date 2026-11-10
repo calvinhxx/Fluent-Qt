@@ -32,8 +32,58 @@ class ReleaseHistoryTest(unittest.TestCase):
         data = history.load_history(self.root)
         self.assertEqual(next(v for v in data['versions'] if v['version'] == data['latest'])['status'], 'published')
         self.assertEqual(data['unreleased']['after'], data['latest'])
-        self.assertTrue(all(item['summary']['zh'] for item in data['versions']))
+        self.assertTrue(all(g['summary']['zh'] for item in data['versions'] for g in item['groups']))
         self.assertTrue(all(not item['published_at'] for item in data['versions'] if item['status'] == 'archive'))
+
+    def test_scope_groups_are_explicit_unique_and_nonempty(self):
+        baseline = copy.deepcopy(self.data)
+        for scope in (None, 'unknown', 'gallery'):
+            with self.subTest(scope=scope):
+                self.data = copy.deepcopy(baseline)
+                self.data['versions'][0]['groups'][0]['scope'] = scope
+                self.write()
+                with self.assertRaisesRegex(ValueError, 'unknown or duplicate scopes'):
+                    history.load_history(self.root)
+        self.data = copy.deepcopy(baseline)
+        self.data['unreleased']['groups'] = [{'scope': 'uilib', 'headers': ['file.h']}]
+        self.write()
+        with self.assertRaisesRegex(ValueError, 'no public changes'):
+            history.load_history(self.root)
+        self.data = copy.deepcopy(baseline)
+        self.data['versions'][0]['summary'] = {'en': 'Mixed summary.', 'zh': '混合摘要。'}
+        self.write()
+        with self.assertRaisesRegex(ValueError, 'explicit scope group'):
+            history.load_history(self.root)
+
+    def test_bullet_budget_applies_across_scope_groups(self):
+        entry = self.data['versions'][0]
+        entry['groups'][0]['changes'] = [{'en': f'Item {i}.', 'zh': f'第 {i} 项。'} for i in range(4)]
+        entry['groups'][1]['changes'] = [{'en': f'Item {i}.', 'zh': f'第 {i} 项。'} for i in range(3)]
+        self.write()
+        with self.assertRaisesRegex(ValueError, 'change bullets'):
+            history.load_history(self.root)
+
+    def test_gallery_build_migration_does_not_belong_to_the_library(self):
+        data = history.load_history(self.root)
+        entry = next(v for v in data['versions'] if v['version'] == '1.11.1')
+        groups = {g['scope']: g for g in entry['groups']}
+        self.assertFalse(groups['uilib']['migrations'])
+        self.assertEqual([m['id'] for m in groups['gallery']['migrations']], ['gallery-private-qt-headers'])
+        for language in history.LANGUAGES:
+            library = release_pages.scope_group(groups['uilib'], language, entry['version'])
+            gallery = release_pages.scope_group(groups['gallery'], language, entry['version'])
+            self.assertNotIn('gallery-private-qt-headers', library)
+            self.assertNotIn('release-breaking', library)
+            self.assertIn('gallery-private-qt-headers', gallery)
+            self.assertIn('data-release-scope="gallery"', gallery)
+            self.assertIn('data-breaking="true"', gallery)
+
+    def test_gallery_only_notice_keeps_its_scope(self):
+        data = copy.deepcopy(history.load_history(self.root))
+        data['unreleased']['groups'] = [{'scope': 'gallery', 'related': ['checkbox']}]
+        with patch.object(release_pages, 'load_history', return_value=data):
+            notice = release_pages.document_notice('checkbox', None, 'api/checkbox/index.html', 'en')
+        self.assertIn('change=checkbox&amp;scope=gallery#unreleased', notice)
 
     def test_a_new_note_or_stale_translation_blocks_generation(self):
         note = self.root / 'docs/releases/v9.0.0.md'
@@ -52,12 +102,12 @@ class ReleaseHistoryTest(unittest.TestCase):
         self.assertEqual(history.note_digest(source), history.note_digest(generated))
 
     def test_missing_translation_and_migration_are_rejected(self):
-        self.data['versions'][0]['summary']['zh'] = ''
+        self.data['versions'][0]['groups'][0]['summary']['zh'] = ''
         self.write()
         with self.assertRaisesRegex(ValueError, 'bilingual'):
             history.load_history(self.root)
         self.data = json.loads((history.ROOT / history.SOURCE).read_text(encoding='utf-8'))
-        next(v for v in self.data['versions'] if v['version'] == '1.7.0')['migrations'] = []
+        next(v for v in self.data['versions'] if v['version'] == '1.7.0')['groups'][0]['migrations'] = []
         self.write()
         with self.assertRaisesRegex(ValueError, 'migration record'):
             history.load_history(self.root)
@@ -89,18 +139,18 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_pending_api_notice_tracks_publication_and_header_associations(self):
         data = copy.deepcopy(history.load_history())
-        data['unreleased']['related'] = ['font-icon']
-        data['unreleased']['headers'] = []
+        data['unreleased']['groups'][0]['related'] = ['font-icon']
+        data['unreleased']['groups'][0]['headers'] = []
         data['versions'] = [item for item in data['versions'] if item['status'] != 'candidate']
         page = 'api/font-icon/index.html'
         source = 'src/components/foundation/FontIcon.h'
-        candidate = {'version': '9.0.0', 'status': 'candidate', 'headers': [source]}
+        candidate = {'version': '9.0.0', 'status': 'candidate', 'groups': [{'scope': 'uilib', 'headers': [source]}]}
         with patch.object(release_pages, 'load_history', return_value=data):
             notice = release_pages.document_notice('font-icon', None, page, 'en')
             self.assertIn('unreleased changes', notice)
-            self.assertIn('releases/?change=font-icon#unreleased', notice)
+            self.assertIn('releases/?change=font-icon&amp;scope=uilib#unreleased', notice)
             self.assertEqual(release_pages.document_notice('checkbox', None, 'api/checkbox/index.html', 'en'), '')
-            data['unreleased']['related'] = []
+            data['unreleased']['groups'][0]['related'] = []
             data['versions'].insert(0, candidate)
             self.assertIn('#v9.0.0', release_pages.document_notice('font-icon', source, page, 'en'))
             candidate['status'] = 'published'
@@ -113,18 +163,17 @@ class ReleaseHistoryTest(unittest.TestCase):
         self.assertIn('id="particles-module"', body)
         self.assertIn(f'自 {data["latest"]} 发布以来已合入源码的改动：', body)
         empty_unreleased = copy.deepcopy(data)
-        empty_unreleased['unreleased']['changes'] = []
-        empty_unreleased['unreleased']['migrations'] = []
+        empty_unreleased['unreleased']['groups'] = []
         empty_body = release_pages.history_body(empty_unreleased, 'en', 'api/releases/index.html')
         self.assertIn(f'No unreleased public changes since {data["latest"]}.', empty_body)
         self.assertIn('&lt;FluentQt/Particles.h&gt;', body)
         self.assertIn('2026-10-27', body)
         self.assertIn('setFontFamily', body.split('id="unreleased"', 1)[1].split('id="v1.10.3"', 1)[0])
         particle_entry = next(item for item in [data['unreleased'], *data['versions']]
-                              if any(m['id'] == 'particles-module' for m in item.get('migrations', [])))
+                              if any(m['id'] == 'particles-module' for g in item['groups'] for m in g.get('migrations', [])))
         anchor = 'v' + particle_entry['version'] if 'version' in particle_entry else 'unreleased'
         self.assertIn('particle-backdrop', body.split(f'id="{anchor}"', 1)[1].split('data-release-search="', 1)[1].split('"', 1)[0])
-        malicious = copy.deepcopy(next(m for m in particle_entry['migrations'] if m['id'] == 'particles-module'))
+        malicious = copy.deepcopy(next(m for g in particle_entry['groups'] for m in g.get('migrations', []) if m['id'] == 'particles-module'))
         malicious['impact']['en'] = '<script>alert(1)</script> `<img src=x>`'
         rendered = release_pages.migration_html(malicious, 'en')
         self.assertNotIn('<script>', rendered)
@@ -133,10 +182,9 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_unknown_component_links_are_not_silently_lost(self):
         with self.assertRaisesRegex(ValueError, 'unknown documentation'):
-            history.validate_related_documents({'unreleased': {'related': ['retired-widget']}, 'versions': []}, ['button'])
-        history.validate_related_documents({'unreleased': {}, 'versions': [{'related': ['retired-widget']}],
+            history.validate_related_documents({'unreleased': {'groups': [{'related': ['retired-widget']}]}, 'versions': []}, ['button'])
+        history.validate_related_documents({'unreleased': {}, 'versions': [{'groups': [{'related': ['retired-widget']}]}],
                                             'retired_document_ids': ['retired-widget']}, ['button'])
-
 
     def test_api_identifiers_use_ascii_boundaries_next_to_chinese(self):
         for identifier in ('LineEdit', 'FLUENT_QT_BUILD_GALLERY', 'FontIcon::setFontFamily',
@@ -145,7 +193,7 @@ class ReleaseHistoryTest(unittest.TestCase):
                 for quoted in (False, True):
                     with self.subTest(identifier=identifier, surrounding=surrounding, quoted=quoted):
                         token = f'`{identifier}`' if quoted else identifier
-                        self.data['unreleased']['changes'] = [{'en': 'Adds a feature.', 'zh': surrounding.format(token)}]
+                        self.data['unreleased']['groups'][0]['changes'] = [{'en': 'Adds a feature.', 'zh': surrounding.format(token)}]
                         self.write()
                         if quoted:
                             history.load_history(self.root)
@@ -164,7 +212,7 @@ class ReleaseHistoryTest(unittest.TestCase):
                     value = {'en': 'Fixes `ComboBox` and `LineEdit`.', 'zh': '修复 `ComboBox` 与 `LineEdit`。'}
                     value[lang] = (f'Fixes `ComboBox`{mark} fixes `LineEdit`.' if lang == 'en'
                                    else f'修复 `ComboBox`{mark}修复 `LineEdit`。')
-                    self.data['unreleased']['changes'] = [value]
+                    self.data['unreleased']['groups'][0]['changes'] = [value]
                     self.write()
                     with self.assertRaisesRegex(ValueError, 'semicolon-splicing'):
                         history.load_history(self.root)
@@ -179,14 +227,14 @@ class ReleaseHistoryTest(unittest.TestCase):
                         'Deliver queued signals on the UI thread.',
                         'Fixes a crash while delivering queued events.'):
             with self.subTest(english=english):
-                self.data['unreleased']['changes'] = [{'en': english, 'zh': '修复事件传递。'}]
+                self.data['unreleased']['groups'][0]['changes'] = [{'en': english, 'zh': '修复事件传递。'}]
                 self.write()
                 history.load_history(self.root)
         for english in ('`TextEdit` delivers a seamless experience.',
                         'Delivers comprehensive improvements.',
                         'Improves editing while preserving caller ownership.'):
             with self.subTest(english=english):
-                self.data['unreleased']['changes'] = [{'en': english, 'zh': '更新编辑功能。'}]
+                self.data['unreleased']['groups'][0]['changes'] = [{'en': english, 'zh': '更新编辑功能。'}]
                 self.write()
                 with self.assertRaisesRegex(ValueError, 'AI-slop or internal-plumbing phrasing'):
                     history.load_history(self.root)
@@ -194,7 +242,7 @@ class ReleaseHistoryTest(unittest.TestCase):
     def test_feedback_release_note_requires_the_explicit_issue_action(self):
         data = history.load_history(self.root)
         entry = next(item for item in [data['unreleased'], *data['versions']]
-                     if 'src/utils/DiagnosticSession.h' in item.get('headers', []))
+                     if any('src/utils/DiagnosticSession.h' in g.get('headers', []) for g in item['groups']))
         for lang, action, old_claim in (
             ('en', 'Choose Open GitHub issue in the notification', 'and opens GitHub Issues'),
             ('zh', '在提示中点击“Open GitHub issue”后才打开 GitHub', '复制到剪贴板并打开 GitHub'),
@@ -215,48 +263,48 @@ class ReleaseHistoryTest(unittest.TestCase):
                 history.load_history(self.root)
 
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({'en': 'LineEdit adds suffixes.', 'zh': '`LineEdit` 新增后缀。'}),
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({'en': 'LineEdit adds suffixes.', 'zh': '`LineEdit` 新增后缀。'}),
             'Wrap identifier `LineEdit` in backticks',
         )
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({'en': 'Use FLUENT_QT_BUILD_GALLERY.', 'zh': '使用 `FLUENT_QT_BUILD_GALLERY`。'}),
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({'en': 'Use FLUENT_QT_BUILD_GALLERY.', 'zh': '使用 `FLUENT_QT_BUILD_GALLERY`。'}),
             'Wrap identifier `FLUENT_QT_BUILD_GALLERY` in backticks',
         )
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({'en': 'Fixes `ComboBox`; fixes `LineEdit`.', 'zh': '修复 `ComboBox` 与 `LineEdit`。'}),
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({'en': 'Fixes `ComboBox`; fixes `LineEdit`.', 'zh': '修复 `ComboBox` 与 `LineEdit`。'}),
             'semicolon-splicing',
         )
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({'en': 'Fixes `ComboBox` and `LineEdit`.', 'zh': '修复 `ComboBox`；修复 `LineEdit`。'}),
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({'en': 'Fixes `ComboBox` and `LineEdit`.', 'zh': '修复 `ComboBox`；修复 `LineEdit`。'}),
             'semicolon-splicing',
         )
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({
                 'en': '`LineEdit` adds suffixes without changing caller ownership.',
                 'zh': '`LineEdit` 新增后缀。',
             }),
             'AI-slop or internal-plumbing phrasing',
         )
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({
                 'en': '`LineEdit` adds suffixes.',
                 'zh': '`LineEdit` 新增后缀，并保留调用方的所有权约定。',
             }),
             'AI-slop or internal-plumbing phrasing',
         )
         assert_rejected(
-            lambda d: d['versions'][0].__setitem__(
+            lambda d: d['versions'][0]['groups'][0].__setitem__(
                 'changes',
                 [{'en': f'Item {index}.', 'zh': f'第 {index} 项。'} for index in range(history.MAX_CHANGES_PER_ENTRY + 1)],
             ),
             'change bullets',
         )
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({'en': 'Unclosed `LineEdit span.', 'zh': '`LineEdit` 正常。'}),
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({'en': 'Unclosed `LineEdit span.', 'zh': '`LineEdit` 正常。'}),
             'Unbalanced or empty inline code span',
         )
         assert_rejected(
-            lambda d: d['versions'][0]['changes'].append({'en': 'word ' * 50, 'zh': '简短说明。'}),
+            lambda d: d['versions'][0]['groups'][0]['changes'].append({'en': 'word ' * 50, 'zh': '简短说明。'}),
             'tighten the prose',
         )
 

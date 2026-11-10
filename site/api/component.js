@@ -387,10 +387,13 @@ function setupReleaseHistory() {
   if (!form) return;
   const entries = [...document.querySelectorAll('[data-release-entry]')];
   const normalize = value => value.toLocaleLowerCase().replace(/[-_\s]/g, '');
-  const terms = new Map(entries.map(entry => [entry, normalize(entry.dataset.releaseSearch)]));
+  const groups = new Map(entries.map(entry => [entry, [...entry.querySelectorAll('[data-release-scope]')]]));
+  const terms = new Map([...groups.values()].flat().map(group => [group, normalize(group.dataset.releaseSearch)]));
   const query = form.querySelector('[data-release-query]');
   const from = form.querySelector('[data-release-from]');
   const breaking = form.querySelector('[data-release-breaking]');
+  const scopes = [...form.querySelectorAll('[data-release-scope-filter]')];
+  const selectedScope = () => scopes.find(control => control.checked)?.value || 'all';
   const result = form.querySelector('[data-release-result]');
   const empty = document.querySelector('[data-release-empty]');
   const chinese = document.documentElement.lang === 'zh-CN';
@@ -398,6 +401,8 @@ function setupReleaseHistory() {
   query.value = params.get('change') || '';
   from.value = [...from.options].some(option => option.value === params.get('from')) ? params.get('from') : '';
   breaking.checked = params.get('breaking') === '1';
+  const initialScope = ['uilib', 'gallery'].includes(params.get('scope')) ? params.get('scope') : 'all';
+  scopes.forEach(control => { control.checked = control.value === initialScope; });
   const newer = (version, baseline) => {
     if (!baseline || version === 'unreleased') return true;
     const a = version.split('.').map(Number), b = baseline.split('.').map(Number);
@@ -408,10 +413,18 @@ function setupReleaseHistory() {
   };
   function filter(updateUrl = false) {
     const term = normalize(query.value.trim());
+    const scope = selectedScope();
     let count = 0;
     entries.forEach(entry => {
-      const visible = (!term || terms.get(entry).includes(term))
-        && (!breaking.checked || entry.dataset.breaking === 'true') && newer(entry.dataset.version, from.value);
+      const sections = groups.get(entry);
+      sections.forEach(group => {
+        group.hidden = (scope !== 'all' && group.dataset.releaseScope !== scope)
+          || (term && !terms.get(group).includes(term))
+          || (breaking.checked && group.dataset.breaking !== 'true');
+      });
+      const hasContent = sections.some(group => !group.hidden)
+        || (sections.length === 0 && scope === 'all' && !term && !breaking.checked);
+      const visible = hasContent && newer(entry.dataset.version, from.value);
       entry.hidden = !visible;
       if (visible) count++;
       const outline = document.querySelector(`.page-navigation a[href="#${entry.id}"]`);
@@ -422,7 +435,8 @@ function setupReleaseHistory() {
       : `${count} ${count === 1 ? 'entry' : 'entries'}${from.value ? ` after ${from.value}` : ''}`;
     if (updateUrl) {
       const url = new URL(location.href);
-      for (const [key, value] of [['change', query.value.trim()], ['from', from.value], ['breaking', breaking.checked ? '1' : '']]) {
+      for (const [key, value] of [['change', query.value.trim()], ['from', from.value],
+          ['breaking', breaking.checked ? '1' : ''], ['scope', selectedScope() === 'all' ? '' : selectedScope()]]) {
         if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
       }
       history.replaceState(null, '', url);
@@ -437,14 +451,24 @@ function setupReleaseHistory() {
     query.value = '';
     from.value = '';
     breaking.checked = false;
+    scopes.forEach(control => { control.checked = control.value === 'all'; });
     filter(true);
   });
-  window.addEventListener('hashchange', () => {
+  function revealAnchor(initial = false) {
     let anchor;
     try { anchor = decodeURIComponent(location.hash.slice(1)); } catch { return; }
-    const entry = document.getElementById(anchor)?.closest('[data-release-entry]');
-    if (entry?.hidden) { form.reset(); queueMicrotask(() => entry.scrollIntoView({block: 'start'})); }
-  });
+    const target = document.getElementById(anchor);
+    const entry = target?.closest('[data-release-entry]');
+    const section = target?.closest('[data-release-scope]');
+    // Keep old migration links readable even when the URL selects another scope.
+    // A version anchor left over from a search must not clear that search on reload.
+    if ((entry?.hidden || section?.hidden) && (!initial || target !== entry)) {
+      form.reset();
+      queueMicrotask(() => target.scrollIntoView({block: 'start'}));
+    }
+  }
+  window.addEventListener('hashchange', () => revealAnchor());
   filter();
+  revealAnchor(true);
 }
 setupReleaseHistory();

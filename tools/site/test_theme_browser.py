@@ -37,18 +37,53 @@ def prepare_site_theme_contract(project_root: Path) -> None:
     )
 
 
-def check_release_documents(page: object, site_url: str, language: str) -> None:
+def check_release_documents(page: object, site_url: str, language: str, output: Path) -> None:
     """Exercise the generated reading surface without requesting a Gallery runtime."""
+    # The homepage checks leave an explicit Light preference; this pass follows
+    # the emulated system theme in its isolated browser context.
+    page.evaluate("localStorage.removeItem('fluent-qt-theme')")
     response = page.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
     if response is None or not response.ok:
         raise RuntimeError('Missing generated release history')
     page.wait_for_selector('[data-release-filters]:not([hidden])')
     all_count = page.locator('[data-release-entry]').count()
+    def choose_scope(scope):
+        page.locator(f'[data-release-scope-filter][value="{scope}"] + span').click()
+
+    library = page.locator('[id="v1.11.1"] [data-release-scope="uilib"]')
+    gallery = page.locator('[id="v1.11.1"] [data-release-scope="gallery"]')
+    choose_scope('uilib')
+    if not library.is_visible() or gallery.is_visible() or page.locator('#gallery-private-qt-headers').is_visible():
+        raise RuntimeError('UILib view leaked Gallery summaries or migration requirements')
+    page.locator('[data-release-breaking]').check()
+    if page.locator('[id="v1.11.1"]').is_visible() or not page.locator('[id="v1.7.0"]').is_visible():
+        raise RuntimeError('Migration filtering ignored the selected scope')
+    choose_scope('gallery')
+    if not gallery.is_visible() or library.is_visible() or page.locator('[id="v1.7.0"]').is_visible():
+        raise RuntimeError('Gallery migration view leaked library content')
+    page.locator('[data-release-from]').select_option('1.11.0')
+    page.reload(wait_until='domcontentloaded')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if not page.locator('[value="gallery"][data-release-scope-filter]').is_checked() or not gallery.is_visible():
+        raise RuntimeError('Reloading lost the audience or migration filters')
+    page.locator('[data-release-query]').fill('qt6-base-private-dev')
+    choose_scope('uilib')
+    if not page.locator('[data-release-empty]').is_visible():
+        raise RuntimeError('Gallery migration search terms leaked into UILib results')
+    page.locator('[data-release-filters] button[type="reset"]').click()
+    all_scope = page.locator('[value="all"][data-release-scope-filter]')
+    all_scope.focus()
+    page.keyboard.press('ArrowRight')
+    if not page.locator('[value="uilib"][data-release-scope-filter]').is_checked():
+        raise RuntimeError('Scope filters do not support native radio keyboard navigation')
+    page.locator('[data-release-filters] button[type="reset"]').click()
     page.locator('[data-release-breaking]').check()
     page.locator('[data-release-from]').select_option('1.6.4')
     if page.locator('[id="v1.5.0"]').is_visible() or not page.locator('[id="v1.7.0"]').is_visible():
         raise RuntimeError('Upgrade range filtering is incorrect')
     page.locator('[data-release-filters] button[type="reset"]').click()
+    if not all_scope.is_checked():
+        raise RuntimeError('Reset did not restore the All scope')
     if page.locator('[data-release-entry]:visible').count() != all_count:
         raise RuntimeError('Clearing release filters did not restore every record')
     page.locator('[data-release-query]').fill('ParticleBackdrop')
@@ -68,6 +103,21 @@ def check_release_documents(page: object, site_url: str, language: str) -> None:
         page.set_viewport_size({'width': width, 'height': 800})
         if page.evaluate('document.documentElement.scrollWidth > innerWidth'):
             raise RuntimeError(f'Release history overflows at {width}px')
+        for theme in ('light', 'dark'):
+            page.emulate_media(color_scheme=theme)
+            page.wait_for_function('theme => document.documentElement.dataset.theme === theme', arg=theme)
+            page.screenshot(path=str(output / f'releases-{language}-{theme}-{width}.png'), full_page=False)
+    page.goto(site_url + 'api/releases/#v1.11.3', wait_until='domcontentloaded')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    page.screenshot(path=str(output / f'releases-{language}-grouped-mobile.png'), full_page=False)
+    page.goto(site_url + 'api/releases/?scope=uilib#gallery-private-qt-headers', wait_until='domcontentloaded')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if not page.locator('#gallery-private-qt-headers').is_visible():
+        raise RuntimeError('A scoped URL hid an existing migration anchor')
+    page.goto(site_url + 'api/releases/?scope=unknown', wait_until='domcontentloaded')
+    page.wait_for_selector('[data-release-filters]:not([hidden])')
+    if page.locator('[data-release-entry]:visible').count() != all_count or not all_scope.is_checked():
+        raise RuntimeError('Unknown scopes must fall back to All')
     page.goto(site_url + 'api/roadmap/', wait_until='domcontentloaded')
     page.wait_for_url(site_url + 'api/releases/')
     page.wait_for_selector('[data-release-filters]:not([hidden])')
@@ -233,8 +283,21 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                         raise RuntimeError("Website eagerly loaded the opt-in Spatial runtime")
                     page.screenshot(path=str(output / f"{language}-{width}.png"))
                 if site_root is not None:
-                    check_release_documents(page, site_url, language)
+                    check_release_documents(page, site_url, language, output)
                     check_directory_hierarchy(page, site_url)
+                    fallback = browser.new_page(java_script_enabled=False)
+                    try:
+                        fallback.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
+                        entry_count = fallback.locator('[data-release-entry]').count()
+                        if not entry_count or fallback.locator('[data-release-entry]:visible').count() != entry_count:
+                            raise RuntimeError('No-JavaScript reading lost release entries')
+                        for scope in ('uilib', 'gallery'):
+                            if not fallback.locator(f'[id="v1.11.1"] [data-release-scope="{scope}"]').is_visible():
+                                raise RuntimeError('No-JavaScript reading hid a release scope')
+                        if not fallback.locator('#gallery-private-qt-headers').is_visible():
+                            raise RuntimeError('No-JavaScript reading hid migration instructions')
+                    finally:
+                        fallback.close()
                 if errors:
                     raise RuntimeError(f"Website page errors ({language}): {errors}")
                 if runtime_requests:

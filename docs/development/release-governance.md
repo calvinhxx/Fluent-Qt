@@ -55,6 +55,28 @@ IDs, and migration instructions in `tools/site/release-history.json`.
 The website's version history is generated from that input during
 the ordinary website build; generated HTML stays untracked.
 
+Schema version 2 keeps one version timeline with explicit `groups`. Each group
+owns its bilingual `summary`, `changes`, `migrations`, `related` document IDs,
+and public `headers`. Use one group per scope in an entry:
+
+| Scope | Audience and content |
+|---|---|
+| `uilib` | Applications using the C++ or PySide6 library: APIs, component behavior, library dependencies and package compatibility |
+| `gallery` | Gallery users and builders: examples, navigation, app settings, diagnostics, Gallery packages and app-only build requirements |
+| `project` | Historical website or community updates with no library or Gallery behavior change; shown only under All |
+
+Split a sentence that combines a library API with its Gallery example into the
+respective groups. Do not repeat a mixed summary above those groups. Migration
+requirements inherit the group's scope: the Gallery private-header requirement
+must never appear as a library migration. The six-bullet budget applies to the
+whole version, across all groups. Published groups require a summary; empty
+Unreleased uses `"groups": []`.
+
+The page filters entire groups, including summaries, search terms and migration
+badges. Scope, keyword, upgrade baseline and migration-only filters combine and
+persist in the URL. Existing version and migration anchors stay stable; without
+JavaScript, all groups remain readable.
+
 When preparing a release:
 
 1. Add the canonical release note and its English and Chinese summary. Mark a
@@ -66,7 +88,7 @@ When preparing a release:
    such as `## Non-breaking changes` do not.
    Keep removed document IDs in `retired_document_ids` so historical component
    searches remain useful after an API page is retired.
-   Add source-only API additions to `unreleased` before merging. Related
+   Add source-only API additions to the `uilib` group in `unreleased` before merging. Related
    component, guide, and header-reference pages show a notice linked to the
    pending record. Move those associations with the change when it ships so
    published APIs no longer show an unreleased notice.
