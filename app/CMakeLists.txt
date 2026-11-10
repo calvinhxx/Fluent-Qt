@@ -45,6 +45,8 @@ if(TARGET FluentQtSpatial)
 else()
     list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX "/(SpatialSamples|GallerySpatialController)\\.cpp$")
 endif()
+list(APPEND FLUENT_QT_GALLERY_CORE_SOURCES
+    "${PROJECT_SOURCE_DIR}/support/clipboard/ClipboardSupport.cpp")
 if(NOT TARGET FluentQtQmlBridge)
     list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX "/QmlBridgeSamples\\.cpp$")
 endif()

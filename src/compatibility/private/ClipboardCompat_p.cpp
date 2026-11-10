@@ -12,6 +12,24 @@
 #endif
 
 namespace compatibility::detail {
+bool clipboardWriteSucceeded()
+{
+#if defined(Q_OS_WASM)
+    return false;
+#else
+    const auto* clipboard = QGuiApplication::clipboard();
+    if (!clipboard)
+        return false;
+#if defined(Q_OS_WIN)
+    // Windows QPA checks OleIsCurrentClipboard after the potentially failing write.
+    // zh_CN: Windows 原生后端用 OLE 所有权确认可能失败的写入。
+    if (QGuiApplication::platformName() == QStringLiteral("windows"))
+        return clipboard->ownsClipboard();
+#endif
+    return true;
+#endif
+}
+
 #if defined(Q_OS_WASM)
 namespace {
 struct ClipboardRequest {
@@ -124,12 +142,7 @@ void copyImage(QObject* context, const QImage& image, std::function<void(bool)> 
         clipboard->setImage(image);
     if (!guard)
         return;
-    bool copied = clipboard != nullptr;
-#if defined(Q_OS_WIN)
-    if (copied && QGuiApplication::platformName() == QStringLiteral("windows"))
-        copied = clipboard->ownsClipboard();
-#endif
-    completed(copied);
+    completed(clipboardWriteSucceeded());
 }
 
 void copyText(QObject* context, const QString& text, std::function<void(bool)> completed)
@@ -142,15 +155,7 @@ void copyText(QObject* context, const QString& text, std::function<void(bool)> c
         clipboard->setText(text);
     if (!guard)
         return;
-    bool copied = clipboard != nullptr;
-#if defined(Q_OS_WIN)
-    // The Windows QPA checks OleIsCurrentClipboard; setText itself has no
-    // result and can fail when another process holds the clipboard lock.
-    // zh_CN: Windows 原生后端以 OLE 所有权确认写入，避免占用失败时误报成功。
-    if (copied && QGuiApplication::platformName() == QStringLiteral("windows"))
-        copied = clipboard->ownsClipboard();
-#endif
-    completed(copied);
+    completed(clipboardWriteSucceeded());
 }
 #endif
 } // namespace compatibility::detail
