@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE = 'tools/site/release-history.json'
 REPOSITORY = 'https://github.com/calvinhxx/Fluent-Qt'
 LANGUAGES = ('en', 'zh')
+SCOPES = ('uilib', 'gallery', 'project')
 MAX_CHANGES_PER_ENTRY = 6
 FIELD_BUDGETS = {
     'summary': {'en': 250, 'zh': 125},
@@ -122,7 +123,7 @@ def bilingual(value, location):
 @lru_cache(maxsize=4)
 def load_history(root=ROOT):
     data = json.loads((root / SOURCE).read_text(encoding='utf-8'))
-    if data.get('schema_version') != 1:
+    if data.get('schema_version') != 2:
         raise ValueError('Unsupported release history schema')
     versions = data['versions']
     names = [item['version'] for item in versions]
@@ -135,9 +136,9 @@ def load_history(root=ROOT):
         note = path.read_text(encoding='utf-8')
         if item.get('source_sha256') != note_digest(note):
             raise ValueError(f'Review the bilingual summary after changing {path.relative_to(root)}')
-        if re.search(r'^##[ \t]+breaking\b', note, re.M | re.I) and not item.get('migrations'):
+        if re.search(r'^##[ \t]+breaking\b', note, re.M | re.I) and not any(
+                group.get('migrations') for group in item.get('groups', [])):
             raise ValueError(f'Breaking release {item["version"]} needs a bilingual migration record')
-        validate_prose_field(item['summary'], 'summary', f'{item["version"]} summary')
         if item['status'] not in ('published', 'archive', 'candidate'):
             raise ValueError(f'Invalid release status: {item["version"]}')
         if item['status'] == 'published':
@@ -150,21 +151,39 @@ def load_history(root=ROOT):
         raise ValueError('Move shipped changes out of Unreleased and update its baseline')
     for item in [data['unreleased'], *versions]:
         label = item.get('version', 'unreleased')
-        changes = item.get('changes', [])
-        if len(changes) > MAX_CHANGES_PER_ENTRY:
-            raise ValueError(f'{label} has {len(changes)} change bullets (limit {MAX_CHANGES_PER_ENTRY})')
-        for index, change in enumerate(changes):
-            validate_prose_field(change, 'change', f'{label} change {index}')
-        for migration in item.get('migrations', []):
-            for field in ('title', 'impact', 'action'):
-                validate_prose_field(migration[field], f'migration.{field}', f'migration {migration["id"]} {field}')
-            if not re.fullmatch(r'[a-z][a-z0-9-]*', migration['id']):
-                raise ValueError('Migration anchors must be stable slugs')
-            if not migration.get('before') or not migration.get('after'):
-                raise ValueError('Migration records need before and after examples')
-            if migration.get('commit') and not re.fullmatch(r'[0-9a-f]{40}', migration['commit']):
-                raise ValueError('Migration commit references must use a full Git revision')
-    ids = [m['id'] for item in [data['unreleased'], *versions] for m in item.get('migrations', [])]
+        if any(key in item for key in ('summary', 'changes', 'migrations', 'related', 'headers')):
+            raise ValueError(f'{label} content must belong to an explicit scope group')
+        groups = item.get('groups')
+        if not isinstance(groups, list) or ('version' in item and not groups):
+            raise ValueError(f'{label} needs scope groups')
+        if any(not isinstance(group, dict) for group in groups):
+            raise ValueError(f'{label} needs scope group objects')
+        scopes = [group.get('scope') for group in groups]
+        if any(scope not in SCOPES for scope in scopes) or len(scopes) != len(set(scopes)):
+            raise ValueError(f'{label} has unknown or duplicate scopes')
+        change_count = sum(len(group.get('changes', [])) for group in groups)
+        if change_count > MAX_CHANGES_PER_ENTRY:
+            raise ValueError(f'{label} has {change_count} change bullets (limit {MAX_CHANGES_PER_ENTRY})')
+        for group in groups:
+            location = f'{label} {group["scope"]}'
+            if 'version' in item or 'summary' in group:
+                validate_prose_field(group.get('summary'), 'summary', f'{location} summary')
+            if not any(group.get(key) for key in ('summary', 'changes', 'migrations')):
+                raise ValueError(f'{location} has no public changes')
+            changes = group.get('changes', [])
+            for index, change in enumerate(changes):
+                validate_prose_field(change, 'change', f'{location} change {index}')
+            for migration in group.get('migrations', []):
+                for field in ('title', 'impact', 'action'):
+                    validate_prose_field(migration[field], f'migration.{field}', f'migration {migration["id"]} {field}')
+                if not re.fullmatch(r'[a-z][a-z0-9-]*', migration['id']):
+                    raise ValueError('Migration anchors must be stable slugs')
+                if not migration.get('before') or not migration.get('after'):
+                    raise ValueError('Migration records need before and after examples')
+                if migration.get('commit') and not re.fullmatch(r'[0-9a-f]{40}', migration['commit']):
+                    raise ValueError('Migration commit references must use a full Git revision')
+    ids = [m['id'] for item in [data['unreleased'], *versions]
+           for group in item['groups'] for m in group.get('migrations', [])]
     if len(ids) != len(set(ids)):
         raise ValueError('Duplicate migration anchor')
     return data
@@ -176,7 +195,8 @@ def page_path(kind, language='en'):
 
 def validate_related_documents(data, document_ids):
     allowed = set(document_ids) | set(data.get('retired_document_ids', []))
-    unknown = {name for item in [data['unreleased'], *data['versions']] for name in item.get('related', [])} - allowed
+    unknown = {name for item in [data['unreleased'], *data['versions']]
+               for group in item.get('groups', []) for name in group.get('related', [])} - allowed
     if unknown:
         raise ValueError(f'Release history links to unknown documentation: {sorted(unknown)}')
 
@@ -192,7 +212,8 @@ def main():
         entry = next((item for item in data['versions'] if item['version'] == args.refresh_digest), None)
         if entry is None:
             parser.error('Add the bilingual version record before acknowledging its source')
-        bilingual(entry['summary'], args.refresh_digest)
+        for group in entry['groups']:
+            bilingual(group['summary'], f'{args.refresh_digest} {group["scope"]}')
         entry['source_sha256'] = note_digest((ROOT / f'docs/releases/v{args.refresh_digest}.md').read_text(encoding='utf-8'))
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     data = load_history()
