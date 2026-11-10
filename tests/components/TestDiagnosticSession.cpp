@@ -73,6 +73,19 @@ TEST(DiagnosticSessionTest, BoundedConcurrentLogsAndLifetimeSafeSink)
     sink(QtWarningMsg, "test", "after-destruction");
 }
 
+TEST(DiagnosticSessionTest, TruncationDoesNotLeaveHalfASurrogatePair)
+{
+    QWidget root;
+    DiagnosticSession session;
+    ASSERT_TRUE(session.start(&root, true));
+    const QString emoji = QString(QChar(0xd83d)) + QChar(0xde00);
+    session.recordMessage(QtWarningMsg, QString(79, 'c') + emoji, QString(511, 'm') + emoji);
+    const auto events = session.report().value("events").toList();
+    ASSERT_EQ(events.size(), 1);
+    EXPECT_EQ(events.first().toMap().value("category").toString(), QString(79, 'c'));
+    EXPECT_EQ(events.first().toMap().value("message").toString(), QString(511, 'm'));
+}
+
 TEST(DiagnosticSessionTest, RootDestructionStopsAndClearDiscardsConsentAndData)
 {
     auto root = std::make_unique<QWidget>();

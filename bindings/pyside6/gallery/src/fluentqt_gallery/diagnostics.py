@@ -19,6 +19,7 @@ from PySide6.QtCore import (QAbstractAnimation, QByteArray, QCoreApplication, QE
 from PySide6.QtGui import QColor, QDesktopServices, QFont, QKeySequence
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 import fluentqt
+from fluentqt._qt_compat import single_shot
 
 _save_workers = set()
 _MAX_CRASH_BYTES = 16 * 1024 * 1024
@@ -727,7 +728,7 @@ class _FeedbackTip(fluentqt.TeachingTip):
         result = super().eventFilter(watched, event)
         if relevant and self.isOpen() and not self._position_pending:
             self._position_pending = True
-            QTimer.singleShot(0, self, self._queue_placement)
+            single_shot(0, self, self._queue_placement)
         return result
 
     def _queue_placement(self):
@@ -888,7 +889,7 @@ class DiagnosticRecorder(QObject):
 
     def _open_issue(self):
         if not QDesktopServices.openUrl(self.issue_target):
-            QTimer.singleShot(0, self, self._open_failed)
+            single_shot(0, self, self._open_failed)
 
     def _open_failed(self):
         self.feedback_visible = True
@@ -939,7 +940,7 @@ class DiagnosticRecorder(QObject):
             tip.set_action("Try again", "ic_fluent_arrow_clockwise_20_regular", self._retry)
 
     def _retry(self):
-        QTimer.singleShot(0, self, lambda: self.report_problem(self.feedback_anchor))
+        single_shot(0, self, lambda: self.report_problem(self.feedback_anchor))
 
     def persist(self):
         if self.closed or self.writer is None or (self.future is not None and not self.future.done()):

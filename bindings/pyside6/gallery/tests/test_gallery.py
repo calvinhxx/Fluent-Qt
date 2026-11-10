@@ -482,7 +482,6 @@ class PythonGalleryTest(unittest.TestCase):
     def test_diagnostic_log_forwarding_drains_before_window_teardown(self):
         import logging
         import threading
-        from shiboken6 import Shiboken
         from fluentqt_gallery.diagnostics import FeedbackButton, ensure_diagnostics
         root = QWidget()
         panel = FeedbackButton(root)
@@ -498,7 +497,7 @@ class PythonGalleryTest(unittest.TestCase):
         worker = threading.Thread(target=forward)
         worker.start()
         self.assertTrue(started.wait(2))
-        Shiboken.delete(root)
+        delete_qobject(root)
         worker.join(2)
         self.assertFalse(worker.is_alive())
         self.assertFalse(capture.active)
@@ -507,7 +506,6 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_diagnostics_survive_feedback_button_recreation(self):
         import tempfile
-        from shiboken6 import Shiboken
         from fluentqt_gallery.diagnostics import FeedbackButton, ensure_diagnostics
         from PySide6.QtCore import QtMsgType
         root = QWidget()
@@ -517,13 +515,13 @@ class PythonGalleryTest(unittest.TestCase):
             self.assertIs(ensure_diagnostics(panel), recorder)
             session = recorder.session
             session.recordMessage(QtMsgType.QtWarningMsg, "test", "before-opening-feedback")
-            Shiboken.delete(panel)
+            delete_qobject(panel)
             self.assertTrue(session.isRecording())
             panel = FeedbackButton(root)
             self.assertIs(ensure_diagnostics(root).session, session)
             self.assertIn("before-opening-feedback", json.dumps(recorder.report()))
             self.assertTrue(panel.isEnabled())
-            Shiboken.delete(root)
+            delete_qobject(root)
             saved = list(Path(directory).glob("session-*.json"))
             self.assertEqual(len(saved), 1)
             self.assertIn("environment", json.loads(saved[0].read_text()))
@@ -534,7 +532,6 @@ class PythonGalleryTest(unittest.TestCase):
         import zipfile
         from unittest.mock import patch
         from PySide6.QtCore import QMimeData, QtMsgType, QUrlQuery
-        from shiboken6 import Shiboken
         from fluentqt_gallery.diagnostics import FeedbackButton, ensure_diagnostics
         clipboard = QApplication.clipboard()
         original = clipboard.mimeData()
@@ -619,12 +616,11 @@ class PythonGalleryTest(unittest.TestCase):
                 self.assertNotIn("_local_process", captured)
                 self.assertEqual(captured["crash_files_included"], 1)
             self.assertTrue(recorder.session.isRecording())
-            Shiboken.delete(root)
+            delete_qobject(root)
 
     def test_diagnostics_open_failure_keeps_a_retry_action(self):
         import tempfile
         from unittest.mock import patch
-        from shiboken6 import Shiboken
         from fluentqt_gallery.diagnostics import ensure_diagnostics, issue_url
         root = QWidget()
         root.resize(500, 360)
@@ -649,11 +645,10 @@ class PythonGalleryTest(unittest.TestCase):
                 self.assertEqual(retry.artifactState(), "Copied to clipboard")
                 self.assertEqual(retry.content.action.text(), "Open GitHub issue")
                 self.assertIs(retry.target(), anchor)
-            Shiboken.delete(root)
+            delete_qobject(root)
 
     def test_diagnostics_tip_tracks_anchor_and_respects_motion(self):
         from fluentqt_gallery.diagnostics import _FeedbackTip, FeedbackButton
-        from shiboken6 import Shiboken
         original = fluentqt.current_motion_mode()
         root = QWidget()
         root.resize(800, 480)
@@ -706,10 +701,10 @@ class PythonGalleryTest(unittest.TestCase):
                 tip.close()
                 _qwait(100)
             tip.show_for(anchor)
-            Shiboken.delete(anchor)
+            delete_qobject(anchor)
             self.assertFalse(tip.isOpen())
         finally:
-            Shiboken.delete(root)
+            delete_qobject(root)
             fluentqt.set_motion_mode(original)
 
     def test_diagnostics_hidden_spinner_stays_stopped_after_motion_changes(self):
@@ -741,12 +736,14 @@ class PythonGalleryTest(unittest.TestCase):
             tip.configure("Diagnostic ZIP ready", "Attach it on GitHub.", False, False)
             self.assertEqual(tip._spin_animation.state(), QAbstractAnimation.Stopped)
         finally:
-            shiboken6.delete(root)
+            delete_qobject(root)
             fluentqt.set_motion_mode(original)
 
     def test_diagnostics_crash_matching_excludes_unrelated_files(self):
         import tempfile
         import time
+        from contextlib import nullcontext
+        from unittest.mock import patch
         from fluentqt_gallery.diagnostics import existing_crash_attachments
         with tempfile.TemporaryDirectory() as directory:
             now = int(time.time() * 1000)
@@ -756,10 +753,29 @@ class PythonGalleryTest(unittest.TestCase):
             (root / "other.ips").write_text('{"pid":124,"procPath":"/test/Python"}')
             (root / "Python.123.dmp").write_bytes(b"synthetic dump")
             (root / "Python.124.dmp").write_bytes(b"unrelated dump")
-            (root / "linked.ips").symlink_to(root / "python.ips")
-            files = existing_crash_attachments([identity], directory)
+            source = root / "link-source"
+            source.mkdir()
+            target = source / "private.ips"
+            target.write_text('{"pid":123,"procPath":"/test/Python","linked-only":true}')
+            link = root / "linked.ips"
+            link_metadata = nullcontext()
+            try:
+                link.symlink_to(target)
+            except OSError as error:
+                if getattr(error, "winerror", None) != 1314:
+                    raise
+                # Ordinary Windows users lack symlink creation rights. Keep the
+                # exclusion assertion with explicit metadata; WSL uses a real link.
+                link.write_bytes(target.read_bytes())
+                original_is_symlink = Path.is_symlink
+                link_metadata = patch.object(Path, "is_symlink", lambda path: (
+                    path == link or original_is_symlink(path)
+                ))
+            with link_metadata:
+                files = existing_crash_attachments([identity], directory)
             self.assertEqual(len(files), 2)
             self.assertIn(b"synthetic dump", [bytes(data) for data in files.values()])
+            self.assertFalse(any(b"linked-only" in bytes(data) for data in files.values()))
             self.assertEqual(existing_crash_attachments([], directory), {})
             identity["started_ms"], identity["checkpoint_ms"] = now - 1000000, now - 900000
             self.assertEqual(existing_crash_attachments([identity], directory), {})
