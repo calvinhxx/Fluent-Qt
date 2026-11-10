@@ -938,6 +938,7 @@ void Window::updateChromeOptions()
     }
     options.resizeBorderWidth = ResizeBorderWidth;
     options.chromeInteractive = m_chromeInteractive;
+    options.maximizeButton = m_maximizeButton;
     m_chrome.configure(options);
 
     const int reservedResizeBorder =

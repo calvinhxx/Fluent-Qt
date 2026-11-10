@@ -9,7 +9,9 @@
 // 标题栏和内容颜色由 Window/TitleBar/NavigationView 绘制。
 
 #include <QByteArray>
+#include <QAbstractButton>
 #include <QPoint>
+#include <QPointer>
 #include <QRect>
 #include <QSize>
 #include <QVector>
@@ -80,6 +82,12 @@ struct WindowChromeOptions {
      * zh_CN: 为 false 时锁定 chrome 移动/缩放，用于模态覆盖层。
      */
     bool chromeInteractive = true;
+
+    /**
+     * @brief Borrowed maximize/restore control for native caption integration.
+     * zh_CN: 借用的最大化/还原控件，用于原生标题栏集成，不转移所有权。
+     */
+    QPointer<QAbstractButton> maximizeButton;
 };
 
 /**

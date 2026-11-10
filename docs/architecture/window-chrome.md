@@ -39,6 +39,33 @@ excluded from installed headers. Run
 call `Window::setBackdropEffect()` and observe `backdropStateChanged`, but should
 not read private dynamic-property strings or duplicate platform checks.
 
+## Native maximize-button integration
+
+`Window` publishes its existing maximize/restore button through the borrowed
+`WindowChromeOptions::maximizeButton` reference. The Windows adapter supplies
+the Win11 Snap Layouts hit target using `HTMAXBUTTON`, following Microsoft's
+[desktop Snap Layouts guidance](https://learn.microsoft.com/windows/apps/desktop/modernize/ui/apply-snap-layout-menu).
+It translates non-client pointer input back to the same Qt button, so ordinary
+clicks and accessibility actions retain the existing maximize/restore commands.
+The adapter owns native mouse capture, hover, cancellation and physical-to-logical
+coordinate conversion; components contain no Windows-version or message logic.
+
+The hit target follows the live button geometry and is unavailable while the
+button is hidden, disabled, covered by another widget, or chrome is locked. A
+full-screen or fixed-size window does not advertise the target. Native resize
+edges retain precedence. Losing capture, hiding/deactivating the window or
+destroying it clears the pressed state without invoking a second action.
+
+Windows 10 and other platforms retain ordinary Qt button handling. Windows
+chooses the available layouts and controls whether the hover flyout is enabled;
+FluentQt does not draw a substitute menu or change system settings. Application
+minimum sizes still constrain which snap zones can contain the window.
+
+`WindowsSnapLayoutTest` covers native-message hit testing, geometry, modal
+occlusion, one-click commands, drag cancellation and destruction. Those tests do
+not prove that the shell flyout appeared; native desktop review must separately
+check hovering, selecting a layout and restoring the window.
+
 ## Typed backdrop state
 
 `BackdropState` deliberately separates intent from what is actually visible:

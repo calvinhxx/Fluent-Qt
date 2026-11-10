@@ -13,8 +13,10 @@
 #include <QGuiApplication>
 #include <QImage>
 #include <QPalette>
+#include <QOperatingSystemVersion>
 #include <QPointer>
 #include <QSignalSpy>
+#include <QScreen>
 #include <QTest>
 #include <QVBoxLayout>
 #include <QWindow>
@@ -38,6 +40,57 @@ using fluent::windowing::BackdropSurfaceMode;
 using fluent::windowing::Window;
 
 namespace {
+
+bool hasNativeSnapLayouts()
+{
+    return QGuiApplication::platformName() == QLatin1String("windows")
+        && QOperatingSystemVersion::current()
+        >= QOperatingSystemVersion(QOperatingSystemVersion::Windows, 10, 0, 22000);
+}
+
+LPARAM nativeCaptionPoint(QWidget& window, const QPoint& point, bool screen = true)
+{
+    const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+    RECT client = {};
+    EXPECT_TRUE(GetClientRect(hwnd, &client));
+    POINT native = {qRound(qreal(point.x()) * (client.right - client.left) / window.width()),
+        qRound(qreal(point.y()) * (client.bottom - client.top) / window.height())};
+    if (screen)
+        EXPECT_TRUE(ClientToScreen(hwnd, &native));
+    return MAKELPARAM(native.x, native.y);
+}
+
+QPoint captionCenter(QWidget& window, QWidget* button)
+{
+    return button->mapTo(&window, button->rect().center());
+}
+
+class CaptionAdapterWindow final : public QWidget {
+public:
+    CaptionAdapterWindow() : chrome(this)
+    {
+        resize(360, 240);
+        chrome.applyPlatformWindowFlags();
+    }
+
+    void setMaximizeButton(QAbstractButton* button)
+    {
+        auto options = chrome.options();
+        options.titleBarRect = QRect(0, 0, width(), 40);
+        options.maximizeButton = button;
+        options.dragExclusionRects = {button->geometry()};
+        chrome.configure(options);
+    }
+
+protected:
+    bool nativeEvent(const QByteArray& type, void* message, compatibility::FluentNativeEventResult* result) override
+    {
+        return chrome.handleNativeEvent(type, message, result);
+    }
+
+private:
+    compatibility::WindowChromeCompat chrome;
+};
 
 int nativeBackdropType(HWND hwnd)
 {
@@ -209,6 +262,204 @@ private:
 #endif
 
 } // namespace
+
+TEST(WindowsSnapLayoutTest, MaximizeHitTestTracksAvailabilityAndGeometry)
+{
+    if (!hasNativeSnapLayouts())
+        GTEST_SKIP() << "Snap caption integration requires Windows 11 and the Windows platform plugin";
+    Window window;
+    window.resize(720, 480);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window, 2000));
+    auto* maximize = window.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentWindowMaximizeButton"));
+    ASSERT_NE(maximize, nullptr);
+    const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+    const auto hit = [&](const QPoint& point) {
+        return SendMessageW(hwnd, WM_NCHITTEST, 0, nativeCaptionPoint(window, point));
+    };
+    EXPECT_EQ(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+    for (const auto* name : {"fluentWindowMinimizeButton", "fluentWindowCloseButton"}) {
+        auto* button = window.findChild<fluent::basicinput::Button*>(QLatin1String(name));
+        ASSERT_NE(button, nullptr);
+        EXPECT_EQ(hit(captionCenter(window, button)), HTCLIENT);
+    }
+    EXPECT_EQ(hit(QPoint(window.width() - 1, 1)), HTTOPRIGHT);
+    const QPoint previous = captionCenter(window, maximize);
+    window.resize(560, 400);
+    QApplication::processEvents();
+    EXPECT_NE(captionCenter(window, maximize), previous);
+    EXPECT_NE(hit(previous), HTMAXBUTTON);
+    EXPECT_EQ(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+    window.setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    EXPECT_EQ(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+
+    maximize->setEnabled(false);
+    EXPECT_EQ(hit(captionCenter(window, maximize)), HTCLIENT);
+    maximize->setEnabled(true);
+    const QPoint hidden = captionCenter(window, maximize);
+    maximize->hide();
+    EXPECT_NE(hit(hidden), HTMAXBUTTON);
+    maximize->show();
+    QApplication::processEvents();
+    window.setChromeInteractive(false);
+    EXPECT_EQ(hit(captionCenter(window, maximize)), HTCLIENT);
+    window.setChromeInteractive(true);
+    EXPECT_EQ(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+
+    fluent::dialogs_flyouts::Dialog dialog(&window);
+    dialog.setAnimationEnabled(false);
+    dialog.setModal(true);
+    dialog.setFixedSize(280, 160);
+    dialog.open();
+    QApplication::processEvents();
+    EXPECT_NE(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+    dialog.close();
+    QApplication::processEvents();
+    EXPECT_EQ(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+    window.showFullScreen();
+    QApplication::processEvents();
+    EXPECT_NE(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+    window.showNormal();
+    QApplication::processEvents();
+    window.setFixedSize(window.size());
+    EXPECT_NE(hit(captionCenter(window, maximize)), HTMAXBUTTON);
+}
+
+TEST(WindowsSnapLayoutTest, NativeMousePreservesQtClickAndCancelsOutsideRelease)
+{
+    if (!hasNativeSnapLayouts())
+        GTEST_SKIP() << "Snap caption integration requires Windows 11 and the Windows platform plugin";
+    Window window;
+    window.resize(720, 480);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window, 2000));
+    auto* maximize = window.findChild<fluent::basicinput::Button*>(QStringLiteral("fluentWindowMaximizeButton"));
+    ASSERT_NE(maximize, nullptr);
+    const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+    QSignalSpy clicks(maximize, &QAbstractButton::clicked);
+    QSignalSpy maximizeRequests(&window, &Window::maximizeRequested);
+    QSignalSpy restoreRequests(&window, &Window::restoreRequested);
+    const auto press = [&] {
+        const LPARAM point = nativeCaptionPoint(window, captionCenter(window, maximize));
+        SendMessageW(hwnd, WM_NCMOUSEMOVE, HTMAXBUTTON, point);
+        EXPECT_TRUE(maximize->underMouse());
+        SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTMAXBUTTON, point);
+        EXPECT_TRUE(maximize->isDown());
+        EXPECT_EQ(GetCapture(), hwnd);
+    };
+    press();
+    const LPARAM outside = nativeCaptionPoint(window, QPoint(-12, -12), false);
+    SendMessageW(hwnd, WM_MOUSEMOVE, MK_LBUTTON, outside);
+    EXPECT_FALSE(maximize->isDown());
+    SendMessageW(hwnd, WM_LBUTTONUP, 0, outside);
+    EXPECT_EQ(clicks.count(), 0);
+    EXPECT_NE(GetCapture(), hwnd);
+
+    press();
+    SendMessageW(hwnd, WM_LBUTTONUP, 0, nativeCaptionPoint(window, captionCenter(window, maximize), false));
+    EXPECT_EQ(clicks.count(), 1);
+    EXPECT_EQ(maximizeRequests.count(), 1);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return window.isMaximized(); }, 2000));
+    press();
+    SendMessageW(hwnd, WM_LBUTTONUP, 0, nativeCaptionPoint(window, captionCenter(window, maximize), false));
+    EXPECT_EQ(clicks.count(), 2);
+    EXPECT_EQ(restoreRequests.count(), 1);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.isMaximized(); }, 2000));
+
+    press();
+    ReleaseCapture();
+    EXPECT_FALSE(maximize->isDown());
+    EXPECT_FALSE(maximize->underMouse());
+    EXPECT_EQ(clicks.count(), 2);
+    press();
+    window.setChromeInteractive(false);
+    EXPECT_FALSE(maximize->isDown());
+    EXPECT_NE(GetCapture(), hwnd);
+    EXPECT_EQ(clicks.count(), 2);
+    window.setChromeInteractive(true);
+    press();
+    SendMessageW(hwnd, WM_CANCELMODE, 0, 0);
+    EXPECT_FALSE(maximize->isDown());
+    EXPECT_NE(GetCapture(), hwnd);
+    EXPECT_EQ(clicks.count(), 2);
+
+    fluent::dialogs_flyouts::Dialog dialog(&window);
+    dialog.setAnimationEnabled(false);
+    dialog.setModal(true);
+    dialog.setFixedSize(280, 160);
+    const auto connection = QObject::connect(maximize, &QAbstractButton::pressed, &dialog, [&] { dialog.open(); });
+    press();
+    ASSERT_TRUE(dialog.isVisible());
+    SendMessageW(hwnd, WM_LBUTTONUP, 0, nativeCaptionPoint(window, captionCenter(window, maximize), false));
+    EXPECT_EQ(clicks.count(), 2) << "A modal surface appearing during press must cancel the underlying action";
+    EXPECT_FALSE(maximize->isDown());
+    EXPECT_NE(GetCapture(), hwnd);
+    QObject::disconnect(connection);
+    dialog.close();
+}
+
+TEST(WindowsSnapLayoutTest, DestructionDuringPressReleasesNativeCapture)
+{
+    if (!hasNativeSnapLayouts())
+        GTEST_SKIP() << "Snap caption integration requires Windows 11 and the Windows platform plugin";
+    QPointer<Window> window = new Window;
+    window->resize(720, 480);
+    window->show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window, 2000));
+    auto* maximize = window->findChild<fluent::basicinput::Button*>(QStringLiteral("fluentWindowMaximizeButton"));
+    ASSERT_NE(maximize, nullptr);
+    const HWND hwnd = reinterpret_cast<HWND>(window->winId());
+    const LPARAM point = nativeCaptionPoint(*window, captionCenter(*window, maximize));
+    QObject::connect(maximize, &QAbstractButton::pressed, window, [window] { delete window.data(); });
+    SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTMAXBUTTON, point);
+    EXPECT_TRUE(window.isNull());
+    EXPECT_NE(GetCapture(), hwnd);
+}
+
+TEST(WindowsSnapLayoutTest, BorrowedControlDeletionAndReplacementClearNativeState)
+{
+    if (!hasNativeSnapLayouts())
+        GTEST_SKIP() << "Snap caption integration requires Windows 11 and the Windows platform plugin";
+    CaptionAdapterWindow window;
+    const auto makeButton = [&] {
+        auto* button = new fluent::basicinput::Button(&window);
+        button->setGeometry(250, 0, 46, 36);
+        window.setMaximizeButton(button);
+        button->show();
+        return button;
+    };
+    auto* first = makeButton();
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window, 2000));
+    const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+    const LPARAM point = nativeCaptionPoint(window, captionCenter(window, first));
+    EXPECT_EQ(SendMessageW(hwnd, WM_NCHITTEST, 0, point), HTMAXBUTTON);
+    SendMessageW(hwnd, WM_NCMOUSEMOVE, HTMAXBUTTON, point);
+    ASSERT_TRUE(first->underMouse());
+    delete first;
+    EXPECT_EQ(SendMessageW(hwnd, WM_NCHITTEST, 0, point), HTCLIENT);
+
+    QPointer<fluent::basicinput::Button> second = makeButton();
+    SendMessageW(hwnd, WM_NCMOUSEMOVE, HTMAXBUTTON, point);
+    EXPECT_TRUE(second->underMouse());
+    QObject::connect(second, &QAbstractButton::pressed, &window, [second] { delete second.data(); });
+    SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTMAXBUTTON, point);
+    EXPECT_TRUE(second.isNull());
+    EXPECT_NE(GetCapture(), hwnd);
+    EXPECT_EQ(SendMessageW(hwnd, WM_NCHITTEST, 0, point), HTCLIENT);
+
+    auto* third = makeButton();
+    SendMessageW(hwnd, WM_NCMOUSEMOVE, HTMAXBUTTON, point);
+    EXPECT_TRUE(third->underMouse());
+    SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTMAXBUTTON, point);
+    EXPECT_TRUE(third->isDown());
+    auto* replacement = makeButton();
+    EXPECT_FALSE(third->isDown());
+    EXPECT_NE(GetCapture(), hwnd);
+    SendMessageW(hwnd, WM_NCMOUSEMOVE, HTMAXBUTTON, point);
+    EXPECT_TRUE(replacement->underMouse());
+}
 
 TEST(WindowsWindowOverlayTest, ModalDialogFollowsCaptionMaximizeRestore)
 {

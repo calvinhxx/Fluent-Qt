@@ -64,6 +64,14 @@ endif()
 if(WIN32)
     add_qt_test_module(test_window_win TestWindowWin.cpp)
     configure_native_window_desktop_test(
+        WindowsSnapLayoutTest.MaximizeHitTestTracksAvailabilityAndGeometry windows)
+    configure_native_window_desktop_test(
+        WindowsSnapLayoutTest.NativeMousePreservesQtClickAndCancelsOutsideRelease windows)
+    configure_native_window_desktop_test(
+        WindowsSnapLayoutTest.DestructionDuringPressReleasesNativeCapture windows)
+    configure_native_window_desktop_test(
+        WindowsSnapLayoutTest.BorrowedControlDeletionAndReplacementClearNativeState windows)
+    configure_native_window_desktop_test(
         WindowsWindowOverlayTest.ModalDialogFollowsCaptionMaximizeRestore windows)
     if(TARGET FluentQtSpatial)
         target_link_libraries(test_window_win_objects PRIVATE FluentQt::Spatial)
