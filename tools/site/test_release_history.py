@@ -28,6 +28,11 @@ class ReleaseHistoryTest(unittest.TestCase):
         (self.root / history.SOURCE).write_text(json.dumps(self.data), encoding='utf-8')
         history.load_history.cache_clear()
 
+    def pending_group(self):
+        if not self.data['unreleased']['groups']:
+            self.data['unreleased']['groups'] = [{'scope': 'uilib', 'changes': []}]
+        return self.data['unreleased']['groups'][0]
+
     def test_each_release_has_a_reviewed_translation_and_real_publication_state(self):
         data = history.load_history(self.root)
         self.assertEqual(next(v for v in data['versions'] if v['version'] == data['latest'])['status'], 'published')
@@ -139,8 +144,7 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_pending_api_notice_tracks_publication_and_header_associations(self):
         data = copy.deepcopy(history.load_history())
-        data['unreleased']['groups'][0]['related'] = ['font-icon']
-        data['unreleased']['groups'][0]['headers'] = []
+        data['unreleased']['groups'] = [{'scope': 'uilib', 'related': ['font-icon'], 'headers': []}]
         data['versions'] = [item for item in data['versions'] if item['status'] != 'candidate']
         page = 'api/font-icon/index.html'
         source = 'src/components/foundation/FontIcon.h'
@@ -157,7 +161,9 @@ class ReleaseHistoryTest(unittest.TestCase):
             self.assertEqual(release_pages.document_notice('font-icon', source, page, 'en'), '')
 
     def test_migrations_are_static_safe_and_searchable(self):
-        data = history.load_history()
+        data = copy.deepcopy(history.load_history())
+        data['unreleased']['groups'] = [{'scope': 'uilib', 'changes': [
+            {'en': 'An upcoming fix.', 'zh': '待发布修复。'}]}]
         body = release_pages.history_body(data, 'zh', 'zh-CN/api/releases/index.html')
         self.assertIn('id="v1.7.0"', body)
         self.assertIn('id="particles-module"', body)
@@ -193,7 +199,7 @@ class ReleaseHistoryTest(unittest.TestCase):
                 for quoted in (False, True):
                     with self.subTest(identifier=identifier, surrounding=surrounding, quoted=quoted):
                         token = f'`{identifier}`' if quoted else identifier
-                        self.data['unreleased']['groups'][0]['changes'] = [{'en': 'Adds a feature.', 'zh': surrounding.format(token)}]
+                        self.pending_group()['changes'] = [{'en': 'Adds a feature.', 'zh': surrounding.format(token)}]
                         self.write()
                         if quoted:
                             history.load_history(self.root)
@@ -212,7 +218,7 @@ class ReleaseHistoryTest(unittest.TestCase):
                     value = {'en': 'Fixes `ComboBox` and `LineEdit`.', 'zh': '修复 `ComboBox` 与 `LineEdit`。'}
                     value[lang] = (f'Fixes `ComboBox`{mark} fixes `LineEdit`.' if lang == 'en'
                                    else f'修复 `ComboBox`{mark}修复 `LineEdit`。')
-                    self.data['unreleased']['groups'][0]['changes'] = [value]
+                    self.pending_group()['changes'] = [value]
                     self.write()
                     with self.assertRaisesRegex(ValueError, 'semicolon-splicing'):
                         history.load_history(self.root)
@@ -227,14 +233,14 @@ class ReleaseHistoryTest(unittest.TestCase):
                         'Deliver queued signals on the UI thread.',
                         'Fixes a crash while delivering queued events.'):
             with self.subTest(english=english):
-                self.data['unreleased']['groups'][0]['changes'] = [{'en': english, 'zh': '修复事件传递。'}]
+                self.pending_group()['changes'] = [{'en': english, 'zh': '修复事件传递。'}]
                 self.write()
                 history.load_history(self.root)
         for english in ('`TextEdit` delivers a seamless experience.',
                         'Delivers comprehensive improvements.',
                         'Improves editing while preserving caller ownership.'):
             with self.subTest(english=english):
-                self.data['unreleased']['groups'][0]['changes'] = [{'en': english, 'zh': '更新编辑功能。'}]
+                self.pending_group()['changes'] = [{'en': english, 'zh': '更新编辑功能。'}]
                 self.write()
                 with self.assertRaisesRegex(ValueError, 'AI-slop or internal-plumbing phrasing'):
                     history.load_history(self.root)
@@ -254,6 +260,8 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_copy_rules_reject_ai_slop_unquoted_apis_and_bloated_entries(self):
         baseline = json.loads((history.ROOT / history.SOURCE).read_text(encoding='utf-8'))
+        for group in baseline['versions'][0]['groups']:
+            group['changes'] = []
 
         def assert_rejected(mutate, pattern):
             self.data = copy.deepcopy(baseline)

@@ -159,8 +159,9 @@ class VisualDocumentationTest(unittest.TestCase):
 
     def test_unreleased_notices_reach_components_guides_and_header_references(self):
         data = json.loads(json.dumps(release_pages.load_history()))
-        data['unreleased']['groups'][0]['related'] = ['font-icon', 'foundation-iconography']
-        data['unreleased']['groups'][0]['headers'] = ['src/components/particles/ParticlesSession.h']
+        data['unreleased']['groups'] = [{'scope': 'uilib',
+            'related': ['font-icon', 'foundation-iconography'],
+            'headers': ['src/components/particles/ParticlesSession.h']}]
         data['versions'] = [item for item in data['versions'] if item['status'] != 'candidate']
         with patch.object(release_pages, 'load_history', return_value=data):
             outputs = component_docs.generated_outputs(self.documents)
