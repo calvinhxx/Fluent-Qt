@@ -94,6 +94,7 @@ standalone reading tasks.
     - [Python publication history](../bindings/pyside6/publication-history.md)
 - [Releases](releases/README.md)
   - **1.11**
+    - [Fluent-Qt 1.11.4](releases/v1.11.4.md)
     - [Fluent-Qt 1.11.3](releases/v1.11.3.md)
     - [Fluent-Qt 1.11.2](releases/v1.11.2.md)
     - [Fluent-Qt 1.11.1](releases/v1.11.1.md)
