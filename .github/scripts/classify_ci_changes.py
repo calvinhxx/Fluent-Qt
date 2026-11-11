@@ -110,7 +110,9 @@ WASM_CI_FILES = {
     ".github/scripts/run-wasm-qmlplus-smoke.py",
     ".github/scripts/run-wasm-spatial-smoke.py",
     ".github/scripts/test_wasm_browser_smoke.py",
+    ".github/scripts/test_wasm_build_cache.py",
     ".github/scripts/test_wasm_spatial_smoke.py",
+    ".github/scripts/wasm_build_cache.py",
     ".github/scripts/wasm_command_palette.py",
     ".github/scripts/wasm_drawer_lifecycle.py",
     ".github/scripts/wasm_command_submenus.py",
@@ -478,7 +480,8 @@ def classify_push_event(
     """Classify a push that cannot become release evidence.
 
     Pages publishes the website and Web Gallery from the same run, so a
-    classified push always keeps the WebAssembly lane. None means the previous
+    classified push always keeps the WebAssembly validation lane. Its module
+    can reuse an exact-input build while rerunning the checks. None means the previous
     tip could not be compared and the complete matrix must run.
     """
     paths = push_changed_paths(event, cwd)

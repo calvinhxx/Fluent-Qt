@@ -51,6 +51,7 @@ jobs:
 
       - name: Validate browser checks
         run: |
+          python .github/scripts/test_wasm_build_cache.py
           python .github/scripts/test_wasm_browser_smoke.py
           python .github/scripts/test_wasm_spatial_smoke.py
 
@@ -145,7 +146,37 @@ jobs:
           python tools/wasm/test_qt_accessibility_overlay.py
           python tools/wasm/qt_accessibility_overlay.py fetch --cache "$FLUENT_QT_WASM_SOURCE_CACHE"
 
+      - name: Fingerprint WebAssembly build inputs
+        id: wasm-inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest="$(python .github/scripts/wasm_build_cache.py fingerprint)"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Restore exact WebAssembly build
+        id: wasm-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: build/wasm-reusable
+          key: fluentqt-wasm-build-v1-${{ steps.wasm-inputs.outputs.digest }}
+
+      - name: Verify restored WebAssembly build
+        id: wasm-reuse
+        shell: bash
+        run: |
+          usable=false
+          if [[ "${{ steps.wasm-cache.outputs.cache-hit }}" == "true" ]] &&
+             python .github/scripts/wasm_build_cache.py verify; then
+            usable=true
+          else
+            echo "::notice::No valid exact-input build cache; compiling from source."
+          fi
+          echo "usable=$usable" >> "$GITHUB_OUTPUT"
+
       - name: Configure and build WebAssembly targets
+        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}
         shell: bash
         run: |
           source "$EMSDK_ROOT/emsdk_env.sh"
@@ -153,14 +184,22 @@ jobs:
           cmake --preset wasm
           cmake --build --preset wasm --parallel 4
 
+      - name: Install WebAssembly development SDK
+        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}
+        shell: bash
+        run: |
+          cmake --install build/wasm \
+            --prefix "$RUNNER_TEMP/fluentqt-wasm-install" \
+            --component Development
+
       - name: Verify installed FluentQt WebAssembly consumer
         shell: bash
         run: |
           source "$EMSDK_ROOT/emsdk_env.sh"
           install_prefix="$RUNNER_TEMP/fluentqt-wasm-install"
-          cmake --install build/wasm \
-            --prefix "$install_prefix" \
-            --component Development
+          if [[ "${{ steps.wasm-reuse.outputs.usable }}" == "true" ]]; then
+            install_prefix="$GITHUB_WORKSPACE/build/wasm-reusable/sdk"
+          fi
           "$QT_WASM_ROOT/bin/qt-cmake" \
             -S examples/hello_world \
             -B build/wasm-installed-consumer \
@@ -170,16 +209,27 @@ jobs:
           cmake --build build/wasm-installed-consumer --parallel 4
           test -f build/wasm-installed-consumer/fluentqt_hello_world.wasm
 
+      - name: Package reusable WebAssembly build
+        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}
+        shell: bash
+        run: |
+          python .github/scripts/wasm_build_cache.py pack \
+            --sdk "$RUNNER_TEMP/fluentqt-wasm-install" \
+            --mode "${{ inputs.mode }}" --commit "$GITHUB_SHA"
+
+      - name: Save trusted WebAssembly build
+        if: ${{ success() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.wasm-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: build/wasm-reusable
+          key: fluentqt-wasm-build-v1-${{ steps.wasm-inputs.outputs.digest }}
+
       - name: Stage browser payload
         shell: bash
         run: |
-          python .github/scripts/stage-wasm-pages.py \
-            build/wasm/app \
-            build/wasm-pages \
-            --qt-version "$QT_VERSION" \
-            --emscripten-version "$EMSCRIPTEN_VERSION" \
-            --validation-mode "${{ inputs.mode }}" \
-            --commit "$GITHUB_SHA"
+          python .github/scripts/wasm_build_cache.py stage \
+            --mode "${{ inputs.mode }}" --commit "$GITHUB_SHA"
 
       - name: Upload browser input
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -259,15 +309,22 @@ jobs:
             --viewport-height 1080
 
       - name: Upload browser smoke diagnostics
-        if: ${{ always() && matrix.group == 'interaction' }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: fluentqt-wasm-browser-diagnostics-${{ github.run_attempt }}
+          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}
           path: |
             build/wasm/command-palette-validation
             build/wasm/command-menu-validation
             build/wasm/form-validation
             build/wasm/data-grid-validation
+            build/wasm/list-detail-validation
+            build/wasm/auto-suggest-validation
+            build/wasm/gallery-search-validation
+            build/wasm/tag-input-validation
+            build/wasm/tree-select-validation
+            build/wasm/chart-workbench-validation
+            build/wasm/diagnostics-validation
           if-no-files-found: ignore
           retention-days: 7
 

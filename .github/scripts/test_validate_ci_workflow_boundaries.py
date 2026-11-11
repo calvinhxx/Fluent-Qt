@@ -798,15 +798,44 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
     def test_wasm_browser_diagnostics_retain_failures_with_bounded_paths(self):
         for before, after in (
             (
-                "always() && matrix.group == 'interaction'",
-                "success() && matrix.group == 'interaction'",
+                "      - name: Upload browser smoke diagnostics\n        if: ${{ always() }}",
+                "      - name: Upload browser smoke diagnostics\n        if: ${{ success() }}",
             ),
             ("            build/wasm/command-palette-validation\n", "            .git\n"),
             ("            build/wasm/data-grid-validation\n", ""),
+            ("            build/wasm/chart-workbench-validation\n", ""),
+            ("fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-", "fluentqt-wasm-browser-diagnostics-"),
         ):
             with self.subTest(replacement=after):
                 errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
                 self.assertTrue(any("bounded browser failure diagnostics" in error for error in errors))
+
+    def test_wasm_build_cache_cannot_bypass_source_identity_or_trusted_writes(self):
+        for before, after in (
+            ('digest="$(python .github/scripts/wasm_build_cache.py fingerprint)"', 'digest=shared'),
+            ('fluentqt-wasm-build-v1-${{ steps.wasm-inputs.outputs.digest }}', 'fluentqt-wasm-build-v1'),
+            ('          path: build/wasm-reusable\n', '          path: build\n'),
+            ('             python .github/scripts/wasm_build_cache.py verify; then', '             true; then'),
+            ("github.ref == 'refs/heads/main'", "github.ref != ''"),
+            ("github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'",
+             "github.event_name != ''"),
+            ('python .github/scripts/wasm_build_cache.py stage', 'echo cached checks passed'),
+            ('python .github/scripts/test_wasm_build_cache.py', 'echo tests skipped'),
+        ):
+            with self.subTest(replacement=after):
+                errors = self.workflow_errors_with_replacement('ci-wasm.yml', before, after)
+                self.assertTrue(any('exact-input build cache contract' in error for error in errors), errors)
+
+    def test_wasm_cache_only_skips_compilation_not_consumer_or_browser_checks(self):
+        for before, after, diagnostic in (
+            ("        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}\n", "        if: false\n", 'configure/build'),
+            ('      - name: Verify installed FluentQt WebAssembly consumer\n',
+             "      - name: Verify installed FluentQt WebAssembly consumer\n        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}\n", 'installed-consumer'),
+            ('    needs: build\n', "    needs: build\n    if: ${{ needs.build.outputs.cache_hit != 'true' }}\n", 'browser job must not be conditional'),
+        ):
+            with self.subTest(replacement=after):
+                errors = self.workflow_errors_with_replacement('ci-wasm.yml', before, after)
+                self.assertTrue(any(diagnostic in error for error in errors), errors)
 
     def test_wasm_pages_waits_for_both_full_groups_on_the_same_build_input(self):
         for before, after, diagnostic in (

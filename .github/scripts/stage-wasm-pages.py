@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Copy the validated WebAssembly Gallery into a Pages-ready artifact."""
+"""Stage WebAssembly files with their build origin and current validation context."""
 
 from __future__ import annotations
 
@@ -69,10 +69,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--emscripten-version", required=True)
     parser.add_argument("--validation-mode", choices=("fast", "full"), required=True)
     parser.add_argument("--commit", default="local")
+    parser.add_argument("--build-commit")
+    parser.add_argument("--build-inputs-sha256")
     return parser.parse_args()
 
 
 def stage(args: argparse.Namespace) -> None:
+    build_commit = getattr(args, "build_commit", None)
+    input_digest = getattr(args, "build_inputs_sha256", None)
+    if build_commit is not None or input_digest is not None:
+        if not re.fullmatch(r"[0-9a-f]{40}", build_commit or "") or not re.fullmatch(r"[0-9a-f]{64}", input_digest or ""):
+            raise ValueError("Build provenance requires a source commit and input SHA256")
     source = args.source.resolve()
     destination = args.destination.resolve()
     missing = [name for name in PAYLOAD_FILES if not (source / name).is_file()]
@@ -127,6 +134,8 @@ def stage(args: argparse.Namespace) -> None:
         "validation_mode": args.validation_mode,
         "commit": args.commit,
     }
+    if build_commit is not None or input_digest is not None:
+        metadata.update(build_commit=build_commit, build_inputs_sha256=input_digest)
     (destination / "build-info.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
