@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 import sys
+from textwrap import dedent
 from pathlib import Path
 
 from ci_action_policy import (
@@ -519,8 +520,14 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Cache Emscripten system libraries",
         "      - name: Cache pinned Qt accessibility sources",
         "      - name: Fetch and verify pinned Qt accessibility sources",
+        "      - name: Fingerprint WebAssembly build inputs",
+        "      - name: Restore exact WebAssembly build",
+        "      - name: Verify restored WebAssembly build",
         "      - name: Configure and build WebAssembly targets",
+        "      - name: Install WebAssembly development SDK",
         "      - name: Verify installed FluentQt WebAssembly consumer",
+        "      - name: Package reusable WebAssembly build",
+        "      - name: Save trusted WebAssembly build",
         "      - name: Stage browser payload",
         "      - name: Upload browser input",
     ]
@@ -633,11 +640,84 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     if uncommented_workflow_lines(source_fetch) != expected_source_fetch:
         errors.append("ci-wasm.yml must explicitly verify and fetch pinned Qt sources before offline configure")
 
+    cache_steps = {
+        "Validate browser checks": '''
+            run: |
+              python .github/scripts/test_wasm_build_cache.py
+              python .github/scripts/test_wasm_browser_smoke.py
+              python .github/scripts/test_wasm_spatial_smoke.py
+        ''',
+        "Fingerprint WebAssembly build inputs": '''
+            id: wasm-inputs
+            shell: bash
+            run: |
+              set -euo pipefail
+              digest="$(python .github/scripts/wasm_build_cache.py fingerprint)"
+              echo "digest=$digest" >> "$GITHUB_OUTPUT"
+        ''',
+        "Restore exact WebAssembly build": '''
+            id: wasm-cache
+            continue-on-error: true
+            uses: actions/cache/restore@<commit>
+            with:
+              path: build/wasm-reusable
+              key: fluentqt-wasm-build-v1-${{ steps.wasm-inputs.outputs.digest }}
+        ''',
+        "Verify restored WebAssembly build": '''
+            id: wasm-reuse
+            shell: bash
+            run: |
+              usable=false
+              if [[ "${{ steps.wasm-cache.outputs.cache-hit }}" == "true" ]] &&
+                 python .github/scripts/wasm_build_cache.py verify; then
+                usable=true
+              else
+                echo "::notice::No valid exact-input build cache; compiling from source."
+              fi
+              echo "usable=$usable" >> "$GITHUB_OUTPUT"
+        ''',
+        "Install WebAssembly development SDK": r'''
+            if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}
+            shell: bash
+            run: |
+              cmake --install build/wasm \
+                --prefix "$RUNNER_TEMP/fluentqt-wasm-install" \
+                --component Development
+        ''',
+        "Package reusable WebAssembly build": r'''
+            if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}
+            shell: bash
+            run: |
+              python .github/scripts/wasm_build_cache.py pack \
+                --sdk "$RUNNER_TEMP/fluentqt-wasm-install" \
+                --mode "${{ inputs.mode }}" --commit "$GITHUB_SHA"
+        ''',
+        "Save trusted WebAssembly build": '''
+            if: ${{ success() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.wasm-cache.outputs.cache-hit != 'true' }}
+            continue-on-error: true
+            uses: actions/cache/save@<commit>
+            with:
+              path: build/wasm-reusable
+              key: fluentqt-wasm-build-v1-${{ steps.wasm-inputs.outputs.digest }}
+        ''',
+        "Stage browser payload": r'''
+            shell: bash
+            run: |
+              python .github/scripts/wasm_build_cache.py stage \
+                --mode "${{ inputs.mode }}" --commit "$GITHUB_SHA"
+        ''',
+    }
+    for name, body in cache_steps.items():
+        expected = [f"      - name: {name}"] + ["        " + line for line in dedent(body).strip().splitlines()]
+        if uncommented_workflow_lines(named_step_section(build, name)) != expected:
+            errors.append(f"ci-wasm.yml exact-input build cache contract changed: {name}")
+
     configure_step = named_step_section(
         build, "Configure and build WebAssembly targets"
     )
     expected_configure_step = [
         "      - name: Configure and build WebAssembly targets",
+        "        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}",
         "        shell: bash",
         "        run: |",
         '          source "$EMSDK_ROOT/emsdk_env.sh"',
@@ -659,9 +739,9 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "        run: |",
         '          source "$EMSDK_ROOT/emsdk_env.sh"',
         '          install_prefix="$RUNNER_TEMP/fluentqt-wasm-install"',
-        "          cmake --install build/wasm \\",
-        '            --prefix "$install_prefix" ' + "\\",
-        "            --component Development",
+        '          if [[ "${{ steps.wasm-reuse.outputs.usable }}" == "true" ]]; then',
+        '            install_prefix="$GITHUB_WORKSPACE/build/wasm-reusable/sdk"',
+        "          fi",
         '          "$QT_WASM_ROOT/bin/qt-cmake" ' + "\\",
         "            -S examples/hello_world \\",
         "            -B build/wasm-installed-consumer \\",
@@ -679,15 +759,22 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     browser_evidence = named_step_section(browser, "Upload browser smoke diagnostics")
     expected_browser_evidence = [
         "      - name: Upload browser smoke diagnostics",
-        "        if: ${{ always() && matrix.group == 'interaction' }}",
+        "        if: ${{ always() }}",
         "        uses: actions/upload-artifact@<commit>",
         "        with:",
-        "          name: fluentqt-wasm-browser-diagnostics-${{ github.run_attempt }}",
+        "          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}",
         "          path: |",
         "            build/wasm/command-palette-validation",
         "            build/wasm/command-menu-validation",
         "            build/wasm/form-validation",
         "            build/wasm/data-grid-validation",
+        "            build/wasm/list-detail-validation",
+        "            build/wasm/auto-suggest-validation",
+        "            build/wasm/gallery-search-validation",
+        "            build/wasm/tag-input-validation",
+        "            build/wasm/tree-select-validation",
+        "            build/wasm/chart-workbench-validation",
+        "            build/wasm/diagnostics-validation",
         "          if-no-files-found: ignore",
         "          retention-days: 7",
     ]
@@ -1827,7 +1914,7 @@ def validate_boundaries() -> list[str]:
         "Verify installed FluentQt WebAssembly consumer",
         "build/wasm-installed-consumer",
         ".github/scripts/run-wasm-browser-smoke.py",
-        ".github/scripts/stage-wasm-pages.py",
+        ".github/scripts/wasm_build_cache.py",
         "name: fluentqt-wasm-pages",
     ):
         if required not in wasm:

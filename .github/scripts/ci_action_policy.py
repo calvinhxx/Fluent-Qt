@@ -26,6 +26,8 @@ PAGES_PIPELINE_ACTIONS = {
         "actions/checkout": 2,
         "actions/setup-python": 2,
         "actions/cache": 5,
+        "actions/cache/restore": 1,
+        "actions/cache/save": 1,
         "actions/upload-artifact": 4,
         "actions/download-artifact": 2,
     },

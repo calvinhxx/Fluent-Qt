@@ -152,6 +152,7 @@ def integration_checks(output_dir: Path) -> list[tuple[str, list[str]]]:
     return [
         compatibility_boundary_check(),
         ("CI component registration", [python, ".github/scripts/test_classify_ci_changes.py"]),
+        ("WASM build cache", [python, ".github/scripts/test_wasm_build_cache.py"]),
         ("Python API policy", [python, "bindings/pyside6/tools/verify_api_policy.py"]),
         ("core wheel inventory", [python, "bindings/pyside6/tests/test_wheel_builder.py"]),
         ("desktop candidate assembly", [python, ".github/scripts/test_assemble_desktop_release_candidate.py"]),

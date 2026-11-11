@@ -20,7 +20,7 @@ belong to [release governance](release-governance.md).
 | Pull request | `fast`; path classification may skip native builds | Disabled |
 | Release pull request (`release/*` → `main`, same repository) | `full`; path classification still applies; no `Release ready` | Disabled |
 | Push to `main` for a release candidate (curated notes, version not yet tagged) | `full`; no path classification | Built separately by Release Candidate |
-| Other push to `main` | `full`; path classification against the previous `main` tip; WebAssembly stays enabled for Pages; no `Release ready` | Disabled |
+| Other push to `main` | `full`; path classification against the previous `main` tip; WebAssembly validation stays enabled for Pages and may reuse an exact-input build; no `Release ready` | Disabled |
 | Weekly schedule | `full` | Enabled |
 | Manual CI | `fast` by default; `full` selectable | Opt in with `python_release_bundle=true`; requires `full` |
 
@@ -71,7 +71,7 @@ and package configuration changes retain their broader lanes.
 
 Modules upload artifacts into the caller's run. The
 [Pages workflow](../../.github/workflows/pages.yml) consumes the payload from
-main CI; its manual entry rebuilds both the website and Gallery for recovery.
+main CI; its manual entry prepares both the website and Gallery for recovery.
 
 Website generation runs on pull requests as well as `main`. The planning job
 regenerates the AI catalog and `site/api/catalog.json` from current source before
@@ -111,7 +111,36 @@ changes to its runtime, shell, or browser helpers still select that module.
 The mixed UI/runtime scripts `site/site.js` and `site/spatial-showcase.js` also
 keep the WASM lane because they own real iframe lifecycle and host messages.
 
-WASM CI compiles once and builds an external consumer from the installed SDK.
+WASM CI builds an external consumer from the installed SDK on every run. It can
+reuse the Gallery, examples and SDK when their complete build-input fingerprint
+matches a cached build. The fingerprint covers tracked project files, Qt and
+Emscripten versions, the pinned emsdk revision, build-tool versions and the runner
+image. Website files, website generators, release notes and other non-SDK
+documentation are excluded. Installed AI documentation, the bundled Skill,
+licenses, resources, presets and unknown new tracked paths remain inputs.
+
+The cache contains only the staged browser payload and installed SDK, with a
+complete file hash and permission inventory. It has no prefix restore keys.
+Only successful `main` build jobs for push, schedule or manual events write it;
+pull requests can restore the default branch's matching cache. A missing,
+corrupt or mismatched entry triggers normal compilation. Cache transport errors
+also fall back to compilation; a save failure does not fail validated output.
+The first run after adopting or changing the cache format needs a normal build.
+
+This is a build cache, not reusable test approval. Both browser groups, wide
+viewport checks, Spatial fallback checks and the installed consumer still run.
+The new run stages its own input artifact and publishes it only after those
+checks pass. `build-info.json` keeps `commit` as the current validation/deployment
+commit, records the actual compiler source as `build_commit`, and includes
+`build_inputs_sha256`. Pages still requires the current run's website and tested
+WASM artifacts. Editing website release metadata can therefore reuse compilation
+without accepting a stale test result or hiding the binary's origin.
+
+Browser failures retain diagnostics for both groups, including chart-workbench
+screenshots. The log includes the failing Python call stack. Retrying an
+intermittent failure must not require discarding successful checks or rebuilding
+their shared input.
+
 Full validation sends the same staged files to two Chromium runners. One tests
 the Gallery, examples, wide viewport and Spatial fallback. The other tests
 command menus, the command palette, forms and DataGrid, keeping their failure

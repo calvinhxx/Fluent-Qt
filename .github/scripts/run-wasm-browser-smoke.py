@@ -10,6 +10,7 @@ import math
 import sys
 import threading
 import time
+import traceback
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -1157,6 +1158,7 @@ def main() -> int:
             args.group,
         )
     except Exception as error:
+        traceback.print_exc()
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0
