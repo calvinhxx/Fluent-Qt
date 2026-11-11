@@ -118,6 +118,13 @@ def collect_release_context(root: Path, base_ref: str) -> ReleaseContext:
     if target.returncode not in (0, 1):
         raise PreflightError(f"could not inspect refs/tags/{target_tag}")
 
+    if git_output(root, "rev-list", "--merges", f"{base_ref}..HEAD"):
+        raise PreflightError(
+            f"release range contains merge commits; review and rebase the unpromoted "
+            f"commits onto {base_ref} before opening the PR, so GitHub can rebase-merge "
+            "without repeating full CI after a history rewrite"
+        )
+
     notes_path = root / "docs" / "releases" / f"{target_tag}.md"
     try:
         notes = notes_path.read_text(encoding="utf-8").strip()

@@ -334,6 +334,13 @@ Before creating a stable tag:
    catalogs, shared source/packaging checks, and other deterministic release
    contracts before CI starts. It does not replace runtime compatibility tests. Then
    confirm the maintainer has explicitly approved making the version public.
+   The unpromoted range must be linear. If it still contains the previous
+   post-release synchronization merge, review and rebase the commits after that
+   synchronization onto current `main` before opening the PR. Verify that the
+   resulting tree retains the intended changes. The preflight rejects merge
+   commits in this range so an unsuccessful GitHub rebase does not force a
+   history rewrite and another full PR validation after the first run finishes.
+   Merges already included in `main` do not block promotion.
 2. Add and review `docs/releases/vX.Y.Z.md`, then preview it with
    `--require-curated` and review the maintainer changelog from the previous
    release tag. The automatic candidate refuses to package an untagged version

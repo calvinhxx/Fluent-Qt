@@ -81,6 +81,39 @@ class ReleasePreflightTest(unittest.TestCase):
         with self.assertRaisesRegex(MODULE.PreflightError, "must be promoted from"):
             MODULE.collect_release_context(root, "main")
 
+    def test_rejects_synced_merge_history_before_expensive_pr_validation(self):
+        temporary, root = make_repository()
+        self.addCleanup(temporary.cleanup)
+        (root / "feature.txt").write_text("feature\n")
+        git(root, "add", ".")
+        git(root, "commit", "-m", "feat: feature")
+        git(root, "switch", "main")
+        (root / "metadata.txt").write_text("published metadata\n")
+        git(root, "add", ".")
+        git(root, "commit", "-m", "docs: publication metadata")
+        git(root, "switch", "release/1.8.x")
+        git(root, "merge", "--no-ff", "main", "-m", "chore: synchronize main")
+        with self.assertRaisesRegex(MODULE.PreflightError, "release range contains merge commits"):
+            MODULE.collect_release_context(root, "main")
+        before = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=root)
+        git(root, "rebase", "main")
+        after = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=root)
+        self.assertEqual(before, after)
+        self.assertEqual(MODULE.collect_release_context(root, "main").version, "1.8.0")
+
+    def test_merge_already_in_main_does_not_block_linear_promotion(self):
+        temporary, root = make_repository()
+        self.addCleanup(temporary.cleanup)
+        git(root, "switch", "-c", "side", "main")
+        (root / "integrated.txt").write_text("integrated\n")
+        git(root, "add", ".")
+        git(root, "commit", "-m", "feat: integrated work")
+        git(root, "switch", "main")
+        git(root, "merge", "--no-ff", "side", "-m", "chore: integration")
+        git(root, "switch", "release/1.8.x")
+        git(root, "merge", "--ff-only", "main")
+        self.assertEqual(MODULE.collect_release_context(root, "main").version, "1.8.0")
+
     def test_checklist_keeps_changelog_last(self):
         temporary, root = make_repository()
         self.addCleanup(temporary.cleanup)
