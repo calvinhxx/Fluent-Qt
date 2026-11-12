@@ -257,8 +257,8 @@ private:
     void applyChildGeometries();
     void applyChildGeometries(const LayoutState& state);
     // True when the pane is shown as a light-dismiss flyout over the content (the compact/minimal
-    // modes with the pane opened past its rail), rather than inline-pushing the content.
-    // zh_CN: 当窗格以轻关闭浮层覆盖在内容之上（紧凑/最小模式且窗格展开超过其栏宽）而非内联推开内容时为真。
+    // modes with the pane overlapping the current content rectangle), rather than inline-pushing it.
+    // zh_CN: 当窗格以轻关闭浮层覆盖当前内容矩形（紧凑/最小模式）而非内联推开内容时为真。
     bool isPaneFlyoutVisible(const LayoutState& state) const;
     // Positions/paints the floating pane backing (surface + shadow + light-dismiss) for the flyout
     // modes, reusing the SAME pane widgets as the inline rail — the DrawerView capability folded in.

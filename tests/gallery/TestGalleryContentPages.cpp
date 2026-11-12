@@ -37,6 +37,7 @@
 #include <QMargins>
 #include <QPoint>
 #include <QPointer>
+#include <QPropertyAnimation>
 #include <QPixmap>
 #include <QPainter>
 #include <QSvgRenderer>
@@ -84,6 +85,7 @@
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
+#include "components/navigation/NavigationView.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -4248,6 +4250,45 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonUpdatesTreeViewPreviewTheme)
     EXPECT_EQ(treeView->effectiveTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(treeView->themeColors().bgLayer, QColor("#FFFFFF"));
     EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
+}
+
+TEST_F(GalleryContentPagesTest, NavigationViewSampleModeChangesKeepInlineBackground)
+{
+    using fluent::navigation::NavigationView;
+    fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        for (int width : {740, 500}) {
+            fluent::gallery::GallerySample sample;
+            ASSERT_TRUE(findSampleById("navigation-view", "navigation-view-display-modes", &sample));
+            std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+            preview->resize(width, 580);
+            preview->show();
+            QApplication::processEvents();
+            auto* nav = preview->findChild<NavigationView*>();
+            ASSERT_NE(nav, nullptr);
+            auto* animation = nav->findChild<QPropertyAnimation*>();
+            ASSERT_NE(animation, nullptr);
+            for (const auto& mode : {"Minimal", "Compact", "Left", "Compact", "Minimal", "Top", "Minimal"}) {
+                SCOPED_TRACE(::testing::Message() << "theme=" << int(theme) << " width=" << width << " mode=" << mode);
+                nav->setAnimationEnabled(false);
+                QApplication::processEvents();
+                nav->setAnimationEnabled(true);
+                auto* button = buttonWithText(preview.get(), QString::fromLatin1(mode));
+                ASSERT_NE(button, nullptr);
+                button->click();
+                animation->pause();
+                for (qreal progress : {0.1, 0.49, 0.5, 0.9, 1.0}) {
+                    SCOPED_TRACE(progress);
+                    ASSERT_TRUE(nav->setProperty("layoutTransitionProgress", progress));
+                    for (auto* pane : {nav->headerChromeWidget(), nav->mainChromeWidget(), nav->footerChromeWidget()}) {
+                        ASSERT_NE(pane, nullptr);
+                        EXPECT_FALSE(pane->property("fluentNavPaneFloating").toBool());
+                    }
+                }
+            }
+        }
+    }
 }
 
 TEST_F(GalleryContentPagesTest, NavigationViewDisplayModeButtonsKeepContentScrollPosition)

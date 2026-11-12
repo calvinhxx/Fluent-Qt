@@ -15,6 +15,17 @@ component has one classification before release.
 
 ## Current baseline
 
+NavigationView mode transitions keep an inline pane inline until it actually
+overlaps the content. Switching between Left, Compact, Minimal and Top does
+not create a transient drawer surface or light-dismiss input layer. Explicit
+Compact/Minimal flyouts retain their surface throughout opening and closing,
+including Escape dismissal. `NavigationViewTransitionTest` and the C++/Python
+Gallery display-mode sample regressions cover these distinct transitions.
+Layout motion uses the standard smooth-start/smooth-end theme curve. Reversing
+a running pane transition starts at the currently visible geometry instead of
+replacing its endpoint mid-flight. Full, Reduced and Disabled motion policies
+remain effective; the transition regression checks each policy explicitly.
+
 TreeView uses Fluent row selection and indicator painting instead of the macOS
 outer focus ring. The existing platform adapter disables only that native
 decoration; keyboard focus, arrow navigation and selection remain active.

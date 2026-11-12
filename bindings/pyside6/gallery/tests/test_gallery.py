@@ -479,6 +479,40 @@ def _wait_until(
 
 
 class PythonGalleryTest(unittest.TestCase):
+    def test_navigation_sample_mode_changes_keep_inline_background(self):
+        self.addCleanup(fluentqt.set_motion_mode, fluentqt.current_motion_mode())
+        fluentqt.set_motion_mode(fluentqt.MotionMode.Full)
+        for theme in (fluentqt.Theme.Light, fluentqt.Theme.Dark):
+            for width in (740, 500):
+                result = build_sample("navigation-view", "navigation-view-display-modes")
+                root = result.widget
+                root.setProperty("fluentThemeOverride", int(theme))
+                _refresh_fluent_subtree(root)
+                root.resize(width, 580)
+                root.show()
+                QApplication.processEvents()
+                try:
+                    nav = root.findChild(fluentqt.NavigationView)
+                    self.assertIsNotNone(nav)
+                    animation = next(a for a in nav.findChildren(QPropertyAnimation)
+                                     if bytes(a.propertyName()) == b"layoutTransitionProgress")
+                    buttons = {b.text(): b for b in root.findChildren(fluentqt.Button)}
+                    for mode in ("Minimal", "Compact", "Left", "Compact", "Minimal", "Top", "Minimal"):
+                        nav.setAnimationEnabled(False)
+                        QApplication.processEvents()
+                        nav.setAnimationEnabled(True)
+                        buttons[mode].click()
+                        animation.pause()
+                        for progress in (0.1, 0.49, 0.5, 0.9, 1.0):
+                            with self.subTest(theme=theme, width=width, mode=mode, progress=progress):
+                                self.assertTrue(nav.setProperty("layoutTransitionProgress", progress))
+                                for pane in (nav.headerChromeWidget(), nav.mainChromeWidget(), nav.footerChromeWidget()):
+                                    self.assertFalse(pane.property("fluentNavPaneFloating"))
+                finally:
+                    root.close()
+                    root.deleteLater()
+                    QApplication.processEvents()
+
     def test_diagnostic_log_forwarding_drains_before_window_teardown(self):
         import logging
         import threading
