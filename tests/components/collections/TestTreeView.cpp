@@ -322,6 +322,33 @@ TEST_F(TreeViewTest, EmptyTreeView)
     EXPECT_FALSE(tv->selectedItem().isValid());
 }
 
+TEST_F(TreeViewTest, Contract_FluentSelectionKeepsKeyboardFocusWithoutNativeOuterRing)
+{
+    TreeView tree(window);
+    tree.setGeometry(10, 10, 280, 160);
+    tree.setBorderVisible(false);
+    tree.setSelectionIndicatorVisible(true);
+    attachFluentDelegate(&tree);
+    QStandardItemModel model;
+    model.appendRow(new QStandardItem(QStringLiteral("First")));
+    model.appendRow(new QStandardItem(QStringLiteral("Second")));
+    tree.setModel(&model);
+    window->show();
+    window->activateWindow();
+    for (auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+        tree.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        tree.setCurrentIndex(model.index(0, 0));
+        tree.setFocus(Qt::TabFocusReason);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return tree.hasFocus(); }, 1000));
+        EXPECT_FALSE(tree.testAttribute(Qt::WA_MacShowFocusRect));
+        EXPECT_TRUE(tree.selectionIndicatorVisible());
+        QTest::keyClick(&tree, Qt::Key_Down);
+        EXPECT_EQ(tree.currentIndex(), model.index(1, 0));
+        EXPECT_EQ(tree.selectedItem(), model.index(1, 0));
+        EXPECT_TRUE(tree.hasFocus());
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Selection
 // ═══════════════════════════════════════════════════════════════════════════════

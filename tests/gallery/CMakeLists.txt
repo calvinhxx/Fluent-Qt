@@ -186,6 +186,7 @@ if(APPLE)
         GallerySpatialTest.NativeOpenGLPreviewsSurviveClippingAndExternalUpdates
         GallerySpatialTest.MacStartupPrewarmKeepsNativeWindowSurface
         GallerySpatialTest.MacTrafficLightsRemainCenteredAcrossSpatialNavigation
+        GallerySpatialTest.Contract_LiveZoomFooterFocusUsesOnlyFluentChrome
         PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=cocoa"
             LABELS "qt;unit;gallery;gallery_spatial;test_gallery_spatial;platform_macos;local_desktop;native_window"

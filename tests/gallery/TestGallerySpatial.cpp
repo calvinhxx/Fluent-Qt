@@ -47,12 +47,14 @@
 #include <objc/runtime.h>
 #endif
 #include "model/GalleryComponentCatalog.h"
+#include "platform/GalleryPlatform.h"
 #include "model/GalleryNavigationItem.h"
 #include "view/pages/GalleryCategoryPage.h"
 #include "view/pages/GalleryComponentPage.h"
 #include "view/pages/GalleryPageFactory.h"
 #include "view/pages/SettingsPage.h"
 #include "view/shell/GalleryWindow.h"
+#include "view/shell/GalleryInterfaceZoomController.h"
 #include "view/shell/GallerySpatialController.h"
 #include "view/shell/GallerySpatialRenderPolicy.h"
 #include "view/shell/GalleryGlyphPaintDevice.h"
@@ -147,6 +149,79 @@ protected:
         qApp->setProperty("fluentqtGalleryKeepSlowPresentation", oldKeepSlowPresentation);
     }
 };
+
+TEST_F(GallerySpatialTest, Contract_LiveZoomFooterFocusUsesOnlyFluentChrome)
+{
+    if (QGuiApplication::platformName() != QLatin1String("cocoa") || !platform::supportsLiveInterfaceZoom())
+        GTEST_SKIP() << "Requires Cocoa and live interface zoom";
+    const QString previousStyle = qApp->style()->objectName();
+    for (const auto& name : QStyleFactory::keys())
+        if (name.contains("mac", Qt::CaseInsensitive))
+            qApp->setStyle(QStyleFactory::create(name));
+    auto& settings = GallerySettings::instance();
+    const int previousZoom = settings.interfaceZoomPercent();
+    const qreal previousScale = platform::appliedInterfaceZoom();
+    const auto restore = qScopeGuard([&] {
+        settings.setInterfaceZoomPercent(previousZoom);
+        platform::applyInterfaceZoom(previousScale);
+        qApp->setStyle(previousStyle);
+    });
+    settings.setNavigationStyle(GallerySettings::NavigationStyle::Left);
+    settings.setWindowEffect(windowing::BackdropEffect::Mica);
+    GalleryWindow window;
+    window.resize(1200, 850);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 60000));
+    auto* footer = window.findChild<GalleryNavigationPane*>("galleryFooterNavigationPane");
+    ASSERT_NE(footer, nullptr);
+    auto* tree = footer->findChild<collections::TreeView*>();
+    auto* controller = window.findChild<GallerySpatialController*>();
+    auto* zoom = window.findChild<GalleryInterfaceZoomController*>();
+    ASSERT_NE(tree, nullptr);
+    ASSERT_NE(controller, nullptr);
+    ASSERT_NE(zoom, nullptr);
+    const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+    for (auto theme : {GallerySettings::ThemeMode::Light, GallerySettings::ThemeMode::Dark}) {
+        settings.setThemeMode(theme);
+        for (bool spatial : {false, true}) {
+            SCOPED_TRACE(::testing::Message() << "theme=" << static_cast<int>(theme) << " spatial=" << spatial);
+            zoom->resetZoom();
+            ASSERT_TRUE(window.selectRoute("home"));
+            settings.setSpatialModeEnabled(spatial);
+            ASSERT_TRUE(QTest::qWaitFor([&] { return depth::enabled(&window) == spatial; }, 3000));
+            controller->cancelTransition();
+            window.activateWindow();
+            zoom->zoomOut();
+            zoom->zoomOut();
+            ASSERT_EQ(settings.interfaceZoomPercent(), 80);
+            ASSERT_TRUE(QTest::qWaitFor([&] { return qFuzzyCompare(platform::appliedInterfaceZoom(), 0.8); }, 1000));
+            QApplication::processEvents();
+            const QModelIndex settingsIndex = footer->indexForRouteId("settings");
+            const QPoint point = tree->visualRect(settingsIndex).center();
+            if (spatial)
+                QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
+                    controller->projectedPosition(tree->viewport(), point));
+            else
+                QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, point);
+            ASSERT_TRUE(
+                QTest::qWaitFor([&] { return tree->hasFocus() && footer->selectedRouteId() == "settings"; }, 1000));
+            EXPECT_EQ(tree->currentIndex(), settingsIndex);
+            EXPECT_TRUE(tree->selectionIndicatorVisible());
+            EXPECT_FALSE(tree->testAttribute(Qt::WA_MacShowFocusRect));
+            // Native focus-ring remnants are outside the GL texture. Capture the
+            // composited window before QWidget::grab can force a fresh repaint.
+            // zh_CN: 原生焦点框残线在 GL 纹理之外；先抓系统合成窗口，避免 grab 触发重绘掩盖问题。
+            if (!directory.isEmpty()) {
+                QTest::qWait(150);
+                QDir().mkpath(directory);
+                const QString stem =
+                    QStringLiteral("footer-%1-%2")
+                        .arg(theme == GallerySettings::ThemeMode::Light ? "light" : "dark", spatial ? "3d" : "2d");
+                EXPECT_TRUE(window.screen()->grabWindow(window.winId()).save(directory + "/" + stem + ".png"));
+            }
+        }
+    }
+}
 
 // Keep real session activation/ownership while exercising refused factory and
 // attachment outcomes at the shared preview boundary.
