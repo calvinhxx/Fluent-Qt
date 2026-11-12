@@ -702,7 +702,10 @@ void NavigationView::startLayoutTransition(const LayoutState& from, const Layout
 
     const auto animation = themeAnimation();
     m_layoutAnimation->setDuration(animation.normal);
-    m_layoutAnimation->setEasingCurve(animation.decelerate);
+    // Layout changes accelerate and settle smoothly; an entrance-only curve
+    // spends most of a short rail transition on its first few frames.
+    // zh_CN: 布局切换应平滑加速并收尾，入场式减速曲线会让短距离栏动画集中在开头几帧。
+    m_layoutAnimation->setEasingCurve(animation.standard);
     m_layoutAnimation->setStartValue(0.0);
     m_layoutAnimation->setEndValue(1.0);
     ::fluent::detail::startMotionTransition(m_layoutAnimation, animation.normal, m_animationEnabled);
@@ -814,17 +817,21 @@ void NavigationView::updateLayout()
     m_layout = next;
     m_layoutDirty = false;
 
-    // If a transition toward this exact target (mode + bounds) is already in flight, let it
+    // If a transition toward this exact target is already in flight, let it
     // finish instead of restarting it. Restarting on every relayout — e.g. when an
     // effectiveDisplayModeChanged handler re-lays-out the pane — pins the animation at
     // progress 0 and leaves a half-transitioned chrome on screen. That feedback loop is why
     // the compact icon rail never fully collapsed into LeftMinimal.
-    // zh_CN: 若已经在向这个确切目标（模式 + 边界）过渡，就让它跑完而不是重启。每次重排都重启
+    // zh_CN: 若已经在向这个确切目标（模式、边界和几何）过渡，就让它跑完而不是重启。每次重排都重启
     //（如 effectiveDisplayModeChanged 处理器重排窗格时）会把动画钉在进度 0、留下半过渡的 chrome。
     // 这个反馈环正是紧凑图标栏始终收不成 LeftMinimal 的原因。
+    // A reversed pane request changes geometry without changing mode or bounds.
+    // Restart it from previousVisual instead of replacing the endpoint mid-flight.
+    // zh_CN: 反向开合会改变目标几何而不改变模式或边界，应从当前画面重新过渡，避免中途替换终点造成跳变。
     const bool sameTargetInFlight = m_layoutTransitionKind != LayoutTransitionKind::None && m_layoutAnimation
-        && m_layoutAnimation->state() == QAbstractAnimation::Running
-        && m_layoutTransitionTo.effectiveMode == next.effectiveMode && m_layoutTransitionTo.bounds == next.bounds;
+        && m_layoutAnimation->state() != QAbstractAnimation::Stopped
+        && m_layoutTransitionTo.effectiveMode == next.effectiveMode && m_layoutTransitionTo.bounds == next.bounds
+        && m_layoutTransitionTo.chromeRect == next.chromeRect && m_layoutTransitionTo.contentRect == next.contentRect;
     if (sameTargetInFlight) {
         m_layoutTransitionTo = next; // refresh target geometry, keep the running animation
     } else if (animateTransition) {
@@ -964,11 +971,13 @@ bool NavigationView::isPaneFlyoutVisible(const LayoutState& state) const
 {
     if (state.effectiveMode != DisplayMode::LeftCompact && state.effectiveMode != DisplayMode::LeftMinimal)
         return false;
-    // The pane is a flyout once it has opened past its inline rail (compact rail width, or 0 for
-    // minimal) — true at rest when open AND throughout the slide animation.
-    // zh_CN: 窗格一旦展开超过其内联栏（紧凑栏宽，或最小模式的 0）即为浮层——静止打开时与整个滑动动画期间皆为真。
-    const int rail = state.effectiveMode == DisplayMode::LeftCompact ? m_compactPaneWidth : 0;
-    return state.chromeRect.width() > rail;
+    // Compare the two animated rectangles, not the resolved mode's fixed rail width.
+    // Inline mode changes move the content edge together with the pane; only an
+    // actual open flyout overlaps it. A fixed threshold misclassifies intermediate
+    // Compact/Minimal frames and briefly paints a floating card and shadow.
+    // zh_CN: 比较同步动画中的两个矩形，不用显示模式的固定栏宽。内联切换时内容边缘与窗格
+    // 一起移动，只有真正打开的浮层才覆盖内容；固定阈值会误判紧凑/最小模式的中间帧并闪出卡片阴影。
+    return state.chromeRect.intersects(state.contentRect);
 }
 
 void NavigationView::updatePaneFlyout(const LayoutState& state)
