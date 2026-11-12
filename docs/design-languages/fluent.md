@@ -194,8 +194,11 @@ the **caret**, and the inline **text-box button**.
 
 ### Text fields
 
-TextBox is a 4 px-rounded surface with a bottom underline that thickens and
-uses the accent color on focus.
+Text fields use a 4 px-rounded outline with no extra underline while unfocused.
+Editable focus adds a 2 px accent underline; validation errors use the error
+color. LineEdit and TextEdit expose explicit underline-width overrides.
+ComboBox shares the quiet resting outline and shows its accent underline while
+focused or open. Read-only fields retain the resting treatment.
 
 ### Basic input family
 

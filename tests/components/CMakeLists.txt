@@ -1,6 +1,6 @@
 # components 根目录下的测试
 add_qt_test_module(test_anchor_layout TestAnchorLayout.cpp)
-add_qt_test_module(test_foundation_contracts TestFoundationContracts.cpp)
+add_qt_test_module(test_foundation_contracts TestFoundationContracts.cpp TestInputFrames.cpp)
 add_qt_test_module(test_form_controller TestFormController.cpp)
 add_qt_test_module(test_motion_policy TestMotionPolicy.cpp)
 add_qt_test_module(test_fluent_element TestFluentElement.cpp TestHighContrastTheme.cpp TestThemeOverrides.cpp)

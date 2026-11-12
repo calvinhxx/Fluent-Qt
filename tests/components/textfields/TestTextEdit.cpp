@@ -803,7 +803,7 @@ TEST_F(TextEditTest, FluentPropertiesDefaultsAndSetters)
             Spacing::Padding::TextFieldHorizontal, Spacing::Padding::TextFieldVertical));
     EXPECT_EQ(edit->fontRole(), Typography::FontRole::Body);
     EXPECT_EQ(edit->focusedBorderWidth(), Spacing::Border::Focused);
-    EXPECT_EQ(edit->unfocusedBorderWidth(), Spacing::Border::Normal);
+    EXPECT_EQ(edit->unfocusedBorderWidth(), 0);
     EXPECT_EQ(edit->lineHeight(), Spacing::ControlHeight::Standard);
     EXPECT_EQ(edit->minVisibleLines(), 1);
     EXPECT_EQ(edit->maxVisibleLines(), 4);
@@ -1321,6 +1321,59 @@ TEST_F(TextEditTest, EmbeddedEditorOptionsAreIdempotentAndCursorIsDocumentBound)
     edit.setTextCursor(QTextCursor(&other));
     EXPECT_EQ(edit.textCursor().position(), 4);
     EXPECT_EQ(edit.toPlainText(), QStringLiteral("Own document"));
+}
+
+TEST_F(TextEditTest, Contract_FrameWidthsControlOnlyTheUnderline)
+{
+    TextEdit edit(window);
+    edit.setAutoResizeEnabled(false);
+    edit.setGeometry(20, 20, 240, 80);
+    EXPECT_EQ(edit.unfocusedBorderWidth(), 0);
+    EXPECT_EQ(edit.focusedBorderWidth(), Spacing::Border::Focused);
+    window->show();
+    window->activateWindow();
+    QApplication::processEvents();
+    for (auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+        edit.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        for (bool focused : {false, true}) {
+            edit.setFocus(Qt::OtherFocusReason);
+            if (!focused)
+                edit.clearFocus();
+            QApplication::processEvents();
+            ASSERT_EQ(edit.focusProxy()->hasFocus(), focused);
+            for (qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                SCOPED_TRACE(::testing::Message() << "theme=" << theme << " focused=" << focused << " scale=" << scale);
+                const auto render = [&] {
+                    QImage image(QSize(qRound(edit.width() * scale), qRound(edit.height() * scale)),
+                        QImage::Format_ARGB32_Premultiplied);
+                    image.setDevicePixelRatio(scale);
+                    image.fill(Qt::transparent);
+                    QPainter painter(&image);
+                    edit.render(&painter);
+                    return image;
+                };
+                edit.setFrameVisible(true);
+                edit.setUnfocusedBorderWidth(3);
+                edit.setFocusedBorderWidth(3);
+                const QImage visible = render();
+                edit.setUnfocusedBorderWidth(0);
+                edit.setFocusedBorderWidth(0);
+                const QImage quiet = render();
+                const int x = quiet.width() / 2;
+                const int bottom = quiet.height() - 1;
+                const int underlineY = bottom - qRound(scale);
+                EXPECT_EQ(quiet.pixelColor(x, 0), quiet.pixelColor(x, bottom));
+                EXPECT_EQ(quiet.pixelColor(x, 0), visible.pixelColor(x, 0));
+                EXPECT_NE(quiet.pixelColor(x, underlineY), visible.pixelColor(x, underlineY));
+                edit.setFrameVisible(false);
+                edit.setUnfocusedBorderWidth(3);
+                edit.setFocusedBorderWidth(3);
+                const QImage hidden = render();
+                EXPECT_EQ(hidden.pixelColor(x, 0), hidden.pixelColor(x, bottom));
+                EXPECT_NE(hidden.pixelColor(x, underlineY), visible.pixelColor(x, underlineY));
+            }
+        }
+    }
 }
 
 TEST_F(TextEditTest, LayoutOwnedEditorReservesScrollbarWithoutOuterResize)

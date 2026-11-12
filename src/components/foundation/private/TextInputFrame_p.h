@@ -14,7 +14,7 @@ struct TextInputFrameState {
     bool hovered = false;
     bool pressed = false;
     bool invalid = false;
-    int normalWidth = 1;
+    int normalWidth = 0;
     int focusedWidth = 2;
 };
 
