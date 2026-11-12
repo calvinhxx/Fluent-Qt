@@ -39,16 +39,19 @@ protected:
 void skipUnlessVisualGate()
 {
     if (!tests::support::shouldRunVisualGate()) {
-        GTEST_SKIP() << "Opt-in visual gate. Run with VISUAL_SNAPSHOT=1 VISUAL_COMPARE=1 "
-                        "(or VISUAL_UPDATE_BASELINE=1). Automated CTest keeps SKIP_VISUAL_TEST=1.";
+        GTEST_SKIP()
+            << "Opt-in visual gate. Run with VISUAL_SNAPSHOT=1 VISUAL_COMPARE=1 "
+               "(or VISUAL_UPDATE_BASELINE=1). Automated CTest keeps SKIP_VISUAL_TEST=1.";
     }
     if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Visual gate baselines are desktop-captured; "
-                        "offscreen/minimal is not an approval host.";
+        GTEST_SKIP()
+            << "Visual gate baselines are desktop-captured; "
+               "offscreen/minimal is not an approval host.";
     }
     if (!tests::support::isVisualGateApprovalHost()) {
-        GTEST_SKIP() << "Visual gate baselines require the documented macOS arm64 "
-                        "Fusion approval host with QT_SCALE_FACTOR=1 and QT_FONT_DPI=96.";
+        GTEST_SKIP()
+            << "Visual gate baselines require the documented macOS arm64 "
+               "Fusion approval host with QT_SCALE_FACTOR=1 and QT_FONT_DPI=96.";
     }
 }
 
@@ -117,7 +120,6 @@ GateSurface* makeTreeViewRtlWindow()
     tree->setHeaderHidden(true);
     tree->setBorderVisible(false);
     tree->setBackgroundVisible(true);
-    tree->setAttribute(Qt::WA_MacShowFocusRect, false);
     tree->setIndicatorMotionAnimationEnabled(false);
     tree->setAnimated(false);
 

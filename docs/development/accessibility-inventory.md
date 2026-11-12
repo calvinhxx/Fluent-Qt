@@ -15,6 +15,16 @@ component has one classification before release.
 
 ## Current baseline
 
+TreeView uses Fluent row selection and indicator painting instead of the macOS
+outer focus ring. The existing platform adapter disables only that native
+decoration; keyboard focus, arrow navigation and selection remain active.
+`TreeViewTest.Contract_FluentSelectionKeepsKeyboardFocusWithoutNativeOuterRing`
+covers the interaction across themes. The Cocoa-only
+`GallerySpatialTest.Contract_LiveZoomFooterFocusUsesOnlyFluentChrome` exercises
+live zoom to 80% followed by clicking Settings in both 2D and 3D. Native screen
+captures cover the composited focus-ring boundary, which is absent from GL
+texture captures. These checks do not constitute screen-reader certification.
+
 | Classification | Meaning |
 | --- | --- |
 | Native | The Qt base class supplies the appropriate role, state, actions, and logical children. |

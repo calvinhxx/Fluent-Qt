@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "compatibility/PaintCompat.h"
 #include "compatibility/WidgetCompat.h"
 #include "TreeView.h"
@@ -131,6 +132,7 @@ qreal indicatorTrailingProgress(qreal progress)
 
 TreeView::TreeView(QWidget* parent) : QTreeView(parent)
 {
+    ::compatibility::detail::disableNativeFocusRing(this);
 
     auto* rowStyle = new DelegateOwnedRowStyle;
     rowStyle->setParent(this);
