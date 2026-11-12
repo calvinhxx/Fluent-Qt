@@ -1,4 +1,4 @@
-add_qt_test_module(test_button TestButton.cpp)
+add_qt_test_module(test_button TestButton.cpp TestButtonIconAbove.cpp)
 add_qt_test_module(test_compound_button TestCompoundButton.cpp)
 add_qt_test_module(test_dropdown_button TestDropDownButton.cpp)
 add_qt_test_module(test_file_drop_zone TestFileDropZone.cpp)

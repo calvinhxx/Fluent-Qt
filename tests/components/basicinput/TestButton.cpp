@@ -169,6 +169,36 @@ protected:
     void TearDown() override { ThemeRegistry::instance().resetToDefaults(); }
 };
 
+TEST_F(ButtonTest, IconPropertyNotifiesOnceAndLayoutObserversMayDeleteTheButton)
+{
+    QPixmap pixels(16, 16);
+    pixels.fill(Qt::magenta);
+    const QIcon icon(pixels);
+    Button button;
+    QSignalSpy icons(&button, &Button::iconChanged);
+    QSignalSpy layouts(&button, &Button::fluentLayoutChanged);
+    EXPECT_TRUE(button.setProperty("icon", icon));
+    button.setIcon(icon);
+    EXPECT_EQ(icons.count(), 1);
+    EXPECT_EQ(layouts.count(), 1);
+    button.setIconGlyph(Typography::Icons::Save);
+    EXPECT_TRUE(button.icon().isNull());
+    EXPECT_EQ(icons.count(), 2);
+    EXPECT_EQ(layouts.count(), 1);
+    button.setIconGlyph(QString());
+    EXPECT_EQ(icons.count(), 2);
+
+    for (bool glyph : {false, true}) {
+        QPointer<Button> temporary = new Button;
+        QObject::connect(temporary, &Button::fluentLayoutChanged, temporary, [temporary] { delete temporary; });
+        if (glyph)
+            temporary->setIconGlyph(Typography::Icons::Save);
+        else
+            temporary->setIcon(icon);
+        EXPECT_TRUE(temporary.isNull());
+    }
+}
+
 TEST_F(ButtonTest, SemanticForegroundTracksThemeWithoutOverridingStateContrast)
 {
     Button button(QStringLiteral("Reset"));

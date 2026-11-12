@@ -2899,6 +2899,56 @@ TEST_F(GalleryContentPagesTest, StackViewSampleButtonsUseRequestedSpacing)
     EXPECT_EQ(popButton->x() - (pushButton->x() + pushButton->width()), expectedButtonRowSpacing(8));
 }
 
+TEST_F(GalleryContentPagesTest, Contract_IconAboveButtonsMatchDisplayedSource)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("button"), QStringLiteral("button-icon-above"), &sample));
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("Button::IconAbove")));
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("redo->setEnabled(false)")));
+    GallerySampleCard card(sample);
+    card.resize(400, card.sizeHint().height());
+    card.show();
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+    auto* undo = card.findChild<Button*>(QStringLiteral("buttonIconAboveUndo"));
+    auto* redo = card.findChild<Button*>(QStringLiteral("buttonIconAboveRedo"));
+    ASSERT_NE(undo, nullptr);
+    ASSERT_NE(redo, nullptr);
+    for (auto* button : {undo, redo}) {
+        EXPECT_EQ(button->fluentLayout(), Button::IconAbove);
+        EXPECT_GE(button->height(), button->sizeHint().height());
+        EXPECT_GT(button->height(), 32);
+        EXPECT_TRUE(card.previewWidget()->rect().contains(button->geometry()));
+    }
+    EXPECT_TRUE(undo->isEnabled());
+    EXPECT_FALSE(redo->isEnabled());
+}
+
+TEST_F(GalleryContentPagesTest, Contract_IconBelowButtonsMatchDisplayedSource)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("button"), QStringLiteral("button-icon-below"), &sample));
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("Button::IconBelow")));
+    EXPECT_TRUE(sample.codeSnippet.contains(QStringLiteral("redo->setEnabled(false)")));
+    GallerySampleCard card(sample);
+    card.resize(400, card.sizeHint().height());
+    card.show();
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+    auto* undo = card.findChild<Button*>(QStringLiteral("buttonIconBelowUndo"));
+    auto* redo = card.findChild<Button*>(QStringLiteral("buttonIconBelowRedo"));
+    ASSERT_NE(undo, nullptr);
+    ASSERT_NE(redo, nullptr);
+    for (auto* button : {undo, redo}) {
+        EXPECT_EQ(button->fluentLayout(), Button::IconBelow);
+        EXPECT_GE(button->height(), button->sizeHint().height());
+        EXPECT_GT(button->height(), 32);
+        EXPECT_TRUE(card.previewWidget()->rect().contains(button->geometry()));
+    }
+    EXPECT_TRUE(undo->isEnabled());
+    EXPECT_FALSE(redo->isEnabled());
+}
+
 TEST_F(GalleryContentPagesTest, ButtonLikeSampleRowsPreserveRequestedSpacing)
 {
     struct SampleCase {
@@ -2912,6 +2962,8 @@ TEST_F(GalleryContentPagesTest, ButtonLikeSampleRowsPreserveRequestedSpacing)
         {QStringLiteral("button"), QStringLiteral("button-styles"), 3, 10},
         {QStringLiteral("button"), QStringLiteral("button-sizes"), 3, 10},
         {QStringLiteral("button"), QStringLiteral("button-icon-layouts"), 3, 10},
+        {QStringLiteral("button"), QStringLiteral("button-icon-above"), 2, 10},
+        {QStringLiteral("button"), QStringLiteral("button-icon-below"), 2, 10},
         {QStringLiteral("button"), QStringLiteral("button-interaction-state"), 5, 10},
         {QStringLiteral("repeat-button"), QStringLiteral("repeat-button-timing"), 2, 10},
         {QStringLiteral("split-button"), QStringLiteral("split-button-sizes"), 3, 10},

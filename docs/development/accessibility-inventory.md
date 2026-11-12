@@ -26,6 +26,22 @@ a running pane transition starts at the currently visible geometry instead of
 replacing its endpoint mid-flight. Full, Reduced and Disabled motion policies
 remain effective; the transition regression checks each policy explicitly.
 
+`Button::IconAbove` and `Button::IconBelow` change content arrangement and preferred height while
+retaining the primary label, accessible role, focus and activation semantics.
+The layout also applies to generic toggle, repeat, dropdown, split, compound
+and hyperlink buttons. Compound descriptions remain separate from the primary
+label, and split/menu targets retain their own action regions. IconBelow places
+the compound description between its title and icon. `ButtonIconAboveTest` and `ButtonIconBelowTest`
+checks glyph and QIcon placement across themes, sizes, layout directions and
+pixel ratios, together with empty content and existing-layout round trips.
+The `button-icon-above` and `button-icon-below` Gallery cards and their C++/Python contracts demonstrate
+enabled and disabled states with matching displayed source.
+Default icon assignment remains visible without an explicit layout call: the
+first glyph or QIcon promotes an unconfigured Button to IconBefore and reserves
+its width. Explicit TextOnly, including a selection made before setting the
+icon, remains text-only. The default-layout regression covers all eight generic
+button families, both glyph overloads, direct QIcon and Qt property assignment.
+
 TreeView uses Fluent row selection and indicator painting instead of the macOS
 outer focus ring. The existing platform adapter disables only that native
 decoration; keyboard focus, arrow navigation and selection remain active.

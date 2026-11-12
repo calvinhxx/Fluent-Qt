@@ -4,7 +4,7 @@
   "summary": {
     "component_count": 99,
     "foundation_topic_count": 1,
-    "sample_count": 300
+    "sample_count": 302
   },
   "samples": [
     {
@@ -21,6 +21,16 @@
       "route_id": "button",
       "sample_id": "button-icon-layouts",
       "source": "leading = fluentqt.Button('Icon before')\nleading.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore)\nleading.setIconGlyph(fluentqt.Typography.Icons.Add)\nicon_only = fluentqt.Button('')\nicon_only.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)\nicon_only.setIconGlyph(fluentqt.Typography.Icons.More)\ntrailing = fluentqt.Button('Next')\ntrailing.setFluentLayout(fluentqt.Button.ButtonLayout.IconAfter)\ntrailing.setIconGlyph(fluentqt.Typography.Icons.ChevronRight)\n"
+    },
+    {
+      "route_id": "button",
+      "sample_id": "button-icon-above",
+      "source": "undo = fluentqt.Button('Undo')\nundo.setFluentLayout(fluentqt.Button.ButtonLayout.IconAbove)\nundo.setIconGlyph(\n    fluentqt.Typography.Icons.Undo,\n    fluentqt.Typography.IconSize.XLarge\n)\nredo = fluentqt.Button('Redo')\nredo.setFluentLayout(fluentqt.Button.ButtonLayout.IconAbove)\nredo.setIconGlyph(\n    fluentqt.Typography.Icons.Redo,\n    fluentqt.Typography.IconSize.XLarge\n)\nredo.setEnabled(False)\n"
+    },
+    {
+      "route_id": "button",
+      "sample_id": "button-icon-below",
+      "source": "undo = fluentqt.Button('Undo')\nundo.setFluentLayout(fluentqt.Button.ButtonLayout.IconBelow)\nundo.setIconGlyph(\n    fluentqt.Typography.Icons.Undo,\n    fluentqt.Typography.IconSize.XLarge\n)\nredo = fluentqt.Button('Redo')\nredo.setFluentLayout(fluentqt.Button.ButtonLayout.IconBelow)\nredo.setIconGlyph(\n    fluentqt.Typography.Icons.Redo,\n    fluentqt.Typography.IconSize.XLarge\n)\nredo.setEnabled(False)\n"
     },
     {
       "route_id": "button",

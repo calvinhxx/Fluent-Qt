@@ -236,6 +236,60 @@ register_source_samples(
                 _WIDGETS,
             ),
         ),
+        "button-icon-above": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QHBoxLayout(root)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(10)
+                layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+                undo = fluentqt.Button("Undo", root)
+                undo.setObjectName("buttonIconAboveUndo")
+                undo.setFluentLayout(fluentqt.Button.ButtonLayout.IconAbove)
+                undo.setIconGlyph(fluentqt.Typography.Icons.Undo, fluentqt.Typography.IconSize.XLarge)
+
+                redo = fluentqt.Button("Redo", root)
+                redo.setObjectName("buttonIconAboveRedo")
+                redo.setFluentLayout(fluentqt.Button.ButtonLayout.IconAbove)
+                redo.setIconGlyph(fluentqt.Typography.Icons.Redo, fluentqt.Typography.IconSize.XLarge)
+                redo.setEnabled(False)
+
+                layout.addWidget(undo)
+                layout.addWidget(redo)
+                """,
+                "from PySide6.QtCore import Qt\n" + _WIDGETS,
+            ),
+        ),
+        "button-icon-below": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QHBoxLayout(root)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(10)
+                layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+                undo = fluentqt.Button("Undo", root)
+                undo.setObjectName("buttonIconBelowUndo")
+                undo.setFluentLayout(fluentqt.Button.ButtonLayout.IconBelow)
+                undo.setIconGlyph(fluentqt.Typography.Icons.Undo, fluentqt.Typography.IconSize.XLarge)
+
+                redo = fluentqt.Button("Redo", root)
+                redo.setObjectName("buttonIconBelowRedo")
+                redo.setFluentLayout(fluentqt.Button.ButtonLayout.IconBelow)
+                redo.setIconGlyph(fluentqt.Typography.Icons.Redo, fluentqt.Typography.IconSize.XLarge)
+                redo.setEnabled(False)
+
+                layout.addWidget(undo)
+                layout.addWidget(redo)
+                """,
+                "from PySide6.QtCore import Qt\n" + _WIDGETS,
+            ),
+        ),
         "button-interaction-state": (
             "root",
             _script(

@@ -114,6 +114,92 @@ def wait_for_events(duration_ms):
 
 
 class FluentQtBindingTest(unittest.TestCase):
+    def test_default_icon_layout_preserves_legacy_setters_and_explicit_text_only(self):
+        layouts = fluentqt.Button.ButtonLayout
+        pixels = QImage(16, 16, QImage.Format_ARGB32)
+        pixels.fill(QColor('magenta'))
+        from PySide6.QtGui import QPixmap
+        icon = QIcon(QPixmap.fromImage(pixels))
+        for kind in (fluentqt.Button, fluentqt.ToggleButton, fluentqt.RepeatButton,
+                     fluentqt.DropDownButton, fluentqt.SplitButton, fluentqt.ToggleSplitButton,
+                     fluentqt.CompoundButton, fluentqt.HyperlinkButton):
+            for source in ('glyph', 'icon', 'property'):
+                with self.subTest(kind=kind.__name__, source=source):
+                    button = kind('Undo')
+                    plain_size = button.sizeHint()
+                    changes = QSignalSpy(button.fluentLayoutChanged)
+                    if source == 'glyph':
+                        button.setIconGlyph(fluentqt.Typography.Icons.Save)
+                    elif source == 'icon':
+                        button.setIcon(icon)
+                    else:
+                        self.assertTrue(button.setProperty('icon', icon))
+                    self.assertEqual(button.fluentLayout(), layouts.IconBefore)
+                    self.assertEqual(changes.count(), 1)
+                    self.assertGreater(button.sizeHint().width(), plain_size.width())
+                    button.setFluentLayout(layouts.TextOnly)
+                    button.setIconGlyph(fluentqt.Typography.Icons.Undo)
+                    self.assertEqual(button.fluentLayout(), layouts.TextOnly)
+                    self.assertEqual(button.sizeHint(), plain_size)
+                    delete_qobject(button)
+            button = kind('Undo')
+            button.setFluentLayout(layouts.TextOnly)
+            button.setIconGlyph(fluentqt.Typography.Icons.Save)
+            self.assertEqual(button.fluentLayout(), layouts.TextOnly)
+            delete_qobject(button)
+
+    def test_icon_above_layout_is_available_on_generic_button_families(self):
+        layouts = fluentqt.Button.ButtonLayout
+        self.assertEqual([int(value) for value in (layouts.TextOnly, layouts.IconBefore,
+                         layouts.IconOnly, layouts.IconAfter, layouts.IconAbove)], [0, 1, 2, 3, 4])
+        for kind in (fluentqt.Button, fluentqt.ToggleButton, fluentqt.RepeatButton,
+                     fluentqt.DropDownButton, fluentqt.SplitButton, fluentqt.ToggleSplitButton,
+                     fluentqt.CompoundButton, fluentqt.HyperlinkButton):
+            with self.subTest(kind=kind.__name__):
+                button = kind("Undo")
+                button.setIconGlyph(fluentqt.Typography.Icons.Undo, 24)
+                button.setFluentLayout(layouts.IconBefore)
+                original_size = button.sizeHint()
+                changed = []
+                button.fluentLayoutChanged.connect(lambda: changed.append(True))
+                button.setFluentLayout(layouts.IconAbove)
+                button.setFluentLayout(layouts.IconAbove)
+                self.assertEqual(len(changed), 1)
+                self.assertEqual(button.fluentLayout(), layouts.IconAbove)
+                self.assertGreater(button.sizeHint().height(), original_size.height())
+                button.resize(button.sizeHint())
+                self.assertFalse(button.grab().isNull())
+                button.setFluentLayout(layouts.IconBefore)
+                self.assertEqual(button.sizeHint(), original_size)
+                delete_qobject(button)
+
+    def test_icon_below_layout_is_available_on_generic_button_families(self):
+        layouts = fluentqt.Button.ButtonLayout
+        self.assertEqual([int(value) for value in (layouts.TextOnly, layouts.IconBefore,
+                         layouts.IconOnly, layouts.IconAfter, layouts.IconAbove, layouts.IconBelow)], [0, 1, 2, 3, 4, 5])
+        for kind in (fluentqt.Button, fluentqt.ToggleButton, fluentqt.RepeatButton,
+                     fluentqt.DropDownButton, fluentqt.SplitButton, fluentqt.ToggleSplitButton,
+                     fluentqt.CompoundButton, fluentqt.HyperlinkButton):
+            with self.subTest(kind=kind.__name__):
+                button = kind("Undo")
+                if kind is fluentqt.CompoundButton:
+                    button.setSecondaryText("Restore change")
+                button.setIconGlyph(fluentqt.Typography.Icons.Undo, 24)
+                button.setFluentLayout(layouts.IconBefore)
+                original_size = button.sizeHint()
+                changed = []
+                button.fluentLayoutChanged.connect(lambda: changed.append(True))
+                button.setFluentLayout(layouts.IconBelow)
+                button.setFluentLayout(layouts.IconBelow)
+                self.assertEqual(len(changed), 1)
+                self.assertEqual(button.fluentLayout(), layouts.IconBelow)
+                self.assertGreater(button.sizeHint().height(), original_size.height())
+                button.resize(button.sizeHint())
+                self.assertFalse(button.grab().isNull())
+                button.setFluentLayout(layouts.IconBefore)
+                self.assertEqual(button.sizeHint(), original_size)
+                delete_qobject(button)
+
     def test_input_frames_default_to_no_unfocused_underline(self):
         host = QWidget()
         host.resize(360, 180)

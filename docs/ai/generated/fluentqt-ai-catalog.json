@@ -1326,6 +1326,7 @@
         "actions"
       ],
       "search_terms": [
+        "above",
         "accent",
         "action",
         "actions",
@@ -1333,13 +1334,18 @@
         "basic",
         "become",
         "before",
+        "below",
+        "both",
         "button",
         "button-critical-hover",
+        "button-icon-above",
+        "button-icon-below",
         "button-icon-layouts",
         "button-interaction-state",
         "button-sizes",
         "button-styles",
         "can",
+        "center",
         "change",
         "changing",
         "click",
@@ -1356,19 +1362,23 @@
         "disabled",
         "event.",
         "forced",
+        "gap.",
         "glyphs",
         "height",
         "hover",
         "icon",
+        "includes",
         "input",
         "interaction",
         "keeping",
         "keyboard-focus",
+        "label.",
         "layouts",
         "lightweight",
         "neutral",
         "padding",
         "pointer",
+        "preferred",
         "presets",
         "preview",
         "primary",
@@ -1376,6 +1386,7 @@
         "responds",
         "rest.",
         "review.",
+        "rows",
         "semantics.",
         "shown",
         "side",
@@ -1388,6 +1399,7 @@
         "styles",
         "subtle",
         "text",
+        "their",
         "user",
         "uses",
         "while",
@@ -1444,6 +1456,26 @@
           "title": "Icon layouts",
           "description": "Icon glyphs can sit before text, after text, or become the whole button content.",
           "cpp_snippet": "auto* before = new Button(\"Icon before\", this);\nbefore->setFluentLayout(Button::IconBefore);\nbefore->setIconGlyph(Typography::Icons::Add);\n\nauto* iconOnly = new Button(QString(), this);\niconOnly->setFluentLayout(Button::IconOnly);\niconOnly->setIconGlyph(Typography::Icons::More);\n\nauto* after = new Button(\"Next\", this);\nafter->setFluentLayout(Button::IconAfter);\nafter->setIconGlyph(Typography::Icons::ChevronRight);",
+          "preview_layout": {
+            "orientation": "horizontal",
+            "spacing": 10
+          }
+        },
+        {
+          "id": "button-icon-above",
+          "title": "Icon above text",
+          "description": "Center an icon above its label. The preferred height includes both rows and their gap.",
+          "cpp_snippet": "auto* undo = new Button(\"Undo\", this);\nundo->setFluentLayout(Button::IconAbove);\nundo->setIconGlyph(Typography::Icons::Undo, Typography::IconSize::XLarge);\n\nauto* redo = new Button(\"Redo\", this);\nredo->setFluentLayout(Button::IconAbove);\nredo->setIconGlyph(Typography::Icons::Redo, Typography::IconSize::XLarge);\nredo->setEnabled(false);",
+          "preview_layout": {
+            "orientation": "horizontal",
+            "spacing": 10
+          }
+        },
+        {
+          "id": "button-icon-below",
+          "title": "Icon below text",
+          "description": "Center an icon below its label. The preferred height includes both rows and their gap.",
+          "cpp_snippet": "auto* undo = new Button(\"Undo\", this);\nundo->setFluentLayout(Button::IconBelow);\nundo->setIconGlyph(Typography::Icons::Undo, Typography::IconSize::XLarge);\n\nauto* redo = new Button(\"Redo\", this);\nredo->setFluentLayout(Button::IconBelow);\nredo->setIconGlyph(Typography::Icons::Redo, Typography::IconSize::XLarge);\nredo->setEnabled(false);",
           "preview_layout": {
             "orientation": "horizontal",
             "spacing": 10
@@ -12729,7 +12761,7 @@
   "summary": {
     "route_count": 125,
     "component_count": 99,
-    "sample_count": 288,
+    "sample_count": 290,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 15,

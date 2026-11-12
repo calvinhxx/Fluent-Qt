@@ -513,6 +513,46 @@ class PythonGalleryTest(unittest.TestCase):
                     root.deleteLater()
                     QApplication.processEvents()
 
+    def test_icon_above_button_sample_matches_its_source(self):
+        result = build_sample("button", "button-icon-above")
+        try:
+            self.assertIn("ButtonLayout.IconAbove", result.source)
+            self.assertIn("Typography.Icons.Undo", result.source)
+            self.assertIn("redo.setEnabled(False)", result.source)
+            undo = result.widget.findChild(fluentqt.Button, "buttonIconAboveUndo")
+            redo = result.widget.findChild(fluentqt.Button, "buttonIconAboveRedo")
+            self.assertIsNotNone(undo)
+            self.assertIsNotNone(redo)
+            for button in (undo, redo):
+                self.assertEqual(button.fluentLayout(), fluentqt.Button.ButtonLayout.IconAbove)
+                self.assertGreater(button.sizeHint().height(), 32)
+            self.assertTrue(undo.isEnabled())
+            self.assertFalse(redo.isEnabled())
+        finally:
+            result.widget.close()
+            result.widget.deleteLater()
+            QApplication.processEvents()
+
+    def test_icon_below_button_sample_matches_its_source(self):
+        result = build_sample("button", "button-icon-below")
+        try:
+            self.assertIn("ButtonLayout.IconBelow", result.source)
+            self.assertIn("Typography.Icons.Undo", result.source)
+            self.assertIn("redo.setEnabled(False)", result.source)
+            undo = result.widget.findChild(fluentqt.Button, "buttonIconBelowUndo")
+            redo = result.widget.findChild(fluentqt.Button, "buttonIconBelowRedo")
+            self.assertIsNotNone(undo)
+            self.assertIsNotNone(redo)
+            for button in (undo, redo):
+                self.assertEqual(button.fluentLayout(), fluentqt.Button.ButtonLayout.IconBelow)
+                self.assertGreater(button.sizeHint().height(), 32)
+            self.assertTrue(undo.isEnabled())
+            self.assertFalse(redo.isEnabled())
+        finally:
+            result.widget.close()
+            result.widget.deleteLater()
+            QApplication.processEvents()
+
     def test_diagnostic_log_forwarding_drains_before_window_teardown(self):
         import logging
         import threading
@@ -3429,7 +3469,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             for key, sample in SAMPLE_BY_KEY.items()
             if sample.preview_orientation is not None
         }
-        self.assertEqual(len(grouped_samples), 78)
+        self.assertEqual(len(grouped_samples), 80)
         expected_types = {
             "horizontal": QHBoxLayout,
             "vertical": QVBoxLayout,
