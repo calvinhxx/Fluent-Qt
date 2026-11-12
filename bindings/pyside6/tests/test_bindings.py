@@ -114,6 +114,54 @@ def wait_for_events(duration_ms):
 
 
 class FluentQtBindingTest(unittest.TestCase):
+    def test_input_frames_default_to_no_unfocused_underline(self):
+        host = QWidget()
+        host.resize(360, 180)
+        focus_target = fluentqt.Button("Focus", host)
+        focus_target.setGeometry(10, 10, 100, 32)
+        host.show()
+        QApplication.setActiveWindow(host)
+        kinds = (fluentqt.LineEdit, fluentqt.AutoSuggestBox, fluentqt.NumberBox,
+                 fluentqt.PasswordBox, fluentqt.TagInput, fluentqt.TextEdit, fluentqt.ComboBox)
+        try:
+            for kind in kinds:
+                control = kind(host)
+                if kind is fluentqt.TextEdit:
+                    control.setAutoResizeEnabled(False)
+                if kind is fluentqt.ComboBox:
+                    control.addItems(["2 seconds", "Automatic"])
+                else:
+                    self.assertEqual(control.unfocusedBorderWidth(), 0, kind.__name__)
+                    self.assertEqual(control.focusedBorderWidth(), 2, kind.__name__)
+                control.setGeometry(10, 60, 280, 64 if kind is fluentqt.TextEdit else 32)
+                control.show()
+                for editable in ((False, True) if kind is fluentqt.ComboBox else (False,)):
+                    if kind is fluentqt.ComboBox:
+                        control.setEditable(editable)
+                    for theme in (fluentqt.Theme.Light, fluentqt.Theme.Dark, fluentqt.Theme.HighContrast):
+                        control.setProperty("fluentThemeOverride", int(theme))
+                        focus_target.setFocus()
+                        QCoreApplication.processEvents()
+                        self.assertTrue(focus_target.hasFocus())
+                        for scale in (1, 1.25, 1.5, 2):
+                            with self.subTest(control=kind.__name__, editable=editable, theme=theme, scale=scale):
+                                image = QImage(round(control.width() * scale), round(control.height() * scale),
+                                               QImage.Format_ARGB32_Premultiplied)
+                                image.setDevicePixelRatio(scale)
+                                image.fill(Qt.transparent)
+                                painter = QPainter(image)
+                                try:
+                                    control.render(painter, QPoint())
+                                finally:
+                                    painter.end()
+                                x = image.width() // 2
+                                self.assertEqual(image.pixelColor(x, 0), image.pixelColor(x, image.height() - 1))
+                control.hide()
+                delete_qobject(control)
+        finally:
+            host.close()
+            delete_qobject(host)
+
     def test_inline_action_semantic_color_is_available_in_native_bindings(self):
         button = fluentqt.Button("Reset")
         changes = []

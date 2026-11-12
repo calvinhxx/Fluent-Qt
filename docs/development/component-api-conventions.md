@@ -144,7 +144,13 @@ their contrast colors. Label's Critical role uses the theme's error color.
 Application layouts must honor minimum size hints for custom action hit targets;
 an explicitly undersized fixed widget cannot preserve arbitrary content sizes.
 
-Derived text inputs must honor LineEdit's `frameVisible` surface contract.
+Text inputs and ComboBox default to a rounded outline with no unfocused
+underline. The shared `TextInputFrameState` keeps that default; LineEdit and
+TextEdit expose optional custom underline widths. Focus and validation retain
+their accent or error feedback. Derived text inputs must honor LineEdit's
+widths and `frameVisible` surface contract. `InputFrameTest` checks rendered
+defaults across text inputs and composed selectors, including hover, read-only,
+disabled, theme, layout direction and display scale.
 NumberBox exposes `commitInput()` for consumers that must read the numeric value
 before focus-out, including item delegates. Keep model commits in the delegate:
 Enter, Tab and focus-out commit current text; Escape cancels. Preserve the model's

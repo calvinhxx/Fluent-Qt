@@ -53,8 +53,8 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
         WRITE setFocusedBorderWidth
         NOTIFY focusedBorderWidthChanged)
     /**
-     * @brief Bottom border width while not focused.
-     * zh_CN: 未聚焦时底部边框宽度。
+     * @brief Bottom border width while not focused; defaults to zero (no underline).
+     * zh_CN: 未聚焦时底部边框宽度，默认零表示不绘制下划线。
      */
     Q_PROPERTY(int unfocusedBorderWidth
         READ unfocusedBorderWidth
@@ -236,7 +236,7 @@ private:
     bool m_isHovered = false;
     bool m_isFocused = false;
     int m_focusedBorderWidth = ::Spacing::Border::Focused;
-    int m_unfocusedBorderWidth = ::Spacing::Border::Normal;
+    int m_unfocusedBorderWidth = 0;
     int m_lineHeight = ::Spacing::ControlHeight::Standard;
     int m_minVisibleLines = 1;
     int m_maxVisibleLines = 4;

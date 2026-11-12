@@ -164,6 +164,46 @@ TEST(ComboBoxTrailingContentTest, AccessibilityExposesHostedActionAndActualPopup
     }
 }
 
+TEST(ComboBoxSurfaceTest, Contract_UnfocusedFrameOmitsUnderline)
+{
+    for (const bool editable : {false, true}) {
+        for (const auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+            QWidget host;
+            Button focusTarget(QStringLiteral("Focus"), &host);
+            ComboBox combo(&host);
+            combo.addItems({"2 seconds", "Automatic"});
+            combo.setEditable(editable);
+            combo.setProperty("fluentThemeOverride", static_cast<int>(theme));
+            host.resize(320, 120);
+            focusTarget.setGeometry(20, 10, 100, 32);
+            host.show();
+            QApplication::setActiveWindow(&host);
+            focusTarget.setFocus();
+            ASSERT_TRUE(QTest::qWaitFor([&focusTarget] { return focusTarget.hasFocus(); }, 1000));
+
+            for (const int width : {120, 240}) {
+                combo.setGeometry(20, 60, width, 32);
+                for (const bool readOnly : {false, true}) {
+                    if (readOnly && !editable)
+                        continue;
+                    if (combo.lineEdit())
+                        combo.lineEdit()->setReadOnly(readOnly);
+                    for (const qreal scale : {1.0, 1.25, 1.5, 2.0}) {
+                        SCOPED_TRACE(::testing::Message()
+                            << "editable=" << editable << " theme=" << theme << " width=" << width
+                            << " readOnly=" << readOnly << " scale=" << scale);
+                        const QImage image = testutils::renderControlSurface(combo, scale, QColor(17, 23, 31));
+                        // An unfocused field has the same rounded outline at both edges.
+                        // zh_CN: 未聚焦时上下边缘应只有相同的圆角外框，无额外底线。
+                        const int x = image.width() / 2;
+                        EXPECT_EQ(image.pixelColor(x, 0), image.pixelColor(x, image.height() - 1));
+                    }
+                }
+            }
+        }
+    }
+}
+
 TEST(ComboBoxSurfaceTest, Contract_LayoutContainsBoundsAndBothEditorModesShowFocus)
 {
     for (const bool editable : {false, true}) {
@@ -198,6 +238,11 @@ TEST(ComboBoxSurfaceTest, Contract_LayoutContainsBoundsAndBothEditorModesShowFoc
                     testutils::surfaceColorPixels(resting, accent));
                 EXPECT_EQ(combo.currentIndex(), 0);
             }
+            combo.showPopup();
+            QApplication::processEvents();
+            const QImage open = testutils::renderControlSurface(combo, 1.0, background);
+            EXPECT_GT(testutils::surfaceColorPixels(open, accent), 0);
+            combo.hidePopup();
         }
     }
 }

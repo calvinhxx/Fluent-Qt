@@ -60,6 +60,24 @@ covers both focus states in Light and Dark at integer and fractional pixel ratio
 each derived field with LineEdit for default/custom/zero widths, frame visibility,
 and header bounds under the same themes, focus states, and pixel ratios.
 
+ComboBox also omits the unfocused underline in both editing modes, including a
+read-only editor, while preserving the rounded outline and the accent underline
+for focus or an open popup. `ComboBoxSurfaceTest.Contract_UnfocusedFrameOmitsUnderline`
+covers Light, Dark, High Contrast, narrow/normal widths and fractional pixel ratios;
+`ComboBoxSurfaceTest.Contract_LayoutContainsBoundsAndBothEditorModesShowFocus`
+checks focus and open-popup feedback. Accessible roles and input behavior are unchanged.
+
+TextEdit uses the same zero-width unfocused default; its explicit focused and
+unfocused width settings and `frameVisible` remain effective. The shared
+`TextInputFrameState` also defaults to zero, so a new caller does not silently
+restore the old underline. `InputFrameTest` renders the text inputs, both ComboBox
+and TreeSelect modes, MultiSelectComboBox, and date/time picker entries under
+Light/Dark/High Contrast, LTR/RTL, normal/narrow widths and four pixel ratios.
+Rest, hover, read-only and disabled states are checked separately from focus
+and validation. `TextEditTest.Contract_FrameWidthsControlOnlyTheUnderline`
+covers explicit widths and frame visibility. The Python binding regression
+checks the same native defaults and visible resting edges.
+
 LineEdit and its derived fields, plus both ComboBox editing modes, support one
 logical trailing text or widget slot. Suffix text is a non-focusable label and
 does not enter the editor value, selection, validation or clipboard text. Custom
