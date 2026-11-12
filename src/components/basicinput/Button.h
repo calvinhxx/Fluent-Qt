@@ -57,6 +57,9 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      * zh_CN: 文本与图标的内容排列方式。
      */
     Q_PROPERTY(ButtonLayout fluentLayout READ fluentLayout WRITE setFluentLayout NOTIFY fluentLayoutChanged)
+    /** @brief Qt icon with the same default-layout promotion as icon glyphs.
+     * zh_CN: Qt 图标采用与字形图标相同的默认布局切换规则。 */
+    Q_PROPERTY(QIcon icon READ icon WRITE setIcon NOTIFY iconChanged)
     /**
      * @brief Controls whether the focus visual frame is painted.
      * zh_CN: 控制是否绘制焦点视觉框。
@@ -125,10 +128,10 @@ public:
     Q_ENUM(ButtonSize)
 
     /**
-     * @brief Text/icon composition mode.
-     * zh_CN: 文本与图标的组合模式。
+     * @brief Text/icon composition mode, including centered icons above or below the label.
+     * zh_CN: 文本与图标的组合模式，支持将图标居中放在文字上方或下方。
      */
-    enum ButtonLayout { TextOnly, IconBefore, IconOnly, IconAfter };
+    enum ButtonLayout { TextOnly, IconBefore, IconOnly, IconAfter, IconAbove, IconBelow };
     Q_ENUM(ButtonLayout)
 
     /** @brief Semantic text and icon emphasis. zh_CN: 文字与图标的语义强调层级。 */
@@ -165,7 +168,14 @@ public:
     void setFont(const QFont& font);
 
     ButtonLayout fluentLayout() const { return m_layout; }
+    /** @brief Selects an explicit layout, including TextOnly before an icon is assigned.
+     * zh_CN: 显式指定布局；在设置图标前指定 TextOnly 也会保持仅文字显示。 */
     void setFluentLayout(ButtonLayout layout);
+
+    /** @brief Sets a Qt icon; the first icon uses IconBefore unless a layout was explicitly selected.
+     * zh_CN: 设置 Qt 图标；未显式指定布局时，首个图标使用 IconBefore。 */
+    void setIcon(const QIcon& icon);
+    QIcon icon() const { return QPushButton::icon(); }
 
     bool hasFocusVisual() const { return m_focusVisual; }
     void setFocusVisual(bool focus);
@@ -202,6 +212,8 @@ public:
     /**
      * @brief Sets an iconfont glyph that is drawn directly during paintEvent().
      * zh_CN: 设置在 paintEvent() 中直接绘制的 iconfont 图标字符。
+     * The first nonempty glyph uses IconBefore unless a layout was explicitly selected.
+     * zh_CN: 未显式指定布局时，首个非空字形自动使用 IconBefore。
      *
      * @param glyph Icon glyph, usually from Typography::Icons.
      * @param pixelSize Icon slot and native optical design size; defaults to
@@ -225,6 +237,7 @@ signals:
     void fontRoleChanged();
     void textColorRoleChanged();
     void fluentLayoutChanged();
+    void iconChanged();
     void focusVisualChanged();
     void interactionStateChanged();
     void criticalOnHoverChanged();
@@ -247,6 +260,13 @@ protected:
      * zh_CN: 返回用于布局自绘图标与文本内容的区域。
      */
     virtual QRectF contentPaintRect(const QRectF& surfaceRect) const;
+
+    /** @brief Measures the stacked icon and label without outer padding.
+     * zh_CN: 测量上下排列的图标和文字，不包含外部内边距。 */
+    virtual QSize stackedContentSize() const;
+    /** @brief Paints centered stacked content in the supplied bounds and returns the label rectangle.
+     * zh_CN: 在指定区域居中绘制上下排列的内容，并返回文字矩形。 */
+    QRectF paintStackedContent(QPainter& painter, const QRectF& bounds) const;
 
     // Exposes iconfont details to specialized button subclasses.
     // zh_CN: 向特殊按钮子类暴露 iconfont 信息，便于自定义绘制。
@@ -282,12 +302,14 @@ protected:
 
 private:
     void applyFontRole();
+    void updateIconPresentation(bool nativeIconChanged);
 
     ButtonStyle m_style = Standard;
     ButtonSize m_size = StandardSize;
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
     TextColorRole m_textColorRole = TextColorRole::Primary;
     ButtonLayout m_layout = TextOnly;
+    bool m_hasExplicitLayout = false;
     InteractionState m_interactionState = Rest;
     bool m_focusVisual = false;
     bool m_criticalOnHover = false;

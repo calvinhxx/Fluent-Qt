@@ -219,6 +219,56 @@ QVector<GallerySample> buttonSamples()
                 group->layout()->addWidget(after);
                 return group;
             }),
+        makeSample(QStringLiteral("button-icon-above"), QStringLiteral("Icon above text"),
+            QStringLiteral("Center an icon above its label. The preferred height includes both rows and their gap."),
+            QStringLiteral(
+                "auto* undo = new Button(\"Undo\", this);\n"
+                "undo->setFluentLayout(Button::IconAbove);\n"
+                "undo->setIconGlyph(Typography::Icons::Undo, Typography::IconSize::XLarge);\n\n"
+                "auto* redo = new Button(\"Redo\", this);\n"
+                "redo->setFluentLayout(Button::IconAbove);\n"
+                "redo->setIconGlyph(Typography::Icons::Redo, Typography::IconSize::XLarge);\n"
+                "redo->setEnabled(false);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 10);
+                auto* undo = new Button(QStringLiteral("Undo"), group);
+                undo->setObjectName(QStringLiteral("buttonIconAboveUndo"));
+                undo->setFluentLayout(Button::IconAbove);
+                undo->setIconGlyph(Typography::Icons::Undo, Typography::IconSize::XLarge);
+                auto* redo = new Button(QStringLiteral("Redo"), group);
+                redo->setObjectName(QStringLiteral("buttonIconAboveRedo"));
+                redo->setFluentLayout(Button::IconAbove);
+                redo->setIconGlyph(Typography::Icons::Redo, Typography::IconSize::XLarge);
+                redo->setEnabled(false);
+                group->layout()->addWidget(undo);
+                group->layout()->addWidget(redo);
+                return group;
+            }),
+        makeSample(QStringLiteral("button-icon-below"), QStringLiteral("Icon below text"),
+            QStringLiteral("Center an icon below its label. The preferred height includes both rows and their gap."),
+            QStringLiteral(
+                "auto* undo = new Button(\"Undo\", this);\n"
+                "undo->setFluentLayout(Button::IconBelow);\n"
+                "undo->setIconGlyph(Typography::Icons::Undo, Typography::IconSize::XLarge);\n\n"
+                "auto* redo = new Button(\"Redo\", this);\n"
+                "redo->setFluentLayout(Button::IconBelow);\n"
+                "redo->setIconGlyph(Typography::Icons::Redo, Typography::IconSize::XLarge);\n"
+                "redo->setEnabled(false);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 10);
+                auto* undo = new Button(QStringLiteral("Undo"), group);
+                undo->setObjectName(QStringLiteral("buttonIconBelowUndo"));
+                undo->setFluentLayout(Button::IconBelow);
+                undo->setIconGlyph(Typography::Icons::Undo, Typography::IconSize::XLarge);
+                auto* redo = new Button(QStringLiteral("Redo"), group);
+                redo->setObjectName(QStringLiteral("buttonIconBelowRedo"));
+                redo->setFluentLayout(Button::IconBelow);
+                redo->setIconGlyph(Typography::Icons::Redo, Typography::IconSize::XLarge);
+                redo->setEnabled(false);
+                group->layout()->addWidget(undo);
+                group->layout()->addWidget(redo);
+                return group;
+            }),
         makeSample(QStringLiteral("button-interaction-state"), QStringLiteral("Interaction state preview"),
             QStringLiteral("Forced pointer, keyboard-focus, and disabled states are shown side by "
                            "side for review."),

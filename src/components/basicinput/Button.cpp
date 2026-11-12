@@ -234,12 +234,37 @@ void Button::applyFontRole()
 
 void Button::setFluentLayout(ButtonLayout layout)
 {
+    m_hasExplicitLayout = true;
     if (m_layout != layout) {
         m_layout = layout;
         updateGeometry();
         update();
         emit fluentLayoutChanged();
     }
+}
+
+void Button::setIcon(const QIcon& newIcon)
+{
+    const bool changed = icon().cacheKey() != newIcon.cacheKey();
+    QPushButton::setIcon(newIcon);
+    updateIconPresentation(changed);
+}
+
+void Button::updateIconPresentation(bool nativeIconChanged)
+{
+    const bool promote = !m_hasExplicitLayout && m_layout == TextOnly && (!m_iconGlyph.isEmpty() || !icon().isNull());
+    if (promote)
+        m_layout = IconBefore;
+    updateGeometry();
+    update();
+
+    // A layout observer may synchronously destroy the button.
+    // zh_CN: 布局观察者可能同步销毁按钮。
+    QPointer<Button> guard(this);
+    if (promote)
+        emit fluentLayoutChanged();
+    if (guard && nativeIconChanged)
+        emit iconChanged();
 }
 
 void Button::setFocusVisual(bool focus)
@@ -336,12 +361,13 @@ void Button::setContentOpacity(qreal opacity)
 
 void Button::setIconGlyph(const QString& glyph, int pixelSize, const QString& family)
 {
+    const bool nativeIconChanged = !icon().isNull();
     if (glyph.isEmpty()) {
         m_iconGlyph.clear();
         m_iconFontFamily.clear();
         m_iconPixelSize = 0;
-        setIcon(QIcon()); // Clear the regular icon. zh_CN: 清除普通图标。
-        update();
+        QPushButton::setIcon(QIcon()); // Clear the regular icon. zh_CN: 清除普通图标。
+        updateIconPresentation(nativeIconChanged);
         return;
     }
 
@@ -352,11 +378,10 @@ void Button::setIconGlyph(const QString& glyph, int pixelSize, const QString& fa
     m_iconPixelSize = pixelSize;
 
     // Drop the regular icon in favor of icon-font painting. zh_CN: 清除普通图标，使用 iconfont 绘制。
-    setIcon(QIcon());
+    QPushButton::setIcon(QIcon());
 
     // Refresh the size hint. zh_CN: 更新尺寸提示。
-    updateGeometry();
-    update();
+    updateIconPresentation(nativeIconChanged);
 }
 
 QSize Button::sizeHint() const
@@ -372,7 +397,7 @@ QSize Button::sizeHint() const
     // Icon gap: Small(4px), Standard(8px). zh_CN: 图标间距。
     int iconGap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
-    const QString txt = text();
+    const QString txt = (m_layout == IconOnly) ? QString() : text();
     const QSize textSize =
         txt.contains(QLatin1Char('\n')) ? fm.size(0, txt) : QSize(fm.horizontalAdvance(txt), fm.height());
 
@@ -382,14 +407,22 @@ QSize Button::sizeHint() const
     if (m_size == StandardSize && !txt.contains(QLatin1Char('\n')))
         dynamicHeight = ::fluent::detail::standardControlHeight(fm);
 
+    if (m_layout == IconAbove || m_layout == IconBelow) {
+        if (m_iconGlyph.isEmpty() && icon().isNull())
+            return QSize(textSize.width() + hPadding * 2, dynamicHeight);
+        const QSize content = stackedContentSize();
+        return QSize(content.width() + hPadding * 2, qMax(dynamicHeight, content.height() + vPadding * 2));
+    }
+
     // 3. Total width required by the content. zh_CN: 计算内容所需的总宽度。
     // Prefer the icon font, falling back to the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
-    bool hasIconFont = !m_iconGlyph.isEmpty();
+    bool hasIconFont = (m_layout != TextOnly) && !m_iconGlyph.isEmpty();
+    bool hasRegularIcon = (m_layout != TextOnly) && !icon().isNull();
     QSize icSize = hasIconFont ? QSize(m_iconPixelSize, m_iconPixelSize) : iconSize();
-    int contentWidth = textSize.width();
-    if (!txt.isEmpty() && (hasIconFont || !icon().isNull()))
+    int contentWidth = (m_layout == IconOnly) ? 0 : textSize.width();
+    if (!txt.isEmpty() && (hasIconFont || hasRegularIcon))
         contentWidth += iconGap;
-    if (hasIconFont || !icon().isNull())
+    if (hasIconFont || hasRegularIcon)
         contentWidth += icSize.width();
 
     return QSize(contentWidth + hPadding * 2, dynamicHeight);
@@ -403,6 +436,61 @@ QSize Button::minimumSizeHint() const
 QRectF Button::contentPaintRect(const QRectF& surfaceRect) const
 {
     return surfaceRect;
+}
+
+QSize Button::stackedContentSize() const
+{
+    const QSize label = text().isEmpty() ? QSize(0, 0) : QFontMetrics(font()).size(0, text());
+    const QSize image = !m_iconGlyph.isEmpty()
+        ? QSize(qMax(0, m_iconPixelSize), qMax(0, m_iconPixelSize))
+        : (icon().isNull() ? QSize(0, 0) : iconSize());
+    const auto& spacing = themeSpacing();
+    const int gap =
+        !label.isEmpty() && !image.isEmpty() ? (m_size == Small ? spacing.gap.tight : spacing.gap.normal) : 0;
+    return QSize(qMax(label.width(), image.width()), label.height() + image.height() + gap);
+}
+
+QRectF Button::paintStackedContent(QPainter& painter, const QRectF& bounds) const
+{
+    const QSize label = text().isEmpty() ? QSize(0, 0) : QFontMetrics(font()).size(0, text());
+    const QSize image = !m_iconGlyph.isEmpty()
+        ? QSize(qMax(0, m_iconPixelSize), qMax(0, m_iconPixelSize))
+        : (icon().isNull() ? QSize(0, 0) : iconSize());
+    const QSize content = stackedContentSize();
+    const qreal top = bounds.center().y() - content.height() / 2.0;
+    const bool below = m_layout == IconBelow;
+    const qreal iconTop = below ? top + content.height() - image.height() : top;
+    const QRectF iconRect(bounds.center().x() - image.width() / 2.0, iconTop, image.width(), image.height());
+    const qreal labelWidth = qMin<qreal>(label.width(), qMax<qreal>(0.0, bounds.width()));
+    const qreal labelTop = below ? top : top + content.height() - label.height();
+    const QRectF labelRect(bounds.center().x() - labelWidth / 2.0, labelTop, labelWidth, label.height());
+    painter.save();
+    painter.setClipRect(bounds, Qt::IntersectClip);
+    if (!image.isEmpty()) {
+        if (!m_iconGlyph.isEmpty()) {
+            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect, m_iconOffset,
+                m_iconScale, m_iconRotation);
+        } else {
+            const qreal dpr = painter.device()
+                ? qMax<qreal>(1.0, painter.device()->devicePixelRatioF())
+                : qMax<qreal>(1.0, devicePixelRatioF());
+            const QPixmap pixmap = fluentIconPixmapForLogicalExtent(icon(), image, dpr,
+                window() ? window()->windowHandle() : nullptr);
+            if (!pixmap.isNull()) {
+                const QSizeF size = QSizeF(pixmap.size()) / pixmap.devicePixelRatioF();
+                painter.save();
+                painter.translate(iconRect.center() + QPointF(m_iconOffset));
+                painter.rotate(m_iconRotation);
+                painter.scale(m_iconScale, m_iconScale);
+                fluentDrawPixmapAt(painter, QPointF(-size.width() / 2.0, -size.height() / 2.0), pixmap);
+                painter.restore();
+            }
+        }
+    }
+    painter.setFont(font());
+    fluent::painting::drawVerticallyCenteredText(painter, labelRect, text(), Qt::AlignHCenter);
+    painter.restore();
+    return labelRect;
 }
 
 void Button::paintEvent(QPaintEvent*)
@@ -523,7 +611,7 @@ void Button::paintButton(InteractionState state)
 
     // 4. Lay out and paint the icon and text using token gaps. zh_CN: 使用 Token 间距计算并绘制图标和文字。
     QString txt = (m_layout == IconOnly) ? "" : text();
-    bool hasIconFont = !m_iconGlyph.isEmpty();
+    bool hasIconFont = (m_layout != TextOnly) && !m_iconGlyph.isEmpty();
     const qreal targetDpr = painter.device()
         ? qMax<qreal>(1.0, painter.device()->devicePixelRatioF())
         : qMax<qreal>(1.0, devicePixelRatioF());
@@ -580,7 +668,9 @@ void Button::paintButton(InteractionState state)
         painter.restore();
     };
 
-    if (m_layout == IconAfter) {
+    if (m_layout == IconAbove || m_layout == IconBelow) {
+        paintStackedContent(painter, layoutRect);
+    } else if (m_layout == IconAfter) {
         // Text first, icon after. zh_CN: 文本在前，图标在后。
         if (!txt.isEmpty()) {
             fluent::painting::drawVerticallyCenteredText(painter,

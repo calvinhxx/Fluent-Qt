@@ -37,6 +37,7 @@ signals:
     void secondaryTextChanged(const QString& text);
 
 protected:
+    QSize stackedContentSize() const override;
     QRectF contentPaintRect(const QRectF& surfaceRect) const override;
     void paintEvent(QPaintEvent* event) override;
 

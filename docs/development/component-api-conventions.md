@@ -111,6 +111,27 @@ APIs under `src/components/**`.
 
 ## Inherited Qt Interaction Contracts
 
+An unconfigured `Button` starts at `TextOnly`. Assigning its first nonempty
+glyph or `QIcon` promotes it to `IconBefore`, preserving legacy icon-only
+setter calls and their size hints. `setFluentLayout()` records an explicit
+choice even when the value is already `TextOnly`: subsequent icon assignments
+must not override that choice. The rule applies to both glyph overloads,
+`setIcon()`, the Qt `icon` property, and generic derived buttons. Promotion emits
+one `fluentLayoutChanged`; regular icon changes emit `iconChanged`.
+
+`Button::IconAbove` and `Button::IconBelow` append to `ButtonLayout` without
+changing the existing numeric values (4 and 5 respectively). They center the
+icon above or below the label and include both rows and their token gap in
+`sizeHint()`. A missing icon keeps the text-only
+size; a missing label omits its row and gap. Font glyphs and `QIcon` share this
+geometry. ToggleButton, RepeatButton, DropDownButton, SplitButton,
+ToggleSplitButton, CompoundButton and HyperlinkButton support both layouts.
+Split/drop-down controls retain their trailing action regions in LTR and RTL;
+CompoundButton keeps its description after the title: with IconAbove it follows
+the icon/title stack; with IconBelow the title and description precede the icon.
+DatePicker/TimePicker and private command presenters keep their specialized
+content layouts rather than treating them as generic text/icon buttons.
+
 Standard single-line inputs and Standard buttons share the private
 `ControlMetrics_p.h` height calculation: a 32 logical-pixel baseline that grows
 for text metrics. A composition such as DataGridToolBar coordinates its child
@@ -151,6 +172,7 @@ their accent or error feedback. Derived text inputs must honor LineEdit's
 widths and `frameVisible` surface contract. `InputFrameTest` checks rendered
 defaults across text inputs and composed selectors, including hover, read-only,
 disabled, theme, layout direction and display scale.
+
 NumberBox exposes `commitInput()` for consumers that must read the numeric value
 before focus-out, including item delegates. Keep model commits in the delegate:
 Enter, Tab and focus-out commit current text; Escape cancels. Preserve the model's

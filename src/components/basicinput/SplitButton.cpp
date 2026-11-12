@@ -223,6 +223,11 @@ QRectF SplitButton::primaryContentRect(const QRectF& primaryRect) const
 
 QSize SplitButton::sizeHint() const
 {
+    if (fluentLayout() == IconAbove || fluentLayout() == IconBelow) {
+        const QSize primary = Button::sizeHint();
+        return QSize(primary.width() + m_secondaryWidth + (text().isEmpty() ? 0 : primaryTrailingInset()),
+            primary.height());
+    }
     const auto& spacing = themeSpacing();
     QFontMetrics fm(font());
 
@@ -235,7 +240,7 @@ QSize SplitButton::sizeHint() const
 
     const bool iconOnly = fluentLayout() == IconOnly;
     const QString txt = iconOnly ? QString() : text();
-    const bool hasIconFont = !iconGlyph().isEmpty();
+    const bool hasIconFont = fluentLayout() != TextOnly && !iconGlyph().isEmpty();
     const int txtWidth = splitButtonTextWidth(fm, txt);
     const int iconWidth = hasIconFont ? iconPixelSize() : 0;
     const int contentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && hasIconFont) ? iconGap : 0);
@@ -357,57 +362,64 @@ void SplitButton::paintEvent(QPaintEvent*)
     const double secondaryOffset = (m_pressPart == Secondary ? 0.5 : 0.0)
         + (m_animatedPart == Secondary ? rebound * 2.0 : 0.0);
 
-    QString txt = (fluentLayout() == IconOnly) ? "" : text();
-    bool hasIconFont = !iconGlyph().isEmpty();
-    int gap = (fluentSize() == Small) ? spacing.gap.tight : spacing.gap.normal;
-
-    int iconWidth = hasIconFont ? iconPixelSize() : 0;
-
-    // Text layouts keep a trailing inset before the divider (DropDownButton pattern). Icon-only
-    // centers in the full primary zone — applying that inset there slides the glyph left and
-    // leaves an awkward gap before the chevron.
-    // zh_CN: 带文字布局在分割线前保留尾缘间距(对齐 DropDownButton)。纯图标则在完整主区内居中——
-    // 若再套该 inset 会把字形挤向左侧，与箭头之间留下别扭空隙。
-    const bool iconOnly = fluentLayout() == IconOnly;
-    const QRectF layoutRect = iconOnly ? primaryRect : primaryContentRect(primaryRect);
-    const int hPadding =
-        (fluentSize() == Small) ? spacing.small : (fluentSize() == Large ? spacing.standard : spacing.padding.controlH);
-    const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
-    double cursorX = rightToLeft ? layoutRect.right() : layoutRect.left();
-    if (iconOnly && hasIconFont) {
-        cursorX = layoutRect.left() + (layoutRect.width() - iconWidth) / 2.0;
+    if (fluentLayout() == IconAbove || fluentLayout() == IconBelow) {
+        const QRectF layoutRect = text().isEmpty() ? primaryRect : primaryContentRect(primaryRect);
+        paintStackedContent(painter, layoutRect.translated(0, primaryOffset));
     } else {
-        cursorX += rightToLeft ? -hPadding : hPadding;
-    }
+        QString txt = (fluentLayout() == IconOnly) ? "" : text();
+        bool hasIconFont = fluentLayout() != TextOnly && !iconGlyph().isEmpty();
+        int gap = (fluentSize() == Small) ? spacing.gap.tight : spacing.gap.normal;
 
-    if (hasIconFont) {
-        const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
-        const qreal iconX = (!iconOnly && rightToLeft) ? cursorX - iconWidth : cursorX;
-        QRectF iconRect(iconX, primaryRect.top() + primaryOffset, iconWidth, primaryRect.height());
-        if (usesFluentIcons) {
-            Typography::Icons::paintGlyph(painter, iconRect, iconGlyph(), iconPixelSize(), Qt::AlignCenter);
+        int iconWidth = hasIconFont ? iconPixelSize() : 0;
+
+        // Text layouts keep a trailing inset before the divider (DropDownButton pattern). Icon-only
+        // centers in the full primary zone — applying that inset there slides the glyph left and
+        // leaves an awkward gap before the chevron.
+        // zh_CN: 带文字布局在分割线前保留尾缘间距(对齐 DropDownButton)。纯图标则在完整主区内居中——
+        // 若再套该 inset 会把字形挤向左侧，与箭头之间留下别扭空隙。
+        const bool iconOnly = fluentLayout() == IconOnly;
+        const QRectF layoutRect = iconOnly ? primaryRect : primaryContentRect(primaryRect);
+        const int hPadding = (fluentSize() == Small)
+            ? spacing.small
+            : (fluentSize() == Large ? spacing.standard : spacing.padding.controlH);
+        const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
+        double cursorX = rightToLeft ? layoutRect.right() : layoutRect.left();
+        if (iconOnly && hasIconFont) {
+            cursorX = layoutRect.left() + (layoutRect.width() - iconWidth) / 2.0;
         } else {
-            QFont iconFont(iconFontFamily());
-            iconFont.setPixelSize(iconPixelSize());
-            painter.setFont(iconFont);
-            painter.drawText(iconRect, Qt::AlignCenter, iconGlyph());
-            painter.setFont(font());
+            cursorX += rightToLeft ? -hPadding : hPadding;
         }
-        if (fluentLayout() != IconOnly) {
-            cursorX += rightToLeft ? -(iconWidth + gap) : iconWidth + gap;
-        }
-    }
 
-    if (!txt.isEmpty()) {
-        const QRectF textRect = rightToLeft
-            ? QRectF(layoutRect.left(), primaryRect.top() + primaryOffset,
-                  qMax<qreal>(0.0, cursorX - layoutRect.left()), primaryRect.height())
-            : QRectF(cursorX, primaryRect.top() + primaryOffset, qMax<qreal>(0.0, layoutRect.right() - cursorX),
-                  primaryRect.height());
-        painter.save();
-        painter.setClipRect(layoutRect);
-        painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter), txt);
-        painter.restore();
+        if (hasIconFont) {
+            const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
+            const qreal iconX = (!iconOnly && rightToLeft) ? cursorX - iconWidth : cursorX;
+            QRectF iconRect(iconX, primaryRect.top() + primaryOffset, iconWidth, primaryRect.height());
+            if (usesFluentIcons) {
+                Typography::Icons::paintGlyph(painter, iconRect, iconGlyph(), iconPixelSize(), Qt::AlignCenter);
+            } else {
+                QFont iconFont(iconFontFamily());
+                iconFont.setPixelSize(iconPixelSize());
+                painter.setFont(iconFont);
+                painter.drawText(iconRect, Qt::AlignCenter, iconGlyph());
+                painter.setFont(font());
+            }
+            if (fluentLayout() != IconOnly) {
+                cursorX += rightToLeft ? -(iconWidth + gap) : iconWidth + gap;
+            }
+        }
+
+        if (!txt.isEmpty()) {
+            const QRectF textRect = rightToLeft
+                ? QRectF(layoutRect.left(), primaryRect.top() + primaryOffset,
+                      qMax<qreal>(0.0, cursorX - layoutRect.left()), primaryRect.height())
+                : QRectF(cursorX, primaryRect.top() + primaryOffset, qMax<qreal>(0.0, layoutRect.right() - cursorX),
+                      primaryRect.height());
+            painter.save();
+            painter.setClipRect(layoutRect);
+            painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
+                txt);
+            painter.restore();
+        }
     }
 
     // 7. Paint the chevron; it also sinks 0.5px while pressed. zh_CN: 绘制下拉箭头，按下时同样下沉 0.5px。

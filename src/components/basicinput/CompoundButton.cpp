@@ -51,6 +51,16 @@ QSize CompoundButton::sizeHint() const
     const QFontMetrics secondaryMetrics(secondaryFont());
     const int horizontalPadding = spacing.standard;
     const int contentWidth = secondaryMetrics.horizontalAdvance(m_secondaryText) + horizontalPadding * 2;
+    if (fluentLayout() == IconBelow) {
+        const int verticalPadding = fluentSize() == Small
+            ? spacing.gap.tight
+            : (fluentSize() == Large ? spacing.small : spacing.padding.controlV);
+        return QSize(qMax(baseSize.width(), contentWidth),
+            qMax(baseSize.height(), stackedContentSize().height() + verticalPadding * 2));
+    }
+    if (fluentLayout() == IconAbove)
+        return QSize(qMax(baseSize.width(), contentWidth),
+            baseSize.height() + secondaryMetrics.height() + spacing.gap.tight);
     const int contentHeight = QFontMetrics(font()).height() + secondaryMetrics.height() + spacing.gap.tight
         + spacing.small * 2;
     return QSize(qMax(baseSize.width(), contentWidth), qMax(48, contentHeight));
@@ -67,16 +77,33 @@ void CompoundButton::onThemeUpdated()
     updateGeometry();
 }
 
+QSize CompoundButton::stackedContentSize() const
+{
+    QSize content = Button::stackedContentSize();
+    if (fluentLayout() != IconBelow || m_secondaryText.isEmpty())
+        return content;
+    const QFontMetrics metrics(secondaryFont());
+    const auto& spacing = themeSpacing();
+    const bool hasIcon = !iconGlyph().isEmpty() || !icon().isNull();
+    const int gap = !text().isEmpty()
+        ? spacing.gap.tight
+        : (hasIcon ? (fluentSize() == Small ? spacing.gap.tight : spacing.gap.normal) : 0);
+    content.setWidth(qMax(content.width(), metrics.horizontalAdvance(m_secondaryText)));
+    content.setHeight(content.height() + metrics.height() + gap);
+    return content;
+}
+
 QRectF CompoundButton::contentPaintRect(const QRectF& surfaceRect) const
 {
-    if (m_secondaryText.isEmpty())
+    if (m_secondaryText.isEmpty() || fluentLayout() == IconBelow)
         return Button::contentPaintRect(surfaceRect);
 
     const QFontMetrics primaryMetrics(font());
     const QFontMetrics secondaryMetrics(secondaryFont());
-    const qreal contentHeight = primaryMetrics.height() + themeSpacing().gap.tight + secondaryMetrics.height();
+    const qreal primaryHeight = fluentLayout() == IconAbove ? stackedContentSize().height() : primaryMetrics.height();
+    const qreal contentHeight = primaryHeight + themeSpacing().gap.tight + secondaryMetrics.height();
     const qreal top = surfaceRect.top() + (surfaceRect.height() - contentHeight) / 2.0;
-    return QRectF(surfaceRect.left(), top, surfaceRect.width(), primaryMetrics.height());
+    return QRectF(surfaceRect.left(), top, surfaceRect.width(), primaryHeight);
 }
 
 void CompoundButton::paintEvent(QPaintEvent* event)
@@ -119,7 +146,11 @@ QFont CompoundButton::secondaryFont() const
 QRectF CompoundButton::secondaryPaintRect(const QRectF& surfaceRect) const
 {
     const QRectF primaryRect = contentPaintRect(surfaceRect);
-    const qreal top = primaryRect.bottom() + themeSpacing().gap.tight;
+    const qreal labelHeight = text().isEmpty() ? 0 : QFontMetrics(font()).size(0, text()).height();
+    const qreal top = fluentLayout() == IconBelow
+        ? surfaceRect.center().y() - stackedContentSize().height() / 2.0 + labelHeight
+            + (text().isEmpty() ? 0 : themeSpacing().gap.tight)
+        : primaryRect.bottom() + themeSpacing().gap.tight;
     return QRectF(surfaceRect.left() + themeSpacing().standard, top,
         qMax<qreal>(0.0, surfaceRect.width() - themeSpacing().standard * 2), QFontMetrics(secondaryFont()).height());
 }
