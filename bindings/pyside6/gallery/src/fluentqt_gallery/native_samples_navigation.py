@@ -127,8 +127,8 @@ _MENUS_HELPER = _SourceHelper(_FEEDBACK_HELPER + dedent(
 ))
 
 _COMMAND_FLYOUT_IMPORTS = (
-    "from PySide6.QtCore import QMargins, QRect, QRectF, QTimer, Qt\n"
-    "from PySide6.QtGui import QAction, QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen\n"
+    "from PySide6.QtCore import QMargins, QPointF, QRect, QRectF, QTimer, Qt\n"
+    "from PySide6.QtGui import QAction, QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QRegion\n"
     "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
     "from fluentqt_gallery.visual import gallery_font_icon_pixmap\n"
     "from fluentqt_gallery.window import gallery_window_editing_command_router"
@@ -175,6 +175,21 @@ _COMMAND_FLYOUT_HELPER = _SourceHelper(_FEEDBACK_HELPER + dedent(
             self._action_glyphs.append((action, glyph))
             self._update_action_icon(action, glyph)
 
+        def _center_action_icon(self, pixmap):
+            ink = QRegion(pixmap.mask()).boundingRect()
+            if ink.isEmpty():
+                return pixmap
+            dpr = pixmap.devicePixelRatioF()
+            centered = QPixmap(pixmap.size())
+            centered.setDevicePixelRatio(dpr)
+            centered.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(centered)
+            offset = QPointF((pixmap.width() - ink.width()) // 2 - ink.x(),
+                             (pixmap.height() - ink.height()) // 2 - ink.y())
+            painter.drawPixmap(offset / dpr, pixmap)
+            painter.end()
+            return centered
+
         def _update_action_icon(self, action, glyph):
             colors = self.theme_tokens()["colors"]
             icon = QIcon()
@@ -185,6 +200,8 @@ _COMMAND_FLYOUT_HELPER = _SourceHelper(_FEEDBACK_HELPER + dedent(
                 disabled = gallery_font_icon_pixmap(
                     glyph, size, colors["textDisabled"]
                 )
+                normal = self._center_action_icon(normal)
+                disabled = self._center_action_icon(disabled)
                 for mode, state in (
                     (QIcon.Mode.Normal, QIcon.State.Off),
                     (QIcon.Mode.Active, QIcon.State.Off),
@@ -427,31 +444,92 @@ register_source_samples(
     {
         "menu-command-shortcuts": (
             "root",
-            _script(_MENUS_HELPER + """
+            _script(_COMMAND_FLYOUT_HELPER + """
                 root = SampleSurface(globals().get("gallery_parent"))
-                button = fluentqt.DropDownButton("File", root)
-                button.setMinimumWidth(120)
+                status = make_hint_label(
+                    root,
+                    "Open File or use shortcuts · disabled items keep icon and shortcut alignment",
+                )
+
+                panel = CommandPreviewPanel(root)
+                panel.setFixedSize(560, 88)
+                panel_layout = QHBoxLayout(panel)
+                panel_layout.setContentsMargins(16, 12, 16, 12)
+                panel_layout.setSpacing(12)
+
+                doc_icon = fluentqt.FontIcon(fluentqt.Typography.Icons.Document, panel)
+                doc_icon.setIconSize(28)
+                doc_text = vertical_group(panel, 1)
+                doc_text.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+                doc_title = make_preview_label(
+                    doc_text,
+                    "Quarterly brief.md",
+                    fluentqt.FontRole.BodyStrong,
+                    fluentqt.Label.TextColorRole.Primary,
+                )
+                doc_meta = make_preview_label(
+                    doc_text,
+                    "Ctrl+N New · Ctrl+O Open · Ctrl+S Save",
+                    fluentqt.FontRole.Caption,
+                    fluentqt.Label.TextColorRole.Secondary,
+                )
+                doc_text.layout().addWidget(doc_title)
+                doc_text.layout().addWidget(doc_meta)
+
+                button = fluentqt.DropDownButton("File", panel)
+                button.setIconGlyph(fluentqt.Typography.Icons.Document)
+                button.setMinimumWidth(112)
 
                 menu = fluentqt.FluentMenu("", button)
-                add_feedback_action(
-                    menu, root, "New", QKeySequence.StandardKey.New
+
+                def add_menu_item(text, glyph, feedback, shortcut=None):
+                    action = menu.addAction(text)
+                    if shortcut is not None:
+                        action.setShortcut(shortcut)
+                    root.set_action_glyph(action, glyph)
+                    action.triggered.connect(
+                        lambda _=False, label=text, note=feedback: (
+                            show_feedback(root, f"{label} selected"),
+                            status.setText(note),
+                        )
+                    )
+                    return action
+
+                add_menu_item(
+                    "New",
+                    fluentqt.Typography.Icons.Add,
+                    "Last command: New · created a blank draft",
+                    QKeySequence.StandardKey.New,
                 )
-                add_feedback_action(
-                    menu, root, "Open...", QKeySequence.StandardKey.Open
+                add_menu_item(
+                    "Open...",
+                    fluentqt.Typography.Icons.Folder,
+                    "Last command: Open... · ready to browse documents",
+                    QKeySequence.StandardKey.Open,
                 )
-                add_feedback_action(
-                    menu, root, "Save", QKeySequence.StandardKey.Save
+                add_menu_item(
+                    "Save",
+                    fluentqt.Typography.Icons.Save,
+                    "Last command: Save · saved Quarterly brief.md",
+                    QKeySequence.StandardKey.Save,
                 )
                 menu.addSeparator()
                 publish = menu.addAction("Publish")
                 publish.setEnabled(False)
-                add_feedback_action(menu, root, "Close")
+                root.set_action_glyph(publish, fluentqt.Typography.Icons.Share)
+                add_menu_item(
+                    "Close",
+                    fluentqt.Typography.Icons.Cancel,
+                    "Last command: Close · closed document session",
+                )
                 button.setMenu(menu)
 
-                root.content_layout.addWidget(
-                    button, 0, Qt.AlignmentFlag.AlignLeft
-                )
-                """, _MENUS_IMPORTS),
+                panel_layout.addWidget(doc_icon)
+                panel_layout.addWidget(doc_text, 1)
+                panel_layout.addWidget(button)
+                root.content_layout.addWidget(panel)
+                root.content_layout.addWidget(status)
+                """, _COMMAND_FLYOUT_IMPORTS + "\nfrom PySide6.QtGui import QKeySequence"),
         ),
         "menu-cascading-selection": (
             "root",
@@ -466,6 +544,18 @@ register_source_samples(
                 add_feedback_action(sort_menu, root, "Name")
                 add_feedback_action(sort_menu, root, "Date modified")
                 add_feedback_action(sort_menu, root, "Type")
+                order_menu = fluentqt.FluentMenu("Order", sort_menu)
+                order_group = QActionGroup(order_menu)
+                order_group.setExclusive(True)
+                for name in ("Ascending", "Descending"):
+                    action = order_menu.addAction(name)
+                    action.setCheckable(True)
+                    action.setChecked(name == "Ascending")
+                    order_group.addAction(action)
+                    action.triggered.connect(lambda checked=False, value=name:
+                        status.setText(f"Order: {value}"))
+                sort_menu.addSeparator()
+                sort_menu.addMenu(order_menu)
                 menu.addMenu(sort_menu)
                 menu.addSeparator()
                 view_group = QActionGroup(menu)
@@ -513,9 +603,32 @@ register_source_samples(
     {
         "menu-bar-hosted-surface": (
             "root",
-            _script(_MENUS_HELPER + """
+            _script(_COMMAND_FLYOUT_HELPER + """
                 root = SampleSurface(globals().get("gallery_parent"))
-                menu_bar = fluentqt.FluentMenuBar(root)
+                status = make_hint_label(
+                    root,
+                    "Background hidden · the menu bar inherits the enclosing panel header",
+                )
+
+                panel = CommandPreviewPanel(root)
+                panel.setFixedSize(560, 124)
+                panel_layout = QVBoxLayout(panel)
+                panel_layout.setContentsMargins(14, 10, 14, 12)
+                panel_layout.setSpacing(10)
+
+                header = horizontal_group(panel, 10)
+                header_icon = fluentqt.FontIcon(
+                    fluentqt.Typography.Icons.Document, header
+                )
+                header_icon.setIconSize(18)
+                header_title = make_preview_label(
+                    header,
+                    "Studio",
+                    fluentqt.FontRole.BodyStrong,
+                    fluentqt.Label.TextColorRole.Primary,
+                )
+
+                menu_bar = fluentqt.FluentMenuBar(header)
                 menu_bar.setSizePolicy(
                     QSizePolicy.Policy.MinimumExpanding,
                     QSizePolicy.Policy.Fixed,
@@ -523,33 +636,116 @@ register_source_samples(
                 menu_bar.setMinimumWidth(340)
                 menu_bar.setBackgroundVisible(False)
 
+                def add_menu_item(menu, text, glyph, shortcut=None):
+                    action = menu.addAction(text)
+                    if shortcut is not None:
+                        action.setShortcut(shortcut)
+                    root.set_action_glyph(action, glyph)
+                    action.triggered.connect(
+                        lambda _=False, label=text: (
+                            show_feedback(root, f"{label} selected"),
+                            status.setText(f"Triggered: {label}"),
+                        )
+                    )
+                    return action
+
                 file_menu = fluentqt.FluentMenu("File", menu_bar)
-                add_feedback_action(file_menu, root, "New")
-                add_feedback_action(file_menu, root, "Open...")
-                add_feedback_action(file_menu, root, "Save")
+                add_menu_item(
+                    file_menu,
+                    "New",
+                    fluentqt.Typography.Icons.Add,
+                    QKeySequence.StandardKey.New,
+                )
+                add_menu_item(
+                    file_menu,
+                    "Open...",
+                    fluentqt.Typography.Icons.Folder,
+                    QKeySequence.StandardKey.Open,
+                )
+                add_menu_item(
+                    file_menu,
+                    "Save",
+                    fluentqt.Typography.Icons.Save,
+                    QKeySequence.StandardKey.Save,
+                )
                 menu_bar.addMenu(file_menu)
 
                 edit_menu = fluentqt.FluentMenu("Edit", menu_bar)
-                add_feedback_action(
-                    edit_menu, root, "Undo", QKeySequence.StandardKey.Undo
+                add_menu_item(
+                    edit_menu,
+                    "Undo",
+                    fluentqt.Typography.Icons.Undo,
+                    QKeySequence.StandardKey.Undo,
                 )
-                add_feedback_action(
-                    edit_menu, root, "Cut", QKeySequence.StandardKey.Cut
+                edit_menu.addSeparator()
+                add_menu_item(
+                    edit_menu,
+                    "Cut",
+                    fluentqt.Typography.Icons.Cut,
+                    QKeySequence.StandardKey.Cut,
                 )
-                add_feedback_action(
-                    edit_menu, root, "Copy", QKeySequence.StandardKey.Copy
+                add_menu_item(
+                    edit_menu,
+                    "Copy",
+                    fluentqt.Typography.Icons.Copy,
+                    QKeySequence.StandardKey.Copy,
                 )
-                add_feedback_action(
-                    edit_menu, root, "Paste", QKeySequence.StandardKey.Paste
+                add_menu_item(
+                    edit_menu,
+                    "Paste",
+                    fluentqt.Typography.Icons.Paste,
+                    QKeySequence.StandardKey.Paste,
                 )
                 menu_bar.addMenu(edit_menu)
 
+                view_menu = fluentqt.FluentMenu("View", menu_bar)
+                word_wrap = view_menu.addAction("Word wrap")
+                word_wrap.setCheckable(True)
+                word_wrap.setChecked(True)
+                word_wrap.toggled.connect(
+                    lambda checked: status.setText(
+                        "Word wrap: On" if checked else "Word wrap: Off"
+                    )
+                )
+                menu_bar.addMenu(view_menu)
+
                 help_menu = fluentqt.FluentMenu("Help", menu_bar)
-                add_feedback_action(help_menu, root, "About")
+                add_menu_item(help_menu, "About", fluentqt.Typography.Icons.Info)
                 menu_bar.addMenu(help_menu)
 
-                root.content_layout.addWidget(menu_bar)
-                """, _MENUS_IMPORTS),
+                header.layout().addWidget(header_icon)
+                header.layout().addWidget(header_title)
+                header.layout().addWidget(menu_bar, 1)
+
+                note_row = horizontal_group(panel, 10)
+                note_icon = fluentqt.FontIcon(
+                    fluentqt.Typography.Icons.Edit, note_row
+                )
+                note_icon.setIconSize(24)
+                note_text = vertical_group(note_row, 1)
+                note_text.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+                note_title = make_preview_label(
+                    note_text,
+                    "Release checklist.md",
+                    fluentqt.FontRole.BodyStrong,
+                    fluentqt.Label.TextColorRole.Primary,
+                )
+                note_meta = make_preview_label(
+                    note_text,
+                    "Hosted canvas disabled · blends cleanly into the panel surface",
+                    fluentqt.FontRole.Caption,
+                    fluentqt.Label.TextColorRole.Secondary,
+                )
+                note_text.layout().addWidget(note_title)
+                note_text.layout().addWidget(note_meta)
+                note_row.layout().addWidget(note_icon)
+                note_row.layout().addWidget(note_text)
+
+                panel_layout.addWidget(header)
+                panel_layout.addWidget(note_row)
+                root.content_layout.addWidget(panel)
+                root.content_layout.addWidget(status)
+                """, _COMMAND_FLYOUT_IMPORTS + "\nfrom PySide6.QtGui import QKeySequence"),
         ),
         "menu-bar-access-keys": (
             "root",
@@ -701,6 +897,7 @@ register_source_samples(
                 )
                 document_icon.setIconSize(28)
                 document_text = vertical_group(document_row, 1)
+                document_text.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
                 document_title = make_preview_label(
                     document_text,
                     "Quarterly report",
@@ -1009,6 +1206,7 @@ register_source_samples(
                 )
                 file_icon.setIconSize(28)
                 file_text = vertical_group(panel, 1)
+                file_text.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
                 file_title = make_preview_label(
                     file_text,
                     "Release-notes.md",
@@ -3107,29 +3305,74 @@ register_source_samples(
     {
         "command-palette-basic": (
             "root",
-            _script("""
-                root = QWidget(globals().get("gallery_parent"))
-                layout = QVBoxLayout(root)
-                location = fluentqt.Label("Current page: Home", root)
+            _script(_COMMAND_FLYOUT_HELPER + """
+                root = SampleSurface(globals().get("gallery_parent"))
+                status = make_hint_label(
+                    root,
+                    "Search a page name, move with Up/Down, and press Enter or Escape.",
+                )
+
+                panel = CommandPreviewPanel(root)
+                panel.setFixedSize(560, 88)
+                panel_layout = QHBoxLayout(panel)
+                panel_layout.setContentsMargins(16, 12, 16, 12)
+                panel_layout.setSpacing(12)
+
+                page_icon = fluentqt.FontIcon(fluentqt.Typography.Icons.Home, panel)
+                page_icon.setIconSize(28)
+                page_text = vertical_group(panel, 1)
+                page_text.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+                location = make_preview_label(
+                    page_text,
+                    "Current page: Home",
+                    fluentqt.FontRole.BodyStrong,
+                    fluentqt.Label.TextColorRole.Primary,
+                )
                 location.setObjectName("Gallery.CommandPalette.BasicLocation")
+                subtitle = make_preview_label(
+                    page_text,
+                    "Navigation · Home, Inbox, Documents, Folders",
+                    fluentqt.FontRole.Caption,
+                    fluentqt.Label.TextColorRole.Secondary,
+                )
+                page_text.layout().addWidget(location)
+                page_text.layout().addWidget(subtitle)
+
                 palette = fluentqt.CommandPalette(root)
                 palette.setObjectName("Gallery.CommandPalette.Basic")
                 palette.setPlaceholderText("Search pages...")
-                pages = ["Home", "Inbox", "Documents", "Folders"]
-                for page in pages:
+                palette.setDim(True)
+                palette.setDimOpacity(0.12)
+                palette.setBackdropBlurRadius(8)
+                pages = (
+                    ("Home", fluentqt.Typography.Icons.Home),
+                    ("Inbox", fluentqt.Typography.Icons.Mail),
+                    ("Documents", fluentqt.Typography.Icons.Document),
+                    ("Folders", fluentqt.Typography.Icons.Folder),
+                )
+                for page, glyph in pages:
                     action = QAction(page, root)
+                    root.set_action_glyph(action, glyph)
                     palette.addCommand(action, "Navigation")
                     action.triggered.connect(
-                        lambda checked=False, page=page:
-                        location.setText(f"Current page: {page}")
+                        lambda checked=False, name=page, icon_glyph=glyph: (
+                            location.setText(f"Current page: {name}"),
+                            page_icon.setGlyph(icon_glyph),
+                        )
                     )
-                open_button = fluentqt.Button("Search pages", root)
+                open_button = fluentqt.Button("Search pages", panel)
                 open_button.setObjectName("Gallery.CommandPalette.OpenBasic")
                 open_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+                open_button.setIconGlyph(fluentqt.Typography.Icons.Search)
+                open_button.setMinimumWidth(124)
                 open_button.clicked.connect(palette.open)
-                layout.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)
-                layout.addWidget(location)
-            """, _MENUS_IMPORTS),
+
+                panel_layout.addWidget(page_icon)
+                panel_layout.addWidget(page_text, 1)
+                panel_layout.addWidget(open_button)
+                root.content_layout.addWidget(panel)
+                root.content_layout.addWidget(status)
+                """, _COMMAND_FLYOUT_IMPORTS),
         ),
         "command-palette-shared-actions": (
             "root",

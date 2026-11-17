@@ -176,8 +176,8 @@ const QHash<QString, QString>& routeDescriptions()
             QStringLiteral("A modal dialog with title, content, and up to three "
                            "commit buttons.")},
         {QStringLiteral("dialog"),
-            QStringLiteral("A modal window surface that hosts arbitrary content "
-                           "above the app.")},
+            QStringLiteral("A same-window dialog surface with configurable modality "
+                           "and application-provided content.")},
         {QStringLiteral("flyout"),
             QStringLiteral("A light-dismiss container anchored to the control that "
                            "opened it.")},
@@ -186,8 +186,8 @@ const QHash<QString, QString>& routeDescriptions()
             QStringLiteral("An anchored tip that draws attention to a feature "
                            "without blocking interaction.")},
         {QStringLiteral("coach-mark"),
-            QStringLiteral("A standalone teaching tip in its own window that points "
-                           "a tail at a target and glides between them.")},
+            QStringLiteral("A same-window teaching tip that points a tail at a target "
+                           "and can glide between targets.")},
         // Spatial
         {QStringLiteral("plugins"), QStringLiteral("Explore optional FluentQt plugins and their live examples.")},
         {QStringLiteral("spatial"),
@@ -244,8 +244,8 @@ const QHash<QString, QString>& routeDescriptions()
                            "animated indicator.")},
         {QStringLiteral("selector-bar"), QStringLiteral("A row of selectable items for switching between views.")},
         {QStringLiteral("tab-view"),
-            QStringLiteral("A control that hosts multiple pages of content behind a "
-                           "tab strip.")},
+            QStringLiteral("A tab strip with selection, closing and reordering; "
+                           "the application hosts and switches the pages.")},
         // Scrolling
         {QStringLiteral("annotated-scrollbar"),
             QStringLiteral("A scrollbar with labels that make long content easier "

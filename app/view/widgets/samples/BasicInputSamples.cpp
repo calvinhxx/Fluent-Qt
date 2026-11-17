@@ -270,8 +270,8 @@ QVector<GallerySample> buttonSamples()
                 return group;
             }),
         makeSample(QStringLiteral("button-interaction-state"), QStringLiteral("Interaction state preview"),
-            QStringLiteral("Forced pointer, keyboard-focus, and disabled states are shown side by "
-                           "side for review."),
+            QStringLiteral("Hover, pressed, and disabled states are forced for review. "
+                           "Use Tab to move to the Focus button and see its focus cue."),
             QStringLiteral(
                 "auto* rest = new Button(\"Rest\", this);\n\n"
                 "auto* hover = new Button(\"Hover\", this);\n"

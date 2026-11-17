@@ -128,7 +128,7 @@ _STATUS_HELPER = dedent(
         return label
 
 
-    def labeled_column(parent, label_text, content):
+    def labeled_column(parent, label_text, content, slot_height=0):
         cell = QWidget(parent)
         cell.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         cell_layout = QVBoxLayout(cell)
@@ -137,10 +137,35 @@ _STATUS_HELPER = dedent(
         cell_layout.setAlignment(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
-        content.setParent(cell)
-        cell_layout.addWidget(content, 0, Qt.AlignmentFlag.AlignHCenter)
+        effective_w = (
+            content.minimumWidth()
+            if content.minimumWidth() > 0
+            and content.minimumWidth() == content.maximumWidth()
+            else max(content.sizeHint().width(), content.width())
+        )
+        effective_h = (
+            content.minimumHeight()
+            if content.minimumHeight() > 0
+            and content.minimumHeight() == content.maximumHeight()
+            else content.sizeHint().height()
+        )
+        if slot_height > 0:
+            slot = QWidget(cell)
+            slot.setFixedSize(
+                max(effective_w, 1),
+                max(slot_height, effective_h),
+            )
+            slot_layout = QHBoxLayout(slot)
+            slot_layout.setContentsMargins(0, 0, 0, 0)
+            slot_layout.setSpacing(0)
+            content.setParent(slot)
+            slot_layout.addWidget(content, 0, Qt.AlignmentFlag.AlignCenter)
+            cell_layout.addWidget(slot, 0, Qt.AlignmentFlag.AlignHCenter)
+        else:
+            content.setParent(cell)
+            cell_layout.addWidget(content, 0, Qt.AlignmentFlag.AlignHCenter)
         label = make_caption_label(cell, label_text)
-        label.setMinimumWidth(max(72, content.sizeHint().width()))
+        label.setMinimumWidth(max(72, effective_w))
         cell_layout.addWidget(label, 0, Qt.AlignmentFlag.AlignHCenter)
         return cell
 
@@ -230,7 +255,7 @@ register_source_samples(
                 for name, caption, size in values:
                     avatar = fluentqt.Avatar(name, row)
                     avatar.setAvatarSize(size)
-                    row_layout.addWidget(labeled_column(row, caption, avatar))
+                    row_layout.addWidget(labeled_column(row, caption, avatar, 56))
                 layout.addWidget(row, 0, Qt.AlignmentFlag.AlignLeft)
                 """
             ),
@@ -261,7 +286,7 @@ register_source_samples(
                     ("Busy", busy),
                     ("Offline", offline),
                 ):
-                    row_layout.addWidget(labeled_column(row, caption, avatar))
+                    row_layout.addWidget(labeled_column(row, caption, avatar, 56))
                 layout.addWidget(row, 0, Qt.AlignmentFlag.AlignLeft)
                 """,
                 "from PySide6.QtGui import QPixmap\n"
@@ -297,7 +322,7 @@ register_source_samples(
                     ("Auto value", value_badge),
                     ("Explicit dot", explicit_dot),
                 ):
-                    row_layout.addWidget(labeled_column(row, caption, badge))
+                    row_layout.addWidget(labeled_column(row, caption, badge, 20))
                 layout.addWidget(row)
                 """
             ),
@@ -510,7 +535,7 @@ register_source_samples(
                 root, layout = make_status_surface()
                 progress_bar = fluentqt.ProgressBar(root)
                 progress_bar.setRange(0, 100)
-                progress_bar.setBarWidth(320)
+                progress_bar.setBarWidth(260)
 
                 status = make_status_label(root, "Progress: 44%")
                 status.setWordWrap(False)
@@ -536,15 +561,17 @@ register_source_samples(
                 progress_box.valueChanged.connect(update)
                 progress_box.setValue(44)
 
-                row, row_layout = horizontal_group(root, 28)
+                row, row_layout = horizontal_group(root, 24)
                 row_layout.addWidget(
                     progress_bar, 0, Qt.AlignmentFlag.AlignVCenter
                 )
                 row_layout.addWidget(
                     progress_box, 0, Qt.AlignmentFlag.AlignVCenter
                 )
+                row_layout.addWidget(
+                    status, 0, Qt.AlignmentFlag.AlignVCenter
+                )
                 layout.addWidget(row)
-                layout.addWidget(status)
                 """,
                 "import math",
             ),
@@ -620,7 +647,7 @@ register_source_samples(
                     ("Medium", medium),
                     ("Large", large),
                 ):
-                    row_layout.addWidget(labeled_column(row, caption, ring))
+                    row_layout.addWidget(labeled_column(row, caption, ring, 64))
                 layout.addWidget(row)
                 """
             ),

@@ -44,6 +44,7 @@
 #include "components/collections/StackView.h"
 #include "components/collections/TreeView.h"
 #include "compatibility/TextPaintCompat.h"
+#include "CollectionPhotoIllustrations.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
@@ -474,7 +475,9 @@ void loadFlowNetworkImage(QStandardItemModel* model, int row, const QUrl& url, Q
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setTransferTimeout(10000);
+#ifndef Q_OS_WASM
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Fluent-Qt Gallery/1.0"));
+#endif
     QNetworkReply* reply = manager->get(request);
     QObject::connect(reply, &QNetworkReply::finished, manager, [modelGuard, index, reply, url]() {
         reply->deleteLater();
@@ -526,8 +529,7 @@ QStandardItemModel* makeFlowPhotoModel(QObject* parent, const QVector<FlowPhotoI
         item->setEditable(false);
         item->setData(photo.subtitle, PhotoSubtitleRole);
         item->setData(photo.size, Qt::SizeHintRole);
-        item->setData(
-            gradientPixmap(QSize(photo.size.width() * 2, photo.size.height() * 2), photo.from, photo.to, QString{}),
+        item->setData(fluent::gallery::detail::renderScenicPhotoPixmap(photo.size, photo.from, photo.title, 2.0),
             PhotoImageRole);
         model->appendRow(item);
     }
