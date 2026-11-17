@@ -21,18 +21,19 @@ using samples::SpatialPreviewPanel;
 
 QString spatialPanelLifetimeSource()
 {
-    return QStringLiteral("using namespace fluent;\n"
-                          "class SpatialPreviewPanel final : public QWidget {\n"
-                          "public:\n"
-                          "    using QWidget::QWidget;\n"
-                          "    ~SpatialPreviewPanel() override\n"
-                          "    {\n"
-                          "        // Deactivate before dismantling the panel's widgets.\n"
-                          "        if (auto* session = findChild<spatial::SpatialSession*>(\n"
-                          "                QString(), Qt::FindDirectChildrenOnly))\n"
-                          "            session->deactivate();\n"
-                          "    }\n"
-                          "};\n\n");
+    return QStringLiteral(
+        "using namespace fluent;\n"
+        "class SpatialPreviewPanel final : public QWidget {\n"
+        "public:\n"
+        "    using QWidget::QWidget;\n"
+        "    ~SpatialPreviewPanel() override\n"
+        "    {\n"
+        "        // Deactivate before dismantling the panel's widgets.\n"
+        "        if (auto* session = findChild<spatial::SpatialSession*>(\n"
+        "                QString(), Qt::FindDirectChildrenOnly))\n"
+        "            session->deactivate();\n"
+        "    }\n"
+        "};\n\n");
 }
 
 // Show the small Spatial integration first; keep the complete preview source available.
@@ -88,25 +89,26 @@ QString spatialUsage(const QString& id)
             "    item->setPosition(position);\n"
             "});\n");
     if (id == QStringLiteral("spatial-view-tree"))
-        return QStringLiteral("using namespace fluent;\n"
-                              "// card and the surrounding layout are built in Full example.\n"
-                              "auto* session = new spatial::SpatialSession(panel, panel);\n"
-                              "spatial::SpatialView* view = nullptr;\n"
-                              "if (session->activate())\n"
-                              "    view = session->createView(panel);\n"
-                              "if (!view) {\n"
-                              "    view = new spatial::SpatialView(panel);\n"
-                              "    view->setSpatialEnabled(false);\n"
-                              "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
-                              "}\n"
-                              "column->addWidget(view);\n"
-                              "view->setCameraDistance(1400);\n"
-                              "view->setMaximumTilt(QPointF(4, 6));\n"
-                              "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
-                              "item->setRotation(QVector3D(5, -12, 0));\n"
-                              "item->setSurfaceIntensity(0.75);\n"
-                              "item->setHoverLift(4.5);\n"
-                              "// The TreeView keeps its model, row delegate and selection.\n");
+        return QStringLiteral(
+            "using namespace fluent;\n"
+            "// card and the surrounding layout are built in Full example.\n"
+            "auto* session = new spatial::SpatialSession(panel, panel);\n"
+            "spatial::SpatialView* view = nullptr;\n"
+            "if (session->activate())\n"
+            "    view = session->createView(panel);\n"
+            "if (!view) {\n"
+            "    view = new spatial::SpatialView(panel);\n"
+            "    view->setSpatialEnabled(false);\n"
+            "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+            "}\n"
+            "column->addWidget(view);\n"
+            "view->setCameraDistance(1400);\n"
+            "view->setMaximumTilt(QPointF(4, 6));\n"
+            "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
+            "item->setRotation(QVector3D(5, -12, 0));\n"
+            "item->setSurfaceIntensity(0.75);\n"
+            "item->setHoverLift(4.5);\n"
+            "// The TreeView keeps its model, row delegate and selection.\n");
     if (id == QStringLiteral("spatial-view-hybrid"))
         return QStringLiteral(
             "using namespace fluent;\n"
@@ -149,25 +151,26 @@ QString spatialUsage(const QString& id)
             "item->setSurfaceIntensity(0.75);\n"
             "item->setHoverLift(4.5);\n"
             "// The LineEdit stays outside view; its textChanged signal updates card.\n");
-    return QStringLiteral("using namespace fluent;\n"
-                          "// card and the surrounding layout are built in Full example.\n"
-                          "auto* session = new spatial::SpatialSession(panel, panel);\n"
-                          "spatial::SpatialView* view = nullptr;\n"
-                          "if (session->activate())\n"
-                          "    view = session->createView(panel);\n"
-                          "if (!view) {\n"
-                          "    view = new spatial::SpatialView(panel);\n"
-                          "    view->setSpatialEnabled(false);\n"
-                          "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
-                          "}\n"
-                          "column->addWidget(view);\n"
-                          "view->setCameraDistance(1400);\n"
-                          "view->setMaximumTilt(QPointF(4, 6));\n"
-                          "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
-                          "item->setRotation(QVector3D(5, -12, 0));\n"
-                          "item->setSurfaceIntensity(0.75);\n"
-                          "item->setHoverLift(4.5);\n"
-                          "// The existing controls keep their models and signal connections.\n");
+    return QStringLiteral(
+        "using namespace fluent;\n"
+        "// card and the surrounding layout are built in Full example.\n"
+        "auto* session = new spatial::SpatialSession(panel, panel);\n"
+        "spatial::SpatialView* view = nullptr;\n"
+        "if (session->activate())\n"
+        "    view = session->createView(panel);\n"
+        "if (!view) {\n"
+        "    view = new spatial::SpatialView(panel);\n"
+        "    view->setSpatialEnabled(false);\n"
+        "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+        "}\n"
+        "column->addWidget(view);\n"
+        "view->setCameraDistance(1400);\n"
+        "view->setMaximumTilt(QPointF(4, 6));\n"
+        "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
+        "item->setRotation(QVector3D(5, -12, 0));\n"
+        "item->setSurfaceIntensity(0.75);\n"
+        "item->setHoverLift(4.5);\n"
+        "// The existing controls keep their models and signal connections.\n");
 }
 
 QVector<GallerySample> spatialViewSamples()
@@ -348,8 +351,7 @@ QVector<GallerySample> spatialViewSamples()
                 column->setContentsMargins(0, 0, 0, 0);
                 column->setSpacing(16);
                 auto* session = new spatial::SpatialSession(panel, panel);
-                const auto preview =
-                    samples::createAttachedSpatialPreview<SceneView>(session, panel);
+                const auto preview = samples::createAttachedSpatialPreview<SceneView>(session, panel);
                 auto* view = preview.view;
                 view->setObjectName("spatialPreviewView");
                 view->setFixedHeight(400);
@@ -381,10 +383,10 @@ QVector<GallerySample> spatialViewSamples()
                     content->addWidget(note);
                     return card;
                 };
-                spatial::SpatialItem* back = view->addWidget(
-                    makeLayer("Back layer", "Z -160 · sample data"), WidgetOwnership::Owned);
-                spatial::SpatialItem* front = view->addWidget(
-                    makeLayer("Front layer", "Z +160 · sample data"), WidgetOwnership::Owned);
+                spatial::SpatialItem* back = view->addWidget(makeLayer("Back layer", "Z -160 · sample data"),
+                    WidgetOwnership::Owned);
+                spatial::SpatialItem* front = view->addWidget(makeLayer("Front layer", "Z +160 · sample data"),
+                    WidgetOwnership::Owned);
                 back->setRotation(QVector3D(6, 16, 0));
                 front->setRotation(QVector3D(-6, -16, 0));
                 back->setSurfaceIntensity(0.75);
@@ -412,50 +414,49 @@ QVector<GallerySample> spatialViewSamples()
                 grid->setVerticalSpacing(12);
                 grid->setColumnStretch(0, 1);
                 grid->setColumnStretch(1, 1);
-                const auto addSlider = [controls, grid](const QString& name, const QString& label,
-                                                        const QString& unit, int minimum,
-                                                        int maximum, int initial, int row,
-                                                        int col) {
-                    auto* group = new QWidget(controls);
-                    auto* layout = new QVBoxLayout(group);
-                    layout->setContentsMargins(0, 0, 0, 0);
-                    layout->setSpacing(4);
-                    auto* text = new textfields::Label(group);
-                    text->setTextColorRole(textfields::Label::TextColorRole::Primary);
-                    auto* slider = new basicinput::Slider(group);
-                    slider->setObjectName(name);
-                    slider->setAccessibleName(label);
-                    slider->setRange(minimum, maximum);
-                    slider->setValue(initial);
-                    const auto updateText = [text, label, unit](int value) {
-                        text->setText(QString("%1: %2%3").arg(label).arg(value).arg(unit));
+                const auto addSlider =
+                    [controls, grid](const QString& name, const QString& label, const QString& unit, int minimum,
+                        int maximum, int initial, int row, int col) {
+                        auto* group = new QWidget(controls);
+                        auto* layout = new QVBoxLayout(group);
+                        layout->setContentsMargins(0, 0, 0, 0);
+                        layout->setSpacing(4);
+                        auto* text = new textfields::Label(group);
+                        text->setTextColorRole(textfields::Label::TextColorRole::Primary);
+                        auto* slider = new basicinput::Slider(group);
+                        slider->setObjectName(name);
+                        slider->setAccessibleName(label);
+                        slider->setRange(minimum, maximum);
+                        slider->setValue(initial);
+                        const auto updateText = [text, label, unit](int value) {
+                            text->setText(QString("%1: %2%3").arg(label).arg(value).arg(unit));
+                        };
+                        updateText(initial);
+                        QObject::connect(slider, &basicinput::Slider::valueChanged, text, updateText);
+                        layout->addWidget(text);
+                        layout->addWidget(slider);
+                        grid->addWidget(group, row, col);
+                        return slider;
                     };
-                    updateText(initial);
-                    QObject::connect(slider, &basicinput::Slider::valueChanged, text, updateText);
-                    layout->addWidget(text);
-                    layout->addWidget(slider);
-                    grid->addWidget(group, row, col);
-                    return slider;
-                };
-                auto* distance = addSlider("spatialViewDistance", "Camera distance", " px", 650,
-                                           2400, 1200, 0, 0);
+                auto* distance = addSlider("spatialViewDistance", "Camera distance", " px", 650, 2400, 1200, 0, 0);
                 auto* zoom = addSlider("spatialViewZoom", "Scene zoom", "%", 50, 110, 90, 0, 1);
-                QObject::connect(distance, &basicinput::Slider::valueChanged, view,
-                                 [view](int value) { view->setCameraDistance(value); });
-                QObject::connect(zoom, &basicinput::Slider::valueChanged, view,
-                                 [view](int value) { view->setZoom(value / 100.0); });
+                QObject::connect(distance, &basicinput::Slider::valueChanged, view, [view](int value) {
+                    view->setCameraDistance(value);
+                });
+                QObject::connect(zoom, &basicinput::Slider::valueChanged, view, [view](int value) {
+                    view->setZoom(value / 100.0);
+                });
                 column->addWidget(controls);
 
                 QObject::connect(follow, &basicinput::ToggleSwitch::toggled, view,
-                                 &spatial::SpatialView::setPointerTrackingEnabled);
+                    &spatial::SpatialView::setPointerTrackingEnabled);
                 QObject::connect(view, &spatial::SpatialView::pointerTrackingEnabledChanged, follow,
-                                 &basicinput::ToggleSwitch::setIsOn);
+                    &basicinput::ToggleSwitch::setIsOn);
                 const auto updateAvailability = [view, controls, follow] {
                     controls->setEnabled(view->isSpatialEnabled());
                     follow->setEnabled(view->isSpatialEnabled());
                 };
-                QObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, controls,
-                                 updateAvailability);
+                QObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, controls, updateAvailability);
                 updateAvailability();
 
                 new SpatialPreviewBinding(panel, preview.attached);
@@ -599,65 +600,66 @@ QVector<GallerySample> spatialViewSamples()
         makeSample(
             QStringLiteral("spatial-view-inputs"), QStringLiteral("Slider and CheckBox"),
             QStringLiteral("Drag the level slider, then mute and restore the preview."),
-            QStringLiteral("using namespace fluent;\n"
-                           "auto* panel = new SpatialPreviewPanel(parent);\n"
-                           "auto* column = new QVBoxLayout(panel);\n"
-                           "column->setContentsMargins(0, 0, 0, 0);\n"
-                           "column->setSpacing(12);\n"
-                           "auto* session = new spatial::SpatialSession(panel, panel);\n"
-                           "spatial::SpatialView* view = nullptr;\n"
-                           "if (session->activate())\n"
-                           "    view = session->createView(panel);\n"
-                           "if (!view) {\n"
-                           "    view = new spatial::SpatialView(panel);\n"
-                           "    view->setSpatialEnabled(false);\n"
-                           "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
-                           "}\n"
-                           "view->setObjectName(\"spatialPreviewView\");\n"
-                           "view->setFixedHeight(340);\n"
-                           "view->setCameraDistance(1400);\n"
-                           "view->setMaximumTilt(QPointF(4, 6));\n"
-                           "column->addWidget(view);\n"
-                           "auto* card = new layout::Card;\n"
-                           "card->setFixedSize(320, 260);\n"
-                           "auto* content = new QVBoxLayout(card);\n"
-                           "content->setContentsMargins(20, 16, 20, 16);\n"
-                           "content->setSpacing(12);\n"
-                           "auto* title = new textfields::Label(\"Level preview\", card);\n"
-                           "title->setFluentTypography(Typography::FontRole::Subtitle);\n"
-                           "title->setTextColorRole(textfields::Label::TextColorRole::Primary);\n"
-                           "content->addWidget(title);\n"
-                           "auto* value = new textfields::Label(\"Level: 40%\", card);\n"
-                           "value->setObjectName(\"spatialLevelText\");\n"
-                           "value->setTextColorRole(textfields::Label::TextColorRole::Primary);\n"
-                           "content->addWidget(value);\n"
-                           "auto* level = new basicinput::Slider(card);\n"
-                           "level->setObjectName(\"spatialLevelSlider\");\n"
-                           "level->setAccessibleName(\"Preview level\");\n"
-                           "level->setRange(0, 100);\n"
-                           "level->setValue(40);\n"
-                           "content->addWidget(level);\n"
-                           "auto* meter = new status_info::ProgressBar(card);\n"
-                           "meter->setObjectName(\"spatialLevelMeter\");\n"
-                           "meter->setAccessibleName(\"Preview output\");\n"
-                           "meter->setValue(40);\n"
-                           "content->addWidget(meter);\n"
-                           "auto* mute = new basicinput::CheckBox(\"Mute preview\", card);\n"
-                           "mute->setObjectName(\"spatialMuteCheckBox\");\n"
-                           "content->addWidget(mute);\n"
-                           "QObject::connect(level, &basicinput::Slider::valueChanged, meter,\n"
-                           "                 [value, meter, mute](int number) {\n"
-                           "    value->setText(QString(\"Level: %1%\").arg(number));\n"
-                           "    meter->setValue(mute->isChecked() ? 0 : number);\n"
-                           "});\n"
-                           "QObject::connect(mute, &basicinput::CheckBox::toggled, meter,\n"
-                           "                 [level, meter](bool muted) {\n"
-                           "    meter->setValue(muted ? 0 : level->value());\n"
-                           "});\n"
-                           "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
-                           "item->setSurfaceIntensity(0.75);\n"
-                           "item->setHoverLift(4.5);\n"
-                           "item->setRotation(QVector3D(5, -12, 0));\n"),
+            QStringLiteral(
+                "using namespace fluent;\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
+                "auto* column = new QVBoxLayout(panel);\n"
+                "column->setContentsMargins(0, 0, 0, 0);\n"
+                "column->setSpacing(12);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
+                "view->setObjectName(\"spatialPreviewView\");\n"
+                "view->setFixedHeight(340);\n"
+                "view->setCameraDistance(1400);\n"
+                "view->setMaximumTilt(QPointF(4, 6));\n"
+                "column->addWidget(view);\n"
+                "auto* card = new layout::Card;\n"
+                "card->setFixedSize(320, 260);\n"
+                "auto* content = new QVBoxLayout(card);\n"
+                "content->setContentsMargins(20, 16, 20, 16);\n"
+                "content->setSpacing(12);\n"
+                "auto* title = new textfields::Label(\"Level preview\", card);\n"
+                "title->setFluentTypography(Typography::FontRole::Subtitle);\n"
+                "title->setTextColorRole(textfields::Label::TextColorRole::Primary);\n"
+                "content->addWidget(title);\n"
+                "auto* value = new textfields::Label(\"Level: 40%\", card);\n"
+                "value->setObjectName(\"spatialLevelText\");\n"
+                "value->setTextColorRole(textfields::Label::TextColorRole::Primary);\n"
+                "content->addWidget(value);\n"
+                "auto* level = new basicinput::Slider(card);\n"
+                "level->setObjectName(\"spatialLevelSlider\");\n"
+                "level->setAccessibleName(\"Preview level\");\n"
+                "level->setRange(0, 100);\n"
+                "level->setValue(40);\n"
+                "content->addWidget(level);\n"
+                "auto* meter = new status_info::ProgressBar(card);\n"
+                "meter->setObjectName(\"spatialLevelMeter\");\n"
+                "meter->setAccessibleName(\"Preview output\");\n"
+                "meter->setValue(40);\n"
+                "content->addWidget(meter);\n"
+                "auto* mute = new basicinput::CheckBox(\"Mute preview\", card);\n"
+                "mute->setObjectName(\"spatialMuteCheckBox\");\n"
+                "content->addWidget(mute);\n"
+                "QObject::connect(level, &basicinput::Slider::valueChanged, meter,\n"
+                "                 [value, meter, mute](int number) {\n"
+                "    value->setText(QString(\"Level: %1%\").arg(number));\n"
+                "    meter->setValue(mute->isChecked() ? 0 : number);\n"
+                "});\n"
+                "QObject::connect(mute, &basicinput::CheckBox::toggled, meter,\n"
+                "                 [level, meter](bool muted) {\n"
+                "    meter->setValue(muted ? 0 : level->value());\n"
+                "});\n"
+                "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
+                "item->setSurfaceIntensity(0.75);\n"
+                "item->setHoverLift(4.5);\n"
+                "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
                 auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
@@ -698,14 +700,13 @@ QVector<GallerySample> spatialViewSamples()
                 auto* mute = new basicinput::CheckBox("Mute preview", card);
                 mute->setObjectName("spatialMuteCheckBox");
                 content->addWidget(mute);
-                QObject::connect(level, &basicinput::Slider::valueChanged, meter,
-                                 [value, meter, mute](int number) {
-                                     value->setText(QString("Level: %1%").arg(number));
-                                     meter->setValue(mute->isChecked() ? 0 : number);
-                                 });
-                QObject::connect(
-                    mute, &basicinput::CheckBox::toggled, meter,
-                    [level, meter](bool muted) { meter->setValue(muted ? 0 : level->value()); });
+                QObject::connect(level, &basicinput::Slider::valueChanged, meter, [value, meter, mute](int number) {
+                    value->setText(QString("Level: %1%").arg(number));
+                    meter->setValue(mute->isChecked() ? 0 : number);
+                });
+                QObject::connect(mute, &basicinput::CheckBox::toggled, meter, [level, meter](bool muted) {
+                    meter->setValue(muted ? 0 : level->value());
+                });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
@@ -718,69 +719,70 @@ QVector<GallerySample> spatialViewSamples()
             QStringLiteral("spatial-view-list"), QStringLiteral("ListView and InfoBadge"),
             QStringLiteral("Select a task and mark it done. The list model and remaining count "
                            "update together."),
-            QStringLiteral("using namespace fluent;\n"
-                           "auto* panel = new SpatialPreviewPanel(parent);\n"
-                           "auto* column = new QVBoxLayout(panel);\n"
-                           "column->setContentsMargins(0, 0, 0, 0);\n"
-                           "column->setSpacing(12);\n"
-                           "auto* session = new spatial::SpatialSession(panel, panel);\n"
-                           "spatial::SpatialView* view = nullptr;\n"
-                           "if (session->activate())\n"
-                           "    view = session->createView(panel);\n"
-                           "if (!view) {\n"
-                           "    view = new spatial::SpatialView(panel);\n"
-                           "    view->setSpatialEnabled(false);\n"
-                           "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
-                           "}\n"
-                           "view->setObjectName(\"spatialPreviewView\");\n"
-                           "view->setFixedHeight(340);\n"
-                           "view->setCameraDistance(1400);\n"
-                           "view->setMaximumTilt(QPointF(4, 6));\n"
-                           "column->addWidget(view);\n"
-                           "auto* card = new layout::Card;\n"
-                           "card->setFixedSize(340, 290);\n"
-                           "auto* content = new QVBoxLayout(card);\n"
-                           "content->setContentsMargins(20, 16, 20, 16);\n"
-                           "content->setSpacing(12);\n"
-                           "auto* heading = new QHBoxLayout;\n"
-                           "auto* title = new textfields::Label(\"Demo tasks\", card);\n"
-                           "title->setFluentTypography(Typography::FontRole::Subtitle);\n"
-                           "title->setTextColorRole(textfields::Label::TextColorRole::Primary);\n"
-                           "heading->addWidget(title, 1);\n"
-                           "auto* count = new status_info::InfoBadge(card);\n"
-                           "count->setObjectName(\"spatialTaskCount\");\n"
-                           "count->setAccessibleName(\"Remaining demo tasks\");\n"
-                           "count->setValue(3);\n"
-                           "heading->addWidget(count);\n"
-                           "content->addLayout(heading);\n"
-                           "auto* model = new QStringListModel({\"Review colors\", \"Check "
-                           "spacing\", \"Try dark mode\"}, card);\n"
-                           "auto* tasks = new collections::ListView(card);\n"
-                           "tasks->setObjectName(\"spatialTaskList\");\n"
-                           "tasks->setAccessibleName(\"Demo tasks\");\n"
-                           "tasks->setModel(model);\n"
-                           "tasks->setEditTriggers(QAbstractItemView::NoEditTriggers);\n"
-                           "tasks->setSelectedIndex(0);\n"
-                           "tasks->setPlaceholderText(\"All demo tasks done\");\n"
-                           "content->addWidget(tasks, 1);\n"
-                           "auto* done = new basicinput::Button(\"Mark selected done\", card);\n"
-                           "done->setObjectName(\"spatialTaskDone\");\n"
-                           "done->setFluentStyle(basicinput::Button::Accent);\n"
-                           "content->addWidget(done);\n"
-                           "QObject::connect(done, &basicinput::Button::clicked, model, [model, "
-                           "tasks, count, done] {\n"
-                           "    const int row = tasks->selectedIndex();\n"
-                           "    if (row < 0)\n"
-                           "        return;\n"
-                           "    model->removeRow(row);\n"
-                           "    count->setValue(model->rowCount());\n"
-                           "    tasks->setSelectedIndex(qMin(row, model->rowCount() - 1));\n"
-                           "    done->setEnabled(model->rowCount() > 0);\n"
-                           "});\n"
-                           "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
-                           "item->setSurfaceIntensity(0.75);\n"
-                           "item->setHoverLift(4.5);\n"
-                           "item->setRotation(QVector3D(5, -12, 0));\n"),
+            QStringLiteral(
+                "using namespace fluent;\n"
+                "auto* panel = new SpatialPreviewPanel(parent);\n"
+                "auto* column = new QVBoxLayout(panel);\n"
+                "column->setContentsMargins(0, 0, 0, 0);\n"
+                "column->setSpacing(12);\n"
+                "auto* session = new spatial::SpatialSession(panel, panel);\n"
+                "spatial::SpatialView* view = nullptr;\n"
+                "if (session->activate())\n"
+                "    view = session->createView(panel);\n"
+                "if (!view) {\n"
+                "    view = new spatial::SpatialView(panel);\n"
+                "    view->setSpatialEnabled(false);\n"
+                "    view->setRenderMode(spatial::SpatialView::RenderMode::Raster);\n"
+                "}\n"
+                "view->setObjectName(\"spatialPreviewView\");\n"
+                "view->setFixedHeight(340);\n"
+                "view->setCameraDistance(1400);\n"
+                "view->setMaximumTilt(QPointF(4, 6));\n"
+                "column->addWidget(view);\n"
+                "auto* card = new layout::Card;\n"
+                "card->setFixedSize(340, 290);\n"
+                "auto* content = new QVBoxLayout(card);\n"
+                "content->setContentsMargins(20, 16, 20, 16);\n"
+                "content->setSpacing(12);\n"
+                "auto* heading = new QHBoxLayout;\n"
+                "auto* title = new textfields::Label(\"Demo tasks\", card);\n"
+                "title->setFluentTypography(Typography::FontRole::Subtitle);\n"
+                "title->setTextColorRole(textfields::Label::TextColorRole::Primary);\n"
+                "heading->addWidget(title, 1);\n"
+                "auto* count = new status_info::InfoBadge(card);\n"
+                "count->setObjectName(\"spatialTaskCount\");\n"
+                "count->setAccessibleName(\"Remaining demo tasks\");\n"
+                "count->setValue(3);\n"
+                "heading->addWidget(count);\n"
+                "content->addLayout(heading);\n"
+                "auto* model = new QStringListModel({\"Review colors\", \"Check "
+                "spacing\", \"Try dark mode\"}, card);\n"
+                "auto* tasks = new collections::ListView(card);\n"
+                "tasks->setObjectName(\"spatialTaskList\");\n"
+                "tasks->setAccessibleName(\"Demo tasks\");\n"
+                "tasks->setModel(model);\n"
+                "tasks->setEditTriggers(QAbstractItemView::NoEditTriggers);\n"
+                "tasks->setSelectedIndex(0);\n"
+                "tasks->setPlaceholderText(\"All demo tasks done\");\n"
+                "content->addWidget(tasks, 1);\n"
+                "auto* done = new basicinput::Button(\"Mark selected done\", card);\n"
+                "done->setObjectName(\"spatialTaskDone\");\n"
+                "done->setFluentStyle(basicinput::Button::Accent);\n"
+                "content->addWidget(done);\n"
+                "QObject::connect(done, &basicinput::Button::clicked, model, [model, "
+                "tasks, count, done] {\n"
+                "    const int row = tasks->selectedIndex();\n"
+                "    if (row < 0)\n"
+                "        return;\n"
+                "    model->removeRow(row);\n"
+                "    count->setValue(model->rowCount());\n"
+                "    tasks->setSelectedIndex(qMin(row, model->rowCount() - 1));\n"
+                "    done->setEnabled(model->rowCount() > 0);\n"
+                "});\n"
+                "auto* item = view->addWidget(card, WidgetOwnership::Owned);\n"
+                "item->setSurfaceIntensity(0.75);\n"
+                "item->setHoverLift(4.5);\n"
+                "item->setRotation(QVector3D(5, -12, 0));\n"),
             [](QWidget* parent) {
                 auto* panel = new SpatialPreviewPanel(parent);
                 auto* column = new QVBoxLayout(panel);
@@ -810,8 +812,7 @@ QVector<GallerySample> spatialViewSamples()
                 count->setValue(3);
                 heading->addWidget(count);
                 content->addLayout(heading);
-                auto* model =
-                    new QStringListModel({"Review colors", "Check spacing", "Try dark mode"}, card);
+                auto* model = new QStringListModel({"Review colors", "Check spacing", "Try dark mode"}, card);
                 auto* tasks = new collections::ListView(card);
                 tasks->setObjectName("spatialTaskList");
                 tasks->setAccessibleName("Demo tasks");
@@ -824,16 +825,15 @@ QVector<GallerySample> spatialViewSamples()
                 done->setObjectName("spatialTaskDone");
                 done->setFluentStyle(basicinput::Button::Accent);
                 content->addWidget(done);
-                QObject::connect(done, &basicinput::Button::clicked, model,
-                                 [model, tasks, count, done] {
-                                     const int row = tasks->selectedIndex();
-                                     if (row < 0)
-                                         return;
-                                     model->removeRow(row);
-                                     count->setValue(model->rowCount());
-                                     tasks->setSelectedIndex(qMin(row, model->rowCount() - 1));
-                                     done->setEnabled(model->rowCount() > 0);
-                                 });
+                QObject::connect(done, &basicinput::Button::clicked, model, [model, tasks, count, done] {
+                    const int row = tasks->selectedIndex();
+                    if (row < 0)
+                        return;
+                    model->removeRow(row);
+                    count->setValue(model->rowCount());
+                    tasks->setSelectedIndex(qMin(row, model->rowCount() - 1));
+                    done->setEnabled(model->rowCount() > 0);
+                });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
@@ -923,9 +923,7 @@ QVector<GallerySample> spatialViewSamples()
                 selected->setTextColorRole(textfields::Label::TextColorRole::Primary);
                 content->addWidget(selected);
                 QObject::connect(calendar, &date_time::CalendarView::selectedDateChanged, selected,
-                                 [selected](const QDate& date) {
-                                     selected->setText("Selected: " + date.toString(Qt::ISODate));
-                                 });
+                    [selected](const QDate& date) { selected->setText("Selected: " + date.toString(Qt::ISODate)); });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
@@ -935,10 +933,8 @@ QVector<GallerySample> spatialViewSamples()
             },
             true),
         makeSample(
-            QStringLiteral("spatial-view-navigation"),
-            QStringLiteral("SelectorBar with a live text preview"),
-            QStringLiteral(
-                "Switch tabs inside the card. Edit the name below to update the preview."),
+            QStringLiteral("spatial-view-navigation"), QStringLiteral("SelectorBar with a live text preview"),
+            QStringLiteral("Switch tabs inside the card. Edit the name below to update the preview."),
             QStringLiteral(
                 "using namespace fluent;\n"
                 "auto* panel = new SpatialPreviewPanel(parent);\n"
@@ -1046,8 +1042,7 @@ QVector<GallerySample> spatialViewSamples()
                 auto* overview = new textfields::Label("Your workspace preview", pages);
                 overview->setWordWrap(true);
                 overview->setTextColorRole(textfields::Label::TextColorRole::Primary);
-                auto* details =
-                    new textfields::Label("Card + SelectorBar + StackContentHost", pages);
+                auto* details = new textfields::Label("Card + SelectorBar + StackContentHost", pages);
                 details->setWordWrap(true);
                 details->setTextColorRole(textfields::Label::TextColorRole::Primary);
                 pages->insertPage(0, overview, WidgetOwnership::Owned);
@@ -1055,8 +1050,9 @@ QVector<GallerySample> spatialViewSamples()
                 pages->setCurrentIndex(0, 0, false);
                 content->addWidget(pages, 1);
                 tabs->setSelectedIndex(0);
-                QObject::connect(tabs, &navigation::SelectorBar::selectedIndexChanged, pages,
-                                 [pages](int index) { pages->setCurrentIndex(index, 0, false); });
+                QObject::connect(tabs, &navigation::SelectorBar::selectedIndexChanged, pages, [pages](int index) {
+                    pages->setCurrentIndex(index, 0, false);
+                });
                 // Keep text editing in the normal layout, connected to the spatial preview.
                 auto* nameLabel = new textfields::Label("Workspace name", panel);
                 nameLabel->setTextColorRole(textfields::Label::TextColorRole::Primary);
@@ -1067,10 +1063,9 @@ QVector<GallerySample> spatialViewSamples()
                 name->setText("Studio");
                 name->setMaxLength(24);
                 column->addWidget(name);
-                QObject::connect(name, &textfields::LineEdit::textChanged, title,
-                                 [title](const QString& text) {
-                                     title->setText(text.isEmpty() ? "Workspace" : text);
-                                 });
+                QObject::connect(name, &textfields::LineEdit::textChanged, title, [title](const QString& text) {
+                    title->setText(text.isEmpty() ? "Workspace" : text);
+                });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
@@ -1183,21 +1178,17 @@ QVector<GallerySample> spatialViewSamples()
                 result->setObjectName("spatialPresetResult");
                 result->setTextColorRole(textfields::Label::TextColorRole::Secondary);
                 content->addWidget(result);
-                QObject::connect(balanced, &basicinput::RadioButton::toggled, result,
-                                 [result](bool checked) {
-                                     if (checked)
-                                         result->setText("Balanced selected");
-                                 });
-                QObject::connect(vivid, &basicinput::RadioButton::toggled, result,
-                                 [result](bool checked) {
-                                     if (checked)
-                                         result->setText("Vivid selected");
-                                 });
-                QObject::connect(rating, &basicinput::RatingControl::valueChanged, rating,
-                                 [rating](double value) {
-                                     rating->setCaption(value < 0 ? "Not rated"
-                                                                  : QString("%1 / 5").arg(value));
-                                 });
+                QObject::connect(balanced, &basicinput::RadioButton::toggled, result, [result](bool checked) {
+                    if (checked)
+                        result->setText("Balanced selected");
+                });
+                QObject::connect(vivid, &basicinput::RadioButton::toggled, result, [result](bool checked) {
+                    if (checked)
+                        result->setText("Vivid selected");
+                });
+                QObject::connect(rating, &basicinput::RatingControl::valueChanged, rating, [rating](double value) {
+                    rating->setCaption(value < 0 ? "Not rated" : QString("%1 / 5").arg(value));
+                });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
@@ -1328,10 +1319,9 @@ QVector<GallerySample> spatialViewSamples()
                 selected->setObjectName("spatialSelectedFile");
                 selected->setTextColorRole(textfields::Label::TextColorRole::Secondary);
                 content->addWidget(selected);
-                QObject::connect(tree, &QTreeView::clicked, selected,
-                                 [selected](const QModelIndex& index) {
-                                     selected->setText(index.data().toString());
-                                 });
+                QObject::connect(tree, &QTreeView::clicked, selected, [selected](const QModelIndex& index) {
+                    selected->setText(index.data().toString());
+                });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
@@ -1343,8 +1333,7 @@ QVector<GallerySample> spatialViewSamples()
             true),
         makeSample(
             QStringLiteral("spatial-view-donut"), QStringLiteral("DonutChart and Slider"),
-            QStringLiteral(
-                "Adjust the allocation. The same ChartModel updates the projected chart."),
+            QStringLiteral("Adjust the allocation. The same ChartModel updates the projected chart."),
             QStringLiteral(
                 "using namespace fluent;\n"
                 "auto* panel = new SpatialPreviewPanel(parent);\n"
@@ -1433,13 +1422,10 @@ QVector<GallerySample> spatialViewSamples()
                 allocation->setRange(5, 95);
                 allocation->setValue(65);
                 content->addWidget(allocation);
-                QObject::connect(allocation, &basicinput::Slider::valueChanged, chart,
-                                 [chart, model](int value) {
-                                     model->setPoints(
-                                         {{0, double(value)}, {1, double(100 - value)}},
-                                         {"Used", "Free"});
-                                     chart->setCenterText(QString("%1%").arg(value));
-                                 });
+                QObject::connect(allocation, &basicinput::Slider::valueChanged, chart, [chart, model](int value) {
+                    model->setPoints({{0, double(value)}, {1, double(100 - value)}}, {"Used", "Free"});
+                    chart->setCenterText(QString("%1%").arg(value));
+                });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
                 item->setSurfaceIntensity(0.75);
                 item->setHoverLift(4.5);
@@ -1586,14 +1572,13 @@ QVector<GallerySample> spatialViewSamples()
                 formats->setAccessibleName("Export format");
                 formats->setFixedWidth(120);
                 formats->addItems({"PNG", "JPEG", "SVG"});
-                QObject::connect(
-                    formats, qOverload<int>(&basicinput::ComboBox::currentIndexChanged), note,
+                QObject::connect(formats, qOverload<int>(&basicinput::ComboBox::currentIndexChanged), note,
                     [format, filename, note, formats](int index) {
                         const auto type = formats->itemText(index);
                         format->setText(type);
                         filename->setText("gallery-preview." + type.toLower());
-                        const QStringList descriptions = {"Image with transparency",
-                                                          "Compact photo", "Scalable vector"};
+                        const QStringList descriptions = {"Image with transparency", "Compact photo",
+                            "Scalable vector"};
                         note->setText(descriptions.value(index));
                     });
                 auto* item = view->addWidget(card, WidgetOwnership::Owned);
@@ -1612,10 +1597,9 @@ QVector<GallerySample> spatialViewSamples()
     for (auto& sample : samples) {
         sample.codeSnippet.prepend(spatialPanelLifetimeSource());
         sample.usageSnippet = spatialUsage(sample.id);
-        sample.supplementary = sample.id != QStringLiteral("spatial-view-scene") &&
-                               sample.id != QStringLiteral("spatial-view-cards") &&
-                               sample.id != QStringLiteral("spatial-view-donut") &&
-                               sample.id != QStringLiteral("spatial-view-hybrid");
+        sample.supplementary = sample.id != QStringLiteral("spatial-view-scene")
+            && sample.id != QStringLiteral("spatial-view-cards") && sample.id != QStringLiteral("spatial-view-donut")
+            && sample.id != QStringLiteral("spatial-view-hybrid");
     }
     return samples;
 }
@@ -1757,10 +1741,8 @@ QVector<GallerySample> spatialItemSamples()
                     const bool stacked = width() < 720;
                     setFixedHeight(!isSpatialEnabled() ? 520 : (stacked ? 560 : 360));
                     auto* preview = items().first();
-                    preview->setPosition(
-                        QVector3D(stacked ? 0 : -164, stacked ? -140 : 0, preview->position().z()));
-                    items().last()->setPosition(
-                        QVector3D(stacked ? 0 : 164, stacked ? 110 : 0, -50));
+                    preview->setPosition(QVector3D(stacked ? 0 : -164, stacked ? -140 : 0, preview->position().z()));
+                    items().last()->setPosition(QVector3D(stacked ? 0 : 164, stacked ? 110 : 0, -50));
                 }
 
             protected:
@@ -1777,8 +1759,7 @@ QVector<GallerySample> spatialItemSamples()
             column->setContentsMargins(0, 0, 0, 0);
             column->setSpacing(12);
             auto* session = new spatial::SpatialSession(panel, panel);
-            const auto preview =
-                samples::createAttachedSpatialPreview<WorkbenchView>(session, panel);
+            const auto preview = samples::createAttachedSpatialPreview<WorkbenchView>(session, panel);
             auto* view = preview.view;
             view->setObjectName("spatialPreviewView");
             view->setCameraDistance(1400);
@@ -1819,35 +1800,37 @@ QVector<GallerySample> spatialItemSamples()
             heading->setFluentTypography(Typography::FontRole::Subtitle);
             heading->setTextColorRole(textfields::Label::TextColorRole::Primary);
             controls->addWidget(heading);
-            const auto addSlider = [settings, controls](const QString& name, const QString& label,
-                                                        const QString& unit, int minimum,
-                                                        int maximum, int initial) {
-                auto* group = new QVBoxLayout;
-                group->setSpacing(4);
-                auto* text = new textfields::Label(settings);
-                text->setTextColorRole(textfields::Label::TextColorRole::Primary);
-                auto* slider = new basicinput::Slider(settings);
-                slider->setObjectName(name);
-                slider->setAccessibleName(label);
-                slider->setRange(minimum, maximum);
-                slider->setValue(initial);
-                const auto updateText = [text, label, unit](int value) {
-                    text->setText(QString("%1: %2%3").arg(label).arg(value).arg(unit));
+            const auto addSlider =
+                [settings, controls](const QString& name, const QString& label, const QString& unit, int minimum,
+                    int maximum, int initial) {
+                    auto* group = new QVBoxLayout;
+                    group->setSpacing(4);
+                    auto* text = new textfields::Label(settings);
+                    text->setTextColorRole(textfields::Label::TextColorRole::Primary);
+                    auto* slider = new basicinput::Slider(settings);
+                    slider->setObjectName(name);
+                    slider->setAccessibleName(label);
+                    slider->setRange(minimum, maximum);
+                    slider->setValue(initial);
+                    const auto updateText = [text, label, unit](int value) {
+                        text->setText(QString("%1: %2%3").arg(label).arg(value).arg(unit));
+                    };
+                    updateText(initial);
+                    QObject::connect(slider, &basicinput::Slider::valueChanged, text, updateText);
+                    group->addWidget(text);
+                    group->addWidget(slider);
+                    controls->addLayout(group);
+                    return slider;
                 };
-                updateText(initial);
-                QObject::connect(slider, &basicinput::Slider::valueChanged, text, updateText);
-                group->addWidget(text);
-                group->addWidget(slider);
-                controls->addLayout(group);
-                return slider;
-            };
             auto* finish = addSlider("spatialItemSurfaceIntensity", "Surface", "%", 0, 100, 75);
             auto* angle = addSlider("spatialItemRotation", "Rotation", "°", -35, 35, -18);
             auto* depth = addSlider("spatialItemDepth", "Depth", " px", -120, 120, 0);
-            QObject::connect(finish, &basicinput::Slider::valueChanged, item,
-                             [item](int value) { item->setSurfaceIntensity(value / 100.0); });
-            QObject::connect(angle, &basicinput::Slider::valueChanged, item,
-                             [item](int value) { item->setRotation(QVector3D(0, value, 0)); });
+            QObject::connect(finish, &basicinput::Slider::valueChanged, item, [item](int value) {
+                item->setSurfaceIntensity(value / 100.0);
+            });
+            QObject::connect(angle, &basicinput::Slider::valueChanged, item, [item](int value) {
+                item->setRotation(QVector3D(0, value, 0));
+            });
             QObject::connect(depth, &basicinput::Slider::valueChanged, item, [item](int value) {
                 auto position = item->position();
                 position.setZ(value);
@@ -1857,8 +1840,7 @@ QVector<GallerySample> spatialItemSamples()
             controlItem->setSurfaceIntensity(0.75);
             controlItem->setRotation(QVector3D(0, -6, 0));
             // No hover lift for the parameter card: keep its drag targets steady.
-            QObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, view,
-                             [view] { view->arrange(); });
+            QObject::connect(view, &spatial::SpatialView::spatialEnabledChanged, view, [view] { view->arrange(); });
             view->arrange();
 
             new SpatialPreviewBinding(panel, preview.attached);

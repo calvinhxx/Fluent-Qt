@@ -12,8 +12,8 @@
 namespace fluent::gallery {
 
 GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
-                                         const GalleryNavigationViewModel& navigationViewModel,
-                                         QWidget* parent)
+    const GalleryNavigationViewModel& navigationViewModel,
+    QWidget* parent)
     : GalleryContentPage(entry.routeId, entry.title, entry.description, parent)
 {
     setObjectName(QStringLiteral("galleryCategoryPage"));
@@ -52,16 +52,15 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
             description = componentEntry->description;
 
         const QString imageResource = galleryControlImageResource(item.title);
-        entries.append({item.id, item.title, description, imageResource,
-                        imageResource.isEmpty() ? item.iconGlyph : QString()});
+        entries.append(
+            {item.id, item.title, description, imageResource, imageResource.isEmpty() ? item.iconGlyph : QString()});
     }
 
     grid->setEntries(entries);
     connect(grid, &GalleryEntryGrid::activated, this, &GalleryContentPage::routeActivated);
     addContentWidget(grid);
 
-    LOG_DEBUG(
-        QStringLiteral("GalleryCategoryPage created routeId=%1 categoryId=%2 cards=%3")
+    LOG_DEBUG(QStringLiteral("GalleryCategoryPage created routeId=%1 categoryId=%2 cards=%3")
             .arg(entry.routeId, includeAllCategories ? QStringLiteral("<all>") : entry.categoryId)
             .arg(entries.size()));
 }

@@ -50,19 +50,20 @@ QString previewThemeName(FluentElement::Theme theme)
 } // namespace
 
 GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
-                                           const GalleryNavigationViewModel& navigationViewModel,
-                                           QWidget* parent)
-    : GalleryComponentPage(
-          entry, navigationViewModel,
-          GalleryComponentPageOptions{platform::capabilities().showsBilingualDocumentation}, parent)
+    const GalleryNavigationViewModel& navigationViewModel,
+    QWidget* parent)
+    : GalleryComponentPage(entry,
+          navigationViewModel,
+          GalleryComponentPageOptions{platform::capabilities().showsBilingualDocumentation},
+          parent)
 {}
 
 GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
-                                           const GalleryNavigationViewModel& navigationViewModel,
-                                           const GalleryComponentPageOptions& options,
-                                           QWidget* parent)
-    : GalleryContentPage(entry.routeId, entry.title, QString(), parent),
-      m_overviewText(entry.description), m_sampleTheme(currentTheme())
+    const GalleryNavigationViewModel& navigationViewModel,
+    const GalleryComponentPageOptions& options,
+    QWidget* parent)
+    : GalleryContentPage(entry.routeId, entry.title, QString(), parent), m_overviewText(entry.description),
+      m_sampleTheme(currentTheme())
 {
     setObjectName(QStringLiteral("galleryComponentPage"));
 
@@ -72,8 +73,7 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     m_themeButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_themeButton->setFluentSize(fluent::basicinput::Button::StandardSize);
     m_themeButton->setFixedSize(kThemeButtonSize, kThemeButtonSize);
-    connect(m_themeButton, &fluent::basicinput::Button::clicked, this,
-            &GalleryComponentPage::toggleSampleTheme);
+    connect(m_themeButton, &fluent::basicinput::Button::clicked, this, &GalleryComponentPage::toggleSampleTheme);
     addHeaderAction(m_themeButton);
     updateThemeButton();
 
@@ -91,26 +91,23 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     }
 
     const GalleryComponentReference reference = galleryComponentReference(entry.routeId);
-    m_bilingualDocumentationEnabled = options.requestBilingualDocumentation &&
-                                      reference.hasPythonReference() &&
-                                      galleryPythonSnippetsAvailable(entry.routeId, codeSampleIds);
+    m_bilingualDocumentationEnabled = options.requestBilingualDocumentation && reference.hasPythonReference()
+        && galleryPythonSnippetsAvailable(entry.routeId, codeSampleIds);
     if (options.requestBilingualDocumentation && !m_bilingualDocumentationEnabled) {
-        LOG_WARN(QStringLiteral(
-                     "GalleryComponentPage bilingual source unavailable; using C++ only routeId=%1")
-                     .arg(entry.routeId));
+        LOG_WARN(QStringLiteral("GalleryComponentPage bilingual source unavailable; using C++ only routeId=%1")
+                .arg(entry.routeId));
     }
     if (reference.isValid()) {
         addSectionHeader(QStringLiteral("Use"));
-        m_referenceCard =
-            new GalleryComponentReferenceCard(reference, m_bilingualDocumentationEnabled, this);
+        m_referenceCard = new GalleryComponentReferenceCard(reference, m_bilingualDocumentationEnabled, this);
         if (m_referenceCard->languageSelector()) {
             connect(m_referenceCard, &GalleryComponentReferenceCard::codeLanguageChanged, this,
-                    &GalleryComponentPage::setCodeLanguage);
+                &GalleryComponentPage::setCodeLanguage);
         }
         addContentWidget(m_referenceCard);
     } else {
         LOG_WARN(QStringLiteral("GalleryComponentPage reference missing routeId=%1 title=%2")
-                     .arg(entry.routeId, entry.title));
+                .arg(entry.routeId, entry.title));
     }
 
     addSectionHeader(QStringLiteral("Live examples"));
@@ -119,16 +116,17 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
         settingsButton->setObjectName(QStringLiteral("gallerySpatialSettingsLink"));
         settingsButton->setIconGlyph(Typography::Icons::Settings);
         addHeaderAction(settingsButton);
-        connect(settingsButton, &fluent::basicinput::Button::clicked, this,
-                [this] { emit routeActivated(QStringLiteral("settings")); });
+        connect(settingsButton, &fluent::basicinput::Button::clicked, this, [this] {
+            emit routeActivated(QStringLiteral("settings"));
+        });
         auto* status = addBodyText(QString());
         status->setObjectName(QStringLiteral("gallerySpatialModeStatus"));
         auto& settings = GallerySettings::instance();
         const auto updateStatus = [status, &settings] {
             const bool enabled = settings.spatialAvailable() && settings.spatialModeEnabled();
-            status->setText(
-                enabled ? QStringLiteral("3D is on. All examples follow Settings > 3D Gallery.")
-                        : QStringLiteral("2D is on. Enable 3D in Settings > 3D Gallery."));
+            status->setText(enabled
+                    ? QStringLiteral("3D is on. All examples follow Settings > 3D Gallery.")
+                    : QStringLiteral("2D is on. Enable 3D in Settings > 3D Gallery."));
         };
         connect(&settings, &GallerySettings::spatialModeEnabledChanged, status, updateStatus);
         connect(&settings, &GallerySettings::spatialAvailabilityChanged, status, updateStatus);
@@ -138,17 +136,17 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     // not a normal state — surface it loudly.
     // zh_CN: 组件页没有任何示例说明示例目录存在覆盖缺口，不是正常状态——大声暴露出来。
     if (samples.isEmpty()) {
-        LOG_WARN(QStringLiteral("GalleryComponentPage samples missing routeId=%1 title=%2")
-                     .arg(entry.routeId, entry.title));
+        LOG_WARN(
+            QStringLiteral("GalleryComponentPage samples missing routeId=%1 title=%2").arg(entry.routeId, entry.title));
     }
     auto* examples = new QWidget(this);
     m_samplesLayout = new QVBoxLayout(examples);
     m_samplesLayout->setContentsMargins(0, 0, 0, 0);
     m_samplesLayout->setSpacing(16);
     addContentWidget(examples);
-    const bool hasSupplementary =
-        std::any_of(samples.cbegin(), samples.cend(),
-                    [](const GallerySample& sample) { return sample.supplementary; });
+    const bool hasSupplementary = std::any_of(samples.cbegin(), samples.cend(), [](const GallerySample& sample) {
+        return sample.supplementary;
+    });
     if (hasSupplementary) {
         auto* moreExamples = new QWidget(this);
         m_moreSamplesLayout = new QVBoxLayout(moreExamples);
@@ -174,8 +172,7 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
             QString relatedDescription;
             if (const GalleryContentEntry* relatedEntry = galleryContentEntry(relatedRouteId))
                 relatedDescription = relatedEntry->description;
-            auto* card =
-                new GalleryEntryCard(relatedItem->id, relatedItem->title, relatedDescription, this);
+            auto* card = new GalleryEntryCard(relatedItem->id, relatedItem->title, relatedDescription, this);
             // Categories have no per-control art; render their nav glyph instead.
             // zh_CN: 分类没有控件图片，改用其导航字形图标。
             if (relatedItem->kind != GalleryNavigationItem::Kind::ComponentRoute)
@@ -186,9 +183,9 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     }
 
     LOG_DEBUG(QStringLiteral("GalleryComponentPage created routeId=%1 samples=%2 related=%3")
-                  .arg(entry.routeId)
-                  .arg(samples.size())
-                  .arg(entry.relatedRouteIds.size()));
+            .arg(entry.routeId)
+            .arg(samples.size())
+            .arg(entry.relatedRouteIds.size()));
 }
 
 void GalleryComponentPage::buildNextSample()
@@ -196,12 +193,12 @@ void GalleryComponentPage::buildNextSample()
     if (!hasPendingSamples())
         return;
     const GallerySample& sample = m_samples.at(m_nextSample);
-    auto* card = m_bilingualDocumentationEnabled ? new GallerySampleCard(routeId(), sample, this)
-                                                 : new GallerySampleCard(sample, this);
+    auto* card = m_bilingualDocumentationEnabled
+        ? new GallerySampleCard(routeId(), sample, this)
+        : new GallerySampleCard(sample, this);
     if (GalleryCodeBlock* block = card->codeBlock()) {
         if (block->languageSelector()) {
-            connect(block, &GalleryCodeBlock::codeLanguageChanged, this,
-                    &GalleryComponentPage::setCodeLanguage);
+            connect(block, &GalleryCodeBlock::codeLanguageChanged, this, &GalleryComponentPage::setCodeLanguage);
             block->setCodeLanguage(m_codeLanguage);
         }
     }
@@ -244,11 +241,9 @@ void GalleryComponentPage::onThemeUpdated()
 
 void GalleryComponentPage::toggleSampleTheme()
 {
-    const FluentElement::Theme currentSampleTheme =
-        m_sampleThemeExplicit ? m_sampleTheme : currentTheme();
-    m_sampleTheme = FluentElement::themeUsesDarkAppearance(currentSampleTheme)
-                        ? FluentElement::Light
-                        : FluentElement::Dark;
+    const FluentElement::Theme currentSampleTheme = m_sampleThemeExplicit ? m_sampleTheme : currentTheme();
+    m_sampleTheme =
+        FluentElement::themeUsesDarkAppearance(currentSampleTheme) ? FluentElement::Light : FluentElement::Dark;
     m_sampleThemeExplicit = true;
     updateThemeButton();
     applySampleTheme();
@@ -270,16 +265,13 @@ void GalleryComponentPage::updateThemeButton()
 {
     if (!m_themeButton)
         return;
-    const FluentElement::Theme visibleTheme =
-        m_sampleThemeExplicit ? m_sampleTheme : currentTheme();
+    const FluentElement::Theme visibleTheme = m_sampleThemeExplicit ? m_sampleTheme : currentTheme();
     const QString themeName = previewThemeName(visibleTheme);
     if (m_themeButton->property("gallerySampleTheme").toString() != themeName)
         m_themeButton->setProperty("gallerySampleTheme", themeName);
-    const QString nextThemeName = FluentElement::themeUsesDarkAppearance(visibleTheme)
-                                      ? QStringLiteral("Light")
-                                      : QStringLiteral("Dark");
-    const QString description =
-        QStringLiteral("Preview theme: %1. Switch to %2.").arg(themeName, nextThemeName);
+    const QString nextThemeName =
+        FluentElement::themeUsesDarkAppearance(visibleTheme) ? QStringLiteral("Light") : QStringLiteral("Dark");
+    const QString description = QStringLiteral("Preview theme: %1. Switch to %2.").arg(themeName, nextThemeName);
     m_themeButton->setAccessibleName(description);
     fluent::status_info::ToolTip::attach(m_themeButton, description);
     const QString iconGlyph = previewThemeGlyph(visibleTheme);

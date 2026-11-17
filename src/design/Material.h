@@ -18,82 +18,91 @@
  */
 namespace Material {
 
-    /**
+/**
      * @brief Acrylic material parameters.
      * zh_CN: Acrylic 材质参数。
      */
-    struct AcrylicToken {
-        QColor tintColor;           // Overlay tint color. zh_CN: Tint 叠加色。
-        double tintOpacity;         // Tint-layer opacity in [0, 1]. zh_CN: Tint 层透明度，[0, 1]。
-        double luminosityOpacity;   // Luminosity-layer opacity in [0, 1]. zh_CN: Luminosity 层透明度，[0, 1]。
-        int    blurRadius;          // Background blur radius; implementation-dependent. zh_CN: 背景模糊半径，具体实现依赖平台或效果。
-    };
+struct AcrylicToken {
+    QColor tintColor;         // Overlay tint color. zh_CN: Tint 叠加色。
+    double tintOpacity;       // Tint-layer opacity in [0, 1]. zh_CN: Tint 层透明度，[0, 1]。
+    double luminosityOpacity; // Luminosity-layer opacity in [0, 1]. zh_CN: Luminosity 层透明度，[0, 1]。
+    int blurRadius; // Background blur radius; implementation-dependent. zh_CN: 背景模糊半径，具体实现依赖平台或效果。
+};
 
-    /**
+/**
      * @brief Mica material parameters.
      * zh_CN: Mica 材质参数。
      */
-    struct MicaToken {
-        QColor baseColor;           // Material base color. zh_CN: 材质基础色。
-        double opacity;             // Overall opacity in [0, 1]. zh_CN: 整体透明度，[0, 1]。
-    };
+struct MicaToken {
+    QColor baseColor; // Material base color. zh_CN: 材质基础色。
+    double opacity;   // Overall opacity in [0, 1]. zh_CN: 整体透明度，[0, 1]。
+};
 
-    /**
+/**
      * @brief Smoke scrim material parameters.
      * zh_CN: Smoke 遮罩材质参数。
      */
-    struct SmokeToken {
-        QColor baseColor;           // Scrim base color, usually black. zh_CN: 遮罩基础色，通常为黑色。
-        double opacity;             // Overall opacity in [0, 1]. zh_CN: 整体透明度，[0, 1]。
-    };
+struct SmokeToken {
+    QColor baseColor; // Scrim base color, usually black. zh_CN: 遮罩基础色，通常为黑色。
+    double opacity;   // Overall opacity in [0, 1]. zh_CN: 整体透明度，[0, 1]。
+};
 
-    // Acrylic material presets.
-    // zh_CN: Acrylic 材质预设。
-    namespace Acrylic {
-        inline AcrylicToken light() {
-            return { QColor(252, 252, 252), 0.60, 0.22, 30 };
-        }
-        inline AcrylicToken dark() {
-            return { QColor(44, 44, 44), 0.65, 0.16, 30 };
-        }
-        inline AcrylicToken get(bool isDark) {
-            return isDark ? dark() : light();
-        }
-    }
+// Acrylic material presets.
+// zh_CN: Acrylic 材质预设。
+namespace Acrylic {
+inline AcrylicToken light()
+{
+    return {QColor(252, 252, 252), 0.60, 0.22, 30};
+}
+inline AcrylicToken dark()
+{
+    return {QColor(44, 44, 44), 0.65, 0.16, 30};
+}
+inline AcrylicToken get(bool isDark)
+{
+    return isDark ? dark() : light();
+}
+} // namespace Acrylic
 
-    // Mica material presets.
-    // zh_CN: Mica 材质预设。
-    namespace Mica {
-        inline MicaToken light() {
-            return { QColor(243, 242, 241), 0.90 };
-        }
-        inline MicaToken dark() {
-            return { QColor(32, 32, 32), 0.90 };
-        }
-        inline MicaToken get(bool isDark) {
-            return isDark ? dark() : light();
-        }
-    }
+// Mica material presets.
+// zh_CN: Mica 材质预设。
+namespace Mica {
+inline MicaToken light()
+{
+    return {QColor(243, 242, 241), 0.90};
+}
+inline MicaToken dark()
+{
+    return {QColor(32, 32, 32), 0.90};
+}
+inline MicaToken get(bool isDark)
+{
+    return isDark ? dark() : light();
+}
+} // namespace Mica
 
-    // Modal smoke/scrim material presets.
-    // zh_CN: 模态 Smoke/遮罩材质预设。
-    namespace Smoke {
-        inline SmokeToken light() {
-            return { QColor(0, 0, 0), 0.40 };
-        }
-        inline SmokeToken dark() {
-            return { QColor(0, 0, 0), 0.60 };
-        }
-        inline SmokeToken get(bool isDark) {
-            return isDark ? dark() : light();
-        }
-    }
+// Modal smoke/scrim material presets.
+// zh_CN: 模态 Smoke/遮罩材质预设。
+namespace Smoke {
+inline SmokeToken light()
+{
+    return {QColor(0, 0, 0), 0.40};
+}
+inline SmokeToken dark()
+{
+    return {QColor(0, 0, 0), 0.60};
+}
+inline SmokeToken get(bool isDark)
+{
+    return isDark ? dark() : light();
+}
+} // namespace Smoke
 
-    /**
+/**
      * @brief Material family identifier for APIs that accept multiple material kinds.
      * zh_CN: 接受多种材质类型的 API 使用的材质族标识。
      */
-    enum class Type { Acrylic, Mica, Smoke };
-}
+enum class Type { Acrylic, Mica, Smoke };
+} // namespace Material
 
 #endif // MATERIAL_H

@@ -21,16 +21,24 @@ public:
      * @brief Creates an outline that tracks the target widget.
      * zh_CN: 创建一个跟随目标控件位置和尺寸的调试描边。
      */
-    explicit DebugOverlay(QWidget *target, const QColor &color = Qt::red, QWidget *parent = nullptr);
-    
-    void setColor(const QColor &c) { m_color = c; update(); }
-    void setThickness(int t) { m_thickness = t; update(); }
+    explicit DebugOverlay(QWidget* target, const QColor& color = Qt::red, QWidget* parent = nullptr);
+
+    void setColor(const QColor& c)
+    {
+        m_color = c;
+        update();
+    }
+    void setThickness(int t)
+    {
+        m_thickness = t;
+        update();
+    }
 
 protected:
     // Tracks target move/show/hide/resize events without taking mouse input.
     // zh_CN: 追踪目标控件移动、显示、隐藏和缩放事件，同时保持鼠标穿透。
-    bool eventFilter(QObject *obj, QEvent *event) override;
-    void paintEvent(QPaintEvent *event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     void updateGeometryToTarget();

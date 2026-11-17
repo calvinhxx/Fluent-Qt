@@ -38,8 +38,7 @@ QString humanizeName(QString value)
 
 const QRegularExpression& iconNamePattern()
 {
-    static const QRegularExpression pattern(
-        QStringLiteral("^(ic_fluent_.+)_([0-9]+)_regular$"));
+    static const QRegularExpression pattern(QStringLiteral("^(ic_fluent_.+)_([0-9]+)_regular$"));
     return pattern;
 }
 
@@ -48,8 +47,7 @@ QVector<IconInfo> loadCatalog()
     fluent::resources::ensureRegistered();
     QFile file(QStringLiteral(":/res/icons/FluentQtIcons.json"));
     if (!file.open(QIODevice::ReadOnly)) {
-        qCWarning(fluent::logging::typographyCategory)
-            << "Could not open the bundled Fluent icon catalog";
+        qCWarning(fluent::logging::typographyCategory) << "Could not open the bundled Fluent icon catalog";
         return {};
     }
 
@@ -82,10 +80,8 @@ QVector<IconInfo> loadCatalog()
     }
 
     std::sort(icons.begin(), icons.end(), [](const IconInfo& left, const IconInfo& right) {
-        const int semanticOrder = QString::compare(
-            left.displayName, right.displayName, Qt::CaseInsensitive);
-        return semanticOrder == 0 ? left.designSize < right.designSize
-                                  : semanticOrder < 0;
+        const int semanticOrder = QString::compare(left.displayName, right.displayName, Qt::CaseInsensitive);
+        return semanticOrder == 0 ? left.designSize < right.designSize : semanticOrder < 0;
     });
     return icons;
 }
@@ -136,8 +132,7 @@ QHash<quint32, QString> loadAliasTargets()
     fluent::resources::ensureRegistered();
     QFile file(QStringLiteral(":/res/icons/FluentQtIconAliases.json"));
     if (!file.open(QIODevice::ReadOnly)) {
-        qCWarning(fluent::logging::typographyCategory)
-            << "Could not open the bundled Fluent semantic icon aliases";
+        qCWarning(fluent::logging::typographyCategory) << "Could not open the bundled Fluent semantic icon aliases";
         return {};
     }
 
@@ -145,8 +140,7 @@ QHash<quint32, QString> loadAliasTargets()
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
     if (error.error != QJsonParseError::NoError || !document.isObject()) {
         qCWarning(fluent::logging::typographyCategory)
-            << "Could not parse the bundled Fluent semantic icon aliases"
-            << error.errorString();
+            << "Could not parse the bundled Fluent semantic icon aliases" << error.errorString();
         return {};
     }
 
@@ -183,9 +177,7 @@ QString sourceNameFor(const QString& glyphOrName)
         return alias.value();
 
     const auto catalogEntry = catalogCodepointIndex().constFind(codepoint);
-    return catalogEntry == catalogCodepointIndex().constEnd()
-        ? QString()
-        : catalog().at(catalogEntry.value()).name;
+    return catalogEntry == catalogCodepointIndex().constEnd() ? QString() : catalog().at(catalogEntry.value()).name;
 }
 
 } // namespace
@@ -211,9 +203,7 @@ int snapIconPixelSize(int requestedPixelSize)
 {
     // WinUI FontIcon crisp sizes + Fluent System Icons compact/optical set.
     // zh_CN: WinUI FontIcon 清晰字号 + Fluent System Icons 紧凑/光学档。
-    static constexpr int kOpticalSizes[] = {
-        12, 16, 20, 24, 28, 32, 40, 48, 64
-    };
+    static constexpr int kOpticalSizes[] = {12, 16, 20, 24, 28, 32, 40, 48, 64};
     if (requestedPixelSize <= 0)
         return 16;
     // Preserve intentional micro slots (8–11) used by FlipView / PipsPager / spin.
@@ -252,8 +242,7 @@ QString glyphForSize(const QString& glyphOrName, int designSize)
         return fallback;
 
     const QString family = sourceMatch.captured(1);
-    const QString exactName = family + QLatin1Char('_') + QString::number(snappedSize)
-        + QStringLiteral("_regular");
+    const QString exactName = family + QLatin1Char('_') + QString::number(snappedSize) + QStringLiteral("_regular");
     const auto exact = catalogIndex().constFind(exactName);
     if (exact != catalogIndex().constEnd())
         return catalog().at(exact.value()).glyph();
@@ -270,10 +259,8 @@ QString glyphForSize(const QString& glyphOrName, int designSize)
         const int delta = qAbs(candidateSize - snappedSize);
         const bool candidateAtOrAbove = candidateSize >= snappedSize;
         const bool bestAtOrAbove = bestSize >= snappedSize;
-        if (delta < bestDelta
-            || (delta == bestDelta && candidateAtOrAbove && !bestAtOrAbove)
-            || (delta == bestDelta && candidateAtOrAbove == bestAtOrAbove
-                && candidateSize < bestSize)) {
+        if (delta < bestDelta || (delta == bestDelta && candidateAtOrAbove && !bestAtOrAbove)
+            || (delta == bestDelta && candidateAtOrAbove == bestAtOrAbove && candidateSize < bestSize)) {
             bestRow = row;
             bestDelta = delta;
             bestSize = candidateSize;
@@ -297,10 +284,10 @@ QFont font(int pixelSize)
 }
 
 void paintGlyph(QPainter& painter,
-                const QRectF& targetRect,
-                const QString& glyphOrName,
-                int pixelSize,
-                Qt::Alignment alignment)
+    const QRectF& targetRect,
+    const QString& glyphOrName,
+    int pixelSize,
+    Qt::Alignment alignment)
 {
     if (glyphOrName.isEmpty() || targetRect.isEmpty() || pixelSize <= 0)
         return;

@@ -16,8 +16,7 @@ public:
         // Stop while this panel's native focus chain still exists. If an enclosing
         // host is already dying, Spatial avoids restoring content into that tree.
         // zh_CN: 在面板原生焦点链仍存活时停用；若外层宿主已开始销毁，Spatial 不再向其中恢复内容。
-        if (auto* session =
-                findChild<spatial::SpatialSession*>(QString(), Qt::FindDirectChildrenOnly))
+        if (auto* session = findChild<spatial::SpatialSession*>(QString(), Qt::FindDirectChildrenOnly))
             session->deactivate();
     }
 };
@@ -58,8 +57,8 @@ SpatialPreviewSurface<View> createAttachedSpatialPreview(Session* session, QWidg
     QPointer<Session> guardedSession(session);
     const bool active = guardedSession && guardedSession->activate();
     QPointer<View> view(new View(panel));
-    const bool attached = active && guardedSession && guardedSession->attachView(view) && view &&
-                          guardedSession && guardedSession->isActive();
+    const bool attached = active && guardedSession && guardedSession->attachView(view) && view && guardedSession
+        && guardedSession->isActive();
     if (!view)
         view = new View(panel);
     if (!attached)
@@ -73,10 +72,8 @@ class SpatialPreviewBinding final : public QObject {
 public:
     explicit SpatialPreviewBinding(QWidget* panel, bool attached) : QObject(panel)
     {
-        const QPointer<spatial::SpatialView> view(
-            panel->findChild<spatial::SpatialView*>("spatialPreviewView"));
-        const QPointer<spatial::SpatialSession> session(
-            panel->findChild<spatial::SpatialSession*>());
+        const QPointer<spatial::SpatialView> view(panel->findChild<spatial::SpatialView*>("spatialPreviewView"));
+        const QPointer<spatial::SpatialSession> session(panel->findChild<spatial::SpatialSession*>());
         if (!view)
             return;
         if (!attached || !session) {
@@ -98,20 +95,19 @@ public:
             if (!view)
                 return;
             m_synchronizing = true;
-            view->setSpatialEnabled(session && session->isActive() && settings.spatialAvailable() &&
-                                    settings.spatialModeEnabled());
+            view->setSpatialEnabled(
+                session && session->isActive() && settings.spatialAvailable() && settings.spatialModeEnabled());
             m_synchronizing = false;
         };
         connect(&settings, &GallerySettings::spatialModeEnabledChanged, this, synchronize);
         connect(&settings, &GallerySettings::spatialAvailabilityChanged, this, synchronize);
         connect(session, &spatial::SpatialSession::activeChanged, this, synchronize);
-        connect(view, &spatial::SpatialView::spatialEnabledChanged, this,
-                [this, session, &settings](bool enabled) {
-                    // Tab/Escape can restore native input. Keep the whole Gallery in that mode.
-                    // zh_CN: Tab/Escape 可恢复原生输入，Gallery 同步回到同一模式。
-                    if (!m_synchronizing && !enabled && session && session->isActive())
-                        settings.setSpatialModeEnabled(false);
-                });
+        connect(view, &spatial::SpatialView::spatialEnabledChanged, this, [this, session, &settings](bool enabled) {
+            // Tab/Escape can restore native input. Keep the whole Gallery in that mode.
+            // zh_CN: Tab/Escape 可恢复原生输入，Gallery 同步回到同一模式。
+            if (!m_synchronizing && !enabled && session && session->isActive())
+                settings.setSpatialModeEnabled(false);
+        });
         synchronize();
     }
 

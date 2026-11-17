@@ -8,8 +8,9 @@
 namespace fluent::charts::tokens {
 inline QVector<QColor> series(bool dark, const QColor& accent)
 {
-    return dark ? QVector<QColor>{accent, QColor("#5DD3C8"), QColor("#C7A6EE"), QColor("#F5BE65")}
-                : QVector<QColor>{accent, QColor("#008084"), QColor("#7F56AB"), QColor("#A85D00")};
+    return dark
+        ? QVector<QColor>{accent, QColor("#5DD3C8"), QColor("#C7A6EE"), QColor("#F5BE65")}
+        : QVector<QColor>{accent, QColor("#008084"), QColor("#7F56AB"), QColor("#A85D00")};
 }
 inline QColor grid(bool dark)
 {

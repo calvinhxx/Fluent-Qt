@@ -42,8 +42,7 @@ public:
         QString glyph;
         QString title;
         QString body;
-        fluent::dialogs_flyouts::CoachMark::Placement placement =
-            fluent::dialogs_flyouts::CoachMark::Auto;
+        fluent::dialogs_flyouts::CoachMark::Placement placement = fluent::dialogs_flyouts::CoachMark::Auto;
         bool centered = false;
     };
 
@@ -61,7 +60,7 @@ protected:
 private:
     void build();
     void applyStep(int index,
-                   bool animateSpotlight); // content + card target/placement + dim spotlight
+        bool animateSpotlight); // content + card target/placement + dim spotlight
     void goToStep(int index);
     QRect scrimGeometryForWindow() const;
     void syncScrimGeometry();
@@ -69,8 +68,7 @@ private:
     QRect presentedTargetRect(QWidget* target) const;
     void syncCardAnchor(bool retarget = false);
     void applyStepSpotlight(int index, bool animate); // glide / pop the dim cut-out onto the target
-    QRect
-    spotlightRectFor(QWidget* target) const; // target geometry in scrim-local coords + padding
+    QRect spotlightRectFor(QWidget* target) const;    // target geometry in scrim-local coords + padding
     void focusPrimaryActionIfActive();
     void settleFocusForHostState();
     void finishTour();

@@ -10,7 +10,7 @@ namespace fluent::collections {
 class GridView;
 class ListView;
 class TreeView;
-}
+} // namespace fluent::collections
 class QPainter;
 class QFont;
 class QModelIndex;
@@ -25,15 +25,17 @@ namespace fluent::gallery {
  * zh_CN: Collections 示例模型 / 代理共用的自定义条目角色。
  */
 enum GalleryItemRole {
-    PhotoImageRole = Qt::UserRole + 701,   ///< QPixmap cover for photo cards.
+    PhotoImageRole = Qt::UserRole + 701,    ///< QPixmap cover for photo cards.
     PhotoSubtitleRole = Qt::UserRole + 702, ///< Secondary caption line.
     TreeIconGlyphRole = Qt::UserRole + 720, ///< FluentQt Icons glyph string.
     TreeIconColorRole = Qt::UserRole + 721  ///< Optional QColor for the glyph.
 };
 
-void drawPhotoCaption(QPainter* painter, const QRectF& card,
-                      const QString& title, const QString& subtitle,
-                      const QFont& baseFont);
+void drawPhotoCaption(QPainter* painter,
+    const QRectF& card,
+    const QString& title,
+    const QString& subtitle,
+    const QFont& baseFont);
 
 /**
  * @brief GridView photo-card delegate (mirrors gridview_test::FluentGridItemDelegate).
@@ -48,18 +50,13 @@ void drawPhotoCaption(QPainter* painter, const QRectF& card,
 class GridPhotoDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    GridPhotoDelegate(fluent::FluentElement* themeHost,
-                      fluent::collections::GridView* view,
-                      QObject* parent = nullptr);
+    GridPhotoDelegate(fluent::FluentElement* themeHost, fluent::collections::GridView* view, QObject* parent = nullptr);
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override;
-    QSize sizeHint(const QStyleOptionViewItem& option,
-                   const QModelIndex& index) const override;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
-    void drawCheckOverlay(QPainter* painter, const QRectF& card,
-                          bool selected, bool enabled) const;
+    void drawCheckOverlay(QPainter* painter, const QRectF& card, bool selected, bool enabled) const;
 
     fluent::FluentElement* m_themeHost = nullptr;
     fluent::collections::GridView* m_view = nullptr;
@@ -78,14 +75,10 @@ private:
 class ListRowDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    ListRowDelegate(fluent::FluentElement* themeHost,
-                    fluent::collections::ListView* view,
-                    QObject* parent = nullptr);
+    ListRowDelegate(fluent::FluentElement* themeHost, fluent::collections::ListView* view, QObject* parent = nullptr);
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override;
-    QSize sizeHint(const QStyleOptionViewItem& option,
-                   const QModelIndex& index) const override;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
     fluent::FluentElement* m_themeHost = nullptr;
@@ -105,19 +98,19 @@ private:
 class TreeRowDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    TreeRowDelegate(fluent::FluentElement* themeHost, int rowHeight,
-                    fluent::collections::TreeView* view,
-                    QObject* parent = nullptr);
+    TreeRowDelegate(fluent::FluentElement* themeHost,
+        int rowHeight,
+        fluent::collections::TreeView* view,
+        QObject* parent = nullptr);
 
     void setCheckBoxVisible(bool visible) { m_checkBoxVisible = visible; }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override;
-    QSize sizeHint(const QStyleOptionViewItem& option,
-                   const QModelIndex& index) const override;
-    bool editorEvent(QEvent* event, QAbstractItemModel* model,
-                     const QStyleOptionViewItem& option,
-                     const QModelIndex& index) override;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    bool editorEvent(QEvent* event,
+        QAbstractItemModel* model,
+        const QStyleOptionViewItem& option,
+        const QModelIndex& index) override;
 
 private:
     QRectF bgRectForOption(const QStyleOptionViewItem& option) const;

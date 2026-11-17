@@ -37,9 +37,9 @@ class GalleryContentPage : public QWidget, public fluent::FluentElement, public 
 
 public:
     explicit GalleryContentPage(const QString& routeId,
-                                const QString& title,
-                                const QString& subtitle = QString(),
-                                QWidget* parent = nullptr);
+        const QString& title,
+        const QString& subtitle = QString(),
+        QWidget* parent = nullptr);
 
     QString routeId() const { return m_routeId; }
     QString title() const { return m_title; }
@@ -88,9 +88,8 @@ protected:
      * @brief Creates a label whose color follows theme refreshes; caller places it.
      * zh_CN: 创建颜色随主题刷新的标签；由调用方负责布局。
      */
-    fluent::textfields::Label* createTrackedLabel(const QString& text,
-                                                  Typography::FontRole fontRole,
-                                                  TextRole textRole);
+    fluent::textfields::Label*
+    createTrackedLabel(const QString& text, Typography::FontRole fontRole, TextRole textRole);
 
     /**
      * @brief Registers an already-created label so its color follows theme refreshes.
