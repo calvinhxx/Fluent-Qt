@@ -651,8 +651,8 @@
   "line-edit": {
     "name": "单行输入框",
     "description": "Fluent 样式单行文本框，支持清空按钮与后缀图标/文本。",
-    "example": "带清除按钮",
-    "usage": "调用 setClearButtonEnabled(true) 在有输入时显示一键清除按钮，通过 textChanged 监听内容变化。"
+    "example": "单位与行内操作",
+    "usage": "用 setTrailingText() 显示单位，用 setTrailingWidget() 添加行内操作，并为输入框和清除按钮设置可访问名称。"
   },
   "number-box": {
     "name": "数值输入框",

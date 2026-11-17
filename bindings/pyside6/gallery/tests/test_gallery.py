@@ -3432,7 +3432,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 self.assertIsNotNone(second)
                 for direction in (Qt.LeftToRight, Qt.RightToLeft):
                     card.setLayoutDirection(direction)
-                    for width in (900, 420):
+                    for width in (900, 844, 845, 846, 420, 900):
                         with self.subTest(sample=sample_id, direction=direction, width=width):
                             card.resize(width, card.sizeHint().height())
                             card.show()
@@ -3442,7 +3442,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             # Nested layout requests can arrive after the native resize.
                             self.assertTrue(_wait_until(lambda: (
                                 first.width() == 370 and second.width() == 370
-                                if width == 900 else
+                                if width >= 846 else
                                 second.mapTo(card, QPoint()).y() > first.mapTo(card, QPoint()).y() + first.height()
                             )))
                             a = first.mapTo(card, QPoint())
@@ -3451,7 +3451,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             self.assertEqual(second.height(), 32)
                             self.assertTrue(card.rect().contains(a))
                             self.assertTrue(card.rect().contains(b))
-                            if width == 900:
+                            if width >= 846:
                                 self.assertEqual(first.width(), 370)
                                 self.assertEqual(second.width(), 370)
                                 self.assertEqual(a.y(), b.y())

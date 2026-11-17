@@ -884,10 +884,12 @@ class _GallerySampleCard(QFrame):
         return max(0, widget.sizeHint().height())
 
     def _content_width(self, width: int) -> int:
-        return max(0, width - self._LEFT_MARGIN - self._RIGHT_MARGIN)
+        frame = self.contentsMargins()
+        return max(0, width - frame.left() - self._LEFT_MARGIN - self._RIGHT_MARGIN - frame.right())
 
     def _calculated_height(self, width: int) -> int:
         content_width = self._content_width(width)
+        frame = self.contentsMargins()
         widgets = (
             self._gallery_title,
             self._gallery_description,
@@ -900,8 +902,10 @@ class _GallerySampleCard(QFrame):
             if widget is not None
         ]
         return (
-            self._TOP_MARGIN
+            frame.top()
+            + self._TOP_MARGIN
             + self._BOTTOM_MARGIN
+            + frame.bottom()
             + sum(heights)
             + self._SPACING * max(0, len(heights) - 1)
             - (self._SPACING - self._DESCRIPTION_SPACING
