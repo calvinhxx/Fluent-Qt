@@ -24,6 +24,7 @@ CMakeUserPresets.json
 .vscode/settings.json
 .qtcreator/
 /.claude/
+/.cursor/
 
 # mac
 .DS_Store
