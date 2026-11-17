@@ -3,9 +3,8 @@
 
 namespace fluent::charts {
 /**
- * @brief Dedicated horizontal bar chart widget with a fixed HorizontalBar presentation.
- * References external ChartModel data without taking ownership.
- * zh_CN: 专用横向条形图控件，图表类型固定为横向条形图，关联外部 ChartModel 而不接管所有权。
+ * @brief Horizontal bar chart widget backed by a ChartModel.
+ * zh_CN: 横向条形图控件，通过 ChartModel 提供数据。
  */
 class HorizontalBarChart : public ChartView {
     Q_OBJECT

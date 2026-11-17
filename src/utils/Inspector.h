@@ -9,13 +9,9 @@ class QWidget;
 namespace fluent::diagnostics {
 
 /**
- * @brief Configures the read-only checks performed by Inspector.
- * zh_CN: 配置 Inspector 执行的只读检查。
- *
- * The defaults target desktop application surfaces. Layout-grid checking is
- * opt-in because application shells may intentionally use optical offsets.
- * zh_CN: 默认值面向桌面应用界面。布局网格检查默认为关闭，因为应用壳层可能会
- * 有意采用视觉补偿偏移。
+ * @brief Configures the read-only UI checks performed by Inspector.
+ * Defaults suit standard desktop windows; layout-grid checking is off by default because shells often use intentional visual offsets.
+ * zh_CN: 配置 Inspector 执行的只读界面检查项。默认适用于桌面应用界面；布局网格检查默认关闭，以免误报有意微调的视觉对齐。
  */
 struct InspectorOptions {
     QSize minimumHitArea{24, 24};
@@ -30,25 +26,19 @@ struct InspectorOptions {
 };
 
 /**
- * @brief Produces a versioned quality report for a built QWidget tree.
- * zh_CN: 为已构建的 QWidget 树生成带版本的质量报告。
- *
- * Inspector never changes widgets, layout, focus order, or application data.
- * Call it after the target surface is visible and pending layout events have
- * been processed. The JSON shape is documented by inspector-report.schema.json.
- * zh_CN: Inspector 不会修改控件、布局、焦点顺序或应用数据。请在目标界面可见且
- * 待处理布局事件完成后调用。JSON 结构由 inspector-report.schema.json 说明。
+ * @brief Produces a read-only JSON inspection report for a QWidget tree.
+ * Call after the window is shown and pending layout events have settled (schema in inspector-report.schema.json).
+ * zh_CN: 为 QWidget 树生成只读的 JSON 检查报告。请在窗口显示且待处理的布局事件完成后调用（字段格式见 inspector-report.schema.json）。
  */
 class Inspector final {
 public:
     static constexpr int ReportSchemaVersion = 1;
 
     /**
-     * @brief Returns deterministic findings and summary counts for root.
-     * zh_CN: 返回 root 的确定性问题记录与汇总计数。
+     * @brief Inspects @p root and returns deterministic findings and summary counts.
+     * zh_CN: 检查 @p root 并返回检查结果列表与统计计数。
      */
-    static QJsonObject report(QWidget* root,
-                              const InspectorOptions& options = InspectorOptions{});
+    static QJsonObject report(QWidget* root, const InspectorOptions& options = InspectorOptions{});
 };
 
 } // namespace fluent::diagnostics

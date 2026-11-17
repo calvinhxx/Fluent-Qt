@@ -8,15 +8,9 @@
 namespace fluent::particles {
 
 /**
- * @brief Scoped facade owning a ParticlesPlugin registration for an application host.
- * Caller retains ownership of the host and backdrops. Activate before creating or attaching
- * backdrops; deactivating pauses tracked backdrops without deleting widgets or altering settings
- * such as animationEnabled, and reactivating or destroying the session lifts the pause. Must not
- * be parented under a tracked widget, and all calls must run on the GUI thread.
- * zh_CN: 为应用作用域管理 ParticlesPlugin 注册的会话封装。
- * 调用方负责宿主与粒子背景的生命周期。创建或关联背景前须先激活；停用时仅暂停已关联背景的动画，
- * 不销毁控件或子内容，也不修改 animationEnabled 等属性，重新激活或销毁会话即恢复。本会话不能
- * 作为受管理控件的子对象，所有调用须在 GUI 线程执行。
+ * @brief Scoped session for managing the particles plugin lifecycle.
+ * Call activate() before use; deactivating pauses attached backdrops. Must be used on the GUI thread.
+ * zh_CN: 管理粒子插件生命周期的会话工具；使用前先调用 activate()，停用时暂停已关联的背景，须在 GUI 线程操作。
  */
 class ParticlesSession : public QObject {
     Q_OBJECT
@@ -24,14 +18,14 @@ class ParticlesSession : public QObject {
 public:
     explicit ParticlesSession(QObject* host = nullptr, QObject* parent = nullptr);
     ~ParticlesSession() override;
-    /** @brief Registers and activates ParticlesPlugin; returns true immediately if already active. zh_CN: 注册并激活 ParticlesPlugin；已激活时直接返回 true。 */
+    /** @brief Registers and activates ParticlesPlugin; returns true if already active. zh_CN: 注册并激活粒子插件；已激活时直接返回 true。 */
     bool activate(QString* error = nullptr);
-    /** @brief Pauses tracked backdrops until reactivated or destroyed without deleting widgets or changing settings. zh_CN: 暂停已关联背景直至重新激活或销毁会话，不销毁控件或更改其设置。 */
+    /** @brief Pauses attached backdrops without deleting widgets. zh_CN: 暂停已关联的粒子背景，不销毁控件。 */
     bool deactivate(QString* error = nullptr);
     bool isActive() const;
-    /** @brief Creates an attached ParticleBackdrop while active (owned by parent or caller); returns nullptr when inactive. zh_CN: 激活时创建并关联一个 ParticleBackdrop（由 parent 或调用方管理）；未激活时返回 nullptr。 */
+    /** @brief Creates and attaches a ParticleBackdrop while active; returns nullptr when inactive. zh_CN: 激活时创建并关联 ParticleBackdrop（由 parent 或调用方管理）；未激活时返回 nullptr。 */
     ParticleBackdrop* createBackdrop(QWidget* parent = nullptr);
-    /** @brief Attaches an existing ParticleBackdrop while active without reparenting or taking ownership. zh_CN: 在激活状态下关联已有的 ParticleBackdrop（不改变父对象或所有权）。 */
+    /** @brief Attaches an existing ParticleBackdrop while active (caller retains ownership). zh_CN: 激活状态下关联已有的 ParticleBackdrop（仍由应用管理，不会随会话销毁）。 */
     bool attachBackdrop(ParticleBackdrop* backdrop);
 
 signals:

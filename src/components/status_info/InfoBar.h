@@ -31,12 +31,9 @@ class InfoBarAccessible;
 }
 
 /**
- * @brief Fluent inline notification bar with severity, actions, and close behavior.
- * zh_CN: 带严重级别、操作区和关闭行为的 Fluent 内联通知栏。
- *
- * InfoBar displays title and message content with optional action widgets,
- * severity icons, close affordance, and open-state animation.
- * zh_CN: InfoBar 展示标题和消息内容，并支持可选操作控件、严重级别图标、关闭入口和打开态动画。
+ * @brief Fluent inline notification bar with severity levels, optional action widget, and close button.
+ * Displays a title and message with status styling and open/close state.
+ * zh_CN: Fluent 内联通知栏，支持严重级别样式、标题与正文、可选操作控件及关闭按钮。
  */
 class InfoBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -164,13 +161,13 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
         WRITE setSeverityIconBackgroundInset
         NOTIFY severityIconBackgroundInsetChanged)
     /**
-     * @brief Typography role used by title text.
-     * zh_CN: 标题文本使用的排版角色。
+     * @brief Fluent Typography preset used by title text.
+     * zh_CN: 标题文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole titleFontRole READ titleFontRole WRITE setTitleFontRole NOTIFY titleFontRoleChanged)
     /**
-     * @brief Typography role used by message text.
-     * zh_CN: 消息文本使用的排版角色。
+     * @brief Fluent Typography preset used by message text.
+     * zh_CN: 消息文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole messageFontRole
         READ messageFontRole

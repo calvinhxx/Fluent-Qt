@@ -15,11 +15,8 @@ namespace fluent::menus_toolbars {
 class CommandBarFlyoutPrivate;
 
 /**
- * @brief Contextual floating command bar with collapsed and expanded modes.
- * Supports repeated opening anchored to a widget or local point inside its parent window without taking ownership of QAction or FluentMenu objects.
- * Opening a submenu via QAction::setMenu() keeps the flyout open; triggering a leaf command closes both the submenu cascade and the flyout.
- * zh_CN: 带折叠与展开状态的浮动上下文命令栏。
- * 支持在同一顶层窗口内按控件锚点或局部坐标重复弹出，不接管 QAction 和 FluentMenu 的所有权；通过 QAction::setMenu() 展开子菜单时保持浮层打开，触发叶动作后一并关闭。
+ * @brief Contextual floating command bar shown near a target widget, with expandable secondary actions that closes automatically when a command triggers.
+ * zh_CN: 在目标控件附近弹出的快捷命令栏，可展开次要操作，点击具体命令后自动关闭。
  */
 class CommandBarFlyout final : public dialogs_flyouts::Flyout {
     Q_OBJECT
@@ -48,46 +45,46 @@ public:
 
     /**
      * @brief Adds an action to the primary section without taking ownership.
-     * zh_CN: 通过 Qt 控件动作接口将 QAction 添加到主命令区（不接管所有权）。
+     * zh_CN: 添加到主命令区（不负责销毁 QAction）。
      */
     void addAction(QAction* action);
     /**
      * @brief Inserts an action into the primary section before `before` without taking ownership.
-     * zh_CN: 在指定主命令之前插入动作（不接管所有权）。
+     * zh_CN: 在指定动作前插入主命令（不负责销毁 QAction）。
      */
     void insertAction(QAction* before, QAction* action);
     /**
      * @brief Removes an action from the flyout without deleting it.
-     * zh_CN: 从浮动命令栏及所属命令分组中移除动作，但不删除该动作。
+     * zh_CN: 从快捷命令栏移除动作（不销毁 QAction）。
      */
     void removeAction(QAction* action);
 
     /** @brief Appends an action to the primary section without taking ownership.
-     *  zh_CN: 将动作追加到主命令区（不接管所有权）。
+     *  zh_CN: 追加到主命令区（不负责销毁 QAction）。
      */
     bool addPrimaryAction(QAction* action);
     /** @brief Inserts a primary action before `before` without taking ownership.
-     *  zh_CN: 在指定主命令之前插入动作（不接管所有权）。
+     *  zh_CN: 在指定动作前插入主命令（不负责销毁 QAction）。
      */
     bool insertPrimaryAction(QAction* before, QAction* action);
     /** @brief Appends an action to the secondary section without taking ownership.
-     *  zh_CN: 将动作追加到次命令区（不接管所有权）。
+     *  zh_CN: 追加到次命令区（不负责销毁 QAction）。
      */
     bool addSecondaryAction(QAction* action);
     /** @brief Inserts a secondary action before `before` without taking ownership.
-     *  zh_CN: 在指定次命令之前插入动作（不接管所有权）。
+     *  zh_CN: 在指定次命令前插入动作（不负责销毁 QAction）。
      */
     bool insertSecondaryAction(QAction* before, QAction* action);
     /** @brief Removes an action from either section without deleting it.
-     *  zh_CN: 从主命令区或次命令区移除指定动作，但不删除该动作。
+     *  zh_CN: 从主命令区或次命令区移除动作（不销毁 QAction）。
      */
     bool removeCommandAction(QAction* action);
     /** @brief Clears all primary commands without deleting the actions.
-     *  zh_CN: 清空主命令区，不删除其中的动作。
+     *  zh_CN: 清空主命令区（不销毁 QAction）。
      */
     void clearPrimaryActions();
     /** @brief Clears all secondary commands without deleting the actions.
-     *  zh_CN: 清空次命令区，不删除其中的动作。
+     *  zh_CN: 清空次命令区（不销毁 QAction）。
      */
     void clearSecondaryActions();
 
@@ -140,7 +137,7 @@ public:
 public slots:
     /**
      * @brief Expands or collapses the secondary command menu while the flyout is open.
-     * zh_CN: 在浮层打开时展开或收起次命令菜单（受 alwaysExpanded 与是否存在主命令约束）。
+     * zh_CN: 在浮层打开时展开或收起次命令菜单。
      */
     void setExpanded(bool expanded);
 

@@ -51,8 +51,8 @@ inline void raiseOverlayStack(QWidget* scrim, QWidget* overlay)
 }
 
 /**
- * @brief Resolves the event receiver's native top-level host, falling back to the focused widget.
- * zh_CN: 解析事件接收者所属的顶层窗口；非控件接收者回退到当前焦点控件。
+ * @brief Resolves the event receiver's native top-level host, falling back to the focused widget for non-widget targets.
+ * zh_CN: 解析事件接收者所属的顶层窗口；若接收者不是控件，则改用当前焦点控件所属窗口。
  */
 QWidget* eventTopLevel(QObject* watched);
 

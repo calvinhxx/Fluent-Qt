@@ -10,18 +10,9 @@ namespace fluent::collections {
 class FileListItemDelegate;
 
 /**
- * @brief List view for displaying file names, transfer status, and per-row remove/retry actions.
- * Uses an external model without taking ownership and performs no I/O itself. Qt::DisplayRole supplies
- * the file name and MetadataRole supplies supporting text (both wrap without elision). Row clicks preserve
- * ListView's pressed/clicked signals, while the remove/retry buttons emit only removeRequested() or
- * retryRequested(). Delete/Backspace requests removal and Ctrl+R (Cmd+R on macOS) requests retry for
- * Rejected rows. Uses a private delegate without per-row widgets; replacing the delegate is unsupported
- * (use ListView for custom row rendering).
- * zh_CN: 用于展示文件名、传输状态及移除/重试操作的列表视图。
- * 关联外部数据模型（不接管所有权），组件自身不执行文件 I/O。Qt::DisplayRole 提供文件名，MetadataRole 提供辅助说明，
- * 两者均自动换行不截断。点击行主体保持 ListView 的 pressed/clicked 信号，点击移除/重试按钮仅发出 removeRequested()
- * 或 retryRequested()；Delete/Backspace 请求移除当前行，Ctrl+R（macOS 下为 Cmd+R）请求重试 Rejected 行。
- * 内部使用私有代理绘制且不逐行创建控件；不支持替换代理，自定义行样式请改用 ListView。
+ * @brief List view displaying file names, transfer status, and per-row remove/retry actions.
+ * Driven by a Qt item model without disk I/O; Delete requests removal and Ctrl/Cmd+R requests retry.
+ * zh_CN: 展示文件名、进度状态及移除/重试按钮的列表视图。通过数据模型驱动（不读写磁盘文件），Delete 请求移除、Ctrl/Cmd+R 请求重试。
  */
 class FileListView : public ListView {
     Q_OBJECT
@@ -30,21 +21,18 @@ class FileListView : public ListView {
 public:
     /**
      * @brief Display status of a file row; actual transfers are handled by the application.
-     * zh_CN: 文件行的展示状态；实际传输逻辑由应用外部处理。
+     * zh_CN: 文件行的显示状态；实际传输逻辑由应用处理。
      */
     enum Status { Ready = 0, Uploading = 1, Rejected = 2 };
     Q_ENUM(Status)
 
     /**
-     * @brief Model roles read by FileListView in addition to Qt::DisplayRole.
-     * MetadataRole takes QString, StatusRole defaults to Ready, ProgressRole is clamped to [0, 1],
-     * RemovableRole defaults to true, and RetryableRole defaults to false (effective only when Status is
-     * Rejected). Standard Qt::ItemIsEnabled flags gate actions, and Qt::AccessibleTextRole /
-     * Qt::AccessibleDescriptionRole override the generated accessibility text.
-     * zh_CN: 除 Qt::DisplayRole 外使用的自定义模型角色。
-     * MetadataRole 为 QString；StatusRole 默认 Ready；ProgressRole 为限制在 [0, 1] 的进度值；
-     * RemovableRole 默认 true；RetryableRole 默认 false（仅 Status 为 Rejected 时可重试）。
-     * 所有操作受 Qt::ItemIsEnabled 约束，可用 Qt::AccessibleTextRole / AccessibleDescriptionRole 覆盖默认无障碍文本。
+     * @brief Model roles read in addition to Qt::DisplayRole.
+     * MetadataRole (QString), StatusRole (Status, default Ready), ProgressRole ([0, 1]),
+     * RemovableRole (bool, default true), and RetryableRole (bool, default false for Rejected rows).
+     * zh_CN: 除 Qt::DisplayRole 外支持的模型角色。
+     * 包含 MetadataRole（辅助文本）、StatusRole（默认 Ready）、ProgressRole（[0, 1] 进度）、
+     * RemovableRole（默认 true）与 RetryableRole（默认 false，仅 Rejected 状态生效）。
      */
     enum DataRole { MetadataRole = Qt::UserRole + 1, StatusRole, ProgressRole, RemovableRole, RetryableRole };
     Q_ENUM(DataRole)
@@ -53,8 +41,8 @@ public:
     ~FileListView() override;
 
     /**
-     * @brief Associates an external model without taking ownership or modifying its data.
-     * zh_CN: 关联外部数据模型，不改变其父对象也不修改其数据。
+     * @brief Sets the item model (still managed by the caller).
+     * zh_CN: 设置数据模型（仍由应用管理，不会随视图销毁）。
      */
     void setModel(QAbstractItemModel* model) override;
 

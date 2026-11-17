@@ -5,17 +5,9 @@
 #include <vector>
 
 /**
- * @brief Defines Fluent semantic color tokens for light, dark, and contrast themes.
- * zh_CN: 定义 Light、Dark 和 Contrast 主题下的 Fluent 语义化颜色 token。
- *
- * Key accent colors:
- * - Light: #005FB8
- * - Dark:  #60CDFF
- * zh_CN: 关键 Accent 色值为 Light #005FB8、Dark #60CDFF。
- *
- * System colors include foreground/background pairs for Critical, Caution,
- * Informational, and Success states.
- * zh_CN: System 颜色包含 Critical、Caution、Informational 和 Success 的前景/背景配对。
+ * @brief Defines Fluent color tokens for Light, Dark, and Contrast themes.
+ * Key accents are #005FB8 (Light) and #60CDFF (Dark); System tokens pair foreground and background colors for Critical, Caution, Informational, and Success states.
+ * zh_CN: 定义 Light、Dark 和 Contrast 主题下的 Fluent 颜色 token。主强调色为 Light #005FB8、Dark #60CDFF，System 分组包含 Critical、Caution、Informational 和 Success 的前景/背景配色。
  */
 namespace ThemeColors {
 
@@ -77,18 +69,18 @@ extern const QColor OnAccentPrimary;
 extern const QColor OnAccentSecondary;
 extern const QColor OnAccentTertiary;
 extern const QColor OnAccentDisabled;
-// Accent foreground measured from Figma; used for text links on neutral surfaces.
-// zh_CN: 从 Figma 实测的强调色前景，用于中性表面上的文本链接。
+// Accent foreground measured from Figma; used for text links on neutral backgrounds.
+// zh_CN: 从 Figma 实测的强调色前景，用于中性背景上的文本链接。
 extern const QColor AccentPrimary;
 } // namespace Text
 
 // --- System / Semantic Colors ---
-// zh_CN: 系统/语义色。
+// zh_CN: 系统/状态色。
 namespace System {
 extern const QColor Critical;
 extern const QColor CriticalBackground;
-// Remaining semantic colors follow WinUI references when not exported by the current Figma node.
-// zh_CN: 当前 Figma node 未导出的语义色参考 WinUI。
+// Remaining status colors follow WinUI references when not exported by the current Figma node.
+// zh_CN: 当前 Figma node 未导出的状态色参考 WinUI。
 extern const QColor Caution;
 extern const QColor CautionBackground;
 extern const QColor Informational;

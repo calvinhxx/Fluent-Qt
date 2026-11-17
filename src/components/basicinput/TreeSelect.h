@@ -26,16 +26,9 @@ class TreeSelectPopup;
 class TreeSelectProxy;
 
 /**
- * @brief Searchable single- or multi-select dropdown over an external tree model (not owned).
- * zh_CN: 基于外部树形模型（不接管所有权）的搜索与单/多选下拉控件。
- *
- * Column 0 supplies DisplayRole labels and unique non-empty string keys in keyRole (UserRole by default).
- * Missing or duplicate keys cannot be selected; ItemIsEnabled and ItemIsSelectable control eligibility,
- * and parent/child items select independently. Filtering never edits the model, and selection is preserved
- * by key across filtering, sorting, and row moves.
- * zh_CN: 第 0 列 DisplayRole 作为显示文本，keyRole（默认 UserRole）作为唯一非空字符串键。
- * 缺少键或键重复的节点不可选；由模型 flags 决定可选状态，父子节点互不联动。
- * 搜索不会修改源模型；节点移除时自动清理，筛选、排序或移动后按 key 保留选中状态。
+ * @brief Searchable single- or multi-select dropdown backed by a tree model.
+ * Reads labels from column 0 DisplayRole and unique string keys from keyRole (UserRole by default); items select independently.
+ * zh_CN: 支持搜索的树形单选/多选下拉控件。以第 0 列 DisplayRole 为文本、keyRole（默认 UserRole）为唯一非空字符串键，各节点独立选择。
  */
 class TreeSelect : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -57,6 +50,8 @@ public:
     ~TreeSelect() override;
 
     QAbstractItemModel* model() const;
+    /** @brief Sets the source tree model (still managed by the caller; not deleted by this control).
+     * zh_CN: 设置树形数据源模型（仍由应用管理，不会随控件销毁）。 */
     void setModel(QAbstractItemModel* model);
     int keyRole() const { return m_keyRole; }
     void setKeyRole(int role);

@@ -19,10 +19,8 @@ namespace fluent::collections {
 
 /**
  * @brief Stacked page container with push/pop navigation and animated transitions.
- * Extends QStackedWidget with a navigation stack, transition animations, and explicit
- * page ownership policies.
- * zh_CN: 支持压栈/出栈导航和转场动画的堆叠页面容器。
- * 在 QStackedWidget 基础上提供导航栈、过渡动画及显式页面所有权策略。
+ * Extends QStackedWidget with a navigation stack, transition animations, and per-page WidgetOwnership disposal.
+ * zh_CN: 支持压栈/出栈导航和转场动画的堆叠页面容器，可为每个页面指定销毁方式。
  */
 class StackView : public QStackedWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -76,8 +74,8 @@ class StackView : public QStackedWidget, public FluentElement, public QMLPlus {
         WRITE setTransitionType
         NOTIFY transitionTypeChanged)
     /**
-     * @brief Default release policy for pages added through StackView APIs.
-     * zh_CN: 通过 StackView API 添加页面时使用的默认释放策略。
+     * @brief Default disposal mode for pages added through StackView APIs.
+     * zh_CN: 通过 StackView API 添加页面时使用的默认销毁方式。
      */
     Q_PROPERTY(fluent::WidgetOwnership defaultItemOwnership
         READ defaultItemOwnership
@@ -137,8 +135,8 @@ public:
     bool clear();
 
     /**
-     * @brief Registers an existing child widget in the navigation stack without taking ownership by default.
-     * zh_CN: 将页面纳入 StackView 导航栈管理，默认不接管其所有权。
+     * @brief Registers an existing child widget in the navigation stack (caller-managed by default, WidgetOwnership::Borrowed).
+     * zh_CN: 将已有子控件纳入导航栈管理（默认由应用管理销毁，即 WidgetOwnership::Borrowed）。
      */
     bool adoptWidget(QWidget* item, WidgetOwnership ownership = WidgetOwnership::Borrowed);
 

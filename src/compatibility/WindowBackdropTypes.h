@@ -23,8 +23,8 @@ enum class BackdropBackend { Solid, PaintedMaterial, DwmSystemBackdrop, MacVibra
 Q_ENUM_NS(BackdropBackend)
 
 /**
- * @brief Fidelity of the effective background relative to the requested material.
- * zh_CN: 当前实际背景相对请求材质的保真层级。
+ * @brief Fidelity level of the active background relative to the requested effect.
+ * zh_CN: 当前实际背景相对请求材质效果的还原程度。
  */
 enum class BackdropFidelity { Solid, Emulated, Composited, Native };
 Q_ENUM_NS(BackdropFidelity)
@@ -37,8 +37,8 @@ enum class BackdropSurfaceMode { SolidOpaque, PaintedOpaque, CompositedTranspare
 Q_ENUM_NS(BackdropSurfaceMode)
 
 /**
- * @brief Per-effect capabilities discovered for the current platform session.
- * zh_CN: 当前平台环境探测到的各项背景能力。
+ * @brief Per-effect backdrop capabilities detected for the current platform session.
+ * zh_CN: 当前平台环境探测到的各项背景支持能力。
  */
 struct BackdropCapabilities {
     bool alphaSurfaceSupported = false;
@@ -48,18 +48,18 @@ struct BackdropCapabilities {
     QString provider;
 
     /**
-     * @brief Whether a native backend supports this effect directly.
-     * zh_CN: 原生后端是否直接支持该效果。
+     * @brief Returns whether a native backend supports this effect directly.
+     * zh_CN: 返回原生后端是否直接支持该效果。
      */
     bool supportsNative(BackdropEffect effect) const;
     /**
-     * @brief Whether generic compositor blur-behind can provide this effect (maps to Acrylic; Mica requires native support or software fallback).
-     * zh_CN: 通用合成器背景模糊是否可提供该效果（仅用于 Acrylic；Mica 需原生支持或软件材质回退）。
+     * @brief Returns whether generic compositor blur-behind can provide this effect (maps to Acrylic; Mica requires native support or software-painted fallback).
+     * zh_CN: 返回通用合成器背景模糊是否支持该效果（仅用于 Acrylic；Mica 需要原生支持或改用软件绘制背景）。
      */
     bool supportsCompositor(BackdropEffect effect) const;
     /**
-     * @brief Whether this effect may use a transparent material surface.
-     * zh_CN: 该效果是否可使用透明材质表面。
+     * @brief Returns whether this effect can use a transparent window background.
+     * zh_CN: 返回该效果是否可以使用透明窗口背景。
      */
     bool supportsTransparentMaterial(BackdropEffect effect) const;
 };

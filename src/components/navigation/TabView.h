@@ -378,8 +378,8 @@ class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
         WRITE setKeyboardAcceleratorsEnabled
         NOTIFY keyboardAcceleratorsEnabledChanged)
     /**
-     * @brief Typography role used by tab text.
-     * zh_CN: 标签文本使用的排版角色。
+     * @brief Font role used by tab text.
+     * zh_CN: 标签文本使用的字号样式。
      */
     Q_PROPERTY(Typography::FontRole tabFontRole READ tabFontRole WRITE setTabFontRole NOTIFY tabFontRoleChanged)
     /**

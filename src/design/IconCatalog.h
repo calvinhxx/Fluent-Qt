@@ -16,9 +16,9 @@ namespace Typography::Icons {
 struct IconInfo {
     QString
         name; // Upstream catalog key, e.g. ic_fluent_add_20_regular. zh_CN: 上游目录键名，例如 ic_fluent_add_20_regular。
-    QString displayName; // Human-readable semantic name. zh_CN: 易读语义名称。
+    QString displayName; // Human-readable icon name. zh_CN: 易读的图标名称。
     quint32 codepoint = 0;
-    int designSize = 0; // Upstream optical design size in pixels. zh_CN: 上游光学设计尺寸。
+    int designSize = 0; // Upstream design size in pixels. zh_CN: 图标原始设计尺寸（像素）。
 
     /**
      * @brief Returns the UTF-16 glyph string for this codepoint.
@@ -40,57 +40,28 @@ const QVector<IconInfo>& catalog();
 QString glyph(const QString& name);
 
 /**
- * @brief Snaps a requested paint size onto Fluent/WinUI crisp optical slots.
- * zh_CN: 将请求绘制字号对齐到 Fluent/WinUI 清晰光学档位。
- *
- * Discrete sizes match WinUI guidance (16/20/24/32/…) plus the Fluent System
- * Icons 12 px compact slot. Requests below 12 stay exact for micro chevrons
- * (FlipView, PipsPager, NumberBox). Ties prefer the larger slot so icons do
- * not read undersized after face substitution.
- * zh_CN: 离散档对齐 WinUI 建议（16/20/24/32/…）并保留 Fluent System Icons 的
- * 12 px 紧凑槽；小于 12 的请求保持原值，供微调和翻页小箭头使用。等距时取更大档，避免换字后
- * 图标视觉偏小。
+ * @brief Snaps an icon pixel size to the nearest crisp design size (12, 16, 20, 24, 32, ...).
+ * Requests below 12 px stay unchanged for small chevrons, and ties prefer the larger size.
+ * zh_CN: 将请求的图标像素尺寸对齐到最接近的清晰设计尺寸（12、16、20、24、32 等）；小于 12 px 时保持原值，等距时取更大一档。
  */
 int snapIconPixelSize(int requestedPixelSize);
 
 /**
- * @brief Resolves a semantic or catalog glyph to its native optical-size variant.
- * zh_CN: 将语义字形或目录字形解析为对应原生光学尺寸的变体。
- *
- * The input may be a Typography::Icons semantic glyph, a glyph returned by
- * glyph(), or an upstream catalog name. If that icon family does not publish
- * the requested size, the nearest available design is used.
- * zh_CN: 输入可以是 Typography::Icons 语义字形、glyph() 返回的字形或上游目录名；
- * 若该图标族没有目标尺寸，则选择最接近的原生设计。
+ * @brief Resolves an icon glyph or catalog name to the variant matching @p designSize.
+ * Accepts a Typography::Icons constant, a glyph string, or an upstream catalog name, falling back to the nearest available size.
+ * zh_CN: 将图标字形或目录名称解析为最匹配 @p designSize 的尺寸变体。支持 Typography::Icons 常量、字形字符串或上游目录名；没有对应尺寸时自动改用最接近的可用尺寸。
  */
 QString glyphForSize(const QString& glyphOrName, int designSize);
 
 /**
- * @brief Creates a platform-consistent font for painting an icon glyph.
- * zh_CN: 创建用于绘制图标字形、跨平台一致的字体。
- *
- * Pixel size is passed through snapIconPixelSize() before QFont construction.
- * Hinting matches Fluent text policy: PreferNoHinting on Windows DirectWrite
- * (vertical grid fitting fattens 12–16 px strokes), PreferVerticalHinting
- * elsewhere.
- * zh_CN: 构造 QFont 前会经 snapIconPixelSize() 对齐字号。Hinting 与正文策略一致：
- * Windows DirectWrite 用 PreferNoHinting（纵向网格拟合会把 12–16 px 描边压粗），
- * 其它平台保留 PreferVerticalHinting。
+ * @brief Creates an icon font at a snapped pixel size with platform-consistent hinting.
+ * zh_CN: 使用 snapIconPixelSize() 对齐字号并创建跨平台渲染一致的图标字体。
  */
 QFont font(int pixelSize);
 
 /**
- * @brief Paints a Fluent icon glyph crisply into @p targetRect.
- * zh_CN: 将 Fluent 图标字形清晰绘制到 @p targetRect。
- *
- * Resolves the optical variant for @p pixelSize, snaps @p targetRect to the
- * device pixel grid, then draws with QPainter::drawText(rect, alignment) so
- * compact chevrons stay centered and sharp (same pattern as SplitButton).
- * The painter font is restored before returning so an icon/text compound
- * control cannot accidentally render its label with the icon face.
- * zh_CN: 按 @p pixelSize 解析光学变体，将 @p targetRect 对齐到设备像素网格，再用
- * QPainter::drawText(rect, alignment) 绘制，使紧凑箭头居中且清晰（与 SplitButton 同模式）。
- * 返回前会恢复 painter 字体，避免图标/文字复合控件误用图标字体绘制标签。
+ * @brief Paints an icon glyph or catalog name into @p targetRect at @p pixelSize, restoring the painter font afterward.
+ * zh_CN: 在 @p targetRect 中以 @p pixelSize 绘制图标字形或目录名称，并在返回前恢复 painter 原字体。
  */
 void paintGlyph(QPainter& painter,
     const QRectF& targetRect,

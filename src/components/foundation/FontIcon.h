@@ -12,18 +12,9 @@
 namespace fluent {
 
 /**
- * @brief Theme-aware icon glyph with bundled or application-provided fonts.
- * zh_CN: 使用内置或应用自定义字体、支持主题颜色的图标字形控件。
- *
- * FontIcon accepts either a semantic glyph, a bundled catalog name, or a
- * catalog glyph and resolves the correct native design-size variant before
- * painting.
- * zh_CN: FontIcon 可接收语义字形、内置目录名称或目录字形，并在绘制前解析到
- * 对应的原生光学尺寸变体。
- * An explicit fontFamily paints the supplied glyph at iconSize without catalog
- * lookup or optical-size substitution. Applications own font registration.
- * zh_CN: 显式设置 fontFamily 后，按 iconSize 直接绘制字形，不查询内置目录或替换
- * 光学尺寸变体。字体注册由应用负责。
+ * @brief Theme-aware icon widget supporting bundled Fluent icons or custom icon fonts.
+ * Accepts an icon name or glyph for bundled icons, or paints directly with fontFamily when set.
+ * zh_CN: 支持主题颜色的图标控件，可使用内置 Fluent 图标或应用自定义字体。传入图标名称或内置字形时会自动匹配对应尺寸；显式设置 fontFamily 后则直接按 iconSize 绘制给定字形。
  */
 class FontIcon : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -43,13 +34,9 @@ public:
     QString fontFamily() const { return m_fontFamily; }
 
     /**
-     * @brief Selects an application-registered font; empty restores bundled Fluent icons.
-     * zh_CN: 指定应用已注册的字体；传入空字符串时恢复内置 Fluent 图标。
-     *
-     * Pass the actual glyph string for a custom family, not a catalog name.
-     * Applications must register fonts with QFontDatabase first.
-     * zh_CN: 使用自定义字体时应传入真实字形字符串而非目录名称，且须先通过
-     * QFontDatabase 注册字体并确认 applicationFontFamilies() 返回值。
+     * @brief Sets an application-registered custom icon font; pass an empty string to restore bundled Fluent icons.
+     * When using a custom font, pass the actual glyph string to setGlyph() instead of a catalog icon name.
+     * zh_CN: 设置应用已注册的自定义图标字体（须先通过 QFontDatabase 注册），传入空字符串恢复使用内置 Fluent 图标；使用自定义字体时，glyph 须传入真实字符而非图标名称。
      */
     void setFontFamily(const QString& family);
 

@@ -78,7 +78,7 @@ class AnnotatedScrollBar : public QWidget, public FluentElement, public QMLPlus 
     Q_PROPERTY(int maximum READ maximum WRITE setMaximum NOTIFY rangeChanged)
     /**
      * @brief Current scroll value that drives thumb and annotation positions.
-     * zh_CN: 驱动滑块和注释位置的当前滚动值。
+     * zh_CN: 控制滑块与标签位置的当前滚动值。
      */
     Q_PROPERTY(int value READ value WRITE setValue NOTIFY valueChanged)
     /**
@@ -103,17 +103,17 @@ class AnnotatedScrollBar : public QWidget, public FluentElement, public QMLPlus 
     Q_PROPERTY(int verticalPadding READ verticalPadding WRITE setVerticalPadding NOTIFY layoutMetricsChanged)
     /**
      * @brief Caret glyph size used by scroll affordances.
-     * zh_CN: 滚动入口使用的箭头图形尺寸。
+     * zh_CN: 上下箭头按钮的图标尺寸。
      */
     Q_PROPERTY(QSize caretSize READ caretSize WRITE setCaretSize NOTIFY layoutMetricsChanged)
     /**
      * @brief Width reserved for annotated labels.
-     * zh_CN: 为标注标签保留的列宽。
+     * zh_CN: 分组标签列宽。
      */
     Q_PROPERTY(int labelColumnWidth READ labelColumnWidth WRITE setLabelColumnWidth NOTIFY layoutMetricsChanged)
     /**
      * @brief Line height used by annotated labels.
-     * zh_CN: 标注标签使用的行高。
+     * zh_CN: 分组标签行高。
      */
     Q_PROPERTY(int labelLineHeight READ labelLineHeight WRITE setLabelLineHeight NOTIFY layoutMetricsChanged)
     /**

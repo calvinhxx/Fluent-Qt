@@ -19,11 +19,8 @@ namespace fluent::dialogs_flyouts {
 
 /**
  * @brief Base same-window popup with open state and close policy control.
- * zh_CN: 具备打开状态与关闭策略控制的同窗口弹层基类。
- *
- * Centralizes modality, scrim dimming, fade animation, light-dismiss behavior,
- * and content hosting for popup-derived controls.
- * zh_CN: 统一管理模态、背景遮罩、淡入淡出动画、轻点关闭及内容承载，供派生弹层复用。
+ * Centralizes modality, scrim dimming, fade animation, light-dismiss behavior, and content hosting.
+ * zh_CN: 具备打开状态与关闭策略控制的同窗口弹层基类，统一管理模态、背景遮罩、淡入淡出动画、轻点关闭与内容承载。
  */
 class Popup : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -39,10 +36,8 @@ public:
 
     /**
      * @brief Why an overlay closed.
-     * zh_CN: 浮层关闭原因。
-     *
      * Values 0–4 match TeachingTip::CloseReason for source compatibility.
-     * zh_CN: 0–4 与 TeachingTip::CloseReason 对齐，保持源兼容。
+     * zh_CN: 浮层关闭原因；0–4 与 TeachingTip::CloseReason 保持一致以兼容源码。
      */
     enum CloseReason {
         Programmatic = 0,
@@ -76,18 +71,12 @@ public:
     Q_PROPERTY(bool dim READ isDim WRITE setDim NOTIFY dimChanged)
     /**
      * @brief Scrim opacity in [0, 1]; -1 uses the theme smoke token. Only applies when dim is enabled.
-     * zh_CN: 遮罩不透明度 [0, 1]；-1 使用主题烟雾 token，仅在 dim 开启时生效。
+     * zh_CN: 遮罩不透明度（0–1，-1 表示使用主题默认遮罩色），仅在 dim 开启时生效。
      */
     Q_PROPERTY(double dimOpacity READ dimOpacity WRITE setDimOpacity NOTIFY dimOpacityChanged)
     /**
-     * @brief Blur radius in logical pixels [0, 32] for the captured backdrop (0 disables blur).
-     *
-     * Defaults to 4 when modal and 0 otherwise until explicitly set; explicit
-     * values (including 0) persist across modality changes. Refreshed on open,
-     * host resize, theme change, or refreshBackdrop(); disabled in High Contrast.
-     * zh_CN: 背景截图的模糊半径（逻辑像素 [0, 32]，0 表示关闭模糊）；未手动设置时模态默认 4、
-     * 非模态默认 0，显式设置后（含 0）不再随模态改变。打开、宿主缩放、主题切换或调用
-     * refreshBackdrop() 时刷新；高对比度主题下关闭模糊。
+     * @brief Blur radius [0, 32] for the captured backdrop (0 disables; defaults to 4 when modal, 0 otherwise).
+     * zh_CN: 背景模糊半径（0–32，0 为关闭；未设置时模态默认 4，非模态默认 0）。
      */
     Q_PROPERTY(double backdropBlurRadius
         READ backdropBlurRadius
@@ -119,18 +108,15 @@ public:
     void setModal(bool m);
 
     /**
-     * @brief Whether a CloseOnPressOutside dismissal swallows the mouse press instead of passing it through.
-     *
-     * Default false keeps menu-style click-through; set true for dropdowns (e.g. ComboBox)
-     * so an outside click only closes the popup.
-     * zh_CN: 为 true 时，外部点击关闭弹层会拦截本次鼠标按下（如 ComboBox 下拉框，点外部仅关闭而不触发下方控件）；默认 false 允许穿透。
+     * @brief Whether a CloseOnPressOutside dismissal consumes the mouse press instead of passing it through (default false).
+     * zh_CN: 点击外部关闭弹层时是否拦截此次鼠标按下（默认 false 会继续触发下方控件，下拉框等可设为 true）。
      */
     bool lightDismissConsumesPress() const { return m_lightDismissConsumesPress; }
     void setLightDismissConsumesPress(bool consume) { m_lightDismissConsumesPress = consume; }
 
     /**
-     * @brief Adds a widget exempt from lightDismissConsumesPress() so clicks inside it still pass through.
-     * zh_CN: 添加 lightDismissConsumesPress() 的豁免控件，落在其中的点击在关闭弹层的同时仍可穿透触发该控件。
+     * @brief Exempts a widget from lightDismissConsumesPress() without taking ownership.
+     * zh_CN: 添加豁免控件（不负责销毁）；关闭弹层时点击该控件仍会继续触发它。
      */
     void addLightDismissPassthrough(QWidget* widget)
     {
@@ -153,16 +139,14 @@ public:
 
     /**
      * @brief Controls whether close() plays the exit fade animation (open animation is unaffected).
-     *
-     * Useful when disabling just dismissal fade, e.g. over macOS native vibrancy backdrops.
-     * zh_CN: 控制 close() 是否播放淡出动画（不影响入场动画），适用于需单独关闭退出淡出的场景（如 macOS 原生毛玻璃背景）。
+     * zh_CN: 控制 close() 是否播放淡出动画（不影响入场动画）。
      */
     bool isExitAnimationEnabled() const { return m_exitAnimationEnabled; }
     void setExitAnimationEnabled(bool e);
 
     /**
-     * @brief Uses a widget as the local theme source when no anchor drives the popup.
-     * zh_CN: 无锚点 Popup 显示时用于继承局部主题的来源控件。
+     * @brief Sets a widget as the fallback theme source when the popup has no anchor.
+     * zh_CN: 设置无锚点时用于继承局部主题的来源控件（不负责销毁）。
      */
     void setThemeSource(QWidget* source);
 
@@ -170,12 +154,8 @@ public:
     void setPopupProgress(double p);
 
     /**
-     * @brief Positions the visible card's top-left in relativeTo's local coordinates (shadow margin compensated).
-     *
-     * Pass topLevelWidget() for window-relative placement. While open, the popup
-     * tracks relativeTo and closes if it is clipped out; if never called, open() centers the popup.
-     * zh_CN: 按 relativeTo 局部坐标定位可见卡片左上角（自动补偿阴影边距；传入顶层窗口即为窗口坐标）。
-     * 打开期间跟随 relativeTo 移动，被完全裁剪时自动关闭；未调用则 open() 时居中显示。
+     * @brief Places the popup's top-left at localPos in relativeTo's coordinates; open() centers if unset.
+     * zh_CN: 按 relativeTo 局部坐标定位弹层左上角，未设置时 open() 居中显示。
      */
     void setPosition(QWidget* relativeTo, const QPoint& localPos);
 
@@ -239,19 +219,14 @@ protected:
 
     /**
      * @brief Allows subclasses to exclude trigger regions from outside-press dismissal.
-     * zh_CN: 子类可将触发区域排除在外部按下自动关闭之外。
-     *
-     * Return false to leave a non-modal press to the target's normal input path.
-     * Modal input blocking and Escape remain independent of this decision.
-     * zh_CN: 返回 false 时非模态按下继续交给目标控件；不改变模态拦截或 Esc 行为。
+     * Return false to pass non-modal clicks to the target; modal blocking and Escape still apply.
+     * zh_CN: 允许子类排除外部点击关闭的触发区域；返回 false 时非模态点击仍会触发目标控件。
      */
     virtual bool shouldDismissOnOutsidePress(const QPoint& globalPos) const;
 
     /**
      * @brief Controls whether open() moves keyboard focus into the popup (default true).
-     *
-     * Disable for transient command popups that must keep focus on the invoking control.
-     * zh_CN: 控制 open() 是否将键盘焦点移入弹层（默认 true）；需要保持焦点在原控件上的浮层可关闭此项。
+     * zh_CN: 控制 open() 是否将键盘焦点移入弹层（默认 true）。
      */
     void setFocusOnOpenEnabled(bool enabled);
 

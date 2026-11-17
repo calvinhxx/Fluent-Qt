@@ -30,11 +30,9 @@ class OverscrollController;
 namespace fluent::collections {
 
 /**
- * @brief Fluent collection view that wraps items automatically across rows.
- * Lays out model items using configurable item size bounds, spacing, and margins,
- * while supporting selection, overlay scrollbars, and drag-and-drop reordering.
- * zh_CN: 自动换行排列条目的 Fluent 流式集合视图。
- * 支持配置条目尺寸上下限、间距和边距，同时提供选择、覆盖式滚动条与拖拽重排功能。
+ * @brief Collection view that wraps items automatically across rows.
+ * Supports configurable item size bounds, spacing, margins, selection, and drag reordering.
+ * zh_CN: 自动换行排列条目的流式集合视图，支持自定义条目尺寸上下限、间距、选择和拖拽重排。
  */
 class FlowView : public QAbstractItemView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -49,7 +47,7 @@ public:
     Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * zh_CN: 文本绘制使用的 Fluent 字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -122,9 +120,8 @@ public:
         NOTIFY scrollChainingEnabledChanged)
     /**
      * @brief Whether elastic overscroll bounce is enabled at scroll boundaries.
-     * Enabled by default; disable for navigation panes or chrome that should stop cleanly at the edge.
-     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启）。
-     * 希望在边界干脆停住（例如导航栏）时可关闭此选项。
+     * Enabled by default; disable when scrolling should stop cleanly at the edge.
+     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启，希望在边界直接停住时可关闭）。
      */
     Q_PROPERTY(bool overscrollEnabled
         READ isOverscrollEnabled

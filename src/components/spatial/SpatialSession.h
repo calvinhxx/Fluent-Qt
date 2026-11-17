@@ -17,15 +17,9 @@ class SpatialView;
 class ParticleLayer;
 
 /**
- * @brief Scoped facade owning a SpatialPlugin registration for C++ and PySide6 apps.
- * Caller retains ownership of the host, views, particle backdrops, and created ParticleLayers;
- * parent owns only this session and must not be a tracked view or its descendant. Deactivate or
- * destroy the session before dismantling the host. Activation does not create a GPU context or
- * change user 3D preferences. All calls must run on the GUI thread.
- * zh_CN: 管理 SpatialPlugin 注册与生命周期的会话封装（面向 C++ 与 PySide6 应用）。
- * 调用方负责宿主、视图、粒子背景及所创建 ParticleLayer 的生命周期；parent 仅管理本会话，且不能是
- * 已关联视图或其子对象。销毁宿主前须先停用或销毁会话。激活不会创建 GPU 上下文或更改用户 3D 偏好，
- * 所有调用须在 GUI 线程执行。
+ * @brief Session for managing the 3D perspective module lifecycle.
+ * Activate before creating or attaching SpatialView, and deactivate before destroying the host; must be called on the GUI thread.
+ * zh_CN: 管理 3D 透视模块启停的会话类；在创建或关联 SpatialView 前激活，宿主销毁前先停用，须在 GUI 线程调用。
  */
 class SpatialSession : public QObject {
     Q_OBJECT
@@ -33,18 +27,18 @@ class SpatialSession : public QObject {
 public:
     explicit SpatialSession(QObject* host = nullptr, QObject* parent = nullptr);
     ~SpatialSession() override;
-    /** @brief Registers and activates SpatialPlugin; returns true immediately if already active. zh_CN: 注册并激活 SpatialPlugin；已激活时直接返回 true。 */
+    /** @brief Registers and activates SpatialPlugin; returns true if already active. zh_CN: 注册并激活 Spatial 插件；已激活时直接返回 true。 */
     bool activate(QString* error = nullptr);
-    /** @brief Suspends tracked views to flat raster mode and releases particle GPU layers without deleting caller objects. zh_CN: 将关联视图暂停为平面光栅模式并释放粒子 GPU 代理，不销毁外部对象。 */
+    /** @brief Switches attached views to 2D raster mode and releases particle GPU layers without deleting caller objects. zh_CN: 将关联视图切回 2D 绘制并释放粒子 GPU 资源，不销毁外部控件。 */
     bool deactivate(QString* error = nullptr);
     bool isActive() const;
-    /** @brief Creates an attached SpatialView while active (owned by parent or caller); returns nullptr when inactive. zh_CN: 激活时创建并关联一个 SpatialView（由 parent 或调用方管理）；未激活时返回 nullptr。 */
+    /** @brief Creates and attaches a SpatialView while active; returns nullptr when inactive. zh_CN: 激活时创建并关联 SpatialView（由 parent 或调用方管理）；未激活时返回 nullptr。 */
     SpatialView* createView(QWidget* parent = nullptr);
-    /** @brief Attaches an existing SpatialView (including subclasses) without reparenting or taking ownership. zh_CN: 关联已有的 SpatialView（含子类），不改变父对象或所有权。 */
+    /** @brief Attaches an existing SpatialView while active (caller retains ownership). zh_CN: 激活状态下关联已有的 SpatialView（仍由应用管理，不会随会话销毁）。 */
     bool attachView(SpatialView* view);
-    /** @brief Creates a ParticleLayer for backdrop while active (without taking ownership of backdrop); returns nullptr when inactive. zh_CN: 激活时为粒子背景创建 ParticleLayer（不接管背景所有权）；未激活时返回 nullptr。 */
+    /** @brief Creates a ParticleLayer for backdrop while active (backdrop remains caller-owned); returns nullptr when inactive. zh_CN: 激活时为粒子背景创建 ParticleLayer（背景控件仍由应用管理）；未激活时返回 nullptr。 */
     ParticleLayer* createParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent = nullptr);
-    /** @brief Prepares a hidden Fluent window without creating a GPU context; returns false while inactive. zh_CN: 为隐藏窗口预配置合成属性（不创建 GPU 上下文）；未激活时返回 false。 */
+    /** @brief Pre-configures a hidden Fluent window without creating a GPU context; returns false while inactive. zh_CN: 激活时为隐藏窗口预置所需的图形表面属性（不创建 GPU 上下文）；未激活时返回 false。 */
     bool prepareWindow(windowing::Window* window);
     bool prepareWindow(windowing::Window* window, QSurface::SurfaceType surfaceType);
 

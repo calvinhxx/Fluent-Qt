@@ -25,11 +25,9 @@ class OverscrollController;
 namespace fluent::collections {
 
 /**
- * @brief Fluent grid collection view with configurable cell size, spacing, and column limits.
- * Built on QListView in icon-wrapping mode with Fluent selection visuals, optional header and
- * placeholder text, elastic overscroll, and drag-and-drop reordering.
- * zh_CN: 支持自定义单元格尺寸、间距和最大列数的 Fluent 网格视图。
- * 基于 QListView 换行图标模式构建，提供 Fluent 选中样式、标题与占位文本、边界回弹及拖拽重排。
+ * @brief Grid collection view with configurable cell size, spacing, and max columns.
+ * Supports Fluent selection visuals, optional header/placeholder text, overscroll, and drag reordering.
+ * zh_CN: 支持自定义单元格尺寸、间距和最大列数的网格视图，内置 Fluent 选中样式、标题/占位文本、边界回弹及拖拽重排。
  */
 class GridView : public QListView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -44,7 +42,7 @@ public:
     Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * zh_CN: 文本绘制使用的 Fluent 字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -68,9 +66,8 @@ public:
         NOTIFY scrollChainingEnabledChanged)
     /**
      * @brief Whether elastic overscroll bounce is enabled at scroll boundaries.
-     * Enabled by default; disable for navigation panes or chrome that should stop cleanly at the edge.
-     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启）。
-     * 希望在边界干脆停住（例如导航栏）时可关闭此选项。
+     * Enabled by default; disable when scrolling should stop cleanly at the edge.
+     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启，希望在边界直接停住时可关闭）。
      */
     Q_PROPERTY(bool overscrollEnabled
         READ isOverscrollEnabled

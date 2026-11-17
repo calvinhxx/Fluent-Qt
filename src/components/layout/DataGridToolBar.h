@@ -27,11 +27,9 @@ class FluentMenu;
 namespace fluent::layout {
 
 /**
- * @brief Toolbar with search input, multi-select filter dropdowns, and a column visibility menu for a DataGrid.
- * zh_CN: 为 DataGrid（不接管所有权）提供搜索框、多选筛选器和列管理菜单的工具栏。
- *
- * Search and filter changes are emitted as signals; the application handles filtering, models, and persistence.
- * zh_CN: 搜索和筛选项变更通过信号通知，实际数据过滤、模型管理与持久化由应用自行负责。
+ * @brief Toolbar with search input, multi-select filters, and a column visibility menu for a DataGrid.
+ * Emits signals when search text or filters change; data filtering stays handled by the application.
+ * zh_CN: 为 DataGrid 提供搜索框、多选筛选器和列可见性菜单的工具栏。搜索与筛选变更通过信号通知，实际数据过滤由应用自行处理。
  */
 class DataGridToolBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -43,6 +41,8 @@ public:
     ~DataGridToolBar() override;
 
     fluent::collections::DataGrid* dataGrid() const;
+    /** @brief Binds the target DataGrid (still managed by the caller; not deleted by this toolbar).
+     * zh_CN: 关联目标 DataGrid（仍由应用管理，不会随工具栏销毁）。 */
     void setDataGrid(fluent::collections::DataGrid* grid);
     QString searchText() const;
     void setSearchText(const QString& text);

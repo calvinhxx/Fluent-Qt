@@ -46,8 +46,8 @@ struct PivotItem {
 
 /**
  * @brief Horizontal pivot header strip for switching between content sections.
- * Manages item selection and horizontal overflow (scroll buttons or More button) without owning page widgets.
- * zh_CN: Pivot 风格的水平分段导航栏，支持选中切换与横向溢出处理，不接管页面控件。
+ * Manages item selection and horizontal overflow while page widgets remain managed by the caller.
+ * zh_CN: 水平分段导航栏，用于切换内容区并处理横向溢出，页面控件由外部管理。
  */
 class Pivot : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -70,8 +70,8 @@ class Pivot : public QWidget, public FluentElement, public QMLPlus {
         WRITE setOverflowBehavior
         NOTIFY overflowBehaviorChanged)
     /**
-     * @brief Typography role used by selector items.
-     * zh_CN: 选择器条目使用的排版角色。
+     * @brief Font role used by pivot items.
+     * zh_CN: 导航条目使用的字号样式。
      */
     Q_PROPERTY(Typography::FontRole itemFontRole READ itemFontRole WRITE setItemFontRole NOTIFY itemFontRoleChanged)
     /**

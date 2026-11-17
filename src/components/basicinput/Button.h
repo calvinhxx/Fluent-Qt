@@ -22,11 +22,9 @@ namespace fluent::basicinput {
 class ButtonContentPainter;
 
 /**
- * @brief Fluent-styled push button with token-driven painting and optional iconfont content.
- * zh_CN: 基于 Fluent 设计 token 自绘的 QPushButton，支持文本、图标字体和多种视觉状态。
- *
- * Keeps QPushButton interaction behavior while painting the control in paintEvent().
- * zh_CN: 保留 QPushButton 原生交互，通过 paintEvent() 自定义外观绘制。
+ * @brief Fluent push button with token-driven painting and optional iconfont content.
+ * Keeps QPushButton interaction behavior while custom-painting in paintEvent().
+ * zh_CN: 基于 Fluent 设计 token 自绘的按钮，保留 QPushButton 原生交互并支持文本、图标字体和多种视觉状态。
  */
 class Button : public QPushButton, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -38,18 +36,18 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(ButtonStyle fluentStyle READ fluentStyle WRITE setFluentStyle NOTIFY fluentStyleChanged)
     /**
-     * @brief Density token that controls height and padding, not typography.
-     * zh_CN: 按钮密度 token，仅控制高度与内边距；字体由 fontRole 或 setFont() 管理。
+     * @brief Size preset controlling height and padding, not font.
+     * zh_CN: 控制按钮高度与内边距的尺寸预设，不影响字体。
      */
     Q_PROPERTY(ButtonSize fluentSize READ fluentSize WRITE setFluentSize NOTIFY fluentSizeChanged)
     /**
-     * @brief Fluent typography role used while the button follows theme fonts.
-     * zh_CN: 按钮跟随主题字体时使用的 Fluent 排版角色。
+     * @brief Fluent Typography preset used while following theme fonts.
+     * zh_CN: 跟随主题字体时文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
-     * @brief Foreground role for unfilled, unchecked buttons; filled and disabled keep contrast colors.
-     * zh_CN: 非填充、未选中按钮的文字颜色角色；填充和禁用状态仍使用各自对比色。
+     * @brief Foreground emphasis for unfilled, unchecked buttons; filled and disabled keep contrast colors.
+     * zh_CN: 非填充且未选中时的文字配色级别；填充和禁用状态仍使用各自对比色。
      */
     Q_PROPERTY(TextColorRole textColorRole READ textColorRole WRITE setTextColorRole NOTIFY textColorRoleChanged)
     /**

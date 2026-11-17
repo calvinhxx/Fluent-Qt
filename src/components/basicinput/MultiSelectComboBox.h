@@ -29,18 +29,15 @@ class MultiSelectComboBoxAccessible;
 
 /**
  * @brief Model-backed Fluent dropdown for selecting multiple rows.
- * zh_CN: 基于 model 的多选 Fluent 下拉框。
- *
- * Owns only UI state and a default QItemSelectionModel; the source model and
- * any shared QItemSelectionModel remain managed by the caller.
- * zh_CN: 仅管理界面状态和默认选择模型；数据源 model 及外部共享的 QItemSelectionModel 均由调用方管理。
+ * Uses a built-in QItemSelectionModel by default; external data and selection models remain managed by the caller.
+ * zh_CN: 基于数据模型的多选 Fluent 下拉框，默认内置选择模型，外部传入的数据模型与选择模型由调用方自行管理。
  */
 class MultiSelectComboBox : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
 
     /**
-     * @brief Source model displayed by the dropdown (not owned by this widget).
-     * zh_CN: 下拉框展示的数据源 model（不接管所有权）。
+     * @brief Source model providing the dropdown options.
+     * zh_CN: 下拉框展示的数据源模型。
      */
     Q_PROPERTY(QAbstractItemModel* model READ model WRITE setModel NOTIFY modelChanged)
     /**
@@ -108,9 +105,13 @@ public:
     ~MultiSelectComboBox() override;
 
     QAbstractItemModel* model() const { return m_model.data(); }
+    /** @brief Sets the source model (still managed by the caller; not deleted by this control).
+     * zh_CN: 设置数据源模型（仍由应用管理，不会随控件销毁）。 */
     void setModel(QAbstractItemModel* model);
 
     QItemSelectionModel* selectionModel() const { return m_selectionModel.data(); }
+    /** @brief Sets a custom selection model (still managed by the caller; not deleted by this control).
+     * zh_CN: 设置自定义选择模型（仍由应用管理，不会随控件销毁）。 */
     void setSelectionModel(QItemSelectionModel* selectionModel);
 
     int modelColumn() const { return m_modelColumn; }
@@ -168,8 +169,8 @@ public slots:
      */
     void open();
     /**
-     * @brief Closes the dropdown without rolling back selection.
-     * zh_CN: 关闭下拉弹层且不回滚选择。
+     * @brief Closes the dropdown while keeping the current selection.
+     * zh_CN: 关闭下拉弹层并保留当前选中项。
      */
     void close();
     void setIsOpen(bool open);

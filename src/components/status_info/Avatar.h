@@ -18,12 +18,9 @@ namespace fluent::status_info {
 class InfoBadge;
 
 /**
- * @brief Fluent identity avatar with initials fallback and optional presence badge.
- * zh_CN: Fluent 身份头像控件，支持图片、首字母回退与可选在线状态角标。
- *
- * Uses name to generate fallback initials and for accessibility; setting an
- * explicit initials string or image overrides the fallback display.
- * zh_CN: 姓名用于自动生成首字母和无障碍名称；显式设置首字母或图片后会覆盖默认回退显示。
+ * @brief Fluent identity avatar with automatic initials and optional presence badge.
+ * Uses name for accessibility and automatic initials when no image or explicit initials are set.
+ * zh_CN: Fluent 身份头像控件，无图片时自动显示姓名首字母，并支持右下角在线状态角标；显式设置的图片或首字母会覆盖自动生成内容。
  */
 class Avatar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -86,14 +83,14 @@ public:
     void setForegroundColor(const QColor& color);
 
     /**
-     * @brief Returns explicit initials or the generated name fallback.
-     * zh_CN: 返回显式首字母，或根据姓名生成的回退值。
+     * @brief Returns explicit initials, or initials generated from name.
+     * zh_CN: 返回指定的首字母，或根据姓名自动生成的首字母。
      */
     QString effectiveInitials() const;
 
     /**
-     * @brief Returns the active background color after theme and name fallback resolution.
-     * zh_CN: 返回经主题与姓名回退解析后的实际背景色。
+     * @brief Returns the active background color after theme and name resolution.
+     * zh_CN: 返回当前生效的背景色。
      */
     QColor effectiveBackgroundColor() const;
 

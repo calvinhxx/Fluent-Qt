@@ -35,14 +35,14 @@ class TitleBar;
 class WindowResizeSession;
 
 /**
- * @brief Application shell window with title-bar and content hosting; uses native window management by default and client-side frame fallback where needed.
- * zh_CN: 带标题栏和内容区的应用主窗口；优先使用系统原生窗口管理，必要时回退到自绘边框与拖拽缩放。
+ * @brief Application shell window with title-bar and content hosting; uses native window management by default and client-side frames where unsupported.
+ * zh_CN: 带标题栏和内容区的应用主窗口；优先使用系统原生窗口管理，不支持时自动改用自绘边框与拖拽缩放。
  */
 class Window : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Hosted content widget (ownership remains with the caller).
-     * zh_CN: 窗口内容区承载的控件（不接管所有权）。
+     * @brief Widget hosted in the window content area.
+     * zh_CN: 窗口内容区承载的控件。
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget)
     Q_PROPERTY(BackdropEffect backdropEffect READ backdropEffect WRITE setBackdropEffect NOTIFY backdropEffectChanged)
@@ -61,6 +61,10 @@ public:
     QRect chromeFrameRect() const;
 
     QWidget* contentWidget() const { return m_contentWidget; }
+    /**
+     * @brief Sets the window content widget without taking ownership.
+     * zh_CN: 设置窗口内容区控件（不负责销毁）。
+     */
     void setContentWidget(QWidget* widget);
 
     /**
@@ -97,8 +101,8 @@ public:
     void requestForegroundActivation();
 
     /**
-     * @brief Sets the window background effect and updates it live without recreating the native alpha surface.
-     * zh_CN: 设置窗口背景效果并实时切换，不重建顶层半透明窗口句柄。
+     * @brief Switches the window translucent backdrop effect without recreating the window.
+     * zh_CN: 切换窗口半透明背景效果（不重建窗口）。
      */
     void setBackdropEffect(BackdropEffect effect);
     BackdropEffect backdropEffect() const { return m_backdropEffect; }

@@ -34,10 +34,8 @@ namespace fluent::collections {
 
 /**
  * @brief Fluent list view with header/footer slots, section grouping, and animated selection indicator.
- * Uses external models and delegates without taking ownership, providing Fluent selection styling,
- * placeholder text, drag reordering, and overlay scrollbars.
- * zh_CN: 支持头尾部区域、分组标题和选中指示器动效的 Fluent 列表视图。
- * 关联外部模型与代理（不接管所有权），内置 Fluent 选中样式、占位提示、拖拽重排及覆盖式滚动条。
+ * Uses Qt item models and delegates, providing Fluent selection styling, placeholder text, and drag reordering.
+ * zh_CN: 支持头尾部区域、分组标题和选中指示器动效的 Fluent 列表视图，提供占位提示、拖拽重排与覆盖式滚动条。
  */
 class ListView : public QListView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -55,7 +53,7 @@ public:
     Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * zh_CN: 文本绘制使用的 Fluent 字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -228,7 +226,7 @@ public:
     IndicatorMotionDirection selectedIndicatorMotionDirection() const { return m_selectedIndicatorMotionDirection; }
     /**
      * @brief Whether the selection indicator animates between rows; disabling snaps immediately to the target rect.
-     * zh_CN: 是否启用选中指示器过渡动画；关闭后切换选中项会立即落到目标位置，便于自动化测试。
+     * zh_CN: 是否启用选中指示器过渡动画；关闭后切换选中项会立即移至目标位置。
      */
     bool selectedIndicatorAnimationEnabled() const { return m_selectedIndicatorAnimationEnabled; }
     bool isSelectedIndicatorAnimationEnabled() const { return selectedIndicatorAnimationEnabled(); }
@@ -264,10 +262,9 @@ public:
     ::fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const;
 
     /**
-     * @brief Hides native scrollbars and refreshes the Fluent overlay scrollbars.
-     * Platform styles can re-show native bars (such as inside QComboBox popups), so call again after show if needed.
-     * zh_CN: 隐藏系统原生滚动条并刷新 Fluent 覆盖式滚动条。
-     * 部分平台样式可能在显示后（如 QComboBox 弹层中）重新显示原生滚动条，必要时需在 show 后再次调用。
+     * @brief Hides native scrollbars and refreshes Fluent overlay scrollbars.
+     * Call again after show if a platform style (such as inside QComboBox popups) restores native bars.
+     * zh_CN: 隐藏原生滚动条并刷新 Fluent 覆盖式滚动条（若在 QComboBox 弹层等场景中 show 后被系统样式重置，可再次调用）。
      */
     void refreshFluentScrollChrome();
 

@@ -92,10 +92,8 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(qreal maxZoomFactor READ maxZoomFactor WRITE setMaxZoomFactor NOTIFY maxZoomFactorChanged)
     /**
-     * @brief Whether wheel input at a scroll boundary forwards to an enclosing scroller (WinUI IsScrollChainingEnabled).
-     * Disabled by default so nested ScrollViews consume wheel events across their scrollable range without scrolling the outer page mid-gesture.
-     * zh_CN: 滚动到边界后滚轮事件是否继续传给外层滚动容器（对应 WinUI IsScrollChainingEnabled）。
-     * 默认关闭，避免嵌套 ScrollView 到达边缘时在手势中途带动外层页面滚动。
+     * @brief Whether wheel input at a scroll boundary continues scrolling an enclosing container (default false).
+     * zh_CN: 滑到边界后是否继续滚动外层容器（默认关闭，防止手势误触外层页面）。
      */
     Q_PROPERTY(bool scrollChainingEnabled
         READ isScrollChainingEnabled
@@ -108,7 +106,7 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
     /**
      * @brief Ownership policy for the current content widget.
-     * zh_CN: 当前内容控件的所有权策略。
+     * zh_CN: 当前内容控件的销毁方式。
      */
     Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership NOTIFY contentOwnershipChanged)
 
@@ -126,8 +124,8 @@ public:
     ~ScrollView() override;
 
     /**
-     * @brief Installs `widget` with Owned ownership (matching QScrollArea).
-     * zh_CN: 按与 QScrollArea 一致的 Owned 语义设置内容控件。
+     * @brief Sets the content widget with Owned lifetime (matching QScrollArea).
+     * zh_CN: 设置内容控件并随 ScrollView 一起销毁（与 QScrollArea 一致）。
      */
     void setWidget(QWidget* widget);
 
@@ -142,8 +140,8 @@ public:
     void setContentWidget(QWidget* widget);
 
     /**
-     * @brief Installs `widget` as content with an explicit ownership policy; returns true if applied.
-     * zh_CN: 按指定所有权策略设置内容控件，成功应用时返回 true。
+     * @brief Sets the content widget with an explicit ownership policy; returns true if applied.
+     * zh_CN: 按指定销毁方式设置内容控件，成功时返回 true。
      */
     bool setContentWidget(QWidget* widget, WidgetOwnership ownership);
 

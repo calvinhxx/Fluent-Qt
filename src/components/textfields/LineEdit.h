@@ -29,13 +29,9 @@ class FieldTrailingContent;
 namespace fluent::textfields {
 
 /**
- * @brief Fluent single-line text input with clear button and focus underline.
- * zh_CN: 带清除按钮和焦点下划线的 Fluent 单行文本输入框。
- *
- * LineEdit wraps QLineEdit styling with token-driven margins, typography, frame
- * visibility, clear-button geometry, and focused/unfocused border widths.
- * zh_CN: LineEdit 在 QLineEdit 外增加 token 驱动的边距、排版、外框可见性、
- * 清除按钮几何和聚焦/非聚焦边线宽度。
+ * @brief Fluent single-line text input with clear button, focus underline, and trailing slot.
+ * Wraps QLineEdit with token-driven margins, typography, frame visibility, and border widths.
+ * zh_CN: 带清除按钮、焦点下划线和尾部插槽的 Fluent 单行输入框，在 QLineEdit 基础上提供主题字号、边距和边框样式。
  */
 class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -45,8 +41,8 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
     /**
-     * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * @brief Fluent Typography preset used for text.
+     * zh_CN: 文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -144,16 +140,15 @@ public:
     void setTrailingText(const QString& text);
     QWidget* trailingWidget() const;
     WidgetOwnership trailingWidgetOwnership() const;
-    /** @brief Sets a custom trailing widget with explicit ownership; rejects this LineEdit and its ancestors.
-     *
-     * Call takeTrailingWidget() before changing ownership mode. Read-only fields keep custom actions.
-     * zh_CN: 在输入区尾部放置自定义控件并指定所有权（不能传入自身或祖先控件；更换所有权模式前需先取出，只读字段仍保留自定义操作）。 */
+    /** @brief Sets a custom trailing widget using WidgetOwnership to specify cleanup (rejects self or ancestors).
+     * Call takeTrailingWidget() before switching ownership mode.
+     * zh_CN: 在输入区尾部放置自定义控件，并传入 WidgetOwnership 指定销毁方式（不能传入自身或祖先控件；更换方式前需先调用 takeTrailingWidget()）。 */
     bool setTrailingWidget(QWidget* widget, WidgetOwnership ownership);
-    /** @brief Detaches the custom trailing widget and transfers ownership back to the caller.
-     * zh_CN: 拆离并返回自定义尾部控件，所有权交还调用方。 */
+    /** @brief Removes and returns the trailing widget for the caller to manage or delete.
+     * zh_CN: 移出并返回尾部控件，改由调用方自行销毁。 */
     QWidget* takeTrailingWidget();
-    /** @brief Removes and cleans up custom trailing content according to its ownership mode.
-     * zh_CN: 按设定的所有权模式移除并清理自定义尾部内容。 */
+    /** @brief Removes the trailing widget and handles cleanup according to its WidgetOwnership mode.
+     * zh_CN: 移除尾部控件，并按其 WidgetOwnership 指定的销毁方式处理。 */
     void releaseTrailingWidget();
     QString clearButtonAccessibleName() const;
     void setClearButtonAccessibleName(const QString& name);

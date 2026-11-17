@@ -54,32 +54,32 @@ public:
     bool insertPage(int index, QWidget* widget);
     /**
      * @brief Inserts a page with an explicit ownership policy.
-     * zh_CN: 插入页面并指定所有权策略。
+     * zh_CN: 插入页面并按指定方式管理页面销毁。
      */
     bool insertPage(int index, QWidget* widget, WidgetOwnership ownership);
     QWidget* replacePage(int index, QWidget* widget);
     /**
-     * @brief Replaces a page, applying the previous ownership policy and recording the new one.
-     * zh_CN: 替换页面，按旧页面策略处理后记录新页面的所有权策略。
+     * @brief Replaces a page, applying the previous cleanup policy and recording the new one.
+     * zh_CN: 替换页面，按旧页面方式处理后再按新方式管理页面销毁。
      */
     bool replacePage(int index, QWidget* widget, WidgetOwnership ownership);
     QWidget* takePage(int index);
     /**
-     * @brief Removes a page and applies its configured ownership policy.
-     * zh_CN: 移除页面并执行其所有权策略。
+     * @brief Removes a page and applies its configured cleanup policy.
+     * zh_CN: 移除页面并按其指定的销毁方式处理。
      */
     bool releasePage(int index);
     void clearPages();
     /**
-     * @brief Clears all pages and applies each page's ownership policy.
-     * zh_CN: 清空全部页面并逐一执行各自的释放策略。
+     * @brief Clears all pages and applies each page's cleanup policy.
+     * zh_CN: 清空全部页面并逐一按各自的销毁方式处理。
      */
     void releaseAllPages();
     bool movePage(int from, int to);
     int indexOf(QWidget* widget) const;
     /**
      * @brief Returns the ownership policy recorded for a hosted page.
-     * zh_CN: 返回指定页面记录的所有权策略。
+     * zh_CN: 返回指定页面记录的销毁方式。
      */
     WidgetOwnership pageOwnershipAt(int index) const;
 
@@ -95,9 +95,8 @@ public:
     void setTransitionEffect(TransitionEffect effect);
 
     /**
-     * @brief Configures an optional background fill and border over the window backdrop.
-     * Paints `fill` when valid and non-transparent; otherwise material backdrops stay transparent and regular windows use the default content layer.
-     * zh_CN: 配置绘制在窗口背景之上的可选内容区填充与边框；有效且非透明时使用 fill，否则材质窗口保持透明，普通窗口使用默认内容底色。
+     * @brief Sets the content area background fill, top-left radius, and border; leave fill invalid or transparent to show the window backdrop directly.
+     * zh_CN: 设置内容区背景色和边框；留空或透明时直接显示窗口底色。
      */
     void setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border);
 

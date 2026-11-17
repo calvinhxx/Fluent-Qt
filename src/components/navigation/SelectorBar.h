@@ -49,8 +49,8 @@ struct SelectorBarItem {
 
 /**
  * @brief Horizontal selector bar for mutually exclusive navigation options.
- * Manages selection, overflow behavior, item typography, and activation signals without owning page widgets.
- * zh_CN: 用于互斥导航选项的水平选择栏，管理选中索引、溢出行为、条目排版与激活信号，不接管页面控件。
+ * Manages selection, overflow behavior, and activation signals while page widgets remain managed by the caller.
+ * zh_CN: 水平互斥导航选择栏，管理选中项、横向溢出与激活信号，页面控件由外部管理。
  */
 class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -73,8 +73,8 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
         WRITE setOverflowBehavior
         NOTIFY overflowBehaviorChanged)
     /**
-     * @brief Typography role used by selector items.
-     * zh_CN: 选择器条目使用的排版角色。
+     * @brief Font role used by selector items.
+     * zh_CN: 选项条目使用的字号样式。
      */
     Q_PROPERTY(Typography::FontRole itemFontRole READ itemFontRole WRITE setItemFontRole NOTIFY itemFontRoleChanged)
     /**
@@ -95,9 +95,8 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
 public:
     /**
      * @brief Presentation used when items exceed the available width.
-     * ScrollButtons pages a window of items; MoreButton keeps leading items plus the selected and keyboard-focused items visible (prioritizing focus if both cannot fit) and reports the rest via overflowActivated().
-     * zh_CN: 条目超出可用宽度时的显示方式。
-     * ScrollButtons 按窗口翻页；MoreButton 优先保留前导条目以及选中项和键盘聚焦项（空间不足时优先保留聚焦项），其余通过 overflowActivated() 报告。
+     * ScrollButtons pages through items; MoreButton pins leading, selected, and focused items and reports hidden ones via overflowActivated().
+     * zh_CN: 条目超出可用宽度时的显示方式：ScrollButtons 按页切换；MoreButton 优先保留前导与选中/聚焦项，其余通过 overflowActivated() 报告。
      */
     enum class OverflowBehavior { ScrollButtons, MoreButton };
     Q_ENUM(OverflowBehavior)
