@@ -67,7 +67,7 @@ def site_icon():
     raise ValueError("Gallery application icon is missing its 64px PNG")
 
 
-SECTIONS = {"project": ("Project updates", "项目更新"), "foundation": ("Foundations", "基础能力"),
+SECTIONS = {"project": ("Project updates", "项目更新"), "foundation": ("Foundations", "基础指南"),
             "components": ("Components", "组件"), "modules": ("Modules", "扩展模块"),
             "reference": ("API reference", "API 参考")}
 CATEGORY_NAMES_ZH = {"basic-input": "基础输入", "charts": "图表", "collections": "集合视图",
@@ -159,7 +159,7 @@ def component_directory(doc, documents, page, language):
 
     def guide_entry(item, overview=False):
         current = ' aria-current="page"' if item['id'] == doc['id'] else ''
-        label = ('概述与用法' if language == 'zh' else 'Overview and usage') if overview else item['name'][language]
+        label = ('概览' if language == 'zh' else 'Overview') if overview else item['name'][language]
         accessible = f' aria-label="{escape(item["name"][language] + ": " + label)}"' if overview else ''
         terms = ' '.join([item['id'], label, *item['name'].values(), *item['description'].values()])
         return f'<li data-directory-entry data-kind="guide" data-search="{escape(terms.lower())}"><a href="{relative_url(guide_path(item["id"], language), page)}"{accessible}{current}>{escape(label)}</a></li>'
@@ -360,7 +360,7 @@ def render_reference(reference, documents, catalog, language):
     # Lead with the header's namesake type; a helper struct's brief would misdescribe the page.
     primary = primary_type(reference['types'], reference['source'])
     lead = localized_description(primary, language) if primary else ''
-    fallback = '该头文件公开的类型、函数与常量。' if language == 'zh' else 'Public types, functions, and constants declared in this header.'
+    fallback = '本头文件包含的类型、函数与常量。' if language == 'zh' else 'Public types, functions, and constants declared in this header.'
     description = lead or fallback
     body = '<section id="api" class="reference-body">' + api_search(language)
     body += ''.join(render_type(record, catalog, page, language, include_inherited=True,

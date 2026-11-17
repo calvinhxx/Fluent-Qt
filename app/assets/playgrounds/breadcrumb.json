@@ -60,7 +60,7 @@
       "type": "enum",
       "label": {
         "en": "Standard font role",
-        "zh": "标准尺寸排版"
+        "zh": "标准字号"
       },
       "category": "appearance",
       "effectWhen": "breadcrumbSize == 'Standard'",
@@ -80,7 +80,7 @@
       "type": "enum",
       "label": {
         "en": "Large font role",
-        "zh": "大尺寸排版"
+        "zh": "大尺寸字号"
       },
       "category": "appearance",
       "effectWhen": "breadcrumbSize == 'Large'",

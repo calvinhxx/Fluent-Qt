@@ -93,7 +93,7 @@
     112
   ],
   "description": {
-    "en": "A disclosure surface that reveals caller-supplied content with an optional animation.",
+    "en": "Collapsible panel that shows or hides custom content.",
     "zh": "点击标题展开或收起内容。"
   },
   "presets": [

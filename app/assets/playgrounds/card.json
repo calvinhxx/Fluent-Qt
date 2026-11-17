@@ -54,7 +54,7 @@
     96
   ],
   "description": {
-    "en": "A rounded, token-backed surface for grouping related content.",
+    "en": "Rounded container panel for grouping related content.",
     "zh": "圆角背景面板，用来把相关内容放在一起。"
   },
   "presets": [

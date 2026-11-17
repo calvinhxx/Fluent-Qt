@@ -49,7 +49,7 @@
       "type": "enum",
       "label": {
         "en": "Font role",
-        "zh": "字体角色"
+        "zh": "字号样式"
       },
       "category": "appearance"
     },

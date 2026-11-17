@@ -145,7 +145,7 @@
   ],
   "description": {
     "en": "A tab bar with selection, closing, and drag reordering; pages are hosted by your app.",
-    "zh": "支持新增、关闭和拖拽重排的标签栏，页面内容由应用托管。"
+    "zh": "支持新增、关闭和拖拽重排的标签页栏，各页内容由应用自己管理。"
   },
   "presets": [
     {

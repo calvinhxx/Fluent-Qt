@@ -4354,7 +4354,7 @@
         "type": "enum",
         "label": {
           "en": "Fluent typography",
-          "zh": "排版"
+          "zh": "字号样式"
         },
         "category": "basic"
       },
@@ -4413,7 +4413,7 @@
       56
     ],
     "description": {
-      "en": "Static text rendered with Fluent typography roles and elision.",
+      "en": "Text label supporting Fluent preset font styles and automatic elision.",
       "zh": "应用 Fluent 字体层级的文本标签。"
     },
     "sizeMode": "fixed"
@@ -4913,7 +4913,7 @@
       180
     ],
     "description": {
-      "en": "A multi-line text surface for longer-form input.",
+      "en": "Multi-line text editor that grows with line count and scrolls.",
       "zh": "支持按行数自动增高与滚动的多行文本框。"
     },
     "sizeMode": "contentHeight"
@@ -5276,7 +5276,7 @@
       368
     ],
     "description": {
-      "en": "A calendar surface for browsing months and selecting dates.",
+      "en": "Monthly and yearly calendar for browsing and picking dates.",
       "zh": "按月/年浏览并选择日期。"
     }
   },
@@ -6987,7 +6987,7 @@
       96
     ],
     "description": {
-      "en": "A rounded, token-backed surface for grouping related content.",
+      "en": "Rounded container panel for grouping related content.",
       "zh": "圆角背景面板，用来把相关内容放在一起。"
     }
   },
@@ -7185,7 +7185,7 @@
       112
     ],
     "description": {
-      "en": "A disclosure surface that reveals caller-supplied content with an optional animation.",
+      "en": "Collapsible panel that shows or hides custom content.",
       "zh": "点击标题展开或收起内容。"
     }
   },
@@ -7740,7 +7740,7 @@
         "type": "enum",
         "label": {
           "en": "Standard font role",
-          "zh": "标准尺寸排版"
+          "zh": "标准字号"
         },
         "category": "appearance",
         "effectWhen": "breadcrumbSize == 'Standard'",
@@ -7760,7 +7760,7 @@
         "type": "enum",
         "label": {
           "en": "Large font role",
-          "zh": "大尺寸排版"
+          "zh": "大尺寸字号"
         },
         "category": "appearance",
         "effectWhen": "breadcrumbSize == 'Large'",
@@ -8035,7 +8035,7 @@
         "type": "enum",
         "label": {
           "en": "Font role",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "category": "appearance"
       },
@@ -8125,7 +8125,7 @@
         "type": "enum",
         "label": {
           "en": "Font role",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "category": "appearance"
       },
@@ -8367,7 +8367,7 @@
     ],
     "description": {
       "en": "A tab bar with selection, closing, and drag reordering; pages are hosted by your app.",
-      "zh": "支持新增、关闭和拖拽重排的标签栏，页面内容由应用托管。"
+      "zh": "支持新增、关闭和拖拽重排的标签页栏，各页内容由应用自己管理。"
     }
   },
   {
@@ -11812,7 +11812,7 @@
         "type": "enum",
         "label": {
           "en": "Font style",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "default": "Body",
         "effectHint": {
@@ -12126,7 +12126,7 @@
         "type": "enum",
         "label": {
           "en": "Font style",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "default": "Body",
         "effectHint": {
@@ -12506,7 +12506,7 @@
         "type": "enum",
         "label": {
           "en": "Font style",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "default": "Body",
         "effectHint": {
@@ -13499,7 +13499,7 @@
         "type": "enum",
         "label": {
           "en": "Font style",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "default": "Body",
         "effectHint": {
@@ -13740,7 +13740,7 @@
         "type": "enum",
         "label": {
           "en": "Font style",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "default": "Body"
       },
@@ -13789,7 +13789,7 @@
         "type": "enum",
         "label": {
           "en": "Font style",
-          "zh": "字体角色"
+          "zh": "字号样式"
         },
         "default": "Body"
       },

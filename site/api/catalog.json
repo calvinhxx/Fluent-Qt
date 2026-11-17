@@ -4426,7 +4426,7 @@
         },
         "description": {
           "en": "A contextual command surface with primary and secondary actions.",
-          "zh": "在选中内容旁弹出的上下文命令栏，可按需展开更多操作。"
+          "zh": "在目标控件附近弹出的快捷操作栏，可按需展开更多命令。"
         },
         "urls": {
           "en": "command-bar-flyout/",
@@ -4792,7 +4792,7 @@
         },
         "description": {
           "en": "A tab bar with selection, closing, and drag reordering; pages are hosted by your app.",
-          "zh": "支持新增、关闭和拖拽重排的标签栏，页面内容由应用托管。"
+          "zh": "支持新增、关闭和拖拽重排的标签页栏，各页内容由应用自己管理。"
         },
         "urls": {
           "en": "tab-view/",
@@ -5036,7 +5036,7 @@
         },
         "description": {
           "en": "A Fluent-styled scrollbar with hover expansion.",
-          "zh": "Fluent 样式滚动条，静默时收缩为细条，悬停时自动加宽。"
+          "zh": "Fluent 样式滚动条，空闲时自动收窄为细条，悬停时自动加宽。"
         },
         "urls": {
           "en": "scrollbar/",
@@ -5890,7 +5890,7 @@
         },
         "description": {
           "en": "Static text rendered with Fluent typography roles and elision.",
-          "zh": "应用 Fluent 字体层级的文本标签。"
+          "zh": "支持 Fluent 预设字号的文本标签。"
         },
         "urls": {
           "en": "label/",
@@ -6256,7 +6256,7 @@
         },
         "description": {
           "en": "A Fluent top-level window with custom chrome and theming.",
-          "zh": "带自定义标题栏与系统背景材质的 Fluent 顶层窗口。"
+          "zh": "带自定义标题栏和 Mica / Acrylic 背景效果的顶层窗口。"
         },
         "urls": {
           "en": "window/",
@@ -6317,7 +6317,7 @@
         },
         "description": {
           "en": "A theme-aware widget for bundled Fluent icons or glyphs from an application-provided font family.",
-          "zh": "显示内置 Fluent 图标或应用自定义字体中的字形。"
+          "zh": "显示内置 Fluent 图标或自定义字体里的图标。"
         },
         "urls": {
           "en": "font-icon/",
