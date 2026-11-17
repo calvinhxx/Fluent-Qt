@@ -9,8 +9,7 @@ class QWidget;
 
 namespace fluent::menus_toolbars::detail {
 
-// Shows a Fluent proxy for a caller-owned standard Qt editing menu.
-// The function consumes standardMenu and deletes it with the asynchronous popup.
+// Shows a Fluent menu proxying a standard Qt editing menu, taking ownership of standardMenu.
 bool showTextEditingContextMenu(QWidget* parent,
     QMenu* standardMenu,
     const QPoint& globalPosition,

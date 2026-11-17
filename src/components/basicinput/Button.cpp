@@ -89,8 +89,7 @@ void Button::mouseReleaseEvent(QMouseEvent* event)
 
 Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent)
 {
-    // The custom surface fills the widget; native layout insets must not consume its spacing.
-    // zh_CN: 自绘表面覆盖完整控件，原生布局内缩不能抵消控件间距。
+    // Custom painting fills the widget; keep native layout insets from shrinking spacing.
     setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
     ::compatibility::detail::disableNativeFocusRing(this);
@@ -118,7 +117,7 @@ void Button::setFluentSize(ButtonSize size)
 {
     if (m_size != size) {
         m_size = size;
-        updateGeometry(); // Required: tell the layout system the size changed. zh_CN: 关键：通知布局系统尺寸已变化。
+        updateGeometry();
         update();
         emit fluentSizeChanged();
     }
@@ -210,7 +209,6 @@ void Button::updateIconPresentation(bool nativeIconChanged)
     update();
 
     // A layout observer may synchronously destroy the button.
-    // zh_CN: 布局观察者可能同步销毁按钮。
     QPointer<Button> guard(this);
     if (promote)
         emit fluentLayoutChanged();
@@ -317,21 +315,17 @@ void Button::setIconGlyph(const QString& glyph, int pixelSize, const QString& fa
         m_iconGlyph.clear();
         m_iconFontFamily.clear();
         m_iconPixelSize = 0;
-        QPushButton::setIcon(QIcon()); // Clear the regular icon. zh_CN: 清除普通图标。
+        QPushButton::setIcon(QIcon());
         updateIconPresentation(nativeIconChanged);
         return;
     }
 
-    // Store the icon-font glyph and paint it directly in paintEvent (same approach as DropDownButton).
-    // zh_CN: 保存 iconfont 信息，在 paintEvent 中直接绘制（参考 DropDownButton 方案）。
     m_iconGlyph = glyph;
     m_iconFontFamily = family;
     m_iconPixelSize = pixelSize;
 
-    // Drop the regular icon in favor of icon-font painting. zh_CN: 清除普通图标，使用 iconfont 绘制。
+    // Clear any QIcon so paintEvent draws the crisp iconfont glyph directly.
     QPushButton::setIcon(QIcon());
-
-    // Refresh the size hint. zh_CN: 更新尺寸提示。
     updateIconPresentation(nativeIconChanged);
 }
 
@@ -340,20 +334,15 @@ QSize Button::sizeHint() const
     const auto& spacing = themeSpacing();
     QFontMetrics fm(font());
 
-    // 1. Padding from spacing tokens. zh_CN: 基于 Token 计算内边距。
-    // Horizontal padding: Small(8px), Standard(12px), Large(16px). zh_CN: 水平内边距。
     int hPadding = (m_size == Small) ? spacing.small : (m_size == Large ? spacing.standard : spacing.padding.controlH);
-    // Vertical padding: Small(4px), Standard(6px), Large(8px). zh_CN: 垂直内边距。
     int vPadding = (m_size == Small) ? spacing.gap.tight : (m_size == Large ? spacing.small : spacing.padding.controlV);
-    // Icon gap: Small(4px), Standard(8px). zh_CN: 图标间距。
     int iconGap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
     const QString txt = (m_layout == IconOnly) ? QString() : text();
     const QSize textSize =
         txt.contains(QLatin1Char('\n')) ? fm.size(0, txt) : QSize(fm.horizontalAdvance(txt), fm.height());
 
-    // 2. Include every explicit text line in the preferred height.
-    // zh_CN: 建议高度包含全部显式换行的文本。
+    // Include multi-line text height rather than snapping to standard single-line control height.
     int dynamicHeight = textSize.height() + vPadding * 2;
     if (m_size == StandardSize && !txt.contains(QLatin1Char('\n')))
         dynamicHeight = ::fluent::detail::standardControlHeight(fm);
@@ -365,8 +354,6 @@ QSize Button::sizeHint() const
         return QSize(content.width() + hPadding * 2, qMax(dynamicHeight, content.height() + vPadding * 2));
     }
 
-    // 3. Total width required by the content. zh_CN: 计算内容所需的总宽度。
-    // Prefer the icon font, falling back to the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
     bool hasIconFont = (m_layout != TextOnly) && !m_iconGlyph.isEmpty();
     bool hasRegularIcon = (m_layout != TextOnly) && !icon().isNull();
     QSize icSize = hasIconFont ? QSize(m_iconPixelSize, m_iconPixelSize) : iconSize();
@@ -440,14 +427,12 @@ void Button::paintButtonState(InteractionState state, bool focused)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
-    // Fade the whole surface uniformly when requested (e.g. reveal/hide animations). zh_CN: 需要时整体淡入淡出（如显隐动画）。
     if (m_contentOpacity < 1.0)
         painter.setOpacity(m_contentOpacity);
 
     const auto& colors = themeColorsRef();
     const auto& spacing = themeSpacing();
 
-    // 1. Resolve the interaction state. zh_CN: 确定交互状态。
     if (!isEnabled()) {
         state = Disabled;
     } else if (state == Rest) {
@@ -457,15 +442,13 @@ void Button::paintButtonState(InteractionState state, bool focused)
             state = Hover;
     }
 
-    // 2. Resolve colors; the font comes from QPushButton's font(). zh_CN: 获取色值，字体使用 QPushButton 的 font()。
     painter.setFont(font());
 
     bool checked = isChecked();
     const bool filled = (m_style == Accent || (checked && m_style == Standard));
     QColor bgColor, textColor, borderColor;
-    // borderColor is the surface stroke; keyboard focus is painted by the separate focusVisual block.
+    // borderColor is the outer stroke; keyboard focus is drawn separately below.
 
-    // Fluent interaction colors. zh_CN: Fluent 交互色。
     if (filled) {
         bgColor = colors.accentDefault;
         textColor = colors.textOnAccent;
@@ -474,11 +457,10 @@ void Button::paintButtonState(InteractionState state, bool focused)
             bgColor = colors.accentSecondary;
         if (state == Pressed) {
             bgColor = colors.accentTertiary;
-            borderColor = Qt::transparent; // Border flattens while pressed. zh_CN: 按下时边框扁平化。
+            borderColor = Qt::transparent;
         }
         if (checked && m_style == Accent && state == Rest) {
-            // Checked accent button shows a deeper active state so toggle is visually distinct.
-            // zh_CN: 选中的强调按钮显示更深的激活态底色，使开关状态清晰可见。
+            // Keep checked Accent visibly distinct from unchecked Accent rest state.
             bgColor = colors.accentTertiary;
         }
     } else if (m_style == Subtle) {
@@ -490,7 +472,7 @@ void Button::paintButtonState(InteractionState state, bool focused)
         if (state == Pressed)
             bgColor = colors.subtleTertiary;
         if (checked && state == Rest)
-            bgColor = colors.subtleSecondary; // Checked rest keeps a subtle fill. zh_CN: 选中态默认带一点背景。
+            bgColor = colors.subtleSecondary;
     } else {
         bgColor = colors.controlDefault;
         textColor = colors.textPrimary;
@@ -499,8 +481,8 @@ void Button::paintButtonState(InteractionState state, bool focused)
             bgColor = colors.controlSecondary;
         if (state == Pressed) {
             bgColor = colors.controlTertiary;
-            borderColor = colors.strokeDivider; // Pressed border fades and flattens. zh_CN: 按下时边框颜色变淡且扁平。
-            textColor = colors.textSecondary;   // Text dims slightly. zh_CN: 文字稍微变淡。
+            borderColor = colors.strokeDivider;
+            textColor = colors.textSecondary;
         }
     }
 
@@ -511,7 +493,6 @@ void Button::paintButtonState(InteractionState state, bool focused)
             textColor = colors.textAccentPrimary;
     }
 
-    // Disabled and critical-hover overrides. zh_CN: 禁用与危险悬停覆盖。
     if (state == Disabled) {
         bgColor = m_style == Subtle ? Qt::transparent : colors.controlDisabled;
         textColor = colors.textDisabled;
@@ -522,7 +503,6 @@ void Button::paintButtonState(InteractionState state, bool focused)
         borderColor = Qt::transparent;
     }
 
-    // 3. Paint the background and border. zh_CN: 绘制背景和边框。
     const QRectF surfaceRect = rect();
     QMargins radii = cornerRadii();
 
@@ -538,23 +518,17 @@ void Button::paintButtonState(InteractionState state, bool focused)
         painter.drawPath(roundedRectPath(borderStroke.rect, radii));
     }
 
-    // Opting into a focus cue must not paint every unfocused composite header.
-    // zh_CN: 启用焦点提示不应让未聚焦的复合控件标题也绘制焦点框。
+    // Require both active focus and opt-in focusVisual so unfocused composite headers don't paint focus frames.
     if (state != Disabled && focused && m_focusVisual) {
-        // High contrast focus line: clean white on filled accent, soft text secondary on standard.
-        // zh_CN: 高对比度焦点线：强调色背景上使用清晰白色，普通背景使用柔和文本次要色。
         QColor focusColor = filled ? colors.textOnAccent : colors.textSecondary;
         focusColor.setAlpha(filled ? 220 : 130);
 
         painter.setPen(QPen(focusColor, 1.0));
         painter.setBrush(Qt::NoBrush);
 
-        // Restore the 1.5px inset. zh_CN: 恢复为 1.5 像素内缩。
         painter.drawPath(roundedRectPath(surfaceRect.adjusted(1.5, 1.5, -1.5, -1.5), adjustedRadii(radii, -1)));
     }
 
-    // Shared content keeps inherited icon configuration consistent across button surfaces.
-    // zh_CN: 共享内容绘制，使按钮派生组件继承相同的图标配置。
     QRectF contentRect = surfaceRect;
     if (state == Pressed && m_style != Subtle)
         contentRect.translate(0, 0.5);

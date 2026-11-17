@@ -27,13 +27,11 @@ class FluentMenu;
 namespace fluent::layout {
 
 /**
- * @brief Compact search, facet and column controls for a borrowed DataGrid.
- * zh_CN: 为借用的 DataGrid 组合紧凑搜索、分面筛选与列管理控件。
+ * @brief Toolbar with search input, multi-select filter dropdowns, and a column visibility menu for a DataGrid.
+ * zh_CN: 为 DataGrid（不接管所有权）提供搜索框、多选筛选器和列管理菜单的工具栏。
  *
- * Search and facet changes are signals; applications own filtering, source
- * models and persistence. This widget never installs or replaces a grid model.
- * zh_CN: 搜索和筛选变化通过信号提供；应用拥有筛选逻辑、源模型和持久化。
- * 工具栏不安装或替换表格模型。
+ * Search and filter changes are emitted as signals; the application handles filtering, models, and persistence.
+ * zh_CN: 搜索和筛选项变更通过信号通知，实际数据过滤、模型管理与持久化由应用自行负责。
  */
 class DataGridToolBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -51,14 +49,14 @@ public:
     QVariantMap filters() const;
 
     /**
-     * @brief Adds a multi-select facet; duplicate or empty keys are rejected.
-     * zh_CN: 添加多选分面；拒绝重复或空键。返回由工具栏拥有的选择控件。
+     * @brief Adds a multi-select filter dropdown owned by the toolbar; empty or duplicate keys are ignored.
+     * zh_CN: 添加一个多选筛选下拉框（由工具栏管理生命周期）；空键或重复键将被忽略。
      */
     fluent::basicinput::MultiSelectComboBox*
     addFilter(const QString& key, const QString& label, const QStringList& options);
     /**
-     * @brief Selects existing option values, ignoring unknown values and duplicates.
-     * zh_CN: 选中已有选项值，忽略未知值和重复值。
+     * @brief Selects matching option values for the given filter key, ignoring unknown or duplicate values.
+     * zh_CN: 为指定筛选键选中匹配的选项值，忽略未知或重复值。
      */
     void setFilterValues(const QString& key, const QStringList& values);
     void removeFilter(const QString& key);

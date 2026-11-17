@@ -140,13 +140,13 @@ public:
 
     /**
      * @brief Returns whether a theme uses dark-backed chrome and material tokens.
-     * zh_CN: 返回指定主题是否使用暗色底的 chrome 与材质 token。
+     * zh_CN: 返回指定主题是否使用暗色底的窗口与材质 token。
      *
-     * HighContrast is a distinct semantic mode, but its built-in contract is a
-     * black canvas with light foregrounds. Callers that choose between light and
-     * dark chrome should use this helper instead of comparing only with Dark.
-     * zh_CN: HighContrast 是独立语义模式，但其内置合同为黑底亮色前景。需要在
-     * 明暗 chrome 间选择的调用方应使用此方法，而非仅与 Dark 比较。
+     * HighContrast is a distinct semantic mode whose built-in palette uses a black
+     * canvas with light foregrounds. Callers choosing between light and dark chrome
+     * should use this helper instead of comparing only against Dark.
+     * zh_CN: HighContrast 是独立语义模式，其内置调色板采用黑底亮色前景。
+     * 需要区分浅色与深色样式的调用方应使用此方法，而非仅判断是否等于 Dark。
      */
     static bool themeUsesDarkAppearance(Theme theme);
 
@@ -154,21 +154,22 @@ public:
      * @brief Re-broadcasts the current theme to repaint after a design-token change.
      * zh_CN: 在设计 token 变化后重新广播当前主题以触发重绘。
      *
-     * setThemeDeferred() early-outs when the theme mode is unchanged, so it cannot repaint a
-     * pure token update while staying in the same mode. This forces the same atomic visible-first
-     * refresh without changing the mode.
-     * zh_CN: setThemeDeferred() 在明暗模式未变时会提前返回，无法重绘纯 token 更新。
-     * 此入口在不改模式的前提下，强制同样的「可见优先原子刷新」。
+     * setThemeDeferred() returns early when the theme mode is unchanged, so it cannot
+     * repaint a token update within the same mode. This forces the same visible-first
+     * batched refresh without switching modes.
+     * zh_CN: setThemeDeferred() 在明暗模式未变时会直接返回，无法触发同模式下的 token 重绘；
+     * 此方法在不切换模式的前提下强制执行可见优先的批量刷新。
      */
     static void refreshTheme();
 
     /**
      * @brief Monotonic counter bumped on every theme change, for staleness checks.
-     * zh_CN: 每次主题变化自增的单调计数器，用于过期判断。
+     * zh_CN: 每次主题变化自增的单调版本号，用于过期判断。
      *
-     * A subtree hidden during a theme change is themed lazily; comparing the generation it last
-     * refreshed against this lets a host (e.g. a stacked page) refresh it exactly once on show.
-     * zh_CN: 切换期间隐藏的子树会延后刷新；用它上次刷新的代次与此比较，宿主（如分页栈中的页）可在显示时恰好刷新一次。
+     * A subtree hidden during a theme change is refreshed lazily; comparing its last
+     * refreshed generation against this lets a container (e.g. a stacked page) refresh once on show.
+     * zh_CN: 主题切换期间处于隐藏状态的子树会延迟刷新；容器（如分页栈页面）可比较页面上次刷新的版本号与当前值，
+     * 在页面显示时按需刷新一次。
      */
     static int themeGeneration();
 
@@ -193,15 +194,17 @@ public:
     // Component-facing token accessors.
     // zh_CN: 供组件侧访问的设计 token 接口。
     /**
-     * @brief Replaces this element's sparse color, radius and font token overrides.
-     * zh_CN: 替换当前元素的稀疏颜色、圆角和字体 token 覆盖。
-     * Missing fields follow the current global theme; overrides survive theme changes.
-     * This is per element, not inherited by child widgets. Empty input clears overrides.
-     * Invalid keys or values reject the complete update without changing state.
-     * zh_CN: 未覆盖字段跟随全局主题；覆盖跨主题切换保留，仅作用于当前元素，不向子控件继承。
-     * 空对象清除覆盖；无效字段或值拒绝整次更新并保留原状态。
+     * @brief Replaces this element's sparse color, radius, and font token overrides.
+     * zh_CN: 替换当前元素的颜色、圆角和字体 token 局部覆盖。
+     *
+     * Unspecified fields follow the global theme, and overrides survive theme changes.
+     * Applies only to this element (not inherited by children); an empty object clears
+     * overrides, and any invalid key or value rejects the entire update.
+     * zh_CN: 未指定字段跟随全局主题，覆盖设置会在主题切换后保留；仅作用于当前元素，
+     * 不向子控件继承。传入空对象会清除覆盖；包含无效键或值时拒绝整次更新并保持原状态。
+     *
      * @return true if the override object changed; false for invalid or identical input.
-     * zh_CN: 覆盖对象改变返回 true；无效或相同输入返回 false。
+     * zh_CN: 覆盖配置发生变更时返回 true；输入无效或与当前相同时返回 false。
      */
     bool setThemeOverrides(const QJsonObject& overrides);
 
@@ -214,17 +217,14 @@ public:
     Colors themeColors() const;
 
     /**
-     * @brief Non-copying access to the active color set (for hot paint paths).
-     * zh_CN: 对当前色板的零拷贝访问（用于绘制热路径）。
+     * @brief Non-copying access to the active color set for hot paint paths.
+     * zh_CN: 对当前色板的零拷贝访问（适用于绘制热路径）。
      *
-     * themeColors() returns the full ~50-QColor Colors struct BY VALUE; a delegate or tab strip that
-     * calls it per item/tab/frame pays that copy (plus the QList<QColor> charts refcount) every time.
-     * This returns a cached const reference to the resolved colors, without copying. The
-     * reference is owned by the registry or this element and stays valid until its next token change,
-     * so use it within a single paint() and do NOT cache it across a theme switch.
-     * zh_CN: themeColors() 按值返回整个 ~50 个 QColor 的结构体;在每项/每帧绘制里调用会反复付出该拷贝
-     *（外加 charts QList 引用计数)。此方法返回解析后色板的 const 引用，避免拷贝。
-     * 该引用归注册表或当前元素所有，在下次 token 变化前有效,故应在单次 paint() 内使用,切勿跨主题切换缓存。
+     * Unlike themeColors() which returns a full copy of Colors, this returns a cached
+     * const reference owned by ThemeRegistry or this element. It stays valid until the
+     * next token change; use within a single paint pass and do not cache across theme switches.
+     * zh_CN: 相比按值拷贝整个 Colors 结构体的 themeColors()，此方法返回缓存的 const 引用
+     * （由 ThemeRegistry 或当前元素持有），在下次 token 变化前有效；请在单次绘制内使用，不要跨主题切换缓存。
      */
     const Colors& themeColorsRef() const;
 

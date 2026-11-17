@@ -189,8 +189,8 @@
     480
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A searchable drop-down list for selecting multiple items.",
+    "zh": "支持搜索和勾选多项的下拉列表。"
   },
   "surface": "host",
   "sizeMode": "popupContent",

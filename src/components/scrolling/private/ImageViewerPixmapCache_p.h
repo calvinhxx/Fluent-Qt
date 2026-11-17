@@ -5,10 +5,8 @@
 
 namespace fluent::scrolling::detail {
 
-// Two power-of-two reductions, never one pixmap per zoom value. The larger image is at most
-// half the source in each dimension; the smaller one has an additional byte budget.
-// zh_CN: 仅保留两个二分缩略级别，不为每个缩放值建图。较大缓存的宽高至多为源图的一半，
-// 较小缓存另受字节预算限制。仅在 GUI 线程访问。
+// Caches up to two power-of-two downscaled levels (at most half source dimensions;
+// smaller level bounded by byte budget) for GUI-thread rendering.
 class ImageViewerPixmapCache {
 public:
     explicit ImageViewerPixmapCache(qint64 smallerLevelBudget = 16 * 1024 * 1024);

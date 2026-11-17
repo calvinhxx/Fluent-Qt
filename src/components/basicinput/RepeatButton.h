@@ -6,13 +6,8 @@
 namespace fluent::basicinput {
 
 /**
- * @brief Button that repeats click actions while pressed.
- * zh_CN: 按住时持续触发点击动作的按钮。
- *
- * RepeatButton adds initial delay and repeat interval control on top of Button,
- * matching spin buttons, scroll commands, and other press-and-hold interactions.
- * zh_CN: RepeatButton 在 Button 基础上增加首次延迟和重复间隔控制，适合步进按钮、
- * 滚动命令等按住连续触发的交互。
+ * @brief Button that emits repeated click signals while pressed.
+ * zh_CN: 按住时持续触发点击信号的按钮。
  */
 class RepeatButton : public Button {
     Q_OBJECT

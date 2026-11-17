@@ -430,8 +430,8 @@ bool GalleryParticleCompositor::prepare(QWidget* content,
                 }
                 return false;
             };
-            // Acceleration notifications can stop/destroy the borrowed session and clear the plan.
-            // zh_CN: 加速状态通知可停用或销毁借用的会话，并清空当前计划。
+            // Acceleration notifications can deactivate the shared SpatialSession and reset the plan.
+            // zh_CN: 加速状态回调可能停用共享 SpatialSession 并清空当前合成计划。
             backdrop->setGpuAccelerationEnabled(true);
             if (!backdrop || !available())
                 return failLayer();

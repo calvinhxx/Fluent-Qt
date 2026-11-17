@@ -22,7 +22,7 @@ SpatialSession::SpatialSession(QObject* host, QObject* parent) : QObject(parent)
 }
 SpatialSession::~SpatialSession()
 {
-    // In-flight calls retain the manager when a direct signal deletes the facade.
+    // Move d before resetting so in-flight calls keep PluginManager alive if a signal deletes the session.
     auto state = std::move(d);
     state.reset();
 }

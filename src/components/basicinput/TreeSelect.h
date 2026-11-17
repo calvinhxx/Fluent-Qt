@@ -26,18 +26,16 @@ class TreeSelectPopup;
 class TreeSelectProxy;
 
 /**
- * @brief Searchable single or multiple selection from a borrowed hierarchical model.
- * zh_CN: 从调用方持有的层级模型中搜索并进行单选或多选。
+ * @brief Searchable single- or multi-select dropdown over an external tree model (not owned).
+ * zh_CN: 基于外部树形模型（不接管所有权）的搜索与单/多选下拉控件。
  *
- * Column zero provides DisplayRole labels and unique non-empty string keys in
- * keyRole (UserRole by default). Missing/duplicate keys cannot be selected.
- * ItemIsEnabled and ItemIsSelectable control selection; branches may be browse-only.
- * Each node is independent: selecting a parent does not select its descendants.
- * Filtering never edits the model. Removed keys are pruned after model changes;
- * filtering, sorting and row moves retain selection by key.
- * zh_CN: 第零列 DisplayRole 为标签，keyRole（默认 UserRole）为唯一非空字符串身份。
- * 缺失或重复身份不可选择；模型 flags 决定是否可选，分组可仅用于浏览。
- * 父子节点独立选择；搜索不修改模型。模型移除的身份会被清理，筛选、排序、移动保留选择。
+ * Column 0 supplies DisplayRole labels and unique non-empty string keys in keyRole (UserRole by default).
+ * Missing or duplicate keys cannot be selected; ItemIsEnabled and ItemIsSelectable control eligibility,
+ * and parent/child items select independently. Filtering never edits the model, and selection is preserved
+ * by key across filtering, sorting, and row moves.
+ * zh_CN: 第 0 列 DisplayRole 作为显示文本，keyRole（默认 UserRole）作为唯一非空字符串键。
+ * 缺少键或键重复的节点不可选；由模型 flags 决定可选状态，父子节点互不联动。
+ * 搜索不会修改源模型；节点移除时自动清理，筛选、排序或移动后按 key 保留选中状态。
  */
 class TreeSelect : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -70,14 +68,14 @@ public:
      */
     QVariantList selectedItems() const { return m_selectedItems; }
     int selectedCount() const { return m_selectedKeys.size(); }
-    /** @brief Selects known selectable keys; single mode retains the first valid key.
-     * zh_CN: 选择已有可选身份；单选模式仅保留首个有效身份。
+    /** @brief Selects known selectable keys; in Single mode only the first valid key is kept.
+     * zh_CN: 选中有效的可选键；单选模式下仅保留首个有效键。
      */
     void setSelectedKeys(const QStringList& keys);
     void clearSelection();
     QString searchText() const { return m_search; }
-    /** @brief Applies a query immediately; rapid typing on large trees is coalesced before filtering.
-     * zh_CN: 程序查询立即生效；大型树的连续键入合并后再筛选，确认选择前会刷新结果。 */
+    /** @brief Applies a query immediately; interactive typing on large trees is debounced before filtering.
+     * zh_CN: 立即按查询字符串筛选；大型树交互输入时会防抖合并后再筛选，确认选择前会刷新结果。 */
     void setSearchText(const QString& text);
     QString placeholderText() const { return m_placeholder; }
     void setPlaceholderText(const QString& text);

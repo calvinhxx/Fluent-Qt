@@ -13,13 +13,12 @@ class QFocusEvent;
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent switch for binary on/off settings.
- * zh_CN: 用于二元开关设置的 Fluent 切换控件。
+ * @brief Fluent binary on/off toggle switch.
+ * zh_CN: Fluent 二元开关控件。
  *
- * ToggleSwitch owns its track, knob, and state text rendering. Labels and field
- * headers should be composed by the application or a field wrapper.
- * zh_CN: ToggleSwitch 自绘轨道、滑块和状态文案；标签与字段标题应由应用层或字段包装组件组合；
- * knobPosition 用于驱动滑块动画。
+ * Renders only the track, knob, and optional on/off state text; compose field
+ * labels externally (for example with Field).
+ * zh_CN: 仅绘制轨道、滑块和开关状态文案；字段标题请通过 Field 等外部组件组合。
  */
 class ToggleSwitch : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -76,12 +75,11 @@ public:
      * @brief Sets the visual scale and updates layout hints without resizing a fixed widget.
      * zh_CN: 设置视觉缩放并更新布局建议尺寸，不改变已固定的控件大小。
      *
-     * Finite values are clamped to [0.5, 10.0]; NaN and infinity are ignored.
-     * The default 1.0 draws a 40 by 20 logical-pixel track; strokes stay at least
-     * one logical pixel wide. Text keeps its font;
-     * use setFontRole() or setFont() to change it. Layouts should honor sizeHint().
-     * zh_CN: 有限值限制在 [0.5, 10.0]，忽略 NaN 和无穷值；1.0 对应 40×20 逻辑像素轨道。
-     * 描边至少为 1 个逻辑像素；文字字体保持不变，可通过字体 API 单独设置；布局应遵循 sizeHint()。
+     * Finite values are clamped to [0.5, 10.0]; non-finite values are ignored.
+     * The default 1.0 draws a 40x20 logical-pixel track with strokes >= 1 px.
+     * Text keeps its font; use setFontRole() or setFont() to change it.
+     * zh_CN: 有限值限制在 [0.5, 10.0]，忽略 NaN 和无穷值；1.0 对应 40x20 逻辑像素轨道，
+     * 描边至少 1 px；文字字体不变，可通过字体 API 单独调整。
      */
     void setVisualScale(qreal scale);
 

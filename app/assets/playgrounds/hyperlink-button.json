@@ -218,8 +218,8 @@
     }
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A button styled like a hyperlink that opens a URL when clicked.",
+    "zh": "超链接样式的按钮，点击后打开目标网址。"
   },
   "presets": [
     {

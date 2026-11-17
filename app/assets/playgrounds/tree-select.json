@@ -120,8 +120,8 @@
     36
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Search a tree model and select one or more items.",
+    "zh": "在树形层级中搜索并选择条目。"
   },
   "presets": [
     {

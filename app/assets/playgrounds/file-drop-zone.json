@@ -91,8 +91,8 @@
     200
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Accept local file drops and emit a browse signal to open a file picker.",
+    "zh": "支持拖放本地文件，或点击按钮调起文件选择。"
   },
   "presets": [
     {

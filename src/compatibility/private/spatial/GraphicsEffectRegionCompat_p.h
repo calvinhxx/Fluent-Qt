@@ -11,15 +11,10 @@
 
 namespace compatibility::detail {
 
-// Qt 5.15 and 6.x set the paint engine's system clip to the dirty region before
-// calling a widget's QGraphicsEffect::draw() from the backing store: the region in
-// widget coordinates, translated by the painter's widget offset, then scaled by the
-// device pixel ratio. Map it back to the effect source's logical coordinates. Any
-// other pass (QWidget::render, grabs, transformed painters) has no reliable mapping
-// and returns an empty region, which callers treat as "everything changed".
-// zh_CN: Qt 5.15 与 6.x 在后备存储调用控件 QGraphicsEffect::draw() 前，把脏区设为绘制引擎的
-// 系统裁剪区（控件坐标加偏移，再乘 DPR）。此处换算回特效源的逻辑坐标；QWidget::render、
-// 截图或带变换的绘制无法可靠换算，返回空区域，调用方按整块失效处理。
+// Map the paint engine's device-pixel systemClip back to logical widget coordinates during backing-store
+// QGraphicsEffect::draw() passes; returns empty for render()/grab()/transformed painters (treated as full repaint).
+// zh_CN: 在绘制缓冲调用 QGraphicsEffect::draw() 时，把引擎系统裁剪区从物理像素换算回逻辑坐标；
+// QWidget::render、截图或带变换的绘制无法可靠映射，返回空区域以触发完整重绘。
 inline QRegion graphicsEffectDirtyRegion(const QPainter* painter, const QPaintDevice* backingStoreDevice)
 {
     if (!painter || !painter->isActive())

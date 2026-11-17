@@ -38,15 +38,12 @@ class DataGridPinnedView;
 } // namespace detail
 
 /**
- * @brief Fluent two-dimensional item view for large model-backed data sets.
- * zh_CN: 面向大型模型数据集的 Fluent 二维条目视图。
- *
- * DataGrid keeps models, selection models, delegates, sorting, validation,
- * and persistence caller-owned. Cells are delegate-painted and editors are
- * created only for the active index, so retained widgets do not scale with the
- * total number of rows or columns.
- * zh_CN: DataGrid 不接管模型、选择模型、代理、排序、校验或持久化。单元格由代理
- * 绘制，仅为活动索引创建编辑器，因此常驻控件数量不会随总行列数增长。
+ * @brief Fluent two-dimensional table view backed by an external item model.
+ * Models, selection models, delegates, sorting, validation, and state persistence
+ * remain managed by the caller. Cells are painted by delegates and editors are created
+ * only for the active cell, keeping widget count independent of row or column count.
+ * zh_CN: 基于外部数据模型的 Fluent 二维表格视图。
+ * 模型、选择模型、代理、排序、校验与状态持久化均由外部管理；单元格由代理绘制，仅为当前编辑单元格创建编辑器，控件数量不随行列规模增长。
  */
 class DataGrid : public QTableView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -71,14 +68,14 @@ public:
     ~DataGrid() override;
 
     /**
-     * @brief Installs a caller-owned model and refreshes table semantics.
-     * zh_CN: 安装调用方拥有的模型并刷新表格语义。
+     * @brief Associates an external item model without taking ownership and refreshes table state.
+     * zh_CN: 关联外部数据模型（不接管所有权）并刷新表格状态。
      */
     void setModel(QAbstractItemModel* model) override;
 
     /**
-     * @brief Installs a caller-owned selection model.
-     * zh_CN: 安装调用方拥有的选择模型。
+     * @brief Associates an external selection model without taking ownership.
+     * zh_CN: 关联外部选择模型（不接管所有权）。
      */
     void setSelectionModel(QItemSelectionModel* selectionModel) override;
 
@@ -102,28 +99,28 @@ public:
     void setAnimationEnabled(bool enabled);
 
     /**
-     * @brief Pins a logical column to the leading edge without copying its model.
-     * zh_CN: 将逻辑列固定到起始边缘，不复制模型数据。
+     * @brief Pins or unpins a logical column at the leading edge of the table.
+     * zh_CN: 将指定逻辑列固定到表格起始侧或取消固定。
      */
     void setColumnPinned(int column, bool pinned);
     bool isColumnPinned(int column) const;
     QList<int> pinnedColumns() const;
 
     /**
-     * @brief Changes column visibility and emits columnLayoutChanged on a real change.
-     * zh_CN: 修改列可见性，仅在实际变化时发送 columnLayoutChanged。
+     * @brief Shows or hides a logical column and emits columnLayoutChanged() when visibility changes.
+     * zh_CN: 设置逻辑列是否可见，仅在可见性实际变化时发出 columnLayoutChanged()。
      */
     void setColumnVisible(int column, bool visible);
     bool isColumnVisible(int column) const;
 
     /**
-     * @brief Serializes column order, widths, visibility, pinning and sort indicator.
-     * zh_CN: 序列化列顺序、宽度、可见性、固定状态和排序指示；存储由应用负责。
+     * @brief Serializes column order, widths, visibility, pinned flags, and sort indicator.
+     * zh_CN: 序列化列顺序、列宽、可见性、固定状态及排序指示器（持久化由外部负责）。
      */
     QByteArray saveColumnState() const;
     /**
-     * @brief Restores a validated layout for the same model schema; invalid data is a no-op.
-     * zh_CN: 为相同模型结构恢复通过校验的布局；无效数据不修改状态。
+     * @brief Restores a previously saved column layout for the same model schema; ignores invalid data.
+     * zh_CN: 为相同表结构的模型恢复列布局；无效数据会被忽略并返回 false。
      */
     bool restoreColumnState(const QByteArray& state);
 
@@ -134,8 +131,8 @@ public:
     void setItemDelegate(QAbstractItemDelegate* delegate);
 
     /**
-     * @brief Returns the Fluent overlay scrollbar mirroring the native range.
-     * zh_CN: 返回镜像原生范围的 Fluent 覆盖式滚动条。
+     * @brief Returns the Fluent vertical overlay scrollbar.
+     * zh_CN: 返回 Fluent 垂直覆盖式滚动条。
      */
     fluent::scrolling::ScrollBar* verticalFluentScrollBar() const { return m_verticalFluentScrollBar; }
 

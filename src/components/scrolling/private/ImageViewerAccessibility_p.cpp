@@ -66,9 +66,7 @@ void sendEvent(QObject* object, QAccessible::Event type)
     QAccessible::updateAccessibility(&event);
 }
 
-// A zoomable image: the zoom percentage is its value, zoom in/out its
-// increase/decrease actions, and the toolbar its only logical child.
-// zh_CN: 可缩放图片：缩放百分比是数值，放大/缩小是增/减动作，工具条是唯一的逻辑子项。
+// Exposes zoom percentage as the value and the floating zoom toolbar as its single logical child.
 class ImageViewerAccessible final : public QAccessibleWidget, public QAccessibleValueInterface {
 public:
     explicit ImageViewerAccessible(ImageViewer* viewer) : QAccessibleWidget(viewer, QAccessible::Graphic) {}
@@ -184,7 +182,7 @@ public:
         return hasImage(viewer()) ? QVariant(effectiveMaximum(viewer()) * 100.0) : QVariant();
     }
 
-    // Steps follow presets, so there is no uniform step. zh_CN: 档位不等距，因此没有统一步长。
+    // Preset zoom steps are non-uniform, so there is no fixed step size.
     QVariant minimumStepSize() const override { return QVariant(); }
 
 private:

@@ -26,15 +26,15 @@ struct PluginMetadata {
 };
 
 /**
- * @brief Caller-owned extension with manager-controlled activation and cleanup.
- * zh_CN: 由调用方持有、由管理器控制激活与清理的扩展对象。
+ * @brief Base class for extensions whose activation lifecycle is managed by PluginManager.
+ * zh_CN: 由 PluginManager 管理启停顺序的扩展基类（插件对象生命周期仍由调用方负责）。
  *
- * A plugin can be registered with one manager at a time. Hooks run synchronously
- * on that manager's thread; nested manager mutations are rejected. Deactivate
- * before destruction for orderly cleanup. If destroyed unexpectedly, the manager
- * removes it and deactivates surviving dependents; its destructor owns its cleanup.
- * zh_CN: 插件同时只能注册到一个管理器；回调在管理器线程同步执行，嵌套修改会被拒绝。
- * 正常销毁前应先停用；意外销毁会移除注册并停用仍存活的依赖方，自身清理由析构函数负责。
+ * A plugin can be registered with one manager at a time; object ownership stays with
+ * the caller. Hooks run synchronously on that manager's thread and reject nested manager
+ * mutations. Deactivate before destruction for orderly cleanup; if destroyed while
+ * registered, the manager removes it and deactivates surviving dependents.
+ * zh_CN: 插件同时只能注册到一个管理器，所有权不发生转移。回调在管理器线程同步执行，
+ * 期间会拒绝嵌套修改管理器状态。正常销毁前应先停用；若意外销毁，管理器会移除注册并停用仍存活的依赖方。
  */
 class Plugin : public QObject {
     Q_OBJECT
@@ -49,21 +49,21 @@ protected:
      * @brief Activates this plugin after its dependencies are active.
      * zh_CN: 在依赖就绪后激活插件。
      *
-     * Return false with an optional error on failure. The manager calls
-     * onDeactivate() after a failed or throwing attempt to release partial work.
-     * Context copies remain lifetime-guarded; they do not own the host or manager.
-     * zh_CN: 失败时返回 false，可填写错误；失败或抛异常后管理器仍调用 onDeactivate()
-     * 清理部分初始化。上下文副本带生命周期保护，不持有宿主或管理器的所有权。
+     * Return false with an optional error on failure; onDeactivate() is called after
+     * a failed or throwing attempt to release partial initialization. Context holds
+     * guarded non-owning pointers to the host and manager.
+     * zh_CN: 失败时返回 false 并可填写错误信息；失败或抛异常后管理器仍会调用 onDeactivate()
+     * 清理部分初始化资源。传入的 context 仅保存带销毁保护的宿主与管理器非所有权指针。
      */
     virtual bool onActivate(const PluginContext& context, QString* error) = 0;
 
     /**
      * @brief Releases activation resources, including partially initialized work.
-     * zh_CN: 释放激活资源，包括部分初始化的资源。
+     * zh_CN: 释放激活期间分配的资源（含部分初始化状态）。
      *
-     * Must not throw. Dependencies remain available until their own deactivation.
-     * Widgets already returned to the application remain caller-owned.
-     * zh_CN: 不得抛异常；依赖在自身停用前仍可访问，已交付应用的控件仍由调用方持有。
+     * Must not throw. Dependencies remain available until their own deactivation,
+     * and widgets already returned to the application remain owned by the caller.
+     * zh_CN: 不得抛异常。依赖插件在自身停用前仍可访问；此前已交付给应用的控件仍归调用方管理。
      */
     virtual void onDeactivate() noexcept = 0;
 

@@ -50,15 +50,13 @@ namespace fluent::gallery {
 namespace {
 
 constexpr int kHeroHeight = 390;
-constexpr int kHeroMarginX = 24; // Text inset (was 48) — content shifts left overall.
-constexpr int kHeroBottomFade =
-    184; // Bottom band that dissolves the banner into the page (lengthened so the seam under the card strip fully dissolves). zh_CN: 加长底部溶解带，使卡片条下方的横向硬缝彻底化开。
-constexpr int kBodyMarginX = 24; // Body content inset (was 48) — matches the hero.
+constexpr int kHeroMarginX = 24;
+constexpr int kHeroBottomFade = 184; // Height of the bottom fade dissolving the banner into the page.
+constexpr int kBodyMarginX = 24;
 constexpr int kBodyMarginTop = 20;
 constexpr int kHeroIconSize = 56;
-// CPU particle painting re-renders the hero beneath its children. Allow a higher update
-// cap while the compositor accelerates it; neither cap promises a measured display rate.
-// zh_CN: CPU 粒子绘制需重绘子控件下方的 hero；合成器加速时提高更新上限，两种上限都不代表实际显示帧率。
+// CPU particle painting repaints the hero beneath children; cap it lower than GPU composition.
+// zh_CN: CPU 粒子绘制会重绘子控件下方的 hero，帧率上限低于 GPU 合成模式。
 constexpr int kHeroParticleCpuFrameRate = 30;
 constexpr int kHeroParticleGpuFrameRate = 60;
 constexpr int kHeroLinkCardWidth = 198;
@@ -67,14 +65,10 @@ constexpr int kHeroLinkCardSpacing = 16;
 constexpr int kHeroLinkCardPadding = 18;
 constexpr int kHeroLinkIconSize = 32;
 constexpr int kHeroLinkStripTop = 200;
-constexpr int kHeroLinkTopPad =
-    8; // Room above each card so the hover-lifted top edge + accent border aren't clipped. zh_CN: 卡片上方预留高度，使 hover 抬起的顶边与强调色描边不被裁切。
-constexpr int kHeroLinkShadowMargin =
-    24; // Room below each card for the soft drop shadow + hover lift. zh_CN: 卡片下方预留高度，容纳柔和投影与 hover 抬升。
-// The delegate draws the card inset by kHeroLinkTopPad inside a cell this tall, leaving room on
-// every side, so the lifted card (and its full border) never touches a clip edge — top OR bottom.
-// zh_CN: delegate 在这么高的单元格内、以 kHeroLinkTopPad 内缩绘制卡片，四周都有余量，
-// 使抬起的卡片（及其完整描边）永远不贴裁剪边——上边或下边都不会。
+// Reserve vertical room around each link card so hover lift and drop shadow are never clipped.
+// zh_CN: 卡片上下预留边距，避免悬停抬升与投影被视口裁切。
+constexpr int kHeroLinkTopPad = 8;
+constexpr int kHeroLinkShadowMargin = 24;
 constexpr int kHeroLinkCellHeight = kHeroLinkTopPad + kHeroLinkCardHeight + kHeroLinkShadowMargin;
 constexpr int kHeroLinkStripHeight = kHeroLinkCellHeight;
 constexpr int kHeroLinkStripInsetX = kHeroMarginX - 8;
@@ -123,13 +117,9 @@ QRect visibleAlphaBounds(const QImage& image)
     return bounds;
 }
 
-// The source art is large (256–1025px) but each icon draws into a small hero box. Downscaling that far in
-// a single drawPixmap() (bilinear) aliases into a soft, distorted blob, and ignoring the device pixel
-// ratio leaves it soft again on HiDPI. So scale ONCE, high-quality (SmoothTransformation), straight to
-// the icon's physical pixel size, tag the result with the dpr, and cache per (path, size, dpr).
-// zh_CN: 源图很大(256–1025px),但每个图标只画进较小的 hero 方框。一次性 drawPixmap 缩这么多(双线性)会糊成
-// 失真的团块,且忽略设备像素比在 HiDPI 上又会发虚。故一次性高质量(SmoothTransformation)缩到图标的物理像素尺寸,
-// 给结果打上 dpr 标记,并按 (路径, 尺寸, dpr) 缓存。
+// Prescale large source icons once with SmoothTransformation at the target physical size
+// to avoid bilinear aliasing and HiDPI blur in drawPixmap().
+// zh_CN: 按目标物理尺寸预先高质量缩放图标并记录 DPR，避免 drawPixmap() 缩图锯齿或 HiDPI 发虚。
 QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qreal dpr, const QColor& tint)
 {
     const bool isGitHub = resourcePath.endsWith(QStringLiteral("GitHub-Mark.png"));
@@ -148,11 +138,8 @@ QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qre
     QImage image(resourcePath);
     if (!image.isNull()) {
         image = image.convertToFormat(QImage::Format_ARGB32);
-        // The GitHub mark ships as black-on-white. Derive alpha from luminance (black → opaque,
-        // white → transparent) and paint the silhouette in the theme text color, so it stays crisp
-        // and visible on both light and dark cards instead of vanishing as a black blob on dark.
-        // zh_CN: GitHub 标记是黑底白图。用亮度推导 alpha(黑→不透明,白→透明),并以主题文字色绘制剪影,
-        // 使其在浅色/深色卡片上都清晰可见,而非在深色卡上糊成看不见的黑块。
+        // GitHub-Mark.png ships as black-on-white; convert luminance to alpha and tint with text color.
+        // zh_CN: GitHub 图标为白底黑图，由亮度生成 alpha 并按主题文字色着色，适配深浅背景。
         if (isGitHub) {
             const QColor c = tint.isValid() ? tint : QColor(0, 0, 0);
             for (int y = 0; y < image.height(); ++y) {
@@ -186,15 +173,13 @@ void drawCenteredPixmap(QPainter& painter,
     if (source.isNull())
         return;
 
-    // The pixmap is dpr-tagged, so its logical size = physical / dpr; centre it in the icon box.
     const QSizeF logical = QSizeF(source.size()) / source.devicePixelRatioF();
     const QPointF topLeft(rect.center().x() - logical.width() / 2.0, rect.center().y() - logical.height() / 2.0);
     fluentDrawPixmapAt(painter, topLeft, source);
 }
 
-// A small, deterministic grayscale-noise tile, painted at very low opacity over the card to give the
-// translucent surface a frosted "acrylic" grain instead of reading as flat glass. Generated once.
-// zh_CN: 一小块确定性灰度噪声贴片,以极低不透明度铺在卡片上,让半透明表面有亚克力磨砂颗粒感,而非平板玻璃。仅生成一次。
+// Deterministic grayscale noise tile overlaid at low opacity for acrylic grain.
+// zh_CN: 确定性灰度噪点贴片，低透明度叠加产生亚克力磨砂质感。
 const QImage& acrylicNoiseTile()
 {
     static const QImage tile = []() {
@@ -291,13 +276,8 @@ public:
         const bool active = hovered || pressed;
         const qreal radius = ::CornerRadius::Overlay;
 
-        // Hover raises the card a couple of pixels; the lift, deeper shadow and accent fringe
-        // together read as "clickable, floating above the banner" (design: translateY(-2px)).
-        // zh_CN: hover 时卡片抬起两像素；抬升 + 更深的阴影 + 强调色发丝边共同传达「可点、浮于横幅之上」。
-        // Lift the card on hover. The strip reserves kHeroLinkTopPad above (so the raised top edge
-        // and its accent border aren't clipped by the viewport) and kHeroLinkShadowMargin below.
-        // zh_CN: hover 抬升。链接条上方预留 kHeroLinkTopPad（使抬起的顶边及其强调色描边不被视口裁切），
-        // 下方预留 kHeroLinkShadowMargin。
+        // Inset inside the cell by kHeroLinkTopPad so hover lift and shadow stay within the clip.
+        // zh_CN: 单元格内预留上下边距，避免悬停抬升与投影被裁剪。
         const qreal lift = active ? 2.0 : 0.0;
         QRectF cardRect(QPointF(option.rect.left(), option.rect.top() + kHeroLinkTopPad),
             QSizeF(kHeroLinkCardWidth, kHeroLinkCardHeight));
@@ -306,11 +286,8 @@ public:
         QPainterPath cardPath;
         cardPath.addRoundedRect(cardRect, radius, radius);
 
-        // Soft drop shadow — feathered concentric layers, clipped to OUTSIDE the card so it never
-        // darkens the translucent surface, and biased downward so the card rests on a gentle
-        // cushion. Light at rest, a touch deeper on hover.
-        // zh_CN: 柔和投影——羽化同心层，裁剪到卡片之外，绝不压暗半透明表面；向下偏移，使卡片落在柔垫上。
-        // 静息轻、hover 略深。
+        // Clip shadow outside the card so it never darkens the translucent surface.
+        // zh_CN: 阴影裁剪在卡片外部，避免压暗半透明卡片内部。
         painter->save();
         QPainterPath shadowClip;
         shadowClip.addRect(QRectF(option.rect).adjusted(-40, -40, 40, 60));
@@ -331,12 +308,7 @@ public:
         }
         painter->restore();
 
-        // Acrylic surface: a translucent layer tint lets the banner gradient and decorative circles
-        // show through clearly (Fluent material), and a faint grayscale-noise grain on top gives it
-        // the frosted look instead of flat glass. The shadow is clipped out above, so the
-        // translucency reveals the banner, not the shadow. Text is drawn afterwards, so it stays crisp.
-        // zh_CN: 亚克力表面：半透明 layer 着色让横幅渐变与装饰圆清晰透出（Fluent 材质感），再叠一层淡淡的灰度
-        // 噪声颗粒,呈现磨砂感而非平板玻璃。投影已裁到卡外,透出的是横幅而非阴影。文字随后绘制,保持清晰。
+        // Translucent card fill plus low-opacity noise tile; text draws afterwards.
         QColor surface = dark ? colors.bgLayerAlt : colors.bgLayer;
         surface.setAlpha(dark ? 112 : 132);
         painter->fillPath(cardPath, surface);
@@ -347,10 +319,6 @@ public:
         painter->fillRect(cardRect, QBrush(acrylicNoiseTile()));
         painter->restore();
 
-        // Border: a barely-there hairline at rest (≈ rgba(0,0,0,0.05)) so the card reads as a
-        // shadow-defined surface, NOT an outlined box; on hover/press it becomes the accent fringe.
-        // zh_CN: 描边：静息态几乎不可见（≈ rgba(0,0,0,0.05)），让卡片靠阴影成形，而非画成带框的盒子；
-        // hover/按下时转为强调色发丝边。
         QColor border = active ? colors.accentDefault : (dark ? QColor(255, 255, 255, 18) : QColor(0, 0, 0, 13));
         if (active)
             border.setAlpha(dark ? 150 : 120);
@@ -361,8 +329,7 @@ public:
         const int contentLeft = qRound(cardRect.left()) + kHeroLinkCardPadding;
         const int contentWidth = qRound(cardRect.width()) - kHeroLinkCardPadding * 2;
         const QRectF iconRect(contentLeft, cardRect.top() + kHeroLinkCardPadding, kHeroLinkIconSize, kHeroLinkIconSize);
-        // The GitHub mark is recolored to the text color (theme-aware); colored logos ignore the tint.
-        // zh_CN: GitHub 标记按文字色重新着色(随主题);彩色 logo 忽略该 tint。
+        // Only the monochrome GitHub mark uses the text tint; colored icons ignore it.
         drawCenteredPixmap(*painter, iconRect, index.data(LinkImageRole).toString(), colors.textPrimary);
 
         int textY = qRound(iconRect.bottom()) + 14;
@@ -383,9 +350,6 @@ public:
         const QFont glyphFont = Typography::Icons::font(Typography::IconSize::Standard);
         const QString externalLinkGlyph = Typography::Icons::glyphForSize(
             Typography::Icons::glyph(kExternalLinkIconName), Typography::IconSize::Standard);
-        // External-link glyph moves to the top-right corner and turns accent on hover, reading as
-        // a standard "opens externally" affordance instead of floating alone in the bottom corner.
-        // zh_CN: 外链字形移至右上角，hover 时转强调色，作为标准“外部打开”记号，而非孤零零浮在右下角。
         const QRect externalRect(qRound(cardRect.right()) - kHeroLinkCardPadding - 16,
             qRound(cardRect.top()) + kHeroLinkCardPadding, 16, 16);
         drawElidedWrappedText(*painter,
@@ -420,14 +384,8 @@ public:
         setSelectionMode(SelectionMode::None);
         setBackgroundVisible(false);
         setBorderVisible(false);
-        // This transparent viewport sits over artwork painted by the hero. On
-        // composited Mica windows, ListView normally clears a backgroundless
-        // viewport with CompositionMode_Source to avoid stale rows. Opt out
-        // here so that cleanup does not erase the hero gradient and expose a
-        // rectangular patch of the window backdrop.
-        // zh_CN: 此透明 viewport 叠在 hero 自绘渐变上。合成式 Mica 下 ListView
-        // 通常会用 Source 模式清理无背景 viewport 以避免残影；这里必须保留父层，
-        // 否则会擦掉 hero 渐变并露出一块矩形窗口材质。
+        // Preserve the hero gradient underneath this transparent viewport instead of clearing with CompositionMode_Source.
+        // zh_CN: 保留下方 hero 渐变，避免 Mica 窗口下 ListView 用 Source 模式清除背景导致镂空。
         setProperty("fluentPreserveParentSurface", true);
         viewport()->setProperty("fluentPreserveParentSurface", true);
         setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -606,11 +564,8 @@ public:
     {
         setObjectName(QStringLiteral("galleryHomeHero"));
         setFixedHeight(kHeroHeight);
-        // Translucent backing so the bottom dissolve can fade the banner art to fully transparent and
-        // reveal the SAME native or UILib-painted material the content area shows — no opaque seam between
-        // them. In Normal mode the opaque wash covers this completely, so it's a no-op there.
-        // zh_CN: 透明背板，使底部溶解能把横幅美术层淡到全透明，露出与内容区相同的原生或 UILib 软件材质，
-        // 两者之间不再有不透明硬缝。Normal 模式下不透明 wash 会完全覆盖它，等同无操作。
+        // Transparent backing lets the bottom fade dissolve directly into the window backdrop material.
+        // zh_CN: 透明背景使横幅底部渐隐可直接透出窗口材质，避免接缝。
         setAttribute(Qt::WA_TranslucentBackground);
 
         m_particles = new fluent::particles::ParticleBackdrop(this);
@@ -710,14 +665,10 @@ protected:
 
     void paintEvent(QPaintEvent*) override
     {
-        // Paint the artwork into an isolated alpha layer first. Applying
-        // DestinationIn directly to a child widget's painter also clears pixels
-        // already painted by its parent in the shared backing store. That is
-        // correct for a compositor-owned transparent surface, but on Linux's
-        // PaintedOpaque Mica backend it punched a real hole through the window.
-        // zh_CN: 先在独立 alpha 图层中绘制横幅。若直接在子控件 painter 上使用
-        // DestinationIn，会连同父级已绘制的像素一起清除；这会在 Linux 的
-        // PaintedOpaque Mica 后端上把窗口真正打穿。
+        // Render into an offscreen image first: DestinationIn directly on a child QPainter
+        // clears parent pixels in the shared backing store, punching holes on Linux PaintedOpaque Mica.
+        // zh_CN: 先在离屏图像中绘制；若直接在子控件 painter 上用 DestinationIn 会清除父级像素，
+        // 在 Linux PaintedOpaque Mica 后端上会将窗口打穿。
         const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
         const QSize pixels(qMax(1, qRound(width() * dpr)), qMax(1, qRound(height() * dpr)));
         const bool material = usesWindowMaterialBackdrop(this);
@@ -736,30 +687,16 @@ protected:
         artwork.fill(Qt::transparent);
 
         FluentRasterCachePainter painter(&artwork);
-        // QPainter already maps logical coordinates through QImage's device pixel
-        // ratio. Scaling again makes Retina output 4x in device space: the bottom
-        // dissolve lands outside the image and the top-left radius doubles.
-        // zh_CN: QPainter 已按 QImage 的设备像素比把逻辑坐标映射到物理像素；
-        // 再次 scale 会让 Retina 输出在设备空间变成 4 倍，导致底部渐隐落到图像之外，
-        // 左上圆角也被放大。
+        // QPainter already scales logical coordinates by QImage::devicePixelRatio(); extra scaling doubles Retina coordinates.
+        // zh_CN: QPainter 已按 QImage 的设备像素比映射逻辑坐标，再次缩放会导致 Retina 坐标翻倍。
         painter.setRenderHint(QPainter::Antialiasing);
 
         const bool dark = themeUsesDarkAppearance(currentTheme());
         const Colors colors = themeColors();
-        // Native/composited and UILib-painted materials share the same visual
-        // contract here: the hero dissolves into the window material instead of
-        // ending on an opaque bgLayerAlt plate.
-        // zh_CN: 原生合成与 UILib 软件材质在此共享同一视觉契约：hero 融入窗口材质，
-        // 而不是落在不透明 bgLayerAlt 板上。
         const bool materialBackdrop = usesWindowMaterialBackdrop(this);
 
-        // The banner is full-bleed with only its top-LEFT corner rounded (matching the content
-        // surface, which rounds top-left where it meets the pane and stays square on the right where
-        // it runs to the window edge); its bottom dissolves into the content layer so the image
-        // connects to the page seamlessly (WinUI home). A rounded top-right would leave a small
-        // backdrop notch against the window edge.
-        // zh_CN: 横幅通栏铺满、仅左上角圆角（与内容表面一致：左上与窗格相接处圆角，右侧跑到窗口边缘保持直角）；
-        // 底部淡入内容层，使图像与页面无缝衔接（WinUI 首页）。右上角若圆角会在窗口边缘留下一小块背景缺口。
+        // Round only the top-left corner where the banner meets the nav pane; the right edge runs flush to the window.
+        // zh_CN: 仅对与导航栏相接的左上角做圆角，右侧直抵窗口边缘保持直角。
         const QRectF banner(0, 0, width(), height());
         const qreal radius = themeRadius().overlay;
         QPainterPath clip = fluent::overlay::roundedCornerRectPath(banner, radius, /*TL*/ true, /*TR*/ false,
@@ -767,9 +704,7 @@ protected:
         painter.save();
         painter.setClipPath(clip);
 
-        // Many eased stops (vs the old 3) smooth the adjacent hues so the deep blue→purple range no
-        // longer shows a visible colour band across the wash. (design: silky multi-stop gradient)
-        // zh_CN: 用多个缓动色标（取代原来的 3 个）平滑相邻色相，使深蓝→紫区不再出现可见色带。
+        // Multi-stop gradient avoids visible banding across the blue-to-purple wash.
         QLinearGradient wash(banner.topLeft(), banner.bottomRight());
         if (dark) {
             wash.setColorAt(0.00, QColor(0x16, 0x22, 0x3A));
@@ -789,9 +724,7 @@ protected:
         }
         painter.fillRect(banner, wash);
 
-        // Decorative blooms drift off the right edge — soft radial gradients with a fully transparent
-        // outer stop, so they glow into the wash instead of leaving the hard-edged rim the old solid
-        // circles did. zh_CN: 装饰光晕从右缘漂入——外缘全透明的径向渐变，柔和融入底色，而非旧实心圆那种生硬轮廓。
+        // Soft radial blooms with transparent outer stops so edges blend smoothly into the wash.
         const qreal w = banner.width();
         const qreal h = banner.height();
         const qreal bx = banner.left();
@@ -811,10 +744,7 @@ protected:
         bloom({bx + w * 0.94, by + h * 1.10}, h * 1.3, dark ? QColor(150, 96, 206, 76) : QColor(214, 180, 236, 128));
         bloom({bx + w * 0.62, by + h * 1.15}, h * 1.0, dark ? QColor(196, 116, 168, 46) : QColor(247, 210, 214, 102));
 
-        // Fine grain dither: 8-bit-per-channel gradients band in the deep blue→purple range; a faint
-        // overlay-blended noise (~5%) scatters the bands so the wash reads silky rather than stepped.
-        // Reuses the cached acrylic noise tile. zh_CN: 细噪点抖动：8bpc 渐变在深蓝→紫区会出现色带；
-        // 叠一层极淡(~5%)的 overlay 噪点把色带打散，使底色丝滑而非阶梯状。复用已缓存的亚克力噪声贴片。
+        // Overlay noise dithers 8-bit gradient banding across the blue-purple range.
         painter.save();
         painter.setOpacity(dark ? 0.05 : 0.045);
         painter.setCompositionMode(QPainter::CompositionMode_Overlay);
@@ -824,14 +754,8 @@ protected:
         const QRectF fadeRect(banner.left(), banner.bottom() - kHeroBottomFade, banner.width(), kHeroBottomFade);
 
         if (materialBackdrop) {
-            // Mica/Acrylic: the content area below shows the native or UILib-painted window material,
-            // so fade the banner ART itself with a DestinationIn alpha mask — it melts into the SAME
-            // material with no seam. A gentle hold-back alpha across the upper band also lets the
-            // material tint subtly through the whole hero ("a little transparency"), while the text,
-            // icon and link cards (separate child widgets painted afterwards) stay fully crisp.
-            // zh_CN: Mica/Acrylic：下方内容区透明、透出系统背景，故用 DestinationIn alpha 蒙版把横幅美术层本身
-            // 淡到透明——它融入同一背景且无缝。上半区保留一点点透明，让背景色调透过整个 hero（“带一点透明”）；
-            // 文字、图标与链接卡片是后绘的独立子控件，保持清晰。
+            // Under Mica/Acrylic, fade the banner alpha with DestinationIn to reveal the underlying material without a seam.
+            // zh_CN: Mica/Acrylic 下用 DestinationIn 淡出横幅透明通道，平滑露出下方窗口材质。
             const qreal veil = dark ? 0.90 : 0.92; // upper-band opacity → backdrop shows ~8–10% through the art
             const qreal fadeTop = qBound(0.0, 1.0 - qreal(kHeroBottomFade) / qMax(1.0, banner.height()), 1.0);
             const auto a = [](qreal o) { return QColor(0, 0, 0, qBound(0, qRound(o * 255.0), 255)); };
@@ -846,11 +770,8 @@ protected:
             painter.fillRect(banner, mask);
             painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
         } else {
-            // Normal (opaque chrome): dissolve onto the content-layer surface (bgLayerAlt) the host
-            // paints behind the transparent page, so the banner transitions seamlessly into the page.
-            // A softer four-step curve eases the banner in so the seam under the card strip fully fades.
-            // zh_CN: Normal（不透明 chrome）：渐隐到宿主在透明页面之后绘制的内容层表面（bgLayerAlt），无缝过渡到
-            // 页面。更柔的四段曲线让横幅渐隐，卡片条下方的接缝彻底化开。
+            // In Normal mode, fade onto the opaque bgLayerAlt surface behind the page.
+            // zh_CN: Normal 模式下渐隐到页面背后的 bgLayerAlt 不透明表面。
             QColor base = colors.bgLayerAlt;
             QColor clear = base;
             clear.setAlpha(0);
@@ -917,7 +838,6 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     setObjectName(QStringLiteral("galleryHomePage"));
 
     // The hero replaces the stock heading and spans the full page width.
-    // zh_CN: hero 取代默认标题，并横贯整页宽度。
     setPageHeaderVisible(false);
     setViewportMargins(QMargins(0, 0, 0, 0));
     setContentSpacing(0);
@@ -927,21 +847,14 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
 
     auto* body = new QWidget(this);
     body->setObjectName(QStringLiteral("galleryHomeBody"));
-    // The page scroll layout should use the body's content height. Letting the
-    // default Preferred vertical policy grow the body distributes spare height
-    // into QLabel rows on some platform/font combinations, producing a large
-    // blank band before the first card grid.
-    // zh_CN: 页面滚动布局应使用正文的内容高度。默认 Preferred 垂直策略在部分平台/字体
-    // 组合下会把多余高度分配给 QLabel 行，导致首个卡片网格前出现大片空白。
+    // Fix vertical policy to content height; Preferred can distribute spare scroll height into QLabel rows on some platforms.
+    // zh_CN: 垂直策略设为 Fixed 以贴合内容高度，避免部分平台下将富余高度分摊给 QLabel 行造成上方留白。
     body->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     auto* bodyLayout = new QVBoxLayout(body);
     bodyLayout->setContentsMargins(kBodyMarginX, kBodyMarginTop, kBodyMarginX, 48);
     bodyLayout->setSpacing(16);
     bodyLayout->setAlignment(Qt::AlignTop);
 
-    // Each section's cards are drawn by one responsive GalleryEntryGrid (same as the
-    // category pages), so they reflow 1/2/3 columns with the window instead of clipping.
-    // zh_CN: 每个分区的卡片用一个自适应 GalleryEntryGrid 绘制（与分类页一致），随窗口在 1/2/3 列间重排而非裁切。
     auto addEntryGrid = [this, body, bodyLayout](const QString& objectName) -> GalleryEntryGrid* {
         auto* grid = new GalleryEntryGrid(body);
         grid->setObjectName(objectName);
@@ -950,8 +863,6 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         return grid;
     };
 
-    // Featured components mirror the curated routes from the content catalog.
-    // zh_CN: 精选组件来自内容目录的精选路由。
     fluent::textfields::Label* featuredHeader = createTrackedLabel(QStringLiteral("Featured components"),
         Typography::FontRole::Subtitle, TextRole::Primary);
     featuredHeader->setObjectName(QStringLiteral("galleryHomeFeaturedHeader"));
@@ -972,8 +883,6 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     }
     addEntryGrid(QStringLiteral("galleryHomeCards"))->setEntries(featuredEntries);
 
-    // Category quick links cover the rest of the catalog.
-    // zh_CN: 分类捷径覆盖目录其余部分。
     bodyLayout->addSpacing(12);
     fluent::textfields::Label* categoriesHeader = createTrackedLabel(QStringLiteral("Browse by category"),
         Typography::FontRole::Subtitle, TextRole::Primary);

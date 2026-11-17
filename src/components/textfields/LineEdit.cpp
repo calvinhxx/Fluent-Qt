@@ -35,7 +35,6 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
     setAttribute(Qt::WA_Hover);
     setAutoFillBackground(false);
 
-    // Built-in fluent clear button. zh_CN: 内置 Fluent 清除按钮。
     m_clearButton = new ::fluent::basicinput::Button(this);
     m_clearButton->setObjectName(QStringLiteral("fluentLineEditClearButton"));
     m_clearButton->setAccessibleName(tr("Clear text"));
@@ -177,9 +176,7 @@ bool LineEdit::event(QEvent* event)
 void LineEdit::changeEvent(QEvent* event)
 {
     QLineEdit::changeEvent(event);
-    // An ancestor can repolish us after our theme update and restore Qt's cached
-    // old palette. Restore colors without repolishing the subtree again.
-    // zh_CN: 祖先在主题更新后重新 polish 时可能还原 Qt 缓存的旧调色板；仅恢复颜色，避免再次刷新整棵子树。
+    // An ancestor repolish after theme updates can restore Qt's cached palette; re-apply colors only.
     if (event->type() == QEvent::StyleChange)
         applyThemePalette();
     if (event->type() == QEvent::LayoutDirectionChange) {
@@ -193,9 +190,7 @@ void LineEdit::changeEvent(QEvent* event)
 
 void LineEdit::paintEvent(QPaintEvent* event)
 {
-    // End the frame painter before Qt paints text. QWidget::render shares its
-    // painter with the GPU target; overlapping painters lose the text state.
-    // zh_CN: 先结束边框画笔；重定向到 GPU 时，重叠画笔会让文字绘制状态失效。
+    // Finish the frame painter before QLineEdit paints text (shared QWidget::render painter breaks on overlap).
     if (m_frameVisible) {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
@@ -417,12 +412,7 @@ void LineEdit::applyThemePalette()
     pal.setColor(QPalette::Base, Qt::transparent);
     pal.setColor(QPalette::Window, Qt::transparent);
     pal.setColor(QPalette::Text, opaqueTextColor(c.textPrimary, c.bgLayerAlt));
-    // Some Linux Qt styles discard the alpha channel of PlaceholderText and
-    // therefore turn Fluent's translucent black token into solid black. Resolve
-    // the token over the field surface first so every platform receives the
-    // same final, opaque placeholder colour.
-    // zh_CN: 部分 Linux Qt 样式会丢弃 PlaceholderText 的 alpha，导致半透明黑色
-    // token 变成纯黑；先与输入框表面合成，保证各平台得到相同的最终占位文字色。
+    // Blend PlaceholderText over the field fill because some Linux Qt styles discard its alpha channel.
     pal.setColor(QPalette::PlaceholderText, opaqueTextColor(c.textTertiary, c.bgLayerAlt));
     pal.setColor(QPalette::Highlight, c.accentDefault);
     pal.setColor(QPalette::HighlightedText, c.textOnAccent);
@@ -445,17 +435,12 @@ void LineEdit::applyTextPadding()
 {
     const auto& c = themeColorsRef();
     QMargins padding = chromeContentMargins();
-    // QSS mirrors logical padding itself; textMargins remain caller-owned.
-    // zh_CN: QSS 自行镜像逻辑边距；textMargins 仍归调用方所有。
+    // QSS mirrors logical padding; caller-set textMargins remain untouched.
     padding.setRight(padding.right() + m_trailingContentWidth);
     padding = compatibility::detail::lineEditStylePadding(padding);
 
-    // Do not set the generic QSS `color`: QStyleSheetStyle on Qt 5 and Qt 6.2
-    // uses it for the placeholder as well and bypasses PlaceholderText. Keeping
-    // foreground colours in QPalette preserves the dedicated role on every
-    // supported Qt version. (`placeholder-text-color` only exists since 6.5.)
-    // zh_CN: 不设置通用 QSS `color`；Qt 5/6.2 的 QStyleSheetStyle 会把它也用于
-    // placeholder 并绕过 PlaceholderText。前景色统一交给 QPalette，兼容全部 Qt 版本。
+    // Avoid setting generic QSS `color`: Qt 5 / Qt 6.2 applies it to placeholder text too,
+    // bypassing QPalette::PlaceholderText (`placeholder-text-color` requires Qt 6.5+).
     QString qss =
         QString(
             "QLineEdit { background: transparent; "
@@ -470,14 +455,8 @@ void LineEdit::applyTextPadding()
             .arg(padding.bottom())
             .arg(c.accentDefault.name(QColor::HexArgb))
             .arg(c.textOnAccent.name(QColor::HexArgb));
-    // Applying a style sheet repolishes the widget and QStyleSheetStyle may
-    // replace palette roles with its default (black) foreground.  Install the
-    // geometry-only sheet first, then restore the semantic palette.  This is
-    // especially important when a LineEdit is hosted by a styled Gallery card
-    // or embedded transparently in ComboBox.
-    // zh_CN: 设置样式表会触发重新 polish，QStyleSheetStyle 可能用默认黑色覆盖
-    // palette 前景色。先应用只负责几何的样式表，再恢复语义调色板，保证位于带样式
-    // 表的 Gallery 卡片中或透明嵌入 ComboBox 时文字仍遵循当前主题。
+    // setStyleSheet() repolishes the widget and lets ancestor QStyleSheetStyle overwrite palette colors,
+    // so apply the geometry sheet first and then restore our theme palette.
     if (styleSheet() != qss)
         setStyleSheet(qss);
     applyThemePalette();

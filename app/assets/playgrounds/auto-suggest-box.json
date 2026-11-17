@@ -227,8 +227,8 @@
     72
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A search input with local or asynchronous suggestions, loading, pagination and retry.",
+    "zh": "输入关键词时弹出候选列表的搜索框。"
   },
   "presets": [
     {

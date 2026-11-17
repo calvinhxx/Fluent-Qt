@@ -5,12 +5,8 @@
 
 namespace fluent::date_time::detail {
 
-// QLocale supplies calendar names, but not relative-range or action captions.
-// Prefer translated application text, then use the control's effective locale.
-// Qt returns the source for both an absent and an identical translation; select
-// an English control locale when the application intentionally keeps English.
-// zh_CN: 优先使用应用已翻译的文案，否则按控件有效区域设置回退。
-// Qt 无法区分缺失翻译和原文相同的翻译；需要原始英文时显式选择英文区域设置。
+// Prefer Qt translations; when none matches (Qt returns the source string), fall back
+// to built-in Chinese text for Chinese locales unless an English locale was selected.
 inline QString dateTimeRangeText(const QLocale& locale, const char* source)
 {
     const QString translated = DateTimeRangePicker::tr(source);

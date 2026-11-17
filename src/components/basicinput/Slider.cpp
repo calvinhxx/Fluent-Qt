@@ -26,8 +26,6 @@ Slider::Slider(Qt::Orientation orientation, QWidget* parent) : QSlider(orientati
     setAttribute(Qt::WA_Hover);
     ::compatibility::detail::disableNativeFocusRing(this);
 
-    // m_handleSize is initialized to 20 in header
-
     const auto& anim = themeAnimation();
 
     m_hoverAnim = new QPropertyAnimation(this, "hoverRatio", this);
@@ -50,10 +48,7 @@ Slider::~Slider()
 
 QSize Slider::sizeHint() const
 {
-    // Ensure enough space for the handle to avoid clipping
-    // The thickness (height/width) should be at least m_handleSize + some margin
     int length = m_defaultLength;
-    // Add small margin (e.g. 2 * m_visualMargin) to avoid anti-aliasing clipping
     int thickness = std::max(m_handleSize, m_trackHeight) + 2 * m_visualMargin;
 
     if (orientation() == Qt::Horizontal) {
@@ -67,8 +62,7 @@ QSize Slider::minimumSizeHint() const
 {
     const int thickness = std::max(m_handleSize, m_trackHeight) + 2 * m_visualMargin;
     const int padding = m_handleSize / 2 + m_visualMargin;
-    // Keep at least one handle's travel after reserving space for both endpoints.
-    // zh_CN: 预留两端空间后，仍保留至少一个手柄宽度的拖动行程。
+    // Reserve endpoint margins plus at least one handle width of travel.
     const int length = 2 * padding + qMax(1, m_handleSize);
     const QSize minimum = orientation() == Qt::Horizontal ? QSize(length, thickness) : QSize(thickness, length);
     return QSlider::minimumSizeHint().expandedTo(minimum);
@@ -124,7 +118,7 @@ void Slider::enterEvent(FluentEnterEvent* event)
 
 void Slider::leaveEvent(QEvent* event)
 {
-    if (!m_isPressed) { // Only fade out if not currently dragging
+    if (!m_isPressed) {
         m_hoverAnim->stop();
         m_hoverAnim->setEndValue(0.0);
         ::fluent::detail::startMotionTransition(m_hoverAnim, themeAnimation().normal);
@@ -143,18 +137,16 @@ void Slider::mousePressEvent(QMouseEvent* event)
     m_isPressed = true;
     setSliderDown(true);
 
-    // Animate Press
     m_pressAnim->stop();
     m_pressAnim->setEndValue(1.0);
     ::fluent::detail::startMotionTransition(m_pressAnim, themeAnimation().normal);
 
-    // Show ToolTip
     showToolTip();
 
     int val = pixelPosToRangeValue(
         orientation() == Qt::Horizontal ? fluentMousePos(event).x() : fluentMousePos(event).y());
     setSliderPosition(val);
-    updateToolTipPos(); // update after value change
+    updateToolTipPos();
 
     triggerAction(SliderMove);
     update();
@@ -185,15 +177,12 @@ void Slider::mouseReleaseEvent(QMouseEvent* event)
     event->accept();
     m_isPressed = false;
     // QAbstractSlider emits sliderReleased() when sliderDown transitions to false.
-    // zh_CN: sliderDown 切换为 false 时，QAbstractSlider 会发送 sliderReleased()。
     setSliderDown(false);
 
-    // Animate Release
     m_pressAnim->stop();
     m_pressAnim->setEndValue(0.0);
     ::fluent::detail::startMotionTransition(m_pressAnim, themeAnimation().normal);
 
-    // Reset Hover if mouse left during drag
     if (!rect().contains(mapFromGlobal(QCursor::pos()))) {
         m_hoverAnim->stop();
         m_hoverAnim->setEndValue(0.0);
@@ -209,7 +198,7 @@ void Slider::mouseReleaseEvent(QMouseEvent* event)
 void Slider::showToolTip()
 {
     if (!m_toolTip) {
-        m_toolTip = new fluent::status_info::ToolTip(nullptr); // Top level window
+        m_toolTip = new fluent::status_info::ToolTip(nullptr);
     }
     m_toolTip->setText(QString::number(value()));
     updateToolTipPos();
@@ -244,7 +233,6 @@ void Slider::updateToolTipPos()
 
     QPoint globalHandle = mapToGlobal(handlePos);
 
-    // Position tooltip above (Horiz) or Right (Vertical)
     int tipW = m_toolTip->width();
     int tipH = m_toolTip->height();
     int spacing = themeSpacing().medium;
@@ -253,8 +241,6 @@ void Slider::updateToolTipPos()
     if (orientation() == Qt::Horizontal) {
         tipPos = QPoint(globalHandle.x() - tipW / 2, globalHandle.y() - tipH - spacing - m_handleSize / 2);
     } else {
-        // Vertical: Right side preferred, fallback to left if no space?
-        // WinUI usually puts it to the side.
         tipPos = QPoint(globalHandle.x() + m_handleSize / 2 + spacing, globalHandle.y() - tipH / 2);
     }
 
@@ -272,8 +258,7 @@ int Slider::valueToPixelPos(int val) const
     if (range == 0)
         return padding + (opt.upsideDown ? available : 0);
 
-    // Widen before subtraction and multiplication, including tracks wider than 4096 px.
-    // zh_CN: 减法和乘法前提升位宽，兼容完整 int 范围和超过 4096 像素的轨道。
+    // Widen to 64-bit before arithmetic to handle full int ranges and tracks wider than 4096 px.
     const int boundedValue = qBound(minimum(), val, maximum());
     const qint64 offset =
         opt.upsideDown ? static_cast<qint64>(maximum()) - boundedValue : static_cast<qint64>(boundedValue) - minimum();
@@ -301,7 +286,6 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
 
     const int trackThickness = m_trackHeight;
 
-    // 1. Track geometry. zh_CN: 计算轨道几何区域。
     QRect trackRect(padding, cy - trackThickness / 2, width() - 2 * padding, trackThickness);
 
     int handleX = valueToPixelPos(opt.sliderPosition);
@@ -310,12 +294,9 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     const int minimumX = valueToPixelPos(opt.minimum);
     QRectF filledRect(qMin(minimumX, handleX), cy - trackThickness / 2, qAbs(handleX - minimumX), trackThickness);
 
-    // 2. Track background and filled portion. zh_CN: 绘制轨道背景与已填充部分。
     detail::paintSliderBar(p, QRectF(trackRect), detail::sliderTrackColor(colors, isEnabled()));
     detail::paintSliderBar(p, filledRect, detail::sliderFillColor(colors, isEnabled()));
 
-    // Ticks share the same axis-aware painter as RangeSlider.
-    // zh_CN: 与 RangeSlider 共用随方向变化的刻度绘制。
     if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
         auto pixels = detail::sliderTickValues(opt.minimum, opt.maximum, opt.tickInterval, opt.singleStep,
             opt.pageStep);
@@ -325,7 +306,6 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
             detail::sliderTickColor(colors));
     }
 
-    // 3. Thumb. zh_CN: 绘制拇指。
     detail::SliderThumbVisual thumb;
     thumb.center = center;
     thumb.diameter = m_handleSize;
@@ -345,7 +325,6 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
 
     const int trackThickness = m_trackHeight;
 
-    // 1. Track geometry. zh_CN: 计算轨道几何区域。
     QRect trackRect(cx - trackThickness / 2, padding, trackThickness, height() - 2 * padding);
 
     int handleY = valueToPixelPos(opt.sliderPosition);
@@ -354,12 +333,9 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
     const int minimumY = valueToPixelPos(opt.minimum);
     QRectF filledRect(cx - trackThickness / 2, qMin(minimumY, handleY), trackThickness, qAbs(handleY - minimumY));
 
-    // 2. Track background and filled portion. zh_CN: 绘制轨道背景与已填充部分。
     detail::paintSliderBar(p, QRectF(trackRect), detail::sliderTrackColor(colors, isEnabled()));
     detail::paintSliderBar(p, filledRect, detail::sliderFillColor(colors, isEnabled()));
 
-    // Ticks share the same axis-aware painter as RangeSlider.
-    // zh_CN: 与 RangeSlider 共用随方向变化的刻度绘制。
     if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
         auto pixels = detail::sliderTickValues(opt.minimum, opt.maximum, opt.tickInterval, opt.singleStep,
             opt.pageStep);
@@ -369,7 +345,6 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
             detail::sliderTickColor(colors));
     }
 
-    // 3. Thumb. zh_CN: 绘制拇指。
     detail::SliderThumbVisual thumb;
     thumb.center = center;
     thumb.diameter = m_handleSize;

@@ -5,8 +5,7 @@
 
 namespace fluent::diagnostics {
 namespace {
-// Stored ZIP entries keep export dependency-free and readable by ordinary archive tools.
-// zh_CN: 使用无压缩 ZIP 条目，不引入额外依赖，可直接由常见解压工具读取。
+// Store ZIP entries uncompressed (method 0) to stay dependency-free and readable by any archive tool.
 void u16(QByteArray& bytes, quint16 value)
 {
     bytes.append(char(value & 255));

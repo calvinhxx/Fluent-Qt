@@ -11,8 +11,7 @@
  *
  * DebugOverlay assumes the target and overlay share the same parent widget so
  * the target geometry can be reused directly.
- * zh_CN: DebugOverlay 假设目标控件和 overlay 处于同一个父控件下，因此可以直接
- * 复用目标控件的 geometry。
+ * zh_CN: DebugOverlay 假设与目标控件共用同一父控件，因此可直接复用目标控件的 geometry。
  */
 class DebugOverlay : public QWidget {
     Q_OBJECT

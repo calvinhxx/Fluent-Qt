@@ -63,8 +63,6 @@ void Flyout::showAt(QWidget* anchor)
     open();
 }
 
-// ── Geometry helpers. zh_CN: 几何辅助 ────────────────────────────────────────
-
 QRect Flyout::anchorRectInTopLevel() const
 {
     if (!m_anchor)
@@ -113,11 +111,9 @@ Flyout::Placement Flyout::resolveAutoPlacement() const
     return spaceBelow >= spaceAbove ? Bottom : Top;
 }
 
-// ── Placement. zh_CN: 位置计算 ───────────────────────────────────────────────
-
 QPoint Flyout::computePosition() const
 {
-    // No anchor: fall back to the base class (centered). zh_CN: 没有 anchor → 退化到基类（居中）。
+    // No anchor: fall back to centered Popup placement.
     if (!::fluent::overlay::presentedTopLevel(m_anchor)) {
         return Popup::computePosition();
     }
@@ -152,7 +148,6 @@ QPoint Flyout::computePosition() const
         break;
     case Full:
     case Auto:
-        // Already handled / converted above. zh_CN: 已在前面处理/转换。
         return Popup::computePosition();
     }
 

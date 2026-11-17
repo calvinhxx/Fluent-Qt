@@ -39,18 +39,16 @@ struct BreadcrumbItem {
 };
 
 /**
- * @brief Breadcrumb navigation control with overflow handling and item sizing.
- * zh_CN: 支持溢出处理和尺寸模式的面包屑导航控件。
- *
- * Breadcrumb represents a path-like item list, emits navigation intent on item
- * activation, and can truncate or overflow segments according to the selected mode.
- * zh_CN: Breadcrumb 表示路径式 item 列表，在激活项时发出导航意图，并按所选模式截断或溢出片段。
+ * @brief Path navigation bar with configurable item sizing and overflow truncation.
+ * Displays an ordered trail of items, emits activation signals on click or keyboard trigger, and collapses excess segments according to the selected overflow mode.
+ * zh_CN: 支持尺寸模式与溢出折叠的路径面包屑控件。
+ * 按顺序展示路径条目，触发条目时发出激活信号，并在宽度不足时按所选模式收起或省略部分层级。
  */
 class Breadcrumb : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Number of items exposed by the navigation control.
-     * zh_CN: 导航控件暴露的条目数量。
+     * @brief Number of items in the breadcrumb.
+     * zh_CN: 面包屑条目数量。
      */
     Q_PROPERTY(int itemCount READ itemCount NOTIFY itemsChanged)
     /**
@@ -64,8 +62,8 @@ class Breadcrumb : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(OverflowMode overflowMode READ overflowMode WRITE setOverflowMode NOTIFY overflowModeChanged)
     /**
-     * @brief Whether breadcrumb items collapse after item activation.
-     * zh_CN: 条目激活后面包屑是否自动收缩。
+     * @brief Whether activating an item removes all trailing items after it.
+     * zh_CN: 激活条目时是否自动移除其后的所有条目。
      */
     Q_PROPERTY(bool autoTruncateOnItemClick
         READ autoTruncateOnItemClick

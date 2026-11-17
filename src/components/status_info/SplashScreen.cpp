@@ -87,9 +87,7 @@ private:
     qreal m_opacity = 1.0;
 };
 
-// This child only paints the travelling icon. Its window-wide coordinate system lets an
-// embedded cover reach a title-bar sibling without taking ownership of the application's chrome.
-// zh_CN: 私有子控件仅绘制移动图标，以窗口坐标连接内容遮罩和标题栏，不接管应用 chrome。
+// Window-wide overlay widget that paints only the travelling logo during Branded dismissal.
 class SplashScreen::LogoTransition final : public QWidget {
 public:
     explicit LogoTransition(SplashScreen* owner) : QWidget(owner->window()), m_owner(owner)

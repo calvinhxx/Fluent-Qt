@@ -42,8 +42,7 @@ namespace fluent::collections {
 
 namespace {
 
-// Pixels scrolled per wheel notch (delta 120), shared with the other collection views so the
-// wheel feel matches ListView. zh_CN: 每个滚轮刻度（delta 120）滚动的像素数，与 ListView 统一手感。
+// Pixels per 120-delta wheel notch, matching ListView.
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 
 bool pointsEqual(const QPointF& lhs, const QPointF& rhs)
@@ -75,9 +74,6 @@ FlowView::FlowView(QWidget* parent) : QAbstractItemView(parent)
     setDragEnabled(false);
     setDefaultDropAction(Qt::IgnoreAction);
 
-    // Keep the row-based convenience signal aligned with the inherited Qt
-    // item-view click contract.
-    // zh_CN: 让按行编号的便捷信号与继承的 Qt item-view 点击契约保持一致。
     connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& index) {
         emit itemClicked(index.row());
     });
@@ -90,7 +86,6 @@ FlowView::FlowView(QWidget* parent) : QAbstractItemView(parent)
         QStringLiteral("fluentFlowViewScrollBar"));
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &FlowView::syncFluentScrollBar);
 
-    // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
     hooks.scrollBar = [this] { return verticalScrollBar(); };
     hooks.normalScroll = [this](qreal scrollPx) {
@@ -105,8 +100,7 @@ FlowView::FlowView(QWidget* parent) : QAbstractItemView(parent)
         return true;
     };
     hooks.onOverscrollChanged = [this] { viewport()->update(); };
-    // No fallbackWheel: a flow with no overflow ignores the wheel so an enclosing scroller takes it.
-    // zh_CN: 无 fallbackWheel：内容未超出时忽略滚轮，让外层滚动容器接管。
+    // Omit fallbackWheel so non-overflowing views ignore wheel events and let enclosing scrollers handle them.
     m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx, std::move(hooks),
         this);
 
@@ -119,12 +113,7 @@ FlowView::~FlowView()
 {
     clearDragAnimations();
 
-    // Detach caller-owned Python model/delegate objects while the generated
-    // wrapper still retains them. Qt 6.2 on Windows can otherwise tear down
-    // QAbstractItemView connections after Shiboken has started releasing the
-    // corresponding wrappers.
-    // zh_CN: 在生成包装器仍持有调用方 Python model/delegate 时主动解除关联；
-    // Qt 6.2 Windows 若等到基类析构才清理连接，可能与 Shiboken 释放包装器交错。
+    // Detach external model/delegate before ~QAbstractItemView to avoid PySide6/Shiboken teardown races.
     QAbstractItemView::setItemDelegate(nullptr);
     QAbstractItemView::setModel(nullptr);
 }
@@ -712,10 +701,7 @@ void FlowView::wheelEvent(QWheelEvent* event)
         event->ignore();
         return;
     }
-    // The shared controller owns the overscroll/bounce state machine; a scrollable flow keeps
-    // boundary wheel input (unless scrollChainingEnabled) so an enclosing page doesn't pan.
-    // zh_CN: 共享控制器持有 overscroll/回弹状态机；可滚动的 flow 默认持有边界滚轮（除非开启链式滚动），
-    // 避免外层页面跟着平移。
+    // Retain boundary wheel events when scrollable unless scrollChainingEnabled is set.
     m_overscroll->handleWheel(event);
 }
 
@@ -769,8 +755,7 @@ int FlowView::verticalOffset() const
 {
     if (!verticalScrollBar())
         return 0;
-    // m_overscroll may be null while the base view queries the offset during construction.
-    // zh_CN: 构造期间基类会查询偏移，此时 m_overscroll 可能尚未创建。
+    // m_overscroll may be null while the base view queries offsets during construction.
     const qreal overscroll = m_overscroll ? m_overscroll->value() : 0.0;
     return verticalScrollBar()->value() - qRound(overscroll);
 }
@@ -860,8 +845,7 @@ void FlowView::applyThemeStyle(bool refreshFonts)
     pal.setColor(QPalette::Active, QPalette::Text, colors.textPrimary);
     pal.setColor(QPalette::Inactive, QPalette::Text, colors.textPrimary);
     pal.setColor(QPalette::Disabled, QPalette::Text, colors.textDisabled);
-    // The inherited Qt delegate needs a visible selection even without a custom delegate.
-    // zh_CN: 未安装自定义 delegate 时，Qt 默认条目也需要可见的选中反馈。
+    // Keep selection visible when using Qt's default delegate.
     pal.setColor(QPalette::Active, QPalette::Highlight, colors.subtleSecondary);
     pal.setColor(QPalette::Inactive, QPalette::Highlight, colors.subtleSecondary);
     pal.setColor(QPalette::Disabled, QPalette::Highlight, Qt::transparent);
@@ -884,11 +868,7 @@ void FlowView::applyThemeStyle(bool refreshFonts)
         const QColor headerColor = isEnabled() ? colors.textPrimary : colors.textDisabled;
         if (refreshFonts)
             m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-        // Color via the label's OWN style sheet rather than its palette: a palette WindowText color is
-        // dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the subtree
-        // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
-        // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
-        // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
+        // Style via the label's own stylesheet so ancestor QStyleSheetStyle rules won't override QPalette::WindowText.
         m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
                 .arg(headerColor.red())
                 .arg(headerColor.green())
@@ -966,9 +946,7 @@ void FlowView::syncFluentScrollBar()
     const QScopedValueRollback<bool> syncing(m_syncingScrollBar, true);
     ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
 
-    // FlowView owns its scroll model: derive the native range from the laid-out
-    // content height before mirroring it onto the overlay bar.
-    // zh_CN: FlowView 自管滚动模型：先按排版后的内容高度推导原生范围，再镜像到覆盖条。
+    // Derive the native vertical scrollbar range from laid-out content height before mirroring to the overlay bar.
     ensureLayout();
     if (m_layoutDirty)
         return;
@@ -1014,8 +992,7 @@ void FlowView::ensureLayout() const
     int firstRow = 0;
     int preservedBands = 0;
 
-    // A tail append preserves every existing item rectangle, including an unfinished band.
-    // zh_CN: 尾部追加复用已有条目矩形，并从最后一排继续排版。
+    // Tail appends reuse earlier row rectangles and resume from the last band.
     if (m_layoutValidRowCount > 0 && m_layoutValidRowCount == m_itemRects.size() && m_layoutValidRowCount <= count
         && !m_layoutBands.isEmpty()) {
         const LayoutBand lastBand = m_layoutBands.last();
@@ -1028,9 +1005,7 @@ void FlowView::ensureLayout() const
         maxRight = m_contentSize.width() - m_contentMargins.right();
     }
 
-    // Delegate/model callbacks may query geometry. Publish only a complete layout,
-    // and stage only the suffix so repeated tail appends remain amortized linear.
-    // zh_CN: delegate/model 回调可能重入几何查询；完整排版后再发布，仅暂存尾部追加的数据。
+    // Stage suffix rects before publishing in case model/delegate callbacks re-enter geometry queries.
     QVector<QRect> addedRects;
     QVector<LayoutBand> addedBands;
     addedRects.reserve(count - firstRow);

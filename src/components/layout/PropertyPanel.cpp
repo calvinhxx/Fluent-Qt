@@ -49,9 +49,7 @@ public:
         m_field->layout()->activate();
         if (!guard || !m_editor || !m_reset)
             return;
-        // Align with the editor itself; wrapped captions and validation text
-        // must not move the action away from the control it resets.
-        // zh_CN: 按编辑器本身对齐，标签换行或校验信息不应改变重置按钮的位置。
+        // Center reset button on the editor itself rather than the whole Field (captions/errors vary in height).
         const int centerY = m_editor->mapTo(parentWidget(), m_editor->rect().center()).y();
         m_reset->move(m_reset->x(), centerY - m_reset->rect().center().y());
     }
@@ -114,9 +112,7 @@ bool equivalentValue(const PropertyDefinition& definition, const QVariant& first
         return first.value<QColor>() == second.value<QColor>();
     if (definition.type == PropertyDefinition::Number) {
         const double a = first.toDouble(), b = second.toDouble();
-        // Ignore arithmetic roundoff, bounded well below one editor step so
-        // large magnitudes cannot hide meaningful changes.
-        // zh_CN: 忽略算术舍入误差，同时将容差限制在步长百万分之一内，避免大数值吞掉实际改动。
+        // Ignore floating-point roundoff, capped well below one step so large values keep small edits distinct.
         const double scale = qMax(qMax(std::abs(a), std::abs(b)), std::abs(definition.step));
         const double tolerance = qMin(4 * std::numeric_limits<double>::epsilon() * scale,
             std::abs(definition.step) * 1e-6);
@@ -335,8 +331,7 @@ PropertyPanel::~PropertyPanel()
 {
     d->rebuilding = true;
     ++d->revision;
-    // Open overlays are reparented to the window, but remain owned by this panel.
-    // zh_CN: 弹层打开后会挂到窗口，生命周期仍由创建它的属性面板负责。
+    // Open flyouts get reparented to the top-level window while open, so delete them explicitly.
     const auto entries = d->entries;
     for (const auto& entry : entries)
         delete entry.flyout.data();

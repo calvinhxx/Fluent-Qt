@@ -239,24 +239,15 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId, fluent::b
     m_childFlyout = new fluent::dialogs_flyouts::Popup(this);
     m_childFlyout->setObjectName(QStringLiteral("galleryTopNavigationFlyout"));
     m_childFlyout->setAnimationEnabled(true);
-    // Dismiss instantly without an exit animation: the shared fade-out misbehaves over a native
-    // vibrancy backdrop on macOS, so the flyout just hides on close while keeping its slide-up entrance.
-    // zh_CN: 关闭时不播放退场动画,直接隐藏:共享的淡出在 macOS 原生 vibrancy 背景上表现异常;入场的上滑动画保留。
+    // Hide immediately on close because Popup's fade-out glitches over macOS vibrancy; keep slide-up entrance.
+    // zh_CN: 关闭时不播淡出动画以规避 macOS vibrancy 背景上的合成异常，仅保留入场上滑动画。
     m_childFlyout->setExitAnimationEnabled(false);
     m_childFlyout->setClosePolicy(fluent::dialogs_flyouts::Popup::ClosePolicy(
         fluent::dialogs_flyouts::Popup::CloseOnPressOutside | fluent::dialogs_flyouts::Popup::CloseOnEscape));
-    // Light-dismiss consumes the outside press: clicking another top nav item first closes the
-    // current flyout, and a second click is required to activate/open the target item.
-    // zh_CN: 轻关闭会吞掉这次外部按下：点击另一个顶部导航项时先关闭当前浮窗，需要第二次点击才激活/打开目标项。
+    // Light-dismiss consumes the outside press, so clicking another top item first closes this flyout.
     m_childFlyout->setLightDismissConsumesPress(true);
-    // Guard the destroyed handler against a STALE flyout nulling the CURRENT one. closeChildFlyout()
-    // hands the outgoing popup to deleteLater() and immediately lets a new flyout be assigned to
-    // m_childFlyout; the outgoing popup's destroyed signal then fires a turn later. Without the
-    // identity check it would clear m_childFlyout even though it now points at the freshly opened,
-    // visible flyout — leaving m_childFlyout null so the next row click's closeChildFlyout() early-returns
-    // and the flyout never collapses. zh_CN: 防止「旧浮窗」的析构把「当前浮窗」置空。closeChildFlyout() 把上一个
-    // 浮窗交给 deleteLater() 后会立刻把新浮窗赋给 m_childFlyout;旧浮窗的 destroyed 信号在下一轮才触发。若不做身份校验,
-    // 它会把已指向新（可见）浮窗的 m_childFlyout 清空——导致下次点击行时 closeChildFlyout() 提前返回,浮窗无法收起。
+    // Guard against a closing flyout's deferred destroyed() clearing a newer m_childFlyout instance.
+    // zh_CN: 防止延迟销毁的旧浮窗触发 destroyed() 时误清空已赋值为新浮窗的 m_childFlyout。
     auto* createdFlyout = m_childFlyout;
     connect(createdFlyout, &QObject::destroyed, this, [this, createdFlyout]() {
         if (m_childFlyout != createdFlyout)

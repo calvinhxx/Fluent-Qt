@@ -83,8 +83,8 @@
     }
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Select one option from a mutually exclusive group.",
+    "zh": "在一组互斥选项中选择一项。"
   },
   "presets": [
     {

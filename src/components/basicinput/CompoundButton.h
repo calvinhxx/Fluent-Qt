@@ -8,14 +8,8 @@
 namespace fluent::basicinput {
 
 /**
- * @brief Button with a primary label and a secondary description.
- * zh_CN: 同时呈现主标签与次级说明的按钮。
- *
- * CompoundButton preserves Button's click, keyboard, focus, icon, style, and
- * interaction contracts. The secondary text only changes content measurement
- * and painting; it does not introduce a second interactive target.
- * zh_CN: CompoundButton 保留 Button 的点击、键盘、焦点、图标、样式与交互契约。
- * 次级文本只参与内容测量和绘制，不会引入第二个可交互目标。
+ * @brief Push button with a primary label and a display-only secondary description.
+ * zh_CN: 带主标题和次级说明文字（仅展示，不单独交互）的按钮。
  */
 class CompoundButton : public Button {
     Q_OBJECT

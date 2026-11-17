@@ -35,8 +35,6 @@ void DropDownButton::initAnimation()
     if (m_pressAnimation)
         return;
     m_pressAnimation = new QPropertyAnimation(this, "pressProgress", this);
-    // Global motion tokens: slow contrast with a decelerate curve.
-    // zh_CN: 使用全局动画规范——慢速对比效果 + 减速曲线。
     m_pressAnimation->setDuration(themeAnimation().slow);
     m_pressAnimation->setEasingCurve(themeAnimation().decelerate);
 }
@@ -53,9 +51,7 @@ void DropDownButton::setMenu(QMenu* menu)
     m_menu = menu;
     if (m_menu) {
         connect(m_menu, &QMenu::aboutToShow, this, [this]() {
-            // Empty QMenu emits aboutToShow but never aboutToHide. Wait one
-            // turn so application handlers can populate or clear it on demand.
-            // zh_CN: 空菜单不发 aboutToHide；等待一轮以允许应用动态填充或清空。
+            // Empty QMenu emits aboutToShow without aboutToHide; recheck after one event-loop turn.
             QTimer::singleShot(0, this, [this, menu = m_menu] {
                 if (menu && menu == m_menu && menu->isEmpty() && !menu->isVisible())
                     setOpen(false);
@@ -161,9 +157,6 @@ int DropDownButton::chevronReserveWidth() const
 void DropDownButton::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
-        // Clicking plays one press-down-and-rebound animation, independent of
-        // the open state.
-        // zh_CN: 点击触发一次“向下压+回弹”动画（与 open 状态无关）。
         if (m_pressAnimation) {
             m_pressAnimation->stop();
             m_pressAnimation->setStartValue(0.0);
@@ -172,9 +165,7 @@ void DropDownButton::mousePressEvent(QMouseEvent* event)
         }
 
         if (m_menu) {
-            // Keep menu interaction asynchronous so callers are not blocked by
-            // a nested event loop. zh_CN: 菜单交互保持异步，避免嵌套事件循环
-            // 阻塞调用方。
+            // Open asynchronously so callers are not blocked by a nested exec() loop.
             event->accept();
             detail::showMenuButtonMenu(this);
             return;
@@ -200,16 +191,13 @@ void DropDownButton::keyPressEvent(QKeyEvent* event)
 
 void DropDownButton::paintEvent(QPaintEvent*)
 {
-    // Keep the menu-open appearance local to painting, without emitting state changes.
-    // zh_CN: 菜单开启时的按下外观只用于绘制，不发送交互状态变化信号。
+    // Paint open-state visuals without mutating the interactionState property.
     paintButton(m_isOpen ? Pressed : interactionState());
 
-    // Paint the chevron glyph. zh_CN: 绘制 Chevron 图标。
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
 
-    // Icon font with the size unchanged. zh_CN: 设置图标字体（字号保持不变）。
     const bool usesFluentIcons = m_iconFontFamily == Typography::FontFamily::FluentIcons;
     QFont iconFont = usesFluentIcons ? Typography::Icons::font(m_chevronSize) : QFont(m_iconFontFamily);
     if (!usesFluentIcons)
@@ -217,23 +205,14 @@ void DropDownButton::paintEvent(QPaintEvent*)
     painter.setFont(iconFont);
     const qreal pressEffect = qSin(m_pressProgress * M_PI);
 
-    // Icon color reuses Button's semantic colors with a subtle pressed tweak. zh_CN: 图标颜色复用 Button 的语义色，并提供轻微按压反馈。
     const auto& colors = themeColorsRef();
-    // Filled surface matches Button's rule (Accent, or a checked Standard): the chevron then needs the
-    // on-accent color to stay legible; otherwise it follows the brand's neutral/secondary text.
-    // zh_CN: 填充表面与 Button 规则一致(Accent 或选中的 Standard):此时箭头需用 on-accent 色才清晰;否则随品牌的中性/次要文字色。
     QColor textColor;
     if (!isEnabled()) {
         textColor = colors.textDisabled;
     } else {
-        // Accent uses textOnAccent; other styles use textPrimary.
-        // zh_CN: Accent 使用 textOnAccent，其它样式使用 textPrimary。
         textColor = (fluentStyle() == Accent) ? colors.textOnAccent : colors.textPrimary;
         if (pressEffect > 0.0) {
-            // 1.0 → 0.5 for a clear pressed feel. Multiply existing alpha (do not
-            // force opaque 255) so secondary tokens stay consistent.
-            // zh_CN: 1.0 → 0.5，明显的按压感。乘在已有 alpha 上（不要写成不透明 255），
-            // 与次要色 token 保持一致。
+            // Multiply existing alpha rather than resetting to 255 so secondary tokens keep their opacity.
             const qreal alphaFactor = 1.0 - 0.5 * pressEffect;
             textColor.setAlphaF(textColor.alphaF() * alphaFactor);
         }
@@ -241,15 +220,7 @@ void DropDownButton::paintEvent(QPaintEvent*)
 
     painter.setPen(textColor);
 
-    // Paint the glyph: it dips down along Y with the animation then rebounds,
-    // plus the developer offset; chevronOffset.x() is the trailing-edge padding and
-    // chevronOffset.y() the vertical tweak. Snap the dip to whole pixels so the
-    // compact optical chevron stays sharp while pressed.
-    // zh_CN: 绘制图标——按动画进度沿 Y 轴下移后弹回，再叠加自定义偏移；
-    // chevronOffset.x() 为尾缘间距，chevronOffset.y() 为垂直微调。下沉取整像素，
-    // 避免紧凑光学箭头在按下时发虚。
-    // Dedicated chevron slot at the trailing edge (SplitButton pattern), not a
-    // full-width AlignRight band. zh_CN: 尾缘独立箭头槽（对齐 SplitButton），非整行 AlignRight。
+    // Snap the Y press dip to whole pixels so the compact 12 px chevron stays sharp.
     const qreal maxOffset = 3.0;
     const qreal pressOffset = qRound(maxOffset * pressEffect);
     const QRectF bounds = QRectF(rect());

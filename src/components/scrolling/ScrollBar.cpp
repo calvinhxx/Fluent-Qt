@@ -76,8 +76,7 @@ void ScrollBar::init()
                     : scrollBarTrackRect(option.rect)
                           .adjusted(padding.left(), padding.top(), -padding.right(), -padding.bottom()))
                                  .toRect();
-            // The full thickness remains draggable, including the thumb's side padding.
-            // zh_CN: 整个厚度都可拖动，包括滑块两侧留白。
+            // Keep the full bar thickness draggable, including the thumb's side padding.
             if (option.orientation == Qt::Vertical) {
                 geometry.setLeft(option.rect.left());
                 geometry.setRight(option.rect.right());
@@ -100,13 +99,9 @@ void ScrollBar::init()
     setContextMenuPolicy(Qt::NoContextMenu);
     ensureAnimation();
 
-    // Any value change counts as scrolling: show, then auto-hide.
-    // zh_CN: 任意数值变化都视为“正在滚动”，触发显示并自动隐藏。
+    // Show and auto-hide on any scroll value change while visible (ignore pre-show setup updates
+    // so they don't start a fade animation that overwrites a caller-pinned opacity).
     connect(this, &QScrollBar::valueChanged, this, [this](int) {
-        // Initial model/setup values are commonly assigned before the widget is shown. They must
-        // not start a hidden fade animation that later overwrites an explicitly pinned opacity.
-        // zh_CN: 初始模型/配置值通常在控件显示前赋予；此时不得启动隐藏的淡入淡出动画，
-        // 以免随后覆盖调用方显式固定的不透明度。
         if (isVisible())
             showWithAutoHide();
     });
@@ -136,17 +131,14 @@ void ScrollBar::ensureAnimation()
     if (!m_opacityAnim) {
         m_opacityAnim = new QPropertyAnimation(this, "opacity", this);
         const auto anim = themeAnimation();
-        m_opacityAnim->setDuration(anim.fast); // Fluent fast-feedback duration. zh_CN: 使用 Fluent 快速反馈时长。
-        m_opacityAnim->setEasingCurve(
-            anim.decelerate); // Decelerate both ways, matching WinUI. zh_CN: 进入/退出都用减速曲线。
+        m_opacityAnim->setDuration(anim.fast);
+        m_opacityAnim->setEasingCurve(anim.decelerate);
         m_opacityAnim->setStartValue(0.0);
         m_opacityAnim->setEndValue(1.0);
     }
     if (!m_autoHideTimer) {
         m_autoHideTimer = new QTimer(this);
         m_autoHideTimer->setSingleShot(true);
-        // Auto-hide delay derives from motion tokens: about twice Normal.
-        // zh_CN: 自动隐藏延迟基于主题动画，约为 Normal 时长两倍。
         const auto anim = themeAnimation();
         m_autoHideTimer->setInterval(anim.normal * 2);
         connect(m_autoHideTimer, &QTimer::timeout, this, [this]() {
@@ -205,10 +197,6 @@ void ScrollBar::paintEvent(QPaintEvent* event)
     const auto& colors = themeColorsRef();
     const bool isDark = effectiveThemeUsesDarkAppearance();
 
-    // Track: a light subtle fill rounded at half the thickness, with only a
-    // tiny gap to the widget bounds (a separate trackPadding could come later).
-    // zh_CN: 轨道——轻量 Subtle 填充，圆角为厚度一半；与外框只留极小间距
-    // （可按需再引入独立 trackPadding）。
     const QRectF trackRect = scrollBarTrackRect(rect());
     QColor trackColor = colors.subtleSecondary;
     const qreal trackMaxAlpha = isDark ? 0.18 : 0.20;
@@ -255,7 +243,6 @@ void ScrollBar::paintEvent(QPaintEvent* event)
 void ScrollBar::enterEvent(FluentEnterEvent* event)
 {
     m_isHovered = true;
-    // Only animate in when scrollable and enabled. zh_CN: 仅在可滚动且启用时触发显示动画。
     if (isEnabled() && maximum() > minimum()) {
         showWithAutoHide();
     }
@@ -272,7 +259,6 @@ void ScrollBar::leaveEvent(QEvent* event)
 void ScrollBar::mousePressEvent(QMouseEvent* event)
 {
     m_isPressed = true;
-    // Only animate in when scrollable and enabled. zh_CN: 仅在可滚动且启用时触发显示动画。
     if (isEnabled() && maximum() > minimum()) {
         showWithAutoHide();
     }

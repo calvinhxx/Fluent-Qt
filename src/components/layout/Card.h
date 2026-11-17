@@ -9,14 +9,8 @@
 namespace fluent::layout {
 
 /**
- * @brief Non-interactive Fluent surface for grouping caller-owned content.
- * zh_CN: 用于组织调用方内容的非交互式 Fluent 表面。
- *
- * Card paints a token-backed rounded fill and optional hairline border. It
- * intentionally relies on normal QWidget layouts instead of owning a separate
- * content widget, so child ownership and composition stay explicit.
- * zh_CN: Card 绘制由 token 驱动的圆角填充和可选细边框，并直接使用常规 QWidget
- * 布局，不额外接管内容控件，从而保持子控件所有权与组合关系清晰。
+ * @brief Rounded Fluent container frame for grouping child widgets with standard layouts.
+ * zh_CN: 圆角 Fluent 容器卡片，直接使用常规 QWidget 布局组织子控件。
  */
 class Card : public QFrame, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -25,8 +19,8 @@ class Card : public QFrame, public FluentElement, public QMLPlus {
 
 public:
     /**
-     * @brief Token surface used to fill the card.
-     * zh_CN: Card 填充所使用的 token 表面。
+     * @brief Background color token used to fill the card.
+     * zh_CN: 卡片背景填充颜色样式。
      */
     enum Appearance { Layer, LayerAlt, Canvas };
     Q_ENUM(Appearance)

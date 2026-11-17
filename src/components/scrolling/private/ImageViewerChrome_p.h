@@ -20,15 +20,11 @@ class Label;
 
 namespace fluent::scrolling {
 
-// Object names shared by ImageViewer, its accessibility adapter and tests.
-// zh_CN: ImageViewer、读屏适配器和测试共用的对象名。
+// Object names shared by ImageViewer, its accessibility adapter, and tests.
 inline constexpr const char* kImageViewerZoomBarName = "fluentImageViewerZoomBar";
 inline constexpr const char* kImageViewerZoomIndicatorName = "fluentImageViewerZoomIndicator";
 
-// Floating zoom toolbar composed of Fluent subtle buttons and a percentage label.
-// Buttons do not take focus, so keyboard input stays with the viewer.
-// zh_CN: 由 Fluent subtle 按钮和比例标签组成的浮动缩放工具条。按钮不获取焦点，
-// 键盘输入始终留在查看器上。
+// Floating zoom toolbar; buttons stay unfocusable so keyboard focus remains on ImageViewer.
 class ImageViewerZoomBar : public QWidget, public FluentElement {
 public:
     enum class Command { ZoomOut, ZoomIn, Fit, ActualSize, Reset };
@@ -48,16 +44,13 @@ public:
     void setCompact(bool compact);
     bool isCompact() const { return m_compact; }
 
-    // Fades to the requested visibility through MotionPolicy; hides at zero opacity.
-    // zh_CN: 通过 MotionPolicy 淡入淡出到目标可见性；不透明度为零时隐藏。
+    // Fades to the requested visibility and hides once opacity reaches zero.
     void setShown(bool shown);
     bool isShown() const { return m_shown; }
 
-    // Surface size without the shadow margin.
-    // zh_CN: 不含阴影边距的表面尺寸。
+    // Surface size excluding shadow margins.
     QSize surfaceSize() const;
-    // Surface width of the full or compact layout, independent of the current mode.
-    // zh_CN: 完整或紧凑布局的表面宽度，与当前模式无关。
+    // Surface width of the full or compact layout regardless of current mode.
     int surfaceWidth(bool compact) const;
     static int shadowMargin();
 
@@ -87,14 +80,12 @@ private:
     bool m_compact = false;
 };
 
-// Transient zoom percentage shown at the viewport center.
-// zh_CN: 显示在视口中心的临时缩放比例提示。
+// Transient zoom percentage badge shown at the viewport center.
 class ImageViewerZoomIndicator : public QWidget, public FluentElement {
 public:
     explicit ImageViewerZoomIndicator(QWidget* parent = nullptr);
 
-    // Shows the text, then fades out after the hold interval.
-    // zh_CN: 显示文本，并在停留时间后淡出。
+    // Shows the text briefly, then fades out after the hold timer expires.
     void flash(const QString& text);
     void dismiss();
     QString text() const { return m_text; }

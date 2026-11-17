@@ -12,12 +12,12 @@ namespace fluent::charts {
 class ChartViewPrivate;
 
 /**
- * @brief A bounded, native chart projection of caller-owned models.
- * zh_CN: 调用方模型的原生图表视图，绘制数据量受预算约束。
- * One model is one series. Dense lines retain extrema, dense bars show bucket means,
- * and pie/donut charts show positive values from the first eleven rows plus an aggregate remainder.
- * Scatter uses representative points, not a density estimate. No per-point widgets exist.
- * zh_CN: 一模型一序列；密集曲线保留极值，密集柱展示桶均值，饼环图合并剩余项。
+ * @brief Native chart widget that renders external ChartModel series within a point budget.
+ * Each model provides one series without transferring ownership. Dense lines preserve extrema,
+ * dense bars show bucket means, pie/donut charts show the first 11 positive rows plus an "Other"
+ * slice, and scatter plots sample representative points without allocating per-point widgets.
+ * zh_CN: 基于外部 ChartModel 的原生图表控件（不接管模型所有权），绘制点数受预算控制。
+ * 每个模型对应一条序列：密集折线保留极值，密集柱图显示分桶均值，饼/环图显示前 11 个正值项并汇总其余项，散点图按代表点采样绘制。
  */
 class ChartView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -39,15 +39,17 @@ public:
     explicit ChartView(QWidget* parent = nullptr);
     ~ChartView() override;
 
-    /** @brief Replaces series with one borrowed model; nullptr clears. zh_CN: 设置借用模型；空指针清空。 */
+    /**
+     * @brief Binds a single external model (without taking ownership); nullptr clears all series.
+     * zh_CN: 关联单个外部模型（不接管所有权）；传入 nullptr 清空序列。
+     */
     void setModel(ChartModel* model);
     ChartModel* model() const;
     /**
-     * @brief Adds a borrowed series, up to 32; duplicates are no-ops.
-     * zh_CN: 添加借用序列，最多 32 个；重复添加不改变状态。
-     * Pie and Donut retain additional models but render only seriesModel(0).
-     * Prefer setModel() for these single-series presentations.
-     * zh_CN: 饼图和环图保留额外模型，但仅绘制 seriesModel(0)；建议使用 setModel()。
+     * @brief Adds an external series model (up to 32, without taking ownership); duplicates are ignored.
+     * Pie and Donut store extra series but only draw seriesModel(0); prefer setModel() for them.
+     * zh_CN: 添加外部序列模型（最多 32 条，不接管所有权），重复添加会忽略。
+     * 饼图和环图会保留额外模型但仅绘制 seriesModel(0)，这类单序列图表建议使用 setModel()。
      */
     bool addSeries(ChartModel* model);
     bool removeSeries(ChartModel* model);
@@ -56,90 +58,105 @@ public:
     void clearSeries();
 
     ChartType chartType() const;
-    /** @brief Changes a generic ChartView; dedicated chart components keep their fixed type.
-     * zh_CN: 更改通用 ChartView 类型；独立图表组件始终保持其固定类型。 */
+    /**
+     * @brief Changes the chart type on a generic ChartView; dedicated subclasses keep a fixed type.
+     * zh_CN: 修改通用 ChartView 的图表类型；专用图表子类的类型固定不变。
+     */
     void setChartType(ChartType type);
     QString title() const;
     void setTitle(const QString& title);
     QString subtitle() const;
     void setSubtitle(const QString& subtitle);
-    /** @brief Suffix for value readouts, for example " ms" or "%"; does not rescale data.
-     * zh_CN: 数值读数后缀，例如 " ms" 或 "%"；不改变数据比例。 */
+    /**
+     * @brief Unit suffix appended to value readouts (e.g. " ms" or "%") without rescaling data.
+     * zh_CN: 数值提示的单位后缀（如 " ms" 或 "%"），不改变数据刻度。
+     */
     QString valueSuffix() const;
     void setValueSuffix(const QString& suffix);
     QString centerText() const;
     void setCenterText(const QString& text);
     QString centerCaption() const;
     void setCenterCaption(const QString& caption);
-    /** @brief Host-controlled presentation while preparing a snapshot; owns no worker task.
-     * zh_CN: 由宿主控制的快照准备状态；不创建工作线程任务。 */
+    /**
+     * @brief Shows a loading state while data is prepared externally; does not manage background jobs.
+     * zh_CN: 显示加载占位状态（由外部在准备数据时控制，视图自身不启动后台任务）。
+     */
     bool isLoading() const;
     void setLoading(bool loading);
     bool isAutoYRange() const;
     double minimumY() const;
     double maximumY() const;
-    /** @brief Sets a finite increasing value range; percentage bars should use [0, 100].
-     * zh_CN: 设置有限递增的数值范围；百分比条应使用 [0, 100]。 */
+    /**
+     * @brief Sets a finite increasing Y range (for example [0, 100] for percentage bars); invalid ranges are ignored.
+     * zh_CN: 设置有限递增的 Y 轴范围（如百分比柱图可用 [0, 100]）；无效范围会被忽略。
+     */
     void setYRange(double minimum, double maximum);
     void resetYRange();
     bool isLegendVisible() const;
     void setLegendVisible(bool visible);
     int maximumPointCount() const;
-    /** @brief Total projection budget, [512, 65536], additionally limited by viewport width.
-     * zh_CN: 总投影点预算，范围 512 到 65536，并进一步受视口宽度限制。 */
+    /**
+     * @brief Sets the total sampled point budget in [512, 65536], further capped by viewport width.
+     * zh_CN: 设置总采样点预算（范围 [512, 65536]），实际绘制还会受视口宽度限制。
+     */
     void setMaximumPointCount(int count);
     int maximumFrameRate() const;
-    /** @brief Coalesces model update bursts at [1, 60] Hz; hidden views do no projection work.
-     * zh_CN: 将模型更新合并到每秒 1 到 60 帧；隐藏视图不计算投影。 */
+    /**
+     * @brief Throttles burst model updates to [1, 60] Hz; hidden charts skip projection work.
+     * zh_CN: 将高频模型更新节流至 [1, 60] Hz；控件隐藏时不执行投影计算。
+     */
     void setMaximumFrameRate(int rate);
     bool isAutoRange() const;
     double minimumX() const;
     double maximumX() const;
-    /** @brief Sets a finite increasing X viewport; invalid ranges are ignored.
-     * zh_CN: 设置有限且递增的 X 视口范围，忽略无效范围。 */
+    /**
+     * @brief Sets a finite increasing X viewport range; invalid ranges are ignored.
+     * zh_CN: 设置有限递增的 X 轴视口范围；无效范围会被忽略。
+     */
     void setXRange(double minimum, double maximum);
     void resetXRange();
 
     int currentSeries() const;
     int currentRow() const;
-    /** @brief Moves the data cursor without copying model data; -1 clears it.
-     * zh_CN: 移动数据游标，不复制模型数据；-1 清空。 */
+    /** @brief Moves the data cursor to a series row; pass -1 to clear. zh_CN: 将数据游标移动到指定序列和行号；传 -1 清空。 */
     void setCurrentPoint(int series, int row);
     QString currentPointText() const;
     QRectF plotRect() const;
     QRectF legendRect() const;
-    /** @brief Number of cached representative points, after the last paint.
-     * zh_CN: 最近一次绘制缓存的代表点数量。 */
+    /** @brief Cached sample point count from the most recent paint pass. zh_CN: 最近一次绘制缓存的采样点数量。 */
     int renderedPointCount() const;
     quint64 projectionBuildCount() const;
     /**
-     * @brief Renders the current logical layout at a pixel scale, without cursor or focus chrome.
-     * zh_CN: 按像素倍率导出当前逻辑布局，不包含数据游标和焦点装饰。
-     * Runs on the GUI thread; invalid sizes or outputs above 16 million pixels return an empty image.
-     * The widget geometry, model ownership and interactive selection remain unchanged.
-     * zh_CN: 在 GUI 线程调用；无效尺寸或超过 1600 万像素时返回空图，不改变控件几何、模型归属或选中状态。
+     * @brief Renders the chart at the given pixel scale without hover cursor or focus outlines.
+     * Must be called on the GUI thread; invalid scales or outputs exceeding 16 million pixels return a null QImage.
+     * zh_CN: 按指定像素倍率导出图表图像（不含游标和焦点框）。
+     * 须在 GUI 线程调用；无效缩放比例或总像素超过 1600 万时返回空图像。
      */
     QImage exportImage(double scale = 1.0);
-    /** @brief Encodes exportImage as PNG; an empty result means failure.
-     * zh_CN: 将 exportImage 编码为 PNG，失败时返回空数据。 */
+    /**
+     * @brief Encodes exportImage() as PNG bytes, returning empty on failure.
+     * zh_CN: 将 exportImage() 编码为 PNG 字节流，失败时返回空。
+     */
     QByteArray exportPng(double scale = 1.0);
     /**
-     * @brief Exports original rows as UTF-8 CSV: series, name, x, y, label, unit.
-     * zh_CN: 导出原始数据为 UTF-8 CSV，列为序列索引、名称、X、Y、标签、单位。
-     * Includes the X endpoints when visibleRangeOnly is true; radial charts use their complete first series.
-     * Missing Y values are empty cells. No sampled or aggregated values replace original rows.
-     * Work and result memory are O(exported rows); call on the GUI thread for bounded data sets.
-     * zh_CN: 当前范围包含 X 两端；饼环图使用完整首序列，缺失 Y 留空，不使用采样值或聚合值。
-     * 计算与结果内存随导出行数增长；在 GUI 线程对有限数据集调用。
+     * @brief Exports raw model rows as UTF-8 CSV (columns: series, name, x, y, label, unit).
+     * Exports original rows rather than sampled points, leaving NaN Y cells blank. When visibleRangeOnly
+     * is true, X bounds are inclusive; radial charts always export the full first series. Call on the GUI thread.
+     * zh_CN: 将原始模型数据导出为 UTF-8 CSV（列：序列索引、名称、X、Y、标签、单位）。
+     * 直接导出原始行而非采样/聚合值，缺失 Y 值留空；visibleRangeOnly 为 true 时包含 X 边界，饼环图始终导出完整首序列。须在 GUI 线程调用。
      */
     QByteArray exportCsv(bool visibleRangeOnly = false) const;
-    /** @brief Copies a PNG through the host clipboard, reporting actual completion.
-     * zh_CN: 通过宿主剪贴板复制 PNG，并报告实际完成结果。 */
+    /**
+     * @brief Copies the rendered PNG to the system clipboard and emits imageCopied().
+     * zh_CN: 将图表 PNG 图像复制到系统剪贴板，完成后发出 imageCopied()。
+     */
     Q_SLOT void copyImage(double scale = 1.0);
-    /** @brief Copies original CSV rows through the host clipboard.
-     * zh_CN: 通过宿主剪贴板复制原始 CSV 数据。
-     * Calls from another thread report dataCopied(false) without changing the clipboard.
-     * zh_CN: 非 GUI 线程调用会报告 dataCopied(false)，不改变剪贴板内容。 */
+    /**
+     * @brief Copies exported CSV rows to the system clipboard and emits dataCopied().
+     * Off-GUI-thread calls emit dataCopied(false) without touching the clipboard.
+     * zh_CN: 将导出的 CSV 数据复制到系统剪贴板，完成后发出 dataCopied()。
+     * 在非 GUI 线程调用会直接发出 dataCopied(false)，不修改剪贴板。
+     */
     Q_SLOT void copyData(bool visibleRangeOnly = false);
     QSize sizeHint() const override;
     bool hasHeightForWidth() const override;
@@ -162,15 +179,19 @@ signals:
     void maximumFrameRateChanged(int rate);
     void xRangeChanged();
     void currentPointChanged(int series, int row);
-    /** @brief Activates the displayed half-open source range; aggregate bars/slices keep their range.
-     * zh_CN: 激活显示的左闭右开源数据范围；聚合柱或扇区保留完整范围。 */
+    /**
+     * @brief Emitted when a displayed point or bucket [first, last) is clicked or activated.
+     * zh_CN: 点击或激活图表点/聚合区间 [first, last) 时发出。
+     */
     void rangeActivated(int series, int first, int last);
     void imageCopied(bool success);
     void dataCopied(bool success);
 
 protected:
-    /** @brief Constructs a fixed-presentation chart for a dedicated component.
-     * zh_CN: 为独立图表组件构造固定类型的视图。 */
+    /**
+     * @brief Constructs a chart view locked to a fixed ChartType for dedicated subclasses.
+     * zh_CN: 为专用图表子类构造固定类型的视图。
+     */
     ChartView(ChartType type, QWidget* parent);
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;

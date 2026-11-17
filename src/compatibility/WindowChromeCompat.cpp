@@ -73,10 +73,8 @@ void prepareWindowBackdropSurface(QWidget* window,
     palette.setColor(QPalette::Active, QPalette::Window, enabled);
     palette.setColor(QPalette::Inactive, QPalette::Window, inactive);
     palette.setColor(QPalette::Disabled, QPalette::Window, inactive);
-    // Activation selects a prepared base instead of broadcasting a new palette to descendants.
-    // Keep this separate from Disabled's palette policy and hosted windows' Qt activation state.
-    // zh_CN: 激活仅选择已准备的底色，不向子级广播新 palette；原生底色独立于 Disabled
-    // 调色板策略以及 hosted 窗口的 Qt 激活状态。
+    // Pick from the prepared active/inactive window colors without re-broadcasting a new palette to children.
+    // zh_CN: 从预设的激活/非激活底色中选择，避免向子控件广播 palette 变更；同时与 Disabled 调色板保持独立。
     if (windowBackdropSurfaceColor(window) != color || !window->property(kOpaqueNativeColorProperty).isValid())
         window->setProperty(kOpaqueNativeColorProperty, color);
     if (!current())
@@ -112,9 +110,8 @@ bool flushWindowBackdropSurface(QWidget* window)
 
 namespace {
 
-// Guard system move/resize entry points so widgets do not start platform
-// operations before the native window handle and chrome policy are ready.
-// zh_CN: 在原生窗口句柄和 chrome 策略就绪前，避免 widget 启动平台系统移动/缩放。
+// Guard against starting OS move/resize before the native window handle and flags are ready.
+// zh_CN: 原生窗口句柄和边框标志就绪前不发起系统移动或缩放。
 bool canBeginSystemOperation(QWidget* window,
     const WindowChromeOptions& options,
     bool resize,
@@ -311,8 +308,8 @@ WindowChromeCompat::classifyHitTest(const WindowChromeOptions& options, const QS
     if (!QRect(QPoint(0, 0), windowSize).contains(localPos))
         return HitTest::Client;
 
-    // Chrome locked (modal): no move, no resize — the whole window behaves as client.
-    // zh_CN: chrome 锁定(模态):不可移动、不可缩放——整个窗口按 client 处理。
+    // Modal lock: treat the entire window as non-draggable client area.
+    // zh_CN: 模态锁定时禁用拖拽与缩放，整个窗口按客户区处理。
     if (!options.chromeInteractive)
         return HitTest::Client;
 
@@ -342,8 +339,8 @@ WindowChromeCompat::classifyHitTest(const WindowChromeOptions& options, const QS
     }
 
     if (options.titleBarRect.contains(localPos)) {
-        // Child controls hosted inside the title bar remain normal client areas.
-        // zh_CN: 标题栏内承载的子控件仍然保持普通 client 区域语义。
+        // Interactive controls inside the title bar remain clickable client areas.
+        // zh_CN: 标题栏内的子控件区域保持普通客户区行为。
         for (const QRect& r : options.dragExclusionRects) {
             if (r.contains(localPos))
                 return HitTest::Client;

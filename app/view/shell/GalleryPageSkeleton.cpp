@@ -30,11 +30,8 @@ GalleryPageSkeleton::GalleryPageSkeleton(QWidget* parent) : QWidget(parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    // One full-page Shimmer paints every placeholder shape. The previous five
-    // child Shimmers each owned a 16 ms timer and a separate paint pass; creating
-    // them on the first cold navigation made the click path visibly hitch.
-    // zh_CN: 使用一个全页 Shimmer 绘制全部占位形状。此前五个子 Shimmer 各自持有
-    // 16ms 定时器并单独绘制，首次冷导航时创建它们会让点击路径明显卡顿。
+    // Use a single full-page Shimmer instead of separate child Shimmers so cold navigation runs one timer and paint pass.
+    // zh_CN: 使用单个全页 Shimmer 绘制全部占位形状，避免多个子 Shimmer 各自启定时器和重绘造成卡顿。
     m_shimmer = new Shimmer(this);
     m_shimmer->setObjectName(QStringLiteral("galleryPageSkeletonShimmer"));
     m_shimmer->setShimmerTemplate(Shimmer::ShimmerTemplate::Custom);

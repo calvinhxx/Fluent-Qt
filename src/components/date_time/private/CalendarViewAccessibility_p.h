@@ -7,8 +7,7 @@ class CalendarView;
 
 namespace detail {
 
-// Installs the private CalendarView accessibility factory once per process.
-// The adapter remains an implementation detail and is not installed as API.
+// Registers the private CalendarView accessibility factory once per process.
 void ensureCalendarViewAccessibilityFactory();
 
 // Notify assistive technology only after real CalendarView state changes.

@@ -9,8 +9,8 @@
  *
  * Each material is exposed as plain data. Rendering code decides how to apply
  * the values through QPainter, QSS, QGraphicsEffect, or platform APIs.
- * zh_CN: 每种材质都以纯数据暴露；渲染代码自行决定通过 QPainter、QSS、
- * zh_CN: QGraphicsEffect 或平台 API 使用这些值。
+ * zh_CN: 每种材质仅以纯数据结构体提供；渲染代码自行决定通过 QPainter、QSS、
+ * QGraphicsEffect 或平台 API 应用这些参数。
  *
  * Acrylic is a translucent glass material, Mica is an opaque app background
  * material, and Smoke is the modal scrim material.

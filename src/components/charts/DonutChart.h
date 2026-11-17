@@ -2,12 +2,10 @@
 #include "ChartView.h"
 
 namespace fluent::charts {
-/** @brief A dedicated donut chart with its own bounded renderer.
- * zh_CN: 独立的环图组件，拥有专用且受预算约束的绘制器。
- * Borrows ChartModel; presentation is fixed for the lifetime of this widget.
- * zh_CN: 借用 ChartModel；此组件的图表类型在生命周期内保持不变。
- * Renders only the first model. Use setModel(); additional series are not drawn.
- * zh_CN: 仅绘制第一个模型；请使用 setModel()，额外添加的序列不参与绘制。
+/**
+ * @brief Dedicated donut chart widget with a fixed Donut presentation.
+ * References external ChartModel data without taking ownership and draws only the first model (prefer setModel()).
+ * zh_CN: 专用环形图控件，图表类型固定为环形图，关联外部 ChartModel 而不接管所有权；仅绘制第一个模型（建议使用 setModel()）。
  */
 class DonutChart : public ChartView {
     Q_OBJECT

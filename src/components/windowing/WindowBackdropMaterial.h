@@ -12,14 +12,8 @@ class QPainter;
 namespace fluent::windowing {
 
 /**
- * @brief Parameters for the app-painted Fluent window backdrop.
- * zh_CN: Fluent 窗口应用侧绘制背景所使用的参数。
- *
- * The material renderer always establishes an opaque base before applying its
- * decorative layers. It is therefore safe to use when the platform cannot
- * provide a blurred or translucent compositor surface.
- * zh_CN: 材质渲染器始终先建立不透明底层，再叠加装饰层；因此在平台无法提供
- * 模糊或半透明合成表面时也可安全使用。
+ * @brief Options for the software-painted Fluent window backdrop; always establishes an opaque base layer so it is safe without compositor blur.
+ * zh_CN: 软件绘制的 Fluent 窗口背景参数；渲染时会先铺设不透明底色，即使无系统模糊支持也可安全使用。
  */
 struct WindowBackdropMaterialOptions {
     BackdropEffect effect = BackdropEffect::Solid;
@@ -31,29 +25,22 @@ struct WindowBackdropMaterialOptions {
     bool active = true;
 
     /**
-     * Device-pixel ratio used by the cached grain texture. Values less than or
-     * equal to zero are resolved from the painter's target device.
-     * zh_CN: 缓存颗粒纹理使用的设备像素比；小于等于零时从绘制目标自动解析。
+     * @brief Device-pixel ratio for the cached grain tile; values <= 0 use the painter target's DPR.
+     * zh_CN: 颗粒纹理使用的设备像素比；小于等于 0 时自动取绘制目标的 DPR。
      */
     qreal devicePixelRatio = 0.0;
 
     /**
-     * @brief Creates options populated with the built-in Mica and Acrylic tokens.
-     * zh_CN: 创建已填充内置 Mica 与 Acrylic token 的参数。
+     * @brief Creates options initialized with the built-in Mica and Acrylic tokens.
+     * zh_CN: 使用内置 Mica 和 Acrylic token 初始化绘制参数。
      */
     static WindowBackdropMaterialOptions
     forTheme(bool dark, const QColor& normalColor, const QColor& accentColor = QColor());
 };
 
 /**
- * @brief Paints deterministic, opaque Fluent window-material fallbacks.
- * zh_CN: 绘制确定性且最终不透明的 Fluent 窗口材质回退效果。
- *
- * The renderer performs no screen capture or CPU blur. Mica and Acrylic are
- * distinguished with token-driven opaque bases, low-frequency color fields,
- * luminosity/tint layers, and a small cached grain tile.
- * zh_CN: 渲染器不抓屏，也不执行 CPU 模糊；Mica 与 Acrylic 通过 token 驱动的
- * 不透明底色、低频色场、明度/tint 层以及小型缓存颗粒纹理形成区分。
+ * @brief Paints deterministic, opaque software fallbacks for Fluent window materials without screen capture or CPU blur.
+ * zh_CN: 绘制确定性的不透明 Fluent 窗口材质（不截屏也不做 CPU 模糊），通过底色、低频色场与缓存颗粒纹理区分 Mica 和 Acrylic。
  */
 class WindowBackdropMaterial final {
 public:
@@ -64,31 +51,26 @@ public:
     static void paint(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
-     * @brief Paints the opaque Normal/Solid window surface.
-     * zh_CN: 绘制不透明的 Normal/Solid 窗口表面。
+     * @brief Paints the opaque Solid/Normal window background.
+     * zh_CN: 绘制不透明的纯色窗口背景。
      */
     static void paintNormal(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
-     * @brief Paints the opaque, softly personalized Mica fallback.
-     * zh_CN: 绘制不透明、带轻微个性化色场的 Mica 回退材质。
+     * @brief Paints the opaque Mica fallback with subtle color fields.
+     * zh_CN: 绘制带柔和色场的不透明 Mica 回退材质。
      */
     static void paintMica(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
      * @brief Paints the opaque Acrylic fallback with luminosity, tint, and grain.
-     * zh_CN: 绘制带明度、tint 与颗粒层的不透明 Acrylic 回退材质。
+     * zh_CN: 绘制带明度、着色与颗粒层的不透明 Acrylic 回退材质。
      */
     static void paintAcrylic(QPainter& painter, const QRectF& rect, const WindowBackdropMaterialOptions& options);
 
     /**
-     * @brief Returns the guaranteed-opaque base color for the selected material.
-     * zh_CN: 返回所选材质保证不透明的基础颜色。
-     *
-     * This excludes gradients and grain and is useful for palette or backing-
-     * store initialization that must agree with the material painter.
-     * zh_CN: 返回值不包含渐变与颗粒，可用于需要与材质绘制器保持一致的调色板
-     * 或 backing-store 初始化。
+     * @brief Returns the guaranteed-opaque base color for the selected material, excluding gradients and grain.
+     * zh_CN: 返回所选材质的不透明基础色（不含渐变和颗粒），用于窗口调色板和底层填充初始化。
      */
     static QColor opaqueBaseColor(const WindowBackdropMaterialOptions& options);
 

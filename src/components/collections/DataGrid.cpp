@@ -716,9 +716,7 @@ DataGrid::~DataGrid()
 {
     for (const QMetaObject::Connection& connection : m_modelConnections)
         disconnect(connection);
-    // Headers can emit geometriesChanged from QWidget teardown, after our
-    // column containers have been destroyed. Disconnect owned senders first.
-    // zh_CN: QWidget 清理子控件时表头仍可能发出几何通知，先断开以免访问已析构的列状态。
+    // Disconnect child headers before member teardown so teardown geometry signals don't access destroyed maps.
     for (auto* child : findChildren<QObject*>())
         QObject::disconnect(child, nullptr, this, nullptr);
     QObject::disconnect(&MotionPolicy::instance(), nullptr, this, nullptr);
@@ -932,9 +930,7 @@ void DataGrid::wheelEvent(QWheelEvent* event)
     QTableView::wheelEvent(event);
     const bool scrollable = verticalScrollBar()->maximum() > verticalScrollBar()->minimum()
         || horizontalScrollBar()->maximum() > horizontalScrollBar()->minimum();
-    // Match ScrollView: a scrollable container owns boundary and momentum
-    // events unless chaining was requested. A fitted view stays transparent.
-    // zh_CN: 与 ScrollView 一致：默认持有滚动边界和惯性事件，无可滚动内容时放行。
+    // Consume boundary wheel events when scrollable unless scrollChainingEnabled is set.
     if (!m_scrollChainingEnabled && scrollable)
         event->accept();
     syncFluentScrollBars();
@@ -1479,11 +1475,7 @@ void DataGrid::syncPinnedColumns()
         || pinnedHeader->sortIndicatorOrder() != horizontalHeader()->sortIndicatorOrder())
         pinnedHeader->setSortIndicator(horizontalHeader()->sortIndicatorSection(),
             horizontalHeader()->sortIndicatorOrder());
-    // Structural changes are signalled by the header/model. A paint or scroll
-    // only checks scalar options; the forwarding delegate resolves row/column
-    // delegates directly, including calls through inherited nonvirtual setters.
-    // zh_CN: 表头和模型通知结构变化，绘制/滚动只同步标量状态；转发代理直接解析行列代理，
-    // 保留通过继承的非虚 setter 修改代理的行为，无需每帧扫描所有列和可见行。
+    // Sync only scalar state during paint/scroll; ForwardingItemDelegate resolves row/column delegates directly.
     if (m_pinnedHiddenCount != horizontalHeader()->hiddenSectionCount())
         m_pinnedStructureDirty = true;
     if (m_pinnedStructureDirty) {
@@ -1611,9 +1603,7 @@ void DataGrid::setItemDelegate(QAbstractItemDelegate* delegate)
 bool DataGrid::edit(const QModelIndex& index, EditTrigger trigger, QEvent* event)
 {
     if (m_pinnedView && m_pinnedView->isVisible() && isColumnPinned(index.column())) {
-        // Qt distinguishes explicit edit() from user triggers and forwards the
-        // initiating key to the editor. Preserve both in the visible view.
-        // zh_CN: 保留 Qt 的程序编辑语义和首个输入事件，在实际可见的视图中执行。
+        // Forward explicit edit() triggers and initiating key events to the visible pinned view.
         m_pinnedView->setEditTriggers(editTriggers());
         return static_cast<detail::DataGridPinnedView*>(m_pinnedView)->editCell(index, trigger, event);
     }

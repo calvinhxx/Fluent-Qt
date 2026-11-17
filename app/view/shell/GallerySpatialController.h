@@ -13,8 +13,8 @@ class NavigationView;
 }
 namespace fluent::gallery {
 
-/** @brief Presents Gallery depth and transitions using the shared Settings mode.
- * zh_CN: 按 Settings 统一模式呈现 Gallery 的立体外观和转场。 */
+/** @brief Drives Gallery 3D perspective depth and transitions based on Settings.
+ * zh_CN: 按 Settings 控制 Gallery 的 3D 景深外观和转场效果。 */
 class GallerySpatialController final : public QObject {
     Q_OBJECT
 public:
@@ -25,8 +25,8 @@ public:
     ~GallerySpatialController() override;
     bool transitionRunning() const;
     void cancelTransition();
-    /** @brief Maps native control coordinates to their presented position in the window.
-     * zh_CN: 将原生控件坐标映射到窗口中实际显示的位置。 */
+    /** @brief Maps a widget's local coordinates to its projected position in the window.
+     * zh_CN: 将控件局部坐标映射到窗口中实际投影显示的位置。 */
     QPoint projectedPosition(const QWidget* widget, const QPoint& position) const;
     /** @brief Returns cache size and opt-in frame timing diagnostics.
      * zh_CN: 返回缓存尺寸；帧计时统计仅在显式启用性能测量时收集。 */

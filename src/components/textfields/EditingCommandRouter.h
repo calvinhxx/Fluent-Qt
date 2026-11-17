@@ -13,102 +13,60 @@ namespace fluent::textfields {
 class EditingCommandRouterPrivate;
 
 /**
- * @brief Provides window-scoped semantic actions for the focused Fluent editor.
- * zh_CN: 为当前窗口中获得焦点的 Fluent 编辑器提供窗口级语义动作。
+ * @brief Routes window-scoped editing actions to the focused Fluent editor.
+ * zh_CN: 将窗口级编辑动作路由到当前聚焦的 Fluent 编辑器。
  *
- * The router owns stable QAction objects and updates their enabled state as
- * focus, selection, history, read-only state, and clipboard content change.
- * It supports LineEdit and its subclasses plus TextEdit without exposing
- * TextEdit's private QTextEdit.
- * zh_CN: Router 持有地址稳定的 QAction，并随焦点、选择区、撤销历史、只读状态
- * 和剪贴板内容更新启用状态；它支持 LineEdit 及派生类和 TextEdit，但不会暴露
- * TextEdit 的私有 QTextEdit。
+ * Owns persistent QAction instances and updates their enabled state as focus,
+ * selection, undo history, read-only state, and clipboard content change across
+ * LineEdit (including subclasses) and TextEdit.
+ * zh_CN: 内部管理地址稳定的 QAction，随当前顶层窗口内聚焦的 LineEdit 或 TextEdit 的
+ * 选区、撤销历史、只读状态和剪贴板变化自动更新可用性（不暴露 TextEdit 内部编辑器）。
  */
 class EditingCommandRouter final : public QObject {
     Q_OBJECT
 
 public:
-    /**
-     * @brief Editing commands exposed through stable QAction instances.
-     * zh_CN: 通过稳定 QAction 实例暴露的编辑命令。
-     */
     enum class Command { Undo, Redo, Cut, Copy, Paste, Delete, SelectAll };
     Q_ENUM(Command)
 
     /**
-     * @brief Creates a router scoped to the top-level window containing scopeWindow.
-     * zh_CN: 创建作用于 scopeWindow 所属顶层窗口的编辑命令路由器。
-     *
-     * When parent is null, the resolved top-level window becomes the QObject
-     * parent. One router should be created for each top-level window.
-     * zh_CN: parent 为空时，解析出的顶层窗口将成为 QObject 父对象；每个顶层
-     * 窗口应只创建一个 Router。
+     * @brief Creates a router scoped to scopeWindow's top-level window (used as parent when parent is null).
+     * zh_CN: 创建作用于 scopeWindow 所属顶层窗口的路由器（parent 为空时以该顶层窗口为父对象；每窗口建一个即可）。
      */
     explicit EditingCommandRouter(QWidget* scopeWindow, QObject* parent = nullptr);
     ~EditingCommandRouter() override;
 
-    /**
-     * @brief Returns the top-level window that owns this command scope.
-     * zh_CN: 返回拥有当前命令作用域的顶层窗口。
-     */
     QWidget* scopeWindow() const;
-
-    /**
-     * @brief Returns whether a supported Fluent editor is the active target.
-     * zh_CN: 返回当前是否存在获得焦点的受支持 Fluent 编辑器。
-     */
     bool hasActiveTarget() const;
 
     /**
-     * @brief Returns the router-owned action for command.
-     * zh_CN: 返回由 Router 持有的指定命令 QAction。
-     *
-     * The returned pointer remains stable for the router lifetime. Callers may
-     * customize text, icon, and shortcuts; the router owns enabled state and
-     * trigger dispatch.
-     * zh_CN: 返回指针在 Router 生命周期内保持稳定。调用方可以自定义文字、
-     * 图标和快捷键；启用状态与触发分发由 Router 管理。
+     * @brief Returns the QAction for command (owned by the router; text, icon, and shortcuts may be customized).
+     * zh_CN: 返回 command 对应的 QAction（由路由器管理生命周期与启用状态，可自由修改文本、图标和快捷键）。
      */
     QAction* action(Command command) const;
 
     /**
-     * @brief Returns all actions in semantic command order.
-     * zh_CN: 按语义命令顺序返回全部动作。
+     * @brief Returns all actions in Command enum order.
+     * zh_CN: 按 Command 枚举顺序返回全部动作。
      */
     QList<QAction*> actions() const;
 
-    /**
-     * @brief Returns whether command can execute against the current target.
-     * zh_CN: 返回指定命令当前是否可以作用于活动目标。
-     */
     bool canExecute(Command command) const;
 
     /**
-     * @brief Revalidates and executes command against the active target.
-     * zh_CN: 重新校验并对活动目标执行指定命令。
-     *
-     * @return true when the command was dispatched; false when no valid target
-     *         or capability remains.
+     * @brief Revalidates and executes command on the active editor; returns false if unavailable.
+     * zh_CN: 校验并对当前活动编辑器执行指定命令；不可用时返回 false。
      */
     bool execute(Command command);
 
     /**
-     * @brief Recomputes active command capabilities without changing focus.
-     * zh_CN: 在不改变焦点的情况下重新计算活动命令能力。
+     * @brief Recomputes action enabled states for the current focus target.
+     * zh_CN: 重新计算当前活动目标各命令的可用状态。
      */
     void refresh();
 
 signals:
-    /**
-     * @brief Emitted when the active supported target changes.
-     * zh_CN: 当前受支持编辑目标变化时发出。
-     */
     void activeTargetChanged(bool hasActiveTarget);
-
-    /**
-     * @brief Emitted when one command's executable capability changes.
-     * zh_CN: 某项命令的可执行能力变化时发出。
-     */
     void commandCapabilityChanged(fluent::textfields::EditingCommandRouter::Command command, bool enabled);
 
 private:

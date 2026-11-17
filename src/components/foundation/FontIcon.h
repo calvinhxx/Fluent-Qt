@@ -40,20 +40,16 @@ public:
     QString glyph() const { return m_glyph; }
     void setGlyph(const QString& glyph);
 
-    /**
-     * @brief Returns the explicit font family, or empty for bundled Fluent icons.
-     * zh_CN: 返回显式字体族；空字符串表示使用内置 Fluent 图标。
-     */
     QString fontFamily() const { return m_fontFamily; }
 
     /**
-     * @brief Selects an application-registered font; empty restores bundled icons.
-     * zh_CN: 选择应用已注册的字体；空字符串恢复内置图标。
+     * @brief Selects an application-registered font; empty restores bundled Fluent icons.
+     * zh_CN: 指定应用已注册的字体；传入空字符串时恢复内置 Fluent 图标。
      *
      * Pass the actual glyph string for a custom family, not a catalog name.
-     * Register fonts with QFontDatabase and check applicationFontFamilies() first.
-     * zh_CN: 自定义字体应传入真实字形字符串，而非目录名称。应用应先通过
-     * QFontDatabase 注册字体并检查 applicationFontFamilies() 的结果。
+     * Applications must register fonts with QFontDatabase first.
+     * zh_CN: 使用自定义字体时应传入真实字形字符串而非目录名称，且须先通过
+     * QFontDatabase 注册字体并确认 applicationFontFamilies() 返回值。
      */
     void setFontFamily(const QString& family);
 

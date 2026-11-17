@@ -14,12 +14,16 @@ namespace Typography::Icons {
  * zh_CN: 内置 Fluent UI System Icons 字体中单个字形的元数据。
  */
 struct IconInfo {
-    QString name;        // Stable upstream key, e.g. ic_fluent_add_20_regular.
+    QString
+        name; // Upstream catalog key, e.g. ic_fluent_add_20_regular. zh_CN: 上游目录键名，例如 ic_fluent_add_20_regular。
     QString displayName; // Human-readable semantic name. zh_CN: 易读语义名称。
     quint32 codepoint = 0;
     int designSize = 0; // Upstream optical design size in pixels. zh_CN: 上游光学设计尺寸。
 
-    /** @brief Returns the UTF-16 glyph string for this codepoint. */
+    /**
+     * @brief Returns the UTF-16 glyph string for this codepoint.
+     * zh_CN: 返回该码位对应的 UTF-16 字形字符串。
+     */
     QString glyph() const;
 };
 
@@ -44,7 +48,7 @@ QString glyph(const QString& name);
  * (FlipView, PipsPager, NumberBox). Ties prefer the larger slot so icons do
  * not read undersized after face substitution.
  * zh_CN: 离散档对齐 WinUI 建议（16/20/24/32/…）并保留 Fluent System Icons 的
- * 12 px 紧凑槽；小于 12 的请求保持原值给微箭头用。等距时取更大档，避免换字后
+ * 12 px 紧凑槽；小于 12 的请求保持原值，供微调和翻页小箭头使用。等距时取更大档，避免换字后
  * 图标视觉偏小。
  */
 int snapIconPixelSize(int requestedPixelSize);

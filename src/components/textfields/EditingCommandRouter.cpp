@@ -610,9 +610,7 @@ private:
         if (!focus || !scope || focus->window() != scope)
             return false;
 
-        // A command surface may contain its own search editor. Keep editing
-        // actions aimed at the invoking editor while that surface has focus.
-        // zh_CN: 命令表面可包含搜索框；其获得焦点时仍保留原编辑目标。
+        // Keep targeting the invoking editor if focus moves into a router-owned popup (e.g. a search box inside it).
         for (QWidget* ancestor = focus; ancestor && ancestor != scope; ancestor = ancestor->parentWidget()) {
             if (ancestor->property(kCommandPresentationProperty).toBool() && isRouterPresentation(focus))
                 return false;
@@ -657,10 +655,7 @@ private:
                 return true;
         }
 
-        // Native QMenu presentations can put focus on a popup child or on the
-        // popup window rather than on the action-owning menu itself.
-        // zh_CN: 原生 QMenu 可能把焦点放到弹层子控件或弹层窗口，而非持有 action
-        // 的菜单本身，因此保留顶层弹层兜底检查。
+        // Native QMenu may place focus on a popup child or window rather than the QMenu holding the action.
         return containsRouterAction(qobject_cast<QMenu*>(focus->window()));
     }
 

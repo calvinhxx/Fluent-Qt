@@ -22,9 +22,9 @@ class ToolTipAccessible;
  * @brief Fluent tooltip bubble with margin and animation controls.
  * zh_CN: 支持边距和动画控制的 Fluent 提示气泡。
  *
- * ToolTip provides a lightweight status surface that can be styled consistently
- * with overlay radius, spacing, and theme animation decisions.
- * zh_CN: ToolTip 提供轻量提示表面，可与浮层圆角、间距和主题动效保持一致。
+ * Displays short hover text styled with Fluent overlay radius, spacing, and
+ * theme animations.
+ * zh_CN: 用于显示简短提示文案，统一使用浮层圆角、间距和主题动效。
  */
 class ToolTip : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -65,7 +65,8 @@ public:
     // zh_CN: 为投影在四周预留的透明边距（像素）；需要精确定位可见气泡的调用方应据此偏移。
     int shadowMargin() const;
 
-    // Shadows QWidget::setFont so it reaches the inner label. zh_CN: 影子 QWidget::setFont 以应用到内部标签。
+    /** @brief Forwards font changes to the inner text label (hides QWidget::setFont).
+     * zh_CN: 覆盖 QWidget::setFont，将字体同步应用到内部文本标签。 */
     void setFont(const QFont& font);
 
     /**

@@ -79,20 +79,15 @@ protected:
     }
     void paintGL() override
     {
-        // Qt can repaint the FBO directly (for example during a widget capture),
-        // bypassing QGraphicsView's viewport paint event. A plain QOpenGLWidget
-        // clears the frame in that path and leaves the live preview blank.
-        // zh_CN: Qt 可能直接重绘 FBO，绕过 QGraphicsView 的视口事件；空 paintGL 会清空预览。
-        // Paint outside QWidget's stale system clip after an ancestor has scrolled.
-        // zh_CN: 祖先滚动后绕过 QWidget 的旧系统裁剪，恢复完整 FBO 而非仅原可见区域。
+        // Qt may invoke paintGL() directly (e.g. widget capture) bypassing QGraphicsView::paintEvent(),
+        // and ancestor scrolling changes clipping without a local move/resize; repaint the full FBO here.
         QOpenGLPaintDevice target(size() * devicePixelRatioF());
         fluentSetRenderTargetDevicePixelRatio(target, devicePixelRatioF());
         QPainter painter(&target);
         fluentApplyRenderTargetScale(painter, devicePixelRatioF());
         painter.setRenderHints(m_view->renderHints());
         painter.fillRect(rect(), m_view->backgroundBrush());
-        // The paint device already applies DPR; render in logical viewport coordinates.
-        // zh_CN: 绘制设备已应用 DPR，视图目标必须使用逻辑坐标，避免高分屏重复缩放。
+        // Device already scales by DPR; pass the logical viewport rect to render().
         m_view->render(&painter, QRectF(rect()), m_view->viewport()->rect());
     }
 
@@ -126,9 +121,7 @@ private:
             for (const auto& ancestor : m_ancestors)
                 if (ancestor)
                     exposed &= QRect(mapFrom(ancestor, QPoint()), ancestor->size());
-            // Ancestor scrolling changes clipping without moving this widget locally.
-            // QGraphicsView may leave the newly exposed part of its GL texture unpainted.
-            // zh_CN: 祖先滚动只改变裁剪，不触发本控件移动；新露出的 GL 区域需要主动重绘。
+            // Repaint when ancestor scrolling exposes previously clipped regions of the GL texture.
             const bool revealed = !QRegion(exposed).subtracted(m_exposed).isEmpty();
             m_exposed = exposed;
             if (revealed) {
@@ -275,9 +268,7 @@ struct SpatialView::Private {
                 ancestor->installEventFilter(q);
                 ancestorDestructionConnections.append(
                     QObject::connect(ancestor, &QObject::destroyed, q, [this](QObject* object) {
-                        // QWidget has already dismantled its focus chain. The view will
-                        // be deleted with this tree; never restore cards into it now.
-                        // zh_CN: QWidget 已拆除焦点链，视图即将随树销毁，不能再将卡片放回其中。
+                        // Ancestor teardown has already broken the widget focus chain; never reparent cards back into it.
                         ancestorDestroying = true;
                         destroyingAncestors.append(object);
                         motion->stop();
@@ -314,9 +305,7 @@ struct SpatialView::Private {
         auto* widget = item->widget();
         if (!widget)
             return;
-        // Embedded roots have no QWidget parent. Bridge the host theme without
-        // replacing an explicit content override; remove this bridge on release.
-        // zh_CN: 代理根控件没有 QWidget 父对象；补充主题继承，保留显式覆盖，释放时移除。
+        // Propagate host theme to proxy roots (which lack a QWidget parent) unless explicitly overridden.
         if (item->d->inheritsHostTheme) {
             updatingTheme = true;
             widget->setProperty(kThemeOverride, int(q->effectiveTheme()));
@@ -394,9 +383,7 @@ struct SpatialView::Private {
     {
         if (!item->d->proxy)
             return;
-        // Detach before clearing a proxy cursor. Qt 6 otherwise consults its
-        // last mouse event even when the view has only received keyboard input.
-        // zh_CN: 先分离再清理代理光标，避免 Qt 6 在纯键盘操作时访问未初始化的鼠标事件。
+        // Remove proxy from scene before detaching its widget to avoid Qt 6 accessing stale mouse state.
         scene->removeItem(item->d->proxy);
         item->d->proxy->setWidget(nullptr);
         delete item->d->proxy.data();
@@ -493,9 +480,7 @@ struct SpatialView::Private {
             useRaster(q->tr("This Qt platform uses software drawing."));
             return;
         }
-        // Adding the first OpenGL viewport can recreate its top-level native surface.
-        // Hidden pages must not disturb a visible host while they are being prepared.
-        // zh_CN: 首个 OpenGL 视口可能重建顶层原生表面；隐藏页面预热时不能影响已显示的宿主。
+        // Defer adding QOpenGLWidget while hidden so creating its surface doesn't disturb an active window.
         if (!q->isVisible())
             return;
         if (!gpuFailure.isEmpty()) {
@@ -503,9 +488,7 @@ struct SpatialView::Private {
             return;
         }
         if (!qobject_cast<QOpenGLWidget*>(canvas->viewport())) {
-            // Probe before a GPU child changes the host's backing store. Reuse a
-            // successful probe when ancestor clipping temporarily selects raster.
-            // zh_CN: 在 GPU 子窗口改变宿主合成路径前探测；祖先裁切临时回退时复用成功结果。
+            // Run preflight probe before inserting QOpenGLWidget alters the host backing store; reuse across temporary raster fallbacks.
             if (!preflightChecked) {
                 gpuFailure = SpatialRuntime::preflightFailure();
                 preflightChecked = true;
@@ -519,8 +502,7 @@ struct SpatialView::Private {
             gl->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
             QObject::connect(gl, &QOpenGLWidget::frameSwapped, q, [this] { queueCheck(); });
             canvas->setViewport(gl);
-            // Run the one-shot exposure paint before QGraphicsView's viewport filter.
-            // zh_CN: 新曝光的整帧恢复先于 QGraphicsView 的视口过滤器执行。
+            // Process the one-shot full-exposure flag before QGraphicsView's viewport filter.
             gl->installEventFilter(gl);
             gl->setMouseTracking(true);
             if (focused)
@@ -780,10 +762,7 @@ SpatialItem* SpatialView::addWidget(QWidget* widget, WidgetOwnership ownership)
             object->removeEventFilter(this);
             item->d->owner = nullptr;
             item->d->widget.clear();
-            // Qt 5/6.2 already dismantled the focus chain here: reparenting the
-            // dying widget is unsafe. Let Qt release its parent/proxy first,
-            // then notify handlers that may synchronously destroy this host.
-            // zh_CN: 旧版 Qt 此时已拆除焦点链，不能重设父对象；待 Qt 完成解绑后再通知外部。
+            // Focus chain is broken during widget destruction; let Qt unbind before emitting itemCountChanged().
             if (auto* proxy = item->d->proxy.data())
                 proxy->moved = {};
             item->deleteLater();
@@ -817,9 +796,7 @@ QWidget* SpatialView::detachItem(SpatialItem* item, bool applyOwnership)
         return nullptr;
     auto* widget = item->d->widget.data();
     item->d->owner = nullptr;
-    // A count-change handler may destroy the empty host. It no longer owns this
-    // item while its removal (or destructor) is still completing.
-    // zh_CN: 数量变化回调可能销毁空宿主；移除过程中的条目不再归宿主的 QObject 子级所有。
+    // Unparent item early so an itemCountChanged() handler that deletes the view won't double-delete it.
     item->setParent(nullptr);
     if (widget) {
         widget->removeEventFilter(this);
@@ -835,9 +812,7 @@ QWidget* SpatialView::detachItem(SpatialItem* item, bool applyOwnership)
             widget = nullptr;
         } else if (applyOwnership && item->d->ownership == WidgetOwnership::Reparented) {
             if (d->parentIsTearingDown(item->d->originalParent)) {
-                // Its original owner is being deleted too. Preserve that ownership
-                // outcome without inserting the widget into a dead focus chain.
-                // zh_CN: 原所有者也在销毁，保留随其销毁的语义，不向已拆除的焦点链插入控件。
+                // Original parent is also tearing down; delete directly instead of attaching to a broken focus chain.
                 delete widget;
                 widget = nullptr;
             } else {
@@ -893,9 +868,7 @@ void SpatialView::setSpatialEnabled(bool enabled)
     if (enabled == d->spatial)
         return;
     if (d->scene->mouseGrabberItem() && isVisible()) {
-        // Keep only the latest intent while a visible pointer interaction is held.
-        // Hidden scenes cannot receive its release and must not poll indefinitely.
-        // zh_CN: 按住期间只保留最后一次模式请求；隐藏场景收不到松开事件，不能无限重试。
+        // Coalesce pending mode switches while a mouse grab is active; hidden views won't get a release event.
         d->modeChange->start(16);
         return;
     }
@@ -1127,8 +1100,7 @@ bool SpatialView::event(QEvent* event)
 void SpatialView::showEvent(QShowEvent* event)
 {
     QWidget::showEvent(event);
-    // Replacing children during QWidget's show traversal can invalidate that traversal.
-    // zh_CN: 等待 QWidget 的显示遍历结束，避免替换视口使正在遍历的子控件失效。
+    // Defer backend switch so replacing the viewport doesn't mutate QWidget's child list mid-show.
     d->queueBackend();
 }
 void SpatialView::hideEvent(QHideEvent* event)
@@ -1136,8 +1108,7 @@ void SpatialView::hideEvent(QHideEvent* event)
     d->settle();
     if (auto* grabber = d->scene->mouseGrabberItem())
         grabber->ungrabMouse();
-    // Finish after QWidget's hide traversal, before another pointer release is needed.
-    // zh_CN: 等 QWidget 隐藏遍历结束再完成模式切换，不依赖隐藏后无法接收的鼠标松开。
+    // Apply pending mode change after hide traversal finishes rather than waiting for an unreachable release.
     if (d->requestedSpatial != d->spatial)
         d->modeChange->start(0);
     else
@@ -1154,8 +1125,7 @@ void SpatialView::onThemeUpdated()
     palette.setColor(QPalette::Base, themeColorsRef().bgCanvas);
     setPalette(palette);
     setAutoFillBackground(true);
-    // Use the Fluent canvas surface inside styled hosts too; native palettes may be repolished.
-    // zh_CN: 在带样式的宿主内仍使用 Fluent 画布，避免原生调色板被重新 polish 后覆盖。
+    // Force Fluent canvas color so styled-host palette repolishing doesn't overwrite it.
     d->flatContent->onThemeUpdated();
     d->flat->viewport()->setPalette(palette);
     d->canvas->setBackgroundBrush(themeColorsRef().bgCanvas);

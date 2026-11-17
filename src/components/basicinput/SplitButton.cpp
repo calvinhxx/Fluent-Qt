@@ -20,10 +20,7 @@ int splitButtonTextWidth(const QFontMetrics& fm, const QString& text)
 {
     if (text.isEmpty())
         return 0;
-    // Ink can extend past horizontalAdvance; reserve the largest metric so sizeHint
-    // matches painted glyphs (same gap rule as DropDownButton chevron reserve).
-    // zh_CN: 墨水可能超出 horizontalAdvance;取最大度量保证 sizeHint 与绘制一致
-    // (与 DropDownButton 预留 chevron 区同理)。
+    // Ink can extend past horizontalAdvance; take the widest metric so sizeHint matches painted glyphs.
     const int advance = fm.horizontalAdvance(text);
     const int bounds = fm.boundingRect(text).width();
     const int tight = fm.tightBoundingRect(text).width();
@@ -79,9 +76,7 @@ void SplitButton::setMenu(QMenu* menu)
     m_menu = menu;
     if (m_menu) {
         connect(m_menu, &QMenu::aboutToShow, this, [this]() {
-            // QMenu may stay hidden if application aboutToShow handlers leave
-            // it empty. Its private expanded state must not remain latched.
-            // zh_CN: 应用填充回调后仍为空的菜单不显示，按钮展开状态需复原。
+            // Empty QMenu stays hidden without emitting aboutToHide; recheck after one event-loop turn.
             QTimer::singleShot(0, this, [this, menu = m_menu] {
                 if (menu && menu == m_menu && menu->isEmpty() && !menu->isVisible())
                     setOpen(false);
@@ -159,9 +154,7 @@ void SplitButton::mouseReleaseEvent(QMouseEvent* event)
         }
 
         if (m_pressPart == Primary && releasePart != Primary) {
-            // Releasing over the secondary segment cancels the primary
-            // command instead of letting QPushButton treat the whole widget
-            // as one hit target. zh_CN: 主区按下后若在二级区释放，则取消主命令。
+            // Releasing outside the primary zone cancels the primary command.
             m_pressPart = None;
             setDown(false);
             update();
@@ -200,7 +193,6 @@ SplitButton::SplitPart SplitButton::getPartAt(const QPoint& pos) const
     if (!rect().contains(pos))
         return None;
 
-    // Use the configured drop-down zone width. zh_CN: 使用配置的下拉区域宽度。
     const QRect logicalSecondary(width() - m_secondaryWidth, 0, m_secondaryWidth, height());
     const QRect secondary = QStyle::visualRect(layoutDirection(), rect(), logicalSecondary);
     if (secondary.contains(pos))
@@ -246,8 +238,7 @@ QSize SplitButton::sizeHint() const
     const int iconWidth = hasIconFont ? iconPixelSize() : 0;
     const int contentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && hasIconFont) ? iconGap : 0);
     const int primaryWidth = qMax(Button::sizeHint().width(), contentWidth + hPadding * 2);
-    // Trailing inset is for text clearance only; icon-only already centers in the primary zone.
-    // zh_CN: 尾缘 inset 只服务于文字避让；纯图标已在主区内居中，不必再加宽。
+    // Trailing inset clears text from the divider; icon-only centers within the primary zone.
     const int trailing = iconOnly ? 0 : primaryTrailingInset();
 
     return QSize(primaryWidth + m_secondaryWidth + trailing, fm.height() + vPadding * 2);
@@ -268,13 +259,8 @@ void SplitButton::paintEvent(QPaintEvent*)
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 
-    // 1. Size parameters. zh_CN: 尺寸参数。
     int sWidth = m_secondaryWidth;
     int sepMargin = spacing.gap.tight;
-
-    // WinUI keeps the chevron on its native 12 px optical drawing at both
-    // standard and compact control densities.
-    // zh_CN: WinUI 在常规与紧凑密度下都使用原生 12 px chevron 字形。
     const int chevronSize = Typography::IconSize::Compact;
 
     QRectF fullRect = rect();
@@ -287,8 +273,6 @@ void SplitButton::paintEvent(QPaintEvent*)
     const bool checked = isChecked();
     const bool accentLike = (fluentStyle() == Accent || checked);
 
-    // Colors resolved per-branch below. textColor/chevronColor are shared by the content paint.
-    // zh_CN: 颜色按分支解析;textColor/chevronColor 供下方内容绘制共用。
     QColor textColor = accentLike ? colors.textOnAccent : colors.textPrimary;
     QColor chevronColor = textColor;
     if (!isEnabled()) {
@@ -296,9 +280,6 @@ void SplitButton::paintEvent(QPaintEvent*)
         chevronColor = colors.textDisabled;
     }
 
-    // Fluent surface treatment. zh_CN: Fluent 表面处理。
-
-    // 2. State colors. zh_CN: 确定状态颜色。
     QColor baseBg;
 
     if (fluentStyle() == Accent || checked) {
@@ -318,12 +299,10 @@ void SplitButton::paintEvent(QPaintEvent*)
     }
     chevronColor = textColor;
 
-    // 3. Paint the shared background. zh_CN: 绘制整体背景。
     painter.setPen(Qt::NoPen);
     painter.setBrush(baseBg);
     painter.drawRoundedRect(fullRect, radius.control, radius.control);
 
-    // 4. Paint per-zone highlights. zh_CN: 绘制分区域高亮。
     if (isEnabled()) {
         auto drawHighlight = [&](const QRectF& r, SplitPart part) {
             QColor highlight;
@@ -345,20 +324,15 @@ void SplitButton::paintEvent(QPaintEvent*)
         drawHighlight(secondaryRect, Secondary);
     }
 
-    // 5. Paint the divider with token colors. zh_CN: 绘制分割线（使用 Token 颜色）。
     if (isEnabled()) {
-        // Divider: lighter on Accent, standard stroke on Standard.
-        // zh_CN: 分割线——Accent 风格下变淡，Standard 风格用标准边框色。
         QColor sepColor = (fluentStyle() == Accent || checked) ? colors.strokeDivider : colors.strokeDefault;
         painter.setPen(QPen(sepColor, 1));
         painter.drawLine(QPointF(dividerX, sepMargin), QPointF(dividerX, height() - sepMargin));
     }
 
-    // 6. Paint the primary content (text/icon). zh_CN: 绘制主内容。
     painter.setPen(textColor);
     painter.setFont(font());
-    // Each zone sinks independently to suggest its own press feedback.
-    // zh_CN: 两侧独立计算下沉偏移，模拟各自的点击触感。
+    // Apply press rebound independently to each split zone.
     constexpr qreal kPi = 3.14159265358979323846;
     const qreal rebound = qSin(qBound<qreal>(0.0, m_pressProgress, 1.0) * kPi);
     const double primaryOffset = (m_pressPart == Primary ? 0.5 : 0.0)
@@ -389,15 +363,12 @@ void SplitButton::paintEvent(QPaintEvent*)
         painter.restore();
     }
 
-    // 7. Paint the chevron; it also sinks 0.5px while pressed. zh_CN: 绘制下拉箭头，按下时同样下沉 0.5px。
     if (m_animatedPart == Secondary && rebound > 0.0)
         chevronColor.setAlphaF(chevronColor.alphaF() * (1.0 - 0.25 * rebound));
     painter.setPen(chevronColor);
     Typography::Icons::paintGlyph(painter, secondaryRect.translated(0, secondaryOffset), Typography::Icons::ChevronDown,
         chevronSize, Qt::AlignCenter);
 
-    // 8. Focus ring.
-    //    zh_CN: 焦点框。
     if (hasFocus() && isEnabled()) {
         QColor focusColor = colors.textSecondary;
         focusColor.setAlpha(120);

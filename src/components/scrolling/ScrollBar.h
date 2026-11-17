@@ -17,13 +17,10 @@
 namespace fluent::scrolling {
 
 /**
- * @brief Fluent scrollbar with custom thickness and opacity animation.
- * zh_CN: 具备自定义厚度和透明度动画的 Fluent 滚动条。
- *
- * ScrollBar wraps QScrollBar behavior with a compact painted surface for Fluent
- * scroll indicators and transient visibility patterns.
- * zh_CN: ScrollBar 在 QScrollBar 行为外包裹紧凑自绘表面，用于 Fluent 滚动指示器
- * 和临时显隐模式。
+ * @brief Fluent overlay-style scrollbar with configurable thickness and auto-hide fade animation.
+ * Wraps QScrollBar with a compact painted track/thumb that fades in on interaction or value changes and fades out when idle.
+ * zh_CN: 带自动淡入淡出和可调厚度的 Fluent 覆盖式滚动条。
+ * 基于 QScrollBar 实现紧凑自绘滑块，在交互或滚动值变化时淡入，空闲后自动淡出隐藏。
  */
 class ScrollBar : public QScrollBar, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -54,8 +51,6 @@ signals:
     void thicknessChanged();
 
 protected:
-    // Size hint: thickness from the property, length from QScrollBar defaults.
-    // zh_CN: 厚度由 thickness 控制，长度沿用 QScrollBar 默认逻辑。
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -72,17 +67,13 @@ protected:
 private:
     void init();
 
-    // --- Size and visual metrics (no magic numbers in the cpp). zh_CN: 尺寸与视觉参数。---
-    int m_thickness =
-        7; ///< Widget thickness in px; always occupies this extent. zh_CN: 控件实际厚度，始终占位此宽/高。
-    int m_minThumbLength = 16; ///< Minimum thumb length in px. zh_CN: Thumb 最小长度。
-    QMargins m_thumbPadding =
-        QMargins(1, 1, 1, 1); ///< Thumb padding against the track. zh_CN: Thumb 与轨道的四向间距。
+    int m_thickness = 7;       // Total bar width/height (px).
+    int m_minThumbLength = 16; // Minimum thumb length (px).
+    QMargins m_thumbPadding = QMargins(1, 1, 1, 1);
 
     bool m_isHovered = false;
     bool m_isPressed = false;
 
-    // Overlay fade in/out. zh_CN: Overlay 淡入/淡出。
     qreal m_opacity = 0.0;
     QPropertyAnimation* m_opacityAnim = nullptr;
     QTimer* m_autoHideTimer = nullptr;

@@ -35,20 +35,14 @@ class TitleBar;
 class WindowResizeSession;
 
 /**
- * @brief Application shell window with title-bar and content hosting.
- * zh_CN: 支持标题栏和内容承载的应用外壳窗口。
- *
- * Window keeps platform chrome policy in one place. Native platform window
- * management is preferred by default; client-side frame and resize handling are
- * fallback/opt-in paths.
- * zh_CN: Window 集中管理平台窗口 chrome 策略。默认优先使用系统窗口管理；
- * 客户端边框和缩放处理仅作为回退或显式启用路径。
+ * @brief Application shell window with title-bar and content hosting; uses native window management by default and client-side frame fallback where needed.
+ * zh_CN: 带标题栏和内容区的应用主窗口；优先使用系统原生窗口管理，必要时回退到自绘边框与拖拽缩放。
  */
 class Window : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Caller-owned widget hosted as component content.
-     * zh_CN: 作为组件内容承载的调用方控件。
+     * @brief Hosted content widget (ownership remains with the caller).
+     * zh_CN: 窗口内容区承载的控件（不接管所有权）。
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget)
     Q_PROPERTY(BackdropEffect backdropEffect READ backdropEffect WRITE setBackdropEffect NOTIFY backdropEffectChanged)
@@ -61,8 +55,8 @@ public:
     QWidget* contentHost() const { return m_contentHost; }
 
     /**
-     * @brief Visible chrome/content frame in this window's local coordinates.
-     * zh_CN: 当前窗口局部坐标中的可见 chrome/内容框。
+     * @brief Visible window frame bounds in local coordinates, excluding outer shadow margins.
+     * zh_CN: 窗口局部坐标下的可见窗框矩形（不含外侧阴影边距）。
      */
     QRect chromeFrameRect() const;
 
@@ -70,13 +64,8 @@ public:
     void setContentWidget(QWidget* widget);
 
     /**
-     * @brief Enables Fluent-managed title-bar/non-client integration.
-     * zh_CN: 启用由 Fluent 管理的标题栏/非客户区集成。
-     *
-     * This is an opt-in integration point. The platform adapter still decides
-     * whether native move/resize is available or a client-side fallback is needed.
-     * zh_CN: 这是显式启用的集成点；平台适配层仍决定使用系统移动/缩放，
-     * 还是启用客户端回退。
+     * @brief Enables or disables custom title-bar integration; native move and resize remain preferred where supported.
+     * zh_CN: 启用或禁用自定义标题栏集成；在支持的平台上仍优先使用系统原生移动和缩放。
      */
     void setCustomWindowChromeEnabled(bool enabled);
     bool customWindowChromeEnabled() const;
@@ -84,82 +73,66 @@ public:
     void onThemeUpdated() override;
 
     /**
-     * @brief Re-probes and re-applies the configured backdrop.
-     * zh_CN: 重新探测并施加当前配置的背景。
+     * @brief Re-queries platform capabilities and re-applies the configured backdrop.
+     * zh_CN: 重新检测平台能力并应用当前配置的背景效果。
      */
     void reapplySystemBackdrop();
 
     /**
-     * @brief Shows or hides the window; a window shown maximized stays maximized.
-     * zh_CN: 显示或隐藏窗口；以最大化状态显示的窗口保持最大化。
-     *
-     * macOS Stage Manager fits a window that is ordered in already zoomed into its
-     * stage. The platform adapter restores the maximized frame before the first frame.
-     * zh_CN: macOS 台前调度会把已缩放后才入列的窗口收进舞台区域；平台适配层在首帧前恢复最大化框架。
+     * @brief Shows or hides the window, preserving maximized geometry when shown maximized (including under macOS Stage Manager).
+     * zh_CN: 显示或隐藏窗口；以最大化状态显示时恢复完整最大化尺寸（兼容 macOS 台前调度）。
      */
     void setVisible(bool visible) override;
 
     /**
-     * @brief Reasserts native chrome while a hidden window is prepared for restore.
-     * zh_CN: 在隐藏窗口准备恢复显示时重新声明原生窗口边框配置。
+     * @brief Resets transient caption button state and re-applies native chrome before restoring a hidden window.
+     * zh_CN: 在隐藏窗口恢复显示前重置标题栏按钮状态并重新应用原生窗口边框配置。
      */
     void prepareForNativeRestore();
 
     /**
-     * @brief Requests foreground activation through Qt and the platform adapter.
-     * zh_CN: 通过 Qt 与平台适配层请求将窗口激活到前台。
+     * @brief Raises and requests foreground activation for the window.
+     * zh_CN: 请求将窗口提升并激活到前台。
      */
     void requestForegroundActivation();
 
     /**
-     * @brief Sets the window background effect and re-applies it live.
-     * zh_CN: 设置窗口背景效果并实时重新施加。
-     *
-     * Once top-level translucency is enabled it stays stable; switching effects
-     * updates typed paint state and the requested OS backdrop without removing
-     * that native alpha surface.
-     * zh_CN: 顶层半透明一旦启用便保持稳定；切换效果只更新强类型绘制状态和系统背景请求。
+     * @brief Sets the window background effect and updates it live without recreating the native alpha surface.
+     * zh_CN: 设置窗口背景效果并实时切换，不重建顶层半透明窗口句柄。
      */
     void setBackdropEffect(BackdropEffect effect);
     BackdropEffect backdropEffect() const { return m_backdropEffect; }
 
     /**
-     * @brief Effective backdrop state after platform capability resolution.
-     * zh_CN: 平台能力解析后的实际背景状态。
+     * @brief Resolved backdrop state actually in use by the window.
+     * zh_CN: 经平台能力匹配后当前实际生效的背景状态。
      */
     BackdropState backdropState() const { return m_backdropState; }
 
     /**
-     * @brief Backdrop capabilities currently advertised by the platform session.
-     * zh_CN: 当前平台会话公布的背景能力。
+     * @brief Backdrop effects supported in the current platform session.
+     * zh_CN: 当前平台环境支持的背景效果能力。
      */
     BackdropCapabilities backdropCapabilities() const { return m_backdropCapabilities; }
 
     /**
-     * @brief Enables/disables user move + resize through the window chrome.
-     * zh_CN: 启用或禁用通过窗口 chrome 进行的用户移动和缩放。
+     * @brief Enables or disables user window dragging and edge resizing (for example while a modal overlay is open).
+     * zh_CN: 启用或禁用通过标题栏和边框拖拽移动或缩放窗口（例如模态弹窗打开期间）。
      */
     void setChromeInteractive(bool interactive);
     bool isChromeInteractive() const { return m_chromeInteractive; }
 
     /**
-     * @brief Sets caption-button tooltips; empty strings hide a tooltip.
-     * zh_CN: 设置标题栏按钮提示文案；空字符串表示不显示该提示。
-     *
-     * Defaults are empty so the library does not hard-code a language.
-     * Pass restoreTooltip for the maximize button while the window is maximized.
-     * zh_CN: 默认均为空，避免库内写死语言。最大化状态下的还原提示使用 restoreTooltip。
+     * @brief Sets tooltips for the minimize, maximize, close, and restore caption buttons; empty strings hide them.
+     * zh_CN: 设置最小化、最大化、关闭和还原按钮的提示文案；默认全空且库内不预设语言，传空字符串即不显示。
      */
     void setCaptionButtonToolTips(const QString& minimizeTooltip,
         const QString& maximizeTooltip,
         const QString& closeTooltip,
         const QString& restoreTooltip = QString());
     /**
-     * @brief Sets application-owned accessible names for the caption buttons.
-     * zh_CN: 设置由应用拥有的标题栏按钮无障碍名称。
-     *
-     * Defaults remain empty; this API does not translate or synthesize labels.
-     * zh_CN: 默认保持为空；该接口不会翻译或生成标签。
+     * @brief Sets accessible names for the caption buttons (empty by default).
+     * zh_CN: 设置标题栏按钮的无障碍名称（默认为空，库内不自动生成或翻译）。
      */
     void setCaptionButtonAccessibleNames(const QString& minimizeName,
         const QString& maximizeName,

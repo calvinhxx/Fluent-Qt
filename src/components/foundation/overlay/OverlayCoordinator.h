@@ -17,11 +17,11 @@ class OverlayInputFilter;
  * @brief Internal lifecycle coordinator for same-window overlays.
  * zh_CN: 同窗口浮层使用的内部生命周期协调器。
  *
- * It owns top-level attachment, host resize tracking, scrim lifetime, geometry,
- * and the scrim-to-overlay stacking order. Backdrop configuration and modal input routing
- * are shared; concrete components retain placement, animation, and close results.
- * zh_CN: 它统一管理顶层挂载、宿主尺寸跟踪、遮罩生命周期与几何，以及
- * scrim 到 overlay 的层叠顺序，并共享背景配置和模态输入；具体组件保留定位、动画及关闭结果。
+ * Manages top-level attachment, host resize tracking, scrim lifetime and geometry,
+ * z-order stacking, backdrop settings, and modal input routing; concrete components
+ * handle their own placement, animations, and close results.
+ * zh_CN: 统一管理顶层窗口挂载、宿主尺寸跟踪、遮罩生命周期与几何、层叠顺序，
+ * 以及共享背景配置与模态输入拦截；具体浮层组件各自保留定位、动画和关闭逻辑。
  */
 class OverlayCoordinator final : public QObject {
     Q_OBJECT
@@ -49,8 +49,7 @@ public:
     void syncScrimGeometry();
     void raiseStack();
 
-    // Shared state and normalization for public overlay facades.
-    // zh_CN: 公共浮层外观共用的状态和参数归一化。
+    // Shared backdrop state and parameter normalization for public overlay widgets.
     bool isModal() const { return m_modal; }
     bool setModal(bool modal);
     bool isDim() const { return m_dim; }

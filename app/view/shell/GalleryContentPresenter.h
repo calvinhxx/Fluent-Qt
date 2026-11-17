@@ -21,15 +21,12 @@ namespace fluent::gallery {
 class GalleryNavigationViewModel;
 
 /**
- * @brief Owns the right-side content area: turns a route id into a page and
- * swaps it into the navigation view's content host.
- * zh_CN: 负责右侧 content 区：把路由 id 变成页面，并换入导航视图的 content host。
+ * @brief Owns the right-side content area, resolving routes to pages inside the content host.
+ * zh_CN: 管理右侧内容区，负责将路由 ID 构建为页面并切入导航视图的内容宿主。
  *
- * GalleryWindow forwards route changes here and never touches page creation or
- * replacement itself. In-page navigation (entry cards) comes back out through
- * routeActivated so the window can route it like any other selection.
- * zh_CN: GalleryWindow 只把路由变化转发到这里，自身不再创建或替换页面。页面内导航
- * （入口卡片）经 routeActivated 信号回流，窗口按普通路由选择处理。
+ * GalleryWindow forwards route changes here without creating pages directly; in-page
+ * card activations emit routeActivated back to the shell.
+ * zh_CN: GalleryWindow 仅将路由变更转发至此，不直接建页；页内卡片点击通过 routeActivated 回传给外壳。
  */
 class GalleryContentPresenter : public QObject {
     Q_OBJECT
@@ -46,41 +43,28 @@ public:
 
     /**
      * @brief Shows the page for routeId, replacing the current one.
-     * zh_CN: 显示 routeId 对应的页面并替换当前页面。
-     *
-     * Re-presenting the route already on screen is a no-op that returns true. The first
-     * route (startup, behind the splash) builds synchronously so the splash hands directly
-     * to real content. Already-built routes switch instantly. A cold route during normal
-     * use shows a shimmer skeleton immediately, returns from the input handler, then builds
-     * the real page after the skeleton has painted one frame and swaps it in.
-     * zh_CN: 重复呈现已在屏幕上的路由为无操作，返回 true。首个路由（启动、splash 背后）同步构建，
-     * 使 splash 直接交给真内容。已建路由瞬时切换。正常使用中点开冷路由会立刻显示 shimmer 骨架屏，
-     * 骨架绘制一帧后再建真页并换入，避免把建页成本塞进点击处理函数。
+     * Returns immediately with true if routeId is already visible. Startup routes build
+     * synchronously behind the splash; later cold routes display a shimmer skeleton for
+     * one frame before building incrementally.
+     * zh_CN: 切换到 routeId 对应的页面。若该路由已在显示则直接返回 true；启动路由在遮罩后同步构建，
+     * 常规冷路由先显示骨架屏一帧再分步构建真页。
      */
     bool presentRoute(const QString& routeId);
 
     /**
      * @brief Prepares every queued page and its first layout before completing startup.
-     * zh_CN: 启动完成前准备全部排队页面及首次布局。
+     * zh_CN: 在启动完成前预热排队页面并完成首次布局。
      *
-     * Component pages yield between individual sample factories. Progress counts ready pages,
-     * never elapsed time; no timer discards the tail of the queue. Pages remain hidden until
-     * complete, so their ordinary visibility lifecycle keeps live demonstrations idle.
-     * zh_CN: 组件页在各个示例工厂之间让出事件循环。进度只统计就绪页，不按时间推算或丢弃队尾；
-     * 页面完成前保持隐藏，实时示例沿用可见性生命周期保持空闲。
+     * Component pages yield between individual sample factories, and progress tracks
+     * completed pages while keeping them hidden until ready.
+     * zh_CN: 组件页在各示例工厂间让出事件循环；进度按已就绪页统计，构建完成前保持隐藏。
      */
     void prewarmRoutes(const QStringList& routeIds);
 
     /**
-     * @brief Pauses/resumes splash-phase page warming so it never builds during a window interaction.
-     * zh_CN: 暂停/恢复 splash 期建页，使其绝不在窗口交互期间构建。
-     *
-     * Building a page synchronously freezes the GUI thread for tens-to-hundreds of ms; if that lands
-     * mid-drag the window stutters. GalleryWindow pauses warming while the user is moving/resizing the
-     * window and resumes shortly after they stop, so dragging during the first-load splash stays smooth
-     * without abandoning the warm-ahead benefit. No-op once the queue has drained.
-     * zh_CN: 同步建页会冻结 GUI 线程几十~几百毫秒，若落在拖动中途就会卡顿。GalleryWindow 在用户移动/缩放窗口
-     * 期间暂停建页、停止片刻后恢复，使首屏 splash 期间拖拽顺滑，又不放弃预热收益。队列排空后为空操作。
+     * @brief Pauses or resumes splash-phase prewarm so builds never run during window move/resize.
+     * Does nothing once the prewarm queue is empty.
+     * zh_CN: 暂停或恢复启动期预热，避免窗口移动/缩放时同步建页造成卡顿；队列排空后直接返回。
      */
     void setPrewarmPaused(bool paused);
     void cancelPrewarm();
@@ -124,23 +108,16 @@ private:
     const GalleryNavigationViewModel& m_navigationViewModel;
     QString m_currentRouteId;
 
-    // Each route's page is built once and then kept resident in the content host's
-    // stack (parented to the host, just shown/hidden). Navigating is a show/hide of an
-    // already-parented, already-laid-out widget — no reparenting, so Qt skips the full
-    // style re-polish + relayout that made even revisits cost hundreds of ms. The map
-    // remembers each route's stack index. Desktop keeps the cache unbounded by default;
-    // a platform-supplied cap may evict least-recently-used pages and repair indices.
-    // zh_CN: 每个路由的页面只建一次，之后常驻 content host 的栈里（挂在 host 上，仅显示/隐藏）。
-    // 导航变成对"已挂父级、已完成布局"的页面做显示/隐藏——不再 reparent，于是 Qt 跳过整棵子树的
-    // 样式重新 polish + 重新布局（那正是连重访都要几百毫秒的根因）。此表记住每个路由的栈索引。
-    // 桌面端默认不限制缓存；平台可提供上限，按 LRU 淘汰页面并同步修正索引。
+    // Keep built pages parented inside the content host stack to avoid reparenting,
+    // which would force a full-subtree style re-polish and relayout on revisits.
+    // When m_maxResidentRoutes > 0, evict LRU pages and adjust stored stack indices.
+    // zh_CN: 已建页面常驻在内容宿主栈中（仅切换显隐），避免重设父控件导致整棵子树重新 polish 与布局；
+    // 若平台设置 m_maxResidentRoutes > 0，则按 LRU 淘汰页面并同步修正栈索引。
     QHash<QString, int> m_routeStackIndex;
     QStringList m_routeRecency;
     int m_maxResidentRoutes = 0;
 
-    // A single shimmer skeleton page, parked in the stack and shown the instant a cold
-    // route is requested so navigation feels immediate while the real page builds.
-    // zh_CN: 单个 shimmer 骨架页，常驻栈里，请求冷路由时立刻显示，使导航在真页构建期间也即时响应。
+    // Reusable shimmer skeleton shown while a cold route builds incrementally.
     QWidget* m_skeleton = nullptr;
     int m_skeletonIndex = -1;
     QPointer<QWidget> m_lazyPage;

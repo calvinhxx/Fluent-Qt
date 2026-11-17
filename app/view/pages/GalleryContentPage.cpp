@@ -229,12 +229,8 @@ void GalleryContentPage::trackLabelColor(fluent::textfields::Label* label, TextR
 
 void GalleryContentPage::applyBackdrop()
 {
-    // The whole window supplies one native or UILib-painted material, so the page stays
-    // transparent and opaque cards/controls float on top. (A distinct opaque content layer/frame
-    // isn't feasible here: on a translucent window every content widget's unpainted area
-    // clears to Mica — which is also why card gaps already show Mica.)
-    // zh_CN: 整窗提供统一的原生或 UILib 软件材质，故页面透明；不透明卡片/控件浮于其上。（此处无需做出独立的
-    // 不透明内容层/框：半透明窗口下每个内容控件的未绘制区都会清成 Mica——这也是卡片间隙已透出 Mica 的原因。）
+    // Keep the page transparent so the window's backdrop material shows through behind opaque cards.
+    // zh_CN: 保持页面透明，使窗口背景材质能从不透明卡片与控件下方透出。
     setAutoFillBackground(false);
     QPalette pagePalette = palette();
     pagePalette.setColor(QPalette::Window, Qt::transparent);

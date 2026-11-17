@@ -32,12 +32,10 @@ class AnnotatedScrollBarAccessible;
 }
 
 /**
- * @brief Label metadata rendered beside an AnnotatedScrollBar offset.
- * zh_CN: 渲染在 AnnotatedScrollBar 偏移位置旁的标签元数据。
- *
- * The offset is expressed in the same scroll-value coordinate space used by
- * the scrollbar range. detailText can override the detail provider result.
- * zh_CN: offset 使用与滚动条范围相同的滚动值坐标；detailText 可覆盖详情回调结果。
+ * @brief Section label rendered beside an AnnotatedScrollBar offset.
+ * `offset` uses the same scroll-value coordinate space as the scrollbar range; `detailText` overrides the detail provider callback when non-empty.
+ * zh_CN: 显示在 AnnotatedScrollBar 对应偏移位置旁的分组标签。
+ * offset 使用与滚动条范围一致的数值坐标；detailText 非空时覆盖详情回调的返回文本。
  */
 struct AnnotatedScrollBarLabel {
     QString text;
@@ -61,13 +59,10 @@ inline bool operator!=(const AnnotatedScrollBarLabel& lhs, const AnnotatedScroll
 }
 
 /**
- * @brief Vertical Fluent scrollbar with offset labels and optional detail tooltip.
- * zh_CN: 带偏移标签和可选详情提示的垂直 Fluent 滚动条。
- *
- * AnnotatedScrollBar can mirror a ScrollView or be driven directly through range
- * and value properties, while keeping label layout and tooltip behavior explicit.
- * zh_CN: AnnotatedScrollBar 可镜像 ScrollView，也可直接由范围和值属性驱动，
- * 并显式管理标签布局和提示行为。
+ * @brief Vertical Fluent scrollbar with section labels and an optional detail tooltip.
+ * Can mirror a ScrollView or be driven directly through minimum, maximum, and value properties.
+ * zh_CN: 带分组定位标签和可选详情提示的垂直 Fluent 滚动条。
+ * 可绑定 ScrollView 同步联动，也可直接通过 minimum、maximum 与 value 属性驱动。
  */
 class AnnotatedScrollBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -203,16 +198,16 @@ public:
     void clearLabels();
 
     /**
-     * @brief Installs a provider used when a hovered label needs detail text.
-     * zh_CN: 设置标签 hover 时用于生成详情文本的 provider。
+     * @brief Sets a callback that supplies tooltip detail text for a hovered scroll offset.
+     * zh_CN: 设置悬停标签时用于生成详情提示文本的回调函数。
      */
     void setDetailLabelProvider(DetailLabelProvider provider);
     void clearDetailLabelProvider();
     bool hasDetailLabelProvider() const { return static_cast<bool>(m_detailLabelProvider); }
 
     /**
-     * @brief Mirrors range/value from a ScrollView and sends scroll requests back to it.
-     * zh_CN: 从 ScrollView 同步 range/value，并将滚动请求回传给该 ScrollView。
+     * @brief Binds to a ScrollView to mirror its range and value and forward scroll requests back to it.
+     * zh_CN: 绑定 ScrollView，同步滚动范围与当前值并将滚动请求回传给该 ScrollView。
      */
     void connectToScrollView(ScrollView* scrollView);
     void disconnectScrollView();
@@ -233,8 +228,6 @@ public:
     QSize minimumSizeHint() const override;
 
 signals:
-    // Property and interaction notifications.
-    // zh_CN: 属性与交互通知信号。
     void rangeChanged(int minimum, int maximum);
     void valueChanged(int value);
     void pageStepChanged(int pageStep);

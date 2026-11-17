@@ -30,13 +30,11 @@ class OverscrollController;
 namespace fluent::collections {
 
 /**
- * @brief Fluent collection view that wraps items across rows or columns.
- * zh_CN: 可按行或列自动换行排列 item 的 Fluent 集合视图。
- *
- * FlowView lays out model items with configurable item size, spacing, flow axis,
- * and alignment while preserving collection selection and reorder options.
- * zh_CN: FlowView 通过可配置 item 尺寸、间距、流向和对齐方式布局模型项，
- * 同时保留集合选择和重排能力。
+ * @brief Fluent collection view that wraps items automatically across rows.
+ * Lays out model items using configurable item size bounds, spacing, and margins,
+ * while supporting selection, overlay scrollbars, and drag-and-drop reordering.
+ * zh_CN: 自动换行排列条目的 Fluent 流式集合视图。
+ * 支持配置条目尺寸上下限、间距和边距，同时提供选择、覆盖式滚动条与拖拽重排功能。
  */
 class FlowView : public QAbstractItemView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -65,13 +63,13 @@ public:
      */
     Q_PROPERTY(QString headerText READ headerText WRITE setHeaderText NOTIFY headerTextChanged)
     /**
-     * @brief Text shown when the flow model has no items to present.
-     * zh_CN: 流式 model 没有可展示 item 时显示的占位文本。
+     * @brief Text shown when the model has no items.
+     * zh_CN: 模型为空时显示的占位文本。
      */
     Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     /**
-     * @brief Fallback item size when neither the model nor delegate provides a valid size.
-     * zh_CN: 模型和代理均未提供有效尺寸时使用的后备条目尺寸。
+     * @brief Default item size used when neither the model nor delegate provides a valid sizeHint.
+     * zh_CN: 模型和代理均未提供有效尺寸时使用的默认条目尺寸。
      */
     Q_PROPERTY(QSize defaultItemSize READ defaultItemSize WRITE setDefaultItemSize NOTIFY defaultItemSizeChanged)
     /**
@@ -85,8 +83,8 @@ public:
      */
     Q_PROPERTY(QSize maximumItemSize READ maximumItemSize WRITE setMaximumItemSize NOTIFY maximumItemSizeChanged)
     /**
-     * @brief Model role used to resolve per-item size.
-     * zh_CN: 用于解析单个条目尺寸的 model role。
+     * @brief Model role queried for per-item size hints.
+     * zh_CN: 用于读取单个条目尺寸的模型角色。
      */
     Q_PROPERTY(int itemSizeRole READ itemSizeRole WRITE setItemSizeRole NOTIFY itemSizeRoleChanged)
     /**
@@ -105,8 +103,8 @@ public:
      */
     Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
     /**
-     * @brief Whether the item-view viewport is currently hovered.
-     * zh_CN: item-view viewport 当前是否处于悬停状态。
+     * @brief Whether the viewport is currently hovered.
+     * zh_CN: 视口当前是否处于悬停状态。
      */
     Q_PROPERTY(bool viewportHovered READ viewportHovered NOTIFY viewportHoveredChanged)
     /**
@@ -123,9 +121,10 @@ public:
         WRITE setScrollChainingEnabled
         NOTIFY scrollChainingEnabledChanged)
     /**
-     * @brief Whether the view shows an elastic overscroll/bounce at the scroll boundary.
-     * Enabled by default; disable for chrome that should stop cleanly at the edge.
-     * zh_CN: 滚动到边界时是否显示弹性回弹。默认开启；不希望回弹的 chrome 可关闭，使其在边界干脆停住。
+     * @brief Whether elastic overscroll bounce is enabled at scroll boundaries.
+     * Enabled by default; disable for navigation panes or chrome that should stop cleanly at the edge.
+     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启）。
+     * 希望在边界干脆停住（例如导航栏）时可关闭此选项。
      */
     Q_PROPERTY(bool overscrollEnabled
         READ isOverscrollEnabled
@@ -216,8 +215,8 @@ signals:
     void scrollChainingEnabledChanged();
     void overscrollEnabledChanged();
     /**
-     * @brief Emits the row once for the same pointer action as inherited clicked().
-     * zh_CN: 与继承的 clicked() 对应，在同一次指针点击中发送一次行号。
+     * @brief Convenience signal emitting the clicked row index alongside QAbstractItemView::clicked().
+     * zh_CN: 与 QAbstractItemView::clicked() 对应的便捷信号，直接传递被点击的行号。
      */
     void itemClicked(int row);
     void itemReordered(int fromIndex, int toIndex);

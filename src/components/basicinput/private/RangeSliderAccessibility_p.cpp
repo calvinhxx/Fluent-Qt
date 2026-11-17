@@ -100,8 +100,7 @@ public:
         return nullptr;
     }
 
-    // The live bounds follow the other thumb, as a multi-thumb slider should.
-    // zh_CN: 实时上下界随另一个手柄变化，符合多手柄滑块的语义。
+    // Live bounds track the opposite thumb.
     QVariant currentValue() const override { return m_slider ? QVariant(value()) : QVariant(); }
     QVariant minimumValue() const override
     {

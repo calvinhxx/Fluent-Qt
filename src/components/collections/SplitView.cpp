@@ -575,14 +575,7 @@ void SplitView::mousePressEvent(QMouseEvent* event)
     m_drag.leadingPane = pair.leadingPane;
     m_drag.trailingPane = pair.trailingPane;
     m_drag.startPosition = axisPosition(fluentMousePos(event));
-    // Baseline the drag on the panes' actual laid-out lengths, not their stored
-    // preferredSize. The fill pane never writes its displayed length back to
-    // preferredSize, so using the stored value as a baseline let a non-fill pane
-    // ratchet larger on every drag and eventually swallow the fill pane. The real
-    // geometry always sums to the true combined span the boundary moves within.
-    // zh_CN: 以面板实际布局长度（而非存储的 preferredSize）作为拖拽基准。填充面板从不把
-    // 显示长度写回 preferredSize，用存储值作基准会让非填充面板每次拖拽不断变大、最终吞掉
-    // 填充面板。实际 geometry 始终等于边界可移动的真实合并跨度。
+    // Baseline drags on actual laid-out widths rather than stored preferredSize, which fill panes never update.
     m_drag.leadingStartSize = dragStartLength(pair.leadingPane);
     m_drag.trailingStartSize = dragStartLength(pair.trailingPane);
     m_drag.changed = false;

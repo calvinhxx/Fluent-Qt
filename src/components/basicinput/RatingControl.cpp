@@ -74,8 +74,6 @@ void RatingControl::onThemeUpdated()
     update();
 }
 
-// ── Property setters. zh_CN: 属性 setter ────────────────────────────────────
-
 void RatingControl::setValue(double value)
 {
     value = qBound(-1.0, value, static_cast<double>(m_maxRating));
@@ -178,8 +176,6 @@ void RatingControl::setCaptionFontRole(Typography::FontRole role)
     emit captionFontRoleChanged();
 }
 
-// ── Geometry helpers. zh_CN: 几何辅助 ────────────────────────────────────────
-
 QSize RatingControl::iconCellSize() const
 {
     const QFont iconFont = Typography::Icons::font(m_starSize);
@@ -233,8 +229,6 @@ QSize RatingControl::minimumSizeHint() const
     return QSize(starsAreaWidth() + inset * 2, iconCellSize().height() + inset * 2);
 }
 
-// ── Mouse-to-rating mapping. zh_CN: 鼠标 → 评分值映射 ───────────────────────
-
 double RatingControl::ratingFromPosition(int x) const
 {
     for (int i = 0; i < m_maxRating; ++i) {
@@ -263,21 +257,17 @@ double RatingControl::keyboardStepTarget(int direction) const
     return qMin(candidate, static_cast<double>(m_maxRating));
 }
 
-// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
-
 void RatingControl::paintEvent(QPaintEvent* /*event*/)
 {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     const auto& c = themeColorsRef();
 
-    // Resolve the displayed value. zh_CN: 确定要显示的值。
     bool isHoverPreview = m_isHovered && !m_isReadOnly && m_hoverValue > 0;
     double displayValue = isHoverPreview ? m_hoverValue : (m_value >= 0 ? m_value : m_placeholderValue);
     bool isPlaceholder = (m_value < 0 && !isHoverPreview);
     bool isDisabled = !isEnabled();
 
-    // State colors. zh_CN: 状态颜色。
     QColor filledColor, emptyColor;
     if (isDisabled) {
         filledColor = c.textDisabled;
@@ -293,7 +283,6 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         emptyColor = c.strokeSecondary;
     }
 
-    // Paint star by star. zh_CN: 逐星绘制。
     for (int i = 0; i < m_maxRating; ++i) {
         QRectF rect = starRect(i);
         const QPainterPath star = ratingStarPath(rect, m_starSize);
@@ -305,8 +294,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         } else if (fillFraction <= 0.0) {
             drawRatingStar(p, star, emptyColor, false, outlineWidth);
         } else {
-            // Partial fill: paint the outline, then the solid star inside a clip.
-            // zh_CN: 部分填充——先画空心，再用裁剪区域画实心。
+            // Paint outline first, then clip and fill the fractional portion.
             drawRatingStar(p, star, emptyColor, false, outlineWidth);
             p.save();
             const qreal fillWidth = rect.width() * fillFraction;
@@ -317,7 +305,6 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         }
     }
 
-    // Caption text. zh_CN: 标题文字。
     if (!m_caption.isEmpty()) {
         QFont captionFont = themeFont(m_captionFontRole).toQFont();
         p.setFont(captionFont);
@@ -333,15 +320,13 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     if (!isDisabled && hasFocus() && m_keyboardFocusVisible) {
         QColor focusColor = c.textSecondary;
         focusColor.setAlpha(120);
-        // The keyboard cue surrounds the stars without repainting their tips.
-        // zh_CN: 键盘焦点框围住星形区域，避开星尖的绘制边缘。
+        // Frame the star area without intersecting star tips.
         const int inset = contentInset();
         const int cellHeight = iconCellSize().height();
         p.setPen(QPen(focusColor, 1.0));
         p.setBrush(Qt::NoBrush);
         if (inset < themeSpacing().gap.tight || height() < cellHeight + inset * 2) {
-            // A compact legacy size has no room for a frame around the star tips.
-            // zh_CN: 旧紧凑尺寸容不下环绕星尖的焦点框，改用星形下方的焦点线。
+            // Compact fixed heights lack room for an enclosing ring; draw an underline cue instead.
             const QRect logicalArea(inset, 0, starsAreaWidth(), height());
             const QRectF area = QStyle::visualRect(layoutDirection(), rect(), logicalArea);
             p.drawLine(QPointF(area.left() + 0.5, height() - 0.5), QPointF(area.right() - 0.5, height() - 0.5));
@@ -353,8 +338,6 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         p.drawRoundedRect(focusRect, themeRadius().control, themeRadius().control);
     }
 }
-
-// ── Mouse interaction. zh_CN: 鼠标交互 ───────────────────────────────────────
 
 void RatingControl::enterEvent(FluentEnterEvent* event)
 {

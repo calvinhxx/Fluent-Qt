@@ -22,7 +22,7 @@
       "type": "enum",
       "label": {
         "en": "Presentation",
-        "zh": "呈现模式"
+        "zh": "显示样式"
       },
       "category": "basic"
     },
@@ -41,7 +41,7 @@
       "effectWhen": "presentation == 'Branded'",
       "effectHint": {
         "en": "Displayed in Branded presentation; Simple centers the loading ring without brand headings.",
-        "zh": "仅在品牌模式下显示；简洁模式只显示图标与居中加载环。"
+        "zh": "仅在 Branded 样式下显示；Simple 样式只显示居中加载环。"
       },
       "effectFixture": {
         "presentation": "Branded"
@@ -142,8 +142,8 @@
     272
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Cover a content area during startup, report progress, and dismiss when ready.",
+    "zh": "应用启动期间覆盖主区域，显示图标与加载进度。"
   },
   "presets": [
     {

@@ -10,11 +10,8 @@
 
 namespace fluent::overlay {
 
-// Optional compositor contract: a source root's local coordinates are mapped
-// to its presented local coordinates. The nearest root wins; a native window
-// starts a new coordinate space. Ordinary Widgets never publish this property.
-// zh_CN: 可选合成契约：源根节点局部坐标映射到显示局部坐标；最近根节点优先，
-// 原生窗口开启新的坐标空间。普通 Widgets 不设置此属性。
+// Optional transform published by a host root to map local coords to displayed coords;
+// the nearest ancestor root wins, and native windows start a fresh coordinate space.
 constexpr const char* presentationTransformPropertyName()
 {
     return "_fluent_qt_overlay_presentation_transform";
@@ -53,9 +50,8 @@ constexpr const char* presentedMenuPointPropertyName()
     return "_fluent_qt_presented_menu_point";
 }
 
-// Map the invocation point before QMenu applies screen containment. The scoped
-// source also tells the compositor not to project this native popup twice.
-// zh_CN: 在 QMenu 做屏幕边界约束前映射调用点；临时源标记避免合成器再次投影。
+// Map localPoint before QMenu clamps to screen bounds; the temporary source
+// property prevents compositors from projecting this native popup twice.
 inline void popupMenuAt(QMenu* menu, QWidget* source, const QPoint& localPoint, const QPoint& popupOffset = QPoint())
 {
     if (!menu || !source)

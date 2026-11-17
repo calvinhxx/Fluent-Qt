@@ -13,9 +13,9 @@ public:
     using QWidget::QWidget;
     ~SpatialPreviewPanel() override
     {
-        // Stop while this panel's native focus chain still exists. If an enclosing
-        // host is already dying, Spatial avoids restoring content into that tree.
-        // zh_CN: 在面板原生焦点链仍存活时停用；若外层宿主已开始销毁，Spatial 不再向其中恢复内容。
+        // Deactivate before widget teardown removes the native focus chain so Spatial
+        // never tries to reparent content back into a dying host tree.
+        // zh_CN: 在面板析构破坏原生焦点链前停用会话，防止外层宿主销毁过程中把内容恢复回已析构控件树。
         if (auto* session = findChild<spatial::SpatialSession*>(QString(), Qt::FindDirectChildrenOnly))
             session->deactivate();
     }

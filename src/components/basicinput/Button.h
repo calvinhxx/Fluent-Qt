@@ -25,11 +25,8 @@ class ButtonContentPainter;
  * @brief Fluent-styled push button with token-driven painting and optional iconfont content.
  * zh_CN: 基于 Fluent 设计 token 自绘的 QPushButton，支持文本、图标字体和多种视觉状态。
  *
- * Button keeps Qt's QPushButton behavior while replacing the visual surface in
- * paintEvent(). Use it as the common base for button-like entry components
- * that do not need a more specialized Qt base class.
- * zh_CN: Button 保留 QPushButton 的交互语义，但通过 paintEvent 自绘视觉表面。
- * 不需要特殊 Qt 基类的按钮类入口组件，应优先以它作为通用基础。
+ * Keeps QPushButton interaction behavior while painting the control in paintEvent().
+ * zh_CN: 保留 QPushButton 原生交互，通过 paintEvent() 自定义外观绘制。
  */
 class Button : public QPushButton, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -51,8 +48,8 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
-     * @brief Semantic foreground for unfilled, unchecked buttons; filled and disabled states keep their contrast roles.
-     * zh_CN: 非填充、未选中按钮的语义前景色；填充和禁用状态仍使用对应对比色。
+     * @brief Foreground role for unfilled, unchecked buttons; filled and disabled keep contrast colors.
+     * zh_CN: 非填充、未选中按钮的文字颜色角色；填充和禁用状态仍使用各自对比色。
      */
     Q_PROPERTY(TextColorRole textColorRole READ textColorRole WRITE setTextColorRole NOTIFY textColorRoleChanged)
     /**
@@ -70,15 +67,15 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
     Q_PROPERTY(bool focusVisual READ hasFocusVisual WRITE setFocusVisual NOTIFY focusVisualChanged)
     /**
      * @brief Overrides the interaction state for guided demos or visual checks.
-     * zh_CN: 强制交互状态，主要用于引导、演示或 VisualCheck。
+     * zh_CN: 强制交互状态，主要用于引导、演示或可视化检查。
      */
     Q_PROPERTY(InteractionState interactionState
         READ interactionState
         WRITE setInteractionState
         NOTIFY interactionStateChanged)
     /**
-     * @brief Uses the critical semantic color while hovered or pressed.
-     * zh_CN: Hover/Pressed 状态使用 Critical 语义色，适合关闭、删除等危险操作。
+     * @brief Uses the critical error color while hovered or pressed.
+     * zh_CN: 悬停或按下时使用危险操作配色（Critical），适合关闭、删除等操作。
      */
     Q_PROPERTY(bool criticalOnHover READ criticalOnHover WRITE setCriticalOnHover NOTIFY criticalOnHoverChanged)
     /**
@@ -108,10 +105,10 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(qreal iconScale READ iconScale WRITE setIconScale)
     /**
-     * @brief Painter-level opacity for the whole button surface (1.0 = fully opaque).
-     * A lightweight fade that avoids QGraphicsOpacityEffect's offscreen compositing.
-     * zh_CN: 作用于整个按钮表面的画笔级不透明度（1.0 为完全不透明）。轻量淡入淡出，
-     * 避免 QGraphicsOpacityEffect 的离屏合成。
+     * @brief Painter-level opacity for the whole button (1.0 = fully opaque).
+     * Lightweight fade that avoids QGraphicsOpacityEffect's offscreen compositing overhead.
+     * zh_CN: 作用于整个按钮的画笔级不透明度（1.0 为完全不透明），
+     * 可实现轻量淡入淡出并避免 QGraphicsOpacityEffect 的离屏合成开销。
      */
     Q_PROPERTY(qreal contentOpacity READ contentOpacity WRITE setContentOpacity)
 
@@ -137,13 +134,13 @@ public:
     enum ButtonLayout { TextOnly, IconBefore, IconOnly, IconAfter, IconAbove, IconBelow };
     Q_ENUM(ButtonLayout)
 
-    /** @brief Semantic text and icon emphasis. zh_CN: 文字与图标的语义强调层级。 */
+    /** @brief Text and icon color emphasis level. zh_CN: 文字与图标的颜色强调级别。 */
     enum class TextColorRole { Primary, Secondary, Accent };
     Q_ENUM(TextColorRole)
 
     /**
-     * @brief Paint-state override used before falling back to real hover/press state.
-     * zh_CN: 绘制状态覆盖值；为 Rest 时再回退到真实 hover/press 状态。
+     * @brief Paint-state override; Rest uses the actual hover or press state.
+     * zh_CN: 绘制状态覆盖值；为 Rest 时按真实悬停或按压状态绘制。
      */
     enum InteractionState { Rest, Hover, Pressed, Disabled };
     Q_ENUM(InteractionState)
@@ -151,8 +148,6 @@ public:
     explicit Button(const QString& text, QWidget* parent = nullptr);
     explicit Button(QWidget* parent = nullptr);
 
-    // Fluent property accessors.
-    // zh_CN: Fluent 属性访问接口。
     ButtonStyle fluentStyle() const { return m_style; }
     void setFluentStyle(ButtonStyle style);
 
@@ -207,20 +202,18 @@ public:
 
     void onThemeUpdated() override;
 
-    // Size hints include Fluent padding, text, and iconfont content.
-    // zh_CN: 尺寸提示会综合 Fluent 内边距、文本和 iconfont 内容。
+    /** @brief Computes preferred size including Fluent padding, text, and iconfont content.
+     * zh_CN: 计算包含 Fluent 内边距、文本与 iconfont 图标的建议尺寸。 */
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
     /**
-     * @brief Sets an iconfont glyph that is drawn directly during paintEvent().
-     * zh_CN: 设置在 paintEvent() 中直接绘制的 iconfont 图标字符。
-     * The first nonempty glyph uses IconBefore unless a layout was explicitly selected.
-     * zh_CN: 未显式指定布局时，首个非空字形自动使用 IconBefore。
+     * @brief Sets an iconfont glyph drawn directly in paintEvent().
+     * The first non-empty glyph switches layout to IconBefore unless setFluentLayout() was called.
+     * zh_CN: 设置在 paintEvent() 中直接绘制的 iconfont 字符；未显式指定布局时，首个非空字形会自动切换为 IconBefore。
      *
      * @param glyph Icon glyph, usually from Typography::Icons.
-     * @param pixelSize Icon slot and native optical design size; defaults to
-     * WinUI's standard 16 px control icon.
+     * @param pixelSize Icon slot and optical size; defaults to 16 px.
      * @param family Icon font family; defaults to FluentQt Icons.
      */
     void setIconGlyph(const QString& glyph,
@@ -247,8 +240,8 @@ signals:
     void cornerRadiiChanged();
 
 protected:
-    // Paints the full Fluent button surface instead of delegating to QStyle.
-    // zh_CN: 自绘完整 Fluent 按钮表面，而不是交给 QStyle 绘制。
+    // Custom-paint the button instead of delegating to QStyle.
+    // zh_CN: 通过自绘完成外观，不走 QStyle 默认绘制。
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
 
@@ -277,14 +270,12 @@ protected:
      * zh_CN: 在指定区域居中绘制上下排列的内容，并返回文字矩形。 */
     QRectF paintStackedContent(QPainter& painter, const QRectF& bounds) const;
 
-    // Exposes iconfont details to specialized button subclasses.
-    // zh_CN: 向特殊按钮子类暴露 iconfont 信息，便于自定义绘制。
+    // Exposes iconfont details to button subclasses.
+    // zh_CN: 向子类暴露 iconfont 绘制参数。
     QString iconGlyph() const { return m_iconGlyph; }
     QString iconFontFamily() const { return m_iconFontFamily; }
     int iconPixelSize() const { return m_iconPixelSize; }
 
-    // State changes only invalidate painting; QPushButton keeps interaction semantics.
-    // zh_CN: 状态变化只触发重绘；交互语义仍由 QPushButton 保持。
     void focusInEvent(QFocusEvent* event) override
     {
         QPushButton::focusInEvent(event);
@@ -329,13 +320,12 @@ private:
     QPoint m_iconOffset{0, 0}; // Fine-tunes iconfont centering for glyphs with uneven metrics.
     qreal m_iconRotation = 0.0;
     qreal m_iconScale = 1.0;      // Press-feedback scale for the painted glyph; 1.0 = no scaling.
-    qreal m_contentOpacity = 1.0; // Painter-level fade for the whole surface; 1.0 = opaque.
+    qreal m_contentOpacity = 1.0; // Painter-level fade for the whole control; 1.0 = opaque.
 
-    // Iconfont state used for crisp text rendering instead of pixmap conversion.
-    // zh_CN: iconfont 状态用于直接文本绘制，避免 pixmap 转换导致模糊。
-    QString m_iconGlyph;      // iconfont 字符
-    QString m_iconFontFamily; // iconfont 字体家族
-    int m_iconPixelSize = 0;  // iconfont 像素大小
+    // Direct iconfont glyph state (avoids pixmap rasterization blur).
+    QString m_iconGlyph;
+    QString m_iconFontFamily;
+    int m_iconPixelSize = 0;
 };
 
 } // namespace fluent::basicinput

@@ -19,11 +19,11 @@ namespace fluent::overlay {
  * @brief Same-window dim/scrim used behind modal overlays, drawers, and spotlights.
  * zh_CN: 用于模态浮层、抽屉与聚光引导背后的同窗口压暗遮罩。
  *
- * OverlayScrim paints into the owning top-level's shared backing (SourceOver, no translucent
- * child surface) and optionally intercepts pointer input. Optional rounded surface and spotlight
- * cut-outs cover Dialog-style smoke and intro-tour highlights without a second scrim type.
- * zh_CN: OverlayScrim 画进宿主顶层的共享后备缓冲（SourceOver，无独立透明子表面），并可拦截指针输入。
- * 可选圆角表面与聚光挖空覆盖 Dialog 式烟雾与引导高亮，无需第二套遮罩类型。
+ * OverlayScrim paints directly onto the owning top-level window using SourceOver
+ * (avoiding a separate translucent child surface) and optionally intercepts pointer
+ * input, with optional rounded surface bounds and spotlight cut-outs.
+ * zh_CN: OverlayScrim 直接在所属顶层窗口内以 SourceOver 绘制压暗和背景模糊
+ *（不创建独立透明子表面），支持指针拦截、圆角边界和聚光灯挖空。
  */
 class OverlayScrim : public QWidget, public FluentElement {
     Q_OBJECT
@@ -46,8 +46,7 @@ public:
     void setOpacityProgress(qreal progress);
     qreal opacityProgress() const { return m_opacityProgress; }
 
-    // Alias used by Dialog smoke fade and Gallery intro tour animations.
-    // zh_CN: Dialog 烟雾淡入与 Gallery 引导动画使用的别名。
+    // Alias used by Dialog fade and spotlight animations.
     double progress() const { return m_opacityProgress; }
     void setProgress(double progress) { setOpacityProgress(progress); }
 
@@ -94,7 +93,7 @@ private:
     bool m_modal = true;
     bool m_dim = true;
     qreal m_opacityProgress = 1.0;
-    QColor m_color; // invalid → themeSmoke(). zh_CN: 无效则用 themeSmoke()。
+    QColor m_color; // invalid -> themeSmoke(). zh_CN: 无效颜色时使用 themeSmoke()。
     qreal m_dimOpacity = -1.0;
     qreal m_blurRadius = 0.0;
     QPointer<QWidget> m_overlay;

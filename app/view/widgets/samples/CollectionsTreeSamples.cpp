@@ -223,14 +223,9 @@ QVector<GallerySample> treeViewSamples()
                 tree->expandAll();
                 const QModelIndex parentIndex = model->index(0, 0);
                 const QModelIndex childIndex = model->index(0, 0, parentIndex);
-                // Keep all three animation targets in the initial viewport.  The old
-                // sibling target was the second root item (Photos), so QTreeView quite
-                // correctly auto-scrolled to reveal it and made the indicator demo look
-                // as if the whole control jumped.  Budget is a true sibling of Proposal
-                // and still exercises the same-level transition without moving the view.
-                // zh_CN: 三个动画目标均保持在初始视口内。旧 sibling 指向第二个根
-                // 节点 Photos，QTreeView 会为显示它而自动滚动，看起来像整个控件跳动；
-                // Budget 是 Proposal 的真实同级节点，可在不滚动的情况下演示同级过渡。
+                // Keep all three targets in the initial viewport (Budget is a sibling of Proposal)
+                // so testing same-level indicator motion does not trigger an auto-scroll jump.
+                // zh_CN: 三个动画目标均保持在初始视口内（Budget 与 Proposal 同级），避免演示同级过渡时触发自动滚动。
                 const QModelIndex siblingIndex = model->index(1, 0, parentIndex);
                 tree->setSelectedItem(parentIndex);
 
@@ -239,13 +234,8 @@ QVector<GallerySample> treeViewSamples()
                 auto* childButton = new Button(QStringLiteral("Child"), controls);
                 auto* siblingButton = new Button(QStringLiteral("Sibling"), controls);
                 auto* status = makeStatusLabel(controls, QStringLiteral("Transition: none"));
-                // Reserve room for the LONGEST transition text up front. This label has no width
-                // floor, so its width tracks the text, which changes length per selection
-                // ("none" → "same level"); the label — and the left-aligned group it shares with the
-                // tree — would then grow/shrink, visibly jumping the TreeView's width and its
-                // translucent backdrop on every selection. zh_CN: 预留「最长过渡文案」的宽度。该标签无宽度下限,
-                // 宽度随文本变化,而文本随选择变化("none"→"same level"),于是标签——以及它与 tree 共处的左对齐 group——
-                // 会伸缩,使每次选择时 TreeView 宽度及其半透明背景跳动。
+                // Reserve width for the longest transition text so toggling labels does not resize the tree group.
+                // zh_CN: 预留最长状态文案宽度，避免切换标签长度时带动左侧控件组和 TreeView 跳动。
                 status->setText(QStringLiteral("Transition: same level"));
                 status->setMinimumWidth(qMax(status->minimumWidth(), status->sizeHint().width()));
                 status->setText(QStringLiteral("Transition: none"));

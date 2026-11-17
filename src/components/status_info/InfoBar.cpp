@@ -28,13 +28,8 @@ void setLabelColor(fluent::textfields::Label* label, const QColor& color)
 {
     if (!label)
         return;
-    // Color via the label's OWN style sheet rather than its palette: when an InfoBar sits under an
-    // ancestor style sheet — e.g. the gallery's GallerySampleCard installs QStyleSheetStyle over its
-    // whole subtree — a palette WindowText color is silently dropped, so the title/message rendered
-    // near-black in dark theme regardless of severity. A style-sheet color wins over the ancestor
-    // style sheet. zh_CN: 用标签自身样式表上色而非 palette：当 InfoBar 位于带样式表的祖先下
-    //（如画廊的 GallerySampleCard 会在整个子树安装 QStyleSheetStyle），palette 的 WindowText 会被丢弃，
-    // 导致标题/正文在深色主题里无视严重级别渲染成近黑。样式表颜色可越过祖先样式表生效。
+    // Color via the label's own style sheet so an ancestor style sheet (e.g. GallerySampleCard)
+    // does not override QPalette::WindowText to near-black in dark theme.
     label->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
             .arg(color.red())
             .arg(color.green())
@@ -582,12 +577,8 @@ void InfoBar::drawSeverityGlyph(QPainter& painter, const QRectF& targetRect) con
     if (glyph.isEmpty() || targetRect.isEmpty())
         return;
 
-    // Badge12 semantic aliases historically pointed at 16 px *circle* drawings
-    // (checkmark_circle / error_circle). Those read as a second ring inside the
-    // filled Fluent badge. Resolve a compact optical variant and paint with
-    // drawText so DirectWrite hinting stays active.
-    // zh_CN: Badge12 语义别名曾指向 16 px「带圈」字形（checkmark_circle / error_circle），
-    // 画在填充徽标圆内会像第二层环。解析紧凑光学变体并用 drawText 绘制，保留 DirectWrite hinting。
+    // Paint a compact glyph directly rather than the 16 px circled variants, which would
+    // read as a second ring inside the filled badge.
     painter.save();
     painter.setPen(isEnabled() ? m_badgeForegroundColor : m_disabledTextColor);
     painter.setBrush(Qt::NoBrush);

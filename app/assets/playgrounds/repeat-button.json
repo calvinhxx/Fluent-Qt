@@ -309,8 +309,8 @@
     }
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A button that raises its click event repeatedly while it stays pressed.",
+    "zh": "按住期间连续触发点击。"
   },
   "presets": [
     {

@@ -51,10 +51,7 @@ Expander::Expander(QWidget* parent) : Card(parent)
     m_headerLabel->setObjectName(QStringLiteral("fluentExpanderHeaderText"));
     m_headerLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_headerLabel->setFluentTypography(Typography::FontRole::BodyStrong);
-    // Primary forces a self stylesheet color so ancestor Gallery/card style
-    // sheets cannot leave the header stuck on a Light WindowText palette.
-    // zh_CN: Primary 走标签自身样式表上色，避免祖先 Gallery/卡片样式表
-    // 把标题卡在浅色 WindowText palette 上。
+    // Primary applies a self stylesheet so ancestor card/Gallery styles cannot override WindowText.
     m_headerLabel->setTextColorRole(textfields::Label::TextColorRole::Primary);
     m_headerLabel->setTextElideMode(Qt::ElideRight);
 
@@ -485,9 +482,7 @@ void Expander::beginViewportTransition()
     }
 
     m_viewportTransitionActive = true;
-    // Hidden siblings still synchronize page geometry, but have no reading
-    // position to preserve. Capturing competing anchors during initialization
-    // can recursively move their shared scrollbar when the page is shown.
+    // Hidden siblings still sync geometry, but skip capturing scroll anchors so init doesn't jump the shared scrollbar.
     if (!isVisible())
         return;
     m_anchorViewportY =

@@ -15,24 +15,9 @@ class QTimer;
 namespace fluent::scrolling {
 
 /**
- * @brief Reusable elastic-overscroll / bounce state machine for the collection views.
- * zh_CN: 集合视图共享的弹性 overscroll / 回弹状态机。
- *
- * Hoisted from ListView's reference implementation so GridView, TreeView, FlowView, and
- * ListView all share one wheel-handling path (the value, the bounce animation + timer, the
- * NoPhaseDiscrete cluster handling, and the elastic rubber-band). The host view forwards
- * wheelEvent() to handleWheel() and supplies a few hooks describing how it reads its scroll
- * range, performs an in-range scroll, and repaints; it renders the offset by reading value().
- * zh_CN: 自 ListView 的参考实现抽取，使 GridView/TreeView/FlowView/ListView 共用同一套滚轮处理
- *（overscroll 值、回弹动画+定时器、NoPhaseDiscrete 成簇处理、弹性橡皮筋）。宿主把 wheelEvent()
- * 转发到 handleWheel()，并通过若干 hook 描述如何读取滚动范围、执行范围内滚动、重绘；宿主读取 value()
- * 渲染偏移。
- *
- * Single-axis: the controller tracks one overscroll magnitude for the *active* scroll axis.
- * A horizontally-flowing view supplies isHorizontal() and its horizontal scrollbar via the
- * hooks; the value then maps to that axis.
- * zh_CN: 单轴：控制器只跟踪“当前滚动轴”的一个 overscroll 量。横向流动的视图通过 hook 提供
- * isHorizontal() 与横向滚动条，value() 即映射到该轴。
+ * @brief Shared single-axis elastic overscroll and bounce-back controller for scrollable views.
+ * Views forward wheelEvent() to handleWheel() with range/scroll hooks and offset rendering by value().
+ * zh_CN: 滚动视图共享的单轴弹性过冲与回弹状态机；视图将 wheelEvent() 交给 handleWheel() 并按 value() 渲染偏移。
  */
 class OverscrollController : public QObject {
     Q_OBJECT

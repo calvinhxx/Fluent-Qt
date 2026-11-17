@@ -25,13 +25,11 @@ class OverscrollController;
 namespace fluent::collections {
 
 /**
- * @brief Fluent grid collection view with configurable cell metrics.
- * zh_CN: 支持配置单元格尺寸的 Fluent 网格集合视图。
- *
- * GridView uses QListView grid behavior while adding Fluent selection chrome,
- * header and placeholder text, drag reordering, and column/spacing constraints.
- * zh_CN: GridView 使用 QListView 的网格能力，并增加 Fluent 选中外观、标题与占位文本、
- * 拖拽重排以及列数/间距约束。
+ * @brief Fluent grid collection view with configurable cell size, spacing, and column limits.
+ * Built on QListView in icon-wrapping mode with Fluent selection visuals, optional header and
+ * placeholder text, elastic overscroll, and drag-and-drop reordering.
+ * zh_CN: 支持自定义单元格尺寸、间距和最大列数的 Fluent 网格视图。
+ * 基于 QListView 换行图标模式构建，提供 Fluent 选中样式、标题与占位文本、边界回弹及拖拽重排。
  */
 class GridView : public QListView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -50,8 +48,8 @@ public:
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
-     * @brief Whether the item-view viewport is currently hovered.
-     * zh_CN: item-view viewport 当前是否处于悬停状态。
+     * @brief Whether the viewport is currently hovered.
+     * zh_CN: 视口当前是否处于悬停状态。
      */
     Q_PROPERTY(bool viewportHovered READ viewportHovered NOTIFY viewportHoveredChanged)
 
@@ -69,9 +67,10 @@ public:
         WRITE setScrollChainingEnabled
         NOTIFY scrollChainingEnabledChanged)
     /**
-     * @brief Whether the view shows an elastic overscroll/bounce at the scroll boundary.
-     * Enabled by default; disable for chrome that should stop cleanly at the edge.
-     * zh_CN: 滚动到边界时是否显示弹性回弹。默认开启；不希望回弹的 chrome 可关闭，使其在边界干脆停住。
+     * @brief Whether elastic overscroll bounce is enabled at scroll boundaries.
+     * Enabled by default; disable for navigation panes or chrome that should stop cleanly at the edge.
+     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启）。
+     * 希望在边界干脆停住（例如导航栏）时可关闭此选项。
      */
     Q_PROPERTY(bool overscrollEnabled
         READ isOverscrollEnabled
@@ -94,8 +93,8 @@ public:
      */
     Q_PROPERTY(QString headerText READ headerText WRITE setHeaderText NOTIFY headerTextChanged)
     /**
-     * @brief Text shown when the grid model has no rows to present.
-     * zh_CN: 网格 model 没有可展示行时显示的占位文本。
+     * @brief Text shown when the model has no items.
+     * zh_CN: 模型为空时显示的占位文本。
      */
     Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
 
@@ -123,11 +122,9 @@ public:
     explicit GridView(QWidget* parent = nullptr);
     ~GridView() override;
 
-    // --- Selection ---
     SelectionMode selectionMode() const { return m_selectionMode; }
     void setSelectionMode(SelectionMode mode);
 
-    // --- Appearance ---
     Typography::FontRole fontRole() const { return m_fontRole; }
     void setFontRole(Typography::FontRole role);
 
@@ -148,7 +145,6 @@ public:
     bool viewportHovered() const { return m_viewportHovered; }
     bool isViewportHovered() const { return viewportHovered(); }
 
-    // --- Drag reorder ---
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
@@ -158,7 +154,6 @@ public:
     bool isOverscrollEnabled() const;
     void setOverscrollEnabled(bool enabled);
 
-    // --- Grid layout ---
     QSize cellSize() const { return m_cellSize; }
     void setCellSize(const QSize& size);
 
@@ -171,7 +166,6 @@ public:
     int maxColumns() const { return m_maxColumns; }
     void setMaxColumns(int maxCols);
 
-    // --- Selection API ---
     int selectedIndex() const;
     QList<int> selectedRows() const;
     void setSelectedIndex(int index);
@@ -197,8 +191,8 @@ signals:
     void overscrollEnabledChanged();
     void itemReordered(int fromIndex, int toIndex);
     /**
-     * @brief Emits the row once for the same pointer action as inherited clicked().
-     * zh_CN: 与继承的 clicked() 对应，在同一次指针点击中发送一次行号。
+     * @brief Convenience signal emitting the clicked row index alongside QAbstractItemView::clicked().
+     * zh_CN: 与 QAbstractItemView::clicked() 对应的便捷信号，直接传递被点击的行号。
      */
     void itemClicked(int index);
 
@@ -213,7 +207,6 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
     int verticalOffset() const override;
 
-    // Drag-reorder (custom mouse handling)
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;

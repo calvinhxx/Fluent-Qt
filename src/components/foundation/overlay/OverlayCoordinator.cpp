@@ -21,9 +21,8 @@ namespace fluent::overlay {
 namespace {
 constexpr const char* inputActiveProperty = "_fluent_overlay_input_active";
 
-// Keep the matching release out of the background even when dismissal deletes
-// the overlay synchronously. The next press/deactivation ends a lost gesture.
-// zh_CN: 即使关闭同步析构浮层，也吞掉对应释放；新的按下或窗口失活结束丢失的手势。
+// Swallow the matching release even when dismissal deletes the overlay synchronously;
+// a new press or window deactivation ends an orphaned gesture.
 class DismissedPressGuard final : public QObject {
 public:
     DismissedPressGuard(QWidget* top, Qt::MouseButton button) : QObject(top), m_top(top), m_button(button)
@@ -62,17 +61,14 @@ private:
 };
 } // namespace
 
-// Input is filtered before QWidget dispatch; host geometry is observed after
-// component application filters have adapted their content size.
-// zh_CN: 输入在 QWidget 分发前拦截；宿主几何在组件应用过滤器调整内容尺寸后同步。
+// Intercept input before QWidget dispatch; sync host geometry after component filters adapt size.
 class OverlayInputFilter final : public QObject {
 public:
     explicit OverlayInputFilter(OverlayCoordinator* owner) : QObject(owner), m_owner(owner) {}
 
     void queueFocusContainment()
     {
-        // Defer focus callbacks until the public property setter has returned.
-        // zh_CN: 等公共属性 setter 返回后再触发焦点回调。
+        // Defer focus update until the calling property setter returns.
         QTimer::singleShot(0, this, [this] {
             auto* focus = QApplication::focusWidget();
             if (m_owner && m_owner->m_inputActive && m_owner->m_modal && m_owner->m_overlay
@@ -218,8 +214,7 @@ bool OverlayCoordinator::setBackdropBlurRadius(double radius)
     if (!std::isfinite(radius))
         return false;
     const double value = qBound(0.0, radius, 32.0);
-    // Even an explicit zero before enabling modality opts out of its default.
-    // zh_CN: 启用模态前显式设置 0，也会关闭默认模糊。
+    // Explicit 0 before enabling modality opts out of the default modal blur.
     m_blurRadiusExplicit = true;
     if (m_blurRadius == value)
         return false;
@@ -241,9 +236,7 @@ OverlayScrim* OverlayCoordinator::updateScrim(const QString& objectName)
     syncInheritedThemeOverride(scrim, m_overlay);
     scrim->setModalAndDim(m_modal, m_dim);
     scrim->setDimOpacity(m_dimOpacity);
-    // Cached overlays may be below content created or raised since their last
-    // opening. Capture only after establishing the stack the user will see.
-    // zh_CN: 缓存浮层可能低于后来创建或置顶的内容；先确定显示层级，再抓取背景。
+    // Raise cached overlays above newer siblings before capturing the backdrop.
     raiseStack();
     scrim->setBackdrop(m_overlay, m_blurRadius);
     return scrim;
@@ -324,9 +317,7 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
     }
     if (event->type() == QEvent::KeyPress && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
         auto* widget = ::compatibility::detail::widgetForKeyEventReceiver(watched);
-        // Inner controls can cancel editing or reset zoom before an ignored
-        // Escape propagates to the surface and applies its close policy.
-        // zh_CN: 内部控件先取消编辑或重置缩放，未处理的 Esc 再向浮层传播并应用关闭策略。
+        // Let inner widgets handle Escape (e.g. cancel editing) before dismissing the overlay.
         if (widget && widget != m_overlay && m_overlay->isAncestorOf(widget))
             return false;
         if (!m_closeOnEscape && !m_modal)
@@ -372,9 +363,7 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
         if (!m_inputActive || !m_overlay || !m_overlay->isVisible())
             return wasModal;
     }
-    // A trigger can handle its own toggle without dismissing on press. This
-    // exception never makes a modal background interactive.
-    // zh_CN: 触发控件可自行切换开合而不在按下时自动关闭；该例外不放行模态背景输入。
+    // Allow trigger widgets to toggle without closing on press, while still blocking modal backgrounds.
     const bool consume = m_modal || (dismiss && m_consumes && m_consumes(global));
     if (consume)
         event->accept();
@@ -391,8 +380,7 @@ bool OverlayCoordinator::filterInput(QObject* watched, QEvent* event)
     if (dismiss && m_overlay->isEnabled()) {
         const QPointer<QObject> receiver(watched);
         emit dismissRequested(DismissReason::OutsidePress);
-        // Closing observers may delete the receiver as well as the overlay.
-        // zh_CN: 关闭观察者可能同时析构接收对象和浮层。
+        // Dismiss handlers may destroy both the event receiver and the overlay.
         return consume || !receiver;
     }
     return m_modal;
@@ -412,10 +400,8 @@ bool OverlayCoordinator::eventFilter(QObject* watched, QEvent* event)
         return false;
     }
 
-    // Window publishes its final surface from resizeEvent, after this filter's
-    // Resize notification. Observe that publication too, including inset-only changes.
-    // zh_CN: Window 在 resizeEvent 中发布最终区域，晚于此处的 Resize 过滤；
-    // 同步该属性更新，同时覆盖只有边距变化而没有 resize 的情况。
+    // Window updates fluentOverlaySurfaceRect inside resizeEvent (after this Resize filter),
+    // so watch that property as well to catch inset-only updates.
     const bool surfaceChanged = event->type() == QEvent::DynamicPropertyChange
         && static_cast<QDynamicPropertyChangeEvent*>(event)->propertyName() == overlaySurfaceRectPropertyName();
     if (event->type() == QEvent::Resize || surfaceChanged) {

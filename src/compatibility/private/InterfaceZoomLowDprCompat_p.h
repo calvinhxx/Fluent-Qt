@@ -160,9 +160,8 @@ inline bool repaintLowDprRegion(QWidget* widget, const QRegion& requested)
         }
         nativePass.setDevice(nullptr);
         {
-            // A pixel-coordinate view avoids Qt 5.15/6.2's minimum painter DPR of 1.
-            // It borrows the native buffer and never changes its DPR or ownership.
-            // zh_CN: 使用像素坐标视图，绕开 Qt 5.15/6.2 画笔的最小 DPR 1；不改原生缓冲区倍率或所有权。
+            // Pixel-coordinate wrapper directly over the native buffer to bypass Qt 5.15/6.2's min DPR of 1 (no ownership or DPR change).
+            // zh_CN: 直接引用原生缓冲的像素视图，绕开 Qt 5.15/6.2 画笔最小 DPR 1 的限制。
             QImage pixels(native->bits(), native->width(), native->height(), native->bytesPerLine(), native->format());
             QPainter painter(&pixels);
             painter.setClipRegion(QTransform::fromScale(dpr, dpr).map(tileRegion));

@@ -66,10 +66,7 @@ void ScrollView::init()
     m_cornerWidget = new TransparentCornerWidget(this);
     setCornerWidget(m_cornerWidget);
 
-    // Floating overlay bar for vertical "Visible" mode: parented to the viewport, it mirrors the
-    // native (gutter-less, AlwaysOff) scrollbar's range/value and floats over the content's right
-    // edge so content stays full-width. zh_CN: 垂直“常显”模式的浮动覆盖条：父级为视口，镜像原生（无沟槽、
-    // AlwaysOff）滚动条的范围/数值，浮于内容右缘之上，使内容保持整宽。
+    // Overlay bar used for vertical Visible mode so the viewport spans the full width without a scrollbar gutter.
     m_floatingVerticalBar = new ScrollBar(Qt::Vertical, viewport());
     m_floatingVerticalBar->setObjectName(QStringLiteral("fluentScrollViewFloatingVerticalBar"));
     m_floatingVerticalBar->hide();
@@ -183,11 +180,7 @@ void ScrollView::synchronizeContentWidget(bool notify)
     if (content == m_observedContentWidget.data())
         return;
 
-    // A call made explicitly through QScrollArea follows Qt's ownership
-    // contract. Treat the newly observed widget as Owned; the base class may
-    // already have destroyed the previous widget before this synchronization.
-    // zh_CN: 通过 QScrollArea 显式调用时遵循 Qt 的所有权契约。新观察到的内容
-    // 视为 Owned；在同步发生前，基类可能已经销毁旧内容。
+    // Direct QScrollArea::setWidget() calls use Owned semantics; the base class may have already deleted the prior widget.
     observeContentWidget(content, nullptr, WidgetOwnership::Owned, notify);
 }
 
@@ -443,9 +436,7 @@ bool ScrollView::event(QEvent* event)
     const QEvent::Type type = event->type();
     const QPointer<ScrollView> guard(this);
     const bool handled = QScrollArea::event(event);
-    // QObject consumes DeferredDelete by destroying this widget synchronously.
-    // Never query QScrollArea's content after its base event handler deleted it.
-    // zh_CN: QObject 处理 DeferredDelete 时会同步销毁自身；基类返回后不能再查询内容。
+    // QObject::event() destroys this widget synchronously on DeferredDelete; guard before querying content.
     if (!guard)
         return handled;
     synchronizeContentWidget();
@@ -534,13 +525,8 @@ void ScrollView::wheelEvent(QWheelEvent* event)
     stopAnimations();
     QScrollArea::wheelEvent(event);
 
-    // With chaining disabled, a view that has scrollable range owns the wheel
-    // even at its edges: a boundary event left ignored would bubble to an
-    // enclosing scroller and pan the host page mid-gesture. A view with
-    // nothing to scroll stays transparent either way.
-    // zh_CN: 关闭链式滚动后，存在可滚动范围的视图在边缘也持有滚轮：边缘事件若
-    // 保持 ignore 会冒泡给外层滚动容器，手势中途带动宿主页面平移。本身无可滚动
-    // 内容的视图则照常透传。
+    // Consume boundary wheel events when chaining is disabled and a scrollable range exists,
+    // preventing nested scrollers from panning an outer host page mid-gesture.
     if (!m_scrollChainingEnabled && !event->isAccepted() && hasScrollableRange())
         event->accept();
 }
@@ -627,13 +613,8 @@ void ScrollView::applyAxisPolicy(Axis axis)
     const ScrollBarVisibility visibility = visibilityForAxis(axis);
     const bool enabled = isAxisEnabled(axis);
 
-    // A vertical "Visible" bar becomes a WinUI-style floating overlay: the native bar reserves
-    // no gutter (AlwaysOff) so the viewport — and content like the home hero — spans the full
-    // width, and a synced translucent ScrollBar floats over the right edge and auto-hides. This
-    // removes the opaque gutter strip beside the hero and the horizontal reflow as the bar toggles.
-    // The horizontal bar keeps the classic policies. zh_CN: 垂直“常显(Visible)”改为 WinUI 风格的浮动
-    // 覆盖条：原生条不预留沟槽(AlwaysOff)，使视口（及首页 hero 等内容）铺满整宽，另用一条同步的半透明
-    // ScrollBar 浮于右缘并自动隐藏。这消除了 hero 旁的不透明沟槽条带，以及滚动条显隐时的横向重排。水平条沿用经典策略。
+    // Vertical Visible mode hides the native bar (no gutter) and floats a synced ScrollBar over the right edge
+    // so full-width content never reflows; horizontal bars keep standard policies.
     const bool verticalOverlay = axis == Axis::Vertical && enabled && visibility == ScrollBarVisibility::Visible;
 
     Qt::ScrollBarPolicy policy = Qt::ScrollBarAsNeeded;
@@ -687,8 +668,7 @@ void ScrollView::positionFloatingScrollBar()
     const QRect target(qMax(0, area->width() - thickness), 0, thickness, qMax(0, area->height()));
     if (m_floatingVerticalBar->geometry() != target)
         m_floatingVerticalBar->setGeometry(target);
-    // Preserve overlay stacking even when an ancestor is hidden during rendering.
-    // zh_CN: 父级隐藏时捕获控件也应保留覆盖条在内容之上的层级。
+    // Keep overlay above content even when rendered off-screen with a hidden ancestor.
     if (!m_floatingVerticalBar->isHidden())
         m_floatingVerticalBar->raise();
 }
@@ -806,10 +786,7 @@ void ScrollView::applyZoomToContent()
     if (!content || m_unscaledContentSize.isEmpty())
         return;
 
-    // Resizable content is sized by QScrollArea to fill/scroll its viewport; pinning it
-    // to a fixed zoom size here would defeat widgetResizable and collapse flow layouts.
-    // zh_CN: 可伸缩内容由 QScrollArea 负责填充/滚动其视口；在此固定缩放尺寸会破坏
-    // widgetResizable 并使流式布局塌缩。
+    // Let QScrollArea manage widgetResizable content; pinning a fixed zoom size would collapse flow layouts.
     if (widgetResizable())
         return;
 

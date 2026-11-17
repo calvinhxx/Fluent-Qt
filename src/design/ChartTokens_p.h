@@ -3,8 +3,7 @@
 #include <QColor>
 #include <QVector>
 
-// Chart-only semantic roles from the approved Charts study. Existing chart
-// palette users (for example Avatar) retain their published theme behavior.
+// Chart-only semantic tokens; existing palette users (e.g. Avatar) keep their published theme colors.
 namespace fluent::charts::tokens {
 inline QVector<QColor> series(bool dark, const QColor& accent)
 {

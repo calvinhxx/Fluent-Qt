@@ -54,23 +54,18 @@ using AppWindowMetrics = metrics::AppWindow;
 using NavigationMetrics = metrics::Navigation;
 using TitleBarMetrics = metrics::TitleBar;
 
-// Loading counts towards the brand's presentation time; fast machines still get the full reveal.
-// zh_CN: 加载时间计入品牌展示时长，快机器也能看到完整显影；减少动效和简洁模式不增加展示等待。
+// Loading time counts toward the minimum brand reveal; Reduced/Disabled motion skips the wait.
+// zh_CN: 加载耗时计入品牌展示最小时长；减弱或禁用动效时不额外等待。
 constexpr int kStartupSplashMinimumMs = 1400;
 constexpr int kStartupBrandReadyHoldMs = 250;
-// Allow a few compositor frames after loading, including the DWM first-show backdrop setup.
-// zh_CN: 加载完成后留出数帧合成时间，包括 DWM 首次显示时的背景设置。
+// Allow a few compositor frames after loading so DWM finishes initial backdrop setup.
+// zh_CN: 加载完成后留出数帧合成时间，等 DWM 完成首屏背景初始化。
 constexpr int kStartupSplashHoldMs = 120;
 
-// Delay from splash dismissal to the first-launch intro tour, so the chrome fade-in finishes and
-// the window is settled before the coach marks appear. zh_CN: 从 splash 消失到首启引导之间的延迟，
-// 让 chrome 淡入完成、窗口稳定后再出现操作引导。
+// Delay before starting the first-launch tour so splash fade-out and chrome settle first.
 constexpr int kIntroTourDelayMs = 480;
 
-// Idle gap after the last window move/resize event before splash-phase prewarm resumes. Long enough
-// to span the lulls between drag updates (so warming stays paused for the whole gesture), short enough
-// that warming picks back up promptly once the user lets go. zh_CN: 最后一次窗口移动/缩放事件后、恢复 splash 期
-// 预热前的空闲间隔。足够跨过拖动更新之间的停顿（使整个手势期间保持暂停），又短到松手后预热迅速接续。
+// Debounce gap after move/resize events before resuming splash-phase prewarm.
 constexpr int kPrewarmInteractionResumeMs = 200;
 
 } // namespace
@@ -201,16 +196,12 @@ void GalleryWindow::installSplashScreen()
     if (!m_contentPresenter)
         return;
 
-    // While loading we show only the native window controls (min/max/close): the
-    // splash owns the screen, so the back/menu buttons, app title and search box would
-    // just be inert chrome. They come back when the splash dismisses.
-    // zh_CN: 加载期间只保留原生窗口按钮（最小化/最大化/关闭）：splash 占据画面，返回/菜单按钮、
-    // 应用标题与搜索框只是无用装饰，故隐藏；splash 关闭时再恢复。
+    // Hide Gallery title-bar chrome while splash owns the content area, keeping only native window controls.
+    // zh_CN: 启动遮罩覆盖期间隐藏自绘标题栏控件，仅保留原生窗口按钮，待退场时恢复。
     if (m_titleBar)
         m_titleBar->setChromeVisible(false);
 
-    // Cover the content area with the splash from the very first frame; the real title
-    // bar stays live above it. zh_CN: 从第一帧起用 splash 盖住内容区；真实标题栏仍在其上方可用。
+    // Cover the content area from the first frame while the title bar stays interactive above it.
     m_splashScreen = new GallerySplashScreen(contentHost());
     m_splashEventSource = m_splashScreen;
     if (m_titleBar) {
@@ -243,14 +234,12 @@ void GalleryWindow::installSplashScreen()
     connect(&MotionPolicy::instance(), &MotionPolicy::modeChanged, this, [this]() { scheduleStartupFinish(); });
     m_splashScreen->show();
     m_splashScreen->raise();
-    // Do not spend page construction before the splash reaches its first actual paint.
-    // zh_CN: splash 实际绘制首帧之后才开始建页，避免首次显示前长时间空白。
+    // Defer page construction until the splash paints its first frame.
+    // zh_CN: 等 splash 绘出首帧后再开始构建页面，避免启动阶段长时间白屏。
     m_contentPresenter->setPrewarmPaused(true);
     m_contentPresenter->setStartupCovered(true);
     m_splashScreen->installEventFilter(this);
 
-    // Prewarm completion marks content ready; presentation timing belongs to the Gallery shell.
-    // zh_CN: 预热完成表示内容已就绪；展示节奏由 Gallery 外壳控制，公共组件仍可随时 dismiss。
     connect(m_contentPresenter, &GalleryContentPresenter::prewarmProgress, this, [this](int done, int total) {
         if (m_splashScreen)
             m_splashScreen->setProgress(done, total);
@@ -349,12 +338,8 @@ void GalleryWindow::deferPrewarmDuringInteraction()
 {
     if (!m_contentPresenter || m_startupReadyTimer.isValid())
         return;
-    // A top-level move/resize means the user is manipulating the window (or we just placed it at
-    // startup). Pause page warming so a synchronous build can't stutter the gesture, then (re)arm a
-    // short idle timer; continuous drag updates keep resetting it, so warming resumes only once the
-    // window has been still for kPrewarmInteractionResumeMs. zh_CN: 顶层窗口移动/缩放即用户在操作窗口（或启动时
-    // 刚摆放）。暂停建页使同步构建不卡顿手势，再（重新）启动短空闲计时器；连续拖动会不断重置它，于是窗口静止
-    // kPrewarmInteractionResumeMs 后才恢复预热。
+    // Pause prewarm while moving/resizing so synchronous page builds do not stutter the drag.
+    // zh_CN: 移动或缩放窗口期间暂停预热，松手空闲 kPrewarmInteractionResumeMs 后再恢复。
     m_contentPresenter->setPrewarmPaused(true);
     if (!m_prewarmResumeTimer) {
         m_prewarmResumeTimer = new QTimer(this);
@@ -374,9 +359,8 @@ void GalleryWindow::finishStartup()
         return;
     m_startupFinished = true;
     m_startupFinishTimer->stop();
-    // Replacement can explicitly end startup early. Do not keep constructing pages behind
-    // the now-interactive UI; any omitted route retains the ordinary lazy fallback.
-    // zh_CN: 遮罩被替换可提前结束启动；不在已可交互的 UI 后继续建页，遗漏路由保留按需回退。
+    // Replacing the splash ends startup early; leave unbuilt routes for on-demand loading.
+    // zh_CN: 若启动遮罩被提前替换，则中止后台预热，其余页面留待按需加载。
     m_contentPresenter->cancelPrewarm();
     m_contentPresenter->setStartupCovered(false);
     LOG_DEBUG(QStringLiteral("GalleryWindow startup dismiss visibleMs=%1 readyMs=%2")
@@ -384,11 +368,8 @@ void GalleryWindow::finishStartup()
             .arg(m_startupReadyTimer.elapsed()));
     if (m_titleBar)
         m_titleBar->setChromeVisible(true, /*animated*/ true);
-    // The window has composited several frames, so we're past the DWM first-show race that can
-    // leave Mica un-applied (a flat neutral surface until the next activation). Force the
-    // backdrop on now, as the content surfaces from behind the splash.
-    // zh_CN: 窗口已合成数帧，已过那个可能让 Mica 未生效（停在扁平中性表面、要等下次激活）的 DWM 首屏竞争；
-    // 在内容从 splash 后浮现时强制施加背景。
+    // Reapply backdrop after initial frames settle to avoid the DWM first-show Mica race.
+    // zh_CN: 首屏数帧合成完毕后重新应用系统背景材质，绕过 DWM 首次显示时 Mica 偶发不生效的竞争。
     reapplySystemBackdrop();
     if (m_splashScreen) {
         m_splashScreen->cacheDismissalContent(m_navigationView);
@@ -450,11 +431,8 @@ void GalleryWindow::buildNavigationShell()
 {
     m_navigationView = new fluent::navigation::NavigationView(this);
     m_navigationView->setObjectName(QStringLiteral("galleryNavigationView"));
-    // Auto adapts the pane to the window width, like WinUI Gallery: >=1008 expanded with
-    // labels, >=640 compact icon rail, and below that fully hidden (LeftMinimal) behind the
-    // title-bar menu button.
-    // zh_CN: Auto 让窗格随窗口宽度自适应（对齐 WinUI Gallery）：>=1008 展开带标签，>=640 紧凑图标栏，
-    // 更窄则完全隐藏（LeftMinimal），收进标题栏菜单按钮后。
+    // Responsive thresholds matching WinUI Gallery: >=1008 expanded, >=640 compact rail, <640 hidden.
+    // zh_CN: 响应式断点对齐 WinUI Gallery：>=1008 展开，>=640 紧凑图标栏，<640 隐藏。
     m_navigationView->setDisplayMode(fluent::navigation::NavigationView::DisplayMode::Auto);
     m_navigationView->setCompactModeThresholdWidth(NavigationMetrics::CompactThresholdWidth);
     m_navigationView->setExpandedModeThresholdWidth(NavigationMetrics::ExpandedThresholdWidth);
@@ -494,27 +472,15 @@ void GalleryWindow::buildNavigationShell()
     });
     connect(m_navigationView, &fluent::navigation::NavigationView::effectiveDisplayModeChanged, this,
         [this](fluent::navigation::NavigationView::DisplayMode mode) {
-            // Title-bar content adapts with the layout (WinUI Gallery): the app title+icon
-            // only show when the pane is expanded or a compact rail; in the hidden minimal
-            // layout they are dropped so the search box keeps its room. updateLayout() also
-            // re-flows the search box for the new leading-group width.
-            // zh_CN: 标题栏内容随布局自适应（对齐 WinUI Gallery）：应用标题+图标只在窗格展开或紧凑栏时显示；
-            // 在隐藏的最小布局里去掉它们，给搜索框让位。updateLayout() 也会按新的前导组宽度重排搜索框。
+            // Re-flow title bar so LeftMinimal hides app title/icon to leave room for search.
             if (m_titleBar)
                 m_titleBar->updateLayout();
-            // Auto-expand when the layout reaches the Left rail and auto-collapse otherwise, like
-            // WinUI: the inline pane is open only in Left. The signal fires only on an actual mode
-            // change, so a manual pane toggle within Left (which leaves the mode untouched) is not
-            // overridden. zh_CN: 到达 Left 栏时自动展开、否则自动收起，与 WinUI 一致：内联窗格仅在 Left 打开。
-            // 该信号仅在模式真正变化时触发，故 Left 内的手动开合（模式不变）不会被覆盖。
+            // Auto-open the inline pane only in Left mode; effectiveDisplayModeChanged avoids
+            // overriding manual pane toggles within the same mode.
+            // zh_CN: 仅在宽屏 Left 模式下自动展开内联窗格，且只在断点模式变化时同步，不覆盖手动开合。
             m_navigationView->setPaneOpen(mode == fluent::navigation::NavigationView::DisplayMode::Left);
             applyNavigationPaneDensity();
         });
-    // The inline rail vs full-label density is purely a function of the pane's open state now —
-    // the same in every side mode — so drive it off paneOpenChanged (NavigationView presents the
-    // open pane inline when expanded, or as a flyout when compact / minimal).
-    // zh_CN: 内联栏 vs 完整标签的密度现在只取决于窗格开合——各侧边模式一致——故由 paneOpenChanged 驱动
-    //（NavigationView 展开时内联呈现打开的窗格，紧凑/最小时呈现为浮层）。
     connect(m_navigationView, &fluent::navigation::NavigationView::paneOpenChanged, this, [this](bool) {
         applyNavigationPaneDensity();
     });
@@ -539,10 +505,6 @@ void GalleryWindow::buildNavigationShell()
 
 void GalleryWindow::buildContentPresenter()
 {
-    // The presenter owns the route -> page swap inside the navigation view's
-    // content host; in-page navigation flows back through routeActivated.
-    // zh_CN: presenter 负责在导航视图 content host 内完成路由 → 页面的替换；
-    // 页面内导航经 routeActivated 回流。
     m_contentPresenter = new GalleryContentPresenter(m_navigationView->contentHost(), m_navigationViewModel, this,
         platform::capabilities().maxResidentRoutes);
     connect(m_contentPresenter, &GalleryContentPresenter::routeActivated, this, [this](const QString& routeId) {
@@ -658,32 +620,20 @@ void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
         m_splashScreen->clearDismissalContent();
     LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1").arg(routeId));
 
-    // Present synchronously: the presenter itself decides whether this is an instant swap
-    // (warm, resident page) or a shimmer-skeleton-then-lazy-build (cold page), so there is
-    // nothing heavy to defer off this signal. navigateBack() also relies on currentRouteId()
-    // being updated by the time this returns.
-    // zh_CN: 同步换页：是瞬时切换（已预热的常驻页）还是「先骨架屏再懒构建」（冷页）由 presenter 自行决定，
-    // 故没有重活需要从此信号上推迟；navigateBack() 也依赖本函数返回时 currentRouteId() 已更新。
+    // Present synchronously because navigateBack() expects currentRouteId() to update before return.
+    // zh_CN: 同步切换路由（冷页由内部先切骨架屏），确保 navigateBack() 返回前 currentRouteId() 已更新。
     recordNavigationHistory(routeId);
     if (m_contentPresenter)
         m_contentPresenter->presentRoute(routeId);
 
-    // Selecting a destination from the pane while it is a light-dismiss flyout (compact / minimal)
-    // closes it, like WinUI — the inline expanded pane (wide windows) stays put. Gate on isVisible():
-    // effectiveDisplayMode() reads the live width, which during construction (before show()) is 0 and
-    // resolves to LeftMinimal — so the INITIAL selectRoute() would spuriously close the pane and leave
-    // it shut once the window opens wide. A flyout only exists on a shown window, so only dismiss then.
-    // zh_CN: 在窗格作为轻关闭浮层（紧凑/最小）时选择目标会将其关闭，与 WinUI 一致——内联展开的窗格（宽窗）保持不动。
-    // 以 isVisible() 门控：effectiveDisplayMode() 取实时宽度，构造期（show() 之前）宽度为 0、会解析成 LeftMinimal——
-    // 于是「初始 selectRoute()」会误关窗格，并在窗口随后以宽布局打开后仍保持关闭。浮层只在已显示的窗口上存在，故仅此时关闭。
+    // Dismiss flyout nav after choosing a leaf route, but guard on isVisible(): before show()
+    // width is 0 so effectiveDisplayMode() reports LeftMinimal and would wrongly close the initial pane.
+    // zh_CN: 紧凑/最小时选定目标页后收起浮层窗格；以 isVisible() 防护，避免构造期宽度为 0 误关初始窗格。
     if (m_navigationView && m_navigationView->isPaneOpen() && isVisible()) {
         using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
         const DisplayMode mode = m_navigationView->effectiveDisplayMode();
-        // Selecting a leaf destination dismisses the flyout (WinUI). But selecting a CATEGORY only
-        // expands its children inline, so the drawer must stay open for the user to drill into them —
-        // closing it there would discard the expansion the click just performed. zh_CN: 选择叶子目标会关闭
-        // 浮层（与 WinUI 一致）。但选择「分类」只是内联展开其子项，故抽屉须保持打开以便用户继续下钻——此时关闭会丢掉这次
-        // 点击刚展开的内容。
+        // Keep the flyout open when clicking a category so its child items can expand inline.
+        // zh_CN: 点击分类项仅内联展开子项，保持浮层打开以便继续选择子页面。
         const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
         const bool isCategory = item && item->kind == GalleryNavigationItem::Kind::CategoryRoute;
         if (!isCategory && (mode == DisplayMode::LeftCompact || mode == DisplayMode::LeftMinimal))
@@ -773,14 +723,8 @@ void GalleryWindow::applyNavigationStyle(GallerySettings::NavigationStyle style)
     setTopNavigationChrome(mode == DisplayMode::Top);
     m_navigationView->setDisplayMode(mode);
     const DisplayMode effectiveMode = m_navigationView->effectiveDisplayMode();
-    // The pane is presented inline-open only when the effective mode is the expanded Left rail; in
-    // compact/minimal it starts closed (icon rail / hidden) and opens on demand as a flyout, and Top
-    // has no side pane. This is re-synced on effectiveDisplayModeChanged so widening auto-expands and
-    // narrowing auto-collapses, like WinUI — and so it stays correct regardless of the construction
-    // vs show ordering (effectiveDisplayMode() reads 0 width before show()).
-    // zh_CN: 仅当有效模式为展开的 Left 栏时窗格内联打开；紧凑/最小下起始关闭（图标栏/隐藏）、按需以浮层打开，
-    // Top 无侧栏。此状态在 effectiveDisplayModeChanged 时重新同步，故加宽自动展开、变窄自动收起，与 WinUI 一致——
-    // 且无论「构造 vs 显示」的先后都正确（show() 之前 effectiveDisplayMode() 读到的是 0 宽度）。
+    // Only Left mode starts inline-open; compact/minimal open on demand as flyouts.
+    // zh_CN: 仅宽屏 Left 模式默认内联展开，其余模式默认收起（紧凑/最小按需弹出浮层）。
     m_navigationView->setPaneOpen(effectiveMode == DisplayMode::Left);
     applyNavigationPaneDensity();
     if (m_titleBar)
@@ -826,13 +770,8 @@ void GalleryWindow::toggleNavigationDisplayMode()
         return;
     }
 
-    // One gesture for every side mode: just flip the pane open/closed. NavigationView decides the
-    // presentation — inline push when expanded, a light-dismiss flyout (its own surface + shadow +
-    // outside/Esc dismiss) when compact / minimal — so there is no separate drawer to drive here.
-    // The icon/label density follows via applyNavigationPaneDensity() (paneOpenChanged).
-    // zh_CN: 所有侧边模式同一个手势：仅翻转窗格开合。由 NavigationView 决定呈现——展开时内联推开，
-    // 紧凑/最小时为轻关闭浮层（自带表面+阴影+外部/Esc 关闭）——故此处不再需要单独的抽屉。
-    // 图标/标签密度经 applyNavigationPaneDensity()（paneOpenChanged）跟随。
+    // NavigationView chooses inline vs overlay display based on mode; density tracks paneOpenChanged.
+    // zh_CN: 展开形态（内联或浮层）由 NavigationView 根据模式自行决定，标签密度随 paneOpenChanged 同步。
     m_navigationView->setPaneOpen(!m_navigationView->isPaneOpen());
     LOG_DEBUG(QStringLiteral("GalleryWindow navigationPaneToggled paneOpen=%1 effectiveMode=%2 chromeWidth=%3")
             .arg(m_navigationView->isPaneOpen() ? QStringLiteral("true") : QStringLiteral("false"))

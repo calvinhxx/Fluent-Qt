@@ -12,13 +12,12 @@
 namespace fluent::status_info {
 
 /**
- * @brief Fluent linear progress indicator for determinate and indeterminate
- * work. zh_CN: 用于确定和不确定进度的 Fluent 线性进度指示器。
+ * @brief Fluent linear progress bar for determinate and indeterminate progress.
+ * zh_CN: Fluent 线性进度条，支持确定进度和不确定动画。
  *
- * ProgressBar exposes value bounds, paused/error status, rail visibility, bar
- * thickness, and indeterminate animation as explicit visual state.
- * zh_CN: ProgressBar
- * 将值范围、暂停/错误状态、轨道可见性、条厚度和不确定动画暴露为明确视觉状态。
+ * Exposes value bounds, paused/error states, rail visibility, track thickness,
+ * and indeterminate animation.
+ * zh_CN: 支持数值范围、暂停/错误状态、轨道显隐、轨道粗细以及不确定进度动画。
  */
 class ProgressBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT

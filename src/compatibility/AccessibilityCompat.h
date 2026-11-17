@@ -7,9 +7,17 @@
 #include <QAccessibleInterface>
 #include <utility>
 
+/**
+ * @brief Return type of QAccessibleInterface::relations() across Qt 5 and Qt 6.
+ * zh_CN: 跨 Qt 5 和 Qt 6 的 QAccessibleInterface::relations() 返回类型。
+ */
 using FluentAccessibleRelationList = decltype(std::declval<const QAccessibleInterface&>().relations(
     QAccessible::AllRelations));
 
+/**
+ * @brief Politeness level for live accessibility announcements.
+ * zh_CN: 无障碍实时播报的打断优先级。
+ */
 enum class FluentAccessibleAnnouncementPoliteness { Unspecified = -1, Polite, Assertive };
 
 /**

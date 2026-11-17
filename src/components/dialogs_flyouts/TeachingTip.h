@@ -15,13 +15,12 @@ class QWidget;
 namespace fluent::dialogs_flyouts {
 
 /**
- * @brief Contextual teaching flyout with target placement and optional tail.
- * zh_CN: 支持目标定位和可选尾巴的上下文教学浮层。
+ * @brief Contextual teaching flyout with target anchoring, placement options, and optional tail.
+ * zh_CN: 指向目标控件的教学引导浮层，支持方位配置、轻点关闭和可选指向尾巴。
  *
- * TeachingTip adds preferred placement, placement margin, light-dismiss control,
- * and tail visibility on top of Popup/Flyout overlay behavior.
- * zh_CN: TeachingTip 在 Popup/Flyout 浮层行为上增加首选位置、边距、
- * light-dismiss 控制和尾巴可见性。
+ * Extends Popup with preferred placement around a target widget, placement
+ * margin, light-dismiss control, and pointer tail rendering.
+ * zh_CN: 在 Popup 基础上增加相对目标的方位策略、间距、轻点关闭与指向尾巴绘制。
  */
 class TeachingTip : public Popup {
     Q_OBJECT
@@ -103,14 +102,12 @@ public:
     bool isTailVisible() const { return m_tailVisible; }
     void setTailVisible(bool visible);
 
-    /// Card content host: add child widgets (AnchorLayout etc.) to it. Its
-    /// geometry follows placement/cardSize automatically.
-    /// zh_CN: 卡片内容区容器——向此 widget 添加子控件（AnchorLayout 等）；
-    /// 几何随 placement / cardSize 自动更新，无需手动管理。
+    /** @brief Content container whose geometry updates automatically with placement and cardSize().
+     * zh_CN: 卡片内容区容器，几何随位置和 cardSize() 自动更新。 */
     QWidget* contentHost() const { return m_contentHost; }
 
-    /// Sets the card content size, excluding shadow and tail. Defaults to 360×200.
-    /// zh_CN: 设置卡片内容区尺寸（不含阴影和气泡箭头），默认 360×200。
+    /** @brief Sets the card content size excluding shadow and tail (default 360x200).
+     * zh_CN: 设置卡片内容区尺寸（不含阴影和尾巴），默认 360×200。 */
     void setCardSize(const QSize& size);
     QSize cardSize() const { return m_cardSizeHint; }
 

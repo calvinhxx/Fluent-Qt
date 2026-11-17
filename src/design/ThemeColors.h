@@ -225,10 +225,9 @@ extern const QColor Grey190;
 extern const std::vector<QColor> Charts;
 } // namespace Dark
 
-// Deterministic cross-platform high-contrast fallback based on the third Figma
-// color-style group. Native system contrast brushes are not imported.
-// zh_CN: 基于 Figma Color Styles 第三组构建的确定性跨平台高对比度回退；
-// 不导入原生系统对比色画刷。
+// Deterministic cross-platform high-contrast palette based on the third Figma
+// color-style group (does not import native OS system-color brushes).
+// zh_CN: 基于 Figma 第三组颜色样式的跨平台高对比度调色板（不读取原生系统对比色画刷）。
 namespace Contrast {
 
 namespace Fill {

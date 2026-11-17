@@ -21,7 +21,7 @@ ParticlesSession::ParticlesSession(QObject* host, QObject* parent) : QObject(par
 }
 ParticlesSession::~ParticlesSession()
 {
-    // Direct signals may delete this facade during a manager operation.
+    // Move d before resetting so in-flight calls keep PluginManager alive if a signal deletes the session.
     auto state = std::move(d);
     state.reset();
 }

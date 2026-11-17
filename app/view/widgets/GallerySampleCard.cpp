@@ -388,14 +388,9 @@ void GallerySampleCard::applyPalette()
               .arg(::CornerRadius::Overlay);
     if (styleSheet() != cardStyle)
         setStyleSheet(cardStyle);
-    // Color the text via each label's OWN style sheet, not the palette: this card sets a style sheet
-    // on itself, which installs QStyleSheetStyle over the whole subtree and makes a child Label's
-    // palette-based WindowText color (Label::onThemeUpdated) be ignored — so the title/description
-    // rendered as near-black on the dark card. Setting the color on the label directly (as
-    // GalleryEntryCard already does) wins regardless of the ancestor style sheet.
-    // zh_CN: 用每个标签自身的样式表上色，而非 palette：本卡片给自己设了样式表，会在整个子树上安装 QStyleSheetStyle，
-    // 使子 Label 基于 palette 的 WindowText 颜色（Label::onThemeUpdated）被忽略——于是标题/描述在深色卡片上渲染成近黑。
-    // 直接给标签设颜色（与 GalleryEntryCard 一致）则无视祖先样式表生效。
+    // Set each label's own stylesheet color because the card's stylesheet installs QStyleSheetStyle,
+    // which overrides palette-based WindowText colors on dark cards.
+    // zh_CN: 通过标签自身样式表设置文字色；卡片样式表会安装 QStyleSheetStyle，导致子标签基于 palette 的文字色在深色下失效。
     if (m_titleLabel) {
         const QString titleStyle =
             QStringLiteral("color: %1; background: transparent;").arg(cssColor(colors.textPrimary));

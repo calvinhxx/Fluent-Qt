@@ -23,29 +23,26 @@ class OverlayCoordinator;
 namespace fluent::collections {
 
 /**
- * @brief Same-window drawer overlay with modal, dim, and drag behavior.
- * zh_CN: 支持模态、遮罩和拖拽行为的同窗口抽屉浮层。
- *
- * DrawerView hosts caller content and centralizes edge placement, light-dismiss,
- * drag margins, corner shaping, animation, and scrim participation.
- * zh_CN: DrawerView 承载调用方内容，并统一管理边缘定位、light-dismiss、拖拽边距、
- * 圆角、动画和遮罩参与方式。
+ * @brief Same-window edge drawer overlay supporting modal blocking, dimming, and edge dragging.
+ * Hosts a content widget and handles edge placement, light-dismiss, rounded corners, animations, and scrim dimming.
+ * zh_CN: 支持模态拦截、背景遮罩和边缘拖拽的同窗口抽屉浮层。
+ * 承载外部传入的内容控件，并统一处理边缘定位、轻点关闭、圆角裁剪、滑入动画与遮罩。
  */
 class DrawerView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Whether the popup, drawer, or notification surface is open.
-     * zh_CN: 弹层、抽屉或通知表面是否处于打开状态。
+     * @brief Whether the drawer is open.
+     * zh_CN: 抽屉是否处于打开状态。
      */
     Q_PROPERTY(bool isOpen READ isOpen WRITE setIsOpen NOTIFY isOpenChanged)
     /**
-     * @brief Window edge from which the drawer appears.
-     * zh_CN: 抽屉出现的窗口边缘。
+     * @brief Window edge from which the drawer slides in.
+     * zh_CN: 抽屉滑出的窗口边缘。
      */
     Q_PROPERTY(DrawerEdge edge READ edge WRITE setEdge NOTIFY edgeChanged)
     /**
-     * @brief Animated drawer position along its opening axis.
-     * zh_CN: 抽屉沿打开方向的动画位置。
+     * @brief Normalized slide progress along the opening axis (0.0 closed, 1.0 open).
+     * zh_CN: 抽屉沿打开轴的归一化滑动进度（0.0 关闭，1.0 打开）。
      */
     Q_PROPERTY(qreal position READ position WRITE setPosition NOTIFY positionChanged)
     /**
@@ -74,11 +71,11 @@ class DrawerView : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(double dimOpacity READ dimOpacity WRITE setDimOpacity NOTIFY dimOpacityChanged)
     /**
-     * @brief Cached owning-window blur radius in logical pixels [0, 32]; 0 disables blur.
-     * zh_CN: 所属窗口背景快照的模糊半径，范围 [0, 32] 逻辑像素；0 关闭模糊。
-     * Defaults to 4 for modal surfaces and 0 otherwise until explicitly set.
-     * Explicit values, including 0, persist across modality changes.
-     * zh_CN: 未显式设置时，模态默认 4，非模态默认 0；显式值（包括 0）不随模态变化。
+     * @brief Blur radius for the cached owning-window backdrop in logical pixels [0, 32]; 0 disables blur.
+     * Defaults to 4 for modal drawers and 0 for non-modal drawers until explicitly set; explicit values persist
+     * across modal changes.
+     * zh_CN: 所属窗口背景快照的模糊半径，范围 [0, 32] 逻辑像素，0 表示关闭。
+     * 未显式设置时模态默认 4、非模态默认 0；显式设置的值（包括 0）不会因切换模态而重置。
      */
     Q_PROPERTY(double backdropBlurRadius
         READ backdropBlurRadius
@@ -183,21 +180,20 @@ public:
     QWidget* contentWidget() const { return m_contentWidget.data(); }
 
     /**
-     * @brief Hosts content with Borrowed release semantics.
-     * zh_CN: 使用 Borrowed 释放语义承载内容控件。
+     * @brief Sets the drawer content widget without taking ownership (WidgetOwnership::Borrowed).
+     * zh_CN: 设置抽屉内容控件，默认不接管其所有权（WidgetOwnership::Borrowed）。
      */
     void setContentWidget(QWidget* widget);
 
     /**
-     * @brief Hosts content with an explicit release policy.
-     * zh_CN: 使用显式释放策略承载内容控件。
-     * @return true when the requested content contract was applied.
+     * @brief Sets the drawer content widget with an explicit ownership policy.
+     * zh_CN: 使用指定的所有权策略设置抽屉内容控件；设置成功返回 true。
      */
     bool setContentWidget(QWidget* widget, WidgetOwnership ownership);
 
     /**
-     * @brief Removes and returns content as a parentless caller-owned widget.
-     * zh_CN: 将内容作为无父控件、由调用方持有的 QWidget 移除并返回。
+     * @brief Detaches and returns the current content widget without deleting it (parent cleared).
+     * zh_CN: 移除并返回当前内容控件（不删除，父控件置空，所有权归还调用方）。
      */
     QWidget* takeContentWidget();
 

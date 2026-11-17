@@ -28,28 +28,24 @@ class MultiSelectComboBoxAccessible;
 }
 
 /**
- * @brief Model-backed Fluent dropdown for selecting several rows.
- * zh_CN: 基于 model、用于选择多行的 Fluent 下拉框。
+ * @brief Model-backed Fluent dropdown for selecting multiple rows.
+ * zh_CN: 基于 model 的多选 Fluent 下拉框。
  *
- * MultiSelectComboBox keeps the existing ComboBox single-select contract
- * untouched. It owns only presentation state and a default selection model;
- * applications retain ownership of their data model and may supply a shared
- * QItemSelectionModel.
- * zh_CN: MultiSelectComboBox 不改变现有 ComboBox 的单选契约。控件仅持有展示状态
- * 和默认 selection model；应用继续拥有数据 model，也可提供共享的
- * QItemSelectionModel。
+ * Owns only UI state and a default QItemSelectionModel; the source model and
+ * any shared QItemSelectionModel remain managed by the caller.
+ * zh_CN: 仅管理界面状态和默认选择模型；数据源 model 及外部共享的 QItemSelectionModel 均由调用方管理。
  */
 class MultiSelectComboBox : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
 
     /**
-     * @brief Caller-owned source model displayed by the dropdown.
-     * zh_CN: 下拉框展示的、由调用方持有的源 model。
+     * @brief Source model displayed by the dropdown (not owned by this widget).
+     * zh_CN: 下拉框展示的数据源 model（不接管所有权）。
      */
     Q_PROPERTY(QAbstractItemModel* model READ model WRITE setModel NOTIFY modelChanged)
     /**
-     * @brief Selection model used as the component value.
-     * zh_CN: 作为控件值使用的 selection model。
+     * @brief Selection model holding the checked rows (uses an internal one by default).
+     * zh_CN: 记录选中行的 selection model（默认自动创建内部实例）。
      */
     Q_PROPERTY(QItemSelectionModel* selectionModel
         READ selectionModel

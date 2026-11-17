@@ -201,13 +201,11 @@ QString glyph(const QString& name)
 
 int snapIconPixelSize(int requestedPixelSize)
 {
-    // WinUI FontIcon crisp sizes + Fluent System Icons compact/optical set.
-    // zh_CN: WinUI FontIcon 清晰字号 + Fluent System Icons 紧凑/光学档。
+    // WinUI FontIcon crisp sizes plus the 12 px compact Fluent System Icons slot.
     static constexpr int kOpticalSizes[] = {12, 16, 20, 24, 28, 32, 40, 48, 64};
     if (requestedPixelSize <= 0)
         return 16;
-    // Preserve intentional micro slots (8–11) used by FlipView / PipsPager / spin.
-    // zh_CN: 保留 FlipView / PipsPager / 微调钮等有意使用的 8–11 微槽。
+    // Preserve 8-11 px micro slots used by FlipView, PipsPager, and spin buttons.
     if (requestedPixelSize < 12)
         return requestedPixelSize;
 
@@ -215,8 +213,7 @@ int snapIconPixelSize(int requestedPixelSize)
     int bestDelta = qAbs(requestedPixelSize - best);
     for (int size : kOpticalSizes) {
         const int delta = qAbs(requestedPixelSize - size);
-        // Prefer larger on ties so mid sizes like 18/21 do not look undersized.
-        // zh_CN: 等距时取更大档，避免 18/21 等中间值视觉偏小。
+        // Prefer larger on ties so intermediate sizes (e.g. 18/21) do not read undersized.
         if (delta < bestDelta || (delta == bestDelta && size > best)) {
             best = size;
             bestDelta = delta;
@@ -273,12 +270,8 @@ QFont font(int pixelSize)
 {
     QFont result(fluent::fontcompat::IconFamily);
     result.setPixelSize(snapIconPixelSize(pixelSize));
-    // Match UI text: DirectWrite vertical grid fitting fattens compact Fluent
-    // System Icon strokes (12–16 px caption / chevron / badge slots). Keep
-    // vertical hinting on FreeType/CoreText where it sharpens without bloat.
-    // zh_CN: 与 UI 正文一致：DirectWrite 纵向网格拟合会把紧凑 Fluent System Icon
-    // 描边（12–16 px 标题栏/箭头/徽标槽）压粗；在 FreeType/CoreText 上保留纵向
-    // hinting，清晰且不明显发胖。
+    // DirectWrite vertical grid fitting fattens 12-16 px icon strokes; fluentConfigureTextRendering
+    // disables hinting there while keeping vertical hinting on FreeType/CoreText.
     fluentConfigureTextRendering(result);
     return result;
 }
@@ -296,13 +289,8 @@ void paintGlyph(QPainter& painter,
     const QFont previousFont = painter.font();
     painter.setFont(font(pixelSize));
 
-    // Draw into a device-pixel-aligned slot with Qt's text alignment. Measuring
-    // ink via QPainterPath and placing a raw baseline often mis-centers compact
-    // chevrons (ComboBox AlignRight on a full-width rect) and softens edges on
-    // DirectWrite compared to drawText(rect, AlignCenter) used by SplitButton.
-    // zh_CN: 在设备像素对齐的槽里用 Qt 文本对齐绘制。用 QPainterPath 量墨再摆基线
-    // 容易让紧凑箭头偏心（ComboBox 整行 AlignRight），且在 DirectWrite 上比
-    // SplitButton 的 drawText(rect, AlignCenter) 更易发虚。
+    // Draw into a device-pixel-aligned rect via QPainter::drawText rather than measuring ink
+    // bounds with QPainterPath, keeping compact chevrons centered and sharp on DirectWrite.
     QRectF slot = targetRect;
     const qreal dpr = painter.device() ? painter.device()->devicePixelRatioF() : 1.0;
     if (dpr > 0.0) {

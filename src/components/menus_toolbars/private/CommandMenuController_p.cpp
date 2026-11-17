@@ -79,11 +79,7 @@ bool CommandMenuController::open(CommandPresenter* presenter, std::function<void
     overlay::popupMenuAt(menu, anchor, local, offset);
     if (!lifetime || !anchor || !menu || m_revision != revision || m_presenter != anchor
         || m_menu.data() != menu.data()) {
-        // Qt can finish showing after a synchronous close. Restore before hide
-        // so an aboutToHide callback can reopen from the caller's original host.
-        // A new invocation of this same menu owns its state and must survive.
-        // zh_CN: 同步关闭后 Qt 仍可能继续显示；先还原再隐藏，让隐藏回调重开时保留原父级。
-        // 同一菜单的新调用已经接管状态时，不再执行旧调用的收尾。
+        // Qt may finish showing after a synchronous close; restore host before hiding unless a newer open took over.
         if (menu && (!lifetime || m_menu.data() != menu.data())) {
             popupHost.restore();
             if (menu && (!lifetime || m_menu.data() != menu.data()))

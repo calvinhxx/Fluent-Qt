@@ -92,7 +92,7 @@
       "effect": "context",
       "effectHint": {
         "en": "Applies only when the anchor offset would otherwise place the flyout outside the host bounds.",
-        "zh": "仅当偏移后的浮出面板会超出宿主边界时生效。"
+        "zh": "仅在偏移后超出窗口范围时可见。"
       }
     },
     {

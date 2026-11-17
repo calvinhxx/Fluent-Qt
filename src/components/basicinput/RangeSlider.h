@@ -25,7 +25,7 @@ namespace fluent::basicinput {
  * step, tick, orientation, and tracking properties keep QSlider's meaning; the
  * two values never cross and stay at least minimumRange apart.
  * zh_CN: RangeSlider 与 Slider 使用相同的轨道、手柄和数值提示。范围、步长、刻度、方向与
- * tracking 属性沿用 QSlider 语义；两个值不会交叉，且间距不小于 minimumRange。
+ * tracking 属性与 QSlider 一致；两个值不会交叉，且间距不小于 minimumRange。
  */
 class RangeSlider : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT

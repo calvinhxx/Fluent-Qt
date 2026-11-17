@@ -15,10 +15,11 @@ compiles the same implementation. Link the core `FluentQt::FluentQt` target.
 
 ## Ownership and values
 
-Register each Field with a unique nonempty string key. The controller borrows
-Fields without reparenting them or their editors. A Field can be registered only
-once in a controller. Field destruction unregisters it. PySide6 retains borrowed
-wrappers while registered and releases them on removal or destruction.
+Register each Field with a unique nonempty string key. The controller tracks
+registered Fields without reparenting or taking ownership of them or their
+editors. A Field can be registered only once in a controller, and destroying it
+automatically unregisters it. PySide6 retains non-owning wrapper references
+while registered and releases them on removal or destruction.
 
 The application owns values, validators, network operations and persistence.
 Call `markFieldChanged(key)` for every value change, including programmatic

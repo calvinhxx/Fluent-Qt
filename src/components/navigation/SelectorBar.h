@@ -48,19 +48,15 @@ struct SelectorBarItem {
 };
 
 /**
- * @brief Horizontal selector bar for mutually exclusive navigation items.
- * zh_CN: 用于互斥导航项的水平选择栏。
- *
- * SelectorBar manages selected index, overflow behavior, item typography, icon
- * font settings, and activation signals without owning application pages.
- * zh_CN: SelectorBar 管理选中索引、溢出行为、item 排版、图标字体设置和激活信号，
- * 不拥有应用页面。
+ * @brief Horizontal selector bar for mutually exclusive navigation options.
+ * Manages selection, overflow behavior, item typography, and activation signals without owning page widgets.
+ * zh_CN: 用于互斥导航选项的水平选择栏，管理选中索引、溢出行为、条目排版与激活信号，不接管页面控件。
  */
 class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Number of items exposed by the navigation control.
-     * zh_CN: 导航控件暴露的条目数量。
+     * @brief Number of items in the selector bar.
+     * zh_CN: 选择栏条目数量。
      */
     Q_PROPERTY(int itemCount READ itemCount NOTIFY itemCountChanged)
     /**
@@ -82,17 +78,14 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(Typography::FontRole itemFontRole READ itemFontRole WRITE setItemFontRole NOTIFY itemFontRoleChanged)
     /**
-     * @brief Iconfont family used for glyph rendering.
-     * zh_CN: 图标字符绘制使用的 iconfont 字体族。
+     * @brief Icon font family used for glyph rendering.
+     * zh_CN: 图标字符绘制使用的字体族。
      */
     Q_PROPERTY(QString iconFontFamily READ iconFontFamily WRITE setIconFontFamily NOTIFY iconFontFamilyChanged)
     /**
-     * @brief Whether the bar paints its layer background.
-     * zh_CN: 是否绘制选择栏的图层背景。
-     *
-     * Disable it to let the bar blend into a host surface that already paints
-     * its own background, such as a navigation chrome or a custom title bar.
-     * zh_CN: 关闭后选择栏融入自带背景的宿主表面，例如导航 chrome 或自定义标题栏。
+     * @brief Whether the bar paints its background fill.
+     * Disable to blend into a parent container that already provides a background, such as navigation chrome or a custom title bar.
+     * zh_CN: 是否绘制选择栏背景；关闭后可融入导航栏或自定义标题栏等自带背景的容器。
      */
     Q_PROPERTY(bool backgroundVisible
         READ isBackgroundVisible
@@ -102,13 +95,9 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
 public:
     /**
      * @brief Presentation used when items exceed the available width.
-     * zh_CN: 条目超出可用宽度时的呈现方式。
-     *
-     * ScrollButtons pages a window of items. MoreButton keeps the leading items
-     * plus the selected and keyboard-focused items visible, and reports the rest
-     * through overflowActivated(). If both do not fit, the focused item takes priority.
-     * zh_CN: ScrollButtons 按窗口翻页。MoreButton 保持前导条目以及选中、键盘聚焦条目可见，
-     * 其余条目经 overflowActivated() 报告。空间不足以同时显示时，优先显示聚焦条目。
+     * ScrollButtons pages a window of items; MoreButton keeps leading items plus the selected and keyboard-focused items visible (prioritizing focus if both cannot fit) and reports the rest via overflowActivated().
+     * zh_CN: 条目超出可用宽度时的显示方式。
+     * ScrollButtons 按窗口翻页；MoreButton 优先保留前导条目以及选中项和键盘聚焦项（空间不足时优先保留聚焦项），其余通过 overflowActivated() 报告。
      */
     enum class OverflowBehavior { ScrollButtons, MoreButton };
     Q_ENUM(OverflowBehavior)
@@ -169,12 +158,9 @@ signals:
     void itemsChanged();
     void itemActivated(int index, const SelectorBarItem& item);
     /**
-     * @brief Emitted for every pointer, keyboard, or accessibility invocation, including the selected item.
-     * zh_CN: 每次指针、键盘或辅助功能调用条目时发出，包括再次调用已选中条目。
-     *
-     * It precedes itemActivated() and the selection signals, which fire only
-     * when the selection changes.
-     * zh_CN: 它先于 itemActivated() 与选择信号发出；后两者仅在选中变化时发出。
+     * @brief Emitted for every pointer, keyboard, or accessibility invocation, even on the already selected item.
+     * Precedes itemActivated() and selection signals, which fire only when selection changes.
+     * zh_CN: 每次指针、键盘或无障碍触发条目时发出（包括再次触发当前选中项）；先于 itemActivated() 和选择变更信号发出，后者仅在选中项变化时触发。
      */
     void itemInvoked(int index, const SelectorBarItem& item);
     void selectedIndexChanged(int index);

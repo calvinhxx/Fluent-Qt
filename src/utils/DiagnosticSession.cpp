@@ -240,9 +240,8 @@ QVariantMap DiagnosticSession::snapshot()
             }
         }
     }
-    // Inspector may contain label text and authored object names. Copy only
-    // rule identifiers and geometry, and skip its full traversal for large roots.
-    // zh_CN: Inspector 可能含文本与对象名称，仅保留规则标识和几何；大树不作全量检查。
+    // Keep only rule code, severity, and rect from Inspector to avoid leaking text
+    // or object names, and skip full inspection on truncated large trees.
     QVariantList findings;
     if (!truncated) {
         const auto report = Inspector::report(m_ui->root).toVariantMap();

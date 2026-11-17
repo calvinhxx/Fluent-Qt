@@ -37,8 +37,7 @@ namespace fluent::collections {
 
 namespace {
 
-// Pixels scrolled per wheel notch (delta 120), shared across the collection views so the
-// wheel feel matches ListView. zh_CN: 每个滚轮刻度（delta 120）滚动的像素数，与 ListView 统一手感。
+// Pixels per 120-delta wheel notch, matching ListView.
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 
 bool dragPointsEqual(const QPointF& lhs, const QPointF& rhs)
@@ -65,36 +64,29 @@ GridView::GridView(QWidget* parent) : QListView(parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
-    setDragEnabled(false); // Disable QListView's built-in drag; reorder is custom. zh_CN: 禁用内置拖拽（自行实现）。
+    setDragEnabled(false); // Disable built-in drag; reorder is handled manually.
     setDefaultDropAction(Qt::IgnoreAction);
 
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectItems);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
-    // Pixel scrolling so the wheel moves a fixed pixel step per notch (matches ListView),
-    // instead of ScrollPerItem's whole-row jumps. zh_CN: 像素级滚动，使每个滚轮刻度滚动固定像素
-    //（与 ListView 一致），而非 ScrollPerItem 的整行跳动。
+    // Use per-pixel scrolling to match ListView instead of ScrollPerItem's whole-row jumps.
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) { emit itemClicked(idx.row()); });
 
-    // --- Header label ---
     m_headerLabel = new QLabel(this);
     m_headerLabel->hide();
     m_headerLabel->setIndent(::Spacing::Padding::ListItemHorizontal);
 
-    // --- Fluent scroll bar ---
     m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(Qt::Vertical, this, verticalScrollBar(),
         QStringLiteral("fluentGridViewScrollBar"));
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &GridView::syncFluentScrollBar);
 
-    // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
     hooks.horizontalScrollBar = [this] { return horizontalScrollBar(); };
     hooks.scrollBar = [this] { return verticalScrollBar(); };
     hooks.normalScroll = [this](qreal scrollPx) {
-        // ScrollPerPixel: a fixed pixel step per notch instead of Qt's whole-row jump.
-        // zh_CN: ScrollPerPixel：每刻度固定像素步进，而非 Qt 的整行跳动。
         QScrollBar* vsb = verticalScrollBar();
         const int before = vsb->value();
         vsb->setValue(before - qRound(scrollPx));
@@ -114,9 +106,7 @@ GridView::~GridView()
 {
     clearDragAnimations();
 
-    // Keep Python-owned item-view dependencies alive until the native view has
-    // disconnected from them; see the matching FlowView teardown contract.
-    // zh_CN: 先让原生 view 与 Python 所有的依赖解除连接，再由包装器释放依赖。
+    // Detach external model/delegate before ~QListView to avoid PySide6/Shiboken teardown races.
     QListView::setItemDelegate(nullptr);
     QListView::setModel(nullptr);
 }
@@ -268,8 +258,7 @@ void GridView::setOverscrollEnabled(bool enabled)
 
 void GridView::updateGridSize()
 {
-    // gridSize covers cell + spacing; QListView lays out IconMode slots with it.
-    // zh_CN: gridSize 包含 cell + spacing（QListView 以此布局 IconMode 每格）。
+    // QListView IconMode lays out each cell slot using gridSize (cell + spacing).
     setGridSize(QSize(m_cellSize.width() + m_hSpacing, m_cellSize.height() + m_vSpacing));
 }
 
@@ -319,24 +308,19 @@ void GridView::paintEvent(QPaintEvent* event)
 {
     const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
-    // --- 1. Container background. zh_CN: 绘制容器背景。---
     if (m_backgroundVisible) {
         QPainter p(viewport());
         p.setRenderHint(QPainter::Antialiasing);
         p.fillRect(viewport()->rect(), c.bgLayer);
         p.end();
     } else if (detail::shouldClearCompositedViewport(this)) {
-        // Composited Mica/Acrylic viewports share the top-level backing store.
-        // Clear stale cells while allowing callers to preserve an opaque parent layer.
-        // zh_CN: 合成式 Mica/Acrylic viewport 与顶层窗口共享后备缓冲；每帧清除旧单元格，
-        // 同时允许调用方保留不透明父级表面。
+        // Clear stale cells on composited OS backdrops unless preserving an opaque parent surface.
         QPainter p(viewport());
         p.setCompositionMode(QPainter::CompositionMode_Source);
         p.fillRect(viewport()->rect(), Qt::transparent);
         p.end();
     }
 
-    // --- 2. Empty placeholder. zh_CN: 空网格占位符。---
     const bool isEmpty = !model() || model()->rowCount() == 0;
     if (isEmpty && !m_placeholderText.isEmpty()) {
         QPainter ph(viewport());
@@ -347,13 +331,11 @@ void GridView::paintEvent(QPaintEvent* event)
         ph.end();
     }
 
-    // --- 3. Items via QListView's default painting; drags apply displacement. ---
-    // zh_CN: 绘制网格项（QListView 默认绘制，拖拽时应用位移偏移）。
+    // During drag, visualRect() temporarily applies displacement offsets.
     m_paintingWithOffsets = !m_dragOffsets.isEmpty();
     QListView::paintEvent(event);
     m_paintingWithOffsets = false;
 
-    // --- 3.1 Translucent mask over the drag source. zh_CN: 拖拽源项半透明遮罩。---
     if (m_isDragging && !m_dragSourceIndices.isEmpty() && model()) {
         QPainter ghost(viewport());
         ghost.setRenderHint(QPainter::Antialiasing);
@@ -369,14 +351,12 @@ void GridView::paintEvent(QPaintEvent* event)
         ghost.end();
     }
 
-    // --- 3.2 Drop indicator. zh_CN: 拖拽指示线。---
     if (m_isDragging && m_dropTargetIndex >= 0 && model()) {
         m_paintingWithOffsets = !m_dragOffsets.isEmpty();
         QPainter dp(viewport());
         dp.setRenderHint(QPainter::Antialiasing);
 
         // m_dropTargetIndex is a slot among non-source items.
-        // Find the visual rect of the item at that slot (or after last).
         const QSet<int> srcSet(m_dragSourceIndices.begin(), m_dragSourceIndices.end());
         QList<int> remaining;
         for (int i = 0; i < model()->rowCount(); ++i)
@@ -399,7 +379,6 @@ void GridView::paintEvent(QPaintEvent* event)
             const int yTop = targetRect.top() + 2;
             const int yBot = targetRect.bottom() - 2;
 
-            // A 2px vertical accent line with dot caps. zh_CN: 2px 竖向 accent 指示线 + 圆点端点。
             dp.setPen(QPen(c.accentDefault, 2.0));
             dp.drawLine(x, yTop, x, yBot);
 
@@ -413,7 +392,6 @@ void GridView::paintEvent(QPaintEvent* event)
         dp.end();
     }
 
-    // --- 3.3 Drag ghost layer. zh_CN: 拖拽浮动图层。---
     if (m_isDragging && !m_dragPixmap.isNull()) {
         QPainter fp(viewport());
         fp.setRenderHint(QPainter::Antialiasing);
@@ -425,7 +403,7 @@ void GridView::paintEvent(QPaintEvent* event)
         fp.end();
     }
 
-    // --- 4. Corner masking: fill corners with parent bg (anti-alias) ---
+    // Cover outer corners with parent background (antialiased replacement for setMask).
     if (m_borderVisible) {
         QPainter cp(viewport());
         cp.setRenderHint(QPainter::Antialiasing);
@@ -446,7 +424,6 @@ void GridView::paintEvent(QPaintEvent* event)
         cp.end();
     }
 
-    // --- 5. Container border. zh_CN: 容器边框。---
     if (m_borderVisible) {
         QPainter bp(viewport());
         bp.setRenderHint(QPainter::Antialiasing);
@@ -508,8 +485,7 @@ void GridView::wheelEvent(QWheelEvent* event)
 
 int GridView::verticalOffset() const
 {
-    // m_overscroll may be null while QListView's base setup queries the offset during
-    // construction. zh_CN: 构造期间 QListView 基类会查询偏移，此时 m_overscroll 可能尚未创建。
+    // m_overscroll may be null while QListView queries offsets during construction.
     const qreal overscroll = m_overscroll ? m_overscroll->value() : 0.0;
     return QListView::verticalOffset() - qRound(overscroll);
 }
@@ -549,8 +525,7 @@ void GridView::applyThemeStyle(bool refreshFonts)
     pal.setColor(QPalette::Active, QPalette::Text, c.textPrimary);
     pal.setColor(QPalette::Inactive, QPalette::Text, c.textPrimary);
     pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
-    // The inherited Qt delegate needs a visible selection even without a custom delegate.
-    // zh_CN: 未安装自定义 delegate 时，Qt 默认条目也需要可见的选中反馈。
+    // Keep selection visible when using Qt's default delegate.
     pal.setColor(QPalette::Active, QPalette::Highlight, c.subtleSecondary);
     pal.setColor(QPalette::Inactive, QPalette::Highlight, c.subtleSecondary);
     pal.setColor(QPalette::Disabled, QPalette::Highlight, Qt::transparent);
@@ -574,11 +549,7 @@ void GridView::applyThemeStyle(bool refreshFonts)
         const QColor headerColor = isEnabled() ? c.textPrimary : c.textDisabled;
         if (refreshFonts)
             m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-        // Color via the label's OWN style sheet rather than its palette: a palette WindowText color is
-        // dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the subtree
-        // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
-        // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
-        // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
+        // Style via the label's own stylesheet so ancestor QStyleSheetStyle rules won't override QPalette::WindowText.
         m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
                 .arg(headerColor.red())
                 .arg(headerColor.green())
@@ -813,9 +784,7 @@ void GridView::mouseReleaseEvent(QMouseEvent* event)
             m_pressedOnBlank = false;
             if (interceptedClickIndex.isValid()) {
                 QPointer<GridView> guard(this);
-                // The matching press was intentionally not sent to QListView,
-                // so complete the inherited click contract here as well.
-                // zh_CN: 对应按下事件未交给 QListView，因此这里显式完成继承的点击契约。
+                // Emit clicked() manually because the matching press bypassed QListView.
                 emit clicked(interceptedClickIndex);
                 if (!guard)
                     return;

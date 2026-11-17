@@ -25,8 +25,10 @@ inline QWidget* enclosingOverlaySurface(QWidget* widget)
     return nullptr;
 }
 
-/** @brief Resolve the native overlay host, including embedded widget presentations.
- * zh_CN: 解析原生浮层宿主，包括嵌入控件的显示宿主。 */
+/**
+ * @brief Resolves the native top-level overlay host, including embedded widget presentations.
+ * zh_CN: 解析浮层所属的原生顶层窗口（兼容嵌入场景中的控件宿主）。
+ */
 QWidget* resolveOwningTopLevel(const QPointer<QWidget>& originalParent, QWidget* currentParent);
 
 inline void attachToTopLevel(QWidget* overlay, QWidget* topLevel)
@@ -44,17 +46,20 @@ inline void raiseOverlayStack(QWidget* scrim, QWidget* overlay)
     if (scrim)
         scrim->raise();
     // Raise unhidden overlays even before their host is shown so scrims stay underneath.
-    // zh_CN: 宿主尚未显示时也提升未隐藏的浮层，避免显示后遮罩压在浮层之上。
     if (overlay && !overlay->isHidden())
         overlay->raise();
 }
 
-/** @brief Resolve the event receiver's native host, falling back to the focused widget.
- * zh_CN: 解析事件接收者的原生宿主；非控件接收者使用焦点控件。 */
+/**
+ * @brief Resolves the event receiver's native top-level host, falling back to the focused widget.
+ * zh_CN: 解析事件接收者所属的顶层窗口；非控件接收者回退到当前焦点控件。
+ */
 QWidget* eventTopLevel(QObject* watched);
 
-/** @brief Refresh hosted Fluent widgets after an overlay inherits a local theme.
- * zh_CN: 浮层继承局部主题后刷新托管的 Fluent 控件。 */
+/**
+ * @brief Refreshes descendant Fluent widgets after an overlay inherits a local theme override.
+ * zh_CN: 当浮层继承局部主题覆盖时，递归刷新其内部的 Fluent 控件。
+ */
 void refreshFluentDescendants(QWidget* root);
 
 } // namespace fluent::overlay

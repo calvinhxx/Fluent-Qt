@@ -186,8 +186,8 @@
     108
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Adds a label, required marker, helper text, and validation feedback to any input control.",
+    "zh": "为输入控件加上标签、必填标记、说明和校验提示。"
   },
   "presets": [
     {

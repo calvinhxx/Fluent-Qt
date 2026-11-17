@@ -103,9 +103,7 @@ bool QmlTextureRenderer::attach(QQuickWidget* quick)
         return false;
     d->quick = quick;
     d->root = quick->rootObject();
-    // Window-attached QML callbacks can unload while setParentItem() is running.
-    // Keep its destination alive until that public operation has returned.
-    // zh_CN: 窗口关联的 QML 回调可能在视觉重父过程中卸载，须保活目标至操作返回。
+    // Guard against QML windowChanged callbacks unloading the view while setParentItem() runs.
     QScopedValueRollback<bool> attaching(d->rendering, true);
     createWindow();
     d->rendering = false;
@@ -169,9 +167,7 @@ void QmlTextureRenderer::releaseNow(bool restore)
         ::compatibility::detail::resetQuickRenderTarget(d->window.get());
     }
     d->target.reset();
-    // The window owns render-target resources backed by the control's QRhi.
-    // Destroy those first, then the QRhi, while its borrowed context is alive.
-    // zh_CN: 先清理窗口拥有的渲染目标，再销毁 QRhi，二者均须早于借用上下文失效。
+    // Destroy the window (which holds QRhi render targets) before resetting control/QRhi while the context is alive.
     d->window.reset();
     d->control.reset();
     d->context.clear();
@@ -183,8 +179,7 @@ void QmlTextureRenderer::releaseNow(bool restore)
     d->releasePending = false;
     if (!restore && !d->detached)
         createWindow();
-    // The saved surface can be this renderer's retired cleanup surface.
-    // zh_CN: 保存的表面可能就是刚被本渲染器销毁的清理表面，恢复前须确认其仍存活。
+    // Skip restoring if the previous surface was this renderer's just-deleted cleanupSurface.
     if (previous && previous->isValid() && previousSurfaceOwner)
         previous->makeCurrent(previousSurface);
     else if (auto* current = QOpenGLContext::currentContext())
@@ -213,9 +208,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
         && !qFuzzyCompare(dpr, d->view->devicePixelRatioF()))
         return fail(QStringLiteral("This Qt version requires the presenting window's device pixel ratio."));
     auto* gl = context->functions();
-    // The context is borrowed from a compositor. Errors already pending here
-    // belong to its preceding work, not to this QML frame.
-    // zh_CN: 上下文由合成器借入，先单独报告此前遗留的错误，避免误判本次 QML 绘制。
+    // Drain pre-existing GL errors from the caller's compositor so they aren't blamed on this QML frame.
     constexpr int maximumInheritedErrors = 16;
     for (int count = 0; count < maximumInheritedErrors; ++count) {
         const GLenum error = gl->glGetError();
@@ -245,9 +238,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
     d->control->renderPhase = true;
     if (!d->initialized) {
         d->context = context;
-        // Quick creates its own fallback surface when importing the context.
-        // Its EGL configuration must match the compositor's actual format.
-        // zh_CN: Quick 导入上下文时会创建备用表面，EGL 配置须匹配合成器的实际格式。
+        // Match the compositor's format so Quick's fallback EGL surface is compatible.
         d->window->setFormat(context->format());
         d->cleanupSurface = std::make_unique<QOffscreenSurface>();
         d->cleanupSurface->setFormat(context->format());
@@ -288,9 +279,7 @@ bool QmlTextureRenderer::render(QOpenGLContext* context, const QSize& logicalSiz
     if (d->initialized && !d->releasePending && !d->detached && d->root && d->dirty) {
         d->control->polishItems();
         if (!d->releasePending && !d->detached && d->root) {
-            // Geometry/binding changes during polish belong to this sync. Only
-            // requests raised during sync/render need another frame afterwards.
-            // zh_CN: polish 中的几何/绑定变更由本次同步消费，仅同步/绘制中新增请求需保留。
+            // Only render requests emitted after polish (during sync/render) need another frame.
             d->dirty = false;
             ::compatibility::detail::beginQuickFrame(d->control.get());
             d->control->sync();

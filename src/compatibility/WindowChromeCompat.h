@@ -1,12 +1,10 @@
 #ifndef WINDOWCHROMECOMPAT_H
 #define WINDOWCHROMECOMPAT_H
 
-// Architecture: this class is a thin per-OS router. Public methods forward to
-// detail functions implemented in WindowChromeCompat_{win,mac,linux,fallback}.cpp.
-// Visual title-bar/content colors are painted by Window/TitleBar/NavigationView.
-// zh_CN: 本类是按平台分发的轻量路由。public 方法转发到各平台
-// WindowChromeCompat_{win,mac,linux,fallback}.cpp 中的 detail 实现。
-// 标题栏和内容颜色由 Window/TitleBar/NavigationView 绘制。
+// Thin per-OS router forwarding to WindowChromeCompat_{win,mac,linux,fallback}.cpp;
+// visual colors are painted by Window, TitleBar, and NavigationView.
+// zh_CN: 按操作系统分发的轻量适配层，具体实现位于 WindowChromeCompat_{win,mac,linux,fallback}.cpp；
+// 标题栏与内容区背景由 Window/TitleBar/NavigationView 负责绘制。
 
 #include <QByteArray>
 #include <QAbstractButton>
@@ -37,89 +35,83 @@ using BackdropApplyResult = fluent::windowing::BackdropApplyResult;
 using BackdropCapabilities = fluent::windowing::BackdropCapabilities;
 
 /**
- * @brief Declarative options for platform window-chrome integration.
- * zh_CN: 平台窗口 chrome 集成使用的声明式配置。
+ * @brief Options for platform window-chrome integration.
+ * zh_CN: 平台窗口标题栏与边框集成配置。
  */
 struct WindowChromeOptions {
     /**
-     * @brief Local title-bar area that can behave as a draggable caption.
-     * zh_CN: 可作为可拖拽 caption 区域的本地标题栏矩形。
+     * @brief Draggable title-bar area in window-local coordinates.
+     * zh_CN: 窗口局部坐标下可拖拽的标题栏区域。
      */
     QRect titleBarRect;
 
     /**
-     * @brief Local child-control rectangles that must stay normal client areas.
-     * zh_CN: 必须保留为普通 client 区域的子控件本地矩形。
+     * @brief Child-control rectangles inside the title bar that remain normal client area.
+     * zh_CN: 标题栏内需要保持可点击（非拖拽）的子控件本地矩形列表。
      */
     QVector<QRect> dragExclusionRects;
 
     /**
      * @brief Resize hit-test border width in device-independent pixels.
-     * zh_CN: resize 命中测试边框宽度，单位为设备无关像素。
+     * zh_CN: 边框拖拽缩放的命中测试宽度（设备无关像素）。
      */
     int resizeBorderWidth = 8;
 
     /**
-     * @brief Enables Fluent-managed title-bar/non-client integration.
-     * zh_CN: 启用由 Fluent 管理的标题栏/非客户区集成。
-     *
-     * This does not mean "draw everything ourselves" on every platform. The
-     * platform implementation should use native window-management APIs first and
-     * expose client-side fallback only when needed.
-     * zh_CN: 这不表示所有平台都完全自绘。平台实现应优先使用系统窗口管理能力，
-     * 仅在需要时暴露客户端回退方案。
+     * @brief Enables Fluent custom title-bar integration while preferring native window management where supported.
+     * zh_CN: 启用自定义标题栏集成；在支持的平台上仍优先使用系统原生窗口管理，仅在需要时启用客户端回退。
      */
     bool useCustomWindowChrome = false;
 
     /**
      * @brief Keeps native macOS traffic-light buttons when available.
-     * zh_CN: 可用时保留 macOS 原生 traffic-light 窗口按钮。
+     * zh_CN: 可用时保留 macOS 原生窗口控制按钮（红绿灯）。
      */
     bool preferNativeMacControls = true;
 
     /**
-     * @brief Locks chrome move/resize when false, for modal overlays.
-     * zh_CN: 为 false 时锁定 chrome 移动/缩放，用于模态覆盖层。
+     * @brief Locks window move and resize when false (e.g., while a modal overlay is active).
+     * zh_CN: 为 false 时禁止拖拽移动与缩放窗口（如模态遮罩显示期间）。
      */
     bool chromeInteractive = true;
 
     /**
-     * @brief Borrowed maximize/restore control for native caption integration.
-     * zh_CN: 借用的最大化/还原控件，用于原生标题栏集成，不转移所有权。
+     * @brief Maximize/restore button used for native caption integration (not owned).
+     * zh_CN: 用于原生标题栏命中测试的最大化/还原按钮（不接管所有权）。
      */
     QPointer<QAbstractButton> maximizeButton;
 };
 
 /**
- * @brief Cross-platform adapter for window chrome behavior.
- * zh_CN: 窗口 chrome 行为的跨平台适配器。
+ * @brief Cross-platform adapter for window chrome behavior, hit-testing, and system backdrops.
+ * zh_CN: 窗口标题栏、命中测试与系统背景的跨平台适配器。
  */
 class WindowChromeCompat {
 public:
     /**
-     * @brief Runtime platform family used for chrome policy decisions.
-     * zh_CN: 用于 chrome 策略决策的运行时平台族。
+     * @brief Runtime platform family used for window-chrome policy decisions.
+     * zh_CN: 用于选择窗口边框策略的运行平台类型。
      */
     enum class Platform { Windows, MacOS, Linux, Other };
 
     /**
-     * @brief Logical hit-test result before mapping to native platform codes.
-     * zh_CN: 映射到平台原生 code 前的逻辑命中测试结果。
+     * @brief Logical hit-test result mapped to platform-specific hit codes.
+     * zh_CN: 映射为各平台原生命中码前的逻辑命中测试结果。
      */
     enum class HitTest { Client, Caption, Left, Right, Top, Bottom, TopLeft, TopRight, BottomLeft, BottomRight };
 
     explicit WindowChromeCompat(QWidget* window);
 
     /**
-     * @brief Replaces the current chrome options and synchronizes platform geometry.
-     * zh_CN: 替换当前 chrome 配置，并同步平台侧几何。
+     * @brief Updates the chrome options and synchronizes platform title-bar geometry.
+     * zh_CN: 更新窗口边框配置并同步平台侧标题栏几何信息。
      */
     void configure(const WindowChromeOptions& options);
     const WindowChromeOptions& options() const { return m_options; }
 
     /**
-     * @brief Applies platform window flags required by the current chrome policy.
-     * zh_CN: 应用当前 chrome 策略需要的平台窗口 flag。
+     * @brief Applies platform window flags required by the current chrome configuration.
+     * zh_CN: 按当前配置应用所需的平台窗口标志。
      */
     void applyPlatformWindowFlags();
 
@@ -131,58 +123,54 @@ public:
 
     /**
      * @brief Returns per-effect platform capabilities for the current session.
-     * zh_CN: 返回当前会话逐效果的平台能力。
+     * zh_CN: 返回当前平台环境支持的各项背景能力。
      */
     BackdropCapabilities backdropCapabilities() const;
     /**
-     * @brief Applies the requested system backdrop effect; returns success.
-     * zh_CN: 施加请求的系统背景效果；返回是否成功。
-     *
-     * Kept for source compatibility. New code that needs the actual backend,
-     * fidelity, surface mode, or failure reason should use the detailed form.
-     * zh_CN: 为源码兼容保留；需要实际后端、保真度、表面模式或失败原因的新代码应使用详细接口。
+     * @brief Applies the requested system backdrop effect (kept for compatibility; prefer applySystemBackdropDetailed() for fallback details).
+     * zh_CN: 应用系统背景效果并返回是否成功（兼容旧接口，需要后端及回退详情时请用 applySystemBackdropDetailed()）。
      */
     bool applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 
     /**
-     * @brief Applies a backdrop and returns the structured actual result.
-     * zh_CN: 施加背景并返回结构化的实际结果。
+     * @brief Applies a backdrop effect and returns the resolved backend and fallback details.
+     * zh_CN: 应用背景效果并返回实际后端、保真度及回退原因等详细信息。
      */
     BackdropApplyResult applySystemBackdropDetailed(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 
     /**
      * @brief Handles forwarded native events and returns true when consumed.
-     * zh_CN: 处理转发来的原生事件；事件被消费时返回 true。
+     * zh_CN: 处理转发来的原生窗口事件；已消费时返回 true。
      */
     bool handleNativeEvent(const QByteArray& eventType, void* message, FluentNativeEventResult* result);
 
     /**
      * @brief Starts a platform system-move operation.
-     * zh_CN: 启动平台系统移动操作。
+     * zh_CN: 启动系统原生窗口拖拽移动。
      */
     bool beginSystemMove(const QPoint& globalPos);
 
     /**
      * @brief Starts a platform system-resize operation for the given edges.
-     * zh_CN: 针对指定边缘启动平台系统缩放操作。
+     * zh_CN: 针对指定边缘启动系统原生窗口缩放。
      */
     bool beginSystemResize(Qt::Edges edges, const QPoint& globalPos);
 
     /**
      * @brief Performs the platform title-bar double-click action.
-     * zh_CN: 执行平台标题栏双击动作。
+     * zh_CN: 执行平台默认的标题栏双击动作。
      */
     bool performTitleBarDoubleClick();
 
     /**
      * @brief Shows the platform system menu at the given global position.
-     * zh_CN: 在指定全局坐标处显示平台系统菜单。
+     * zh_CN: 在指定全局坐标处弹出系统窗口菜单。
      */
     bool showSystemMenu(const QPoint& globalPos);
 
     /**
      * @brief Requests foreground activation through the platform window manager.
-     * zh_CN: 通过平台窗口管理器请求将窗口激活到前台。
+     * zh_CN: 请求平台窗口管理器将窗口激活到前台。
      */
     bool requestForegroundActivation();
 
@@ -195,8 +183,8 @@ public:
     QWidget* window() const { return m_window; }
 
     /**
-     * @brief Classifies a local point against configured title/resize regions.
-     * zh_CN: 根据配置的标题栏和缩放区域对本地点进行命中分类。
+     * @brief Classifies a local point against configured title-bar and resize regions.
+     * zh_CN: 根据标题栏与缩放边框配置对本地坐标进行命中分类。
      */
     HitTest hitTestLocal(const QPoint& localPos) const;
 

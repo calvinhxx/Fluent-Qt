@@ -308,10 +308,7 @@ public:
         setDim(false);
         setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
 
-        // Popup reserves its shadow through QWidget contents margins. This popup's
-        // layout already includes that shadow in outerInset so keeping both would
-        // shift every fixed-width child right by one shadow margin and paint it
-        // outside the visible card.
+        // Zero widget contentsMargins because m_layout's outerInset already includes kPopupShadowMargin.
         setContentsMargins(0, 0, 0, 0);
         m_layout = new QVBoxLayout(this);
         const int outerInset = kPopupShadowMargin + kPopupContentInset;
@@ -532,10 +529,7 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
-        // A dropdown is visually attached to its field, so use the compact menu
-        // elevation profile instead of Popup's denser floating-card shadow.
-        // zh_CN: 下拉菜单在视觉上与输入框相连，因此使用紧凑菜单高程，而不是
-        // Popup 更厚重的浮层阴影。
+        // Use compact menu elevation since the dropdown attaches directly to its trigger.
         const QRect card = ::fluent::overlay::visibleCardRect(rect(), kPopupShadowMargin);
         const int radius = themeRadius().overlay;
         ::fluent::overlay::paintLayeredShadow(painter, card, radius, themeShadow(Elevation::High),
@@ -761,9 +755,7 @@ private:
                 && ranges.first().left() <= m_owner->modelColumn() && ranges.first().right() >= m_owner->modelColumn();
             for (int row = 0; !allSelected && row < rows; ++row) {
                 const auto visible = m_listView->model()->index(row, m_owner->modelColumn(), root);
-                // A known selection already proves that an eligible selected row exists.
-                // Search only for the first eligible unselected row, even if selection is last.
-                // zh_CN: 已知选择已证明存在可选的选中行，只需寻找首个可选的未选中行。
+                // hasSelected already guarantees an eligible selected row exists; only check for an unselected one.
                 if (hasSelected && selection && selection->isSelected(visible))
                     continue;
                 const auto source = m_owner->isSearchEnabled() ? m_proxyModel->mapToSource(visible) : visible;
@@ -840,11 +832,7 @@ private:
             const int aboveCapacity = space.above;
             int cardCapacity = belowCapacity;
             placement = Flyout::Bottom;
-            // Keep the preferred bottom placement only when it can show the whole
-            // menu. Otherwise use the roomier side before clipping the list and
-            // introducing a scrollbar.
-            // zh_CN: 下方能完整显示时才保留下置；否则优先选择空间更大的一侧，
-            // 避免明明上方有空间却先裁切列表并引入滚动条。
+            // Keep Bottom only when the full list fits; otherwise pick the roomier side before scrolling.
             if (belowCapacity < desiredCardHeight && aboveCapacity > belowCapacity) {
                 placement = Flyout::Top;
                 cardCapacity = aboveCapacity;

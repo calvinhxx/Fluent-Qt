@@ -45,19 +45,15 @@ struct PivotItem {
 };
 
 /**
- * @brief Pivot-style horizontal navigation selector.
- * zh_CN: Pivot 风格的水平导航选择器。
- *
- * Pivot shares item overflow and selection concepts with SelectorBar while
- * presenting the more text-centric Pivot surface expected by tabbed sections.
- * zh_CN: Pivot 与 SelectorBar 共享 item 溢出和选择概念，但呈现更偏文本型的 Pivot 表面，
- * 适合分段内容导航。
+ * @brief Horizontal pivot header strip for switching between content sections.
+ * Manages item selection and horizontal overflow (scroll buttons or More button) without owning page widgets.
+ * zh_CN: Pivot 风格的水平分段导航栏，支持选中切换与横向溢出处理，不接管页面控件。
  */
 class Pivot : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Number of items exposed by the navigation control.
-     * zh_CN: 导航控件暴露的条目数量。
+     * @brief Number of items in the pivot.
+     * zh_CN: Pivot 条目数量。
      */
     Q_PROPERTY(int itemCount READ itemCount NOTIFY itemCountChanged)
     /**

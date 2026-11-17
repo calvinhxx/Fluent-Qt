@@ -17,7 +17,7 @@
 
 namespace fluent::basicinput {
 
-// ── WinUI 3 ToggleSwitch metrics (from ToggleSwitch_themeresources.xaml). zh_CN: 尺寸常量 ──
+// WinUI 3 ToggleSwitch metrics (from ToggleSwitch_themeresources.xaml).
 namespace {
 constexpr int kTrackW = 40;
 constexpr int kTrackH = 20;
@@ -25,8 +25,7 @@ constexpr int kKnobNormal = 12;
 constexpr int kKnobHover = 14;
 constexpr int kKnobPressedW = 17;
 constexpr int kKnobPressedH = 14;
-constexpr int kContentGap =
-    10; // Gap between switch and content text (ToggleSwitchPreContentMargin). zh_CN: 开关与文字间距。
+constexpr int kContentGap = 10;
 constexpr qreal kTrackRadius = kTrackH / 2.0;
 } // namespace
 
@@ -51,8 +50,6 @@ void ToggleSwitch::onThemeUpdated()
         applyFontRole();
     update();
 }
-
-// ── Property setters. zh_CN: 属性 setter ────────────────────────────────────
 
 void ToggleSwitch::setIsOn(bool on)
 {
@@ -155,8 +152,6 @@ void ToggleSwitch::setKnobPosition(qreal pos)
     update();
 }
 
-// ── Geometry helpers. zh_CN: 几何辅助 ────────────────────────────────────────
-
 int ToggleSwitch::contentAreaX() const
 {
     return qCeil((kTrackW + kContentGap) * m_visualScale);
@@ -164,9 +159,7 @@ int ToggleSwitch::contentAreaX() const
 
 QRectF ToggleSwitch::trackRect() const
 {
-    // Widget size owns the hit area; only visualScale changes the track metrics.
-    // Preserve the default integer-aligned vertical placement when rows are odd-sized.
-    // zh_CN: 控件大小决定命中区域，仅 visualScale 改变轨道尺寸；保留默认整像素垂直定位。
+    // Widget size owns the hit area; only visualScale scales the track. Keep integer Y alignment on odd row heights.
     const qreal trackW = kTrackW * m_visualScale;
     const qreal trackH = kTrackH * m_visualScale;
     const qreal trackX = layoutDirection() == Qt::RightToLeft ? width() - trackW : 0.0;
@@ -191,9 +184,7 @@ QRectF ToggleSwitch::knobRect() const
     knobW *= m_visualScale;
     knobH *= m_visualScale;
 
-    // Knob center Y equals the track center. zh_CN: knob 中心 Y = track 中心。
     qreal cy = track.center().y();
-    // knob X travel: from left to right inside track
     qreal offX = track.left() + (track.height() - knobW) / 2.0;
     qreal onX = track.right() - (track.height() - knobW) / 2.0 - knobW;
     const qreal visualPosition = layoutDirection() == Qt::RightToLeft ? 1.0 - m_knobPosition : m_knobPosition;
@@ -216,8 +207,6 @@ QSize ToggleSwitch::minimumSizeHint() const
 {
     return QSize(qCeil(kTrackW * m_visualScale), qMax(::Spacing::ControlHeight::Small, qCeil(kTrackH * m_visualScale)));
 }
-
-// ── Animation. zh_CN: 动画 ───────────────────────────────────────────────────
 
 void ToggleSwitch::animateKnob(bool toOn)
 {
@@ -243,8 +232,6 @@ void ToggleSwitch::updateAccessibleText()
     m_autoAccessibleDescription = description;
 }
 
-// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
-
 void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
 {
     QPainter p(this);
@@ -254,12 +241,10 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     const auto& c = themeColorsRef();
     bool enabled = isEnabled();
 
-    // ── Track ──
     QRectF track = trackRect();
     const qreal strokeWidth = qMax(qreal(1.0), m_visualScale);
     const qreal trackRadius = kTrackRadius * m_visualScale;
 
-    // Fluent treatment. zh_CN: Fluent 样式。
     QColor trackFill, trackStroke;
 
     if (!enabled) {
@@ -296,19 +281,16 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         }
     }
 
-    // Paint the track fill. zh_CN: 绘制 track 背景。
     QPainterPath trackPath;
     const qreal inset = strokeWidth / 2.0;
     trackPath.addRoundedRect(track.adjusted(inset, inset, -inset, -inset), trackRadius, trackRadius);
     p.setPen(Qt::NoPen);
     p.setBrush(trackFill);
     p.drawPath(trackPath);
-    // Paint the track outline. zh_CN: 绘制 track 描边。
     p.setBrush(Qt::NoBrush);
     p.setPen(QPen(trackStroke, strokeWidth));
     p.drawPath(trackPath);
 
-    // ── Knob ──
     QRectF knob = knobRect();
     QColor knobFill;
     if (!enabled) {
@@ -322,7 +304,6 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     qreal knobR = qMin(knob.width(), knob.height()) / 2.0;
     p.drawRoundedRect(knob, knobR, knobR);
 
-    // ── Content text (On/Off). zh_CN: Content 文字 ──
     QString contentText = m_isOn ? m_onContent : m_offContent;
     if (!contentText.isEmpty()) {
         p.setFont(font());
@@ -346,8 +327,6 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     }
 }
 
-// ── Mouse interaction. zh_CN: 鼠标交互 ───────────────────────────────────────
-
 void ToggleSwitch::mousePressEvent(QMouseEvent* event)
 {
     if (!isEnabled()) {
@@ -360,8 +339,7 @@ void ToggleSwitch::mousePressEvent(QMouseEvent* event)
         m_keyboardFocusVisible = false;
         m_isPressed = true;
         update();
-        // Keep the press/release pair on this control when embedded in a graphics proxy.
-        // zh_CN: 嵌入图形代理时保留按下与松开的配对，避免默认 QWidget 处理忽略按下事件。
+        // Accept press so embedded graphics proxies still deliver the matching release event.
         event->accept();
         return;
     }

@@ -107,10 +107,8 @@ public:
 
         connect(this, &dialogs_flyouts::Popup::opened, this, [this]() {
             layoutRows();
-            // The as-needed vertical gutter is finalized on the next
-            // event turn; a second pass removes any horizontal range.
-            // zh_CN: 按需垂直沟槽会在下一轮事件中定型；
-            // 第二次布局用于消除残留水平滚动范围。
+            // The as-needed vertical scrollbar gutter settles on the next event turn;
+            // relayout once more to eliminate stale horizontal scroll range.
             QTimer::singleShot(0, this, [this]() {
                 if (isOpen() || isVisible())
                     layoutRows();
@@ -395,11 +393,8 @@ private:
         const QRect scrollRect = cardRect.adjusted(kPopupInset, kPopupInset, -kPopupInset, -kPopupInset);
         m_scrollView->setGeometry(scrollRect);
 
-        // Before the popup is exposed, QScrollArea can still report its
-        // default 100 px viewport. Accept only a measurement that differs
-        // from the card by at most a plausible vertical-scrollbar gutter.
-        // zh_CN: 弹出层显示前 QScrollArea 可能仍报告默认 100 px 视口；
-        // 仅接受与卡片宽度之差不超过合理垂直滚动条沟槽的测量值。
+        // Before exposure QScrollArea may still report its default 100 px viewport;
+        // accept a measured width only when it differs by at most one scrollbar gutter.
         const int measuredViewportWidth = qMax(0, m_scrollView->viewport()->width());
         const int maximumGutter = qMax(::Spacing::Large, m_scrollView->verticalScrollBar()->sizeHint().width());
         const bool measuredWidthIsCurrent = measuredViewportWidth > 0 && measuredViewportWidth <= scrollRect.width()
@@ -737,12 +732,8 @@ public:
             if (event->type() == QEvent::MouseButtonPress) {
                 auto* mouseEvent = static_cast<QMouseEvent*>(event);
                 if (mouseEvent->button() == Qt::LeftButton) {
-                    // Pointer invocation keeps focus on More and waits for
-                    // hover or an explicit navigation key before highlighting
-                    // an overflow command. Keyboard and programmatic opens
-                    // still enter the menu at its first enabled command.
-                    // zh_CN: 鼠标打开时焦点保留在 More，等待 hover 或显式
-                    // 导航键后再高亮菜单项；键盘与编程打开仍进入首个可用命令。
+                    // Keep focus on More after a pointer open so hover/key nav moves into
+                    // the overflow menu; keyboard and programmatic opens focus the first item.
                     focusFirstCommandOnNextOpen = false;
                 }
             } else if (event->type() == QEvent::MouseButtonRelease && suppressNextMoreActivation) {
@@ -1173,12 +1164,8 @@ private:
         QVector<FocusTarget> result;
         const auto appendAction = [this, &result](QAction* action) {
             QWidget* widget = primaryPresenters.value(action);
-            // The semantic model removes a destroyed QAction before its
-            // queued presenter rebuild runs. During that short window the
-            // previous inline projection can still contain the dead
-            // address, while its presenter has already been discarded.
-            // Check the presenter first so focus repair never dereferences
-            // a stale borrowed action.
+            // The model drops destroyed QActions before the queued presenter rebuild runs;
+            // check the presenter map first so focus repair never dereferences a dead pointer.
             if (!action || !widget || action->isSeparator() || !widget->isVisible() || !action->isEnabled()) {
                 return;
             }

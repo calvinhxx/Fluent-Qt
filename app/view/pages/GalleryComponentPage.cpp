@@ -132,9 +132,7 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
         connect(&settings, &GallerySettings::spatialAvailabilityChanged, status, updateStatus);
         updateStatus();
     }
-    // A component page without samples is a coverage gap in the sample catalog,
-    // not a normal state — surface it loudly.
-    // zh_CN: 组件页没有任何示例说明示例目录存在覆盖缺口，不是正常状态——大声暴露出来。
+    // Missing samples indicate an uncovered component route; log a warning so gaps are noticed.
     if (samples.isEmpty()) {
         LOG_WARN(
             QStringLiteral("GalleryComponentPage samples missing routeId=%1 title=%2").arg(entry.routeId, entry.title));
@@ -233,8 +231,7 @@ void GalleryComponentPage::onThemeUpdated()
     if (m_referenceCard)
         m_referenceCard->onThemeUpdated();
     updateThemeButton();
-    // Without a local override the previews follow the global theme manager directly.
-    // Reapplying an empty override here used to traverse and relayout every sample twice.
+    // Previews without a local override follow the global theme directly; skip redundant sample traversal.
     if (m_sampleThemeExplicit)
         applySampleTheme();
 }

@@ -18,13 +18,11 @@ class Button;
 namespace fluent::textfields {
 
 /**
- * @brief Password text field with header and reveal-mode support.
- * zh_CN: 支持标题和密码显示模式的密码输入框。
+ * @brief Password input based on LineEdit with optional header and reveal modes.
+ * zh_CN: 基于 LineEdit 的密码输入框，支持标题与密码显示切换模式。
  *
- * PasswordBox builds on LineEdit while keeping password value, header text, and
- * reveal behavior explicit in the public API.
- * zh_CN: PasswordBox 基于
- * LineEdit，并将密码值、标题文本和显示/隐藏行为显式暴露为公开 API。
+ * Exposes the password text, header label, and reveal policy (peek, hidden, or visible).
+ * zh_CN: 提供密码文本、顶部标题和显示策略（按住显示、始终隐藏或始终可见）。
  */
 class PasswordBox : public LineEdit {
     Q_OBJECT

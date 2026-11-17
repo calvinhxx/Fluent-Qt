@@ -82,10 +82,8 @@ inline qreal imageRasterDpr(qreal dpr)
 }
 
 /**
- * @brief Returns the vertical translation that centers visible glyph ink in a target rectangle.
- * zh_CN: 返回将可见字形墨迹垂直居中到目标矩形所需的平移量。
- * Intended for isolated badges, not labels sharing a row with icons or other text.
- * zh_CN: 适用于独立徽标；与图标或其他文字同行的标签应使用字体行框居中。
+ * @brief Returns the vertical offset that centers visible glyph ink in a rect (for isolated badges; inline labels should use font line boxes).
+ * zh_CN: 返回使可见字形墨迹在目标矩形中垂直居中的偏移量（适合独立徽标；与图标同行的文字应按字体行框居中）。
  */
 inline qreal
 verticallyCenteredTextInkOffset(const QRectF& targetRect, const QFontMetricsF& metrics, const QString& text)
@@ -166,13 +164,8 @@ inline qreal alignedTextInkCenterY(const QRectF& alignedRect, const QFontMetrics
 }
 
 /**
- * @brief Draws control text centered on the font line box, so labels in a row share one baseline.
- * zh_CN: 按字体行框垂直居中绘制控件文字，使同一行的标签共用基线。
- * The caller owns the font, pen, slot and visual horizontal alignment. Qt retains shaping,
- * font fallback and multiline behavior; this helper does not elide text or change control geometry.
- * Isolated badges that center visible ink use verticallyCenteredTextInkRect() instead.
- * zh_CN: 调用方提供字体、画笔、区域和视觉水平对齐；字形塑形、字体回退和多行行为交给 Qt，
- * 此函数不截断文字，也不改变控件布局。按可见墨迹居中的独立徽标改用 verticallyCenteredTextInkRect()。
+ * @brief Draws single- or multi-line control text vertically centered by font line box so row items share one baseline.
+ * zh_CN: 按字体行框垂直居中绘制文本，使同一行内的标签保持基线对齐（按可见墨迹居中的独立徽标请用 verticallyCenteredTextInkRect()）。
  */
 inline void drawVerticallyCenteredText(QPainter& painter,
     const QRectF& targetRect,

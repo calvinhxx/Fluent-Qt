@@ -111,8 +111,7 @@ void ListDetailView::updatePanes()
     if (detailHadFocus)
         m_detailFocus = focused;
 
-    // Leave hidden geometry intact: the child's scroll range must not collapse.
-    // zh_CN: 保留隐藏栏的几何，避免子控件滚动范围收缩而丢失滚动位置。
+    // Leave hidden pane geometry intact so nested scroll views do not lose scroll position.
     const int listWidth = qMin(m_listPaneWidth, qMax(0, (width() - 1) / 2));
     if (showListPane)
         m_listPane->setGeometry(
@@ -137,8 +136,7 @@ void ListDetailView::updatePanes()
         m_detailPane->show();
     if (!current())
         return;
-    // Transfer focus while both panes still exist in the visible focus chain.
-    // zh_CN: 在原栏仍可见时把焦点交给目标栏，避免隐藏触发窗口外部控件的临时聚焦。
+    // Transfer focus while both panes are still visible so hiding doesn't bounce focus outside the view.
     if (listHadFocus && !showListPane)
         focusPane(m_detailPane, m_detailFocus);
     else if (detailHadFocus && !showDetailPane)
@@ -156,9 +154,7 @@ void ListDetailView::updatePanes()
     m_divider->setVisible(!compact);
     if (!current())
         return;
-    // A child geometry/focus callback may have replaced this layout pass.
-    // Publish only the final state, including when a nested pass kept its mode.
-    // zh_CN: 子控件几何或焦点回调可能替换布局，仅发布最终状态。
+    // Child callbacks may trigger a nested layout pass; only emit when the final compact state changed.
     if (m_reportedCompact != compact) {
         m_reportedCompact = compact;
         emit compactChanged(compact);

@@ -69,13 +69,9 @@ struct TabViewItem {
 };
 
 /**
- * @brief Internal tab strip that paints tab chrome and indicator geometry.
- * zh_CN: 绘制 tab 外观和指示器几何的内部 tab 条。
- *
- * TabStrip keeps tab hit testing, close/add affordances, drag state, and animated
- * indicator rects separate from TabView's page ownership.
- * zh_CN: TabStrip 将 tab 命中测试、关闭/新增入口、拖拽状态和指示器动画矩形与
- * TabView 的页面所有权解耦。
+ * @brief Internal tab strip widget that lays out and paints tabs, buttons, and selection indicators.
+ * Handles hit-testing, drag reordering, and indicator animations separately from TabView's page coordination.
+ * zh_CN: TabView 内部的标签栏控件，负责标签布局、按钮命中、拖拽重排与指示器动画绘制。
  */
 class TabStrip : public QWidget, public FluentElement {
     Q_OBJECT
@@ -326,14 +322,9 @@ private:
 };
 
 /**
- * @brief Fluent tab metadata surface with close, reorder, and overflow behavior.
- * zh_CN: 支持关闭、重排和溢出处理的 Fluent 标签元数据界面。
- *
- * TabView owns tab metadata, selected index, add-tab affordance, and keyboard
- * accelerators while delegating tab-strip painting to TabStrip. Application
- * pages remain caller-owned composition.
- * zh_CN: TabView 管理 tab 元数据、选中索引、新增入口和键盘加速键，并将 tab 条
- * 绘制交给 TabStrip；应用页面继续由调用方组合与管理。
+ * @brief Fluent tab strip controller supporting close, drag-reorder, overflow, and keyboard shortcuts.
+ * Manages tab items and selection via TabStrip while callers compose the associated content pages.
+ * zh_CN: Fluent 标签页控件，支持关闭、拖拽重排、横向溢出与键盘快捷键；仅管理标签项与选中索引，内容页由调用方组合管理。
  */
 class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
     Q_OBJECT
@@ -361,8 +352,8 @@ class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
         WRITE setCloseButtonOverlayMode
         NOTIFY closeButtonOverlayModeChanged)
     /**
-     * @brief Whether tabs expose close affordances.
-     * zh_CN: 标签是否显示关闭入口。
+     * @brief Whether tabs display close buttons by default.
+     * zh_CN: 标签默认是否显示关闭按钮。
      */
     Q_PROPERTY(bool tabsClosable READ tabsClosable WRITE setTabsClosable NOTIFY tabsClosableChanged)
     /**

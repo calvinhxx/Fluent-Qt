@@ -684,9 +684,7 @@ void Toast::paintEvent(QPaintEvent* event)
     const qreal scale = devicePixelRatioF();
     const QSize pixels(qCeil(width() * scale), qCeil(height() * scale));
     if (m_surfaceCache.size() != pixels || m_surfaceCache.devicePixelRatioF() != scale) {
-        // Cache the soft surface once per geometry/theme/DPI change. Motion only
-        // composites this surface and the existing child controls.
-        // zh_CN: 仅在几何、主题或 DPI 变化时缓存柔和表面，动画只合成缓存和已有子控件。
+        // Cache shadow + card surface once per geometry/theme/DPI change so animations only composite.
         m_surfaceCache = QPixmap(pixels);
         m_surfaceCache.setDevicePixelRatio(scale);
         m_surfaceCache.fill(Qt::transparent);
@@ -801,9 +799,7 @@ void Toast::updateMessageWrapping()
         const int captionWidth = qMax(1, textWidth - actionPadding);
         QStringList lines;
         qreal longestLine = 0;
-        // Keep the native Button behavior; only insert visual line breaks for
-        // translated actions that cannot fit in the reserved content area.
-        // zh_CN: 保留原生 Button 行为，仅为内容区放不下的长操作文案插入显示换行。
+        // Insert visual line breaks only when translated action captions exceed the available width.
         const QString caption = actionCaption(m_action.data());
         for (const QString& paragraph : caption.split(QLatin1Char('\n'))) {
             QTextLayout captionLayout(paragraph, m_actionButton->font());

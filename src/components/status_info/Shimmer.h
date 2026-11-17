@@ -20,13 +20,12 @@ class QTimerEvent;
 namespace fluent::status_info {
 
 /**
- * @brief Painter helper for Fluent skeleton loading visuals.
- * zh_CN: 用于 Fluent 骨架屏加载视觉的绘制辅助类。
+ * @brief Painter helper for Fluent skeleton loading placeholders.
+ * zh_CN: Fluent 骨架屏加载占位的绘制辅助类。
  *
- * ShimmerPainter keeps delegate-based views lightweight: item delegates can draw
- * the same skeleton elements as the Shimmer widget without embedding child widgets.
- * zh_CN: ShimmerPainter 让基于 delegate 的视图保持轻量：item delegate 可以绘制与
- * Shimmer widget 相同的骨架元素，而无需嵌入子 widget。
+ * Lets item delegates draw the same skeleton shapes as the Shimmer widget
+ * without creating child widgets.
+ * zh_CN: 供列表项委托等轻量绘制场景复用，无需创建子控件即可画出与 Shimmer 一致的骨架元素。
  */
 class ShimmerPainter {
 public:
@@ -98,11 +97,11 @@ public:
 
 /**
  * @brief Fluent skeleton loading placeholder with animated shimmer.
- * zh_CN: 带 shimmer 动画的 Fluent 骨架屏加载占位控件。
+ * zh_CN: 带流光动画的 Fluent 骨架屏占位控件。
  *
- * Shimmer represents content that is still loading. It intentionally does not
- * own network or data-fetching behavior; callers switch it off when content is ready.
- * zh_CN: Shimmer 表示内容仍在加载。它有意不拥有网络或数据获取行为；内容就绪后由调用方关闭。
+ * Displays placeholder shapes while content loads; set active to false or hide
+ * the widget once data is ready.
+ * zh_CN: 用于内容加载期间的骨架占位；数据就绪后将 active 设为 false 或隐藏控件即可。
  */
 class Shimmer : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT

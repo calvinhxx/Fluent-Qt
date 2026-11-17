@@ -8,8 +8,7 @@
 
 namespace fluent::overlay {
 
-// Input-owned dropdowns share a compact surface and a soft, low-spread shadow.
-// zh_CN: 输入框下拉层共用紧凑表面和小范围柔和阴影。
+// Input dropdowns share a compact surface and a soft, low-spread shadow.
 inline void paintFieldPopupSurface(QPainter& painter, const QRect& bounds, const FluentElement& theme)
 {
     const QRect card = visibleCardRect(bounds, ::Spacing::Standard);

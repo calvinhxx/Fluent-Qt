@@ -103,12 +103,10 @@ bool GalleryApplicationController::eventFilter(QObject* watched, QEvent* event)
     if (!event)
         return QObject::eventFilter(watched, event);
 
-    // macOS Dock Quit / Cmd+Q (and QCoreApplication::quit) deliver QEvent::Quit first. Qt then
-    // closes every top-level window; if any Close is ignored, Quit is cancelled and the process
-    // stays alive (especially with setQuitOnLastWindowClosed(false) for tray mode).
-    // zh_CN: macOS Dock Quit / Cmd+Q（以及 quit()）会先发 QEvent::Quit，再关闭各顶层窗口；任一
-    // Close 被 ignore 就会取消 Quit，进程继续存活（托盘模式下 setQuitOnLastWindowClosed(false)
-    // 时尤其明显）。
+    // macOS Dock Quit / Cmd+Q and quit() deliver QEvent::Quit before closing windows; if any
+    // Close event is ignored (such as in tray mode), Quit is cancelled and the process keeps running.
+    // zh_CN: macOS Dock Quit / Cmd+Q 与 quit() 会先发送 QEvent::Quit 再逐个关窗；
+    // 若 Close 事件被忽略（如托盘模式），则会取消退出并保持进程运行。
     if (watched == qApp && event->type() == QEvent::Quit) {
         armApplicationQuit();
         return false;
@@ -263,14 +261,11 @@ void GalleryApplicationController::restoreWindow()
         targetState &= ~Qt::WindowMinimized;
         targetState &= ~Qt::WindowActive;
 
-        // Linux compositors may keep an already-minimized surface iconified even
-        // after Qt has cleared WindowMinimized. Unmap it first, then remap it on
-        // the next event-loop turn so Wayland/X11 must observe two distinct state
-        // transitions. A synchronous hide()+showNormal() can be coalesced and is
-        // therefore not a restore operation.
-        // zh_CN: Linux compositor 可能在 Qt 清除 WindowMinimized 后仍保持 surface 最小化。
-        // 先取消映射，再在下一轮事件循环重新映射，确保 Wayland/X11 观察到两个独立状态切换；
-        // 同步 hide()+showNormal() 可能被合并，不能作为可靠的恢复操作。
+        // Linux compositors can keep an already-minimized surface iconified even after clearing
+        // WindowMinimized. Unmap first and remap on a later turn so Wayland/X11 observes two
+        // distinct state transitions instead of coalescing hide()+showNormal().
+        // zh_CN: Linux compositor 在清除 WindowMinimized 后仍可能保持最小化；先隐藏再于后续事件循环
+        // 重新显示，确保 Wayland/X11 观测到两次独立的状态切换，避免同步调用被合并。
         const bool forceLinuxRemap = needsRestore
             && compatibility::WindowChromeCompat::currentPlatform()
                 == compatibility::WindowChromeCompat::Platform::Linux;

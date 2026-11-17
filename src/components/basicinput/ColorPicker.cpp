@@ -17,8 +17,6 @@
 
 namespace fluent::basicinput {
 
-// Internal helper widgets: spectrum pane and hue bar. zh_CN: 内部辅助控件：色谱和色相条。
-
 class ColorSpectrumWidget : public QWidget {
 public:
     explicit ColorSpectrumWidget(ColorPicker* picker, QWidget* parent = nullptr) : QWidget(parent), m_picker(picker)
@@ -37,27 +35,23 @@ protected:
         p.setRenderHint(QPainter::Antialiasing);
         QRectF r = rect().adjusted(1, 1, -1, -1);
 
-        // Clip the spectrum with rounded corners matching the Fluent radius.
-        // zh_CN: 使用圆角裁剪色盘区域，半径与 Fluent 主题保持一致。
         qreal radius = m_picker->themeRadius().control;
         QPainterPath clipPath;
         clipPath.addRoundedRect(r, radius, radius);
         p.setClipPath(clipPath);
 
-        // Base: horizontal white-to-hue gradient (S axis). zh_CN: 从白色到当前色相的水平渐变（S）。
+        // Horizontal saturation (white -> hue) overlaid with vertical brightness (transparent -> black).
         QColor hueColor = QColor::fromHsvF(m_picker->hue(), 1.0, 1.0);
         QLinearGradient gradH(r.topLeft(), r.topRight());
         gradH.setColorAt(0.0, Qt::white);
         gradH.setColorAt(1.0, hueColor);
         p.fillRect(r, gradH);
 
-        // Overlay: vertical transparent-to-black gradient (V axis). zh_CN: 从透明到黑色的垂直渐变（V）。
         QLinearGradient gradV(r.topLeft(), r.bottomLeft());
         gradV.setColorAt(0.0, QColor(0, 0, 0, 0));
         gradV.setColorAt(1.0, QColor(0, 0, 0, 255));
         p.fillRect(r, gradV);
 
-        // Paint the current selection handle. zh_CN: 绘制当前选择位置。
         qreal sx = m_picker->saturation();
         qreal sv = 1.0 - m_picker->value();
         QPointF pos(r.left() + sx * r.width(), r.top() + sv * r.height());
@@ -141,13 +135,13 @@ protected:
         QRectF r = rect().adjusted(2, 2, -2, -2);
 
         QLinearGradient grad(r.topLeft(), r.bottomLeft());
-        grad.setColorAt(0.0, QColor::fromHsvF(0.0f, 1.0f, 1.0f));              // red
-        grad.setColorAt(1.0 / 6.0, QColor::fromHsvF(1.0f / 6.0f, 1.0f, 1.0f)); // yellow
-        grad.setColorAt(2.0 / 6.0, QColor::fromHsvF(2.0f / 6.0f, 1.0f, 1.0f)); // green
-        grad.setColorAt(3.0 / 6.0, QColor::fromHsvF(3.0f / 6.0f, 1.0f, 1.0f)); // cyan
-        grad.setColorAt(4.0 / 6.0, QColor::fromHsvF(4.0f / 6.0f, 1.0f, 1.0f)); // blue
-        grad.setColorAt(5.0 / 6.0, QColor::fromHsvF(5.0f / 6.0f, 1.0f, 1.0f)); // magenta
-        grad.setColorAt(1.0, QColor::fromHsvF(1.0f, 1.0f, 1.0f));              // back to red
+        grad.setColorAt(0.0, QColor::fromHsvF(0.0f, 1.0f, 1.0f));
+        grad.setColorAt(1.0 / 6.0, QColor::fromHsvF(1.0f / 6.0f, 1.0f, 1.0f));
+        grad.setColorAt(2.0 / 6.0, QColor::fromHsvF(2.0f / 6.0f, 1.0f, 1.0f));
+        grad.setColorAt(3.0 / 6.0, QColor::fromHsvF(3.0f / 6.0f, 1.0f, 1.0f));
+        grad.setColorAt(4.0 / 6.0, QColor::fromHsvF(4.0f / 6.0f, 1.0f, 1.0f));
+        grad.setColorAt(5.0 / 6.0, QColor::fromHsvF(5.0f / 6.0f, 1.0f, 1.0f));
+        grad.setColorAt(1.0, QColor::fromHsvF(1.0f, 1.0f, 1.0f));
 
         p.fillRect(r, grad);
 
@@ -220,8 +214,6 @@ private:
     ColorPicker* m_picker = nullptr;
 };
 
-// Right preview pane: checkerboard plus current color with alpha, after WinUI 3.
-// zh_CN: 右侧预览 pane——棋盘格 + 当前色（含 alpha），参考 WinUI 3。
 class ColorPreviewPaneWidget : public QWidget {
 public:
     explicit ColorPreviewPaneWidget(ColorPicker* picker, QWidget* parent = nullptr) : QWidget(parent), m_picker(picker)
@@ -270,15 +262,11 @@ void ColorPicker::initUi()
     const int pad = spacing.padding.card;
     const int gap = spacing.gap.normal;
     const auto configureFieldLabel = [](fluent::textfields::Label* label) {
-        // Color through the label's own style sheet so a styled host (for
-        // example GallerySampleCard) cannot replace WindowText with black.
-        // zh_CN: 通过标签自身样式表上色，避免带样式表的宿主（如
-        // GallerySampleCard）把 WindowText 覆盖成黑色。
+        // Use the label's own color role stylesheet so styled containers cannot override WindowText.
         label->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
         label->setFixedWidth(48);
     };
 
-    // Input area: Hex plus four RGBA rows. zh_CN: 输入区——Hex + RGBA 五行。
     auto* inputsPanel = new QWidget(this);
     inputsPanel->setObjectName(QStringLiteral("ColorPicker.InputsPanel"));
     auto* inputsLayout = new QVBoxLayout(inputsPanel);
@@ -330,7 +318,6 @@ void ColorPicker::initUi()
     aInputs.bottom = {this, Edge::Bottom, -pad};
     anchorLayout->addAnchoredWidget(inputsPanel, aInputs);
 
-    // Slider area below: value (V) and alpha, after WinUI 3. zh_CN: 下方 Slider 区——明度 (V) + Alpha。
     auto* slidersPanel = new QWidget(this);
     slidersPanel->setObjectName(QStringLiteral("ColorPicker.SlidersPanel"));
     auto* slidersLayout = new QVBoxLayout(slidersPanel);
@@ -413,8 +400,7 @@ void ColorPicker::onThemeUpdated()
     const auto& fs = themeFont(Typography::FontRole::Body);
     QFont f = fs.toQFont();
 
-    // 1. Refresh theme-aware children that miss parent font changes on their own.
-    // zh_CN: 更新可能无法自动响应父级字体变化的主题感知子控件。
+    // Refresh theme-aware children that may not pick up parent font updates on their own.
     const auto labels = findChildren<fluent::textfields::Label*>();
     for (auto* label : labels) {
         label->onThemeUpdated();
@@ -422,7 +408,6 @@ void ColorPicker::onThemeUpdated()
 
     setFont(f);
 
-    // 2. Sync the input fields' theme styles. zh_CN: 同步输入框主题样式。
     if (m_hexEdit)
         m_hexEdit->onThemeUpdated();
     if (m_rEdit)
@@ -438,10 +423,7 @@ void ColorPicker::onThemeUpdated()
     if (m_alphaSlider)
         m_alphaSlider->onThemeUpdated();
 
-    // The spectrum, hue strip, and alpha preview are lightweight private
-    // painters rather than FluentElement instances, so refresh them explicitly.
-    // zh_CN: 色谱、色相条和透明度预览是轻量私有绘制控件，并非 FluentElement，
-    // 因此主题切换时显式触发重绘。
+    // Spectrum, hue bar, and preview pane are plain QWidget painters rather than FluentElements.
     if (m_spectrum)
         m_spectrum->update();
     if (m_hueBar)
@@ -462,19 +444,14 @@ void ColorPicker::setColor(const QColor& c)
     const qreal oldValue = m_v;
     m_color = c;
 
-    // Sync the HSV components. zh_CN: 同步 HSV 分量。
     FluentColorComponent h, s, v, a;
     c.getHsvF(&h, &s, &v, &a);
 
-    // 1. Greyscale colors (h < 0) keep the current hue so it never resets.
-    // zh_CN: 新颜色为灰度（h < 0）时保持现有色相，避免色相丢失。
+    // Keep prior hue for grayscale (h < 0) and prior saturation for black (v == 0) so dragging doesn't snap handles.
     if (h < 0.0f) {
         h = m_h;
     }
 
-    // 2. Black (v ~ 0) keeps the current saturation so dragging to the bottom
-    //    never snaps the handle to the left (s=0).
-    // zh_CN: 新颜色为黑色（v ~ 0）时保持现有饱和度，避免拖到底部时 Handle 跳到最左。
     if (qFuzzyIsNull(v)) {
         s = m_s;
     }
@@ -513,7 +490,6 @@ void ColorPicker::setHueFromBar(qreal h)
     h = qBound(0.0, h, 1.0);
     const qreal oldHue = m_h;
     m_h = h;
-    // Rebuild the color from the current HSV. zh_CN: 基于当前 HSV 重建颜色。
     QColor c = QColor::fromHsvF(m_h, m_s, m_v, m_color.alphaF());
     setColor(c);
     if (!qFuzzyCompare(oldHue + 1.0, m_h + 1.0))
@@ -572,9 +548,7 @@ void ColorPicker::handleChannelEdited()
     int b = m_bEdit->text().toInt();
     int a = m_alphaEnabled ? m_aEdit->text().toInt() : 255;
 
-    // The validator caps 0-255, but QIntValidator allows intermediate input,
-    // so clamp again for safety.
-    // zh_CN: 验证器限制 0-255，但 QIntValidator 允许中间态输入，安全起见再次约束。
+    // QIntValidator allows intermediate strings outside [0, 255]; clamp explicitly.
     r = std::clamp(r, 0, 255);
     g = std::clamp(g, 0, 255);
     b = std::clamp(b, 0, 255);
@@ -587,14 +561,13 @@ void ColorPicker::handleChannelEdited()
 void ColorPicker::handleHexEdited()
 {
     if (m_isInternalUpdate)
-        return; // Ignore self-induced updates to stay consistent. zh_CN: 内部更新时忽略，保持状态一致。
+        return;
 
     bool ok = false;
     QColor c = hexToColor(m_hexEdit->text().trimmed(), &ok);
     if (ok) {
         setColor(c);
     } else {
-        // Fall back to the current color's hex. zh_CN: 回退到当前颜色的 Hex。
         updateFromColor();
     }
 }

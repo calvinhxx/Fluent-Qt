@@ -24,9 +24,9 @@ constexpr int defaultShadowVerticalOffset = 2;
  *
  * Dialog, Menu, Popup, and other overlay cards share this painter so the
  * shadow shape stays identical everywhere; only the intensity differs per
- * surface (denser for modal dialogs, lighter for menus).
+ * overlay type (denser for modal dialogs, lighter for menus).
  * zh_CN: Dialog、Menu、Popup 等浮层卡片共用此绘制器，保证阴影形状各处一致；
- * 仅强度按表面区分（模态对话框更重，菜单更轻）。
+ * 仅透明度系数按浮层类型区分（模态对话框更深，菜单更轻）。
  *
  * @param cardRect Visible card rect the shadow grows from.
  *                 zh_CN: 阴影起始的可见卡片矩形。

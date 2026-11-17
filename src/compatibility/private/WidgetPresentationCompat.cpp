@@ -52,10 +52,8 @@ void prepareNativeWidgetPopup(QWidget* popup)
     const QPointer<QWidget> guard(popup);
     if (!popup->windowFlags().testFlag(Qt::BypassGraphicsProxyWidget))
         popup->setWindowFlag(Qt::BypassGraphicsProxyWidget);
-    // QMenu and setWindowFlags may already have created a child proxy during
-    // construction. Setting the bypass flag alone does not remove that proxy.
-    // Detach its borrowed widget before deleting the now-empty proxy.
-    // zh_CN: 构造时可能已创建子代理；仅加标志不会移除。先解除共享控件再删除空代理。
+    // QMenu/setWindowFlags may already have created a proxy; detach the widget before deleting that empty proxy.
+    // zh_CN: 构造期或 setWindowFlags 可能已创建代理；仅设 Bypass 标志不会清除它，先解绑控件再删掉空代理。
     if (guard) {
         if (QPointer<QGraphicsProxyWidget> proxy = popup->graphicsProxyWidget()) {
             proxy->setWidget(nullptr);

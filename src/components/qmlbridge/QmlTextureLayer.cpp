@@ -100,9 +100,7 @@ bool supportedHierarchy(QmlView* view, QWidget* root)
             if (!above || !sibling || sibling->isWindow() || !view->isVisible() || !sibling->isVisible()
                 || qobject_cast<QmlView*>(sibling))
                 continue;
-            // Transparent native siblings also need correct blending. Keep them
-            // on Qt's direct path rather than painting QML over their foreground.
-            // zh_CN: 透明兄弟控件也需要正确混合；留在 Qt 直接合成路径，不让 QML 覆盖其前景。
+            // Keep overlapping transparent siblings on Qt's direct path so QML does not paint over them.
             if (QRect(sibling->mapTo(root, QPoint()), sibling->size()).intersects(bounds))
                 return false;
         }
@@ -240,9 +238,7 @@ struct QmlTextureLayer::Private {
         if (rootChanged || releaseRequested)
             selected.clear();
         clearGpu();
-        // Take a guarded copy: a QML window-change callback may change the page,
-        // request release, or delete this layer while GPU targets are retired.
-        // zh_CN: QML 窗口变更回调可切页、释放或销毁本层，清理期间须使用受保护的快照。
+        // Iterate over a snapshot because releasing textures can trigger QML callbacks that mutate or delete this layer.
         const auto views = managed;
         for (const auto& view : views)
             if (view)
@@ -259,9 +255,7 @@ struct QmlTextureLayer::Private {
             }
             failed = false;
         }
-        // Coalesce callback requests. Every old GPU target is already gone and
-        // no new frame can be allocated while busy, so another drain is needless.
-        // zh_CN: 合并回调中的请求；旧 GPU 目标已全部清空，busy 期间无法分配新帧，无须循环排空。
+        // Coalesce requests raised during teardown; all GPU targets are cleared and busy blocks new allocations.
         if (rootChanged || pendingRoot) {
             selected.clear();
             failed = false;

@@ -12,12 +12,11 @@ namespace fluent::status_info {
 
 /**
  * @brief Fluent circular progress indicator for active or indeterminate work.
- * zh_CN: 用于活动或不确定任务的 Fluent 环形进度指示器。
+ * zh_CN: Fluent 环形进度指示器，支持确定进度与不确定旋转动画。
  *
- * ProgressRing exposes active state, value range, ring size, stroke width,
- * status, and optional background rendering for compact progress feedback.
- * zh_CN: ProgressRing
- * 暴露活动态、值范围、环尺寸、描边宽度、状态和可选背景绘制， 用于紧凑进度反馈。
+ * Exposes active state, value range, preset ring sizes, stroke width, status,
+ * and optional background track rendering.
+ * zh_CN: 支持启停控制、数值范围、预设尺寸、线宽、状态切换与可选背景圆环绘制。
  */
 class ProgressRing : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -62,8 +61,8 @@ class ProgressRing : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(qreal strokeWidth READ strokeWidth WRITE setStrokeWidth NOTIFY strokeWidthChanged)
     /**
-     * @brief Semantic status used to choose visual treatment.
-     * zh_CN: 用于选择视觉表现的语义状态。
+     * @brief Status controlling the ring color (running, paused, or error).
+     * zh_CN: 决定进度环配色的状态（运行、暂停或错误）。
      */
     Q_PROPERTY(ProgressRingStatus status READ status WRITE setStatus NOTIFY statusChanged)
     /**

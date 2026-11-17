@@ -12,13 +12,8 @@ class QFocusEvent;
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent rating selector with pointer-driven value selection.
- * zh_CN: 通过指针选择评分值的 Fluent 评分控件。
- *
- * RatingControl exposes value, placeholder, caption, read-only, clear behavior,
- * and maximum rating count while keeping star rendering theme-driven.
- * zh_CN: RatingControl 暴露评分值、占位值、说明文本、只读、清空行为和最大评分数，
- * 星形绘制由主题 token 驱动。
+ * @brief Star rating control supporting half-star precision, placeholder preview, and optional clearing.
+ * zh_CN: 支持半星精度、占位预览及可选清空的星级评分控件。
  */
 class RatingControl : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT

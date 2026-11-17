@@ -8,16 +8,13 @@ namespace fluent::collections {
 class TimelineDelegate;
 class TimelineAccessible;
 /**
- * @brief Model-backed timeline with reusable Fluent scrolling, input and theme behavior.
- * zh_CN: 基于模型的时间线，复用 Fluent 滚动、输入和主题行为。
- *
- * The caller owns the model and controls ordering, timestamps and status.
- * DisplayRole is the title; DecorationRole is an optional QIcon. No I/O,
- * sorting, workflow advancement or persistent widget per row is performed.
- * Replace the inherited item delegate for application-defined row content.
- * zh_CN: 模型及顺序、时间和状态由调用方控制。DisplayRole 为标题，DecorationRole
- * 为可选 QIcon；不执行 I/O、排序或流程推进，也不为每行创建常驻控件。可通过
- * 继承的 delegate 接口提供应用自定义的行内容。
+ * @brief Model-backed timeline view built on ListView with Fluent scrolling and theming.
+ * Uses an external model without taking ownership; ordering, timestamps, and node status
+ * come from the model (DisplayRole for title, DecorationRole for optional QIcon), with no I/O
+ * or per-row widgets. Replace the inherited item delegate for custom row layouts.
+ * zh_CN: 基于 ListView 的模型驱动时间线视图，复用 Fluent 滚动与主题。
+ * 关联外部模型（不接管所有权），条目顺序、时间戳和状态均由模型提供（DisplayRole 为标题，
+ * DecorationRole 为可选图标），不执行 I/O 也不逐行创建控件；如需自定义行排版可替换代理。
  */
 class Timeline : public ListView {
     Q_OBJECT
@@ -25,32 +22,32 @@ class Timeline : public ListView {
     Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
 public:
     /**
-     * @brief Logical placement of the timeline rail.
-     * zh_CN: 时间线轨道的逻辑位置。
+     * @brief Side on which the timeline rail and nodes are placed.
+     * zh_CN: 时间线轨道与节点的对齐侧。
      */
     enum NodeAlignment { Leading, Trailing, Alternate };
     Q_ENUM(NodeAlignment)
     /**
-     * @brief Node presentation independent of selection.
-     * zh_CN: 独立于选中状态的节点外观。
+     * @brief Visual status tone of a timeline node.
+     * zh_CN: 时间线节点的状态配色类型。
      */
     enum Status { Neutral, Active, Success, Warning, Error };
     Q_ENUM(Status)
     /**
-     * @brief Optional description, timestamp label and status roles.
-     * zh_CN: 可选说明、时间标签和状态角色。
-     * Strings are caller-formatted; StatusRole defaults to Neutral. Standard
-     * AccessibleTextRole and AccessibleDescriptionRole override semantic text.
-     * zh_CN: 字符串由调用方格式化，StatusRole 默认 Neutral；标准无障碍文字角色
-     * 可覆盖语义文字。
+     * @brief Optional roles for description text, timestamp label, and node status.
+     * Text roles are displayed as formatted by the model; StatusRole defaults to Neutral.
+     * Qt::AccessibleTextRole and Qt::AccessibleDescriptionRole override generated accessibility text.
+     * zh_CN: 可选的描述、时间戳和节点状态角色。
+     * 文本由模型自行格式化，StatusRole 默认为 Neutral；可通过 Qt::AccessibleTextRole 和
+     * AccessibleDescriptionRole 覆盖默认无障碍文本。
      */
     enum DataRole { DescriptionRole = Qt::UserRole + 1, TimestampRole, StatusRole };
     Q_ENUM(DataRole)
     explicit Timeline(QWidget* parent = nullptr);
     ~Timeline() override;
     /**
-     * @brief Borrows a model without changing its parent or data.
-     * zh_CN: 借用模型，不改变其父对象或数据。
+     * @brief Associates an external model without taking ownership or modifying its data.
+     * zh_CN: 关联外部数据模型，不接管所有权也不修改其数据。
      */
     void setModel(QAbstractItemModel* model) override;
     NodeAlignment nodeAlignment() const;

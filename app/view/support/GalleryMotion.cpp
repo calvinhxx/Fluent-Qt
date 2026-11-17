@@ -66,10 +66,8 @@ private:
     void reconcile(fluent::MotionPolicy::Mode mode)
     {
         prune();
-        // Reaching an end value can synchronously emit finished and start a new
-        // transition. Traverse a snapshot so those callbacks cannot invalidate
-        // this pass. zh_CN: 到达终值会同步发送 finished，回调可能再启动新过渡；
-        // 遍历快照以避免当前收敛过程失效。
+        // Iterate over a copy because jumping to the end can synchronously emit finished() and mutate m_active.
+        // zh_CN: 复制列表后再遍历，避免到达终值同步触发 finished() 回调修改 m_active。
         const QList<ActiveTransition> active = m_active;
         for (const ActiveTransition& entry : active) {
             QVariantAnimation* animation = entry.animation.data();

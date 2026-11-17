@@ -93,22 +93,16 @@ protected:
 
     /**
      * @brief Registers an already-created label so its color follows theme refreshes.
-     * zh_CN: 登记一个已创建的标签，使其颜色随主题刷新。
-     *
-     * For labels the page does not create itself (e.g. a value/state readout placed inside
-     * a custom row). Sets the color via the label's OWN style sheet so it survives an ancestor
-     * style sheet's QStyleSheetStyle (which otherwise clobbers a palette-based text color).
-     * zh_CN: 用于页面非自建的标签（如放在自定义行里的取值/状态读数）。通过标签自身样式表上色，
-     * 以无视祖先样式表的 QStyleSheetStyle（否则基于 palette 的文字色会被覆盖）。
+     * For externally placed labels inside styled ancestors, sets color via the label's
+     * own style sheet so QStyleSheetStyle does not override palette-based text colors.
+     * zh_CN: 登记已创建的标签以跟随主题刷新颜色；通过标签自身样式表设置颜色，
+     * 避免被父级样式表安装的 QStyleSheetStyle 覆盖 palette 文字色。
      */
     void trackLabelColor(fluent::textfields::Label* label, TextRole textRole);
 
 private:
     void applyPalette();
-    // Makes the page/viewport transparent so the NavigationView-painted content frame (layer
-    // + rounded top-left + border) shows through behind the page's opaque cards/controls.
-    // zh_CN: 让页面/视口透明，使 NavigationView 绘制的内容框（层 + 左上圆角 + 边框）在页面不透明卡片
-    // /控件之后显出。
+    // Keeps the page/viewport transparent so NavigationView's painted content frame shows behind cards.
     void applyBackdrop();
 
     fluent::scrolling::ScrollView* m_scrollArea = nullptr;

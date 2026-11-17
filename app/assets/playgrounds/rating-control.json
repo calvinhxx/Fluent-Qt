@@ -157,8 +157,8 @@
     }
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Lets people view, set, or clear star ratings.",
+    "zh": "展示、设置或清除星级评分。"
   },
   "presets": [
     {

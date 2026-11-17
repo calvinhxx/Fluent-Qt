@@ -16,18 +16,10 @@ namespace fluent::menus_toolbars {
 class CommandBarPrivate;
 
 /**
- * @brief Hosts ordered primary and secondary application commands.
- * zh_CN: 承载有序主命令和次命令的应用命令栏。
- *
- * CommandBar borrows caller-owned QAction objects. Its inline and overflow
- * presenters are derived from semantic section membership without changing
- * QAction ownership.
- * zh_CN: CommandBar 借用调用方持有的 QAction；内联和溢出呈现由语义分区派生，
- * 不改变 QAction 的所有权。
- * Attach a FluentMenu with QAction::setMenu() for nested commands. Menus are
- * borrowed; opening a branch does not trigger or toggle its action.
- * zh_CN: 通过 QAction::setMenu() 挂接 FluentMenu 以支持多级命令；菜单为借用对象，
- * 打开分支不会触发动作或切换其选中状态。
+ * @brief Horizontal toolbar organizing commands into inline primary actions and an overflow menu.
+ * Does not take ownership of added QAction or FluentMenu objects; attach a FluentMenu via QAction::setMenu() for nested commands (opening a submenu does not trigger or toggle its action).
+ * zh_CN: 水平应用命令栏，将动作划分为内联主命令区与溢出菜单（容纳次命令及收起的主命令）。
+ * 不接管 QAction 和通过 QAction::setMenu() 挂载的 FluentMenu 的所有权；展开子菜单不会触发或切换对应动作。
  */
 class CommandBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -59,71 +51,71 @@ public:
     using QWidget::removeAction;
 
     /**
-     * @brief Adds a QAction through the Qt widget API as a primary command.
-     * zh_CN: 通过 Qt 控件 API 将 QAction 添加为主命令。
+     * @brief Adds an action to the primary section without taking ownership.
+     * zh_CN: 通过 Qt 控件动作接口将 QAction 添加到主命令区（不接管所有权）。
      */
     void addAction(QAction* action);
     /**
-     * @brief Inserts a new Qt widget action into primary command order.
-     * zh_CN: 将新的 Qt 控件动作插入主命令顺序。
+     * @brief Inserts an action into the primary section before `before` without taking ownership.
+     * zh_CN: 在指定主命令之前插入动作（不接管所有权）。
      */
     void insertAction(QAction* before, QAction* action);
     /**
-     * @brief Removes Qt widget association and semantic command membership.
-     * zh_CN: 移除 Qt 控件关联和语义命令成员关系。
+     * @brief Removes an action from the bar and its command group without deleting it.
+     * zh_CN: 从命令栏及所属命令分组中移除动作，但不删除该动作。
      */
     void removeAction(QAction* action);
 
     /**
-     * @brief Appends a borrowed action to the primary section.
-     * zh_CN: 将借用的动作追加到主命令分区。
+     * @brief Appends an action to the primary section without taking ownership.
+     * zh_CN: 将动作追加到主命令区（不接管所有权）。
      */
     bool addPrimaryAction(QAction* action);
     /**
-     * @brief Inserts a borrowed primary action before another primary action.
-     * zh_CN: 在指定主命令之前插入借用的主命令。
+     * @brief Inserts a primary action before `before` without taking ownership.
+     * zh_CN: 在指定主命令之前插入动作（不接管所有权）。
      */
     bool insertPrimaryAction(QAction* before, QAction* action);
     /**
-     * @brief Appends a borrowed action to the secondary section.
-     * zh_CN: 将借用的动作追加到次命令分区。
+     * @brief Appends an action to the secondary (overflow) section without taking ownership.
+     * zh_CN: 将动作追加到次命令区（溢出菜单，不接管所有权）。
      */
     bool addSecondaryAction(QAction* action);
     /**
-     * @brief Inserts a borrowed secondary action before another secondary action.
-     * zh_CN: 在指定次命令之前插入借用的次命令。
+     * @brief Inserts a secondary action before `before` without taking ownership.
+     * zh_CN: 在指定次命令之前插入动作（不接管所有权）。
      */
     bool insertSecondaryAction(QAction* before, QAction* action);
     /**
-     * @brief Removes an action from either semantic section without deleting it.
-     * zh_CN: 从任一语义分区移除动作，但不删除动作。
+     * @brief Removes an action from either primary or secondary commands without deleting it.
+     * zh_CN: 从主命令区或次命令区移除指定动作，但不删除该动作。
      */
     bool removeCommandAction(QAction* action);
     /**
-     * @brief Clears primary membership without deleting actions.
-     * zh_CN: 清空主命令成员关系，但不删除动作。
+     * @brief Clears all primary commands without deleting the actions.
+     * zh_CN: 清空主命令区，不删除其中的动作。
      */
     void clearPrimaryActions();
     /**
-     * @brief Clears secondary membership without deleting actions.
-     * zh_CN: 清空次命令成员关系，但不删除动作。
+     * @brief Clears all secondary commands without deleting the actions.
+     * zh_CN: 清空次命令区，不删除其中的动作。
      */
     void clearSecondaryActions();
 
-    /** @brief Returns primary actions in semantic order.
-     *  zh_CN: 按语义顺序返回主命令。
+    /** @brief Returns primary actions in display order.
+     *  zh_CN: 按顺序返回主命令列表。
      */
     QList<QAction*> primaryActions() const;
-    /** @brief Returns secondary actions in semantic order.
-     *  zh_CN: 按语义顺序返回次命令。
+    /** @brief Returns secondary actions in display order.
+     *  zh_CN: 按顺序返回次命令列表。
      */
     QList<QAction*> secondaryActions() const;
-    /** @brief Returns the current presentation-only overflow snapshot.
-     *  zh_CN: 返回当前仅用于呈现的溢出快照。
+    /** @brief Returns primary actions currently moved into the overflow menu.
+     *  zh_CN: 返回当前因宽度不足收起到溢出菜单中的主命令。
      */
     QList<QAction*> overflowedPrimaryActions() const;
-    /** @brief Returns whether a primary action is currently overflowed.
-     *  zh_CN: 返回指定主命令当前是否进入溢出区。
+    /** @brief Returns whether a primary action is currently in the overflow menu.
+     *  zh_CN: 返回指定主命令当前是否已收起到溢出菜单。
      */
     bool isPrimaryActionOverflowed(const QAction* action) const;
 
@@ -144,8 +136,8 @@ public:
 
 public slots:
     /**
-     * @brief Opens or closes the overflow presentation when one is available.
-     * zh_CN: 在存在可用溢出内容时打开或关闭溢出呈现。
+     * @brief Opens or closes the overflow menu when overflow items exist.
+     * zh_CN: 在存在溢出命令时打开或关闭溢出菜单。
      */
     void setOverflowOpen(bool open);
 

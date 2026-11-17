@@ -58,14 +58,8 @@ inline void prepareWindowNormalGeometry(QWidget* window, const QRect& geometry)
     if (!window)
         return;
     window->setGeometry(geometry);
-    // Create an unmapped surface before asking Qt to retain a maximize/restore
-    // target. On Qt 5.15/6.2 xcb, a surface created while hidden restores to its
-    // maximized size unless its native geometry is submitted again. Before Qt
-    // 6.7, QWindow::resize does that even for an unchanged size; Qt 6.7+ returns
-    // early then, so the call only repeats a size the platform did not apply.
-    // zh_CN: 先创建未显示的表面，再保存最大化/还原目标。Qt 5.15/6.2 xcb 上，隐藏时创建的表面若不重新提交原生几何，
-    // 还原后仍是最大化尺寸。Qt 6.7 之前 resize 即使尺寸未变也会重新提交；Qt 6.7+ 此时直接返回，
-    // 仅在平台未采用该尺寸时重复请求。
+    // Create an unmapped surface and resubmit geometry so Qt 5.15/6.2 xcb restores to normal size instead of staying maximized.
+    // zh_CN: 提前创建未显示的表面并重新提交几何，避免 Qt 5.15/6.2 xcb 还原时停留在最大化尺寸（Qt 6.7+ 仅在尺寸未生效时重复请求）。
     window->winId();
     if (QWindow* handle = window->windowHandle()) {
         handle->setGeometry(geometry);

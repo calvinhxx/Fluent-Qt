@@ -55,9 +55,10 @@ inline QPixmap fluentLabelPixmapValue(const QLabel* label)
     return label->pixmap(Qt::ReturnByValue);
 }
 
-// QAbstractItemModel::dataChanged roles container type.
-// zh_CN: QAbstractItemModel::dataChanged roles 参数容器类型。
-// Qt 6 uses QList<int>; Qt 5 uses QVector<int> in the virtual signature.
+/**
+ * @brief Container type for the roles parameter in QAbstractItemModel::dataChanged() (QList<int> on Qt 6, QVector<int> on Qt 5).
+ * zh_CN: QAbstractItemModel::dataChanged() 中 roles 参数的容器类型（Qt 6 为 QList<int>，Qt 5 为 QVector<int>）。
+ */
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 using FluentItemDataRoles = QList<int>;
 #else
@@ -82,15 +83,8 @@ using FluentItemDataRoles = QVector<int>;
 #endif
 
 /**
- * @brief Returns a stable item-view row height when visualRect() has no height yet.
- * zh_CN: 当 visualRect() 暂时没有高度时，返回稳定的 item-view 行高。
- *
- * Some Qt/platform/offscreen combinations expose a valid item index before
- * visualRect(index).height() is available. Fall back through the view/delegate
- * size hints so reveal animations can still make layout decisions without
- * scattering Qt-version checks in components.
- * zh_CN: 某些 Qt/平台/offscreen 组合会先暴露有效索引，但 visualRect(index).height()
- * zh_CN: 仍为 0；这里统一回退到 view/delegate 的 size hint，避免组件代码散落 Qt 版本判断。
+ * @brief Returns a stable item-view row height, falling back to view/delegate size hints when visualRect() has no height yet.
+ * zh_CN: 返回稳定的列表/表格行高；当 visualRect() 高度尚为 0 时，依次回退到视图或代理的推荐尺寸。
  */
 inline int fluentItemViewRowHeight(const QAbstractItemView* view, const QModelIndex& index, const QRect& visualRect)
 {

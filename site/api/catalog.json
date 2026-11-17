@@ -211,8 +211,8 @@
           "zh": "复合按钮"
         },
         "description": {
-          "en": "A button with primary text and a second line that explains the action.",
-          "zh": "在按钮中显示标题和一行说明。"
+          "en": "A button displaying a title and a secondary description line.",
+          "zh": "在按钮中显示主标题和一行副标题说明。"
         },
         "urls": {
           "en": "compound-button/",
@@ -333,8 +333,8 @@
           "zh": "颜色选择器"
         },
         "description": {
-          "en": "A spectrum surface for picking a color, with RGB, hex, and optional alpha editing.",
-          "zh": "选择颜色，可以编辑 RGB、Hex 和透明度。"
+          "en": "A color picker with spectrum, RGB, hex, and alpha controls.",
+          "zh": "选择颜色，支持编辑 RGB、Hex 与透明度。"
         },
         "urls": {
           "en": "color-picker/",
@@ -516,8 +516,8 @@
           "zh": "文件拖放区"
         },
         "description": {
-          "en": "Accept local file drops and request an application-provided file picker.",
-          "zh": "接收本地文件拖放，并请求应用打开文件选择器。"
+          "en": "Accept local file drops and ask the application to open a picker when Browse is clicked.",
+          "zh": "接收本地文件拖放，点击浏览按钮时请求应用打开选择器。"
         },
         "urls": {
           "en": "file-drop-zone/",
@@ -578,7 +578,7 @@
         },
         "description": {
           "en": "A button styled like a hyperlink that opens a URL when clicked.",
-          "zh": "外观像链接的按钮，点击后打开网址。"
+          "zh": "超链接样式的按钮，点击后打开目标网址。"
         },
         "urls": {
           "en": "hyperlink-button/",
@@ -638,8 +638,8 @@
           "zh": "多选下拉框"
         },
         "description": {
-          "en": "A model-backed drop-down list for selecting, filtering, and clearing several options.",
-          "zh": "从下拉列表中选择多项。"
+          "en": "A searchable drop-down list for selecting multiple items.",
+          "zh": "支持搜索和勾选多项的下拉列表。"
         },
         "urls": {
           "en": "multi-select-combobox/",
@@ -699,8 +699,8 @@
           "zh": "单选按钮"
         },
         "description": {
-          "en": "Lets people select one option from a mutually exclusive group.",
-          "zh": "在一组选项中只能选择一项。"
+          "en": "Select one option from a mutually exclusive group.",
+          "zh": "在一组互斥选项中选择一项。"
         },
         "urls": {
           "en": "radio-button/",
@@ -760,8 +760,8 @@
           "zh": "树形选择器"
         },
         "description": {
-          "en": "Search a hierarchy and select one or more items while retaining their parent paths.",
-          "zh": "在树形列表中搜索并选择条目。"
+          "en": "Search a tree model and select one or more items.",
+          "zh": "在树形层级中搜索并选择条目。"
         },
         "urls": {
           "en": "tree-select/",
@@ -821,8 +821,8 @@
           "zh": "区间滑块"
         },
         "description": {
-          "en": "Lets people select a lower and an upper value by dragging two thumbs along a track.",
-          "zh": "拖动两个手柄选择下限和上限。"
+          "en": "Drag two thumbs along a track to select a lower and upper bound.",
+          "zh": "通过两个滑块分别选择下限与上限数值。"
         },
         "urls": {
           "en": "range-slider/",
@@ -883,7 +883,7 @@
         },
         "description": {
           "en": "Lets people view, set, or clear star ratings.",
-          "zh": "查看、设置或清除星级评分。"
+          "zh": "展示、设置或清除星级评分。"
         },
         "urls": {
           "en": "rating-control/",
@@ -944,7 +944,7 @@
         },
         "description": {
           "en": "A button that raises its click event repeatedly while it stays pressed.",
-          "zh": "按住时连续触发点击。"
+          "zh": "按住期间连续触发点击。"
         },
         "urls": {
           "en": "repeat-button/",
@@ -1004,7 +1004,7 @@
           "zh": "滑块"
         },
         "description": {
-          "en": "Lets people select a value from a range by dragging a handle along a track.",
+          "en": "Drag the thumb to pick a value within a range.",
           "zh": "拖动滑块在范围内选择数值。"
         },
         "urls": {
@@ -1066,7 +1066,7 @@
         },
         "description": {
           "en": "A two-part button: a primary action plus a chevron that opens a menu.",
-          "zh": "左侧执行默认操作，右侧打开更多选项。"
+          "zh": "左侧直接执行默认操作，右侧箭头展开更多菜单。"
         },
         "urls": {
           "en": "split-button/",
@@ -1127,7 +1127,7 @@
         },
         "description": {
           "en": "A button that switches between checked and unchecked states.",
-          "zh": "点击后保持选中或未选中状态的按钮。"
+          "zh": "点击后保持选中或取消状态。"
         },
         "urls": {
           "en": "toggle-button/",
@@ -1188,7 +1188,7 @@
         },
         "description": {
           "en": "A split button whose primary half toggles on and off.",
-          "zh": "左侧切换开关状态，右侧打开相关选项。"
+          "zh": "左侧切换选中状态，右侧展开相关菜单。"
         },
         "urls": {
           "en": "toggle-split-button/",
@@ -1675,8 +1675,8 @@
           "zh": "环形图"
         },
         "description": {
-          "en": "Shows parts of a total as a ring, with room for the total in the middle.",
-          "zh": "用圆环显示各部分占比，中间可以放总数。"
+          "en": "Shows parts of a total as a ring with an optional center summary.",
+          "zh": "用圆环显示各部分占比，中心区域可显示总量或说明。"
         },
         "urls": {
           "en": "donut-chart/",
@@ -1797,8 +1797,8 @@
           "zh": "迷你趋势图"
         },
         "description": {
-          "en": "A small trend line without axes, for cards and tables.",
-          "zh": "不带坐标轴的小型趋势线，适合放在卡片或表格中。"
+          "en": "A compact trend line without axes, ideal for cards and tables.",
+          "zh": "不带坐标轴的小型趋势线，适合嵌入卡片或表格。"
         },
         "urls": {
           "en": "sparkline/",
@@ -2164,7 +2164,7 @@
         },
         "description": {
           "en": "Presents items in a grid of uniform cells with selection.",
-          "zh": "按统一大小的网格显示和选择条目。"
+          "zh": "按统一尺寸的网格排列和选择条目。"
         },
         "urls": {
           "en": "grid-view/",
@@ -2286,7 +2286,7 @@
         },
         "description": {
           "en": "Presents caller-owned model rows as a timeline with text, time labels and node states.",
-          "zh": "按顺序显示事件、时间和状态。"
+          "zh": "按时间顺序展示事件与状态节点。"
         },
         "urls": {
           "en": "timeline/",
@@ -2346,8 +2346,8 @@
           "zh": "双栏选择"
         },
         "description": {
-          "en": "Search and move items between two lists without changing the source model.",
-          "zh": "两侧搜索、批量移动和禁用项；通过稳定键维护归属，源模型保持调用方所有。"
+          "en": "Search items and move them between available and selected lists in bulk.",
+          "zh": "搜索条目，并在可选和已选列表间批量移动。"
         },
         "urls": {
           "en": "transfer/",
@@ -2408,7 +2408,7 @@
         },
         "description": {
           "en": "Hosts resizable panes separated by draggable handles.",
-          "zh": "把区域分成几块，拖动分隔条调整大小。"
+          "zh": "将区域划分成多个可拖动调整大小的窗格。"
         },
         "urls": {
           "en": "split-view/",
@@ -2469,7 +2469,7 @@
         },
         "description": {
           "en": "A stack-based container that pushes and pops pages with transitions.",
-          "zh": "在同一区域压入和弹出页面。"
+          "zh": "在同一区域内以堆栈方式推入和弹出页面。"
         },
         "urls": {
           "en": "stack-view/",
@@ -2530,7 +2530,7 @@
         },
         "description": {
           "en": "A control that presents hierarchical data with expandable nodes.",
-          "zh": "浏览、展开和选择层级数据。"
+          "zh": "浏览、展开和选择树形层级数据。"
         },
         "urls": {
           "en": "tree-view/",
@@ -2591,7 +2591,7 @@
         },
         "description": {
           "en": "A drop-down calendar for picking a single date.",
-          "zh": "从弹出的日历中选择一个日期。"
+          "zh": "点击弹出月历面板以选择单个日期。"
         },
         "urls": {
           "en": "calendar-date-picker/",
@@ -2652,7 +2652,7 @@
         },
         "description": {
           "en": "A calendar surface for browsing months and selecting dates.",
-          "zh": "按月浏览并选择日期。"
+          "zh": "按月/年浏览并选择日期。"
         },
         "urls": {
           "en": "calendar-view/",
@@ -2713,7 +2713,7 @@
         },
         "description": {
           "en": "A spinning-field picker for choosing a day, month, and year.",
-          "zh": "分别滚动选择年、月、日。"
+          "zh": "以滚轮列分别选择年、月、日。"
         },
         "urls": {
           "en": "date-picker/",
@@ -2774,7 +2774,7 @@
         },
         "description": {
           "en": "A compact range entry with a calendar popup, minute precision, quick presets, and independently optional bounds.",
-          "zh": "选择开始和结束日期，也可以包含时间。"
+          "zh": "选择起止日期区间（可选包含时间）。"
         },
         "urls": {
           "en": "date-time-range-picker/",
@@ -2835,7 +2835,7 @@
         },
         "description": {
           "en": "A spinning-field picker for choosing a time of day.",
-          "zh": "分别滚动选择小时和分钟。"
+          "zh": "以滚轮列分别选择小时和分钟。"
         },
         "urls": {
           "en": "time-picker/",
@@ -2896,7 +2896,7 @@
         },
         "description": {
           "en": "A modal dialog with title, content, and up to three commit buttons.",
-          "zh": "需要用户确认时使用的对话框，最多三个按钮。"
+          "zh": "带最多三个操作按钮的模态确认框。"
         },
         "urls": {
           "en": "content-dialog/",
@@ -2956,8 +2956,8 @@
           "zh": "对话框"
         },
         "description": {
-          "en": "A same-window dialog surface with configurable modality and application-provided content.",
-          "zh": "在同一窗口内显示应用内容的对话框，可配置是否模态。"
+          "en": "A same-window dialog supporting modal or modeless display with custom content.",
+          "zh": "嵌入在当前窗口内的可配置对话框，支持模态与自定义内容。"
         },
         "urls": {
           "en": "dialog/",
@@ -3018,7 +3018,7 @@
         },
         "description": {
           "en": "A light-dismiss container anchored to the control that opened it.",
-          "zh": "在触发它的控件旁显示内容，点击外部即关闭。"
+          "zh": "在目标控件旁弹出的轻量面板，点击外部自动关闭。"
         },
         "urls": {
           "en": "flyout/",
@@ -3079,7 +3079,7 @@
         },
         "description": {
           "en": "A floating surface positioned over app content.",
-          "zh": "在应用内容上方显示临时内容。"
+          "zh": "覆盖在应用内容上方的通用浮动容器。"
         },
         "urls": {
           "en": "popup/",
@@ -3140,7 +3140,7 @@
         },
         "description": {
           "en": "An anchored tip that draws attention to a feature without blocking interaction.",
-          "zh": "指向某个控件的提示卡片，不会阻挡其他操作。"
+          "zh": "指向特定控件的引导卡片，不阻断页面交互。"
         },
         "urls": {
           "en": "teaching-tip/",
@@ -3200,8 +3200,8 @@
           "zh": "引导标记"
         },
         "description": {
-          "en": "A same-window teaching tip that points at a target and can move between targets.",
-          "zh": "在同一窗口内指向目标控件的引导卡片，可在目标之间移动。"
+          "en": "An anchored tip that guides users and animates between targets.",
+          "zh": "指向目标控件、并可在步骤间平滑切换位置的引导卡片。"
         },
         "urls": {
           "en": "coach-mark/",
@@ -3566,8 +3566,8 @@
           "zh": "表格工具栏"
         },
         "description": {
-          "en": "Edit search and filter criteria, and control DataGrid column visibility, order and pinning. The application implements row filtering.",
-          "zh": "编辑搜索与筛选条件，控制 DataGrid 列的显示、顺序和固定状态；行筛选由应用实现。"
+          "en": "Provides search, facet filters, and DataGrid column visibility, ordering, and pinning controls.",
+          "zh": "提供搜索、多维筛选，以及 DataGrid 列的显隐、排序和固定控制。"
         },
         "urls": {
           "en": "data-grid-tool-bar/",
@@ -3628,7 +3628,7 @@
         },
         "description": {
           "en": "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation.",
-          "zh": "根据属性定义生成分组的编辑表单。"
+          "zh": "根据属性定义自动生成分组编辑表单。"
         },
         "urls": {
           "en": "property-panel/",
@@ -3689,7 +3689,7 @@
         },
         "description": {
           "en": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes.",
-          "zh": "宽时并排显示列表和详情，窄时一次显示一个。"
+          "zh": "宽屏时并排显示列表与详情，窄屏时自动切为单栏切换。"
         },
         "urls": {
           "en": "list-detail-view/",
@@ -3812,8 +3812,8 @@
           "type": "bool",
           "read_only": false,
           "description": {
-            "en": "Enables perspective; default true when motion/theme policy permits it. False restores the same widgets in a native vertical layout with their state intact.",
-            "zh": "是否启用透视；动效和主题策略允许时默认 true。 关闭后将同一批控件放回原生纵向布局，保留原有状态。"
+            "en": "Enables 3D perspective; defaults to true when motion and theme policies allow it. Setting false restores the same widgets to a flat vertical layout with their state preserved.",
+            "zh": "是否启用 3D 透视；动效和主题策略允许时默认为 true。关闭后将控件放回原生纵向布局并保留其状态。"
           }
         },
         {
@@ -3821,8 +3821,8 @@
           "type": "qreal",
           "read_only": false,
           "description": {
-            "en": "Perspective distance in logical pixels [100, 10000]; default 1000. A shorter distance increases the apparent size difference between near and far surfaces.",
-            "zh": "透视距离，逻辑像素范围 [100, 10000]，默认 1000；越小，近大远小越明显。"
+            "en": "Perspective camera distance in logical pixels [100, 10000]; default 1000 (smaller values increase foreshortening).",
+            "zh": "透视相机距离，范围 [100, 10000] 逻辑像素，默认 1000；越小近大远小越明显。"
           }
         },
         {
@@ -3830,8 +3830,8 @@
           "type": "qreal",
           "read_only": false,
           "description": {
-            "en": "Whole-scene magnification [0.1, 4]; default 1. Item poses stay unchanged.",
-            "zh": "整个场景的显示倍率 [0.1, 4]，默认 1；不改变条目的位置和姿态。"
+            "en": "Whole-scene scale factor [0.1, 4]; default 1. Does not modify item positions.",
+            "zh": "整体场景缩放倍率 [0.1, 4]，默认 1；不改变各条目的位置和姿态。"
           }
         },
         {
@@ -3839,8 +3839,8 @@
           "type": "bool",
           "read_only": false,
           "description": {
-            "en": "Tilts the whole scene toward the pointer; default true, active in 3D only.",
-            "zh": "是否让整个场景随鼠标倾斜，默认 true，仅在 3D 中生效。"
+            "en": "Tilts the scene toward the mouse pointer in 3D mode; default true.",
+            "zh": "在 3D 模式下是否随鼠标位置倾斜整个场景，默认 true。"
           }
         },
         {
@@ -3848,8 +3848,8 @@
           "type": "QPointF",
           "read_only": false,
           "description": {
-            "en": "Maximum pointer pitch/yaw, each [0, 45] degrees; default (10, 16).",
-            "zh": "鼠标跟随的俯仰/偏航上限，各为 [0, 45] 度，默认 (10, 16)。"
+            "en": "Maximum pointer pitch/yaw tilt in degrees, each axis [0, 45]; default (10, 16).",
+            "zh": "鼠标跟随的最大俯仰/偏航角度，各轴范围 [0, 45] 度，默认 (10, 16)。"
           }
         },
         {
@@ -3857,8 +3857,8 @@
           "type": "int",
           "read_only": false,
           "description": {
-            "en": "Exponential pointer response time [0, 1000] ms; default 140, zero is immediate. Larger values soften the response; this is a time constant, not an animation duration.",
-            "zh": "指针跟随时间常数 [0, 1000] 毫秒，默认 140；越大越柔和，0 表示立即跟随。 此值是指数响应的时间常数，不是固定动画时长。"
+            "en": "Exponential pointer smoothing time constant in ms [0, 1000]; default 140 (0 is immediate).",
+            "zh": "鼠标跟随平滑时间常数 [0, 1000] 毫秒，默认 140（0 表示立即响应，非固定动画时长）。"
           }
         },
         {
@@ -3866,8 +3866,8 @@
           "type": "int",
           "read_only": false,
           "description": {
-            "en": "Pointer animation update cap [15, 120] fps; default 60, not measured display FPS.",
-            "zh": "鼠标动画更新上限 [15, 120] 帧/秒，默认 60，不代表显示器实际帧率。"
+            "en": "Pointer tilt animation update cap [15, 120] fps; default 60.",
+            "zh": "鼠标倾斜动画的更新帧率上限 [15, 120] fps，默认 60。"
           }
         },
         {
@@ -3875,8 +3875,8 @@
           "type": "bool",
           "read_only": false,
           "description": {
-            "en": "Caches widget surfaces; default true. Changed content still repaints.",
-            "zh": "是否缓存控件表面，默认 true；内容发生变化时仍会重绘。"
+            "en": "Enables QGraphicsItem surface caching; default true. Dirty widgets still repaint.",
+            "zh": "是否缓存控件绘制结果，默认 true；控件内容更新时仍会重绘。"
           }
         },
         {
@@ -3884,8 +3884,8 @@
           "type": "RenderMode",
           "read_only": false,
           "description": {
-            "en": "Requested renderer: Auto (default), Raster or OpenGL; OpenGL may fall back. Switching waits until active pointer input finishes; inspect activeBackend for the result. Clipped/hidden views release their GPU viewport. Ancestor graphics effects use Raster so the outer compositor can capture the scene; the requested mode remains unchanged.",
-            "zh": "请求的后端：Auto（默认）、Raster 或 OpenGL；OpenGL 不可用时回退。 切换等待当前鼠标操作结束；使用 activeBackend 查询实际后端。隐藏或完全裁出时释放 GPU 视口；祖先绘制特效启用时使用 Raster 供外层捕获，保留请求的渲染模式。"
+            "en": "Requested backend: Auto (default), Raster, or OpenGL. Mode changes wait for active pointer drags to finish; OpenGL falls back to Raster when hardware rendering is unavailable or while an ancestor graphics effect is active, without altering renderMode(). Clipped or hidden views release their OpenGL viewport.",
+            "zh": "请求的渲染模式：Auto（默认）、Raster 或 OpenGL。 切换会等待当前鼠标操作结束；当硬件 OpenGL 不可用或祖先控件启用了图形特效时自动回退到 Raster （不修改 renderMode() 的请求值）。视图隐藏或被完全裁剪时会释放 GPU 视口。"
           }
         },
         {
@@ -3893,8 +3893,8 @@
           "type": "Backend",
           "read_only": true,
           "description": {
-            "en": "Actual renderer, Raster or OpenGL; read-only, initially Raster until exposed.",
-            "zh": "实际渲染后端 Raster 或 OpenGL；只读，在视图显示并完成初始化前为 Raster。"
+            "en": "Active rendering backend (Raster or OpenGL); stays Raster until exposed and verified.",
+            "zh": "实际生效的渲染后端（Raster 或 OpenGL）；在视图显示并完成探测前为 Raster。"
           }
         },
         {
@@ -3902,8 +3902,8 @@
           "type": "QString",
           "read_only": true,
           "description": {
-            "en": "Active OpenGL device name; read-only, empty for Raster or before initialization.",
-            "zh": "当前 OpenGL 设备名称；只读，Raster 或尚未初始化时为空。"
+            "en": "Active OpenGL GL_RENDERER string, or empty in Raster mode or before initialization.",
+            "zh": "当前 OpenGL 渲染器名称；Raster 模式或尚未初始化时为空。"
           }
         },
         {
@@ -3911,8 +3911,8 @@
           "type": "QString",
           "read_only": true,
           "description": {
-            "en": "Explanation of automatic renderer fallback; read-only, empty when none applies.",
-            "zh": "自动回退后端的原因；只读，没有回退原因时为空。"
+            "en": "Reason OpenGL fell back to Raster, or empty when no fallback occurred.",
+            "zh": "自动回退到 Raster 的原因；未发生回退时为空。"
           }
         },
         {
@@ -3920,8 +3920,8 @@
           "type": "int",
           "read_only": true,
           "description": {
-            "en": "Number of hosted surfaces, including hidden ones; read-only, initially 0. Externally destroyed content is removed immediately; its notification is coalesced until widget teardown finishes, so handlers may destroy the host.",
-            "zh": "承载的表面数量，包含隐藏条目；只读，初始为 0。 外部销毁控件时立即移除条目，销毁完成后合并通知，允许回调销毁宿主。"
+            "en": "Number of hosted items (including hidden ones); initially 0. Externally deleted widgets are detached immediately while itemCountChanged() coalesces after teardown completes.",
+            "zh": "当前托管的条目数量（含隐藏项），初始为 0。外部销毁控件后会立即移除条目，并在控件析构完成后合并触发通知。"
           }
         }
       ],
@@ -3932,7 +3932,7 @@
         },
         "description": {
           "en": "Give existing widgets perspective and pointer tilt. Keep text editing and popups in the normal layout; native-window and OpenGL children cannot be embedded.",
-          "zh": "让现有控件以透视方式显示，并随鼠标倾斜。"
+          "zh": "以 3D 透视效果展示已有控件，并随指针产生轻微倾斜。"
         },
         "urls": {
           "en": "spatial-view/",
@@ -3993,8 +3993,8 @@
           "type": "QVector3D",
           "read_only": false,
           "description": {
-            "en": "Pivot position relative to view center in logical pixels; default (0, 0, 0). X points right, Y down and positive Z toward the camera.",
-            "zh": "轴心相对视图中心的位置，使用逻辑像素，默认 (0, 0, 0)；X 向右、Y 向下、Z 正值朝向相机。"
+            "en": "Pivot offset from the view center in logical pixels (+X right, +Y down, +Z toward camera); default (0, 0, 0).",
+            "zh": "轴心相对视图中心的偏移（逻辑像素，+X 向右、+Y 向下、+Z 朝向相机），默认 (0, 0, 0)。"
           }
         },
         {
@@ -4002,8 +4002,8 @@
           "type": "QVector3D",
           "read_only": false,
           "description": {
-            "en": "Rotation about the pivot in X/Y/Z degrees, applied in order; default (0, 0, 0).",
-            "zh": "绕轴心依次应用的 X/Y/Z 旋转角度，默认 (0, 0, 0)；单位是度，不是弧度。"
+            "en": "Rotation around the pivot in X/Y/Z degrees applied in order; default (0, 0, 0).",
+            "zh": "绕轴心依次应用的 X/Y/Z 角度制旋转，默认 (0, 0, 0)。"
           }
         },
         {
@@ -4011,8 +4011,8 @@
           "type": "qreal",
           "read_only": false,
           "description": {
-            "en": "Uniform size multiplier for this surface [0.05, 8]; default 1.",
-            "zh": "单个表面的整体缩放倍率 [0.05, 8]，默认 1。"
+            "en": "Uniform scale multiplier [0.05, 8]; default 1.",
+            "zh": "整体缩放倍率 [0.05, 8]，默认 1。"
           }
         },
         {
@@ -4020,8 +4020,8 @@
           "type": "QPointF",
           "read_only": false,
           "description": {
-            "en": "Normalized anchor and rotation origin, each axis [0, 1]; default center (0.5, 0.5).",
-            "zh": "归一化的位置锚点和旋转轴心，各轴 [0, 1]，默认中心 (0.5, 0.5)。"
+            "en": "Normalized anchor and rotation origin [0, 1] per axis; default (0.5, 0.5).",
+            "zh": "归一化定位与旋转轴心，各轴范围 [0, 1]，默认中心 (0.5, 0.5)。"
           }
         },
         {
@@ -4029,8 +4029,8 @@
           "type": "bool",
           "read_only": false,
           "description": {
-            "en": "Visibility in both spatial and native layouts; default true. Use this property instead of hiding the hosted root widget directly.",
-            "zh": "在 3D 和原生 2D 布局中的可见性，默认 true；使用此属性，而非直接隐藏承载的根控件。"
+            "en": "Visibility in both 3D and flat layouts; default true. Prefer this over hiding the widget directly.",
+            "zh": "在 3D 与平面布局中的可见性，默认 true；请通过此属性控制而非直接隐藏内部控件。"
           }
         },
         {
@@ -4038,8 +4038,8 @@
           "type": "qreal",
           "read_only": false,
           "description": {
-            "en": "Strength of the rounded surface shadow and rim, clamped to [0, 1]; default 0. Intended for an intact rectangular Card; decoration does not change content or hit areas. Only drawn in spatial mode.",
-            "zh": "圆角卡片表面的阴影和边缘高光强度，限制为 [0, 1]，默认 0。 用于完整矩形 Card，不改变内容或命中区域；仅空间模式绘制。"
+            "en": "Shadow and rim highlight strength [0, 1] for rounded cards in 3D mode; default 0. Does not affect hit testing.",
+            "zh": "3D 模式下圆角卡片的阴影与边缘高光强度 [0, 1]，默认 0；仅作装饰，不影响命中区域。"
           }
         },
         {
@@ -4047,8 +4047,8 @@
           "type": "qreal",
           "read_only": false,
           "description": {
-            "en": "Temporary upward pointer-hover offset in logical pixels [0, 16]; default 0. Motion freezes during pointer input. Native mode removes it.",
-            "zh": "悬停时临时向上抬升的逻辑像素数 [0, 16]，默认 0，不修改 position。 鼠标按住时冻结位移，原生平面模式移除此效果。"
+            "en": "Upward hover offset in logical pixels [0, 16]; default 0. Pauses during pointer press and is omitted in flat mode.",
+            "zh": "悬停时向上抬升的逻辑像素偏移 [0, 16]，默认 0；鼠标按住期间冻结，平面模式下不生效。"
           }
         }
       ],
@@ -4059,7 +4059,7 @@
         },
         "description": {
           "en": "Position, rotate and scale a widget inside SpatialView.",
-          "zh": "设置 SpatialView 中单个控件的位置、旋转和缩放。"
+          "zh": "控制 SpatialView 中单个控件的位移、旋转与缩放。"
         },
         "urls": {
           "en": "spatial-item/",
@@ -4121,7 +4121,7 @@
         },
         "description": {
           "en": "A QML surface that shares application models and Fluent theme tokens with the surrounding Widgets.",
-          "zh": "在 Widgets 界面中加载 QML 页面，并共享数据和主题。"
+          "zh": "在 Widgets 界面中嵌入 QML 页面，并共享数据与 Fluent 主题。"
         },
         "urls": {
           "en": "qml-view/",
@@ -4182,7 +4182,7 @@
         },
         "description": {
           "en": "A list of commands shown in a transient surface.",
-          "zh": "显示一组命令的弹出菜单。"
+          "zh": "弹出式命令菜单，支持分组、快捷键、勾选项和多级子菜单。"
         },
         "urls": {
           "en": "menu/",
@@ -4243,7 +4243,7 @@
         },
         "description": {
           "en": "A horizontal bar of top-level menus, each hosting commands.",
-          "zh": "窗口顶部的一排菜单。"
+          "zh": "位于窗口顶部的横向菜单栏，空间不足时自动折叠进溢出菜单。"
         },
         "urls": {
           "en": "menu-bar/",
@@ -4304,7 +4304,7 @@
         },
         "description": {
           "en": "A responsive command strip with primary and overflow actions.",
-          "zh": "排列常用命令，放不下的命令移到溢出菜单。"
+          "zh": "排列常用操作按钮，宽度不足时自动收起到溢出菜单。"
         },
         "urls": {
           "en": "command-bar/",
@@ -4365,7 +4365,7 @@
         },
         "description": {
           "en": "Find and run an action by typing its name. Use the keyboard to choose a result and press Enter to execute it.",
-          "zh": "输入名称查找并运行命令。"
+          "zh": "输入关键词快速检索并执行命令。"
         },
         "urls": {
           "en": "command-palette/",
@@ -4426,7 +4426,7 @@
         },
         "description": {
           "en": "A contextual command surface with primary and secondary actions.",
-          "zh": "在当前内容旁显示的上下文命令。"
+          "zh": "在选中内容旁弹出的上下文命令栏，可按需展开更多操作。"
         },
         "urls": {
           "en": "command-bar-flyout/",
@@ -4487,7 +4487,7 @@
         },
         "description": {
           "en": "Shows the trail to the current location and lets people go back up the hierarchy.",
-          "zh": "显示当前位置的路径，可以返回上一级。"
+          "zh": "展示当前页面层级路径，点击节点可快速跳转。"
         },
         "urls": {
           "en": "breadcrumb/",
@@ -4548,7 +4548,7 @@
         },
         "description": {
           "en": "An adaptive left pane plus content area for top-level navigation.",
-          "zh": "应用的左侧导航和内容区域。"
+          "zh": "提供左侧（或顶部）导航面板与右侧内容区的页面框架。"
         },
         "urls": {
           "en": "navigation-view/",
@@ -4609,7 +4609,7 @@
         },
         "description": {
           "en": "Header-based navigation between peer views with an animated indicator.",
-          "zh": "在同级页面之间切换的标签导航。"
+          "zh": "用于在同级页面间切换的标签式导航栏。"
         },
         "urls": {
           "en": "pivot/",
@@ -4670,7 +4670,7 @@
         },
         "description": {
           "en": "A row of selectable items for switching between views.",
-          "zh": "用一排选项切换当前视图。"
+          "zh": "用横向选项卡切换当前视图或筛选分类。"
         },
         "urls": {
           "en": "selector-bar/",
@@ -4731,7 +4731,7 @@
         },
         "description": {
           "en": "Presents application-controlled steps with completion, error and availability states.",
-          "zh": "显示任务的步骤、进度和状态。"
+          "zh": "展示多步骤任务的步骤序号、完成进度与异常状态。"
         },
         "urls": {
           "en": "stepper/",
@@ -4791,8 +4791,8 @@
           "zh": "标签页视图"
         },
         "description": {
-          "en": "A tab strip with selection, closing and reordering; the application hosts and switches the pages.",
-          "zh": "管理标签的选中、关闭和重排；页面由应用承载和切换。"
+          "en": "A tab bar with selection, closing, and drag reordering; pages are hosted by your app.",
+          "zh": "支持新增、关闭和拖拽重排的标签栏，页面内容由应用托管。"
         },
         "urls": {
           "en": "tab-view/",
@@ -4853,7 +4853,7 @@
         },
         "description": {
           "en": "A scrollbar with labels that make long content easier to navigate.",
-          "zh": "带位置标签的滚动条，方便在长内容中跳转。"
+          "zh": "带书签标记与悬停提示的滚动条，便于在长内容中快速定位。"
         },
         "urls": {
           "en": "annotated-scrollbar/",
@@ -4914,7 +4914,7 @@
         },
         "description": {
           "en": "Lets people zoom around the pointer and pan a single image, with fit and actual-size views.",
-          "zh": "围绕指针缩放、拖动平移单张图片，可切换适应窗口与原始比例。"
+          "zh": "支持以指针为中心缩放与拖拽平移的图片视图。"
         },
         "urls": {
           "en": "image-viewer/",
@@ -4975,7 +4975,7 @@
         },
         "description": {
           "en": "Dot-style pagination for moving through a small set of pages.",
-          "zh": "用圆点显示和切换页面。"
+          "zh": "用分页圆点展示总页数并切换页面。"
         },
         "urls": {
           "en": "pips-pager/",
@@ -5036,7 +5036,7 @@
         },
         "description": {
           "en": "A Fluent-styled scrollbar with hover expansion.",
-          "zh": "Fluent 样式的滚动条，鼠标悬停时变宽。"
+          "zh": "Fluent 样式滚动条，静默时收缩为细条，悬停时自动加宽。"
         },
         "urls": {
           "en": "scrollbar/",
@@ -5097,7 +5097,7 @@
         },
         "description": {
           "en": "A scrollable viewport with Fluent scrollbars and optional zoom.",
-          "zh": "可以滚动和缩放的内容区域。"
+          "zh": "支持平滑滚动与缩放的内容容器。"
         },
         "urls": {
           "en": "scroll-view/",
@@ -5157,8 +5157,8 @@
           "zh": "头像"
         },
         "description": {
-          "en": "Represents a person or identity with an image, initials fallback, shape, size, and presence.",
-          "zh": "用图片或姓名首字母表示一个人。"
+          "en": "Displays a user photo, generated initials, and optional presence status.",
+          "zh": "用照片、首字母或状态角标表示用户或联系人。"
         },
         "urls": {
           "en": "avatar/",
@@ -5219,7 +5219,7 @@
         },
         "description": {
           "en": "A small badge that shows counts, icons, or attention dots.",
-          "zh": "用数字、图标或圆点显示简短状态。"
+          "zh": "用数字、图标或小圆点表示提醒数量或状态。"
         },
         "urls": {
           "en": "info-badge/",
@@ -5280,7 +5280,7 @@
         },
         "description": {
           "en": "An inline bar for status messages with severity and optional actions.",
-          "zh": "在页面中显示提示、成功、警告或错误信息。"
+          "zh": "在页面内嵌展示提示、成功、警告或错误消息。"
         },
         "urls": {
           "en": "info-bar/",
@@ -5341,7 +5341,7 @@
         },
         "description": {
           "en": "Shows determinate or indeterminate progress along a line.",
-          "zh": "显示任务完成了多少。"
+          "zh": "条形展示任务完成比例或不确定加载态。"
         },
         "urls": {
           "en": "progress-bar/",
@@ -5401,8 +5401,8 @@
           "zh": "进度环"
         },
         "description": {
-          "en": "Show a known completion ratio or an indeterminate progress ring.",
-          "zh": "显示已知完成比例，或使用不确定进度圆环。"
+          "en": "Shows determinate progress or an indeterminate loading spinner.",
+          "zh": "环形展示已知百分比进度或不确定加载动画。"
         },
         "urls": {
           "en": "progress-ring/",
@@ -5463,7 +5463,7 @@
         },
         "description": {
           "en": "Cover a content area during startup, report progress, and dismiss when ready.",
-          "zh": "应用启动时覆盖内容区，显示加载进度。"
+          "zh": "应用启动期间覆盖主区域，显示图标与加载进度。"
         },
         "urls": {
           "en": "splash-screen/",
@@ -5524,7 +5524,7 @@
         },
         "description": {
           "en": "Shows a skeleton placeholder while content is loading.",
-          "zh": "内容加载前显示的占位动画。"
+          "zh": "内容尚未就绪时显示的骨架屏闪烁动画。"
         },
         "urls": {
           "en": "shimmer/",
@@ -5585,7 +5585,7 @@
         },
         "description": {
           "en": "Shows a brief same-window notification without interrupting the current task.",
-          "zh": "短暂显示的通知，不会打断当前操作。"
+          "zh": "不打断当前操作的轻量浮动通知，可附带一个快捷操作按钮。"
         },
         "urls": {
           "en": "toast/",
@@ -5646,7 +5646,7 @@
         },
         "description": {
           "en": "A popup label that shows extra information about a control on hover.",
-          "zh": "鼠标悬停时显示的简短说明。"
+          "zh": "鼠标悬停时在控件旁显示的简短说明气泡。"
         },
         "urls": {
           "en": "tooltip/",
@@ -5707,7 +5707,7 @@
         },
         "description": {
           "en": "A search input with local or asynchronous suggestions, loading, pagination and retry.",
-          "zh": "输入时显示候选建议的搜索框。"
+          "zh": "输入关键词时弹出候选列表的搜索框。"
         },
         "urls": {
           "en": "auto-suggest-box/",
@@ -5768,7 +5768,7 @@
         },
         "description": {
           "en": "Choose several values as compact tags with asynchronous suggestions and native text input.",
-          "zh": "把多个值显示为可以删除的标签。"
+          "zh": "将多个选项展示为可编辑、可删除的标签胶囊。"
         },
         "urls": {
           "en": "tag-input/",
@@ -5829,7 +5829,7 @@
         },
         "description": {
           "en": "Read-only code with syntax colors, exact copying, folding and bounded scrolling.",
-          "zh": "只读显示代码，带语法高亮和复制按钮。"
+          "zh": "只读语法高亮代码展示组件，支持折叠与一键复制。"
         },
         "urls": {
           "en": "code-block/",
@@ -5890,7 +5890,7 @@
         },
         "description": {
           "en": "Static text rendered with Fluent typography roles and elision.",
-          "zh": "按 Fluent 字体层级显示文字。"
+          "zh": "应用 Fluent 字体层级的文本标签。"
         },
         "urls": {
           "en": "label/",
@@ -5951,7 +5951,7 @@
         },
         "description": {
           "en": "A single-line text box with Fluent styling and a clear button.",
-          "zh": "输入单行文字。"
+          "zh": "Fluent 样式单行文本框，支持清空按钮与后缀图标/文本。"
         },
         "urls": {
           "en": "line-edit/",
@@ -6012,7 +6012,7 @@
         },
         "description": {
           "en": "A numeric input with spin buttons and inline expression support.",
-          "zh": "输入数值，可以步进或拖动调整。"
+          "zh": "支持步进调节、表达式计算与拖拽调值的数值框。"
         },
         "urls": {
           "en": "number-box/",
@@ -6073,7 +6073,7 @@
         },
         "description": {
           "en": "A text box that conceals input with an optional reveal button.",
-          "zh": "输入密码，可以按需显示。"
+          "zh": "支持按需明文查看的密码输入框。"
         },
         "urls": {
           "en": "password-box/",
@@ -6134,7 +6134,7 @@
         },
         "description": {
           "en": "A multi-line text surface for longer-form input.",
-          "zh": "输入多行文字。"
+          "zh": "支持按行数自动增高与滚动的多行文本框。"
         },
         "urls": {
           "en": "text-edit/",
@@ -6195,7 +6195,7 @@
         },
         "description": {
           "en": "A custom window title bar with drag regions and themed chrome.",
-          "zh": "自定义窗口标题栏，可以放入自己的控件。"
+          "zh": "支持自定义内容与拖拽区域的窗口标题栏。"
         },
         "urls": {
           "en": "title-bar/",
@@ -6256,7 +6256,7 @@
         },
         "description": {
           "en": "A Fluent top-level window with custom chrome and theming.",
-          "zh": "带自定义标题栏和主题背景的顶层窗口。"
+          "zh": "带自定义标题栏与系统背景材质的 Fluent 顶层窗口。"
         },
         "urls": {
           "en": "window/",
@@ -6484,7 +6484,7 @@
     {
       "include": "<FluentQt/compatibility/AccessibilityCompat.h>",
       "source": "src/compatibility/AccessibilityCompat.h",
-      "summary": "Returns the accessibility event type used for live announcements.",
+      "summary": "Return type of QAccessibleInterface::relations() across Qt 5 and Qt 6.",
       "declarations": [
         "FluentAccessibleAnnouncementPoliteness"
       ],
@@ -6493,7 +6493,7 @@
     {
       "include": "<FluentQt/compatibility/ApplicationCompat.h>",
       "source": "src/compatibility/ApplicationCompat.h",
-      "summary": "Applies the supported Qt-version-specific High-DPI startup settings.",
+      "summary": "OS color scheme reported by Qt style hints when supported (Qt 6.5+).",
       "declarations": [
         "FluentSystemColorScheme"
       ],
@@ -6511,14 +6511,14 @@
     {
       "include": "<FluentQt/compatibility/FontCompat.h>",
       "source": "src/compatibility/FontCompat.h",
-      "summary": "Registers an application font as a script-specific fallback when the",
+      "summary": "Registers an application font as a script-specific fallback when supported (Qt 6.8+).",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/FontCompat.h"
     },
     {
       "include": "<FluentQt/compatibility/InputEventCompat.h>",
       "source": "src/compatibility/InputEventCompat.h",
-      "summary": "Reads the first touch point's global position, returning false for an empty event.",
+      "summary": "Enter-event parameter type for QWidget::enterEvent() overrides (QEnterEvent on Qt 6, QEvent on Qt 5).",
       "declarations": [
         "FluentWheelInputKind"
       ],
@@ -6536,7 +6536,7 @@
     {
       "include": "<FluentQt/compatibility/PaintCompat.h>",
       "source": "src/compatibility/PaintCompat.h",
-      "summary": "Painter for explicit image/pixmap caches, including DPR below 1 on older Qt.",
+      "summary": "Painter for explicit image/pixmap caches that compensates when older Qt ignores DPR < 1.0.",
       "declarations": [
         "FluentRasterCachePainter"
       ],
@@ -6559,7 +6559,7 @@
     {
       "include": "<FluentQt/compatibility/QtCompat.h>",
       "source": "src/compatibility/QtCompat.h",
-      "summary": "Source-compatible umbrella for Qt and platform adaptation helpers.",
+      "summary": "Umbrella header for Qt and platform compatibility helpers; new code should include the specific domain header directly.",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/QtCompat.h"
     },
@@ -6600,7 +6600,7 @@
     {
       "include": "<FluentQt/compatibility/WindowGeometryCompat.h>",
       "source": "src/compatibility/WindowGeometryCompat.h",
-      "summary": "Synchronizes a hidden window's normal geometry before maximized display.",
+      "summary": "Synchronizes a hidden window's normal geometry before maximized display without showing or activating it.",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/WindowGeometryCompat.h"
     },
@@ -6621,7 +6621,7 @@
     {
       "include": "<FluentQt/components/basicinput/CheckBox.h>",
       "source": "src/components/basicinput/CheckBox.h",
-      "summary": "Fluent checkbox with animated check-state painting.",
+      "summary": "Fluent check box with animated check and mixed states.",
       "declarations": [
         "CheckBox"
       ],
@@ -6630,7 +6630,7 @@
     {
       "include": "<FluentQt/components/basicinput/ColorPicker.h>",
       "source": "src/components/basicinput/ColorPicker.h",
-      "summary": "Fluent color picker for RGB, HSV, hex, and optional alpha editing.",
+      "summary": "Fluent color picker with spectrum, hue bar, RGB/HSV/Hex inputs, and optional alpha channel.",
       "declarations": [
         "ColorPicker"
       ],
@@ -6639,7 +6639,7 @@
     {
       "include": "<FluentQt/components/basicinput/ComboBox.h>",
       "source": "src/components/basicinput/ComboBox.h",
-      "summary": "Delegate that paints ComboBox popup rows with Fluent metrics.",
+      "summary": "Item delegate that renders ComboBox popup rows with Fluent metrics and theme colors.",
       "declarations": [
         "ComboBoxItemDelegate",
         "ComboBox"
@@ -6649,7 +6649,7 @@
     {
       "include": "<FluentQt/components/basicinput/CompoundButton.h>",
       "source": "src/components/basicinput/CompoundButton.h",
-      "summary": "Button with a primary label and a secondary description.",
+      "summary": "Push button with a primary label and a display-only secondary description.",
       "declarations": [
         "CompoundButton"
       ],
@@ -6658,7 +6658,7 @@
     {
       "include": "<FluentQt/components/basicinput/DropDownButton.h>",
       "source": "src/components/basicinput/DropDownButton.h",
-      "summary": "Fluent button that opens an attached dropdown or flyout.",
+      "summary": "Fluent button with a trailing chevron that opens an attached menu or flyout.",
       "declarations": [
         "DropDownButton"
       ],
@@ -6667,7 +6667,7 @@
     {
       "include": "<FluentQt/components/basicinput/FileDropZone.h>",
       "source": "src/components/basicinput/FileDropZone.h",
-      "summary": "File entry surface with local-URL drop and application-owned browsing.",
+      "summary": "Drag-and-drop area for local file URLs with an application-handled browse button.",
       "declarations": [
         "FileDropZone"
       ],
@@ -6676,7 +6676,7 @@
     {
       "include": "<FluentQt/components/basicinput/HyperlinkButton.h>",
       "source": "src/components/basicinput/HyperlinkButton.h",
-      "summary": "Button-styled hyperlink entry with URL and underline control.",
+      "summary": "Text-styled navigation button with optional URL and hover underline.",
       "declarations": [
         "HyperlinkButton"
       ],
@@ -6685,7 +6685,7 @@
     {
       "include": "<FluentQt/components/basicinput/MultiSelectComboBox.h>",
       "source": "src/components/basicinput/MultiSelectComboBox.h",
-      "summary": "Model-backed Fluent dropdown for selecting several rows.",
+      "summary": "Model-backed Fluent dropdown for selecting multiple rows.",
       "declarations": [
         "MultiSelectComboBox"
       ],
@@ -6694,7 +6694,7 @@
     {
       "include": "<FluentQt/components/basicinput/TreeSelect.h>",
       "source": "src/components/basicinput/TreeSelect.h",
-      "summary": "Searchable single or multiple selection from a borrowed hierarchical model.",
+      "summary": "Searchable single- or multi-select dropdown over an external tree model (not owned).",
       "declarations": [
         "TreeSelect",
         "SelectionMode"
@@ -6704,7 +6704,7 @@
     {
       "include": "<FluentQt/components/basicinput/RadioButton.h>",
       "source": "src/components/basicinput/RadioButton.h",
-      "summary": "Fluent radio button with animated selection feedback.",
+      "summary": "Fluent radio button with animated selection dot.",
       "declarations": [
         "RadioButton"
       ],
@@ -6724,7 +6724,7 @@
     {
       "include": "<FluentQt/components/basicinput/RatingControl.h>",
       "source": "src/components/basicinput/RatingControl.h",
-      "summary": "Fluent rating selector with pointer-driven value selection.",
+      "summary": "Star rating control supporting half-star precision, placeholder preview, and optional clearing.",
       "declarations": [
         "RatingControl"
       ],
@@ -6733,7 +6733,7 @@
     {
       "include": "<FluentQt/components/basicinput/RepeatButton.h>",
       "source": "src/components/basicinput/RepeatButton.h",
-      "summary": "Button that repeats click actions while pressed.",
+      "summary": "Button that emits repeated click signals while pressed.",
       "declarations": [
         "RepeatButton"
       ],
@@ -6742,7 +6742,7 @@
     {
       "include": "<FluentQt/components/basicinput/Slider.h>",
       "source": "src/components/basicinput/Slider.h",
-      "summary": "Fluent slider with custom track, handle, and animated feedback metrics.",
+      "summary": "Fluent slider with custom track, thumb, and drag value tooltip.",
       "declarations": [
         "Slider"
       ],
@@ -6751,7 +6751,7 @@
     {
       "include": "<FluentQt/components/basicinput/SplitButton.h>",
       "source": "src/components/basicinput/SplitButton.h",
-      "summary": "Button with separate primary action and secondary menu regions.",
+      "summary": "Button split into a primary action area and a secondary dropdown menu trigger.",
       "declarations": [
         "SplitButton",
         "SplitPart"
@@ -6761,7 +6761,7 @@
     {
       "include": "<FluentQt/components/basicinput/ToggleButton.h>",
       "source": "src/components/basicinput/ToggleButton.h",
-      "summary": "Fluent button with persistent checked or tri-state behavior.",
+      "summary": "Checkable Fluent button supporting two-state or tri-state toggling.",
       "declarations": [
         "ToggleButton"
       ],
@@ -6770,7 +6770,7 @@
     {
       "include": "<FluentQt/components/basicinput/ToggleSplitButton.h>",
       "source": "src/components/basicinput/ToggleSplitButton.h",
-      "summary": "Split button whose primary region toggles checked state.",
+      "summary": "SplitButton whose primary region toggles checked state.",
       "declarations": [
         "ToggleSplitButton"
       ],
@@ -6779,7 +6779,7 @@
     {
       "include": "<FluentQt/components/basicinput/ToggleSwitch.h>",
       "source": "src/components/basicinput/ToggleSwitch.h",
-      "summary": "Fluent switch for binary on/off settings.",
+      "summary": "Fluent binary on/off toggle switch.",
       "declarations": [
         "ToggleSwitch"
       ],
@@ -6788,7 +6788,7 @@
     {
       "include": "<FluentQt/components/charts/ChartModel.h>",
       "source": "src/components/charts/ChartModel.h",
-      "summary": "An implicitly shared, indexed XY snapshot; safe to prepare away from the GUI thread.",
+      "summary": "Implicitly shared, indexed XY snapshot that can be built off the GUI thread.",
       "declarations": [
         "ChartData",
         "ChartModel"
@@ -6798,7 +6798,7 @@
     {
       "include": "<FluentQt/components/charts/ChartView.h>",
       "source": "src/components/charts/ChartView.h",
-      "summary": "A bounded, native chart projection of caller-owned models.",
+      "summary": "Native chart widget that renders external ChartModel series within a point budget.",
       "declarations": [
         "ChartView",
         "ChartType"
@@ -6808,7 +6808,7 @@
     {
       "include": "<FluentQt/components/charts/LineChart.h>",
       "source": "src/components/charts/LineChart.h",
-      "summary": "A dedicated line chart with its own bounded renderer.",
+      "summary": "Dedicated line chart widget with a fixed Line presentation.",
       "declarations": [
         "LineChart"
       ],
@@ -6817,7 +6817,7 @@
     {
       "include": "<FluentQt/components/charts/AreaChart.h>",
       "source": "src/components/charts/AreaChart.h",
-      "summary": "A dedicated area chart with its own bounded renderer.",
+      "summary": "Dedicated area chart widget with a fixed Area presentation.",
       "declarations": [
         "AreaChart"
       ],
@@ -6826,7 +6826,7 @@
     {
       "include": "<FluentQt/components/charts/BarChart.h>",
       "source": "src/components/charts/BarChart.h",
-      "summary": "A dedicated bar chart with its own bounded renderer.",
+      "summary": "Dedicated vertical bar chart widget with a fixed Bar presentation.",
       "declarations": [
         "BarChart"
       ],
@@ -6835,7 +6835,7 @@
     {
       "include": "<FluentQt/components/charts/HorizontalBarChart.h>",
       "source": "src/components/charts/HorizontalBarChart.h",
-      "summary": "A dedicated horizontalbar chart with its own bounded renderer.",
+      "summary": "Dedicated horizontal bar chart widget with a fixed HorizontalBar presentation.",
       "declarations": [
         "HorizontalBarChart"
       ],
@@ -6844,7 +6844,7 @@
     {
       "include": "<FluentQt/components/charts/PieChart.h>",
       "source": "src/components/charts/PieChart.h",
-      "summary": "A dedicated pie chart with its own bounded renderer.",
+      "summary": "Dedicated pie chart widget with a fixed Pie presentation.",
       "declarations": [
         "PieChart"
       ],
@@ -6853,7 +6853,7 @@
     {
       "include": "<FluentQt/components/charts/DonutChart.h>",
       "source": "src/components/charts/DonutChart.h",
-      "summary": "A dedicated donut chart with its own bounded renderer.",
+      "summary": "Dedicated donut chart widget with a fixed Donut presentation.",
       "declarations": [
         "DonutChart"
       ],
@@ -6862,7 +6862,7 @@
     {
       "include": "<FluentQt/components/charts/ScatterChart.h>",
       "source": "src/components/charts/ScatterChart.h",
-      "summary": "A dedicated scatter chart with its own bounded renderer.",
+      "summary": "Dedicated scatter chart widget with a fixed Scatter presentation.",
       "declarations": [
         "ScatterChart"
       ],
@@ -6871,7 +6871,7 @@
     {
       "include": "<FluentQt/components/charts/Sparkline.h>",
       "source": "src/components/charts/Sparkline.h",
-      "summary": "A dedicated sparkline chart with its own bounded renderer.",
+      "summary": "Compact sparkline chart widget with a fixed Sparkline presentation.",
       "declarations": [
         "Sparkline"
       ],
@@ -6880,7 +6880,7 @@
     {
       "include": "<FluentQt/components/collections/DataGrid.h>",
       "source": "src/components/collections/DataGrid.h",
-      "summary": "Fluent two-dimensional item view for large model-backed data sets.",
+      "summary": "Fluent two-dimensional table view backed by an external item model.",
       "declarations": [
         "DataGrid"
       ],
@@ -6889,7 +6889,7 @@
     {
       "include": "<FluentQt/components/collections/DrawerView.h>",
       "source": "src/components/collections/DrawerView.h",
-      "summary": "Same-window drawer overlay with modal, dim, and drag behavior.",
+      "summary": "Same-window edge drawer overlay supporting modal blocking, dimming, and edge dragging.",
       "declarations": [
         "DrawerView",
         "DragState",
@@ -6902,7 +6902,7 @@
     {
       "include": "<FluentQt/components/collections/FileListView.h>",
       "source": "src/components/collections/FileListView.h",
-      "summary": "Presents file names, transfer status, and commands from a caller-owned model.",
+      "summary": "List view for displaying file names, transfer status, and per-row remove/retry actions.",
       "declarations": [
         "FileListView",
         "Status",
@@ -6913,7 +6913,7 @@
     {
       "include": "<FluentQt/components/collections/FlipView.h>",
       "source": "src/components/collections/FlipView.h",
-      "summary": "Fluent carousel that presents one item at a time.",
+      "summary": "Fluent carousel container that displays one QWidget page at a time.",
       "declarations": [
         "FlipView",
         "PageRecord"
@@ -6923,7 +6923,7 @@
     {
       "include": "<FluentQt/components/collections/FlowView.h>",
       "source": "src/components/collections/FlowView.h",
-      "summary": "Fluent collection view that wraps items across rows or columns.",
+      "summary": "Fluent collection view that wraps items automatically across rows.",
       "declarations": [
         "FlowView",
         "LayoutBand"
@@ -6933,7 +6933,7 @@
     {
       "include": "<FluentQt/components/collections/GridView.h>",
       "source": "src/components/collections/GridView.h",
-      "summary": "Fluent grid collection view with configurable cell metrics.",
+      "summary": "Fluent grid collection view with configurable cell size, spacing, and column limits.",
       "declarations": [
         "GridView"
       ],
@@ -6942,7 +6942,7 @@
     {
       "include": "<FluentQt/components/collections/ListView.h>",
       "source": "src/components/collections/ListView.h",
-      "summary": "Fluent list collection view with header, footer, sections, and indicator motion.",
+      "summary": "Fluent list view with header/footer slots, section grouping, and animated selection indicator.",
       "declarations": [
         "ListView",
         "IndicatorMotionDirection"
@@ -6952,7 +6952,7 @@
     {
       "include": "<FluentQt/components/collections/Timeline.h>",
       "source": "src/components/collections/Timeline.h",
-      "summary": "Model-backed timeline with reusable Fluent scrolling, input and theme behavior.",
+      "summary": "Model-backed timeline view built on ListView with Fluent scrolling and theming.",
       "declarations": [
         "Timeline",
         "NodeAlignment",
@@ -6973,7 +6973,7 @@
     {
       "include": "<FluentQt/components/collections/SplitView.h>",
       "source": "src/components/collections/SplitView.h",
-      "summary": "Resizable multi-pane container with Fluent splitter handles.",
+      "summary": "Resizable multi-pane container with draggable Fluent splitter handles.",
       "declarations": [
         "SplitViewPaneOptions",
         "SplitView",
@@ -6986,7 +6986,7 @@
     {
       "include": "<FluentQt/components/collections/StackView.h>",
       "source": "src/components/collections/StackView.h",
-      "summary": "Stacked page host with push/pop navigation semantics.",
+      "summary": "Stacked page container with push/pop navigation and animated transitions.",
       "declarations": [
         "StackView",
         "StackEntry",
@@ -7001,7 +7001,7 @@
     {
       "include": "<FluentQt/components/collections/TreeView.h>",
       "source": "src/components/collections/TreeView.h",
-      "summary": "Fluent tree collection view with hierarchy-aware selection visuals.",
+      "summary": "Fluent tree view with hierarchical selection indicator motion and check-state sync.",
       "declarations": [
         "TreeView",
         "SelectionIndicatorStyle",
@@ -7014,7 +7014,7 @@
     {
       "include": "<FluentQt/components/collections/Transfer.h>",
       "source": "src/components/collections/Transfer.h",
-      "summary": "Searchable dual-list selection backed by a caller-owned flat model.",
+      "summary": "Searchable dual-list transfer widget backed by an external flat model.",
       "declarations": [
         "Transfer"
       ],
@@ -7023,7 +7023,7 @@
     {
       "include": "<FluentQt/components/date_time/CalendarDatePicker.h>",
       "source": "src/components/date_time/CalendarDatePicker.h",
-      "summary": "Button-like date entry that opens a CalendarView popup.",
+      "summary": "Button-style date input that opens a CalendarView popup.",
       "declarations": [
         "CalendarDatePicker"
       ],
@@ -7032,7 +7032,7 @@
     {
       "include": "<FluentQt/components/date_time/CalendarView.h>",
       "source": "src/components/date_time/CalendarView.h",
-      "summary": "Fluent calendar surface for browsing and selecting dates across levels.",
+      "summary": "Fluent calendar widget for browsing and selecting dates by day, month, or year.",
       "declarations": [
         "CalendarView",
         "DayPageKey",
@@ -7045,7 +7045,7 @@
     {
       "include": "<FluentQt/components/date_time/DatePicker.h>",
       "source": "src/components/date_time/DatePicker.h",
-      "summary": "Button-like date picker with nullable selected-date semantics.",
+      "summary": "Button-style date picker that supports clearing the selection.",
       "declarations": [
         "DatePicker",
         "FieldSegment",
@@ -7059,7 +7059,7 @@
     {
       "include": "<FluentQt/components/date_time/DateTimeRangePicker.h>",
       "source": "src/components/date_time/DateTimeRangePicker.h",
-      "summary": "Compact range entry with a calendar flyout and independently nullable endpoints.",
+      "summary": "Compact date/time range picker with a calendar flyout and independently clearable endpoints.",
       "declarations": [
         "DateTimeRangePicker",
         "Preset"
@@ -7069,7 +7069,7 @@
     {
       "include": "<FluentQt/components/date_time/TimePicker.h>",
       "source": "src/components/date_time/TimePicker.h",
-      "summary": "Button-like time picker with nullable selected-time semantics.",
+      "summary": "Button-style time picker that supports clearing the selection.",
       "declarations": [
         "TimePicker",
         "FieldSegment",
@@ -7081,7 +7081,7 @@
     {
       "include": "<FluentQt/components/dialogs_flyouts/CoachMark.h>",
       "source": "src/components/dialogs_flyouts/CoachMark.h",
-      "summary": "Same-window teaching tip with a tail aimed at a target.",
+      "summary": "Same-window teaching tip with a pointer tail aimed at a target widget.",
       "declarations": [
         "CoachMark",
         "SurfaceMode",
@@ -7092,7 +7092,7 @@
     {
       "include": "<FluentQt/components/dialogs_flyouts/ContentDialog.h>",
       "source": "src/components/dialogs_flyouts/ContentDialog.h",
-      "summary": "WinUI-style content dialog with title, content, and command buttons.",
+      "summary": "WinUI-style content dialog with title, content area, and action buttons.",
       "declarations": [
         "ContentDialog",
         "ContentDialogButton"
@@ -7102,7 +7102,7 @@
     {
       "include": "<FluentQt/components/dialogs_flyouts/Dialog.h>",
       "source": "src/components/dialogs_flyouts/Dialog.h",
-      "summary": "Same-window Fluent dialog shell with optional smoke scrim and enter/exit fade.",
+      "summary": "Same-window Fluent dialog host with optional smoke scrim and fade animation.",
       "declarations": [
         "Dialog",
         "CloseFlag"
@@ -7112,7 +7112,7 @@
     {
       "include": "<FluentQt/components/dialogs_flyouts/Flyout.h>",
       "source": "src/components/dialogs_flyouts/Flyout.h",
-      "summary": "Popup anchored to a target with placement and window clamping rules.",
+      "summary": "Popup anchored to a target widget with placement options and window clamping.",
       "declarations": [
         "Flyout",
         "Placement"
@@ -7122,7 +7122,7 @@
     {
       "include": "<FluentQt/components/dialogs_flyouts/Popup.h>",
       "source": "src/components/dialogs_flyouts/Popup.h",
-      "summary": "Base same-window popup surface with open state and close policy control.",
+      "summary": "Base same-window popup with open state and close policy control.",
       "declarations": [
         "Popup",
         "CloseFlag",
@@ -7133,7 +7133,7 @@
     {
       "include": "<FluentQt/components/dialogs_flyouts/TeachingTip.h>",
       "source": "src/components/dialogs_flyouts/TeachingTip.h",
-      "summary": "Contextual teaching flyout with target placement and optional tail.",
+      "summary": "Contextual teaching flyout with target anchoring, placement options, and optional tail.",
       "declarations": [
         "TeachingTip",
         "PreferredPlacement",
@@ -7205,7 +7205,7 @@
     {
       "include": "<FluentQt/components/foundation/ThemeRegistry.h>",
       "source": "src/components/foundation/ThemeRegistry.h",
-      "summary": "Runtime store for the theme-able design tokens consumed by every",
+      "summary": "Runtime store for Fluent design tokens consumed by FluentElement.",
       "declarations": [
         "ThemeRegistry",
         "Snapshot",
@@ -7217,7 +7217,7 @@
     {
       "include": "<FluentQt/components/foundation/UserTheme.h>",
       "source": "src/components/foundation/UserTheme.h",
-      "summary": "Loads Fluent token overrides and accent customization into",
+      "summary": "Loads Fluent token overrides and accent customization into ThemeRegistry.",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/UserTheme.h"
     },
@@ -7233,7 +7233,7 @@
     {
       "include": "<FluentQt/components/foundation/FormController.h>",
       "source": "src/components/foundation/FormController.h",
-      "summary": "Coordinates borrowed Fields without owning values, validators, or requests.",
+      "summary": "Coordinates Field controls without owning their values, validators, or requests.",
       "declarations": [
         "FormController",
         "Entry",
@@ -7254,7 +7254,7 @@
     {
       "include": "<FluentQt/components/foundation/plugins/PluginContext.h>",
       "source": "src/components/foundation/plugins/PluginContext.h",
-      "summary": "Provides guarded access to an application host and active dependencies.",
+      "summary": "Provides guarded non-owning access to an application host and active dependencies.",
       "declarations": [
         "PluginContext"
       ],
@@ -7329,14 +7329,14 @@
     {
       "include": "<FluentQt/components/foundation/overlay/OverlayWindow.h>",
       "source": "src/components/foundation/overlay/OverlayWindow.h",
-      "summary": "Resolve the native overlay host, including embedded widget presentations.",
+      "summary": "Resolves the native top-level overlay host, including embedded widget presentations.",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayWindow.h"
     },
     {
       "include": "<FluentQt/components/layout/Accordion.h>",
       "source": "src/components/layout/Accordion.h",
-      "summary": "Vertical group of Expander items with coordinated expansion and keyboard focus.",
+      "summary": "Vertical container of Expander items with coordinated expansion and keyboard navigation.",
       "declarations": [
         "Accordion",
         "ItemRecord",
@@ -7347,7 +7347,7 @@
     {
       "include": "<FluentQt/components/layout/Card.h>",
       "source": "src/components/layout/Card.h",
-      "summary": "Non-interactive Fluent surface for grouping caller-owned content.",
+      "summary": "Rounded Fluent container frame for grouping child widgets with standard layouts.",
       "declarations": [
         "Card",
         "Appearance"
@@ -7357,7 +7357,7 @@
     {
       "include": "<FluentQt/components/layout/DataGridToolBar.h>",
       "source": "src/components/layout/DataGridToolBar.h",
-      "summary": "Compact search, facet and column controls for a borrowed DataGrid.",
+      "summary": "Toolbar with search input, multi-select filter dropdowns, and a column visibility menu for a DataGrid.",
       "declarations": [
         "DataGridToolBar"
       ],
@@ -7375,7 +7375,7 @@
     {
       "include": "<FluentQt/components/layout/Expander.h>",
       "source": "src/components/layout/Expander.h",
-      "summary": "Fluent disclosure surface with an animated, caller-supplied body.",
+      "summary": "Collapsible Fluent card with an animated content area.",
       "declarations": [
         "Expander"
       ],
@@ -7384,7 +7384,7 @@
     {
       "include": "<FluentQt/components/layout/Field.h>",
       "source": "src/components/layout/Field.h",
-      "summary": "Composition shell that labels an existing editor and presents helper",
+      "summary": "Form field wrapper adding a label, required mark, helper text, and validation status to an editor.",
       "declarations": [
         "Field",
         "LabelPosition",
@@ -7395,7 +7395,7 @@
     {
       "include": "<FluentQt/components/layout/PropertyPanel.h>",
       "source": "src/components/layout/PropertyPanel.h",
-      "summary": "Explicit metadata for one generated editor; business values remain application-owned.",
+      "summary": "Schema describing a generated editor row in PropertyPanel (data values stay managed by the application).",
       "declarations": [
         "PropertyDefinition",
         "PropertyPanel",
@@ -7408,7 +7408,7 @@
     {
       "include": "<FluentQt/components/layout/ListDetailView.h>",
       "source": "src/components/layout/ListDetailView.h",
-      "summary": "Two persistent content panes that collapse to one at a width threshold.",
+      "summary": "Two persistent panes that switch to single-pane mode below a width threshold.",
       "declarations": [
         "ListDetailView",
         "Pane"
@@ -7425,7 +7425,7 @@
     {
       "include": "<FluentQt/components/particles/ParticleBackdrop.h>",
       "source": "src/components/particles/ParticleBackdrop.h",
-      "summary": "CPU-default particle presets behind caller-composed content.",
+      "summary": "Animated particle backdrop widget using CPU rendering by default.",
       "declarations": [
         "ParticleBackdrop",
         "Effect",
@@ -7436,7 +7436,7 @@
     {
       "include": "<FluentQt/components/particles/ParticlesPlugin.h>",
       "source": "src/components/particles/ParticlesPlugin.h",
-      "summary": "Creates and pauses caller-owned particle backdrops through the plugin lifecycle.",
+      "summary": "Plugin adapter that creates and pauses ParticleBackdrop widgets on deactivation.",
       "declarations": [
         "ParticlesPlugin"
       ],
@@ -7445,7 +7445,7 @@
     {
       "include": "<FluentQt/components/particles/ParticlesSession.h>",
       "source": "src/components/particles/ParticlesSession.h",
-      "summary": "Owns a Particles plugin registration for an application scope.",
+      "summary": "Scoped facade owning a ParticlesPlugin registration for an application host.",
       "declarations": [
         "ParticlesSession"
       ],
@@ -7454,7 +7454,7 @@
     {
       "include": "<FluentQt/components/menus_toolbars/CommandBar.h>",
       "source": "src/components/menus_toolbars/CommandBar.h",
-      "summary": "Hosts ordered primary and secondary application commands.",
+      "summary": "Horizontal toolbar organizing commands into inline primary actions and an overflow menu.",
       "declarations": [
         "CommandBar",
         "LabelPosition"
@@ -7464,7 +7464,7 @@
     {
       "include": "<FluentQt/components/menus_toolbars/CommandBarFlyout.h>",
       "source": "src/components/menus_toolbars/CommandBarFlyout.h",
-      "summary": "Contextual command surface with collapsed and expanded show modes.",
+      "summary": "Contextual floating command bar with collapsed and expanded modes.",
       "declarations": [
         "CommandBarFlyout",
         "ShowMode"
@@ -7474,7 +7474,7 @@
     {
       "include": "<FluentQt/components/menus_toolbars/CommandPalette.h>",
       "source": "src/components/menus_toolbars/CommandPalette.h",
-      "summary": "Searchable same-window presentation of borrowed application actions.",
+      "summary": "Searchable same-window command palette for invoking application actions.",
       "declarations": [
         "CommandPalette"
       ],
@@ -7493,7 +7493,7 @@
     {
       "include": "<FluentQt/components/menus_toolbars/MenuBar.h>",
       "source": "src/components/menus_toolbars/MenuBar.h",
-      "summary": "Fluent-styled menu bar with configurable font role.",
+      "summary": "Fluent-styled menu bar with overflow menu and configurable font role.",
       "declarations": [
         "FluentMenuBar",
         "Metrics"
@@ -7503,7 +7503,7 @@
     {
       "include": "<FluentQt/components/navigation/Breadcrumb.h>",
       "source": "src/components/navigation/Breadcrumb.h",
-      "summary": "Breadcrumb navigation control with overflow handling and item sizing.",
+      "summary": "Path navigation bar with configurable item sizing and overflow truncation.",
       "declarations": [
         "BreadcrumbItem",
         "Breadcrumb",
@@ -7518,7 +7518,7 @@
     {
       "include": "<FluentQt/components/navigation/NavigationView.h>",
       "source": "src/components/navigation/NavigationView.h",
-      "summary": "Lightweight navigation shell with pane display modes and content hosting.",
+      "summary": "Adaptive navigation shell with pane display modes and a content host.",
       "declarations": [
         "NavigationView",
         "ChromeRecord",
@@ -7532,7 +7532,7 @@
     {
       "include": "<FluentQt/components/navigation/Pivot.h>",
       "source": "src/components/navigation/Pivot.h",
-      "summary": "Pivot-style horizontal navigation selector.",
+      "summary": "Horizontal pivot header strip for switching between content sections.",
       "declarations": [
         "PivotItem",
         "Pivot",
@@ -7547,7 +7547,7 @@
     {
       "include": "<FluentQt/components/navigation/SelectorBar.h>",
       "source": "src/components/navigation/SelectorBar.h",
-      "summary": "Horizontal selector bar for mutually exclusive navigation items.",
+      "summary": "Horizontal selector bar for mutually exclusive navigation options.",
       "declarations": [
         "SelectorBarItem",
         "SelectorBar",
@@ -7562,7 +7562,7 @@
     {
       "include": "<FluentQt/components/navigation/Stepper.h>",
       "source": "src/components/navigation/Stepper.h",
-      "summary": "Presents application-controlled steps without owning pages or workflow rules.",
+      "summary": "Displays a multi-step progress sequence whose workflow state is controlled by the application.",
       "declarations": [
         "Stepper",
         "StepperItem",
@@ -7573,7 +7573,7 @@
     {
       "include": "<FluentQt/components/navigation/StackContentHost.h>",
       "source": "src/components/navigation/StackContentHost.h",
-      "summary": "Content host that switches stacked pages with configurable transitions.",
+      "summary": "Stacked page container with animated directional transitions.",
       "declarations": [
         "StackContentHost",
         "PageRecord",
@@ -7584,7 +7584,7 @@
     {
       "include": "<FluentQt/components/navigation/TabView.h>",
       "source": "src/components/navigation/TabView.h",
-      "summary": "Internal tab strip that paints tab chrome and indicator geometry.",
+      "summary": "Internal tab strip widget that lays out and paints tabs, buttons, and selection indicators.",
       "declarations": [
         "TabViewItem",
         "TabStrip",
@@ -7603,7 +7603,7 @@
     {
       "include": "<FluentQt/components/qmlbridge/QmlPlugin.h>",
       "source": "src/components/qmlbridge/QmlPlugin.h",
-      "summary": "Registers QML widget hosts with the optional plugin lifecycle.",
+      "summary": "Plugin adapter that manages QmlView creation and scene unloading on deactivation.",
       "declarations": [
         "QmlPlugin"
       ],
@@ -7612,7 +7612,7 @@
     {
       "include": "<FluentQt/components/qmlbridge/QmlSession.h>",
       "source": "src/components/qmlbridge/QmlSession.h",
-      "summary": "Owns QML bridge activation for C++, PySide6 and WebAssembly applications.",
+      "summary": "Manages QmlPlugin activation and view lifecycle for C++, PySide6, and WebAssembly apps.",
       "declarations": [
         "QmlSession",
         "GraphicsApi"
@@ -7622,7 +7622,7 @@
     {
       "include": "<FluentQt/components/qmlbridge/QmlTheme.h>",
       "source": "src/components/qmlbridge/QmlTheme.h",
-      "summary": "Exposes the host's Fluent tokens to QML as the read-only fluentTheme object.",
+      "summary": "Exposes host Fluent design tokens to QML as the read-only fluentTheme context object.",
       "declarations": [
         "QmlTheme"
       ],
@@ -7631,7 +7631,7 @@
     {
       "include": "<FluentQt/components/qmlbridge/QmlTextureLayer.h>",
       "source": "src/components/qmlbridge/QmlTextureLayer.h",
-      "summary": "Composes borrowed QmlViews into an application-owned OpenGL panel.",
+      "summary": "Composites QmlView subtrees into an OpenGL panel texture without CPU readback.",
       "declarations": [
         "QmlTextureLayer"
       ],
@@ -7640,7 +7640,7 @@
     {
       "include": "<FluentQt/components/qmlbridge/QmlView.h>",
       "source": "src/components/qmlbridge/QmlView.h",
-      "summary": "Hosts an application QML page inside a caller-owned QWidget.",
+      "summary": "QWidget container that hosts an application QML scene.",
       "declarations": [
         "QmlView",
         "Status"
@@ -7650,7 +7650,7 @@
     {
       "include": "<FluentQt/components/scrolling/AnnotatedScrollBar.h>",
       "source": "src/components/scrolling/AnnotatedScrollBar.h",
-      "summary": "Label metadata rendered beside an AnnotatedScrollBar offset.",
+      "summary": "Section label rendered beside an AnnotatedScrollBar offset.",
       "declarations": [
         "AnnotatedScrollBarLabel",
         "AnnotatedScrollBar",
@@ -7675,7 +7675,7 @@
     {
       "include": "<FluentQt/components/scrolling/PipsPager.h>",
       "source": "src/components/scrolling/PipsPager.h",
-      "summary": "Fluent page indicator with selectable pips and navigation buttons.",
+      "summary": "Page indicator displaying selectable pips with optional previous/next buttons.",
       "declarations": [
         "PipsPager",
         "HitTarget",
@@ -7687,7 +7687,7 @@
     {
       "include": "<FluentQt/components/scrolling/ScrollBar.h>",
       "source": "src/components/scrolling/ScrollBar.h",
-      "summary": "Fluent scrollbar with custom thickness and opacity animation.",
+      "summary": "Fluent overlay-style scrollbar with configurable thickness and auto-hide fade animation.",
       "declarations": [
         "ScrollBar"
       ],
@@ -7696,7 +7696,7 @@
     {
       "include": "<FluentQt/components/scrolling/ScrollView.h>",
       "source": "src/components/scrolling/ScrollView.h",
-      "summary": "Helper content widget that exposes ScrollView zoom state to layout code.",
+      "summary": "Interface for ScrollView content widgets that handle zoom directly.",
       "declarations": [
         "ScrollViewZoomAware",
         "ScrollView",
@@ -7710,7 +7710,7 @@
     {
       "include": "<FluentQt/components/spatial/ParticleLayer.h>",
       "source": "src/components/spatial/ParticleLayer.h",
-      "summary": "Render a borrowed ParticleBackdrop into an existing OpenGL compositor.",
+      "summary": "Renders a ParticleBackdrop into an OpenGL texture for an external compositor (FluentQt::Spatial).",
       "declarations": [
         "ParticleLayer"
       ],
@@ -7719,7 +7719,7 @@
     {
       "include": "<FluentQt/components/spatial/SpatialRuntime.h>",
       "source": "src/components/spatial/SpatialRuntime.h",
-      "summary": "Shared opt-in runtime entry for native and application-owned 3D hosts.",
+      "summary": "Static GUI-thread helpers for configuring and probing 3D widget hosts (FluentQt::Spatial).",
       "declarations": [
         "SpatialRuntime"
       ],
@@ -7728,7 +7728,7 @@
     {
       "include": "<FluentQt/components/spatial/SpatialPlugin.h>",
       "source": "src/components/spatial/SpatialPlugin.h",
-      "summary": "Provides Spatial factories and cleanup through the optional plugin layer.",
+      "summary": "Plugin adapter providing SpatialView and ParticleLayer factories with deactivation cleanup.",
       "declarations": [
         "SpatialPlugin"
       ],
@@ -7737,7 +7737,7 @@
     {
       "include": "<FluentQt/components/spatial/SpatialSession.h>",
       "source": "src/components/spatial/SpatialSession.h",
-      "summary": "Owns a Spatial plugin registration for C++ and PySide6 application scopes.",
+      "summary": "Scoped facade owning a SpatialPlugin registration for C++ and PySide6 apps.",
       "declarations": [
         "SpatialSession"
       ],
@@ -7746,7 +7746,7 @@
     {
       "include": "<FluentQt/components/spatial/SpatialItem.h>",
       "source": "src/components/spatial/SpatialItem.h",
-      "summary": "One live widget surface positioned in a SpatialView.",
+      "summary": "Controls the 3D transform and surface styling of a widget inside SpatialView.",
       "declarations": [
         "SpatialItem"
       ],
@@ -7755,7 +7755,7 @@
     {
       "include": "<FluentQt/components/spatial/SpatialView.h>",
       "source": "src/components/spatial/SpatialView.h",
-      "summary": "Host for a small number of perspective-transformed widgets, with OpenGL and raster backends.",
+      "summary": "Container for perspective-transformed QWidgets with OpenGL and raster backends.",
       "declarations": [
         "SpatialView",
         "RenderMode",
@@ -7766,7 +7766,7 @@
     {
       "include": "<FluentQt/components/status_info/Avatar.h>",
       "source": "src/components/status_info/Avatar.h",
-      "summary": "Fluent identity image with initials fallback and optional presence status.",
+      "summary": "Fluent identity avatar with initials fallback and optional presence badge.",
       "declarations": [
         "Avatar",
         "AvatarShape",
@@ -7778,7 +7778,7 @@
     {
       "include": "<FluentQt/components/status_info/InfoBadge.h>",
       "source": "src/components/status_info/InfoBadge.h",
-      "summary": "Compact Fluent badge for value, icon, status, or attention signals.",
+      "summary": "Compact Fluent badge for counts, icons, status dots, or alerts.",
       "declarations": [
         "InfoBadge",
         "InfoBadgeDisplayMode",
@@ -7799,7 +7799,7 @@
     {
       "include": "<FluentQt/components/status_info/ProgressBar.h>",
       "source": "src/components/status_info/ProgressBar.h",
-      "summary": "Fluent linear progress indicator for determinate and indeterminate",
+      "summary": "Fluent linear progress bar for determinate and indeterminate progress.",
       "declarations": [
         "ProgressBar"
       ],
@@ -7819,7 +7819,7 @@
     {
       "include": "<FluentQt/components/status_info/Shimmer.h>",
       "source": "src/components/status_info/Shimmer.h",
-      "summary": "Painter helper for Fluent skeleton loading visuals.",
+      "summary": "Painter helper for Fluent skeleton loading placeholders.",
       "declarations": [
         "ShimmerPainter",
         "Palette",
@@ -7833,7 +7833,7 @@
     {
       "include": "<FluentQt/components/status_info/SplashScreen.h>",
       "source": "src/components/status_info/SplashScreen.h",
-      "summary": "Reusable startup surface covering its parent widget's content area.",
+      "summary": "Reusable startup overlay covering its parent widget's content area.",
       "declarations": [
         "SplashScreen",
         "Presentation"
@@ -7865,7 +7865,7 @@
     {
       "include": "<FluentQt/components/textfields/AutoSuggestBox.h>",
       "source": "src/components/textfields/AutoSuggestBox.h",
-      "summary": "LineEdit-based input box with query affordance and suggestion flyout.",
+      "summary": "LineEdit-based search box with query button and suggestion popup.",
       "declarations": [
         "AutoSuggestBox",
         "TextChangeReason",
@@ -7877,7 +7877,7 @@
     {
       "include": "<FluentQt/components/textfields/TagInput.h>",
       "source": "src/components/textfields/TagInput.h",
-      "summary": "Compact selected tags around AutoSuggestBox's native text editor.",
+      "summary": "Multi-value tag input arranged around AutoSuggestBox's text editor.",
       "declarations": [
         "TagInput"
       ],
@@ -7886,7 +7886,7 @@
     {
       "include": "<FluentQt/components/textfields/CodeBlock.h>",
       "source": "src/components/textfields/CodeBlock.h",
-      "summary": "Read-only, selectable code with syntax colors, folding and bounded scrolling.",
+      "summary": "Read-only, selectable code block with syntax highlighting, folding, and bounded scrolling.",
       "declarations": [
         "CodeBlock"
       ],
@@ -7895,7 +7895,7 @@
     {
       "include": "<FluentQt/components/textfields/EditingCommandRouter.h>",
       "source": "src/components/textfields/EditingCommandRouter.h",
-      "summary": "Provides window-scoped semantic actions for the focused Fluent editor.",
+      "summary": "Routes window-scoped editing actions to the focused Fluent editor.",
       "declarations": [
         "EditingCommandRouter",
         "Command"
@@ -7924,7 +7924,7 @@
     {
       "include": "<FluentQt/components/textfields/NumberBox.h>",
       "source": "src/components/textfields/NumberBox.h",
-      "summary": "Numeric LineEdit with value bounds, expression input, and spin",
+      "summary": "Numeric LineEdit with value bounds, expression evaluation, and spin buttons.",
       "declarations": [
         "NumberBox",
         "SpinButtonPlacementMode"
@@ -7934,7 +7934,7 @@
     {
       "include": "<FluentQt/components/textfields/PasswordBox.h>",
       "source": "src/components/textfields/PasswordBox.h",
-      "summary": "Password text field with header and reveal-mode support.",
+      "summary": "Password input based on LineEdit with optional header and reveal modes.",
       "declarations": [
         "PasswordBox",
         "PasswordRevealMode"
@@ -7953,7 +7953,7 @@
     {
       "include": "<FluentQt/components/windowing/TitleBar.h>",
       "source": "src/components/windowing/TitleBar.h",
-      "summary": "Custom title bar container with reserved system button regions.",
+      "summary": "Custom title bar container with leading and trailing regions reserved for system window controls.",
       "declarations": [
         "TitleBar"
       ],
@@ -7962,7 +7962,7 @@
     {
       "include": "<FluentQt/components/windowing/Window.h>",
       "source": "src/components/windowing/Window.h",
-      "summary": "Application shell window with title-bar and content hosting.",
+      "summary": "Application shell window with title-bar and content hosting; uses native window management by default and client-side frame fallback where needed.",
       "declarations": [
         "Window"
       ],
@@ -7971,14 +7971,14 @@
     {
       "include": "<FluentQt/components/windowing/WindowBackdrop.h>",
       "source": "src/components/windowing/WindowBackdrop.h",
-      "summary": "Returns the published backdrop state for a widget's top-level window.",
+      "summary": "Returns the active backdrop state of the widget's top-level window.",
       "declarations": [],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/WindowBackdrop.h"
     },
     {
       "include": "<FluentQt/components/windowing/WindowBackdropMaterial.h>",
       "source": "src/components/windowing/WindowBackdropMaterial.h",
-      "summary": "Parameters for the app-painted Fluent window backdrop.",
+      "summary": "Options for the software-painted Fluent window backdrop; always establishes an opaque base layer so it is safe without compositor blur.",
       "declarations": [
         "WindowBackdropMaterialOptions",
         "WindowBackdropMaterial"

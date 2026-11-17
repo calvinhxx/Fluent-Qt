@@ -11,13 +11,8 @@ class HyperlinkButtonAccessible;
 }
 
 /**
- * @brief Button-styled hyperlink entry with URL and underline control.
- * zh_CN: 具备 URL 和下划线控制的按钮式超链接入口。
- *
- * HyperlinkButton keeps a lightweight command surface for navigation actions
- * while preserving Fluent text-button styling and optional underline feedback.
- * zh_CN: HyperlinkButton 为导航操作提供轻量命令表面，并保留 Fluent 文本按钮风格
- * 以及可选下划线反馈。
+ * @brief Text-styled navigation button with optional URL and hover underline.
+ * zh_CN: 文本链接样式的导航按钮，支持关联 URL 与悬停下划线。
  */
 class HyperlinkButton : public Button {
     Q_OBJECT

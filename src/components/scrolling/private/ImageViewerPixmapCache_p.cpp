@@ -29,8 +29,7 @@ const QPixmap& ImageViewerPixmapCache::sourceForScale(const QPixmap& original, q
         return m_current;
     }
 
-    // Further reductions start from the nearest larger cached image instead of rescanning the original.
-    // zh_CN: 继续缩小时，从最近的较大缓存生成，避免再次遍历原图。
+    // Downscale from the nearest larger cached level instead of re-sampling the full-resolution source.
     const QPixmap* source = &original;
     for (const QPixmap* cached : {&m_current, &m_previous}) {
         if (!cached->isNull() && cached->width() >= size.width() && cached->height() >= size.height()

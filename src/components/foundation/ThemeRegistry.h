@@ -9,24 +9,12 @@
 namespace fluent {
 
 /**
- * @brief Runtime store for the theme-able design tokens consumed by every
- * FluentElement. zh_CN: 供所有 FluentElement 消费的、可在运行时替换的设计 token
- * 存储。
+ * @brief Runtime store for Fluent design tokens consumed by FluentElement.
+ * zh_CN: 供 FluentElement 使用的运行时设计 token 存储。
  *
- * Historically FluentElement::themeColors()/themeRadius()/themeFont() read
- * straight from the compile-time tables in design/. That made the look
- * impossible to customize without recompiling. ThemeRegistry inserts a single
- * runtime indirection behind those accessors: it is seeded from the built-in
- * Fluent palette (so default behavior is byte-for-byte unchanged), and the
- * application layer can install user-supplied Fluent token overrides loaded
- * from a config file. Because every control already funnels through
- * themeColors() etc., installing new tokens repaints the whole UI without
- * touching any control. zh_CN: 过去 themeColors()/themeRadius()/themeFont()
- * 直接读 design/ 的编译期常量,导致不重编无法定制外观。 ThemeRegistry
- * 在这些访问器后插入唯一一层运行时间接:默认从内置 Fluent
- * 调色板播种(默认行为逐字节不变), 应用层可安装从配置文件加载的 Fluent token
- * 覆盖。由于所有控件都已汇聚到 themeColors() 等漏斗, 安装新 token
- * 即可在不改任何控件的前提下重绘整个界面。
+ * Seeded with built-in Fluent defaults and updated atomically when applications
+ * or UserTheme commit custom palettes, corner radii, or font overrides.
+ * zh_CN: 初始化为内置 Fluent 默认值，可在运行时通过应用或 UserTheme 原子更新调色板、圆角与字体覆盖。
  */
 class ThemeRegistry {
 public:
@@ -103,8 +91,7 @@ public:
      *
      * @deprecated Use colors(FluentElement::Theme) so HighContrast cannot be
      * silently collapsed to the Light palette.
-     * zh_CN: 请改用 colors(FluentElement::Theme)，避免 HighContrast 被静默
-     * 折叠为 Light 调色板。
+     * zh_CN: 请改用 colors(FluentElement::Theme)，避免 HighContrast 被静默按 Light 处理。
      */
     Q_DECL_DEPRECATED_X("Use colors(FluentElement::Theme)")
     const FluentElement::Colors& colors(bool dark) const { return dark ? m_dark : m_light; }
@@ -133,18 +120,16 @@ public:
     Q_DECL_DEPRECATED_X("Use setColors(FluentElement::Theme, const Colors&)")
     void setColors(bool dark, const FluentElement::Colors& colors);
 
-    // Convenience token updates. Each changed value uses the matching snapshot transaction.
-    // zh_CN: token 安装(由应用层主题目录调用)。每次都通过匹配的快照事务提交。
+    // Convenience setters; each commits an atomic snapshot update.
     void setColors(FluentElement::Theme theme, const FluentElement::Colors& colors);
     void setRadius(int none, int control, int overlay);
     void setFontFamilyOverride(const QString& family);
     void setFontScale(qreal scale);
 
-    /// Restore the built-in Fluent defaults. zh_CN: 恢复内置 Fluent 默认值。
+    /** @brief Restores built-in Fluent defaults. zh_CN: 恢复内置 Fluent 默认值。 */
     void resetToDefaults();
 
-    /// Monotonic counter bumped once per changed snapshot.
-    /// zh_CN: 每次快照变化仅自增一次。
+    /** @brief Monotonic counter incremented once per committed snapshot change. zh_CN: 每次快照实际变化时递增一次的单调计数器。 */
     int revision() const { return m_revision; }
 
 private:

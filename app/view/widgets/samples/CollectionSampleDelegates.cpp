@@ -78,11 +78,8 @@ using fluent::collections::TreeView;
 
 namespace {
 
-// Shared all-invalid color set, bound by const-ref when a delegate has no theme host, so the paint
-// hot paths can read colors via themeColorsRef() without copying the ~50-QColor Colors struct per
-// item. The .isValid() guards at each use site fall back to literals for every field.
-// zh_CN: 共享的全无效色板;delegate 无主题宿主时按 const 引用绑定，使绘制热路径可经 themeColorsRef() 读色而不必每项
-// 拷贝整个 ~50 个 QColor 的 Colors 结构体。各使用点的 .isValid() 守卫会对每个字段回退到字面量。
+// Shared invalid color palette bound by const-ref when no theme host exists, avoiding per-item Colors copies in paint().
+// zh_CN: 无主题宿主时按常引用绑定的无效色板，避免绘制热路径为每项拷贝 Colors 结构体，各使用点自行回退默认值。
 const fluent::FluentElement::Colors& emptyColors()
 {
     static const fluent::FluentElement::Colors kEmpty{};
@@ -518,7 +515,6 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         painter->drawText(takeLeadingRect(kIconAreaW), Qt::AlignCenter, glyph);
     }
 
-    // Text.
     const QRectF textSlot = rtl
         ? QRectF(bgRect.left() + 8.0, bgRect.top(), qMax<qreal>(0.0, cursorX - bgRect.left() - 8.0), bgRect.height())
         : QRectF(cursorX, bgRect.top(), qMax<qreal>(0.0, bgRect.right() - cursorX - 8.0), bgRect.height());
@@ -553,7 +549,6 @@ bool TreeRowDelegate::editorEvent(QEvent* event,
             const Qt::CheckState next = (cur == Qt::Checked) ? Qt::Unchecked : Qt::Checked;
 
             model->setData(index, next, Qt::CheckStateRole);
-            // Cascade down to every descendant.
             std::function<void(const QModelIndex&)> cascade = [&](const QModelIndex& parent) {
                 for (int r = 0; r < model->rowCount(parent); ++r) {
                     const QModelIndex child = model->index(r, 0, parent);
@@ -562,7 +557,6 @@ bool TreeRowDelegate::editorEvent(QEvent* event,
                 }
             };
             cascade(index);
-            // Roll the tri-state up through ancestors.
             std::function<void(const QModelIndex&)> rollUp = [&](const QModelIndex& child) {
                 const QModelIndex parent = child.parent();
                 if (!parent.isValid())

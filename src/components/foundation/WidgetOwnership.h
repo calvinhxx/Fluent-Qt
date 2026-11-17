@@ -9,7 +9,7 @@ Q_NAMESPACE
 
 /**
  * @brief Defines how a widget host releases caller-supplied content.
- * zh_CN: 定义控件宿主释放调用方所提供 QWidget 时的生命周期语义。
+ * zh_CN: 定义控件宿主释放外部传入 QWidget 时的所有权处理方式。
  *
  * QWidget containers must reparent content while it is displayed. Borrowed
  * content is detached to a parentless widget when released, Reparented content

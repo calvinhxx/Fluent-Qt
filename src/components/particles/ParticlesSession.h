@@ -8,17 +8,15 @@
 namespace fluent::particles {
 
 /**
- * @brief Owns a Particles plugin registration for an application scope.
- * zh_CN: 为应用作用域持有 Particles 插件注册。
- *
- * Host and backdrops remain borrowed. Activate before creating or attaching
- * backdrops; deactivation pauses them without deleting widgets, child content,
- * or settings such as animationEnabled. Reactivating or destroying the session
- * removes the pause. Keep this session outside tracked widget ancestry. All
- * operations use QApplication's GUI thread.
- * zh_CN: 宿主和背景均为借用对象。先激活再创建或关联背景；停用仅暂停动画，不销毁
- * 控件或子内容，也不修改 animationEnabled 等设置；再次激活或销毁会话即解除暂停。
- * 本会话不可作为受追踪控件的后代，所有操作均须在 QApplication 的 GUI 线程执行。
+ * @brief Scoped facade owning a ParticlesPlugin registration for an application host.
+ * Caller retains ownership of the host and backdrops. Activate before creating or attaching
+ * backdrops; deactivating pauses tracked backdrops without deleting widgets or altering settings
+ * such as animationEnabled, and reactivating or destroying the session lifts the pause. Must not
+ * be parented under a tracked widget, and all calls must run on the GUI thread.
+ * zh_CN: 为应用作用域管理 ParticlesPlugin 注册的会话封装。
+ * 调用方负责宿主与粒子背景的生命周期。创建或关联背景前须先激活；停用时仅暂停已关联背景的动画，
+ * 不销毁控件或子内容，也不修改 animationEnabled 等属性，重新激活或销毁会话即恢复。本会话不能
+ * 作为受管理控件的子对象，所有调用须在 GUI 线程执行。
  */
 class ParticlesSession : public QObject {
     Q_OBJECT
@@ -26,18 +24,14 @@ class ParticlesSession : public QObject {
 public:
     explicit ParticlesSession(QObject* host = nullptr, QObject* parent = nullptr);
     ~ParticlesSession() override;
-    /** @brief Activates the plugin; repeated activation is a no-op.
-     * zh_CN: 激活插件；重复激活为空操作。 */
+    /** @brief Registers and activates ParticlesPlugin; returns true immediately if already active. zh_CN: 注册并激活 ParticlesPlugin；已激活时直接返回 true。 */
     bool activate(QString* error = nullptr);
-    /** @brief Pauses borrowed backdrops until reactivation or destruction; settings are preserved.
-     * zh_CN: 暂停借用背景，直到再次激活或会话销毁；保留所有权和粒子设置。 */
+    /** @brief Pauses tracked backdrops until reactivated or destroyed without deleting widgets or changing settings. zh_CN: 暂停已关联背景直至重新激活或销毁会话，不销毁控件或更改其设置。 */
     bool deactivate(QString* error = nullptr);
     bool isActive() const;
-    /** @brief Creates a caller-owned backdrop with the requested parent while active.
-     * zh_CN: 激活时创建指定父对象的背景，由调用方持有。 */
+    /** @brief Creates an attached ParticleBackdrop while active (owned by parent or caller); returns nullptr when inactive. zh_CN: 激活时创建并关联一个 ParticleBackdrop（由 parent 或调用方管理）；未激活时返回 nullptr。 */
     ParticleBackdrop* createBackdrop(QWidget* parent = nullptr);
-    /** @brief Tracks a borrowed backdrop while active without reparenting it.
-     * zh_CN: 激活时追踪借用背景，不改变其父对象。 */
+    /** @brief Attaches an existing ParticleBackdrop while active without reparenting or taking ownership. zh_CN: 在激活状态下关联已有的 ParticleBackdrop（不改变父对象或所有权）。 */
     bool attachBackdrop(ParticleBackdrop* backdrop);
 
 signals:

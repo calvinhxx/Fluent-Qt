@@ -18,8 +18,6 @@
 
 namespace fluent {
 
-// --- AnchorLayout implementation. zh_CN: AnchorLayout 实现。---
-
 namespace {
 
 QSize normalizedSize(QSize size)
@@ -467,11 +465,8 @@ QSize AnchorLayout::measuredSize(bool minimum) const
         candidate = candidate.expandedTo(naturalSize);
     }
 
-    // Probe a comfortably large parent once to distinguish constraints that
-    // can be satisfied by growing the layout from constant outward offsets
-    // that can never move inside the parent.
-    // zh_CN: 先以足够大的父区域探测一次，用于区分“扩大布局即可满足”的约束
-    // 与无论如何扩大都仍位于父区域之外的固定偏移。
+    // Probe a large parent once to separate constraints satisfiable by growing
+    // the layout from constant outward offsets.
     constexpr int kProbeExtent = 1 << 20;
     const QRect probeRect(0, 0, kProbeExtent, kProbeExtent);
     const QVector<QRect> probeGeometries = resolveGeometries(probeRect, minimum, false);
@@ -498,12 +493,8 @@ QSize AnchorLayout::measuredSize(bool minimum) const
         };
     }
 
-    // Grow to the smallest discrete parent rectangle that preserves every
-    // satisfiable natural size and boundary. Re-resolving the complete anchor
-    // graph on each pass also handles chains that connect a leading item to a
-    // trailing item, such as ContentDialog's title/content/action stack.
-    // zh_CN: 逐轮扩展到能保留所有可满足自然尺寸与边界的最小整数父区域；每轮
-    // 重新求解完整锚点图，也可覆盖从顶部元素连接到底部元素的约束链。
+    // Grow to the smallest parent rect that satisfies natural sizes and bounds;
+    // re-solving each pass also handles multi-item anchor chains.
     constexpr int kMaximumPasses = 64;
     for (int pass = 0; pass < kMaximumPasses; ++pass) {
         const QRect candidateRect(QPoint(0, 0), candidate);
@@ -546,20 +537,8 @@ void AnchorLayout::setGeometry(const QRect& rect)
     if (m_items.isEmpty())
         return;
 
-    // First layout pass: make sure each child's font metrics resolve before
-    // sizeHint() is queried.
-    //
-    // FluentElement applies pixel-size fonts in onThemeUpdated() during
-    // construction, but the widget is not yet in a window hierarchy and some
-    // platform application-font backends may not have final metrics yet;
-    // QStyle::polish() can also overwrite custom fonts. So on the first
-    // setGeometry(): ensurePolished() first (style lands), then
-    // onThemeUpdated() (Fluent fonts reapplied) so sizeHint() is correct.
-    // zh_CN: 首次布局——在查询 sizeHint() 前确保子控件字体 metrics 已解析。
-    // FluentElement 构造时即调用 onThemeUpdated() 设置 pixelSize 字体，但控件
-    // 尚未入窗，macOS 上应用字体 metrics 可能尚未初始化，
-    // QStyle::polish() 也可能覆盖自定义字体；因此首次 setGeometry() 先
-    // ensurePolished() 再 onThemeUpdated()，保证 sizeHint() 正确。
+    // On the first layout pass, polish children before reapplying Fluent fonts so
+    // sizeHint() uses final metrics (QStyle::polish() can overwrite custom fonts).
     if (m_firstLayout) {
         m_firstLayout = false;
         for (const Item& it : m_items) {
@@ -585,8 +564,6 @@ void AnchorLayout::setGeometry(const QRect& rect)
             it.item->setGeometry(it.geometry);
     }
 }
-
-// --- Managed binding and state runtime. zh_CN: 可管理绑定与状态运行时。---
 
 namespace {
 
@@ -738,11 +715,8 @@ public:
             const QMetaProperty property = metaProperty(dependency.object, dependency.propertyName);
             QObject::connect(dependency.object, property.notifySignal(), this, slot);
             QObject::connect(dependency.object, &QObject::destroyed, this, [this] {
-                // Sibling controls may already be gone while a parent deletes
-                // children. Defer state signals until teardown has completed;
-                // deleting this watcher cancels the queued reevaluation.
-                // zh_CN: 父对象删除子对象时，兄弟控件可能已经销毁。延后状态通知，
-                // 待析构完成后再求值；观察器销毁会取消排队任务。
+                // Defer until parent teardown finishes so sibling destruction does not trigger stale evaluation;
+                // destroying this watcher cancels the queued callback.
                 QTimer::singleShot(0, this, [this] { changed(); });
             });
         }
@@ -980,9 +954,7 @@ void QMLPlusPropertyHub::install(QByteArray property, detail::QMLBinding* bindin
     const QPointer<QMLPlusPropertyHub> guard(this);
     const QPointer<detail::QMLBinding> bindingGuard(binding);
     const QPointer<detail::QMLBinding> previous(this->binding(property));
-    // Publish before cancellation. A reentrant registration can then retire
-    // this candidate, and the most recent registration remains authoritative.
-    // zh_CN: 取消前先发布候选绑定；重入注册可使其失效，并保留最近一次注册。
+    // Publish before cancelling previous so reentrant registrations keep the newest binding.
     m_entries[property].binding = binding;
     if (previous)
         previous->invalidate();
@@ -1127,8 +1099,7 @@ void BindingHandle::unbind() const
         m_binding->invalidate();
 }
 
-// Kept as a standalone compatibility helper. Managed bind() uses QMLBinding.
-// zh_CN: 保留为独立兼容工具；受管理的 bind() 使用 QMLBinding。
+// Standalone compatibility helper; managed bind() uses QMLBinding.
 PropertyLink::PropertyLink(QObject* from,
     const QMetaProperty& fromProp,
     QObject* to,
@@ -1523,9 +1494,7 @@ void QMLPlusRuntime::requestState(const QString& name, bool force)
         d->current = requested;
         d->applying = true;
 
-        // Acquire the full destination before writing any value, so reentrant
-        // notifications cannot leak a state assignment through a TwoWay link.
-        // zh_CN: 写入前先取得全部目标属性，防止重入通知经双向绑定泄漏状态赋值。
+        // Acquire all target properties before writing so reentrant notifies cannot leak via TwoWay links.
         for (const PropertyChange& change : std::as_const(destination.changes)) {
             if (!change.target || change.propertyName.isEmpty())
                 continue;
@@ -1752,8 +1721,7 @@ void QMLPlus::addState(const QMLState& definition)
             observer));
     }
     if (activeReplacement) {
-        // A replacement must reapply even if its public name is unchanged.
-        // zh_CN: 即使公开状态名称未改变，也需要重新应用替换后的定义。
+        // Reapply even when the state name itself is unchanged.
         observer->requestState(data->current, true);
         if (!guard)
             return;

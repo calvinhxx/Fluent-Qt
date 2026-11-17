@@ -8,17 +8,16 @@
 namespace fluent::textfields {
 
 /**
- * @brief Compact selected tags around AutoSuggestBox's native text editor.
- * zh_CN: 在 AutoSuggestBox 原生文字编辑区周围排列紧凑的已选标签。
+ * @brief Multi-value tag input arranged around AutoSuggestBox's text editor.
+ * zh_CN: 基于 AutoSuggestBox 的多标签输入控件，在编辑区周围排列已选标签。
  *
- * Each selected item is a QVariantMap with non-empty "key" and "text" strings.
- * Stable keys identify values; equal labels are allowed. Suggestions may carry
- * the same map in Qt::UserRole, or a string key with the candidate text as label.
- * Models and transport remain application-owned. Selection stores value
- * snapshots and survives suggestion model replacement and filtering.
- * zh_CN: 每项是含非空 key、text 字符串的 QVariantMap；key 标识身份，文字可重名。
- * 建议项 UserRole 可提供同形 map，或字符串身份并使用候选文字作为标签。
- * 模型与请求仍由应用拥有，选择保存值快照，不随候选模型替换或筛选丢失。
+ * Each selected tag is stored as a QVariantMap with non-empty "key" and "text"
+ * strings (keys uniquely identify tags; duplicate display text is allowed).
+ * Suggestions may pass that map or a string key via Qt::UserRole. Selected
+ * items are stored as value snapshots and persist across model updates.
+ * zh_CN: 每个已选标签以包含非空 "key" 和 "text" 的 QVariantMap 存储（key 唯一标识标签，
+ * 允许显示文本重名）；候选项可通过 Qt::UserRole 传入同结构 map 或字符串 key。
+ * 已选列表保存值快照，不会随候选模型替换或筛选丢失。
  */
 class TagInput : public AutoSuggestBox {
     Q_OBJECT
@@ -35,12 +34,12 @@ public:
     QStringList selectedTexts() const;
     bool containsKey(const QString& key) const;
 
-    /** @brief Restores value snapshots; ignores malformed items and duplicate keys, preserving first occurrence.
-     * zh_CN: 恢复值快照；忽略无效项和重复身份，保留首个出现项及顺序。
+    /** @brief Replaces selected tags, ignoring malformed items and duplicate keys (keeping first order).
+     * zh_CN: 批量设置已选标签，忽略格式无效项和重复 key（按首次出现顺序保留）。
      */
     void setSelectedItems(const QVariantList& items);
-    /** @brief Adds a value snapshot; returns false for empty or already-selected keys.
-     * zh_CN: 添加值快照；身份为空或已选中时返回 false。
+    /** @brief Adds a tag snapshot; returns false if key is empty or already selected.
+     * zh_CN: 添加标签；key 为空或已存在时返回 false。
      */
     bool addItem(const QString& key, const QString& text);
     bool removeItem(const QString& key);
@@ -49,11 +48,10 @@ public:
 
 signals:
     void selectionChanged();
-    /** @brief Asks the application to resolve submitted text or delimited pasted values.
-     * zh_CN: 请应用解析提交文字或分隔粘贴的值；应用添加有效项并保留待修正文字。
-     * Unknown text never silently becomes a directory member. The application
-     * can call addItem and clear/setText after resolving these values.
-     * zh_CN: 未知文字不会自动成为目录成员；应用解析后可调用 addItem 与 clear/setText。
+    /** @brief Emitted when typed text or delimited pasted tokens need external resolution.
+     *
+     * Unresolved text is not added automatically; call addItem() and clear() or setText() after resolving tokens.
+     * zh_CN: 用户提交输入文本或粘贴带分隔符的片段时发出，由外部校验后调用 addItem() 及 clear()/setText()（未识别文本不会自动成标签）。
      */
     void tokensSubmitted(const QStringList& tokens);
 

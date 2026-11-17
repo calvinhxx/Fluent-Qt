@@ -159,8 +159,8 @@
     36
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A single-line text box with Fluent styling and a clear button.",
+    "zh": "Fluent 样式单行文本框，支持清空按钮与后缀图标/文本。"
   },
   "presets": [
     {

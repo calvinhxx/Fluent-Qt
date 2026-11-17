@@ -15,8 +15,7 @@ FieldTrailingContent::FieldTrailingContent(QWidget* host) : m_host(host)
 FieldTrailingContent::~FieldTrailingContent()
 {
     m_host->removeEventFilter(this);
-    // Owned children are destroyed by QWidget; borrowed children must leave first.
-    // zh_CN: 拥有的子控件交由 QWidget 销毁，借用的子控件必须先脱离宿主。
+    // Owned children are deleted by QWidget; non-owning children must detach before host teardown.
     release(false);
 }
 
@@ -63,8 +62,7 @@ void FieldTrailingContent::release(bool destroyOwned)
         if (destroyOwned)
             delete widget.data();
     } else {
-        // Restoring into a dying host would also destroy borrowed content.
-        // zh_CN: 析构期间不能恢复到即将销毁的宿主子树，否则借用内容仍会被删除。
+        // Do not reparent back into a host subtree that is being destroyed.
         const bool safeParent = original && (destroyOwned || (original != m_host && !m_host->isAncestorOf(original)));
         widget->setParent(ownership == WidgetOwnership::Reparented && safeParent ? original.data() : nullptr);
     }
@@ -178,9 +176,7 @@ QSize FieldTrailingContent::sizeHint() const
     if (!child || child->isHidden())
         return QSize(0, 0);
     if (!m_text.isEmpty()) {
-        // Rounded integer advances can elide even a two-letter unit. Leave the
-        // same small raster clearance used by the closed ComboBox text surface.
-        // zh_CN: 整数取整可能让两个字母的单位也被省略；保留与 ComboBox 文字表面相同的小幅栅格余量。
+        // Add small raster clearance so integer rounding does not elide short unit labels.
         const QFontMetricsF metrics(child->font());
         const int width = qCeil(qMax(metrics.horizontalAdvance(m_text), metrics.boundingRect(m_text).width())) + 2;
         return QSize(width, child->fontMetrics().height());

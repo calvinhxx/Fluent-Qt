@@ -30,15 +30,15 @@ enum class BackdropFidelity { Solid, Emulated, Composited, Native };
 Q_ENUM_NS(BackdropFidelity)
 
 /**
- * @brief Painting contract used by widgets sharing the top-level backing store.
- * zh_CN: 共享顶层后备缓冲的控件所使用的绘制契约。
+ * @brief Background painting rule used by widgets sharing the top-level backing store.
+ * zh_CN: 共享顶层绘制缓冲的控件所遵循的背景绘制模式。
  */
 enum class BackdropSurfaceMode { SolidOpaque, PaintedOpaque, CompositedTransparent };
 Q_ENUM_NS(BackdropSurfaceMode)
 
 /**
  * @brief Per-effect capabilities discovered for the current platform session.
- * zh_CN: 当前平台会话探测到的逐效果能力。
+ * zh_CN: 当前平台环境探测到的各项背景能力。
  */
 struct BackdropCapabilities {
     bool alphaSurfaceSupported = false;
@@ -48,18 +48,13 @@ struct BackdropCapabilities {
     QString provider;
 
     /**
-     * @brief Whether a native backend represents this effect.
-     * zh_CN: 原生后端是否支持该效果。
+     * @brief Whether a native backend supports this effect directly.
+     * zh_CN: 原生后端是否直接支持该效果。
      */
     bool supportsNative(BackdropEffect effect) const;
     /**
-     * @brief Whether generic compositor blur can represent this effect.
-     * zh_CN: 通用合成器模糊是否可表示该效果。
-     *
-     * Blur-behind maps to Acrylic. Mica requires a native Mica provider or the
-     * stable UILib-painted material fallback.
-     * zh_CN: 背景模糊映射为 Acrylic；Mica 需要原生 Mica 后端或稳定的
-     * UILib 软件材质回退。
+     * @brief Whether generic compositor blur-behind can provide this effect (maps to Acrylic; Mica requires native support or software fallback).
+     * zh_CN: 通用合成器背景模糊是否可提供该效果（仅用于 Acrylic；Mica 需原生支持或软件材质回退）。
      */
     bool supportsCompositor(BackdropEffect effect) const;
     /**
@@ -70,8 +65,8 @@ struct BackdropCapabilities {
 };
 
 /**
- * @brief Result of asking a platform backend to apply one background effect.
- * zh_CN: 请求平台后端施加某一背景效果后的结果。
+ * @brief Result returned by a platform backend after applying a background effect.
+ * zh_CN: 平台后端应用背景效果后的返回结果。
  */
 struct BackdropApplyResult {
     bool applied = false;
@@ -82,8 +77,8 @@ struct BackdropApplyResult {
 };
 
 /**
- * @brief Requested and effective state published by a Fluent window.
- * zh_CN: Fluent 窗口发布的请求状态与实际状态。
+ * @brief Requested and effective backdrop state published by a Fluent window.
+ * zh_CN: Fluent 窗口上记录的请求背景效果与实际生效状态。
  */
 struct BackdropState {
     BackdropEffect requestedEffect = BackdropEffect::Solid;

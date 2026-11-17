@@ -4,9 +4,8 @@ namespace fluent::basicinput {
 
 RepeatButton::RepeatButton(const QString& text, QWidget* parent) : Button(text, parent)
 {
-    // Enable auto-repeat. zh_CN: 启用自动重复功能。
     setAutoRepeat(true);
-    // Defaults matching the usual WinUI 3 feel. zh_CN: 设置默认值，匹配 WinUI 3 常见体验。
+    // Default repeat timing matching WinUI 3.
     setAutoRepeatDelay(500);
     setAutoRepeatInterval(50);
 }

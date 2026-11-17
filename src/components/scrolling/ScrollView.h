@@ -21,13 +21,8 @@ namespace fluent::scrolling {
 class ScrollBar;
 
 /**
- * @brief Helper content widget that exposes ScrollView zoom state to layout code.
- * zh_CN: 向布局代码暴露 ScrollView 缩放状态的辅助内容控件。
- *
- * ScrollViewZoomAware separates wheel and gesture observation from the public
- * ScrollView API while keeping zoom-sensitive content testable.
- * zh_CN: ScrollViewZoomAware 将滚轮/手势观察从 ScrollView 公开 API 中拆出，
- * 并让缩放敏感内容更易测试。
+ * @brief Interface for ScrollView content widgets that handle zoom directly.
+ * zh_CN: 供直接响应缩放的 ScrollView 内容控件实现的接口。
  */
 class ScrollViewZoomAware {
 public:
@@ -38,13 +33,8 @@ public:
 };
 
 /**
- * @brief Scrollable content host with Fluent scroll bars and optional zoom support.
- * zh_CN: 带 Fluent 滚动条和可选缩放能力的可滚动内容宿主。
- *
- * ScrollView hosts a single content widget and coordinates scroll modes, bar
- * visibility policies, custom scroll bars, gesture handling, and zoom bounds.
- * zh_CN: ScrollView 承载单个内容控件，并协调滚动模式、滚动条可见策略、自定义滚动条、
- * 手势处理和缩放边界。
+ * @brief Scrollable content container with Fluent scroll bars and optional zoom support.
+ * zh_CN: 带 Fluent 滚动条与可选缩放能力的可滚动内容容器。
  */
 class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -102,19 +92,10 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(qreal maxZoomFactor READ maxZoomFactor WRITE setMaxZoomFactor NOTIFY maxZoomFactorChanged)
     /**
-     * @brief Whether boundary wheel input chains to an enclosing scroller (WinUI
-     * ScrollViewer.IsScrollChainingEnabled).
-     * zh_CN: 滚动到边缘后滚轮输入是否继续传给外层滚动容器（对应 WinUI
-     * ScrollViewer.IsScrollChainingEnabled）。
-     *
-     * When disabled, a view with scrollable range consumes wheel events even at
-     * its edges, so a nested ScrollView never pans its host page mid-gesture.
-     * zh_CN: 关闭后，存在可滚动范围的视图在边缘也会消费滚轮事件，嵌套的
-     * ScrollView 不会在手势中途带动宿主页面平移。
-     *
-     * The default is disabled because Gallery pages commonly host nested
-     * scrollers.
-     * zh_CN: 默认为关闭，因为 Gallery 页面中经常嵌套滚动视图。
+     * @brief Whether wheel input at a scroll boundary forwards to an enclosing scroller (WinUI IsScrollChainingEnabled).
+     * Disabled by default so nested ScrollViews consume wheel events across their scrollable range without scrolling the outer page mid-gesture.
+     * zh_CN: 滚动到边界后滚轮事件是否继续传给外层滚动容器（对应 WinUI IsScrollChainingEnabled）。
+     * 默认关闭，避免嵌套 ScrollView 到达边缘时在手势中途带动外层页面滚动。
      */
     Q_PROPERTY(bool scrollChainingEnabled
         READ isScrollChainingEnabled
@@ -126,8 +107,8 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
     /**
-     * @brief Release policy for the current content widget.
-     * zh_CN: 当前内容控件的释放策略。
+     * @brief Ownership policy for the current content widget.
+     * zh_CN: 当前内容控件的所有权策略。
      */
     Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership NOTIFY contentOwnershipChanged)
 
@@ -145,14 +126,14 @@ public:
     ~ScrollView() override;
 
     /**
-     * @brief Installs content using QScrollArea-compatible owned semantics.
-     * zh_CN: 按照与 QScrollArea 一致的 Owned 语义安装内容控件。
+     * @brief Installs `widget` with Owned ownership (matching QScrollArea).
+     * zh_CN: 按与 QScrollArea 一致的 Owned 语义设置内容控件。
      */
     void setWidget(QWidget* widget);
 
     /**
-     * @brief Removes and returns the current content without deleting it.
-     * zh_CN: 移除并返回当前内容控件，且不销毁该控件。
+     * @brief Detaches and returns the current content widget without deleting it.
+     * zh_CN: 卸下并返回当前内容控件，不销毁该控件。
      */
     QWidget* takeWidget();
 
@@ -161,15 +142,14 @@ public:
     void setContentWidget(QWidget* widget);
 
     /**
-     * @brief Installs content with an explicit release policy.
-     * zh_CN: 使用显式释放策略安装内容控件。
-     * @return true when the requested content contract was applied.
+     * @brief Installs `widget` as content with an explicit ownership policy; returns true if applied.
+     * zh_CN: 按指定所有权策略设置内容控件，成功应用时返回 true。
      */
     bool setContentWidget(QWidget* widget, WidgetOwnership ownership);
 
     /**
-     * @brief Removes and returns content as a parentless caller-owned widget.
-     * zh_CN: 将内容作为无父控件、由调用方持有的 QWidget 移除并返回。
+     * @brief Detaches and returns the content widget as a parentless widget owned by the caller.
+     * zh_CN: 将内容控件卸下并置为无父对象后返回，由调用方负责销毁。
      */
     QWidget* takeContentWidget();
 
@@ -280,8 +260,8 @@ private:
     QPropertyAnimation* m_verticalAnimation = nullptr;
     QPropertyAnimation* m_zoomAnimation = nullptr;
     QWidget* m_cornerWidget = nullptr;
-    ScrollBar* m_floatingVerticalBar =
-        nullptr; // Overlay bar for vertical "Visible" (no gutter). zh_CN: 垂直“常显”用的浮动覆盖条（不预留沟槽）。
+    // Floating overlay bar used in vertical Visible mode without reserving layout gutter.
+    ScrollBar* m_floatingVerticalBar = nullptr;
     QPointer<QWidget> m_observedContentWidget;
     QPointer<QWidget> m_originalContentParent;
     WidgetOwnership m_contentOwnership = WidgetOwnership::Owned;

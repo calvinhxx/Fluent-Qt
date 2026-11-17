@@ -21,8 +21,8 @@
  * - Text: Caption and body roles.
  * - Heading: Subtitle and Title roles.
  * - Display: Title Large and Display roles.
- * zh_CN: FluentQt 内置经过重命名的开源 Inter 静态实例：Text 用于说明与正文，
- * zh_CN: Heading 用于副标题和标题，Display 用于大标题和展示文本。
+ * zh_CN: FluentQt 内置经过重命名的开源 Inter 静态字体：Text 用于说明与正文，
+ * Heading 用于副标题和标题，Display 用于大标题和展示文本。
  */
 namespace Typography {
 Q_NAMESPACE
@@ -276,7 +276,7 @@ Q_ENUM_NS(FontRole)
      */
 struct FontStyle {
     QString family;
-    QString styleName; // Figma style name, e.g. "Small Regular". zh_CN: Figma 字体样式名。
+    QString styleName; // Figma style name, e.g. "Small Regular". zh_CN: Figma 字体样式名，如 "Small Regular"。
     int size;          // px
     int weight;        // QFont::Weight
     int lineHeight;    // Absolute pixels measured from Figma. zh_CN: Figma 实测绝对像素值。

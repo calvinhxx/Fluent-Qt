@@ -11,9 +11,8 @@
 
 namespace compatibility::detail {
 
-// Keep one delegate installed per view while borrowing the application's paint
-// and edit policy. Only signals for editors created by this adapter are forwarded.
-// zh_CN: 每个视图安装独立代理，借用应用的绘制与编辑策略，只转发本代理创建的编辑器信号。
+// Single per-view delegate that forwards paint/edit calls to the resolved delegate and relays its editor signals.
+// zh_CN: 每个视图安装一个代理，转发绘制与编辑调用，并仅中继由该代理创建的编辑器信号。
 class ForwardingItemDelegate final : public QAbstractItemDelegate {
 public:
     using Resolver = std::function<QAbstractItemDelegate*(const QModelIndex&)>;

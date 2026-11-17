@@ -106,12 +106,11 @@ built without it. For source integration, set `FLUENT_QT_BUILD_PLUGINS` before
 ## Particles: decorative effects
 
 `FluentQt::Particles` provides `ParticlesPlugin` and `ParticlesSession` with ID
-`fluentqt.particles` and widget key `particle-backdrop`. A session creates or
-tracks caller-owned ParticleBackdrop widgets and pauses them while stopped,
-without changing their animation preferences. Reactivating or destroying the
-session lifts the pause. The CPU path
-requires no Spatial or OpenGL target. See the [Particles contract](particles.md)
-for ownership, motion and the Spatial GPU adapter.
+`fluentqt.particles` and widget key `particle-backdrop`. A session tracks
+existing ParticleBackdrop widgets and pauses them when stopped while keeping
+their animation settings intact; reactivating or destroying the session resumes
+them. CPU rendering works without Spatial or OpenGL. See
+[Particles](particles.md) for ownership and GPU rendering details.
 
 ## Spatial: perspective widget hosts
 
@@ -152,21 +151,18 @@ and plugin, while an application can register `QmlPlugin` in its shared graph.
 The same native host is available to matched PySide6 builds and compiled browser
 applications.
 
-Call `QmlSession::prepareApplication()` explicitly before the first Quick
-surface; activation does not change the global graphics backend. Deactivation
-clears tracked hosts' page state and rejects new loads immediately. Quick scenes
-and engines are released through deferred deletion after the current QML
-callback returns; caller-owned hosts and context models remain intact.
-Reactivation permits an explicit load and never reloads old
-pages automatically. The [QmlBridge contract](qml-bridge.md) owns scene/root
-lifetimes, borrowed context objects, theme tokens, and the Qt Quick dependency
-boundary. Gallery presents this plugin under **Plugins → QmlBridge → QmlView**.
-For supported OpenGL hosts, `QmlTextureLayer` redirects the existing Quick scene
-to a GPU texture and composes it into the Widgets panel before projection.
-Gallery therefore includes QML in its shared 3D mode; unsupported composition or
-texture failure uses native 2D while preserving the requested preference. The
-Quick dependencies and rendering helper stay inside QmlBridge. This does not
-add Quick dependencies or a QML graphics-proxy contract to Spatial or the core.
+Call `QmlSession::prepareApplication()` explicitly before creating the first Quick
+surface; activation leaves the global graphics backend unchanged. Deactivation
+unloads tracked scenes immediately and rejects new loads; Quick views and
+engines are cleaned up via `deleteLater()` after any active QML callback
+returns, while caller widgets and context models remain intact. Reactivation
+allows new explicit loads without automatically reloading prior URLs. See
+[QmlBridge](qml-bridge.md) for lifetime, non-owning context objects, theme
+tokens, and Quick dependency boundaries. Gallery showcases this module under
+**Plugins → QmlBridge → QmlView**. When hosted inside a supported OpenGL view,
+`QmlTextureLayer` renders the Quick scene to a GPU texture for compositing in
+3D mode, falling back to 2D on unsupported hosts. All Qt Quick dependencies and
+rendering code stay inside `FluentQt::QmlBridge`.
 
 ## Minimal extension example
 

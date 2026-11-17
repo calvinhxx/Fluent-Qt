@@ -229,12 +229,9 @@ QString galleryControlImageResource(const QString& controlTitle)
 {
     static const QString placeholder = QStringLiteral(":/app/assets/control_images/Placeholder.svg");
 
-    // Foundation topics are content routes, not entries in galleryComponentCatalog(), so the
-    // title->category lookup below can't resolve them — and their display titles (for example
-    // "QML+") aren't necessarily valid filenames. Map them explicitly to clean ASCII
-    // image names. zh_CN: foundation 主题是内容路由，不在 galleryComponentCatalog() 中，下方的
-    // 标题->分类查找解析不到它们；而且部分显示标题（例如 "QML+"）也不是合法文件名。
-    // 故在此用干净的 ASCII 图片名显式映射它们。
+    // Foundation topics are content routes rather than component catalog entries, and titles like "QML+"
+    // are not portable filenames, so map them explicitly to ASCII resource names.
+    // zh_CN: Foundation 主题不在组件目录中，且部分标题（如 "QML+"）不是合法文件名，需显式映射。
     static const QHash<QString, QString> foundationOverrides = {
         {QStringLiteral("QML+"), QStringLiteral(":/app/assets/control_images/foundation/QMLPlus.svg")},
         {QStringLiteral("Typography"), QStringLiteral(":/app/assets/control_images/foundation/Typography.svg")},
@@ -247,9 +244,7 @@ QString galleryControlImageResource(const QString& controlTitle)
     if (foundationIt != foundationOverrides.constEnd())
         return QFile::exists(foundationIt.value()) ? foundationIt.value() : placeholder;
 
-    // Map each control title to its category id once, straight from the catalog, so the
-    // folder layout and the lookup never drift apart.
-    // zh_CN: 从目录里一次性建立"控件标题 → 分类 id"映射，保证文件夹结构与查找逻辑不会脱节。
+    // Build title-to-category map from the catalog so folder layout stays the single source of truth.
     static const QHash<QString, QString> titleToCategory = []() {
         QHash<QString, QString> map;
         for (const GalleryComponentCategory& category : galleryComponentCatalog())

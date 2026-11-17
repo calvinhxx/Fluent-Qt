@@ -6,9 +6,8 @@ namespace compatibility::detail {
 
 #if QT_CONFIG(accessibility)
 
-// Components implement the same selection contract on every supported Qt line.
-// Older Qt versions cannot expose it through their native accessibility bridge.
-// zh_CN: 组件在各 Qt 版本实现相同的选择契约；旧版 Qt 不向原生无障碍桥暴露此接口。
+// Components implement the same selection interface across Qt versions; older Qt builds omit the native bridge.
+// zh_CN: 组件在各 Qt 版本实现相同的选择接口，旧版 Qt 仅不向原生无障碍桥暴露。
 class AccessibleSelectionInterface
 #if FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE
     : public QAccessibleSelectionInterface

@@ -54,9 +54,7 @@ TeachingTip::TeachingTip(QWidget* parent) : Popup(parent)
     m_contentHost = new QWidget(this);
 
     connect(this, &Popup::closing, this, [this](Popup::CloseReason reason) {
-        // Shared dismissal runs before component event filters. Preserve the
-        // TeachingTip close-reason contract for both outside presses and Escape.
-        // zh_CN: 共享关闭先于组件事件过滤器；外部按下和 Esc 保留 TeachingTip 的兼容关闭原因。
+        // Shared dismissal runs before component event filters; preserve TeachingTip CloseReason values.
         if (!m_closeReasonExplicit && isLightDismissEnabled()
             && (reason == Popup::LightDismiss || reason == Popup::Escape)) {
             m_pendingCloseReason = LightDismiss;
@@ -346,11 +344,7 @@ TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& c
         return Bottom;
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
 
-    // Only the main axis is checked for space, matching Flyout. Cross-axis
-    // overflow is fixed by clampCardTopLeft and excluded from the fits test,
-    // so Bottom/Top are never skipped just because centering overflows an edge.
-    // zh_CN: 只检查主轴方向空间（与 Flyout 一致）；横轴溢出由 clampCardTopLeft
-    // 修正，不纳入 fits 判断，避免 Bottom/Top 因横向居中超出窗口边缘被误跳过。
+    // Check only the main axis for space (cross-axis overflow is fixed by clampCardTopLeft).
     const auto fits = [&](PreferredPlacement placement) {
         const QPoint p = cardTopLeftForPlacement(placement, targetRect, cardSize);
         if (isBottomPlacement(placement))

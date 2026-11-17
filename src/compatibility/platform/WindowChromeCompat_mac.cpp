@@ -22,10 +22,8 @@ namespace detail {
 
 namespace {
 
-// Keep Objective-C message sends local to this file so the public chrome
-// adapter stays free of Cocoa headers and Objective-C++ requirements.
-// zh_CN: 将 Objective-C 消息发送限制在本文件内，避免公共 chrome 适配器依赖 Cocoa
-// zh_CN: 头文件或 Objective-C++ 编译要求。
+// Send AppKit messages via objc_msgSend so the header needs no Cocoa/ObjC++ includes.
+// zh_CN: 通过 objc_msgSend 调 AppKit，避免头文件引入 Cocoa/Objective-C++ 依赖。
 constexpr unsigned long NSWindowStyleMaskFullSizeContentView = 1UL << 15;
 constexpr unsigned long NSWindowStyleMaskResizable = 1UL << 3;
 constexpr long NSWindowTitleHidden = 1;
@@ -239,8 +237,7 @@ id nativeWindowFor(QWidget* window)
     return nil;
 }
 
-// The frame AppKit zooms to: the delegate's standard frame for the visible screen area.
-// zh_CN: AppKit 缩放到的框架：委托针对屏幕可见区域给出的标准框架。
+// Standard zoomed frame computed from the screen visible frame and window delegate.
 CGRect standardZoomFrame(id nsWindow)
 {
     id screen = respondsTo(nsWindow, selector("screen")) ? sendId(nsWindow, "screen") : nil;
@@ -282,11 +279,8 @@ id createSystemMoveMouseDownEvent(id nsWindow)
         location, 0UL, 0.0, windowNumber, nil, 0L, 1L, 1.0f);
 }
 
-// Qt logical pixels equal Cocoa points only while Qt applies no extra scale
-// factor. QT_SCALE_FACTOR or an application zoom makes Qt's DPR differ from the
-// backing scale; their ratio converts logical pixels to points.
-// zh_CN: 仅当 Qt 未叠加额外缩放时，Qt 逻辑像素才等于 Cocoa point。QT_SCALE_FACTOR
-// zh_CN: 或应用缩放会让 Qt DPR 与 backing scale 不同，二者之比即逻辑像素到 point 的换算。
+// Convert Qt logical pixels to Cocoa points when QT_SCALE_FACTOR or app zoom differs from backingScaleFactor.
+// zh_CN: 当 QT_SCALE_FACTOR 或应用缩放使 Qt DPR 不同于 backingScaleFactor 时，用于换算逻辑像素到 Cocoa pt。
 qreal pointsPerLogicalPixel(QWidget* window, id nsWindow)
 {
     const QWindow* handle = window ? window->windowHandle() : nullptr;
@@ -320,10 +314,8 @@ void centerTrafficLights(id nsWindow, const QRect& titleBarRect, qreal pointsPer
 
         CGFloat targetCenterY = bounds.size.height / 2.0;
         if (titleBarRect.height() > 0) {
-            // Cocoa button frames are expressed in the superview coordinate system;
-            // convert the QWidget title-bar center while respecting flipped views.
-            // zh_CN: Cocoa 按钮 frame 使用 superview 坐标系；这里将 QWidget 标题栏中心
-            // zh_CN: 转换过去，并处理 flipped view。
+            // Map top-down QWidget title-bar center into the traffic-light superview's coordinate system.
+            // zh_CN: 将 QWidget 自上而下的标题栏中心换算到交通灯父视图坐标系（需处理翻转坐标）。
             const CGFloat titleBarCenterFromTop = (titleBarRect.y() + titleBarRect.height() / 2.0) * pointsPerLogical;
             const bool flipped = respondsTo(superview, selector("isFlipped")) && sendBool(superview, "isFlipped");
             targetCenterY = flipped ? titleBarCenterFromTop : bounds.size.height - titleBarCenterFromTop;
@@ -444,30 +436,19 @@ bool performNativeTitleBarDoubleClick(QWidget* window)
     return true;
 }
 
-// --- Native vibrancy backdrop (the macOS analogue of Windows 11 Mica) ---------------------------
-// zh_CN: 原生 vibrancy 背景（Windows 11 Mica 的 macOS 对应物）。
-//
-// The material lives in the same NSWindow as Qt. An NSVisualEffectView is inserted into the frame
-// view as a sibling immediately below Qt's QNSView, and its tint is contained inside that effect
-// view. This preserves NSWindow.contentView == QNSView, keeps text and borders in one Qt backing
-// store, and avoids a second WindowServer surface sampling stale frames from the foreground.
-// Mica uses a quieter material and stronger tint; Acrylic uses a livelier material and lighter tint.
-// zh_CN: 材质与 Qt 位于同一个 NSWindow 中。NSVisualEffectView 作为 QNSView 的兄弟视图插入
-// frame view，并严格位于 QNSView 下方；tint 则收纳在 effect view 内。这样既保持
-// NSWindow.contentView == QNSView，也让文字和边框只经过一份 Qt backing store，同时避免第二个
-// WindowServer surface 回采前景旧帧。
-// Mica 更克制且 tint 更强，Acrylic 更鲜活且 tint 更浅。
+// --- Native vibrancy backdrop ---
+// Insert NSVisualEffectView as a sibling immediately behind QNSView (keeping
+// NSWindow.contentView == QNSView) so text stays in one Qt backing store and no
+// second WindowServer surface samples stale foreground frames.
+// zh_CN: 将 NSVisualEffectView 作为 QNSView 下方的同级视图插入 frame view，保留单一 Qt 绘制缓冲且避免重采样前景旧帧。
 
-// NSView identifiers used to find-or-reuse our backdrop layers across re-applies.
-// zh_CN: NSView 标识符，用于跨多次重新施加时查找/复用我们的背景层。
 constexpr char kBackdropBaseIdentifier[] = "fluentBackdropBase";
 constexpr char kBackdropTintIdentifier[] = "fluentBackdropTint";
 constexpr char kBackdropFailureCoverIdentifier[] = "fluentBackdropFailureCover";
 
-// AppKit enum values pinned locally so this file needs no Cocoa headers.
-// zh_CN: 在本地固定 AppKit 枚举值，使本文件无需 Cocoa 头文件。
-constexpr long NSVisualEffectMaterialSidebar = 7;    // moderate source-list material → Mica
-constexpr long NSVisualEffectMaterialHUDWindow = 13; // frosted-glass material → Acrylic (most see-through)
+// AppKit enum constants pinned locally to avoid Cocoa headers.
+constexpr long NSVisualEffectMaterialSidebar = 7;    // Mica (quieter material)
+constexpr long NSVisualEffectMaterialHUDWindow = 13; // Acrylic (livelier frosted glass)
 constexpr long NSVisualEffectBlendingModeBehindWindow = 0;
 constexpr long NSVisualEffectStateFollowsWindowActiveState = 0;
 constexpr long NSWindowAbove = 1;
@@ -558,17 +539,15 @@ void applyEffectAppearance(id effectView, bool dark)
     if (!effectView || !respondsTo(effectView, selector("setAppearance:")))
         return;
 
-    // Drive the material's light/dark variant from the app theme rather than the system
-    // appearance, so vibrancy matches our in-app theme toggle.
-    // zh_CN: 用应用主题（而非系统外观）驱动材质的明暗变体，使 vibrancy 跟随应用内主题切换。
+    // Drive light/dark vibrancy from the in-app theme rather than macOS system appearance.
+    // zh_CN: 使用应用内主题而非系统外观驱动材质深浅变体。
     id name = makeNSString(dark ? "NSAppearanceNameDarkAqua" : "NSAppearanceNameAqua");
     id appearance = name ? sendClassIdReturnsId("NSAppearance", "appearanceNamed:", name) : nil;
     if (appearance)
         sendId(effectView, "setAppearance:", appearance);
 }
 
-// Find or create the native material as a sibling immediately behind Qt's content view.
-// zh_CN: 查找或创建原生材质兄弟视图，并将它严格放在 Qt content view 后方。
+// Find or create the NSVisualEffectView sibling directly below Qt's contentView.
 id ensureBackdropView(id superview, id contentView, long material)
 {
     id effectView = findSubviewWithIdentifier(superview, kBackdropBaseIdentifier);
@@ -597,8 +576,6 @@ id ensureBackdropView(id superview, id contentView, long material)
     return isSubviewBelow(superview, effectView, contentView) ? effectView : nil;
 }
 
-// Sets a layer-backed view's app-surface tint at the requested alpha.
-// zh_CN: 按指定 alpha 设置图层视图的应用表面 tint。
 void setMicaTintColor(id view, bool dark, double alpha)
 {
     if (!view || !respondsTo(view, selector("layer")))
@@ -721,9 +698,8 @@ void syncBackdropFailureCover(id cover, id contentView, id base, const QColor& o
     sendCGRect(cover, "setFrame:", sendRect(contentView, "frame"));
     setLayerOpaqueColor(sendId(cover, "layer"), opaqueColor);
 
-    // An invalid effect can also extend beyond the content. Clip it before revealing the
-    // correctly sized opaque cover; retain the effect until the normal Qt-frame handoff.
-    // zh_CN: 错尺寸材质可能越出内容区。先裁剪，再显示正确尺寸的不透明覆盖；仍保留材质到 Qt 帧提交。
+    // Clip any oversized effect layer while keeping it alive until Qt commits the opaque replacement frame.
+    // zh_CN: 裁剪越出内容区的错尺寸材质，同时保留到 Qt 不透明替代帧提交。
     id layer = sendId(base, "layer");
     id mask = layer ? sendId(layer, "mask") : nil;
     if (!mask)
@@ -737,9 +713,8 @@ void syncBackdropFailureCover(id cover, id contentView, id base, const QColor& o
 
 void coverInvalidBackdrop(QWidget* window, id superview, id contentView, id base)
 {
-    // A new/previously disabled material has never supplied visible pixels. Keep it hidden;
-    // the prepared native theme base already covers a cold or opaque surface.
-    // zh_CN: 新建或已禁用的材质没有承载可见像素；保持隐藏，由预备底色覆盖冷启动或不透明 surface。
+    // Hidden effect views never painted visible pixels; let the prepared window color cover cold/opaque surfaces.
+    // zh_CN: 隐藏的材质视图未产生可见像素，保持隐藏由预备底色覆盖即可。
     if (!base || sendBool(base, "isHidden"))
         return;
     BackdropLayerTransaction transaction;
@@ -788,8 +763,8 @@ void preparePlatformWindowBackdropSurface(QWidget* window,
     }
     id layer = contentView ? sendId(contentView, "layer") : nil;
     if (layer) {
-        // Surface preparation is immediate; an implicit layer fade would expose the previous base.
-        // zh_CN: surface 底色必须立即就绪，不能通过隐式图层动画渐变而露出上一帧底色。
+        // Disable implicit Core Animation crossfade so background color preparation takes effect immediately.
+        // zh_CN: 禁用隐式 Core Animation 渐变动画，使底色立即生效以免露出上一帧。
         Class transaction = objc_getClass("CATransaction");
         using TransactionSend = void (*)(Class, SEL);
         using DisableSend = void (*)(Class, SEL, BOOL);
@@ -803,8 +778,6 @@ void preparePlatformWindowBackdropSurface(QWidget* window,
         if (transaction)
             reinterpret_cast<TransactionSend>(objc_msgSend)(transaction, selector("commit"));
     }
-    // Keep Cocoa's alpha-capable window/view and Qt's ownership intact.
-    // zh_CN: 保持 Cocoa 的 alpha surface 以及 Qt 对窗口、视图的所有权。
 }
 
 bool flushPlatformWindowBackdropSurface(QWidget* window)
@@ -815,9 +788,8 @@ bool flushPlatformWindowBackdropSurface(QWidget* window)
     Class transaction = objc_getClass("CATransaction");
     if (!nsWindow || !transaction)
         return false;
-    // Qt has painted/composed the replacement. Submit its layer transaction before hiding vibrancy.
-    // Do not dispatch arbitrary Qt events or reconstruct the native window.
-    // zh_CN: 先提交 Qt 已绘制、合成的替代图层，再隐藏 vibrancy；不泵送任意事件或重建窗口。
+    // Flush pending Core Animation layer commits before hiding vibrancy (do not pump arbitrary events).
+    // zh_CN: 先刷出 Qt 已提交的替换图层，再隐藏 vibrancy（不泵送其他事件或重建窗口）。
     using Send = void (*)(Class, SEL);
     reinterpret_cast<Send>(objc_msgSend)(transaction, selector("flush"));
     return true;
@@ -867,13 +839,9 @@ bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos)
     if (!nsWindow || !respondsTo(nsWindow, selector("performWindowDragWithEvent:")))
         return false;
 
-    // QTBUG-141220: QCocoaWindow::startSystemMove() rejects intermittent trackpad
-    // pressure/gesture events even though the left button is still down. Hand
-    // AppKit a fresh mouse-down event so native dragging, Spaces, and
-    // window-server behavior remain intact instead of using QWidget::move().
-    // zh_CN: QTBUG-141220 中 QCocoaWindow::startSystemMove() 会间歇性拒绝触控板
-    // pressure/gesture 事件；在左键仍按下时合成 mouse-down 交还 AppKit，保留原生拖动与
-    // Spaces 行为。
+    // QTBUG-141220: QCocoaWindow::startSystemMove() rejects intermittent trackpad pressure/gesture events
+    // while left mouse is still down; invoke performWindowDragWithEvent: directly to preserve native drag & Spaces.
+    // zh_CN: QTBUG-141220：QCocoaWindow::startSystemMove() 会间歇性拒绝触控板压力手势；在左键按下时直接交给 AppKit 拖动。
     if ((sendClassUnsignedLong("NSEvent", "pressedMouseButtons") & NSLeftMouseButtonMask) == 0) {
         return false;
     }
@@ -928,9 +896,8 @@ int nativeTitleBarLeadingInset(QWidget* window)
     if (!nsWindow || !respondsTo(nsWindow, selector("standardWindowButton:")))
         return 0;
 
-    // Read the zoom button (rightmost traffic light) frame to determine
-    // how much leading space the native controls occupy.
-    // zh_CN: 读取缩放按钮（最右侧交通灯）的 frame，以确定原生控件占用的前置宽度。
+    // Measure the rightmost traffic light (zoom button) + 8pt trailing gap.
+    // zh_CN: 读取最右侧交通灯（缩放按钮）的 frame，以计算原生按钮占用宽度。
     id zoomButton = sendUnsignedLongReturnsId(nsWindow, "standardWindowButton:", NSWindowZoomButton);
     if (!zoomButton || !respondsTo(zoomButton, selector("frame")))
         return 0;
@@ -939,9 +906,6 @@ int nativeTitleBarLeadingInset(QWidget* window)
     if (frame.size.width <= 0)
         return 0;
 
-    // frame is in Cocoa points; convert it to Qt logical pixels and add an
-    // 8-pixel gap after the rightmost button.
-    // zh_CN: frame 使用 Cocoa point，换算为 Qt 逻辑像素后在末尾留 8px 间距。
     constexpr int kTrailingGap = 8;
     const qreal pointsPerLogical = pointsPerLogicalPixel(window, nsWindow);
     return static_cast<int>(std::ceil((frame.origin.x + frame.size.width) / pointsPerLogical)) + kTrailingGap;
@@ -981,11 +945,9 @@ bool requestPlatformForegroundActivation(QWidget* window)
 
 bool restorePlatformMaximizedFrame(QWidget* window)
 {
-    // Qt zooms a maximized window before ordering it in. Stage Manager then fits the
-    // ordered-in frame into its stage, so the window is no longer zoomed. Reapply the
-    // standard frame without animation; AppKit keeps the restore frame from Qt's zoom.
-    // zh_CN: Qt 在窗口入列前执行缩放；台前调度随后把入列框架收进舞台区域，窗口不再处于缩放状态。
-    // 无动画地重新应用标准框架；AppKit 保留 Qt 缩放时记录的还原框架。
+    // Stage Manager shrinks windows zoomed before ordering in; reapply the standard zoom frame without animation
+    // (AppKit retains Qt's original restore frame).
+    // zh_CN: 台前调度会把先缩放再显示的窗口收进舞台区；无动画重设标准最大化尺寸，同时保留 AppKit 原有的还原尺寸。
     id nsWindow = nativeWindowFor(window);
     if (!nsWindow || !respondsTo(nsWindow, selector("isZoomed")) || sendBool(nsWindow, "isZoomed")
         || !respondsTo(nsWindow, selector("setFrame:display:animate:")))
@@ -1000,10 +962,6 @@ bool restorePlatformMaximizedFrame(QWidget* window)
 
 bool platformSupportsSystemBackdrop()
 {
-    // macOS gets the Mica-equivalent via a native NSVisualEffectView (vibrancy). Available on
-    // every Qt 6.9-supported macOS, so just confirm the class is present.
-    // zh_CN: macOS 通过原生 NSVisualEffectView（vibrancy）获得 Mica 等价效果。在 Qt 6.9 支持的所有 macOS
-    // 上都可用，故只需确认类存在。
     const BackdropCapabilities capabilities = platformBackdropCapabilities();
     return capabilities.nativeMica || capabilities.nativeAcrylic;
 }
@@ -1012,8 +970,6 @@ BackdropApplyResult
 applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, bool forceRecomposite)
 {
     BackdropApplyResult result;
-    // Solid keeps an opaque window: no vibrancy, the app paints its own themeBackdrop.
-    // zh_CN: Solid 为不透明窗口：不挂 vibrancy，由 App 自绘 themeBackdrop。
     if (effect == BackdropEffect::Solid) {
         id contentView = nil;
         id superview = nil;
@@ -1036,24 +992,15 @@ applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, b
         return result;
     }
 
-    // Three visibly distinct surfaces (Normal/Solid already returned above as fully opaque):
-    //   • Mica    — sidebar material + a moderate app tint: a subtle, mostly-cohesive wallpaper tint.
-    //   • Acrylic — HUD-window (frosted-glass) material + a light tint: a much more see-through frost
-    //               that lets the desktop blur read clearly through the chrome.
-    // The previous mapping (window-background + 0.58 tint for Mica) sat so close to opaque that Mica
-    // was nearly indistinguishable from Normal, while Acrylic (sidebar + 0.20) read like a proper Mica.
-    // zh_CN: 三种可明显区分的表面（Normal/Solid 已在上方按全不透明返回）：
-    //   • Mica    —— sidebar material + 中等应用 tint：克制、基本统一的壁纸着色。
-    //   • Acrylic —— HUD-window（磨砂玻璃）material + 更浅 tint：更通透，桌面模糊清晰透过 chrome。
-    // 旧映射（Mica 用 window-background + 0.58 tint）过于接近不透明，使 Mica 与 Normal 几乎无法区分，
-    // 而 Acrylic（sidebar + 0.20）看起来反而才像真正的 Mica。
+    // Mica uses Sidebar material + stronger tint (cohesive wallpaper tone);
+    // Acrylic uses HUDWindow material + lighter tint (stronger desktop blur-through).
+    // zh_CN: Mica 用 Sidebar 材质配合较高 tint 呈现克制壁纸色调；Acrylic 用 HUDWindow 配合低 tint 呈现更通透的磨砂玻璃效果。
     const bool acrylic = effect == BackdropEffect::Acrylic;
     const long material = acrylic ? NSVisualEffectMaterialHUDWindow : NSVisualEffectMaterialSidebar;
     BackdropLayerTransaction transaction;
     id base = ensureBackdropView(superview, contentView, material);
     if (!base) {
-        // The shared opaque-commit protocol removes any surviving material after replacement paint.
-        // zh_CN: 由共享的不透明帧提交协议，在替代帧绘制后清理仍存在的材质。
+        // Any surviving material is removed after Qt paints the opaque fallback.
         result.reason = QStringLiteral("visual-effect-view-unavailable");
         return result;
     }

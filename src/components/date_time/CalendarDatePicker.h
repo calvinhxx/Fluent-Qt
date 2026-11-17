@@ -14,13 +14,12 @@ class CalendarDatePickerPopup;
 class CalendarView;
 
 /**
- * @brief Button-like date entry that opens a CalendarView popup.
- * zh_CN: 打开 CalendarView 弹层的按钮式日期入口。
+ * @brief Button-style date input that opens a CalendarView popup.
+ * zh_CN: 按钮式日期选择控件，点击弹出 CalendarView 日历浮层。
  *
- * CalendarDatePicker stores placeholder text, selected date, range, display format,
- * first-day setting, and popup open state while delegating calendar rendering to CalendarView.
- * zh_CN: CalendarDatePicker 管理占位文本、选中日期、日期范围、显示格式、一周起始日
- * 和弹层打开态，日历绘制交给 CalendarView。
+ * Manages placeholder text, selected date, date bounds, display format, and
+ * first day of week while delegating calendar rendering to CalendarView.
+ * zh_CN: 管理占位文本、选中日期、可选范围、显示格式与周起始日，日历绘制交给 CalendarView。
  */
 class CalendarDatePicker : public fluent::basicinput::Button {
     Q_OBJECT
@@ -31,17 +30,17 @@ class CalendarDatePicker : public fluent::basicinput::Button {
     Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     /**
      * @brief Current date value displayed by the picker.
-     * zh_CN: picker 当前显示的日期值。
+     * zh_CN: 当前显示的日期值。
      */
     Q_PROPERTY(QDate date READ date WRITE setDate NOTIFY dateChanged)
     /**
-     * @brief Minimum date accepted by the calendar surface.
-     * zh_CN: 日历表面接受的最小日期。
+     * @brief Minimum selectable date.
+     * zh_CN: 日历允许选择的最小日期。
      */
     Q_PROPERTY(QDate minDate READ minDate WRITE setMinDate NOTIFY minDateChanged)
     /**
-     * @brief Maximum date accepted by the calendar surface.
-     * zh_CN: 日历表面接受的最大日期。
+     * @brief Maximum selectable date.
+     * zh_CN: 日历允许选择的最大日期。
      */
     Q_PROPERTY(QDate maxDate READ maxDate WRITE setMaxDate NOTIFY maxDateChanged)
     /**
@@ -51,7 +50,7 @@ class CalendarDatePicker : public fluent::basicinput::Button {
     Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
     /**
      * @brief Date display format used by the picker button.
-     * zh_CN: picker 按钮使用的日期显示格式。
+     * zh_CN: 按钮文本使用的日期显示格式。
      */
     Q_PROPERTY(QString displayFormat READ displayFormat WRITE setDisplayFormat NOTIFY displayFormatChanged)
     /**

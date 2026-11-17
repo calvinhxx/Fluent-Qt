@@ -7,9 +7,7 @@ namespace fluent::basicinput::detail {
 
 QColor sliderTrackColor(const FluentElement::Colors& colors, bool enabled)
 {
-    // WinUI paints the unfilled track with the strong control fill so the
-    // selected portion stays readable against it.
-    // zh_CN: WinUI 用强控件填充绘制未填充轨道，使已选部分始终可辨。
+    // Unfilled track uses strong stroke so the filled portion remains legible against it.
     return enabled ? colors.strokeStrong : colors.textDisabled;
 }
 

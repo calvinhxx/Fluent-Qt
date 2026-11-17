@@ -27,20 +27,9 @@ class ImageViewerPixmapCache;
 
 /**
  * @brief Pan-and-zoom viewer for a single image.
- * zh_CN: 单张图片的平移缩放查看器。
- *
- * ImageViewer paints one caller-provided pixmap inside its viewport. Users zoom
- * around the pointer with the mouse wheel, Ctrl/Command + wheel or a trackpad
- * pinch, pan by dragging, and use +, -, 0, 1 and the arrow keys. An axis without
- * a pannable range ignores drag, scroll and arrow input so a parent such as
- * FlipView can handle it.
- * zh_CN: ImageViewer 在视口内绘制调用方提供的单张 pixmap。用户可用鼠标滚轮、
- * Ctrl/Command + 滚轮或触控板捏合围绕指针缩放，拖动平移，并使用 +、-、0、1
- * 和方向键。某一轴没有可平移范围时，拖动、滚动和方向键会交给父控件（例如 FlipView）。
- *
- * A zoom factor of 1.0 shows the pixmap at its device-independent size
- * (pixel size divided by devicePixelRatio).
- * zh_CN: 缩放因子 1.0 按 pixmap 的设备无关尺寸（像素尺寸除以 devicePixelRatio）显示。
+ * Displays a caller-provided pixmap where zoom factor 1.0 matches its device-independent size (pixel size divided by devicePixelRatio). Supports pointer-anchored wheel/pinch zoom, drag panning, and +, -, 0, 1, and arrow keys; axes without a pannable range pass input through to parent widgets such as FlipView.
+ * zh_CN: 单张图片的平移与缩放查看器。
+ * 绘制调用方提供的 pixmap（缩放因子 1.0 对应设备无关尺寸，即像素尺寸除以 devicePixelRatio）。支持鼠标滚轮、Ctrl/Command+滚轮与触控板捏合以指针为锚点缩放，支持拖拽平移及 +、-、0、1、方向键操作；无平移余量的轴会将输入透传给父控件（如 FlipView）。
  */
 class ImageViewer : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT

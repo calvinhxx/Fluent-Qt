@@ -71,10 +71,7 @@ int maxShortcutWidth(const FluentMenu* menu, const QFontMetrics& fontMetrics)
         const QString text = menu->shortcutTextForAction(action);
         result = qMax(result, qMax(fontMetrics.horizontalAdvance(text), fontMetrics.boundingRect(text).width()));
     }
-    // Leave ink allowance on both sides: Windows font backends can render
-    // antialiased bearings beyond both horizontalAdvance() and boundingRect().
-    // zh_CN: 两侧均预留字形墨迹空间；Windows 字体后端的抗锯齿边缘可能超出
-    // horizontalAdvance() 与 boundingRect()，不能用恰好等宽的矩形绘制。
+    // Pad both sides: Windows font backends can paint antialiased bearings beyond horizontalAdvance() and boundingRect().
     return result > 0 ? result + 6 : 0;
 }
 
@@ -136,8 +133,6 @@ void appendVisibleMenuChain(QVector<FluentMenu*>& menus, FluentMenu* menu)
 }
 } // namespace
 
-// =============================== FluentMenuItem ===============================
-
 FluentMenuItem::FluentMenuItem(const QString& text, QObject* parent) : QWidgetAction(parent)
 {
     setText(text);
@@ -158,13 +153,9 @@ void FluentMenuItem::onThemeUpdated()
     setFont(themeFont(m_fontStyle).toQFont());
 }
 
-// ================================ FluentMenu =================================
-
 FluentMenu::FluentMenu(const QString& title, QWidget* parent) : QMenu(title, parent)
 {
-    // Frameless top-level with system shadow disabled; shadow and rounding are
-    // painted by the menu itself.
-    // zh_CN: 顶层无边框并禁用系统阴影，阴影与圆角由自身绘制。
+    // Disable system drop shadow; FluentMenu paints its own rounded card and shadow.
     setWindowFlags(
         (windowFlags() & ~Qt::WindowType_Mask) | Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
     m_translucentSurface = compatibility::detail::runtimePlatformCapabilities().translucentPopupSurfaces;
@@ -186,18 +177,12 @@ FluentMenu::FluentMenu(const QString& title, QWidget* parent) : QMenu(title, par
         if (!QApplication::isEffectEnabled(Qt::UI_AnimateMenu))
             return;
 
-        // QMenu selects its process-wide platform animation after emitting
-        // aboutToShow(). Suppress that selection only until showEvent() starts;
-        // FluentMenu supplies its own paint-only entrance transition below.
-        // zh_CN: QMenu 会在发出 aboutToShow() 后选择进程级平台动画；仅在
-        // showEvent() 开始前暂时抑制该选择，FluentMenu 在下方提供自绘入场动画。
+        // QMenu picks its global platform menu animation right after aboutToShow();
+        // suppress it until showEvent() so our paint-only reveal runs instead.
         setProperty(kRestoreNativeMenuAnimationsProperty, true);
         QApplication::setEffectEnabled(Qt::UI_AnimateMenu, false);
 
-        // Empty menus can return before showEvent(), and aboutToShow handlers
-        // may delete the menu. Always retain a queued restoration fallback.
-        // zh_CN: 空菜单可能在 showEvent() 前返回，aboutToShow 处理器也可能
-        // 删除菜单，因此始终保留一次队列恢复兜底。
+        // Empty menus or aboutToShow() deletion can skip showEvent(), so always queue a restore.
         const QPointer<FluentMenu> guard(this);
         QTimer::singleShot(0, qApp, [guard]() {
             if (guard && !guard->property(kRestoreNativeMenuAnimationsProperty).toBool())
@@ -223,9 +208,7 @@ void FluentMenu::setFontStyle(Typography::FontRole role)
 
 void FluentMenu::onThemeUpdated()
 {
-    // Release any previous auto minimum width before updating the font or menu
-    // stylesheet so QMenu recomputes its action geometry from the new font.
-    // zh_CN: 在更新字体与菜单样式前先释放上一次自动设置的最小宽度，使 QMenu 按新字体重算动作布局。
+    // Clear the previous auto width floor so QMenu recomputes action geometry for the new font.
     if (minimumWidth() == m_autoMinimumWidth && m_autoMinimumWidth > 0) {
         setMinimumWidth(0);
         m_autoMinimumWidth = 0;
@@ -234,14 +217,10 @@ void FluentMenu::onThemeUpdated()
     const auto& s = themeSpacing();
     const int vPadding = s.gap.tight;
 
-    // Sync the menu font; it feeds QMenu's internal actionGeometry heights.
-    // zh_CN: 同步菜单字体（影响 QMenu 内部 actionGeometry 高度计算）。
+    // Sync the widget font because QMenu derives actionGeometry() heights from it.
     setFont(themeFont(m_fontStyle).toQFont());
 
-    // Reserve shadow and inner padding via margins so QMenu's sizeHint includes
-    // them and the popup window is large enough.
-    // zh_CN: 用 margins 为阴影和内部 padding 预留空间，QMenu 的 sizeHint 会自动
-    // 包含这些边距，确保窗口足够大。
+    // Reserve shadow and inner padding in contentsMargins so QMenu::sizeHint() includes them.
     setContentsMargins(m_shadowSize, m_shadowSize + vPadding, m_shadowSize, m_shadowSize + vPadding);
     setItemLayoutMetrics(s.padding.listItemV, s.gap.normal + 1);
     syncAutoMinimumWidth();
@@ -252,9 +231,7 @@ void FluentMenu::onThemeUpdated()
 
 void FluentMenu::syncAutoMinimumWidth()
 {
-    // Re-evaluate width without letting the previous auto floor ratchet wider
-    // across dynamic font-role changes while preserving explicit caller widths.
-    // zh_CN: 重新计算宽度时先释放先前自动设置的下限，避免字号切换后宽度只增不减，同时保留调用方显式设置的最小宽度。
+    // Reset any prior auto floor so font shrinkage can narrow the menu, while keeping caller minimums.
     if (minimumWidth() == m_autoMinimumWidth)
         setMinimumWidth(0);
     const int targetWidth = sizeHint().width();
@@ -344,7 +321,6 @@ void FluentMenu::keyPressEvent(QKeyEvent* event)
             if (active && !active->menu() && !active->isSeparator() && active->isEnabled()) {
                 event->accept();
                 // Triggering may synchronously destroy this menu or its owner.
-                // zh_CN: 动作可能同步销毁菜单或宿主，触发后不再访问自身。
                 active->trigger();
                 return;
             }
@@ -356,12 +332,9 @@ void FluentMenu::keyPressEvent(QKeyEvent* event)
 
 void FluentMenu::enterEvent(FluentEnterEvent* event)
 {
-    // Translucent popup shadows overlap. Native hit testing can briefly report
-    // a parent Enter after the cursor has already entered the child window.
-    // Route that Enter to the child so Qt updates its mouse state and cancels
-    // ancestor close timers, instead of dropping the event and its bookkeeping.
-    // zh_CN: 半透明阴影重叠时，父菜单可能误收 Enter。将事件交还给实际命中的
-    // 子菜单，由 Qt 更新鼠标状态并取消祖先菜单的关闭计时，不能直接吞掉事件。
+    // Translucent shadows overlap, so native hit-testing can briefly deliver Enter to
+    // the parent after the cursor enters a submenu. Forward it to the child so Qt
+    // updates mouse tracking and cancels ancestor close timers.
     if (const auto position = compatibility::detail::enterEventGlobalPosition(event)) {
         if (QPointer<QMenu> submenu = visibleSubmenuAt(this, position->toPoint())) {
             QEvent leave(QEvent::Leave);
@@ -377,8 +350,7 @@ void FluentMenu::enterEvent(FluentEnterEvent* event)
 void FluentMenu::mouseMoveEvent(QMouseEvent* event)
 {
     if (QMenu* submenu = visibleSubmenuAt(this, fluentMouseGlobalPos(event))) {
-        // Native routing may send the follow-up move to the parent as well.
-        // zh_CN: 原生分发也可能把紧随 Enter 的移动误交给父菜单。
+        // Native routing can also misdeliver the follow-up move to the parent.
         compatibility::detail::sendMouseEvent(submenu, event);
         return;
     }
@@ -503,25 +475,17 @@ void FluentMenu::paintEvent(QPaintEvent* event)
 
     const auto& colors = themeColorsRef();
 
-    // 1. Clear alpha-capable popups; runtimes without popup alpha receive a
-    // fully opaque Fluent layer so text never floats on an unpainted window.
-    // zh_CN: 支持 alpha 时透明清屏；不支持 popup alpha 的运行时完整填充 Fluent
-    // layer，避免文字漂浮在未绘制窗口上。
+    // Clear alpha-capable popups to transparent; opaque fallback runtimes fill the full Fluent layer.
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(rect(), m_translucentSurface ? Qt::transparent : colors.bgLayer);
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    // Fade only this custom paint pass. Applying QGraphicsOpacityEffect to a
-    // native QMenu popup can leave a Wayland QMenu::exec() surface invisible
-    // while its modal event loop continues to block user input.
-    // zh_CN: 仅对当前自绘过程应用透明度；在原生 QMenu popup 上安装
-    // QGraphicsOpacityEffect 可能使 Wayland 的 QMenu::exec() 表面不可见，
-    // 但模态事件循环仍继续阻塞输入。
+    // Fade only in paintEvent: QGraphicsOpacityEffect on a native QMenu popup can leave
+    // Wayland QMenu::exec() invisible while its modal loop still blocks input.
     p.setOpacity(m_translucentSurface ? qBound<qreal>(0.0, m_revealProgress, 1.0) : 1.0);
 
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 
-    // 2. Vertical extent of the items. zh_CN: 计算 items 垂直范围。
     QRect itemsRect;
     for (QAction* action : actions()) {
         if (action->isVisible()) {
@@ -532,17 +496,11 @@ void FluentMenu::paintEvent(QPaintEvent* event)
     if (itemsRect.isEmpty())
         return;
 
-    // The card rect depends only on the final popup size, not on QMenu's
-    // internal action widths.
-    // zh_CN: 底板矩形只依赖最终 popup 尺寸，不依赖 QMenu 内部 action 宽度。
     QRect contentRect = rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
 
-    // Reveal animation: clip downward from the top while progress < 1.
-    // zh_CN: 揭示动画：progress < 1 时从顶部向下裁剪可见高度。
     if (m_translucentSurface && m_revealProgress < 1.0)
         p.setClipRect(QRectF(0, 0, width(), height() * m_revealProgress));
 
-    // Share the same restrained surface with command overflow and flyout menus.
     detail::paintMenuSurface(p, contentRect, *this, m_translucentSurface);
     int r = radius.overlay;
     p.save();
@@ -550,16 +508,9 @@ void FluentMenu::paintEvent(QPaintEvent* event)
     clipPath.addRoundedRect(contentRect, r, r);
     p.setClipPath(clipPath);
 
-    // 5. Paint the menu items.
-    // itemInset: shared horizontal inset for highlights and separators
-    // (4px, visually aligned with the card rounding).
-    // textPadding: horizontal text padding from the card edge (12px, ControlHorizontal).
-    // zh_CN: 绘制菜单项。itemInset：高亮背景与分割线距底板边缘的统一水平缩进
-    // （4px，与底板圆角视觉对齐）；textPadding：文字距底板边缘的水平内边距
-    // （12px，ControlHorizontal）。
     const int plateLeft = contentRect.left();
     const int plateWidth = contentRect.width();
-    const int itemInset = spacing.gap.tight; // 4
+    const int itemInset = spacing.gap.tight;
     const int textPadding = spacing.padding.controlH;
     const int leadingColumn = hasLeadingAction(this) ? spacing.controlHeight.small : 0;
     const QFontMetrics fontMetrics(font());
@@ -567,8 +518,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
     const int trailingColumn = hasSubmenuAction(this) ? spacing.controlHeight.small : ::Spacing::Small;
     const int shortcutGap = spacing.gap.section;
 
-    // Set the paint font explicitly so the shadow pass cannot pollute it.
-    // zh_CN: 明确设置绘制字体，防止 shadow 循环中字体被污染。
+    // Reset font explicitly after the surface/shadow pass.
     p.setFont(font());
 
     for (QAction* action : actions()) {
@@ -576,9 +526,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
             continue;
 
         QRect itemRect = actionGeometry(action);
-        // Normalize the horizontal span to the card bounds (actionGeometry may
-        // exclude the shadow margin).
-        // zh_CN: 规范化水平范围：统一对齐到底板边界（actionGeometry 可能不含 shadow margin）。
+        // Align horizontal span to the card bounds because actionGeometry() may omit shadow margins.
         itemRect.setLeft(plateLeft);
         itemRect.setWidth(plateWidth);
 
@@ -597,8 +545,6 @@ void FluentMenu::paintEvent(QPaintEvent* event)
         const bool highlighted = isEnabled && isActive;
         const QColor bg = highlighted ? colors.subtleSecondary : QColor(Qt::transparent);
 
-        // §2 invalid-QColor guard: only paint a valid, non-transparent fill. zh_CN: §2 无效 QColor 防护:
-        // 仅在色值有效且非透明时绘制填充。
         if (bg.isValid() && bg.alpha() > 0) {
             QRectF bgRect = itemRect.adjusted(itemInset, 1, -itemInset, -1);
             p.setPen(Qt::NoPen);
@@ -609,11 +555,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
         const QColor secondaryText = isEnabled ? colors.textSecondary : colors.textDisabled;
 
         if (leadingColumn > 0) {
-            // The leading column holds a 16 px icon and an 8 px text gap after
-            // the shared content inset. Center by extent to avoid QRect's
-            // integer-center bias toward the top-left for even-sized icons.
-            // zh_CN: 前导列在统一内容边距后容纳 16 px 图标与 8 px 图文间距；
-            // 按尺寸差居中，避免 QRect 整数中心使偶数尺寸图标偏向左上。
+            // Center icon by extent difference to avoid integer QRect center bias on even sizes.
             const int iconSide = qMin(Typography::IconSize::Standard, leadingColumn);
             const QRect iconRect(itemRect.left() + textPadding, itemRect.top() + (itemRect.height() - iconSide) / 2,
                 iconSide, iconSide);
@@ -636,13 +578,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
         const qreal textBaseline = detail::menuTextBaseline(p, QRectF(itemRect));
 
         p.setPen(primaryText);
-        // Draw from a baseline instead of an exactly measured QRect. Some
-        // Windows font backends paint antialiased edge pixels outside Qt's
-        // reported text bounds; QRect-based drawText clips those pixels and
-        // can visibly remove the final "l" or the leading "C".
-        // zh_CN: 使用基线坐标绘制，不再使用恰好等宽的 QRect。部分 Windows
-        // 字体后端会将抗锯齿边缘绘制到 Qt 报告边界之外，矩形绘制会裁掉末尾
-        // “l” 或开头 “C”。
+        // Draw at a baseline point rather than a tight QRect so Windows antialiased edge glyphs are not clipped.
         if (textLeft <= textRight)
             p.drawText(QPointF(textLeft, textBaseline), menuLabelText(action->text()));
 
@@ -673,10 +609,7 @@ void FluentMenu::resizeEvent(QResizeEvent* event)
 void FluentMenu::updateSurfaceMask()
 {
     if (m_translucentSurface || rect().isEmpty()) {
-        // Do not clear a native/platform mask that QMenu may own. Only remove
-        // the opaque fallback mask installed by this class.
-        // zh_CN: 不清除 QMenu 可能持有的平台原生 mask；只移除本类为不透明
-        // 回退表面安装的遮罩。
+        // Only clear our own opaque-fallback mask so platform masks (e.g. macOS) stay intact.
         if (m_surfaceMaskApplied) {
             clearMask();
             m_surfaceMaskApplied = false;
@@ -684,14 +617,8 @@ void FluentMenu::updateSurfaceMask()
         return;
     }
 
-    // Browser popup windows use an opaque backing surface for stable text and
-    // animation. Clip that surface at the widget/window boundary so the full-
-    // rect opaque clear cannot leak through the painted rounded corners.
-    // QRegion is intentionally used only for the opaque fallback; translucent
-    // desktop popups keep their antialiased alpha edge and painted shadow.
-    // zh_CN: 浏览器 popup 使用不透明后备表面以保证文字与动画稳定。通过控件/
-    // 窗口边界遮罩裁掉矩形清屏的四角，避免覆盖后续绘制的圆角轮廓。QRegion 只
-    // 用于不透明回退；桌面透明 popup 继续使用抗锯齿 alpha 边缘与自绘阴影。
+    // Opaque fallback popups (e.g. WASM) need a rounded QRegion mask so the full-rect clear
+    // doesn't bleed past rounded corners; translucent desktop popups keep alpha-antialiased edges.
     const QRegion surfaceMask = ::fluent::overlay::roundedRectRegion(rect(), themeRadius().overlay);
     if (mask() != surfaceMask)
         setMask(surfaceMask);
@@ -713,13 +640,8 @@ QSize FluentMenu::sizeHint() const
     const int contentWidth = spacing.gap.tight * 2 + textPadding * 2 + leadingColumn + maxLabelWidth(this, fontMetrics)
         + shortcutColumn + trailingColumn;
 
-    // Qt WASM can report only one row from QMenu::sizeHint() for a popup with
-    // several actions. Compute a backend-independent lower bound from the
-    // visible action list; the later resize lets QMenu rebuild actionGeometry
-    // for every row while native platforms retain their larger style hint.
-    // zh_CN: Qt WASM 对多动作 popup 的 QMenu::sizeHint() 有时只返回一行高度。
-    // 根据可见动作列表计算与后端无关的下界；随后 resize 会让 QMenu 为每一行重建
-    // actionGeometry，原生平台仍保留其更大的 style hint。
+    // Qt WASM QMenu::sizeHint() can under-report multi-action popups as one row;
+    // compute a lower bound from visible actions while letting native platforms keep larger hints.
     int contentHeight = contentsMargins().top() + contentsMargins().bottom();
     const int itemContentHeight = qMax(fontMetrics.height(), Typography::IconSize::Standard);
     const int itemHeight = qMax(::Spacing::ControlHeight::Small, itemContentHeight + 2 * m_itemVerticalPadding);
@@ -744,24 +666,14 @@ void FluentMenu::showEvent(QShowEvent* event)
     if (::fluent::overlay::syncInheritedThemeOverride(this, parentWidget()))
         onThemeUpdated();
 
-    // QMenu can enter showEvent() with a transient platform-window height that
-    // is larger than its already-settled sizeHint (notably on the first macOS
-    // popup). Treat the Fluent/native-combined hint as authoritative instead
-    // of preserving that one-shot excess with expandedTo(). Fixed widget size
-    // constraints are still honored by QWidget::resize().
-    // zh_CN: QMenu 首次进入 showEvent() 时，平台窗口高度可能暂时大于已经稳定的
-    // sizeHint（macOS 尤其明显）。以 Fluent/native 合并后的 hint 为准，避免
-    // expandedTo() 锁住这次性的多余高度；QWidget::resize() 仍会遵守固定尺寸约束。
+    // On first macOS show, QMenu can enter showEvent() taller than sizeHint();
+    // resize to sizeHint() instead of locking the transient excess via expandedTo().
     const QSize targetSize = sizeHint();
     if (size() != targetSize) {
         resize(targetSize);
         updateGeometry();
     }
-    // QMenu's platform style may replace a mask while processing its base
-    // showEvent (macOS keeps only its own native corner convention). Reapply
-    // the Fluent surface mask after base-show geometry has settled.
-    // zh_CN: QMenu 平台样式可能在基类 showEvent 中替换 mask（macOS 会保留
-    // 自己的原生圆角约定）；基类显示几何稳定后重新应用 Fluent 表面遮罩。
+    // QMenu's platform style can overwrite the mask inside base showEvent(); reapply ours afterward.
     updateSurfaceMask();
 
     if (m_cascadeParent) {
@@ -784,11 +696,7 @@ void FluentMenu::showEvent(QShowEvent* event)
         if (size() != targetSize)
             resize(targetSize);
         if (geometryNeedsRefresh) {
-            // QMenu's WASM backend can retain its pre-popup one-row cache when
-            // resized from inside showEvent(). A one-pixel post-show nudge
-            // invalidates that cache, then restores the token-derived size.
-            // zh_CN: QMenu 的 WASM 后端可能保留 showEvent() 之前的单行缓存。
-            // 显示后一像素的尺寸扰动会使其失效，再恢复 token 计算出的尺寸。
+            // Invalidate QMenu's WASM pre-show one-row geometry cache with a 1 px nudge.
             resize(targetSize + QSize(0, 1));
             resize(targetSize);
         }
@@ -804,25 +712,15 @@ void FluentMenu::showEvent(QShowEvent* event)
         delete previousAnimation;
     }
 
-    // Initial state: custom paint is transparent with reveal progress at zero.
-    // Native window opacity and graphics effects deliberately remain untouched.
-    // zh_CN: 初始状态：自绘内容透明且揭示进度归零；不修改原生窗口透明度，
-    // 也不在顶层菜单安装 graphics effect。
     m_revealProgress = m_translucentSurface ? 0.0 : 1.0;
 
-    // Opaque popup runtimes cannot reveal through transparent pixels. Paint
-    // the complete stable card immediately instead of flashing a partial menu.
-    // zh_CN: 不透明 popup 运行时无法通过透明像素做揭示动画，直接绘制完整稳定
-    // 菜单，避免闪现残缺表面。
+    // Opaque runtimes cannot fade/clip through transparent pixels; show full menu immediately.
     if (!m_translucentSurface) {
         update();
         return;
     }
 
-    // One timeline drives both the height reveal and paint opacity, keeping
-    // the WinUI PopupThemeTransition without native-window opacity calls.
-    // zh_CN: 用同一时间线驱动高度揭示与自绘透明度，在保留 WinUI
-    // PopupThemeTransition 的同时避开原生窗口透明度接口。
+    // Drive height reveal and paint opacity together without changing native window opacity.
     auto* entranceAnimation = new QVariantAnimation(this);
     entranceAnimation->setObjectName(QString::fromLatin1(kEntranceAnimationName));
     entranceAnimation->setStartValue(0.0);

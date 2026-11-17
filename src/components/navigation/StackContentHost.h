@@ -19,13 +19,9 @@ class QStackedLayout;
 namespace fluent::navigation {
 
 /**
- * @brief Content host that switches stacked pages with configurable transitions.
- * zh_CN: 使用可配置过渡效果切换堆叠页面的内容宿主。
- *
- * StackContentHost provides the page-hosting side of navigation shells, exposing
- * busy state and transition effect without dictating the navigation chrome.
- * zh_CN: StackContentHost 提供导航外壳的页面承载侧能力，暴露 busy 状态和过渡效果，
- * 但不规定导航 chrome。
+ * @brief Stacked page container with animated directional transitions.
+ * Hosts page widgets independently of the navigation header or pane chrome.
+ * zh_CN: 支持方向动画转场的堆叠页面容器，仅承载页面切换与过渡效果，不绑定外围导航栏样式。
  */
 class StackContentHost : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -57,45 +53,40 @@ public:
     QWidget* pageWidget(int index) const;
     bool insertPage(int index, QWidget* widget);
     /**
-     * @brief Inserts a page with an explicit release policy.
-     * zh_CN: 使用显式释放策略插入页面。
+     * @brief Inserts a page with an explicit ownership policy.
+     * zh_CN: 插入页面并指定所有权策略。
      */
     bool insertPage(int index, QWidget* widget, WidgetOwnership ownership);
     QWidget* replacePage(int index, QWidget* widget);
     /**
-     * @brief Replaces a page, applying the old policy and recording the new one.
-     * zh_CN: 替换页面，执行旧页面策略并记录新页面策略。
+     * @brief Replaces a page, applying the previous ownership policy and recording the new one.
+     * zh_CN: 替换页面，按旧页面策略处理后记录新页面的所有权策略。
      */
     bool replacePage(int index, QWidget* widget, WidgetOwnership ownership);
     QWidget* takePage(int index);
     /**
      * @brief Removes a page and applies its configured ownership policy.
-     * zh_CN: 移除页面并执行其已配置的所有权策略。
+     * zh_CN: 移除页面并执行其所有权策略。
      */
     bool releasePage(int index);
     void clearPages();
     /**
-     * @brief Clears all pages and applies each configured ownership policy.
-     * zh_CN: 清空全部页面并执行各自配置的所有权策略。
+     * @brief Clears all pages and applies each page's ownership policy.
+     * zh_CN: 清空全部页面并逐一执行各自的释放策略。
      */
     void releaseAllPages();
     bool movePage(int from, int to);
     int indexOf(QWidget* widget) const;
     /**
-     * @brief Returns the configured release policy for a hosted page.
-     * zh_CN: 返回托管页面已配置的释放策略。
+     * @brief Returns the ownership policy recorded for a hosted page.
+     * zh_CN: 返回指定页面记录的所有权策略。
      */
     WidgetOwnership pageOwnershipAt(int index) const;
 
     /**
      * @brief Switches the current page, optionally animating in a direction.
-     * zh_CN: 切换当前页面，可按方向播放转场动画。
-     *
-     * direction >= 0 plays the forward transition (incoming page slides in from the
-     * effect's side); direction < 0 reverses it (incoming page slides in from the
-     * opposite side), matching back navigation.
-     * zh_CN: direction >= 0 播放前进转场（新页面从效果方向侧滑入）；direction < 0 反向
-     * 播放（新页面从相反侧滑入），对应后退导航。
+     * `direction >= 0` plays the forward transition; `direction < 0` reverses it for back navigation.
+     * zh_CN: 切换当前页面；direction >= 0 播放正向滑入动画，direction < 0 反向播放（对应后退导航）。
      */
     void setCurrentIndex(int index, int direction = 0, bool animated = true);
     void setTransitionAnimationEnabled(bool enabled);
@@ -104,14 +95,9 @@ public:
     void setTransitionEffect(TransitionEffect effect);
 
     /**
-     * @brief Configures the optional content surface drawn above the window backdrop.
-     * zh_CN: 配置绘制在窗口背景之上的可选内容表面。
-     *
-     * The host paints this fill when it is valid and non-transparent. Without an
-     * explicit fill, material backdrop modes remain transparent and other modes use
-     * the default content layer.
-     * zh_CN: 填充有效且非透明时宿主绘制该表面；未显式配置时，材质背景模式保持透明，
-     * 其他模式使用默认内容层。
+     * @brief Configures an optional background fill and border over the window backdrop.
+     * Paints `fill` when valid and non-transparent; otherwise material backdrops stay transparent and regular windows use the default content layer.
+     * zh_CN: 配置绘制在窗口背景之上的可选内容区填充与边框；有效且非透明时使用 fill，否则材质窗口保持透明，普通窗口使用默认内容底色。
      */
     void setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border);
 

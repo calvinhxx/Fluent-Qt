@@ -18,18 +18,11 @@ class QResizeEvent;
 namespace fluent::gallery {
 
 /**
- * @brief A virtualized grid of entry cards drawn by a single widget.
- * zh_CN: 由单个 widget 绘制的虚拟化卡片网格。
+ * @brief Virtualized grid of entry cards painted by a single widget.
  *
- * Where the old category page built one GalleryEntryCard widget per control (60+
- * widgets, each with its own labels and stylesheet — the bulk of a category page's
- * build cost), this holds the entries as plain data and paints only the cards that
- * intersect the exposed paint rect. The scroll area clips to the viewport, so a
- * scroll repaints just the visible band: construction is O(1) and painting is bound
- * to what's on screen, regardless of how many entries exist.
- * zh_CN: 旧分类页为每个控件建一个 GalleryEntryCard（60+ 个 widget，各自带标签和样式表——
- * 分类页建页开销的大头）；这里把条目当作纯数据持有，只绘制与曝光区相交的卡片。滚动区裁剪到
- * 视口，滚动时只重绘可见的一条带：构造是 O(1)、绘制量只跟屏幕上的内容相关，与条目总数无关。
+ * Stores entry metadata directly and paints only cards intersecting the exposed
+ * paint rect, keeping construction O(1) regardless of entry count.
+ * zh_CN: 由单个控件绘制的虚拟化卡片网格：仅持有条目数据并按曝光区域按需绘制，构造开销为 O(1)。
  */
 class GalleryEntryGrid : public QWidget, public fluent::FluentElement, public fluent::QMLPlus {
     Q_OBJECT

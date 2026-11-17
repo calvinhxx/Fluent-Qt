@@ -37,8 +37,7 @@ QString commandLabel(const QAction* action)
     QString text = action->text().section(QLatin1Char('\t'), 0, 0);
     if (text.isEmpty())
         text = action->iconText();
-    // Keep escaped ampersands while removing mnemonic markers.
-    // zh_CN: 保留转义的 &，移除快捷访问标记。
+    // Preserve escaped "&&" while stripping mnemonic markers.
     text.replace(QStringLiteral("&&"), QString(QChar(0x1f)));
     text.remove(QLatin1Char('&'));
     text.replace(QChar(0x1f), QLatin1Char('&'));
@@ -171,9 +170,7 @@ public:
         }
         painter->setFont(option.font);
         const QString shortcut = index.data(Qt::UserRole).toString();
-        // Round fractional glyph advances up; an exact integer advance can elide
-        // a complete native shortcut (for example, Command+C) to just "...".
-        // zh_CN: 字形宽度向上取整，避免完整的原生快捷键被误省略。
+        // Round fractional advances up so a full native shortcut (e.g. Command+C) is not elided to "...".
         const int shortcutWidth = qMin(qCeil(QFontMetricsF(option.font).horizontalAdvance(shortcut)) + 2,
             qMax(0, card.width() / 3));
         QRect shortcutRect(card.right() - inset - shortcutWidth, card.top(), shortcutWidth, card.height());
@@ -234,9 +231,7 @@ public:
         view->setSpacing(0);
         view->setBorderVisible(false);
         view->setBackgroundVisible(false);
-        // The popup already paints an opaque surface. Preserve it when the
-        // containing window uses Mica/vibrancy instead of clearing through it.
-        // zh_CN: 保留弹层已绘制的背景，避免在 Mica/毛玻璃窗口中被清成透明洞。
+        // Keep the opaque popup surface intact instead of punching a transparent hole under Mica/vibrancy.
         view->setProperty("fluentPreserveParentSurface", true);
         view->viewport()->setProperty("fluentPreserveParentSurface", true);
         view->setPlaceholderText(CommandPalette::tr("No matching commands"));

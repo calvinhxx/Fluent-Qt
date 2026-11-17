@@ -8,8 +8,7 @@ class ImageViewer;
 namespace detail {
 
 void ensureImageViewerAccessibilityFactory();
-// Sends a value change, and ActionChanged when zoom in/out availability changed.
-// zh_CN: 发送数值变化事件；放大/缩小可用性变化时额外发送 ActionChanged。
+// Emits ValueChanged, plus ActionChanged when zoom-in/out availability changed.
 void notifyImageViewerAccessibilityZoomChanged(ImageViewer* viewer, bool actionsChanged);
 void notifyImageViewerAccessibilityImageChanged(ImageViewer* viewer, bool actionsChanged);
 void notifyImageViewerAccessibilityActionsChanged(ImageViewer* viewer);

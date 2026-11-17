@@ -15,16 +15,11 @@ namespace fluent::menus_toolbars {
 class CommandBarFlyoutPrivate;
 
 /**
- * @brief Contextual command surface with collapsed and expanded show modes.
- * zh_CN: 具有折叠和展开显示模式的上下文命令表面。
- *
- * The flyout borrows QAction objects and supports repeatable widget-anchor or
- * local-point invocation inside its owning top-level window.
- * zh_CN: 该浮层借用 QAction，并支持在所属顶层窗口内按控件锚点或局部点重复调用。
- * QAction::setMenu() attaches a borrowed FluentMenu cascade. Branches keep the
- * flyout open; activating a leaf closes the cascade and the flyout.
- * zh_CN: QAction::setMenu() 可挂接借用的 FluentMenu 多级菜单；打开分支保留浮层，
- * 执行叶子命令后关闭菜单和浮层。
+ * @brief Contextual floating command bar with collapsed and expanded modes.
+ * Supports repeated opening anchored to a widget or local point inside its parent window without taking ownership of QAction or FluentMenu objects.
+ * Opening a submenu via QAction::setMenu() keeps the flyout open; triggering a leaf command closes both the submenu cascade and the flyout.
+ * zh_CN: 带折叠与展开状态的浮动上下文命令栏。
+ * 支持在同一顶层窗口内按控件锚点或局部坐标重复弹出，不接管 QAction 和 FluentMenu 的所有权；通过 QAction::setMenu() 展开子菜单时保持浮层打开，触发叶动作后一并关闭。
  */
 class CommandBarFlyout final : public dialogs_flyouts::Flyout {
     Q_OBJECT
@@ -52,56 +47,56 @@ public:
     using QWidget::removeAction;
 
     /**
-     * @brief Adds a QAction through the Qt widget API as a primary command.
-     * zh_CN: 通过 Qt 控件 API 将 QAction 添加为主命令。
+     * @brief Adds an action to the primary section without taking ownership.
+     * zh_CN: 通过 Qt 控件动作接口将 QAction 添加到主命令区（不接管所有权）。
      */
     void addAction(QAction* action);
     /**
-     * @brief Inserts a new Qt widget action into primary command order.
-     * zh_CN: 将新的 Qt 控件动作插入主命令顺序。
+     * @brief Inserts an action into the primary section before `before` without taking ownership.
+     * zh_CN: 在指定主命令之前插入动作（不接管所有权）。
      */
     void insertAction(QAction* before, QAction* action);
     /**
-     * @brief Removes Qt widget association and semantic command membership.
-     * zh_CN: 移除 Qt 控件关联和语义命令成员关系。
+     * @brief Removes an action from the flyout without deleting it.
+     * zh_CN: 从浮动命令栏及所属命令分组中移除动作，但不删除该动作。
      */
     void removeAction(QAction* action);
 
-    /** @brief Appends a borrowed action to the primary section.
-     *  zh_CN: 将借用的动作追加到主命令分区。
+    /** @brief Appends an action to the primary section without taking ownership.
+     *  zh_CN: 将动作追加到主命令区（不接管所有权）。
      */
     bool addPrimaryAction(QAction* action);
-    /** @brief Inserts a borrowed primary action before another primary action.
-     *  zh_CN: 在指定主命令之前插入借用的主命令。
+    /** @brief Inserts a primary action before `before` without taking ownership.
+     *  zh_CN: 在指定主命令之前插入动作（不接管所有权）。
      */
     bool insertPrimaryAction(QAction* before, QAction* action);
-    /** @brief Appends a borrowed action to the secondary section.
-     *  zh_CN: 将借用的动作追加到次命令分区。
+    /** @brief Appends an action to the secondary section without taking ownership.
+     *  zh_CN: 将动作追加到次命令区（不接管所有权）。
      */
     bool addSecondaryAction(QAction* action);
-    /** @brief Inserts a borrowed secondary action before another secondary action.
-     *  zh_CN: 在指定次命令之前插入借用的次命令。
+    /** @brief Inserts a secondary action before `before` without taking ownership.
+     *  zh_CN: 在指定次命令之前插入动作（不接管所有权）。
      */
     bool insertSecondaryAction(QAction* before, QAction* action);
     /** @brief Removes an action from either section without deleting it.
-     *  zh_CN: 从任一分区移除动作，但不删除动作。
+     *  zh_CN: 从主命令区或次命令区移除指定动作，但不删除该动作。
      */
     bool removeCommandAction(QAction* action);
-    /** @brief Clears primary membership without deleting actions.
-     *  zh_CN: 清空主命令成员关系，但不删除动作。
+    /** @brief Clears all primary commands without deleting the actions.
+     *  zh_CN: 清空主命令区，不删除其中的动作。
      */
     void clearPrimaryActions();
-    /** @brief Clears secondary membership without deleting actions.
-     *  zh_CN: 清空次命令成员关系，但不删除动作。
+    /** @brief Clears all secondary commands without deleting the actions.
+     *  zh_CN: 清空次命令区，不删除其中的动作。
      */
     void clearSecondaryActions();
 
-    /** @brief Returns primary actions in semantic order.
-     *  zh_CN: 按语义顺序返回主命令。
+    /** @brief Returns primary actions in display order.
+     *  zh_CN: 按顺序返回主命令列表。
      */
     QList<QAction*> primaryActions() const;
-    /** @brief Returns secondary actions in semantic order.
-     *  zh_CN: 按语义顺序返回次命令。
+    /** @brief Returns secondary actions in display order.
+     *  zh_CN: 按顺序返回次命令列表。
      */
     QList<QAction*> secondaryActions() const;
 
@@ -117,35 +112,35 @@ public:
     QSize minimumSizeHint() const override;
 
     /**
-     * @brief Selects widget-anchor placement without opening.
-     * zh_CN: 选择控件锚点定位，但不立即打开。
+     * @brief Sets the anchor widget for placement without opening the flyout.
+     * zh_CN: 设置锚点控件但不立即打开浮层。
      */
     void setAnchor(QWidget* anchor);
     /**
-     * @brief Opens at a widget anchor using the current show mode.
-     * zh_CN: 使用当前显示模式在控件锚点处打开。
+     * @brief Opens the flyout anchored to `anchor` using the current show mode.
+     * zh_CN: 按当前显示模式在锚点控件附近打开浮层。
      */
     void showAt(QWidget* anchor);
     /**
-     * @brief Opens at a widget anchor using an explicit show mode.
-     * zh_CN: 使用指定显示模式在控件锚点处打开。
+     * @brief Opens the flyout anchored to `anchor` using `mode`.
+     * zh_CN: 按指定显示模式在锚点控件附近打开浮层。
      */
     void showAt(QWidget* anchor, ShowMode mode);
     /**
-     * @brief Opens near a local point using the current show mode.
-     * zh_CN: 使用当前显示模式在局部坐标点附近打开。
+     * @brief Opens the flyout near `localPosition` relative to `relativeTo` using the current show mode.
+     * zh_CN: 按当前显示模式在相对控件的局部坐标附近打开浮层。
      */
     void showAtPoint(QWidget* relativeTo, const QPoint& localPosition);
     /**
-     * @brief Opens near a local point using an explicit show mode.
-     * zh_CN: 使用指定显示模式在局部坐标点附近打开。
+     * @brief Opens the flyout near `localPosition` relative to `relativeTo` using `mode`.
+     * zh_CN: 按指定显示模式在相对控件的局部坐标附近打开浮层。
      */
     void showAtPoint(QWidget* relativeTo, const QPoint& localPosition, ShowMode mode);
 
 public slots:
     /**
-     * @brief Changes effective expansion while the flyout is open.
-     * zh_CN: 在浮层打开时修改有效展开状态。
+     * @brief Expands or collapses the secondary command menu while the flyout is open.
+     * zh_CN: 在浮层打开时展开或收起次命令菜单（受 alwaysExpanded 与是否存在主命令约束）。
      */
     void setExpanded(bool expanded);
 

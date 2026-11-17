@@ -29,10 +29,8 @@ GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
         QString description;
         if (const GalleryContentEntry* topicEntry = galleryContentEntry(routeId))
             description = topicEntry->description;
-        // Prefer designed topic artwork; component routes without dedicated artwork
-        // use their catalog glyph instead of borrowing an unrelated image.
-        // zh_CN: 优先使用主题专属图片；没有专属图片的组件路由改用目录字形，
-        // 不再借用其他组件的图片。
+        // Use topic artwork when available, falling back to the catalog glyph rather than reusing unrelated art.
+        // zh_CN: 优先使用主题专属图片；无专属图片时改用目录字形，不混用其他组件图片。
         const QString imageResource = galleryControlImageResource(item->title);
         entries.append(
             {item->id, item->title, description, imageResource, imageResource.isEmpty() ? item->iconGlyph : QString()});

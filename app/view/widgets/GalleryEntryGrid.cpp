@@ -18,25 +18,18 @@
 namespace fluent::gallery {
 namespace {
 
-// Mirrors the old GalleryEntryCard layout (QHBoxLayout 16px margins, 40px icon,
-// 16px gap, title + caption column) so the painted grid matches the previous look.
-// zh_CN: 对齐旧 GalleryEntryCard 布局，使绘制网格与原来外观一致。
+// Match GalleryEntryCard metrics (16px padding, 40px icon slot, 16px text gap).
+// zh_CN: 沿用 GalleryEntryCard 的间距与尺寸规范，保持页面外观一致。
 constexpr int kGridSpacing = 12;
 constexpr int kMinCardHeight = 86;
 constexpr int kCardPadding = 16;
 constexpr int kIconSize = 40;
-// Preserve the artwork's accepted 36 px footprint within the 40 px layout slot;
-// SVG rendering supplies the physical pixels required by the current screen.
-// zh_CN: 保留素材在 40px 布局槽位内的 36px 尺寸，SVG 按当前屏幕生成所需物理像素。
+// Render 36px SVG artwork inside the 40px layout slot at target display DPR.
 constexpr int kControlImageSize = 36;
 constexpr int kIconTextGap = 16;
 constexpr int kTitleDescGap = 3;
 
-// The grid wraps to as many columns as fit at >= kMinCardWidth each, growing 1 -> 2 ->
-// 3 -> 4 as the window widens (WinUI-style), capped at kMaxColumns so cards never get
-// too narrow nor sprawl past four across.
-// zh_CN: 网格按每列至少 kMinCardWidth 宽排布，随窗口变宽 1→2→3→4 列（对齐 WinUI），封顶 kMaxColumns 列，
-// 既不让卡片过窄，也不超过四列。
+// Responsive 1-4 columns at >= kMinCardWidth each.
 constexpr int kMinCardWidth = 240;
 constexpr int kMaxColumns = 4;
 

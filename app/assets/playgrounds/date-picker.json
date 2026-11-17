@@ -146,8 +146,8 @@
     48
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A spinning-field picker for choosing a day, month, and year.",
+    "zh": "以滚轮列分别选择年、月、日。"
   },
   "presets": [
     {
