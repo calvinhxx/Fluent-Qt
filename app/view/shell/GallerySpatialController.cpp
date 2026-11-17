@@ -32,6 +32,7 @@
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QElapsedTimer>
+#include <QDeadlineTimer>
 #include <QDynamicPropertyChangeEvent>
 #include <QFrame>
 #include <QGraphicsEffect>
@@ -184,6 +185,7 @@ struct ShellScene : FluentElement {
     Panel navigation, content;
     qreal progress = 0;
     QPointF pointerTilt;
+    std::array<QDeadlineTimer, 2> manipulation;
     bool top = false;
     std::function<void()> themeChanged;
     std::function<void(QPainter&, bool, const QRegion&)> renderWidgets;
@@ -1131,12 +1133,11 @@ private:
         const bool partial = known && spatial_render::coveredRows(bands) * 10 < height * 6;
         if (!partial)
             bands = {{0, height}};
-        // Continuous large updates with a reported extent (scrolling, dragging, expanding)
-        // paint at native density when cache density would exceed the frame budget, and
-        // are refined at cache density after they pause. Unknown changes such as startup,
-        // theme or page switches keep full density.
-        // zh_CN: 范围已知的连续大面积更新（滚动、拖动、展开）在缓存密度会超出帧预算时按原生密度
-        // 绘制，停止后按缓存密度补全；启动、主题或换页等范围未知的变化保持完整密度。
+        // Only actual scrolling/dragging may trade sampling density for frame time.
+        // Frequent layout, hover and navigation animation paints are not input intent:
+        // switching their glyph raster density makes stationary text darken and blur.
+        // zh_CN: 仅实际滚动、拖动可以用采样密度换取帧时间；布局、悬停、切页动画的频繁
+        // 重绘不等于操作意图，切换字形栅格密度会使静止文字暂时变黑、模糊。
         const qreal nativeDpr = devicePixelRatioF();
         const qint64 now = m_clock.elapsed();
         const bool slow = updateCostMs() > 16;
@@ -1147,8 +1148,9 @@ private:
         const bool continuous = cache.updatedAtMs >= 0 && now - cache.updatedAtMs < interval;
         const int damagedRows = spatial_render::coveredRows(bands);
         const bool large = damagedRows >= spatial_render::kInteractiveDamageShare * height;
-        bool interactive = m_interactive && known && quantum && dpr > nativeDpr && continuous
-            && damagedRows >= share * height && !m_cacheDensityCost.fits(damagedRows, m_frameUpdateMs);
+        bool interactive = m_interactive && !m_scene->manipulation[navigation ? 0 : 1].hasExpired() && known && quantum
+            && dpr > nativeDpr && continuous && damagedRows >= share * height
+            && !m_cacheDensityCost.fits(damagedRows, m_frameUpdateMs);
         cache.updatedAtMs = now;
         // Qt caches nested effect pixmaps in device pixels and invalidates them only when the
         // painter transform changes, so a density switch would replay them at stale positions.
@@ -1316,6 +1318,7 @@ struct GallerySpatialController::Private {
     QPointer<QWidget> grabbed, hovered;
     QVector<QPointer<QWidget>> hoverPath;
     QPoint hoverSource;
+    QPoint pressPosition;
     struct NativePopupAnchor {
         QPointer<QWidget> source;
         QPoint point;
@@ -1613,6 +1616,8 @@ struct GallerySpatialController::Private {
             grabbed = nullptr;
             hovered = nullptr;
             hoverPath.clear();
+            for (auto& intent : scene.manipulation)
+                intent.setRemainingTime(0);
         }
         sync();
         navigation->update();
@@ -2214,6 +2219,9 @@ QVariantMap GallerySpatialController::renderingStatistics() const
 {
     QVariantMap result = d->initializationTimings;
     result["pluginActive"] = d->session && d->session->isActive();
+    result["pointerCaptured"] = bool(d->grabbed);
+    result["navigationManipulationActive"] = !d->scene.manipulation[0].hasExpired();
+    result["contentManipulationActive"] = !d->scene.manipulation[1].hasExpired();
     result["directCompositionRequired"] = d->directCompositionRequired;
     for (const auto& entry : {qMakePair(QStringLiteral("navigation"), d->capture.data()),
              qMakePair(QStringLiteral("content"), d->contentCapture.data())}) {
@@ -2644,8 +2652,15 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         d->hover(target, source.toPoint());
         if (!guard || !target)
             return true;
-        if (event->type() == QEvent::MouseButtonPress)
+        if (event->type() == QEvent::MouseButtonPress) {
             d->grabbed = target;
+            d->pressPosition = global;
+            for (auto& intent : d->scene.manipulation)
+                intent.setRemainingTime(0);
+        } else if (event->type() == QEvent::MouseMove && d->grabbed && input->buttons() != Qt::NoButton
+            && (global - d->pressPosition).manhattanLength() >= QApplication::startDragDistance()) {
+            d->scene.manipulation[d->belongsToContent(target) ? 1 : 0].setRemainingTime(spatial_render::kRefineDelayMs);
+        }
         FluentTranslatedMouseEvent forwarded(input, local, target->mapTo(d->window, local), sourceGlobal);
         // Queue composition alongside the drag's source update, before Qt starts
         // painting. The capture then joins this frame instead of requesting another.
@@ -2655,6 +2670,8 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         QApplication::sendEvent(target, &forwarded);
         if (guard && event->type() == QEvent::MouseButtonRelease && input->buttons() == Qt::NoButton) {
             d->grabbed = nullptr;
+            for (auto& intent : d->scene.manipulation)
+                intent.setRemainingTime(0);
             QWidget* hoverTarget = hit && d->navigation->rect().contains(presented) && !d->nativeOverlayAt(global)
                 ? d->navigation->childAt(hoverPosition)
                 : nullptr;
@@ -2662,6 +2679,8 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         }
     } else if (wheel) {
         auto* input = static_cast<QWheelEvent*>(event);
+        if (!input->pixelDelta().isNull() || !input->angleDelta().isNull())
+            d->scene.manipulation[d->belongsToContent(target) ? 1 : 0].setRemainingTime(spatial_render::kRefineDelayMs);
         // Qt deliberately does not bubble synthetic wheel events. Walk the widget
         // parents so scrolling over a label/card still reaches its scroll viewport.
         // zh_CN: Qt 不会冒泡合成滚轮事件，逐级转发让文字、卡片上的滚动也能到达滚动视口。

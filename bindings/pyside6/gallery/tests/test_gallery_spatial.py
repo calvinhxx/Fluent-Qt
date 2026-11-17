@@ -1085,6 +1085,49 @@ class GallerySpatialTest(unittest.TestCase):
             delete(receiver)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_navigation_clicks_keep_text_sampling_stable(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires full Gallery GPU composition")
+        window = GalleryWindow(startup_visuals=False)
+        window.resize(1185, 850)
+        try:
+            window.show()
+            window.activateWindow()
+            self.assertTrue(QTest.qWaitForWindowActive(window))
+            pane = window.findChild(QWidget, "galleryMainNavigationPane")
+            tree = window.findChild(fluentqt.TreeView, "galleryMainNavigationTreeView")
+            self.assertIsNotNone(tree)
+            controller = window._spatial_controller
+            self.settings.set_spatial_mode_enabled(True)
+            for _ in range(100):
+                if controller.canvas.property("presenting"):
+                    break
+                _qwait(50)
+            self.assertTrue(controller.canvas.property("presenting"))
+            controller.settle()
+            for theme in (ThemeMode.Light, ThemeMode.Dark):
+                self.settings.set_theme_mode(theme)
+                for route in ("file-list-view", "drawer-view", "data-grid", "file-list-view"):
+                    with self.subTest(theme=theme, route=route):
+                        index = pane._route_items[route].index()
+                        parent = index.parent()
+                        while parent.isValid():
+                            tree.expand(parent)
+                            parent = parent.parent()
+                        tree.scrollTo(index)
+                        _qwait(500)
+                        before = controller.canvas.statistics()["interactiveUpdates"]
+                        QTest.mouseClick(window.windowHandle(), Qt.LeftButton, Qt.NoModifier,
+                                         controller.projected_position(tree.viewport(), tree.visualRect(index).center()))
+                        _qwait(700)
+                        self.assertEqual(controller.canvas.statistics()["interactiveUpdates"], before)
+                        self.assertEqual(pane._selected_route_id, route)
+                        self.assertTrue(all(intent.hasExpired() for intent in controller.manipulation))
+        finally:
+            self.settings.set_spatial_mode_enabled(False)
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_native_flip_view_receives_projected_parent_hover(self):
         if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
             self.skipTest("requires full native Gallery presentation")
@@ -2438,8 +2481,7 @@ print("2D-only Gallery: no OpenGL imports")
             from fluentqt_gallery.glyph_paint_device import glyph_raster_dpr, needs_native_glyph_coverage
             expected_glyph_dpr = (glyph_raster_dpr(content.font(), dpr, surface.plan[0])
                                   if needs_native_glyph_coverage(dpr) else 0)
-            # Activation can still have native-density rows awaiting refinement.
-            # Judge settled text after those rows return to the cache density.
+            # Wait for the initial composed glyph frame. Activation keeps cache density.
             for _ in range(40):
                 if (content.glyph_dpr == expected_glyph_dpr
                         and all(cache.get("degraded") is None or cache["degraded"].isEmpty()

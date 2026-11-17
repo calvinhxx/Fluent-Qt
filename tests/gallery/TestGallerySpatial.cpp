@@ -4,6 +4,8 @@
 #include <QPainter>
 #include <QPaintEngine>
 #include <QJsonDocument>
+#include <QJsonArray>
+#include <QFile>
 #include <QtMath>
 #include <iostream>
 #include <functional>
@@ -2672,6 +2674,7 @@ TEST_F(GallerySpatialTest, ContinuousLargeUpdatesPaintAtNativeDensityThenRefine)
     window.resize(800, 600);
     auto* navigation = new navigation::NavigationView(&window);
     navigation->resize(window.size());
+    navigation->setDisplayMode(navigation::NavigationView::DisplayMode::Left);
     auto* page = new DamageProbe;
     // Cache density must exceed the frame budget before continuous updates degrade.
     page->paintDelayMs = ulong(2 * spatial_render::kCacheDensityBudgetMs);
@@ -2695,7 +2698,22 @@ TEST_F(GallerySpatialTest, ContinuousLargeUpdatesPaintAtNativeDensityThenRefine)
         const QPoint projected = controller.projectedPosition(page, page->rect().center());
         return frame.pixelColor(surface->mapFrom(&window, projected) * surface->devicePixelRatioF());
     };
+    // Programmatic animation alone must not change text sampling, even on a slow page.
+    for (int frame = 0; frame < 3; ++frame) {
+        const int paints = page->gpuPaints;
+        page->update();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return page->gpuPaints > paints; }, 2000));
+        QTest::qWait(20);
+    }
+    EXPECT_EQ(controller.renderingStatistics()["interactiveUpdates"], before["interactiveUpdates"]);
+    const QPoint start = controller.projectedPosition(page, page->rect().center());
+    QTest::mousePress(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, start);
     for (int frame = 0; frame < 8; ++frame) {
+        QTest::mouseMove(window.windowHandle(), start + QPoint(20 + frame * 12, 0));
+        const auto intent = controller.renderingStatistics();
+        EXPECT_TRUE(intent["pointerCaptured"].toBool());
+        EXPECT_TRUE(intent["contentManipulationActive"].toBool());
+        EXPECT_FALSE(intent["navigationManipulationActive"].toBool());
         page->color = frame % 2 ? Qt::blue : Qt::green;
         const int paints = page->gpuPaints;
         page->update();
@@ -2703,8 +2721,9 @@ TEST_F(GallerySpatialTest, ContinuousLargeUpdatesPaintAtNativeDensityThenRefine)
         QTest::qWait(20);
     }
     const auto moving = controller.renderingStatistics();
+    QTest::mouseRelease(window.windowHandle(), Qt::LeftButton, Qt::NoModifier, start + QPoint(104, 0));
     EXPECT_GT(moving["interactiveUpdates"].toLongLong(), before["interactiveUpdates"].toLongLong())
-        << "Continuous whole-page updates paint at native density";
+        << "Actual expensive dragging can still use native density";
     EXPECT_GT(pixel().blue(), 200) << "The scaled native-density frame still shows current content";
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
@@ -6531,5 +6550,102 @@ TEST_F(GallerySpatialTest, NativeOriginalMenuOpensThreeLevelsAndActivatesOnce)
         EXPECT_FALSE(menu->isVisible());
         EXPECT_FALSE(sort->isVisible());
         EXPECT_FALSE(order->isVisible());
+    }
+}
+
+TEST_F(GallerySpatialTest, NativeNavigationClicksKeepTextSamplingStable)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires the full Gallery GPU compositor";
+    auto& settings = GallerySettings::instance();
+    settings.setHomeParticlesEnabled(false);
+    settings.setNavigationStyle(GallerySettings::NavigationStyle::Left);
+    GalleryWindow window;
+    window.resize(1185, 850);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    auto* controller = window.findChild<GallerySpatialController*>();
+    auto* pane = window.findChild<GalleryNavigationPane*>("galleryMainNavigationPane");
+    ASSERT_NE(controller, nullptr);
+    ASSERT_NE(pane, nullptr);
+    auto* tree = pane->findChild<collections::TreeView*>();
+    ASSERT_NE(tree, nullptr);
+    settings.setSpatialModeEnabled(true);
+    controller->cancelTransition();
+    auto* surface = window.findChild<QOpenGLWidget*>("gallerySpatialSurface");
+    ASSERT_NE(surface, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return surface->property("presenting").toBool(); }, 5000));
+    const auto reference = pane->indexForRouteId("basic-input");
+    ASSERT_TRUE(reference.isValid());
+    const QStringList routes{"file-list-view", "drawer-view", "data-grid", "file-list-view"};
+    QJsonArray frames;
+    const QString directory = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE");
+    if (!directory.isEmpty())
+        QDir().mkpath(directory);
+    const int previousZoom = settings.interfaceZoomPercent();
+    const auto restoreZoom = qScopeGuard([&] { settings.setInterfaceZoomPercent(previousZoom); });
+    for (int zoom : {75, 100}) {
+        SCOPED_TRACE(zoom);
+        settings.setInterfaceZoomPercent(zoom);
+        QTest::qWait(300);
+        const QString frameDirectory = directory.isEmpty() ? QString() : directory + "/" + QString::number(zoom);
+        if (!frameDirectory.isEmpty())
+            QDir().mkpath(frameDirectory);
+        for (const auto& route : routes) {
+            SCOPED_TRACE(route.toStdString());
+            const auto index = pane->indexForRouteId(route);
+            ASSERT_TRUE(index.isValid());
+            for (auto parent = index.parent(); parent.isValid(); parent = parent.parent())
+                tree->expand(parent);
+            tree->scrollTo(index);
+            QTest::qWait(500);
+            const auto before = controller->renderingStatistics();
+            QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier,
+                controller->projectedPosition(tree->viewport(), tree->visualRect(index).center()));
+            QElapsedTimer elapsed;
+            elapsed.start();
+            std::vector<int> inkCounts;
+            for (int frame = 0; frame < 24; ++frame) {
+                QTest::qWait(25);
+                auto stats = QJsonObject::fromVariantMap(controller->renderingStatistics());
+                stats["route"] = route;
+                stats["elapsedMs"] = elapsed.elapsed();
+                stats["frame"] = frame;
+                stats["zoom"] = zoom;
+                frames.append(stats);
+                {
+                    const auto image = surface->grabFramebuffer();
+                    // An unchanged navigation label reveals raster changes without comparing different pages.
+                    const QRect row = tree->visualRect(reference).adjusted(36, 2, -24, -2);
+                    const QPoint topLeft = surface->mapFrom(&window,
+                        controller->projectedPosition(tree->viewport(), row.topLeft()));
+                    const qreal dpr = qreal(image.width()) / surface->width();
+                    const auto text = image.copy(QRect(topLeft * dpr, row.size() * dpr));
+                    ASSERT_FALSE(text.isNull());
+                    int ink = 0;
+                    for (int y = 0; y < text.height(); ++y)
+                        for (int x = 0; x < text.width() * 7 / 10; ++x)
+                            ink += qGray(text.pixel(x, y)) < 100;
+                    inkCounts.push_back(ink);
+                    if (!frameDirectory.isEmpty())
+                        text.save(frameDirectory + QStringLiteral("/%1-%2.png").arg(route).arg(frame));
+                }
+            }
+            const auto range = std::minmax_element(inkCounts.begin(), inkCounts.end());
+            ASSERT_GT(*range.first, 0);
+            EXPECT_LE(*range.second, *range.first * 1.02 + 2)
+                << "An unchanged label must not become darker between click and idle frames";
+            const auto after = controller->renderingStatistics();
+            EXPECT_EQ(after["interactiveUpdates"].toLongLong(), before["interactiveUpdates"].toLongLong())
+                << "A navigation click must not rerasterize text at a temporary lower density";
+            EXPECT_EQ(window.currentRouteId(), route);
+        }
+    }
+    if (!directory.isEmpty()) {
+        QFile output(directory + "/click-frames.json");
+        ASSERT_TRUE(output.open(QIODevice::WriteOnly));
+        output.write(QJsonDocument(frames).toJson());
     }
 }

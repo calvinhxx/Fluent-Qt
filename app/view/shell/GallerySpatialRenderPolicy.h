@@ -21,9 +21,10 @@ constexpr qint64 kGlyphScratchBytes = 512LL * 1024;
 // Retained raster images and their texture copies share the same overall budget.
 constexpr int kGlyphCacheBytes = 2 * 1024 * 1024;
 constexpr qint64 kGlyphWorkingSetBytes = kGlyphScratchBytes + 2LL * kGlyphCacheBytes;
-// A continuous update covering at least this share of a panel paints at native density
-// and is refined at cache density once updates pause for kRefineDelayMs.
-// zh_CN: 连续更新覆盖面板的比例达到此值时按原生密度绘制，更新停止 kRefineDelayMs 后补全质量。
+// During actual scrolling/dragging, large continuous damage may use native density;
+// idle refinement restores cache density after kRefineDelayMs. Click/hover/layout paints stay sharp.
+// zh_CN: 实际滚动、拖动期间的大面积连续更新可使用原生密度，闲置 kRefineDelayMs 后恢复缓存密度；
+// 点击、悬停和布局重绘保持清晰。
 constexpr qreal kInteractiveDamageShare = .3;
 constexpr int kInteractiveIntervalMs = 120;
 constexpr int kRefineDelayMs = 160;

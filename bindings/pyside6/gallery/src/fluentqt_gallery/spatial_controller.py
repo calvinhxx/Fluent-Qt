@@ -14,7 +14,7 @@ import fluentqt
 from fluentqt.spatial import SpatialRuntime, SpatialSession
 from fluentqt._fluentqt import fluent as _native_fluent
 from PySide6.QtCore import (
-    QAbstractAnimation, QEasingCurve, QElapsedTimer, QEvent, QLineF, QObject, QPoint, QPointF,
+    QAbstractAnimation, QDeadlineTimer, QEasingCurve, QElapsedTimer, QEvent, QLineF, QObject, QPoint, QPointF,
     QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal, Slot,
 )
 from PySide6.QtGui import (
@@ -132,7 +132,7 @@ _PAINT_SAMPLES = 2
 _GLYPH_SCRATCH_BYTES = 512 * 1024
 _GLYPH_WORKING_SET_BYTES = _GLYPH_SCRATCH_BYTES + 2 * GLYPH_IMAGE_CACHE_BYTES
 # Continuous updates covering this share of a panel paint at native density and are
-# refined at cache density after _REFINE_DELAY_MS, as in GallerySpatialRenderPolicy.h.
+# refined after _REFINE_DELAY_MS. Only actual wheel/drag input enables this tradeoff.
 _INTERACTIVE_DAMAGE_SHARE = .3
 _INTERACTIVE_INTERVAL_MS = 120
 _REFINE_DELAY_MS = 160
@@ -839,7 +839,10 @@ class _Surface(QOpenGLWidget):
         total = self.static_cache_bytes() + self.particles.allocatedBytes()
         if _alive(self.qml_layer):
             total += self.qml_layer.statistics().get("allocatedBytes", 0)
-        return {"glyphCacheBytes": self.glyph_cache.cost(),
+        return {"pointerCaptured": _alive(self.owner.grabbed),
+                "navigationManipulationActive": not self.owner.manipulation[0].hasExpired(),
+                "contentManipulationActive": not self.owner.manipulation[1].hasExpired(),
+                "glyphCacheBytes": self.glyph_cache.cost(),
                 "cacheEstimatedBytes": total,
                 "navigationPaintedRows": self.navigation_painted_rows,
                 "contentPaintedRows": self.content_painted_rows,
@@ -879,9 +882,8 @@ class _Surface(QOpenGLWidget):
         partial = known and _covered_rows(bands) * 10 < height * 6
         if not partial:
             bands = [(0, height)]
-        # Continuous large updates with a reported extent paint at native density when
-        # cache density would exceed the frame budget, and are refined at cache density
-        # after they pause; unknown changes keep density.
+        # Only real scrolling/dragging may reduce density. Hover, clicks and layout
+        # animations retain a stable glyph raster even when their damage is frequent.
         native_dpr = self.devicePixelRatioF()
         now = self.clock.elapsed()
         slow = self.slow_tracker.cost_ms > 16
@@ -892,7 +894,8 @@ class _Surface(QOpenGLWidget):
         continuous = updated_at >= 0 and now - updated_at < interval
         damaged_rows = _covered_rows(bands)
         large = damaged_rows >= _INTERACTIVE_DAMAGE_SHARE * height
-        interactive = (self.interactive and known and quantum and dpr > native_dpr and continuous
+        interactive = (self.interactive and not owner.manipulation[index].hasExpired()
+                       and known and quantum and dpr > native_dpr and continuous
                        and damaged_rows >= share * height
                        and not self.cache_density_cost.fits(damaged_rows, self.frame_update_ms))
         cache["updated_at"] = now
@@ -1224,6 +1227,8 @@ class GallerySpatialController(QObject):
         self.filtering = False
         self.grabbed = self.hovered = None
         self.hover_path = []
+        self.press_position = QPoint()
+        self.manipulation = [QDeadlineTimer(), QDeadlineTimer()]
         self.native_popup_anchors = {}
         self._direct_composition_required = False
         self._composing_requirements = False
@@ -1359,6 +1364,8 @@ class GallerySpatialController(QObject):
         self.backdrop_dirty = True
         self.grabbed = self.hovered = None
         self.hover_path = []
+        self.press_position = QPoint()
+        self.manipulation = [QDeadlineTimer(), QDeadlineTimer()]
         self.navigation.update()
         self.window.update()
 
@@ -1680,6 +1687,8 @@ class GallerySpatialController(QObject):
         self.backdrop = QPixmap()
         self.grabbed = self.hovered = None
         self.hover_path = []
+        self.press_position = QPoint()
+        self.manipulation = [QDeadlineTimer(), QDeadlineTimer()]
         if _alive(self.canvas):
             self.canvas.clear_frame_caches()
             self.canvas.hide()
@@ -1871,6 +1880,8 @@ class GallerySpatialController(QObject):
             self.backdrop_dirty = True
             self.grabbed = self.hovered = None
             self.hover_path = []
+            for intent in self.manipulation:
+                intent.setRemainingTime(0)
         self.sync()
         self.navigation.update()
         self.window.update()
@@ -2295,6 +2306,12 @@ class GallerySpatialController(QObject):
                     return True
                 if kind == QEvent.MouseButtonPress:
                     self.grabbed = target
+                    self.press_position = QPoint(global_pos)
+                    for intent in self.manipulation:
+                        intent.setRemainingTime(0)
+                elif (kind == QEvent.MouseMove and self.grabbed and event.buttons() != Qt.NoButton
+                      and (global_pos - self.press_position).manhattanLength() >= QApplication.startDragDistance()):
+                    self.manipulation[1 if self.in_content(target) else 0].setRemainingTime(_REFINE_DELAY_MS)
                 forwarded = QMouseEvent(kind, local, target.mapTo(self.window, local), source_global,
                                         event.button(), event.buttons(), event.modifiers(), event.source(), event.pointingDevice())
                 # Compose the drag's source update in this frame, not a later one.
@@ -2304,10 +2321,14 @@ class GallerySpatialController(QObject):
                 QApplication.sendEvent(target, forwarded)
                 if _alive(self) and kind == QEvent.MouseButtonRelease and event.buttons() == Qt.NoButton:
                     self.grabbed = None
+                    for intent in self.manipulation:
+                        intent.setRemainingTime(0)
                     hover_target = (nav.childAt(hover_position) if hit is not None
                                     and nav.rect().contains(presented) and not self.native_overlay_at(global_pos) else None)
                     self.hover(hover_target, hover_position)
             elif wheel:
+                if not event.pixelDelta().isNull() or not event.angleDelta().isNull():
+                    self.manipulation[1 if self.in_content(target) else 0].setRemainingTime(_REFINE_DELAY_MS)
                 receiver = target
                 while _alive(receiver):
                     forwarded = QWheelEvent(receiver.mapFromGlobal(source_global), source_global,
