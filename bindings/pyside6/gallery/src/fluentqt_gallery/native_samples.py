@@ -2920,10 +2920,17 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
     if key == ("menu", "menu-command-shortcuts"):
         return focused(
             """
-            def add_command(menu, anchor, text, shortcut=None):
+            def add_command(menu, anchor, text, glyph, shortcut=None):
                 action = menu.addAction(text)
                 if shortcut is not None:
                     action.setShortcut(shortcut)
+                icon = fluentqt.FontIcon(glyph)
+                icon.setIconSize(16)
+                icon.resize(20, 20)
+                pixmap = QPixmap(20, 20)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                icon.render(pixmap)
+                action.setIcon(QIcon(pixmap))
                 action.triggered.connect(lambda: fluentqt.Toast.showOrUpdateToast(
                     anchor, "gallery.action-feedback", text + " selected",
                     fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
@@ -2932,16 +2939,26 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 return action
 
             button = fluentqt.DropDownButton("File")
+            button.setIconGlyph(fluentqt.Typography.Icons.Document)
             menu = fluentqt.FluentMenu("", button)
-            add_command(menu, button, "New", QKeySequence.New)
-            add_command(menu, button, "Open...", QKeySequence.Open)
-            add_command(menu, button, "Save", QKeySequence.Save)
+            add_command(
+                menu, button, "New", fluentqt.Typography.Icons.Add,
+                QKeySequence.StandardKey.New,
+            )
+            add_command(
+                menu, button, "Open...", fluentqt.Typography.Icons.Folder,
+                QKeySequence.StandardKey.Open,
+            )
+            add_command(
+                menu, button, "Save", fluentqt.Typography.Icons.Save,
+                QKeySequence.StandardKey.Save,
+            )
             menu.addSeparator()
             menu.addAction("Publish").setEnabled(False)
-            add_command(menu, button, "Close")
+            add_command(menu, button, "Close", fluentqt.Typography.Icons.Cancel)
             button.setMenu(menu)
             """,
-            imports="from PySide6.QtCore import QMargins, Qt\nfrom PySide6.QtGui import QAction, QKeySequence",
+            imports="from PySide6.QtCore import QMargins, Qt\nfrom PySide6.QtGui import QIcon, QKeySequence, QPixmap",
         )
     if key == ("menu", "menu-cascading-selection"):
         return focused(
@@ -2960,6 +2977,15 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                         fluentqt.Toast.Informational, 2200, fluentqt.Toast.Top,
                         QMargins(16, 50, 16, 16),
                     ))
+            order_menu = fluentqt.FluentMenu("Order", sort_menu)
+            order_group = QActionGroup(order_menu)
+            order_group.setExclusive(True)
+            for name in ("Ascending", "Descending"):
+                action = order_menu.addAction(name)
+                action.setCheckable(True)
+                action.setChecked(name == "Ascending")
+                order_group.addAction(action)
+            sort_menu.addMenu(order_menu)
             menu.addMenu(sort_menu)
 
             view_group = QActionGroup(menu)
@@ -3026,16 +3052,21 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             menu_bar = fluentqt.FluentMenuBar()
             menu_bar.setBackgroundVisible(False)
             file_menu = fluentqt.FluentMenu("File", menu_bar)
-            add_command(file_menu, menu_bar, "New")
-            add_command(file_menu, menu_bar, "Open...")
-            add_command(file_menu, menu_bar, "Save")
+            add_command(file_menu, menu_bar, "New", QKeySequence.StandardKey.New)
+            add_command(file_menu, menu_bar, "Open...", QKeySequence.StandardKey.Open)
+            add_command(file_menu, menu_bar, "Save", QKeySequence.StandardKey.Save)
             menu_bar.addMenu(file_menu)
             edit_menu = fluentqt.FluentMenu("Edit", menu_bar)
-            add_command(edit_menu, menu_bar, "Undo", QKeySequence.Undo)
-            add_command(edit_menu, menu_bar, "Cut", QKeySequence.Cut)
-            add_command(edit_menu, menu_bar, "Copy", QKeySequence.Copy)
-            add_command(edit_menu, menu_bar, "Paste", QKeySequence.Paste)
+            add_command(edit_menu, menu_bar, "Undo", QKeySequence.StandardKey.Undo)
+            add_command(edit_menu, menu_bar, "Cut", QKeySequence.StandardKey.Cut)
+            add_command(edit_menu, menu_bar, "Copy", QKeySequence.StandardKey.Copy)
+            add_command(edit_menu, menu_bar, "Paste", QKeySequence.StandardKey.Paste)
             menu_bar.addMenu(edit_menu)
+            view_menu = fluentqt.FluentMenu("View", menu_bar)
+            wrap = view_menu.addAction("Word wrap")
+            wrap.setCheckable(True)
+            wrap.setChecked(True)
+            menu_bar.addMenu(view_menu)
             help_menu = fluentqt.FluentMenu("Help", menu_bar)
             add_command(help_menu, menu_bar, "About")
             menu_bar.addMenu(help_menu)
@@ -3243,6 +3274,36 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             "overlay.setBackdropBlurRadius(8)\n"
             f"overlay.setClosePolicy(fluentqt.{kind}.CloseOnEscape)\n"
             "overlay.open()\n"
+        )
+    if key == ("command-palette", "command-palette-basic"):
+        return focused(
+            """
+            layout = QVBoxLayout(window)
+            location = fluentqt.Label("Current page: Home", window)
+            palette = fluentqt.CommandPalette(window)
+            palette.setPlaceholderText("Search pages...")
+            palette.setDim(True)
+            palette.setDimOpacity(0.12)
+            for page in ("Home", "Inbox", "Documents", "Folders"):
+                action = QAction(page, window)
+                palette.addCommand(action, "Navigation")
+                action.triggered.connect(
+                    lambda checked=False, name=page: location.setText(
+                        f"Current page: {name}"
+                    )
+                )
+            open_button = fluentqt.Button("Search pages", window)
+            open_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+            open_button.setIconGlyph(fluentqt.Typography.Icons.Search)
+            open_button.clicked.connect(palette.open)
+            layout.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)
+            layout.addWidget(location)
+            """,
+            imports=(
+                "from PySide6.QtCore import Qt\n"
+                "from PySide6.QtGui import QAction\n"
+                "from PySide6.QtWidgets import QVBoxLayout"
+            ),
         )
     if key == ("command-palette", "command-palette-shared-actions"):
         return focused(
@@ -4166,7 +4227,7 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             """
             progress_bar = fluentqt.ProgressBar()
             progress_bar.setRange(0, 100)
-            progress_bar.setBarWidth(320)
+            progress_bar.setBarWidth(260)
 
             progress_box = fluentqt.NumberBox()
             progress_box.setHeader("Progress")
@@ -5175,19 +5236,19 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             "image.setShimmerTemplate(",
             "    fluentqt.Shimmer.ShimmerTemplate.ImageCard",
             ")",
-            "image.setFixedSize(160, 92)",
+            "image.setFixedSize(136, 84)",
             "",
             "avatar_row = fluentqt.Shimmer()",
             "avatar_row.setShimmerTemplate(",
             "    fluentqt.Shimmer.ShimmerTemplate.AvatarTextRow",
             ")",
-            "avatar_row.setFixedSize(180, 56)",
+            "avatar_row.setFixedSize(168, 56)",
             "",
             "text = fluentqt.Shimmer()",
             "text.setShimmerTemplate(",
             "    fluentqt.Shimmer.ShimmerTemplate.TextBlock",
             ")",
-            "text.setFixedSize(220, 72)",
+            "text.setFixedSize(176, 72)",
         )
     if key == ("toast", "toast-severity"):
         return _source(
@@ -6404,17 +6465,17 @@ def _shimmer(sample_id: str, parent: QWidget | None) -> PreviewResult:
     if sample_id == "shimmer-templates":
         body = """
         root, layout = make_status_surface()
-        row, row_layout = horizontal_group(root, 24)
+        row, row_layout = horizontal_group(root, 20)
         values = (
-            (fluentqt.Shimmer.ShimmerTemplate.ImageCard, QSize(160, 92), "ImageCard"),
-            (fluentqt.Shimmer.ShimmerTemplate.AvatarTextRow, QSize(180, 56), "AvatarTextRow"),
-            (fluentqt.Shimmer.ShimmerTemplate.TextBlock, QSize(220, 72), "TextBlock"),
+            (fluentqt.Shimmer.ShimmerTemplate.ImageCard, QSize(136, 84), "ImageCard"),
+            (fluentqt.Shimmer.ShimmerTemplate.AvatarTextRow, QSize(168, 56), "AvatarTextRow"),
+            (fluentqt.Shimmer.ShimmerTemplate.TextBlock, QSize(176, 72), "TextBlock"),
         )
         for template, size, caption in values:
             shimmer = fluentqt.Shimmer(row)
             shimmer.setShimmerTemplate(template)
             shimmer.setFixedSize(size)
-            row_layout.addWidget(labeled_column(row, caption, shimmer))
+            row_layout.addWidget(labeled_column(row, caption, shimmer, 84))
         layout.addWidget(row)
         """
         extra_imports = "from PySide6.QtCore import QSize"

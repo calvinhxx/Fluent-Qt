@@ -114,3 +114,64 @@ TEST(GalleryCommandSubmenuTest, Contract_CommandSubmenuSamplesExecuteTheirShared
         }
     }
 }
+
+TEST(GalleryCommandSubmenuTest, MenuPageRetainsThreeLevelsAndExclusiveChoices)
+{
+    const auto samples = fluent::gallery::gallerySamplesForRoute(QStringLiteral("menu"));
+    const auto found = std::find_if(samples.cbegin(), samples.cend(), [](const auto& sample) {
+        return sample.id == QStringLiteral("menu-cascading-selection");
+    });
+    ASSERT_NE(found, samples.cend());
+    EXPECT_TRUE(found->codeSnippet.contains(QStringLiteral("sortMenu->addMenu(orderMenu)")));
+    QWidget host;
+    auto* root = found->createPreview(&host);
+    root->adjustSize();
+    host.resize(800, 500);
+    host.show();
+    QApplication::processEvents();
+    auto* menu = root->findChild<fluent::menus_toolbars::FluentMenu*>();
+    ASSERT_NE(menu, nullptr);
+    menu->popup(host.mapToGlobal(QPoint(20, 40)));
+    auto* sort = menu->actions().first()->menu();
+    ASSERT_NE(sort, nullptr);
+    menu->setActiveAction(sort->menuAction());
+    QTest::keyClick(menu, Qt::Key_Right);
+    ASSERT_TRUE(sort->isVisible());
+    auto* order = sort->actions().last()->menu();
+    ASSERT_NE(order, nullptr);
+    sort->setActiveAction(order->menuAction());
+    QTest::keyClick(sort, Qt::Key_Right);
+    ASSERT_TRUE(order->isVisible());
+    QAction* descending = order->actions().last();
+    order->setActiveAction(descending);
+    QTest::keyClick(order, Qt::Key_Return);
+    EXPECT_TRUE(descending->isChecked());
+    EXPECT_FALSE(order->actions().first()->isChecked());
+    bool statusUpdated = false;
+    for (auto* label : root->findChildren<fluent::textfields::Label*>())
+        statusUpdated |= label->text() == QStringLiteral("Order: Descending");
+    EXPECT_TRUE(statusUpdated);
+}
+
+TEST(GalleryCommandSubmenuTest, PreviewTitleAndCaptionStayCenteredAsAGroup)
+{
+    int groups = 0;
+    for (const auto& route : {"menu", "menu-bar", "command-palette", "command-bar", "command-bar-flyout"}) {
+        for (const auto& sample : fluent::gallery::gallerySamplesForRoute(QString::fromLatin1(route))) {
+            QWidget host;
+            host.resize(900, 600);
+            auto* root = sample.createPreview(&host);
+            root->adjustSize();
+            host.show();
+            QApplication::processEvents();
+            for (auto* text : root->findChildren<QWidget*>(QStringLiteral("Gallery.CommandPreview.Text"))) {
+                SCOPED_TRACE(sample.id.toStdString());
+                ++groups;
+                const qreal center = text->y() + text->height() / 2.0;
+                EXPECT_NEAR(center, text->parentWidget()->height() / 2.0, 1.0);
+                EXPECT_LE(text->height(), text->sizeHint().height() + 1);
+            }
+        }
+    }
+    EXPECT_EQ(groups, 5);
+}

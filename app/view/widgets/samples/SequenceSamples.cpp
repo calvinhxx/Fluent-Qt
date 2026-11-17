@@ -31,9 +31,8 @@ QWidget* timelineExample(QWidget* parent, Timeline::NodeAlignment alignment)
     for (int i = 0; i < 3; ++i) {
         const auto index = model->index(i, 0);
         model->setData(index, QStringLiteral("Node %1").arg(i + 1));
-        model->setData(index,
-                       QStringLiteral("Optional supporting content supplied by the application."),
-                       Timeline::DescriptionRole);
+        model->setData(index, QStringLiteral("Optional supporting content supplied by the application."),
+            Timeline::DescriptionRole);
         model->setData(index, QStringLiteral("Time label %1").arg(i + 1), Timeline::TimestampRole);
     }
     model->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);
@@ -43,8 +42,7 @@ QWidget* timelineExample(QWidget* parent, Timeline::NodeAlignment alignment)
     QObject::connect(change, &Button::clicked, model, [model] {
         const auto index = model->index(1, 0);
         const int status = model->data(index, Timeline::StatusRole).toInt();
-        model->setData(index, status == Timeline::Active ? Timeline::Success : Timeline::Active,
-                       Timeline::StatusRole);
+        model->setData(index, status == Timeline::Active ? Timeline::Success : Timeline::Active, Timeline::StatusRole);
     });
     group->layout()->addWidget(timeline);
     group->layout()->addWidget(change);
@@ -58,9 +56,14 @@ QWidget* stepperExample(QWidget* parent, Qt::Orientation axis)
     stepper->setObjectName(QStringLiteral("stepperExample"));
     stepper->setAccessibleName(QStringLiteral("Stepper example"));
     stepper->setOrientation(axis);
-    for (int i = 0; i < 4; ++i) {
-        StepperItem item(QStringLiteral("Step %1").arg(i + 1),
-                         QStringLiteral("Optional description"));
+    const QVector<QPair<QString, QString>> stepSpecs{
+        {QStringLiteral("Account"), QStringLiteral("Basic info")},
+        {QStringLiteral("Workspace"), QStringLiteral("Select tier")},
+        {QStringLiteral("Billing"), QStringLiteral("Payment method")},
+        {QStringLiteral("Review"), QStringLiteral("Confirm setup")},
+    };
+    for (int i = 0; i < stepSpecs.size(); ++i) {
+        StepperItem item(stepSpecs.at(i).first, stepSpecs.at(i).second);
         if (i == 0)
             item.state = Stepper::Completed;
         if (i == 3)
@@ -81,8 +84,7 @@ QWidget* stepperExample(QWidget* parent, Qt::Orientation axis)
     auto* toggle = new Button(QStringLiteral("Toggle step 2 error"), group);
     toggle->setObjectName(QStringLiteral("stepperToggleError"));
     QObject::connect(toggle, &Button::clicked, stepper, [stepper] {
-        stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending
-                                                                            : Stepper::Error);
+        stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending : Stepper::Error);
     });
     group->layout()->addWidget(stepper);
     group->layout()->addWidget(status);
@@ -93,54 +95,54 @@ QWidget* stepperExample(QWidget* parent, Qt::Orientation axis)
 
 QVector<GallerySample> timelineSamples()
 {
-    return {makeSample(
-                QStringLiteral("timeline-basic"), QStringLiteral("Model-backed timeline"),
-                QStringLiteral("The application supplies text, time labels and node states. Click "
-                               "the button to see a state transition."),
-                QStringLiteral(
-                    "auto* timeline = new Timeline(this);\n"
-                    "auto* model = new QStandardItemModel(3, 1, this);\n"
-                    "for (int i = 0; i < 3; ++i) {\n"
-                    "    model->setData(model->index(i, 0), QString(\"Node %1\").arg(i + 1));\n"
-                    "    model->setData(model->index(i, 0), \"Optional supporting content supplied "
-                    "by the application.\", Timeline::DescriptionRole);\n"
-                    "    model->setData(model->index(i, 0), QString(\"Time label %1\").arg(i + 1), "
-                    "Timeline::TimestampRole);\n"
-                    "}\n"
-                    "model->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);\n"
-                    "timeline->setModel(model);\n"
-                    "connect(changeState, &Button::clicked, model, [model] {\n"
-                    "    const auto index = model->index(1, 0);\n"
-                    "    model->setData(index, model->data(index, Timeline::StatusRole).toInt() == "
-                    "Timeline::Active\n"
-                    "        ? Timeline::Success : Timeline::Active, Timeline::StatusRole);\n"
-                    "});\n"),
-                [](QWidget* parent) { return timelineExample(parent, Timeline::Leading); }, true),
-            makeSample(
-                QStringLiteral("timeline-alternate"), QStringLiteral("Alternating content"),
-                QStringLiteral("The same model can place content on alternating sides of the rail; "
-                               "RTL mirrors its logical layout."),
-                QStringLiteral(
-                    "auto* timeline = new Timeline(this);\n"
-                    "auto* model = new QStandardItemModel(3, 1, this);\n"
-                    "for (int i = 0; i < 3; ++i) {\n"
-                    "    model->setData(model->index(i, 0), QString(\"Node %1\").arg(i + 1));\n"
-                    "    model->setData(model->index(i, 0), \"Optional supporting content supplied "
-                    "by the application.\", Timeline::DescriptionRole);\n"
-                    "    model->setData(model->index(i, 0), QString(\"Time label %1\").arg(i + 1), "
-                    "Timeline::TimestampRole);\n"
-                    "}\n"
-                    "model->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);\n"
-                    "timeline->setModel(model);\n"
-                    "connect(changeState, &Button::clicked, model, [model] {\n"
-                    "    const auto index = model->index(1, 0);\n"
-                    "    model->setData(index, model->data(index, Timeline::StatusRole).toInt() == "
-                    "Timeline::Active\n"
-                    "        ? Timeline::Success : Timeline::Active, Timeline::StatusRole);\n"
-                    "});\n") +
-                    QStringLiteral("timeline->setNodeAlignment(Timeline::Alternate);\n"),
-                [](QWidget* parent) { return timelineExample(parent, Timeline::Alternate); },
-                true)};
+    return {
+        makeSample(
+            QStringLiteral("timeline-basic"), QStringLiteral("Model-backed timeline"),
+            QStringLiteral("The application supplies text, time labels and node states. Click "
+                           "the button to see a state transition."),
+            QStringLiteral(
+                "auto* timeline = new Timeline(this);\n"
+                "auto* model = new QStandardItemModel(3, 1, this);\n"
+                "for (int i = 0; i < 3; ++i) {\n"
+                "    model->setData(model->index(i, 0), QString(\"Node %1\").arg(i + 1));\n"
+                "    model->setData(model->index(i, 0), \"Optional supporting content supplied "
+                "by the application.\", Timeline::DescriptionRole);\n"
+                "    model->setData(model->index(i, 0), QString(\"Time label %1\").arg(i + 1), "
+                "Timeline::TimestampRole);\n"
+                "}\n"
+                "model->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);\n"
+                "timeline->setModel(model);\n"
+                "connect(changeState, &Button::clicked, model, [model] {\n"
+                "    const auto index = model->index(1, 0);\n"
+                "    model->setData(index, model->data(index, Timeline::StatusRole).toInt() == "
+                "Timeline::Active\n"
+                "        ? Timeline::Success : Timeline::Active, Timeline::StatusRole);\n"
+                "});\n"),
+            [](QWidget* parent) { return timelineExample(parent, Timeline::Leading); }, true),
+        makeSample(
+            QStringLiteral("timeline-alternate"), QStringLiteral("Alternating content"),
+            QStringLiteral("The same model can place content on alternating sides of the rail; "
+                           "RTL mirrors its logical layout."),
+            QStringLiteral(
+                "auto* timeline = new Timeline(this);\n"
+                "auto* model = new QStandardItemModel(3, 1, this);\n"
+                "for (int i = 0; i < 3; ++i) {\n"
+                "    model->setData(model->index(i, 0), QString(\"Node %1\").arg(i + 1));\n"
+                "    model->setData(model->index(i, 0), \"Optional supporting content supplied "
+                "by the application.\", Timeline::DescriptionRole);\n"
+                "    model->setData(model->index(i, 0), QString(\"Time label %1\").arg(i + 1), "
+                "Timeline::TimestampRole);\n"
+                "}\n"
+                "model->setData(model->index(1, 0), Timeline::Active, Timeline::StatusRole);\n"
+                "timeline->setModel(model);\n"
+                "connect(changeState, &Button::clicked, model, [model] {\n"
+                "    const auto index = model->index(1, 0);\n"
+                "    model->setData(index, model->data(index, Timeline::StatusRole).toInt() == "
+                "Timeline::Active\n"
+                "        ? Timeline::Success : Timeline::Active, Timeline::StatusRole);\n"
+                "});\n")
+                + QStringLiteral("timeline->setNodeAlignment(Timeline::Alternate);\n"),
+            [](QWidget* parent) { return timelineExample(parent, Timeline::Alternate); }, true)};
 }
 QVector<GallerySample> stepperSamples()
 {
@@ -151,8 +153,12 @@ QVector<GallerySample> stepperSamples()
                            "availability stay independent of the current step."),
             QStringLiteral(
                 "auto* stepper = new Stepper(this);\n"
-                "for (int i = 0; i < 4; ++i) {\n"
-                "    StepperItem item(QString(\"Step %1\").arg(i + 1), \"Optional description\");\n"
+                "const QVector<QPair<QString, QString>> steps{\n"
+                "    {\"Account\", \"Basic info\"}, {\"Workspace\", \"Select tier\"},\n"
+                "    {\"Billing\", \"Payment method\"}, {\"Review\", \"Confirm setup\"}\n"
+                "};\n"
+                "for (int i = 0; i < steps.size(); ++i) {\n"
+                "    StepperItem item(steps[i].first, steps[i].second);\n"
                 "    if (i == 0) item.state = Stepper::Completed;\n"
                 "    if (i == 3) item.enabled = false;\n"
                 "    stepper->addItem(item);\n"
@@ -174,8 +180,12 @@ QVector<GallerySample> stepperSamples()
                            "Space requests navigation."),
             QStringLiteral(
                 "auto* stepper = new Stepper(this);\n"
-                "for (int i = 0; i < 4; ++i) {\n"
-                "    StepperItem item(QString(\"Step %1\").arg(i + 1), \"Optional description\");\n"
+                "const QVector<QPair<QString, QString>> steps{\n"
+                "    {\"Account\", \"Basic info\"}, {\"Workspace\", \"Select tier\"},\n"
+                "    {\"Billing\", \"Payment method\"}, {\"Review\", \"Confirm setup\"}\n"
+                "};\n"
+                "for (int i = 0; i < steps.size(); ++i) {\n"
+                "    StepperItem item(steps[i].first, steps[i].second);\n"
                 "    if (i == 0) item.state = Stepper::Completed;\n"
                 "    if (i == 3) item.enabled = false;\n"
                 "    stepper->addItem(item);\n"
@@ -189,8 +199,8 @@ QVector<GallerySample> stepperSamples()
                 "connect(toggleError, &Button::clicked, stepper, [stepper] {\n"
                 "    stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? "
                 "Stepper::Pending : Stepper::Error);\n"
-                "});\n") +
-                QStringLiteral("stepper->setOrientation(Qt::Vertical);\n"),
+                "});\n")
+                + QStringLiteral("stepper->setOrientation(Qt::Vertical);\n"),
             [](QWidget* parent) { return stepperExample(parent, Qt::Vertical); }, true)};
 }
 } // namespace fluent::gallery

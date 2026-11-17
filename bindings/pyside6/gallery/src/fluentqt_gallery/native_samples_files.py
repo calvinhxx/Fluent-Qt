@@ -155,7 +155,7 @@ layout.addWidget(advance, 0, Qt.AlignmentFlag.AlignLeft)
 ''')),
 })
 
-register_source_samples("toast", ("Toast", "Button"), {
+register_source_samples("toast", ("Toast", "Button", "Card"), {
     "toast-feedback": ("panel", _script('''
         panel = QWidget()
         layout = QVBoxLayout(panel)
@@ -169,9 +169,10 @@ register_source_samples("toast", ("Toast", "Button"), {
         review.triggered.connect(lambda: fluentqt.Toast.showToast(
             panel, "Choose a file under 20 MB", fluentqt.Toast.Severity.Informational,
             3500, fluentqt.Toast.Placement.TopEnd))
-        row = QWidget(panel)
-        buttons = QHBoxLayout(row)
-        buttons.setContentsMargins(0, 0, 0, 0)
+        card = fluentqt.Card(panel)
+        card.setAppearance(fluentqt.Card.Appearance.Canvas)
+        buttons = QHBoxLayout(card)
+        buttons.setContentsMargins(16, 14, 16, 14)
         buttons.setSpacing(8)
         panel._feedback_toast = None
         severity = fluentqt.Toast.Severity
@@ -208,11 +209,10 @@ register_source_samples("toast", ("Toast", "Button"), {
             panel._feedback_toast = toast
 
         for i, label in enumerate(("Saved", "Copied", "Warning", "Error")):
-            button = fluentqt.Button(label, row)
+            button = fluentqt.Button(label, card)
             button.setObjectName(f"feedback{i}")
             button.clicked.connect(lambda checked=False, i=i: show_feedback(i))
             buttons.addWidget(button)
-        buttons.addStretch()
-        layout.addWidget(row)
+        layout.addWidget(card, 0, Qt.AlignmentFlag.AlignCenter)
     ''')),
 })

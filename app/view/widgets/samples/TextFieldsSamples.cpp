@@ -852,7 +852,7 @@ QVector<GallerySample> passwordBoxSamples()
 {
     return {
         makeSample(QStringLiteral("password-box-basic"), QStringLiteral("Password value"),
-            QStringLiteral("Password text is stored separately from presentation and emits passwordChanged."),
+            QStringLiteral("setPassword() updates the underlying editor text; passwordChanged reports changes."),
             QStringLiteral(
                 "auto* passwordBox = new PasswordBox(this);\n"
                 "passwordBox->setPassword(\"Fluent123\");\n"

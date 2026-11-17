@@ -1272,7 +1272,7 @@ register_source_samples(
                 root = QWidget(globals().get("gallery_parent"))
                 root_layout = QVBoxLayout(root)
                 root_layout.setContentsMargins(0, 0, 0, 0)
-                root_layout.setSpacing(8)
+                root_layout.setSpacing(10)
                 root_layout.setAlignment(
                     Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
                 )
@@ -1368,7 +1368,7 @@ register_source_samples(
                 root = QWidget(globals().get("gallery_parent"))
                 root_layout = QVBoxLayout(root)
                 root_layout.setContentsMargins(0, 0, 0, 0)
-                root_layout.setSpacing(8)
+                root_layout.setSpacing(10)
                 root_layout.setAlignment(
                     Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
                 )
@@ -1442,7 +1442,7 @@ register_source_samples(
                 root = QWidget(globals().get("gallery_parent"))
                 root_layout = QVBoxLayout(root)
                 root_layout.setContentsMargins(0, 0, 0, 0)
-                root_layout.setSpacing(8)
+                root_layout.setSpacing(10)
                 root_layout.setAlignment(
                     Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
                 )

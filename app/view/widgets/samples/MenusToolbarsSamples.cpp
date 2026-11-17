@@ -3,6 +3,7 @@
 
 #include <QAction>
 #include <QActionGroup>
+#include <QBitmap>
 #include <QBoxLayout>
 #include <QContextMenuEvent>
 #include <QFontMetrics>
@@ -122,6 +123,21 @@ private:
         painter.setPen(color);
         Typography::Icons::paintGlyph(painter, QRectF(0, 0, logicalSize, logicalSize), glyph, logicalSize,
             Qt::AlignCenter);
+        painter.end();
+        // Font icons have font-line bearings; center their visible artwork in
+        // the QAction slot before caching at the actual screen resolution.
+        // zh_CN: 字体图标带有行框留白，按可见图形居中后再缓存到实际屏幕分辨率。
+        const QRect ink = QRegion(pixmap.mask()).boundingRect();
+        if (!ink.isEmpty()) {
+            QPixmap centered(pixmap.size());
+            centered.setDevicePixelRatio(dpr);
+            centered.fill(Qt::transparent);
+            QPainter centeredPainter(&centered);
+            const QPointF offset((physicalSize - ink.width()) / 2 - ink.x(),
+                (physicalSize - ink.height()) / 2 - ink.y());
+            centeredPainter.drawPixmap(offset / dpr, pixmap);
+            return centered;
+        }
         return pixmap;
     }
 
@@ -385,10 +401,18 @@ QVector<GallerySample> menuSamples()
         makeSample(QStringLiteral("menu-command-shortcuts"), QStringLiteral("Commands and shortcuts"),
             QStringLiteral("Menu commands can expose native shortcuts and update app state when triggered."),
             QStringLiteral(R"(using fluent::status_info::Toast;
-auto addCommand = [this](FluentMenu* menu, const QString& text,
+auto addCommand = [this](FluentMenu* menu, const QString& text, const QString& glyph,
                          const QKeySequence& shortcut = QKeySequence()) {
     auto* action = menu->addAction(text);
-    if (!shortcut.isEmpty()) action->setShortcut(shortcut);
+    if (!shortcut.isEmpty())
+        action->setShortcut(shortcut);
+    FontIcon icon(glyph);
+    icon.setIconSize(16);
+    icon.resize(20, 20);
+    QPixmap pixmap(20, 20);
+    pixmap.fill(Qt::transparent);
+    icon.render(&pixmap);
+    action->setIcon(QIcon(pixmap));
     connect(action, &QAction::triggered, this, [this, text] {
         Toast::showOrUpdateToast(this, "gallery.action-feedback", text + " selected",
             Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));
@@ -396,33 +420,77 @@ auto addCommand = [this](FluentMenu* menu, const QString& text,
     return action;
 };
 auto* button = new DropDownButton("File", this);
+button->setIconGlyph(Typography::Icons::Document);
 auto* menu = new FluentMenu(QString(), button);
-addCommand(menu, "New", QKeySequence::New);
-addCommand(menu, "Open...", QKeySequence::Open);
-addCommand(menu, "Save", QKeySequence::Save);
+addCommand(menu, "New", Typography::Icons::Add, QKeySequence::New);
+addCommand(menu, "Open...", Typography::Icons::Folder, QKeySequence::Open);
+addCommand(menu, "Save", Typography::Icons::Save, QKeySequence::Save);
 menu->addSeparator();
 menu->addAction("Publish")->setEnabled(false);
-addCommand(menu, "Close");
+addCommand(menu, "Close", Typography::Icons::Cancel);
 button->setMenu(menu);)"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
-                auto* button = new DropDownButton(QStringLiteral("File"), surface);
-                button->setMinimumWidth(120);
+                auto* status = makeHintLabel(surface,
+                    QStringLiteral("Open File or use shortcuts · disabled items keep icon and shortcut alignment"));
+
+                auto* panel = new CommandPreviewPanel(surface);
+                panel->setFixedSize(560, 88);
+                auto* panelLayout = new QHBoxLayout(panel);
+                panelLayout->setContentsMargins(16, 12, 16, 12);
+                panelLayout->setSpacing(12);
+
+                auto* docIcon = new FontIcon(Typography::Icons::Document, panel);
+                docIcon->setIconSize(28);
+                auto* docText = samples::verticalGroup(panel, 1);
+                docText->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+                docText->setObjectName(QStringLiteral("Gallery.CommandPreview.Text"));
+                auto* docTitle = makePreviewLabel(docText, QStringLiteral("Quarterly brief.md"),
+                    Typography::FontRole::BodyStrong, Label::TextColorRole::Primary);
+                auto* docMeta = makePreviewLabel(docText, QStringLiteral("Ctrl+N New · Ctrl+O Open · Ctrl+S Save"),
+                    Typography::FontRole::Caption, Label::TextColorRole::Secondary);
+                boxLayout(docText)->addWidget(docTitle);
+                boxLayout(docText)->addWidget(docMeta);
+
+                auto* button = new DropDownButton(QStringLiteral("File"), panel);
+                button->setIconGlyph(Typography::Icons::Document);
+                button->setMinimumWidth(112);
 
                 auto* menu = new FluentMenu(QString(), button);
-                addFeedbackAction(menu, surface, QStringLiteral("New"), QKeySequence::New);
-                addFeedbackAction(menu, surface, QStringLiteral("Open..."), QKeySequence::Open);
-                addFeedbackAction(menu, surface, QStringLiteral("Save"), QKeySequence::Save);
+                const auto addMenuItem =
+                    [menu, surface, status](const QString& text, const QString& glyph, const QString& feedback,
+                        const QKeySequence& shortcut = QKeySequence()) {
+                        QAction* action = addFeedbackAction(menu, surface, text, shortcut);
+                        surface->setActionGlyph(action, glyph);
+                        QObject::connect(action, &QAction::triggered, status, [status, feedback]() {
+                            status->setText(feedback);
+                        });
+                        return action;
+                    };
+                addMenuItem(QStringLiteral("New"), Typography::Icons::Add,
+                    QStringLiteral("Last command: New · created a blank draft"), QKeySequence::New);
+                addMenuItem(QStringLiteral("Open..."), Typography::Icons::Folder,
+                    QStringLiteral("Last command: Open... · ready to browse documents"), QKeySequence::Open);
+                addMenuItem(QStringLiteral("Save"), Typography::Icons::Save,
+                    QStringLiteral("Last command: Save · saved Quarterly brief.md"), QKeySequence::Save);
                 menu->addSeparator();
                 auto* publish = menu->addAction(QStringLiteral("Publish"));
                 publish->setEnabled(false);
-                addFeedbackAction(menu, surface, QStringLiteral("Close"));
+                surface->setActionGlyph(publish, Typography::Icons::Share);
+                addMenuItem(QStringLiteral("Close"), Typography::Icons::Cancel,
+                    QStringLiteral("Last command: Close · closed document session"));
                 button->setMenu(menu);
-                boxLayout(surface)->addWidget(button, 0, Qt::AlignLeft);
+
+                panelLayout->addWidget(docIcon);
+                panelLayout->addWidget(docText, 1);
+                panelLayout->addWidget(button);
+                boxLayout(surface)->addWidget(panel);
+                boxLayout(surface)->addWidget(status);
                 return surface;
             }),
         makeSample(QStringLiteral("menu-cascading-selection"), QStringLiteral("Submenus and checked items"),
-            QStringLiteral("Nested menus and exclusive check items keep related choices in one command surface."),
+            QStringLiteral(
+                "Open Sort by, then Order for a third menu level. Exclusive choices keep their checked state."),
             QStringLiteral(
                 "auto* menu = new FluentMenu(QString(), this);\n"
                 "auto* sortMenu = new FluentMenu(\"Sort by\", menu);\n"
@@ -436,6 +504,16 @@ button->setMenu(menu);)"),
                 "            Toast::Top, QMargins(16, 50, 16, 16));\n"
                 "    });\n"
                 "}\n"
+                "auto* orderMenu = new FluentMenu(\"Order\", sortMenu);\n"
+                "auto* orderGroup = new QActionGroup(orderMenu);\n"
+                "orderGroup->setExclusive(true);\n"
+                "for (const QString& name : {QStringLiteral(\"Ascending\"), QStringLiteral(\"Descending\")}) {\n"
+                "    auto* action = orderMenu->addAction(name);\n"
+                "    action->setCheckable(true);\n"
+                "    action->setChecked(name == QStringLiteral(\"Ascending\"));\n"
+                "    orderGroup->addAction(action);\n"
+                "}\n"
+                "sortMenu->addMenu(orderMenu);\n"
                 "menu->addMenu(sortMenu);\n"
                 "\n"
                 "auto* viewGroup = new QActionGroup(menu);\n"
@@ -454,14 +532,32 @@ button->setMenu(menu);)"),
                 auto* surface = sampleSurface(parent);
                 auto* status = makeStatusLabel(surface, QStringLiteral("View: Comfortable list"));
                 auto* button = new DropDownButton(QStringLiteral("View options"), surface);
+                button->setObjectName(QStringLiteral("Gallery.Menu.ViewOptions"));
                 button->setMinimumWidth(150);
 
                 auto* menu = new FluentMenu(QString(), button);
 
+                menu->setObjectName(QStringLiteral("Gallery.Menu.Cascading"));
                 auto* sortMenu = new FluentMenu(QStringLiteral("Sort by"), menu);
+                sortMenu->setObjectName(QStringLiteral("Gallery.Menu.Sort"));
                 addFeedbackAction(sortMenu, surface, QStringLiteral("Name"));
                 addFeedbackAction(sortMenu, surface, QStringLiteral("Date modified"));
                 addFeedbackAction(sortMenu, surface, QStringLiteral("Type"));
+                auto* orderMenu = new FluentMenu(QStringLiteral("Order"), sortMenu);
+                orderMenu->setObjectName(QStringLiteral("Gallery.Menu.Order"));
+                auto* orderGroup = new QActionGroup(orderMenu);
+                orderGroup->setExclusive(true);
+                for (const QString& name : {QStringLiteral("Ascending"), QStringLiteral("Descending")}) {
+                    auto* action = orderMenu->addAction(name);
+                    action->setCheckable(true);
+                    action->setChecked(name == QStringLiteral("Ascending"));
+                    orderGroup->addAction(action);
+                    QObject::connect(action, &QAction::triggered, status, [status, name] {
+                        status->setText(QStringLiteral("Order: %1").arg(name));
+                    });
+                }
+                sortMenu->addSeparator();
+                sortMenu->addMenu(orderMenu);
                 menu->addMenu(sortMenu);
                 menu->addSeparator();
 
@@ -515,9 +611,9 @@ auto addCommand = [this](FluentMenu* menu, const QString& text,
 auto* menuBar = new FluentMenuBar(this);
 menuBar->setBackgroundVisible(false);
 auto* fileMenu = new FluentMenu("File", menuBar);
-addCommand(fileMenu, "New");
-addCommand(fileMenu, "Open...");
-addCommand(fileMenu, "Save");
+addCommand(fileMenu, "New", QKeySequence::New);
+addCommand(fileMenu, "Open...", QKeySequence::Open);
+addCommand(fileMenu, "Save", QKeySequence::Save);
 menuBar->addMenu(fileMenu);
 auto* editMenu = new FluentMenu("Edit", menuBar);
 addCommand(editMenu, "Undo", QKeySequence::Undo);
@@ -525,33 +621,99 @@ addCommand(editMenu, "Cut", QKeySequence::Cut);
 addCommand(editMenu, "Copy", QKeySequence::Copy);
 addCommand(editMenu, "Paste", QKeySequence::Paste);
 menuBar->addMenu(editMenu);
+auto* viewMenu = new FluentMenu("View", menuBar);
+auto* wrap = viewMenu->addAction("Word wrap");
+wrap->setCheckable(true);
+wrap->setChecked(true);
+menuBar->addMenu(viewMenu);
 auto* helpMenu = new FluentMenu("Help", menuBar);
 addCommand(helpMenu, "About");
 menuBar->addMenu(helpMenu);)"),
             [](QWidget* parent) {
                 auto* surface = sampleSurface(parent);
-                auto* menuBar = new FluentMenuBar(surface);
+                auto* status = makeHintLabel(surface,
+                    QStringLiteral("Background hidden · the menu bar inherits the enclosing panel header"));
+
+                auto* panel = new CommandPreviewPanel(surface);
+                panel->setFixedSize(560, 124);
+                auto* panelLayout = new QVBoxLayout(panel);
+                panelLayout->setContentsMargins(14, 10, 14, 12);
+                panelLayout->setSpacing(10);
+
+                auto* header = horizontalGroup(panel, 10);
+                auto* headerIcon = new FontIcon(Typography::Icons::Document, header);
+                headerIcon->setIconSize(18);
+                auto* headerTitle = makePreviewLabel(header, QStringLiteral("Studio"), Typography::FontRole::BodyStrong,
+                    Label::TextColorRole::Primary);
+
+                auto* menuBar = new FluentMenuBar(header);
+                menuBar->setObjectName(QStringLiteral("Gallery.MenuBar.Hosted"));
                 configureMenuBar(menuBar);
                 menuBar->setBackgroundVisible(false);
 
+                const auto addMenuItem =
+                    [surface, status](FluentMenu* menu, const QString& text, const QString& glyph,
+                        const QKeySequence& shortcut = QKeySequence()) {
+                        QAction* action = addFeedbackAction(menu, surface, text, shortcut);
+                        surface->setActionGlyph(action, glyph);
+                        QObject::connect(action, &QAction::triggered, status, [status, text]() {
+                            status->setText(QStringLiteral("Triggered: %1").arg(displayActionText(text)));
+                        });
+                        return action;
+                    };
+
                 auto* fileMenu = new FluentMenu(QStringLiteral("File"), menuBar);
-                addFeedbackAction(fileMenu, surface, QStringLiteral("New"));
-                addFeedbackAction(fileMenu, surface, QStringLiteral("Open..."));
-                addFeedbackAction(fileMenu, surface, QStringLiteral("Save"));
+                addMenuItem(fileMenu, QStringLiteral("New"), Typography::Icons::Add, QKeySequence::New);
+                addMenuItem(fileMenu, QStringLiteral("Open..."), Typography::Icons::Folder, QKeySequence::Open);
+                addMenuItem(fileMenu, QStringLiteral("Save"), Typography::Icons::Save, QKeySequence::Save);
                 menuBar->addMenu(fileMenu);
 
                 auto* editMenu = new FluentMenu(QStringLiteral("Edit"), menuBar);
-                addFeedbackAction(editMenu, surface, QStringLiteral("Undo"), QKeySequence::Undo);
-                addFeedbackAction(editMenu, surface, QStringLiteral("Cut"), QKeySequence::Cut);
-                addFeedbackAction(editMenu, surface, QStringLiteral("Copy"), QKeySequence::Copy);
-                addFeedbackAction(editMenu, surface, QStringLiteral("Paste"), QKeySequence::Paste);
+                editMenu->setObjectName(QStringLiteral("Gallery.MenuBar.Edit"));
+                addMenuItem(editMenu, QStringLiteral("Undo"), Typography::Icons::Undo, QKeySequence::Undo);
+                editMenu->addSeparator();
+                addMenuItem(editMenu, QStringLiteral("Cut"), Typography::Icons::Cut, QKeySequence::Cut);
+                addMenuItem(editMenu, QStringLiteral("Copy"), Typography::Icons::Copy, QKeySequence::Copy);
+                addMenuItem(editMenu, QStringLiteral("Paste"), Typography::Icons::Paste, QKeySequence::Paste);
                 menuBar->addMenu(editMenu);
 
+                auto* viewMenu = new FluentMenu(QStringLiteral("View"), menuBar);
+                auto* wordWrap = viewMenu->addAction(QStringLiteral("Word wrap"));
+                wordWrap->setCheckable(true);
+                wordWrap->setChecked(true);
+                QObject::connect(wordWrap, &QAction::toggled, status, [status](bool checked) {
+                    status->setText(checked ? QStringLiteral("Word wrap: On") : QStringLiteral("Word wrap: Off"));
+                });
+                menuBar->addMenu(viewMenu);
+
                 auto* helpMenu = new FluentMenu(QStringLiteral("Help"), menuBar);
-                addFeedbackAction(helpMenu, surface, QStringLiteral("About"));
+                addMenuItem(helpMenu, QStringLiteral("About"), Typography::Icons::Info);
                 menuBar->addMenu(helpMenu);
 
-                boxLayout(surface)->addWidget(menuBar);
+                boxLayout(header)->addWidget(headerIcon);
+                boxLayout(header)->addWidget(headerTitle);
+                boxLayout(header)->addWidget(menuBar, 1);
+
+                auto* noteRow = horizontalGroup(panel, 10);
+                auto* noteIcon = new FontIcon(Typography::Icons::Edit, noteRow);
+                noteIcon->setIconSize(24);
+                auto* noteText = samples::verticalGroup(noteRow, 1);
+                noteText->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+                noteText->setObjectName(QStringLiteral("Gallery.CommandPreview.Text"));
+                auto* noteTitle = makePreviewLabel(noteText, QStringLiteral("Release checklist.md"),
+                    Typography::FontRole::BodyStrong, Label::TextColorRole::Primary);
+                auto* noteMeta = makePreviewLabel(noteText,
+                    QStringLiteral("Hosted canvas disabled · blends cleanly into the panel surface"),
+                    Typography::FontRole::Caption, Label::TextColorRole::Secondary);
+                boxLayout(noteText)->addWidget(noteTitle);
+                boxLayout(noteText)->addWidget(noteMeta);
+                boxLayout(noteRow)->addWidget(noteIcon);
+                boxLayout(noteRow)->addWidget(noteText);
+
+                panelLayout->addWidget(header);
+                panelLayout->addWidget(noteRow);
+                boxLayout(surface)->addWidget(panel);
+                boxLayout(surface)->addWidget(status);
                 return surface;
             }),
         makeSample(QStringLiteral("menu-bar-access-keys"), QStringLiteral("Access keys and actions"),
@@ -694,52 +856,86 @@ QVector<GallerySample> commandPaletteSamples()
         makeSample(QStringLiteral("command-palette-basic"), QStringLiteral("Find and run a command"),
             QStringLiteral(
                 "Search a page name, choose with the arrow keys, and press Enter. Escape closes the palette."),
-            QStringLiteral(R"sample(auto* root = new QWidget(this);
-auto* layout = new QVBoxLayout(root);
-auto* location = new Label(QStringLiteral("Current page: Home"), root);
-location->setObjectName(QStringLiteral("Gallery.CommandPalette.BasicLocation"));
-auto* palette = new fluent::menus_toolbars::CommandPalette(root);
-palette->setObjectName(QStringLiteral("Gallery.CommandPalette.Basic"));
+            QStringLiteral(R"sample(auto* layout = new QVBoxLayout(this);
+auto* location = new Label(QStringLiteral("Current page: Home"), this);
+auto* palette = new fluent::menus_toolbars::CommandPalette(this);
 palette->setPlaceholderText(QStringLiteral("Search pages..."));
+palette->setDim(true);
+palette->setDimOpacity(0.12);
 const QStringList pages{QStringLiteral("Home"), QStringLiteral("Inbox"),
     QStringLiteral("Documents"), QStringLiteral("Folders")};
 for (const QString& page : pages) {
-    auto* action = new QAction(page, root);
+    auto* action = new QAction(page, this);
     palette->addCommand(action, QStringLiteral("Navigation"));
     QObject::connect(action, &QAction::triggered, location, [location, page] {
         location->setText(QStringLiteral("Current page: %1").arg(page));
     });
 }
-auto* open = new Button(QStringLiteral("Search pages"), root);
-open->setObjectName(QStringLiteral("Gallery.CommandPalette.OpenBasic"));
+auto* open = new Button(QStringLiteral("Search pages"), this);
 open->setFluentStyle(Button::Accent);
+open->setIconGlyph(Typography::Icons::Search);
 QObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);
 layout->addWidget(open, 0, Qt::AlignLeft);
-layout->addWidget(location);
-return root;)sample"),
+layout->addWidget(location);)sample"),
             [](QWidget* parent) {
-                auto* root = new QWidget(parent);
-                auto* layout = new QVBoxLayout(root);
-                auto* location = new Label(QStringLiteral("Current page: Home"), root);
+                auto* root = sampleSurface(parent);
+                auto* status = makeHintLabel(root,
+                    QStringLiteral("Search a page name, move with Up/Down, and press Enter or Escape."));
+
+                auto* panel = new CommandPreviewPanel(root);
+                panel->setFixedSize(560, 88);
+                auto* panelLayout = new QHBoxLayout(panel);
+                panelLayout->setContentsMargins(16, 12, 16, 12);
+                panelLayout->setSpacing(12);
+
+                auto* pageIcon = new FontIcon(Typography::Icons::Home, panel);
+                pageIcon->setIconSize(28);
+                auto* pageText = samples::verticalGroup(panel, 1);
+                pageText->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+                pageText->setObjectName(QStringLiteral("Gallery.CommandPreview.Text"));
+                auto* location = makePreviewLabel(pageText, QStringLiteral("Current page: Home"),
+                    Typography::FontRole::BodyStrong, Label::TextColorRole::Primary);
                 location->setObjectName(QStringLiteral("Gallery.CommandPalette.BasicLocation"));
+                auto* subtitle = makePreviewLabel(pageText,
+                    QStringLiteral("Navigation · Home, Inbox, Documents, Folders"), Typography::FontRole::Caption,
+                    Label::TextColorRole::Secondary);
+                boxLayout(pageText)->addWidget(location);
+                boxLayout(pageText)->addWidget(subtitle);
+
                 auto* palette = new fluent::menus_toolbars::CommandPalette(root);
                 palette->setObjectName(QStringLiteral("Gallery.CommandPalette.Basic"));
                 palette->setPlaceholderText(QStringLiteral("Search pages..."));
+                palette->setDim(true);
+                palette->setDimOpacity(0.12);
+                palette->setBackdropBlurRadius(8);
+
                 const QStringList pages{QStringLiteral("Home"), QStringLiteral("Inbox"), QStringLiteral("Documents"),
                     QStringLiteral("Folders")};
-                for (const QString& page : pages) {
+                const QStringList glyphs{Typography::Icons::Home, Typography::Icons::Mail, Typography::Icons::Document,
+                    Typography::Icons::Folder};
+                for (int i = 0; i < pages.size(); ++i) {
+                    const QString& page = pages.at(i);
+                    const QString& glyph = glyphs.at(i);
                     auto* action = new QAction(page, root);
+                    root->setActionGlyph(action, glyph);
                     palette->addCommand(action, QStringLiteral("Navigation"));
-                    QObject::connect(action, &QAction::triggered, location, [location, page] {
+                    QObject::connect(action, &QAction::triggered, location, [location, pageIcon, page, glyph] {
                         location->setText(QStringLiteral("Current page: %1").arg(page));
+                        pageIcon->setGlyph(glyph);
                     });
                 }
-                auto* open = new Button(QStringLiteral("Search pages"), root);
+                auto* open = new Button(QStringLiteral("Search pages"), panel);
                 open->setObjectName(QStringLiteral("Gallery.CommandPalette.OpenBasic"));
                 open->setFluentStyle(Button::Accent);
+                open->setIconGlyph(Typography::Icons::Search);
+                open->setMinimumWidth(124);
                 QObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);
-                layout->addWidget(open, 0, Qt::AlignLeft);
-                layout->addWidget(location);
+
+                panelLayout->addWidget(pageIcon);
+                panelLayout->addWidget(pageText, 1);
+                panelLayout->addWidget(open);
+                boxLayout(root)->addWidget(panel);
+                boxLayout(root)->addWidget(status);
                 return root;
             }),
         makeSample(
@@ -1224,6 +1420,8 @@ for (QAction* action : bar->primaryActions() + bar->secondaryActions()) {
                 auto* documentIcon = new FontIcon(Typography::Icons::Document, documentRow);
                 documentIcon->setIconSize(28);
                 auto* documentText = samples::verticalGroup(documentRow, 1);
+                documentText->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+                documentText->setObjectName(QStringLiteral("Gallery.CommandPreview.Text"));
                 auto* documentTitle = makePreviewLabel(documentText, QStringLiteral("Quarterly report"),
                     Typography::FontRole::BodyStrong, Label::TextColorRole::Primary);
                 auto* documentMeta = makePreviewLabel(documentText,
@@ -1666,6 +1864,8 @@ for (QAction* action : flyout->primaryActions() + flyout->secondaryActions()) {
                 auto* fileIcon = new FontIcon(Typography::Icons::Document, panel);
                 fileIcon->setIconSize(28);
                 auto* fileText = samples::verticalGroup(panel, 1);
+                fileText->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+                fileText->setObjectName(QStringLiteral("Gallery.CommandPreview.Text"));
                 auto* fileTitle = makePreviewLabel(fileText, QStringLiteral("Release-notes.md"),
                     Typography::FontRole::BodyStrong, Label::TextColorRole::Primary);
                 auto* fileMeta = makePreviewLabel(fileText, QStringLiteral("Markdown · 18 KB"),

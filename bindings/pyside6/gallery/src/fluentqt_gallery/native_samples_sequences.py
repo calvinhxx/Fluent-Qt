@@ -60,8 +60,13 @@ def stepper_source(orientation):
         stepper.setObjectName("stepperExample")
         stepper.setAccessibleName("Stepper example")
         states = fluentqt.Stepper.State
-        for i in range(4):
-            item = fluentqt.StepperItem(f"Step {i + 1}", "Optional description")
+        for i, (title, detail) in enumerate((
+            ("Account", "Basic info"),
+            ("Workspace", "Select tier"),
+            ("Billing", "Payment method"),
+            ("Review", "Confirm setup"),
+        )):
+            item = fluentqt.StepperItem(title, detail)
             if i == 0:
                 item.state = states.Completed
             if i == 3:

@@ -13,6 +13,7 @@
 #include <QVariant>
 
 #include "components/basicinput/Button.h"
+#include "components/menus_toolbars/Menu.h"
 #include "components/navigation/Breadcrumb.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/Pivot.h"
@@ -310,6 +311,32 @@ private:
     int m_preferredVerticalHeight = 0;
     bool m_compact = false;
 };
+
+void showNavigationOverflowMenu(QWidget* owner,
+    const QRect& anchorRect,
+    const QVector<QPair<int, QString>>& entries,
+    const std::function<void(int)>& onSelect)
+{
+    if (!owner || entries.isEmpty())
+        return;
+    auto* menu = owner->findChild<menus_toolbars::FluentMenu*>(QStringLiteral("navigationOverflowMenu"),
+        Qt::FindDirectChildrenOnly);
+    if (!menu) {
+        menu = new menus_toolbars::FluentMenu(QStringLiteral("Overflow"), owner);
+        menu->setObjectName(QStringLiteral("navigationOverflowMenu"));
+    }
+    menu->clear();
+    for (const auto& entry : entries) {
+        auto* action = menu->addAction(entry.second);
+        const int targetIndex = entry.first;
+        QObject::connect(action, &QAction::triggered, owner, [onSelect, targetIndex]() {
+            if (onSelect)
+                onSelect(targetIndex);
+        });
+    }
+    const QPoint anchor = anchorRect.isValid() ? anchorRect.bottomLeft() : QPoint(0, owner->height());
+    menu->popup(owner->mapToGlobal(anchor));
+}
 
 class NavigationSampleSurface : public QWidget, public fluent::FluentElement {
 public:
@@ -683,9 +710,18 @@ QVector<GallerySample> breadcrumbSamples()
                         breadcrumb->setOverflowMode(mode);
                         breadcrumb->setFixedSize(width, 20);
                         QObject::connect(breadcrumb, &Breadcrumb::overflowActivated, status,
-                            [status, label](const QVector<int>& hiddenIndexes) {
+                            [status, breadcrumb, label](const QVector<int>& hiddenIndexes) {
                                 status->setText(QStringLiteral("%1 hidden indexes: %2")
                                         .arg(label, hiddenIndexesText(hiddenIndexes)));
+                                QVector<QPair<int, QString>> entries;
+                                for (int index : hiddenIndexes)
+                                    entries.append({index, breadcrumb->itemAt(index).text});
+                                showNavigationOverflowMenu(breadcrumb, breadcrumb->overflowGeometry(), entries,
+                                    [status, breadcrumb, label](int index) {
+                                        status->setText(QStringLiteral("%1 overflow selected: %2 (index %3)")
+                                                .arg(label, breadcrumb->itemAt(index).text)
+                                                .arg(index));
+                                    });
                             });
                         row->layout()->addWidget(rowLabel);
                         row->layout()->addWidget(breadcrumb);
@@ -1339,10 +1375,16 @@ QVector<GallerySample> pivotSamples()
                         QObject::connect(pivot, &Pivot::overflowActivated, status,
                             [status, pivot](const QVector<int>& hiddenIndexes) {
                                 QStringList headers;
-                                for (int index : hiddenIndexes)
-                                    headers.append(pivot->itemAt(index).header);
+                                QVector<QPair<int, QString>> entries;
+                                for (int index : hiddenIndexes) {
+                                    const QString text = pivot->itemAt(index).header;
+                                    headers.append(text);
+                                    entries.append({index, text});
+                                }
                                 status->setText(
                                     QStringLiteral("MoreButton contains: %1").arg(headers.join(QStringLiteral(", "))));
+                                showNavigationOverflowMenu(pivot, pivot->overflowGeometry(), entries,
+                                    [pivot](int index) { pivot->setSelectedIndex(index); });
                             });
                     }
 
@@ -1537,10 +1579,16 @@ QVector<GallerySample> selectorBarSamples()
                             QObject::connect(selector, &SelectorBar::overflowActivated, status,
                                 [status, selector](const QVector<int>& hiddenIndexes) {
                                     QStringList itemTexts;
-                                    for (int index : hiddenIndexes)
-                                        itemTexts.append(selector->itemAt(index).text);
+                                    QVector<QPair<int, QString>> entries;
+                                    for (int index : hiddenIndexes) {
+                                        const QString text = selector->itemAt(index).text;
+                                        itemTexts.append(text);
+                                        entries.append({index, text});
+                                    }
                                     status->setText(QStringLiteral("MoreButton contains: %1")
                                             .arg(itemTexts.join(QStringLiteral(", "))));
+                                    showNavigationOverflowMenu(selector, selector->overflowGeometry(), entries,
+                                        [selector](int index) { selector->setSelectedIndex(index); });
                                 });
                         }
 
