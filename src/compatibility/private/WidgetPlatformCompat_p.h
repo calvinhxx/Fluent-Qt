@@ -32,11 +32,9 @@ inline bool popupWindowStackingSupported()
 
 inline void disableNativeFocusRing(QWidget* widget)
 {
-#ifdef Q_OS_MAC
+    // Keep the Qt attribute consistent on every backend; Cocoa is its native consumer.
+    // zh_CN: 在所有后端保持 Qt 属性一致；Cocoa 使用该属性控制原生焦点环。
     widget->setAttribute(Qt::WA_MacShowFocusRect, false);
-#else
-    Q_UNUSED(widget);
-#endif
 }
 
 inline void useWidgetMenuBar(QMenuBar* menuBar)
