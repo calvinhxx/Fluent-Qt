@@ -6048,6 +6048,17 @@ TEST_F(GallerySpatialTest, NativeFlipViewHoverReachesContainerAndNavigationWorks
     const auto point = [&](const QPoint& local) {
         return handle->mapFromGlobal(window.mapToGlobal(controller->projectedPosition(view, local)));
     };
+    const auto captureView = [view] {
+        // Use a unit-density target: old QWidget::grab() clips its own rendering below DPR 1.
+        // The separate compositor check below still inspects the real presentation density.
+        // zh_CN: 使用单位密度目标，避免旧版 grab() 在 DPR < 1 时裁切；下方仍检查实际合成画面。
+        QImage image(view->size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        view->render(&painter);
+        painter.end();
+        return image;
+    };
     QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
     QTest::qWait(80);
     for (int zoom : {75, 100}) {
@@ -6068,13 +6079,17 @@ TEST_F(GallerySpatialTest, NativeFlipViewHoverReachesContainerAndNavigationWorks
             QTest::qWait(250);
             QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
             QTest::qWait(80);
-            const auto idle = view->grab().toImage();
+            const auto idle = captureView();
             QTest::mouseMove(handle, point(view->rect().center()));
             QTest::qWait(250);
-            const auto hover = view->grab().toImage();
+            const auto hover = captureView();
             const qreal dpr = hover.devicePixelRatio();
             const QRect arrow(qRound((view->width() - 18) * dpr), qRound((view->height() / 2 - 14) * dpr),
                 qRound(16 * dpr), qRound(28 * dpr));
+            ASSERT_TRUE(hover.rect().contains(arrow))
+                << "image=" << hover.width() << 'x' << hover.height() << " widget=" << view->width() << 'x'
+                << view->height() << " dpr=" << dpr << " arrow=" << arrow.x() << ',' << arrow.y() << ','
+                << arrow.width() << ',' << arrow.height();
             EXPECT_NE(idle.copy(arrow), hover.copy(arrow))
                 << "Hovering the image must reveal the parent FlipView arrow";
             // Inspect the Gallery compositor itself, even when another application
@@ -6104,8 +6119,13 @@ TEST_F(GallerySpatialTest, NativeFlipViewHoverReachesContainerAndNavigationWorks
             EXPECT_GT(lightPixels, 60) << "The arrow must be visible in the actual Gallery compositor";
             if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
                 QDir().mkpath(dir);
-                view->grab().save(dir + QStringLiteral("/flip-hover-%1-%2.png").arg(zoom).arg(spatial));
+                idle.save(dir + QStringLiteral("/flip-idle-%1-%2.png").arg(zoom).arg(spatial));
+                hover.save(dir + QStringLiteral("/flip-hover-%1-%2.png").arg(zoom).arg(spatial));
                 native.save(dir + QStringLiteral("/gallery-hover-%1-%2.png").arg(zoom).arg(spatial));
+                if (!spatial)
+                    window.screen()
+                        ->grabWindow(window.winId())
+                        .save(dir + QStringLiteral("/desktop-2d-%1.png").arg(zoom));
             }
             QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier,
                 point(QPoint(view->width() - 10, view->height() / 2)));
@@ -6366,7 +6386,17 @@ TEST_F(GallerySpatialTest, NativeOriginalSamplesKeepClicksFocusSelectionAndDrag)
                     edit->setReadOnly(false);
                     edit->clear();
                     QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier, point(edit, edit->rect().center()));
-                    EXPECT_TRUE(edit->hasFocus());
+                    const bool focused = QTest::qWaitFor([&] { return edit->hasFocus(); }, 1000);
+                    if (!focused) {
+                        const QPoint click = point(edit, edit->rect().center());
+                        qWarning()
+                            << "EDITOR_FOCUS" << "active" << window.isActiveWindow() << "focus"
+                            << QApplication::focusWidget() << "target" << edit << "click" << click << "hit"
+                            << window.childAt(click) << "nativeHit" << QApplication::widgetAt(window.mapToGlobal(click))
+                            << "editorRect" << QRect(edit->mapTo(&window, QPoint()), edit->size()) << "window"
+                            << window.geometry() << "handle" << handle->geometry() << "cursor" << QCursor::pos();
+                    }
+                    ASSERT_TRUE(focused);
                     for (auto key : {Qt::Key_1, Qt::Key_2, Qt::Key_3})
                         QTest::keyClick(handle, key);
                     EXPECT_EQ(edit->text(), QStringLiteral("123"));
@@ -6426,6 +6456,8 @@ TEST_F(GallerySpatialTest, NativeCatalogSamplesDeliverHoverThroughOriginalParent
 {
     if (tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Requires full native Gallery QWindow input";
+    const QPoint previousCursor = QCursor::pos();
+    const auto restoreCursor = qScopeGuard([previousCursor] { QCursor::setPos(previousCursor); });
     auto& settings = GallerySettings::instance();
     settings.setHomeParticlesEnabled(false);
     GalleryWindow window;
@@ -6436,6 +6468,11 @@ TEST_F(GallerySpatialTest, NativeCatalogSamplesDeliverHoverThroughOriginalParent
     ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
     auto* controller = window.findChild<GallerySpatialController*>();
     auto* handle = window.windowHandle();
+    // Isolate QWindow input from OS hover generated while each sample is relaid out.
+    // zh_CN: 将系统光标停在窗口外，避免示例重排时的原生悬停与 QWindow 注入事件交错。
+    QCursor::setPos(window.frameGeometry().topLeft() - QPoint(8, 8));
+    QTest::qWait(50);
+    ASSERT_FALSE(window.frameGeometry().contains(QCursor::pos()));
     int routes = 0, samples = 0, positions = 0;
     for (const auto& category : galleryComponentCatalog()) {
         if (category.plugin)
@@ -6469,19 +6506,65 @@ TEST_F(GallerySpatialTest, NativeCatalogSamplesDeliverHoverThroughOriginalParent
                     const QRect visible = preview->rect().intersected(
                         QRect(preview->mapFrom(scroll->viewport(), QPoint()), scroll->viewport()->size()));
                     ASSERT_FALSE(visible.isEmpty());
-                    for (const QPoint local : {visible.center(), QPoint(visible.left() + 8, visible.center().y()),
+                    for (QPoint local : {visible.center(), QPoint(visible.left() + 8, visible.center().y()),
                              QPoint(visible.right() - 8, visible.center().y())}) {
-                        QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
-                        QTest::mouseMove(handle, controller->projectedPosition(preview, local));
                         auto* leaf = preview->childAt(local);
                         if (!leaf)
                             leaf = preview;
+                        // Preserve the chosen leaf while avoiding ambiguous projected edge pixels.
+                        // zh_CN: 保留原目标控件，避开正反投影取整后可能落到控件外的边缘像素。
+                        const QRect leafArea = QRect(leaf->mapTo(preview, QPoint()), leaf->size()).intersected(visible);
+                        ASSERT_FALSE(leafArea.isEmpty());
+                        const int insetX = qMin(2, (leafArea.width() - 1) / 2);
+                        const int insetY = qMin(2, (leafArea.height() - 1) / 2);
+                        local.setX(qBound(leafArea.left() + insetX, local.x(), leafArea.right() - insetX));
+                        local.setY(qBound(leafArea.top() + insetY, local.y(), leafArea.bottom() - insetY));
+                        QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+                        // Settle the previous probe's tilt before calculating the next hit point.
+                        // zh_CN: 计算下一个命中点前结束上一个探针的倾斜动画，保留完整 3D 投影。
+                        controller->cancelTransition();
+                        const QPoint probe = controller->projectedPosition(preview, local);
+                        QTest::mouseMove(handle, probe);
+                        // Native QWindow input may deliver ancestor enter/leave events asynchronously.
+                        // zh_CN: 原生 QWindow 输入的祖先进入/离开事件可能异步派发。
+                        const bool entered = QTest::qWaitFor(
+                            [&] {
+                                for (auto* parent = leaf; parent; parent = parent->parentWidget()) {
+                                    if (!parent->underMouse())
+                                        return false;
+                                    if (parent == preview)
+                                        break;
+                                }
+                                return true;
+                            },
+                            500);
+                        if (!entered) {
+                            qWarning()
+                                << "HOVER_TARGET" << "probe" << probe << "current"
+                                << controller->projectedPosition(preview, local) << "leaf" << leaf << "hit"
+                                << window.childAt(probe) << "cursor" << QCursor::pos() << "active"
+                                << window.isActiveWindow() << "preview" << preview << "local" << local << "leafRect"
+                                << QRect(leaf->mapTo(preview, QPoint()), leaf->size()) << "visible" << visible;
+                        }
+                        EXPECT_TRUE(entered);
                         for (auto* parent = leaf; parent; parent = parent->parentWidget()) {
                             EXPECT_TRUE(parent->underMouse()) << parent->metaObject()->className();
                             if (parent == preview)
                                 break;
                         }
                         QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+                        const bool left = QTest::qWaitFor(
+                            [&] {
+                                for (auto* parent = leaf; parent; parent = parent->parentWidget()) {
+                                    if (parent->underMouse())
+                                        return false;
+                                    if (parent == preview)
+                                        break;
+                                }
+                                return true;
+                            },
+                            500);
+                        EXPECT_TRUE(left);
                         for (auto* parent = leaf; parent; parent = parent->parentWidget()) {
                             EXPECT_FALSE(parent->underMouse()) << parent->metaObject()->className();
                             if (parent == preview)
@@ -6504,6 +6587,8 @@ TEST_F(GallerySpatialTest, NativeOriginalMenuOpensThreeLevelsAndActivatesOnce)
 {
     if (tests::support::isHeadlessPlatform())
         GTEST_SKIP() << "Requires original Gallery sample and native popup windows";
+    const QPoint previousCursor = QCursor::pos();
+    const auto restoreCursor = qScopeGuard([previousCursor] { QCursor::setPos(previousCursor); });
     GalleryWindow window;
     window.resize(1185, 850);
     window.show();
@@ -6528,6 +6613,29 @@ TEST_F(GallerySpatialTest, NativeOriginalMenuOpensThreeLevelsAndActivatesOnce)
     auto* controller = window.findChild<GallerySpatialController*>();
     QAction* descending = order->actions().last();
     QSignalSpy activated(descending, &QAction::triggered);
+    const auto hoverBranch = [](QMenu* popup, QAction* branch) {
+        QRect previous;
+        const bool settled = QTest::qWaitFor(
+            [&] {
+                const QRect current = popup->geometry();
+                const bool stable = current.isValid() && current == previous;
+                previous = current;
+                return stable && !popup->actionGeometry(branch).isEmpty();
+            },
+            2000);
+        if (!settled)
+            return false;
+        const QPoint center = popup->actionGeometry(branch).center();
+        // Enter through a distinct position before hovering: QMenu discards the enter-generated move.
+        // zh_CN: 先移入不同位置再悬停，QMenu 会忽略进入时产生的首次移动。
+        const QPoint entry = center - QPoint(12, 0);
+        QTest::mouseMove(popup, entry);
+        if (!QTest::qWaitFor([&] { return popup->underMouse(); }, 1000))
+            return false;
+        QTest::qWait(20);
+        QTest::mouseMove(popup->windowHandle(), center);
+        return true;
+    };
     for (bool spatial : {false, true, false}) {
         SCOPED_TRACE(spatial);
         GallerySettings::instance().setSpatialModeEnabled(spatial);
@@ -6537,10 +6645,21 @@ TEST_F(GallerySpatialTest, NativeOriginalMenuOpensThreeLevelsAndActivatesOnce)
         QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier,
             controller->projectedPosition(button, button->rect().center()));
         ASSERT_TRUE(QTest::qWaitFor([&] { return menu->isVisible() && menu->windowHandle(); }, 2000));
-        QTest::mouseMove(menu->windowHandle(), menu->actionGeometry(sort->menuAction()).center());
-        ASSERT_TRUE(QTest::qWaitFor([&] { return sort->isVisible() && sort->windowHandle(); }, 2000));
-        QTest::mouseMove(sort->windowHandle(), sort->actionGeometry(order->menuAction()).center());
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(menu));
+        // Native popup timers also consult the system cursor; move it along with the test input.
+        // zh_CN: 原生弹出菜单的计时器也会查询系统光标，测试移动须同步真实光标位置。
+        ASSERT_TRUE(hoverBranch(menu, sort->menuAction()));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return sort->isVisible() && sort->windowHandle(); }, 2000))
+            << "active=" << (menu->activeAction() ? menu->activeAction()->text().toStdString() : "none")
+            << " cursor=" << QCursor::pos().x() << ',' << QCursor::pos().y() << " menu=" << menu->x() << ','
+            << menu->y() << ',' << menu->width() << ',' << menu->height()
+            << " branch=" << menu->actionGeometry(sort->menuAction()).x() << ','
+            << menu->actionGeometry(sort->menuAction()).y() << ',' << menu->actionGeometry(sort->menuAction()).width()
+            << ',' << menu->actionGeometry(sort->menuAction()).height();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(sort));
+        ASSERT_TRUE(hoverBranch(sort, order->menuAction()));
         ASSERT_TRUE(QTest::qWaitFor([&] { return order->isVisible() && order->windowHandle(); }, 2000));
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(order));
         const int before = activated.count();
         QTest::mouseClick(order->windowHandle(), Qt::LeftButton, Qt::NoModifier,
             order->actionGeometry(descending).center());

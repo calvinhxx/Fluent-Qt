@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from PySide6.QtCore import QSizeF, Qt
+from PySide6.QtCore import QDeadlineTimer, QSizeF, Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication
 
@@ -108,7 +108,9 @@ class GallerySpatialBackdropTest(unittest.TestCase):
             with self.subTest(release=release.__name__):
                 cache = GlyphImageCache()
                 cache.retain(image)
-                surface = Mock(glyph_cache=cache, qml_layer=None)
+                surface = Mock(glyph_cache=cache, qml_layer=None,
+                               owner=SimpleNamespace(grabbed=None, manipulation=[QDeadlineTimer(), QDeadlineTimer()],
+                                                     context_lost=Mock()))
                 surface.static_cache_bytes.return_value = 0
                 surface.particles.allocatedBytes.return_value = 0
                 self.assertGreater(compositor._Surface.statistics(surface)["glyphCacheBytes"], 0)
@@ -119,7 +121,8 @@ class GallerySpatialBackdropTest(unittest.TestCase):
     def test_cache_statistics_include_particle_and_live_qml_allocations(self):
         from fluentqt_gallery import spatial_controller as compositor
         from fluentqt_gallery.glyph_paint_device import GlyphImageCache
-        surface = Mock(glyph_cache=GlyphImageCache())
+        surface = Mock(glyph_cache=GlyphImageCache(),
+                       owner=SimpleNamespace(grabbed=None, manipulation=[QDeadlineTimer(), QDeadlineTimer()]))
         surface.static_cache_bytes.return_value = 8192
         surface.particles.allocatedBytes.return_value = 4096
         surface.qml_layer.statistics.return_value = {"allocatedBytes": 2048}
