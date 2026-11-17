@@ -857,4 +857,31 @@ TYPED_TEST(OverlayContractTest, OutsideDismissMayDeleteTheSurfaceSynchronously)
     EXPECT_EQ(this->background.presses, 0);
     EXPECT_EQ(this->background.releases, 0);
 }
+
+TEST(OverlayScrimTest, UnthemedHostDarkBackdropUsesCanvasToken)
+{
+    QWidget host;
+    host.resize(240, 180);
+    auto* stage = new QWidget(&host);
+    stage->setFixedSize(240, 180);
+    host.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&host));
+
+    Popup popup(stage);
+    popup.setAnimationEnabled(false);
+    popup.setModal(true);
+    popup.setDim(false);
+    popup.setBackdropBlurRadius(8);
+    popup.setTheme(fluent::FluentElement::Dark);
+    popup.setFixedSize(80, 40);
+    popup.open();
+    QApplication::processEvents();
+
+    auto* scrim = host.findChild<OverlayScrim*>();
+    ASSERT_NE(scrim, nullptr);
+    const QImage grabbed = scrim->grab().toImage();
+    const QColor sample = grabbed.pixelColor(QPoint(20, 20) * grabbed.devicePixelRatio());
+    EXPECT_LT(sample.lightness(), 96);
+    popup.close();
+}
 } // namespace

@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "Popup.h"
 
 #include "components/dialogs_flyouts/Flyout.h"
@@ -63,6 +64,7 @@ Popup::Popup(QWidget* parent) : QWidget(parent)
     connect(m_overlayCoordinator, &::fluent::overlay::OverlayCoordinator::hostGeometryChanged, this, [this]() {
         if ((!m_isOpen && !isVisible()) || m_isClosing)
             return;
+        onHostGeometryChanged();
         move(resolvedPosition());
         m_overlayCoordinator->raiseStack();
     });
@@ -97,6 +99,7 @@ Popup::Popup(QWidget* parent) : QWidget(parent)
 
 Popup::~Popup()
 {
+    compatibility::detail::clearWidgetTreeFocus(this);
     if (qApp)
         qApp->removeEventFilter(this);
 }
@@ -123,8 +126,24 @@ void Popup::setPopupProgress(double p)
     if (qFuzzyCompare(m_popupProgress, p))
         return;
     m_popupProgress = p;
-    if (m_opacityEffect)
+    if (p >= 1.0 - 1e-6) {
+        // Detach the identity opacity effect once settled so QWidget::render()
+        // composites open child popups cleanly without offscreen pixmap redirection.
+        // zh_CN: 展开完成（opacity=1）时移除空闲透明度特效，避免 Qt 在
+        // QWidget::render() 离屏合成中丢失已打开的子弹层内容。
+        if (m_opacityEffect && graphicsEffect() == m_opacityEffect) {
+            m_opacityEffect = nullptr;
+            setGraphicsEffect(nullptr);
+        } else {
+            m_opacityEffect = nullptr;
+        }
+    } else {
+        if (!m_opacityEffect || graphicsEffect() != m_opacityEffect) {
+            m_opacityEffect = new QGraphicsOpacityEffect(this);
+            setGraphicsEffect(m_opacityEffect);
+        }
         m_opacityEffect->setOpacity(p);
+    }
     if (auto* scrim = m_overlayCoordinator->scrim())
         scrim->setOpacityProgress(p);
     update();

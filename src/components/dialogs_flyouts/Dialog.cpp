@@ -594,7 +594,7 @@ void Dialog::updateScrimState()
 void Dialog::showSmokeOverlay()
 {
     QWidget* owner = ownerWidget();
-    if (!owner || !owner->isVisible())
+    if (!owner || (!owner->isVisible() && !owner->testAttribute(Qt::WA_DontShowOnScreen)))
         return;
 
     const int surfaceRadius = qRound(::fluent::overlay::overlaySurfaceRadius(owner));

@@ -21,7 +21,10 @@ void Flyout::setPlacement(Placement p)
     if (m_placement == p)
         return;
     m_placement = p;
+    QPointer<Flyout> guard(this);
     emit placementChanged(p);
+    if (guard && guard->isOpen())
+        guard->move(guard->computePosition());
 }
 
 void Flyout::setAnchorOffset(int px)
@@ -29,7 +32,10 @@ void Flyout::setAnchorOffset(int px)
     if (m_anchorOffset == px)
         return;
     m_anchorOffset = px;
+    QPointer<Flyout> guard(this);
     emit anchorOffsetChanged(m_anchorOffset);
+    if (guard && guard->isOpen())
+        guard->move(guard->computePosition());
 }
 
 void Flyout::setClampToWindow(bool e)
@@ -37,7 +43,10 @@ void Flyout::setClampToWindow(bool e)
     if (m_clampToWindow == e)
         return;
     m_clampToWindow = e;
+    QPointer<Flyout> guard(this);
     emit clampToWindowChanged(m_clampToWindow);
+    if (guard && guard->isOpen())
+        guard->move(guard->computePosition());
 }
 
 void Flyout::setAnchor(QWidget* anchor)

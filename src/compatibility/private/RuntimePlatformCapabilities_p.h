@@ -21,6 +21,11 @@ struct RuntimePlatformCapabilities {
 const RuntimePlatformCapabilities& runtimePlatformCapabilities();
 void setRuntimePlatformCapabilities(const RuntimePlatformCapabilities& capabilities);
 
+inline bool effectiveWindowActivation(bool nativeActive)
+{
+    return nativeActive || runtimePlatformCapabilities().hostsApplicationWindowsInDesktopSurface;
+}
+
 } // namespace compatibility::detail
 
 #endif // FLUENT_RUNTIMEPLATFORMCAPABILITIES_P_H

@@ -17,11 +17,6 @@ namespace {
 
 constexpr int TitleBarDefaultLeadingMargin = 8;
 
-bool effectiveWindowActivation(bool nativeActive)
-{
-    return nativeActive || compatibility::detail::runtimePlatformCapabilities().hostsApplicationWindowsInDesktopSurface;
-}
-
 void refreshFluentDescendants(QWidget* root)
 {
     if (!root)
@@ -39,7 +34,7 @@ void refreshFluentDescendants(QWidget* root)
 
 TitleBar::TitleBar(QWidget* parent) : QWidget(parent)
 {
-    m_windowActive = effectiveWindowActivation(isActiveWindow());
+    m_windowActive = compatibility::detail::effectiveWindowActivation(isActiveWindow());
     setAttribute(Qt::WA_Hover);
     setAttribute(Qt::WA_OpaquePaintEvent,
         compatibility::detail::runtimePlatformCapabilities().opaqueClientTitleBarSurface);
@@ -170,7 +165,7 @@ bool TitleBar::event(QEvent* event)
     // and caller-owned chrome can then dim in lockstep while layout and hit testing stay intact.
     // zh_CN: 将激活状态作为标题栏契约发布，使窗口按钮和调用方 chrome 同步变暗，且不影响布局与命中区域。
     if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate) {
-        const bool active = effectiveWindowActivation(event->type() == QEvent::WindowActivate);
+        const bool active = compatibility::detail::effectiveWindowActivation(event->type() == QEvent::WindowActivate);
         if (m_windowActive != active) {
             m_windowActive = active;
             emit windowActiveChanged(active);

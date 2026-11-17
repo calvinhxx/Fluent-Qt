@@ -143,7 +143,39 @@ void OverlayScrim::refreshBackdrop()
         QPainter painter(&snapshot);
         painter.scale(scale, scale);
         painter.translate(-geometry().topLeft());
-        host->render(&painter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+        const auto* hostTheme = dynamic_cast<FluentElement*>(host);
+        // Suppress Qt's default system background fill on unthemed plain QWidget hosts/stages
+        // so custom paintEvent() still runs while unpainted areas use Fluent bgCanvas below.
+        // zh_CN: 跳过无主题普通 QWidget 宿主/舞台的系统默认背景填充，保留自定义 paintEvent 并由下方使用 Fluent bgCanvas 填充。
+        struct ScopedUnthemedBackgroundBypass {
+            explicit ScopedUnthemedBackgroundBypass(QWidget* widget)
+                : m_widget(shouldSuppress(widget) ? widget : nullptr)
+            {
+                if (m_widget)
+                    m_widget->setAttribute(Qt::WA_NoSystemBackground, true);
+            }
+            ~ScopedUnthemedBackgroundBypass()
+            {
+                if (m_widget)
+                    m_widget->setAttribute(Qt::WA_NoSystemBackground, false);
+            }
+            static bool shouldSuppress(const QWidget* widget)
+            {
+                if (!widget || widget->testAttribute(Qt::WA_NoSystemBackground))
+                    return false;
+                if (dynamic_cast<const FluentElement*>(widget) != nullptr)
+                    return false;
+                if (!widget->isWindow() && widget->autoFillBackground())
+                    return false;
+                return !widget->testAttribute(Qt::WA_SetPalette) && !widget->testAttribute(Qt::WA_StyledBackground)
+                    && !widget->testAttribute(Qt::WA_StyleSheetTarget) && widget->styleSheet().isEmpty();
+            }
+            QWidget* m_widget = nullptr;
+        };
+        {
+            const ScopedUnthemedBackgroundBypass hostBypass(host);
+            host->render(&painter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+        }
         // Render only siblings below this overlay. Hiding widgets to grab the host
         // would disturb focus, layout and nested popups. QObject child order follows stacking.
         // zh_CN: 只绘制当前浮层下方的同级控件；不通过隐藏控件抓图，避免改变焦点、布局和嵌套弹层。
@@ -153,6 +185,7 @@ void OverlayScrim::refreshBackdrop()
                 break;
             if (child != this && !child->isHidden() && !child->isWindow()) {
                 const QRect visible = geometry().translated(-child->pos());
+                const ScopedUnthemedBackgroundBypass childBypass(child);
                 ::compatibility::detail::renderWidgetSnapshot(painter, child, child->pos(), visible);
             }
         }
@@ -161,9 +194,12 @@ void OverlayScrim::refreshBackdrop()
         // zh_CN: 原生材质不属于 QWidget 绘制；用 Fluent 表面 token 填补透明区域后再模糊应用内容。
         painter.resetTransform();
         painter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
-        const auto* hostTheme = dynamic_cast<FluentElement*>(host);
-        painter.fillRect(snapshot.rect(),
-            hostTheme ? hostTheme->themeColorsRef().bgCanvas : host->palette().window().color());
+        // Use the synced Fluent canvas token when an unthemed plain QWidget host has no custom palette.
+        // zh_CN: 无自定义调色板的普通 QWidget 宿主，使用已同步的 Fluent 画布 token 填充透明区域。
+        const QColor fallbackColor = hostTheme
+            ? hostTheme->themeColorsRef().bgCanvas
+            : (host->testAttribute(Qt::WA_SetPalette) ? host->palette().window().color() : themeColorsRef().bgCanvas);
+        painter.fillRect(snapshot.rect(), fallbackColor);
     }
     snapshot = snapshot.convertToFormat(QImage::Format_RGB32);
     const int radius = qMax(1, qRound(m_blurRadius * scale * 0.6));

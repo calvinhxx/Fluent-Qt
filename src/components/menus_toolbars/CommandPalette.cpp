@@ -19,6 +19,7 @@
 #include <QWidgetAction>
 #include <QtMath>
 
+#include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "components/collections/ListView.h"
 #include "components/collections/private/CollectionItemState_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -334,9 +335,14 @@ public:
         const int count = model->rowCount();
         if (q->isOpen()) {
             q->resize(q->sizeHint());
-            if (q->parentWidget())
-                q->move(overlay::clampCardTopLeft(q->pos(), q->size(), overlay::overlaySurfaceRect(q->parentWidget()),
-                    ::Spacing::Small));
+            if (QWidget* parent = q->parentWidget()) {
+                QWidget* host = overlay::presentedTopLevel(parent);
+                QRect bounds = host ? overlay::overlaySurfaceRect(host) : QRect();
+                if (!bounds.isEmpty() && host != parent)
+                    bounds = QRect(parent->mapFromGlobal(host->mapToGlobal(bounds.topLeft())), bounds.size());
+                q->move(overlay::clampCardTopLeft(q->pos(), q->size(),
+                    bounds.isEmpty() ? overlay::overlaySurfaceRect(parent) : bounds, ::Spacing::Small));
+            }
         }
         QPointer<CommandPalette> guard(q);
         notifyCurrent();
@@ -387,6 +393,7 @@ public:
 CommandPalette::CommandPalette(QWidget* parent) : Popup(parent), d(new CommandPalettePrivate(this)) {}
 CommandPalette::~CommandPalette()
 {
+    compatibility::detail::clearWidgetTreeFocus(this);
     QObject::disconnect(d->search, nullptr, this, nullptr);
     QObject::disconnect(d->view, nullptr, this, nullptr);
     QObject::disconnect(d->view->selectionModel(), nullptr, this, nullptr);
@@ -510,9 +517,16 @@ bool CommandPalette::triggerCurrent()
 QSize CommandPalette::sizeHint() const
 {
     QWidget* host = overlay::presentedTopLevel(parentWidget());
-    const QSize available = host ? host->size() : QSize(640, 480);
+    const QRect surface = host ? overlay::overlaySurfaceRect(host) : QRect();
+    const QSize available = !surface.isEmpty() ? surface.size() : (host ? host->size() : QSize(640, 480));
     return QSize(qMax(1, qMin(464, available.width() - 16)),
         qMax(1, qMin(d->preferredHeight(), available.height() - 16)));
+}
+
+void CommandPalette::onHostGeometryChanged()
+{
+    if (d && isOpen())
+        resize(sizeHint());
 }
 
 void CommandPalette::onThemeUpdated()

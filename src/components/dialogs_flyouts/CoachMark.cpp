@@ -277,8 +277,27 @@ double CoachMark::fadeOpacity() const
 
 void CoachMark::setFadeOpacity(double opacity)
 {
-    if (m_opacityEffect)
-        m_opacityEffect->setOpacity(qBound(0.0, opacity, 1.0));
+    const double clamped = qBound(0.0, opacity, 1.0);
+    if (clamped >= 1.0 - 1e-6) {
+        // Detach the identity opacity effect once settled so QWidget::render()
+        // composites open coach marks cleanly without offscreen pixmap redirection.
+        // zh_CN: 展开完成（opacity=1）时移除空闲透明度特效，避免 Qt 在
+        // QWidget::render() 离屏合成中丢失已打开的引导浮层内容。
+        if (m_opacityEffect && graphicsEffect() == m_opacityEffect) {
+            m_opacityEffect = nullptr;
+            setGraphicsEffect(nullptr);
+        } else {
+            m_opacityEffect = nullptr;
+        }
+        update();
+        return;
+    }
+    if (!m_opacityEffect || graphicsEffect() != m_opacityEffect) {
+        m_opacityEffect = new QGraphicsOpacityEffect(this);
+        setGraphicsEffect(m_opacityEffect);
+    }
+    m_opacityEffect->setOpacity(clamped);
+    update();
 }
 
 void CoachMark::resizeEvent(QResizeEvent* event)

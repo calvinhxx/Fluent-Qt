@@ -394,3 +394,37 @@ TEST(CommandPaletteTest, Contract_CompactFilteredHeightKeepsSearchPosition)
     palette.setQuery(QString());
     EXPECT_TRUE(host.rect().contains(palette.geometry()));
 }
+
+TEST(CommandPaletteTest, Contract_OverlaySurfaceRectResizesAndKeepsPositionOnFilter)
+{
+    QWidget host;
+    host.resize(640, 480);
+    const QRect initialSurface(80, 56, 400, 320);
+    host.setProperty("fluentOverlaySurfaceRect", initialSurface);
+
+    CommandPalette palette(&host);
+    palette.setAnimationEnabled(false);
+    for (int i = 0; i < 10; ++i) {
+        auto* action = new QAction(QStringLiteral("Workspace Command %1 with long description").arg(i + 1), &host);
+        palette.addCommand(action, QStringLiteral("Workspace"));
+    }
+
+    host.show();
+    palette.open();
+    QApplication::processEvents();
+    ASSERT_TRUE(palette.isVisible());
+    EXPECT_LE(palette.width(), initialSurface.width());
+    EXPECT_TRUE(initialSurface.contains(palette.geometry()));
+
+    const QRect shiftedSurface(120, 40, 300, 260);
+    host.setProperty("fluentOverlaySurfaceRect", shiftedSurface);
+    QApplication::processEvents();
+    EXPECT_LE(palette.width(), shiftedSurface.width());
+    EXPECT_TRUE(shiftedSurface.contains(palette.geometry()));
+
+    const QPoint openedPos = palette.pos();
+    palette.setQuery(QStringLiteral("Command 1"));
+    QApplication::processEvents();
+    EXPECT_EQ(palette.pos(), openedPos);
+    EXPECT_TRUE(shiftedSurface.contains(palette.geometry()));
+}

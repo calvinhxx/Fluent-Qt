@@ -112,7 +112,7 @@ bool isAnchorVisibleInTopLevel(QWidget* anchor)
     for (int depth = 0; anchor && depth < 32; ++depth) {
         const QWidget* top = anchor->window();
         for (const QWidget* node = anchor; node; node = node->parentWidget()) {
-            if (!node->isVisibleTo(top))
+            if (node != top && !node->isVisibleTo(top))
                 return false;
             visibleRect &= presentedRectInTopLevel(node);
             if (visibleRect.isEmpty())
@@ -122,7 +122,8 @@ bool isAnchorVisibleInTopLevel(QWidget* anchor)
         }
         const auto bridge = ::compatibility::detail::widgetPresentationBridge(anchor);
         if (!bridge.viewport)
-            return top->isVisible();
+            return top->isVisible()
+                || (top->testAttribute(Qt::WA_DontShowOnScreen) && !top->testAttribute(Qt::WA_WState_ExplicitShowHide));
         if (!bridge.visible)
             return false;
         anchor = const_cast<QWidget*>(bridge.viewport);
