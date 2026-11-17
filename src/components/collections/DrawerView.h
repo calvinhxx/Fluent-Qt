@@ -24,9 +24,8 @@ namespace fluent::collections {
 
 /**
  * @brief Same-window edge drawer overlay supporting modal blocking, dimming, and edge dragging.
- * Hosts a content widget and handles edge placement, light-dismiss, rounded corners, animations, and scrim dimming.
- * zh_CN: 支持模态拦截、背景遮罩和边缘拖拽的同窗口抽屉浮层。
- * 承载外部传入的内容控件，并统一处理边缘定位、轻点关闭、圆角裁剪、滑入动画与遮罩。
+ * Hosts a content widget and handles edge placement, light-dismiss, rounded corners, and slide animations.
+ * zh_CN: 同窗口边缘抽屉浮层，支持模态遮罩、边缘拖拽滑出及轻点关闭。
  */
 class DrawerView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -67,15 +66,12 @@ class DrawerView : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(bool dim READ isDim WRITE setDim NOTIFY dimChanged)
     /**
      * @brief Scrim opacity in [0, 1]; -1 uses the theme smoke token when dim is enabled.
-     * zh_CN: 遮罩透明度范围 [0, 1]，-1 使用主题烟雾值，仅在 dim 开启时生效。
+     * zh_CN: 遮罩透明度（0-1，-1 使用主题默认值，需开启 dim）。
      */
     Q_PROPERTY(double dimOpacity READ dimOpacity WRITE setDimOpacity NOTIFY dimOpacityChanged)
     /**
-     * @brief Blur radius for the cached owning-window backdrop in logical pixels [0, 32]; 0 disables blur.
-     * Defaults to 4 for modal drawers and 0 for non-modal drawers until explicitly set; explicit values persist
-     * across modal changes.
-     * zh_CN: 所属窗口背景快照的模糊半径，范围 [0, 32] 逻辑像素，0 表示关闭。
-     * 未显式设置时模态默认 4、非模态默认 0；显式设置的值（包括 0）不会因切换模态而重置。
+     * @brief Backdrop blur radius in [0, 32] px (0 disables blur; defaults to 4 when modal, 0 otherwise).
+     * zh_CN: 抽屉背景模糊半径（0-32 px，0 为关闭；未设置时模态默认 4、非模态默认 0）。
      */
     Q_PROPERTY(double backdropBlurRadius
         READ backdropBlurRadius
@@ -113,8 +109,8 @@ class DrawerView : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
     /**
-     * @brief Release policy for the current content widget.
-     * zh_CN: 当前内容控件的释放策略。
+     * @brief Disposal policy for the current content widget.
+     * zh_CN: 当前内容控件的销毁方式。
      */
     Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership NOTIFY contentOwnershipChanged)
 
@@ -157,8 +153,8 @@ public:
     double backdropBlurRadius() const;
     void setBackdropBlurRadius(double radius);
     /**
-     * @brief Recaptures the owning-window content after background changes.
-     * zh_CN: 背景内容变化后重新采集所属窗口快照。
+     * @brief Recaptures the window backdrop after background content changes.
+     * zh_CN: 背景内容变化后重新采集窗口背景。
      */
     Q_SLOT void refreshBackdrop();
 
@@ -180,20 +176,20 @@ public:
     QWidget* contentWidget() const { return m_contentWidget.data(); }
 
     /**
-     * @brief Sets the drawer content widget without taking ownership (WidgetOwnership::Borrowed).
-     * zh_CN: 设置抽屉内容控件，默认不接管其所有权（WidgetOwnership::Borrowed）。
+     * @brief Sets the drawer content widget (caller-managed by default, WidgetOwnership::Borrowed).
+     * zh_CN: 设置抽屉内容控件（默认由应用管理销毁，即 WidgetOwnership::Borrowed）。
      */
     void setContentWidget(QWidget* widget);
 
     /**
-     * @brief Sets the drawer content widget with an explicit ownership policy.
-     * zh_CN: 使用指定的所有权策略设置抽屉内容控件；设置成功返回 true。
+     * @brief Sets the drawer content widget with an explicit WidgetOwnership disposal mode.
+     * zh_CN: 设置抽屉内容控件并指定销毁方式；设置成功返回 true。
      */
     bool setContentWidget(QWidget* widget, WidgetOwnership ownership);
 
     /**
-     * @brief Detaches and returns the current content widget without deleting it (parent cleared).
-     * zh_CN: 移除并返回当前内容控件（不删除，父控件置空，所有权归还调用方）。
+     * @brief Detaches and returns the current content widget without deleting it.
+     * zh_CN: 移除并返回当前内容控件（不删除）。
      */
     QWidget* takeContentWidget();
 

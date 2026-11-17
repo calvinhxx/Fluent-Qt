@@ -20,13 +20,8 @@ namespace fluent {
 
 /**
  * @brief Lightweight anchor-based layout for QWidget controls.
- * zh_CN: 面向 QWidget 控件的轻量锚点布局。
- *
- * AnchorLayout stores per-child anchors and resolves them during setGeometry().
- * It is intentionally small and is used by QMLPlus as a QWidget-friendly
- * alternative to QML anchors.
- * zh_CN: AnchorLayout 保存每个子控件的锚点，并在 setGeometry() 中解析布局；
- * 它由 QMLPlus 使用，用作 QWidget 场景下的 QML anchors 替代能力。
+ * Stores per-child edge anchors and resolves widget geometries during layout passes.
+ * zh_CN: 面向 QWidget 控件的轻量锚点布局，按子控件边缘锚定关系自动计算几何位置。
  */
 class AnchorLayout : public QLayout {
     Q_OBJECT
@@ -123,21 +118,17 @@ private:
 };
 
 /**
- * @brief Minimal property binder built on Qt meta-properties and notify signals.
- * zh_CN: 基于 Qt meta-property 和 notify signal 的轻量属性绑定工具。
+ * @brief Lightweight property binder built on Qt meta-properties and NOTIFY signals.
+ * zh_CN: 基于 Qt 元属性和 NOTIFY 信号的轻量属性绑定工具。
  */
 namespace detail {
 class QMLBinding;
 }
 
 /**
- * @brief Explicit observable input to a computed binding or state condition.
- * zh_CN: 计算绑定或状态条件的显式可观察输入。
- *
- * The property must be readable and have a NOTIFY signal. All inputs and the
- * target must live on the calling thread. Callbacks must guard other captures.
- * zh_CN: 属性必须可读且具有 NOTIFY 信号。输入与目标须位于调用线程；
- * 回调需要自行保护未列入依赖的其他捕获对象。
+ * @brief Observable property dependency for a computed binding or state condition.
+ * The property must be readable with a NOTIFY signal on the calling thread.
+ * zh_CN: 计算绑定或状态条件所监听的依赖属性；该属性须可读、带 NOTIFY 信号且位于调用线程。
  */
 struct BindingDependency {
     QPointer<QObject> object;
@@ -146,7 +137,7 @@ struct BindingDependency {
 
 /**
  * @brief Initial enablement and optional event-loop coalescing for a binding.
- * zh_CN: 绑定的初始启用状态和可选的事件循环合并更新策略。
+ * zh_CN: 绑定的初始启用状态以及是否合并同轮事件循环内的重复更新。
  */
 struct BindingOptions {
     bool enabled = true;
@@ -154,22 +145,16 @@ struct BindingOptions {
 };
 
 /**
- * @brief Copyable non-owning handle to a target-owned property binding.
- * zh_CN: 指向目标对象所拥有属性绑定的可复制控制句柄（不接管绑定所有权）。
- *
- * Destroying a handle does not unbind. Installing a valid replacement invalidates
- * prior handles, whereas an invalid replacement keeps the existing binding intact.
- * pause()/resume() preserve enabled state; state overrides also suspend both
- * binding directions. refresh() evaluates active bindings immediately.
- * zh_CN: 销毁句柄不会解除绑定。成功替换会使旧句柄失效，无效替换则保留原绑定。
- * pause()/resume() 保留启用状态；状态覆盖期间也会暂停双向同步；refresh() 在绑定活动时立即求值。
+ * @brief Copyable handle to a property binding managed by the target object.
+ * Copying or destroying the handle does not unbind; call unbind() to remove the binding permanently.
+ * zh_CN: 用于操作属性绑定的可复制控制对象（绑定由目标对象管理）。复制或销毁该控制对象不会解除绑定，需显式调用 unbind() 才会移除。
  */
 class BindingHandle {
 public:
     BindingHandle() = default;
     /**
      * @brief Reports whether the binding and its endpoints remain valid.
-     * zh_CN: 返回绑定及其端点是否仍然有效。
+     * zh_CN: 返回绑定及其两端对象是否仍然有效。
      */
     bool isValid() const;
     /**
@@ -179,7 +164,7 @@ public:
     bool isEnabled() const;
     /**
      * @brief Reports manual pause or an active state override.
-     * zh_CN: 返回绑定是否因手动暂停或活动状态覆盖而挂起。
+     * zh_CN: 返回绑定是否因手动暂停或状态覆盖而处于挂起状态。
      */
     bool isSuspended() const;
     /**
@@ -199,7 +184,7 @@ public:
     void resume() const;
     /**
      * @brief Evaluates an active binding immediately, bypassing deferred scheduling.
-     * zh_CN: 立即计算活动绑定，跳过延迟调度。
+     * zh_CN: 立即求值并同步一次活动绑定，跳过延迟调度。
      */
     void refresh() const;
     /**
@@ -216,7 +201,8 @@ private:
 
 /**
  * @brief Managed property synchronization through Qt meta-properties and NOTIFY.
- * zh_CN: 通过 Qt 元属性与 NOTIFY 信号提供可管理的属性同步。
+ * A valid replacement invalidates the old binding handle; an invalid request leaves the existing binding intact.
+ * zh_CN: 通过 Qt 元属性与 NOTIFY 信号同步属性值。新绑定通过校验后会替换原绑定，旧句柄随之失效；校验失败则保留原绑定。
  */
 class PropertyBinder {
 public:
@@ -227,34 +213,17 @@ public:
     enum Direction { OneWay, TwoWay };
 
     /**
-     * @brief Synchronizes properties, observing the available NOTIFY signals.
-     * zh_CN: 同步属性，并连接可用的 NOTIFY 信号。
-     *
-     * Both endpoints must belong to the calling Qt thread. A source without
-     * NOTIFY still supplies the initial value; later changes in that direction
-     * cannot be observed. TwoWay observes each direction only when it notifies.
-     * A valid registration replaces the binding on the same target property;
-     * an invalid registration leaves it intact. State overrides suspend this
-     * binding and read the latest source value when they end.
-     * zh_CN: 两端对象必须属于调用线程。源无 NOTIFY 时仍同步初值，但无法跟踪
-     * 该方向的后续变化；TwoWay 仅监听带通知的方向。有效注册替换同一目标属性
-     * 的已有绑定；无效注册保留原绑定。状态覆盖期间暂停绑定，退出时读取最新源值。
+     * @brief Binds @p sPropName on @p source to @p tPropName on @p target using available NOTIFY signals.
+     * Both objects must live on the calling thread; a valid call replaces any existing binding on the target property.
+     * zh_CN: 将 @p source 的属性绑定到 @p target 的属性并监听可用 NOTIFY 信号。两端对象须位于调用线程；注册成功时会替换目标属性上的已有绑定。
      */
     static void
     bind(QObject* source, const char* sPropName, QObject* target, const char* tPropName, Direction dir = OneWay);
 
     /**
-     * @brief Installs a managed direct binding, synchronizing immediately.
-     * zh_CN: 安装可管理的直接绑定，并立即同步初值。
-     *
-     * An enabled initial synchronization bypasses Behavior. TwoWay additionally
-     * requires writable source and a target NOTIFY signal. State and animation
-     * writes never propagate back into the source.
-     * Both endpoints must be readable and belong to the calling Qt thread;
-     * the target must also be writable and the source must expose NOTIFY.
-     * zh_CN: 启用绑定时的初次同步跳过 Behavior。TwoWay 还要求源可写且目标具有
-     * NOTIFY 信号。状态赋值和动画帧不会反向写入源。
-     * 两端属性须可读且属于调用线程；目标还须可写，源须具有 NOTIFY 信号。
+     * @brief Installs a managed direct binding and synchronizes the initial value immediately.
+     * Both objects must live on the calling thread; @p sourceProp requires NOTIFY and @p targetProp must be writable (TwoWay requires both directions to be readable, writable, and notifying).
+     * zh_CN: 安装可管理的直接绑定并立即同步初值。两端对象须在调用线程，源属性须带 NOTIFY 且目标属性可写；双向绑定还要求源可写且目标带 NOTIFY。
      */
     static BindingHandle bindManaged(QObject* source,
         const char* sourceProp,
@@ -263,14 +232,9 @@ public:
         Direction direction = OneWay,
         BindingOptions options = {});
     /**
-     * @brief Installs a C++ expression binding with explicitly observed inputs.
-     * zh_CN: 安装使用显式可观察输入的 C++ 表达式绑定。
-     *
-     * Empty dependencies permit a constant expression. A destroyed dependency
-     * permanently invalidates the binding before its callback can run again.
-     * The target property must be readable and writable.
-     * zh_CN: 空依赖允许常量表达式。依赖销毁会使绑定永久失效，且不再调用回调。
-     * 目标属性须可读且可写。
+     * @brief Installs a C++ expression binding driven by explicit @p dependencies.
+     * The target property must be readable and writable; destroying any dependency permanently invalidates the binding.
+     * zh_CN: 安装由显式 @p dependencies 驱动的 C++ 表达式绑定。目标属性须可读可写；任意依赖销毁后绑定即永久失效。
      */
     static BindingHandle bindComputed(QObject* target,
         const char* targetProp,
@@ -312,8 +276,8 @@ struct QMLState {
 };
 
 /**
- * @brief MotionPolicy-aware animation for managed property writes.
- * zh_CN: 遵循 MotionPolicy 的受管理属性写入动画。
+ * @brief Animation settings for managed property writes, respecting MotionPolicy.
+ * zh_CN: 受管理属性写入的动画配置，自动遵循 MotionPolicy 动效策略。
  */
 struct PropertyAnimation {
     int duration = 180;
@@ -322,14 +286,9 @@ struct PropertyAnimation {
 };
 
 /**
- * @brief Animation selected for matching state changes; empty properties match all.
- * zh_CN: 匹配状态变化时使用的动画；空属性列表表示匹配全部属性。
- *
- * An empty from/to matches the default state; "*" matches any state. Exact
- * endpoint matches outrank wildcards; registration order breaks equal scores.
- * Anchors are resolved immediately by their owning layout and are not animated.
- * zh_CN: 空 from/to 匹配默认状态；"*" 匹配任意状态。精确端点优先于通配符；
- * 相同优先级按注册顺序选择。锚点由所属布局立即求解，不应用动画。
+ * @brief Animation selected for matching state changes; an empty properties list matches all properties.
+ * Empty from/to matches the default state, and "*" matches any state; anchor changes are not animated.
+ * zh_CN: 为匹配的状态切换指定过渡动画（properties 为空时匹配全部属性）。空的 from/to 表示默认状态，"*" 匹配任意状态；锚点变更不播放动画。
  */
 struct StateTransition {
     QString from = QStringLiteral("*");
@@ -339,14 +298,9 @@ struct StateTransition {
 };
 
 /**
- * @brief Lazily created QObject-host-owned observer for QMLPlus state transitions.
- * zh_CN: 由 QObject 宿主按需创建并管理的状态过渡观察对象。
- *
- * Signals describe managed state changes. transitionFinished is emitted once
- * after the destination settles, including immediate transitions. Interrupted
- * transitions do not emit finished; Behavior alone is not a state transition.
- * zh_CN: 信号描述受管理状态变化。目标状态稳定后发送一次 transitionFinished，
- * 包括立即完成的过渡。被打断的过渡不发送完成信号；单独 Behavior 不属于状态过渡。
+ * @brief Lazily created observer for QMLPlus state transitions, owned by the QObject host.
+ * Emits transitionFinished() once when a transition settles, including immediate switches, unless interrupted.
+ * zh_CN: 由 QObject 宿主按需创建并管理的状态过渡观察对象。过渡稳定后（含立即完成的情况）发送一次 transitionFinished()，被打断时不发送。
  */
 class QMLPlusRuntime : public QObject {
     Q_OBJECT
@@ -384,13 +338,9 @@ private:
 };
 
 /**
- * @brief Mixin that adds anchors, property binding, and simple states to QWidget-based components.
- * zh_CN: 为 QWidget 组件提供 anchors、属性绑定和简单 state 能力的 mixin。
- *
- * States and runtime observation require a QObject host. Anchor and implicit
- * binding conveniences require QWidget; bind() targets that QWidget host.
- * zh_CN: 状态与运行时观察要求 QObject 宿主；锚点和隐式绑定便捷接口要求
- * QWidget；bind() 自动以该 QWidget 宿主作为目标。
+ * @brief Mixin adding anchors, property bindings, and simple states to QWidget-based controls.
+ * States and runtime() require a QObject host; anchor and host-targeted binding helpers require QWidget.
+ * zh_CN: 为 QWidget 控件提供锚点布局、属性绑定与简单状态切换能力的 mixin。状态与 runtime() 需要 QObject 宿主，锚点及面向宿主的绑定接口需要 QWidget。
  */
 class QMLPlus {
 public:
@@ -404,39 +354,23 @@ public:
     AnchorLayout::Anchors* anchors();
 
     /**
-     * @brief Applies a named state, or clears state when name is empty.
-     * zh_CN: 应用具名 state；名称为空时恢复默认状态。
-     *
-     * Unknown non-empty names are ignored and leave the current state intact.
-     * Properties already overridden by another state controller reject the
-     * entire transition. States preserve bindings and refresh them on exit.
-     * zh_CN: 未注册的非空名称会被忽略，并保持当前 state 不变。
-     * 若属性已被其他状态控制器覆盖，则拒绝整个过渡。状态保留原绑定，退出时刷新。
+     * @brief Applies a registered state by name, or restores the default state when @p name is empty.
+     * Unknown names are ignored, and existing bindings resume when leaving the state.
+     * zh_CN: 按名称切换状态；@p name 为空时恢复默认状态。未知名称会被忽略，退出状态后原属性绑定自动恢复同步。
      */
     void setState(const QString& name);
     QString state() const;
 
     /**
-     * @brief Registers or replaces a named state definition.
-     * zh_CN: 注册或替换一个具名 state 定义。
-     *
-     * Replacing the current state applies its new definition immediately.
-     * An unchanged state name does not emit stateChanged again.
-     * zh_CN: 替换当前状态时立即应用新定义；状态名称未改变时不重复发送 stateChanged。
+     * @brief Registers or replaces a named state definition; replacing the active state applies it immediately.
+     * zh_CN: 注册或替换具名状态定义；若替换的正是当前状态则立即重新应用。
      */
     void addState(const QMLState& state);
 
     /**
-     * @brief Reevaluates conditions; the first registered true condition wins.
-     * zh_CN: 重新计算条件；按注册顺序选择首个成立的条件。
-     *
-     * Dependency notifications reevaluate automatically. No match selects the
-     * default state. setState() remains manual until the next reevaluation.
-     * Replacement preserves state order. extend applies ancestors first, with
-     * derived changes winning; missing or cyclic ancestors leave state intact.
-     * zh_CN: 依赖属性通知触发时会自动重新求值；无匹配条件时切回默认状态。setState() 的手动
-     * 选择保持到下次求值。替换状态会保留注册顺序；extend 先应用祖先定义再由派生变更覆盖，
-     * 若祖先缺失或存在循环则保持当前状态不变。
+     * @brief Reevaluates state conditions in registration order and activates the first match, or the default state if none match.
+     * Also runs automatically when dependency properties notify; derived states using extend inherit ancestor changes unless cyclic or missing.
+     * zh_CN: 按注册顺序重新计算各状态的 when 条件并应用首个成立的状态，无匹配时恢复默认状态（依赖属性变化时也会自动触发）。使用 extend 继承的状态会先应用祖先定义，循环或缺失祖先会被忽略。
      */
     void evaluateStates();
     /**
@@ -457,13 +391,8 @@ public:
     void resetAnchors();
 
     /**
-     * @brief Binds a source property to a property on the QWidget host.
-     * zh_CN: 将 source 属性绑定到 QWidget 宿主上的 target 属性。
-     *
-     * Uses PropertyBinder::bind(), including initial synchronization without
-     * NOTIFY, same-thread validation, and replacement of an existing binding.
-     * zh_CN: 使用 PropertyBinder::bind()，保留无 NOTIFY 的初值同步，要求同线程，
-     * 并替换已有绑定。
+     * @brief Binds @p sourceProp on @p source to @p targetProp on this QWidget host via PropertyBinder::bind().
+     * zh_CN: 通过 PropertyBinder::bind() 将 @p source 的属性绑定到当前 QWidget 宿主的指定属性。
      */
     void bind(const char* targetProp,
         QObject* source,
@@ -493,13 +422,9 @@ public:
      */
     void addTransition(const StateTransition& transition);
     /**
-     * @brief Sets the default animation for this host's managed property writes.
-     * zh_CN: 设置宿主受管理属性写入时使用的默认动画。
-     *
-     * Explicit state transitions take precedence. Direct QWidget setter calls
-     * are not intercepted. Retargeting starts from the current visible value.
-     * zh_CN: 显式状态过渡优先级更高；不会拦截直接调用的 QWidget setter；
-     * 动画重新定向会从当前可见值平滑过渡。
+     * @brief Sets the default animation used when @p propertyName is written via writeProperty() or a binding.
+     * Explicit StateTransition rules take precedence; direct C++ setter calls are not animated.
+     * zh_CN: 设置通过 writeProperty() 或绑定更新 @p propertyName 时使用的默认动画。显式 StateTransition 优先级更高，直接调用 C++ setter 不会触发动画。
      */
     void setBehavior(const char* propertyName, const PropertyAnimation& animation);
     /**

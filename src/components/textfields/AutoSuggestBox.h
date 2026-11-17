@@ -37,12 +37,9 @@ class AutoSuggestBoxAccessible;
 }
 
 /**
- * @brief LineEdit-based search box with query button and suggestion popup.
- * zh_CN: 基于 LineEdit 的搜索输入框，带查询图标与候选建议弹层。
- *
- * Combines a query icon, inline clear button, suggestion list or external model,
- * and async loading states for search workflows.
- * zh_CN: 组合了查询图标、行内清除按钮、静态或外部数据模型及异步加载状态，适用于搜索输入场景。
+ * @brief LineEdit-based search box with a query button, clear action, and suggestion popup.
+ * Supports static suggestion lists, external models, and asynchronous search loading states.
+ * zh_CN: 基于 LineEdit 的搜索输入框，带查询与清除按钮及候选弹层，支持静态列表、外部模型与异步搜索状态。
  */
 class AutoSuggestBox : public LineEdit {
     Q_OBJECT
@@ -94,8 +91,8 @@ class AutoSuggestBox : public LineEdit {
      */
     Q_PROPERTY(int clearButtonSize READ clearButtonSize WRITE setClearButtonSize NOTIFY clearButtonSizeChanged)
     /**
-     * @brief Typography role used by suggestion rows.
-     * zh_CN: 建议项行文本使用的排版角色。
+     * @brief Fluent Typography preset used by suggestion rows.
+     * zh_CN: 候选项文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole suggestionFontRole
         READ suggestionFontRole
@@ -168,11 +165,9 @@ public:
     bool isSuggestionListOpen() const;
 
     /**
-     * @brief Uses an external flat model (column 0, DisplayRole for text, optional UserRole for data) without taking ownership.
-     *
-     * Passing nullptr or calling setSuggestions() switches back to QStringList mode; rows are not copied.
-     * zh_CN: 使用外部平面模型提供候选项（第 0 列 DisplayRole 为文本，可选 UserRole 存附加数据），不接管所有权；
-     * 传入 nullptr 或调用 setSuggestions() 可切回字符串列表模式，不复制外部行数据。
+     * @brief Uses an external model (column 0 DisplayRole, optional UserRole data) as suggestions without copying or deleting it.
+     * Pass nullptr or call setSuggestions() to switch back to string-list mode.
+     * zh_CN: 使用外部模型作为候选项（不会复制或销毁模型）；传 nullptr 或调用 setSuggestions() 切回字符串列表模式。
      */
     void setSuggestionModel(QAbstractItemModel* model);
     QAbstractItemModel* suggestionModel() const;
@@ -207,12 +202,9 @@ public:
     void setLoadMoreText(const QString& text);
 
     /**
-     * @brief Checks whether requestId is still the active request before updating an external model.
-     *
-     * Editing, closing the popup, replacing the model, or disabling async suggestions invalidates prior IDs.
-     * Async queries and model updates must finish on the GUI thread.
-     * zh_CN: 更新外部模型前校验 requestId 是否仍为当前有效请求。编辑、关闭弹层、更换模型或禁用异步模式
-     * 都会使旧请求失效；网络请求结果与模型更新需在 GUI 线程处理。
+     * @brief Checks whether requestId is still current before updating an external model (updates must run on the GUI thread).
+     * Editing, closing the popup, replacing the model, or disabling async mode invalidates earlier requests.
+     * zh_CN: 更新外部模型前校验 requestId 是否仍为当前请求（更新需在 GUI 线程完成）；编辑、关闭弹层、更换模型或关闭异步模式都会使旧请求失效。
      */
     bool isSuggestionRequestCurrent(quint64 requestId) const;
     /**
@@ -221,11 +213,9 @@ public:
      */
     bool completeSuggestionRequest(quint64 requestId, bool hasMore = false);
     /**
-     * @brief Applies string results for requestId (appends when load-more); returns false if outdated.
-     *
-     * Only for QStringList mode; external models use completeSuggestionRequest().
-     * zh_CN: 在字符串列表模式下写入 requestId 的结果（加载更多时追加）；请求已过期时返回 false。
-     * 仅适用于 QStringList 模式，外部模型请使用 completeSuggestionRequest()。
+     * @brief Sets or appends QStringList results for requestId, returning false if outdated.
+     * External-model mode should update the model and call completeSuggestionRequest() instead.
+     * zh_CN: 在字符串列表模式下写入或追加 requestId 的结果，请求已过期时返回 false；外部模型请直接更新模型并调用 completeSuggestionRequest()。
      */
     bool setSuggestionsForRequest(quint64 requestId, const QStringList& suggestions, bool hasMore = false);
     /**

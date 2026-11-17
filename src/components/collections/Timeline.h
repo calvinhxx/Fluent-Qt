@@ -8,13 +8,9 @@ namespace fluent::collections {
 class TimelineDelegate;
 class TimelineAccessible;
 /**
- * @brief Model-backed timeline view built on ListView with Fluent scrolling and theming.
- * Uses an external model without taking ownership; ordering, timestamps, and node status
- * come from the model (DisplayRole for title, DecorationRole for optional QIcon), with no I/O
- * or per-row widgets. Replace the inherited item delegate for custom row layouts.
- * zh_CN: 基于 ListView 的模型驱动时间线视图，复用 Fluent 滚动与主题。
- * 关联外部模型（不接管所有权），条目顺序、时间戳和状态均由模型提供（DisplayRole 为标题，
- * DecorationRole 为可选图标），不执行 I/O 也不逐行创建控件；如需自定义行排版可替换代理。
+ * @brief Model-backed timeline view displaying chronological event nodes and status.
+ * Reads DisplayRole for titles, DecorationRole for optional icons, and DataRole for details.
+ * zh_CN: 按时间顺序展示事件节点与状态的时间线视图，数据通过模型提供。
  */
 class Timeline : public ListView {
     Q_OBJECT
@@ -34,20 +30,16 @@ public:
     enum Status { Neutral, Active, Success, Warning, Error };
     Q_ENUM(Status)
     /**
-     * @brief Optional roles for description text, timestamp label, and node status.
-     * Text roles are displayed as formatted by the model; StatusRole defaults to Neutral.
-     * Qt::AccessibleTextRole and Qt::AccessibleDescriptionRole override generated accessibility text.
-     * zh_CN: 可选的描述、时间戳和节点状态角色。
-     * 文本由模型自行格式化，StatusRole 默认为 Neutral；可通过 Qt::AccessibleTextRole 和
-     * AccessibleDescriptionRole 覆盖默认无障碍文本。
+     * @brief Optional model roles for description text, timestamp label, and node status (defaults to Neutral).
+     * zh_CN: 可选的模型角色：描述文本、时间戳和节点状态（StatusRole 默认为 Neutral）。
      */
     enum DataRole { DescriptionRole = Qt::UserRole + 1, TimestampRole, StatusRole };
     Q_ENUM(DataRole)
     explicit Timeline(QWidget* parent = nullptr);
     ~Timeline() override;
     /**
-     * @brief Associates an external model without taking ownership or modifying its data.
-     * zh_CN: 关联外部数据模型，不接管所有权也不修改其数据。
+     * @brief Sets the timeline model (still managed by the caller).
+     * zh_CN: 设置时间线数据模型（仍由应用管理，不会随视图销毁）。
      */
     void setModel(QAbstractItemModel* model) override;
     NodeAlignment nodeAlignment() const;

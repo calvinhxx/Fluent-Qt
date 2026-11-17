@@ -16,8 +16,8 @@ namespace fluent::windowing {
 class TitleBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Hosted title-bar content widget (ownership remains with the caller).
-     * zh_CN: 标题栏内容区承载的控件（不接管所有权）。
+     * @brief Widget hosted in the title-bar content area.
+     * zh_CN: 标题栏内容区承载的控件。
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
     /**
@@ -54,6 +54,10 @@ public:
 
     QWidget* contentHost() const { return const_cast<TitleBar*>(this); }
     QWidget* contentWidget() const { return m_contentWidget; }
+    /**
+     * @brief Sets the title-bar content widget without taking ownership.
+     * zh_CN: 设置标题栏内容区控件（不负责销毁）。
+     */
     void setContentWidget(QWidget* widget);
 
     int systemReservedLeadingWidth() const { return m_systemReservedLeadingWidth; }

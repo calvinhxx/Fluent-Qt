@@ -17,15 +17,9 @@ class ParticleLayer;
 class SpatialView;
 
 /**
- * @brief Plugin adapter providing SpatialView and ParticleLayer factories with deactivation cleanup.
- * Register with PluginManager and activate "fluentqt.spatial" on the GUI thread. Activation
- * initializes native styling without creating a GPU context. Deactivation switches tracked views
- * to flat raster mode and releases particle GPU layers while keeping widgets intact; reactivation
- * restores render modes without re-enabling spatial depth automatically.
- * zh_CN: 提供 SpatialView 与 ParticleLayer 工厂及停用清理的插件适配器。
- * 在 GUI 线程向 PluginManager 注册并激活 fluentqt.spatial。激活仅初始化原生样式，不创建 GPU 上下文；
- * 停用时将关联视图切回平面光栅模式并释放粒子 GPU 代理，同时保留外部控件；重新激活会恢复先前的
- * 渲染模式，但不会自动重新开启 3D 透视。
+ * @brief Plugin providing SpatialView and ParticleLayer factories for the 3D perspective module.
+ * Deactivating switches attached views to 2D raster mode and releases GPU particle layers without deleting widgets; must run on the GUI thread.
+ * zh_CN: 管理 3D 透视视图与粒子纹理层的插件。停用时将关联视图切回 2D 绘制并释放粒子 GPU 资源（不销毁控件），须在 GUI 线程使用。
  */
 class SpatialPlugin : public plugins::WidgetPlugin {
     Q_OBJECT
@@ -39,11 +33,11 @@ public:
     QWidget* createWidget(const QString& key, QWidget* parent, QString* error) override;
     bool isActive() const;
 
-    /** @brief Attaches an existing SpatialView (including subclasses) without reparenting or taking ownership. zh_CN: 关联已有的 SpatialView（含自定义子类），不改变父对象或所有权。 */
+    /** @brief Attaches an existing SpatialView while active (caller retains ownership). zh_CN: 激活状态下关联已有的 SpatialView（仍由应用管理，不会随插件销毁）。 */
     bool attachView(SpatialView* view);
-    /** @brief Creates a ParticleLayer for backdrop while active (without taking ownership of backdrop); returns nullptr when inactive. zh_CN: 激活时为指定粒子背景创建 ParticleLayer（不接管背景所有权）；未激活时返回 nullptr。 */
+    /** @brief Creates a ParticleLayer for backdrop while active (backdrop remains caller-owned); returns nullptr when inactive. zh_CN: 激活时为粒子背景创建 ParticleLayer（背景控件仍由应用管理）；未激活时返回 nullptr。 */
     ParticleLayer* createParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent = nullptr);
-    /** @brief Configures a hidden Fluent window for future GPU composition while active without creating a context. zh_CN: 激活时为隐藏的 Fluent 窗口预配置 GPU 合成属性（不创建上下文）。 */
+    /** @brief Configures a hidden Fluent window for GPU compositing while active without creating a context. zh_CN: 激活时为隐藏的 Fluent 窗口预置所需的图形表面属性（不创建上下文）。 */
     bool prepareWindow(windowing::Window* window);
     bool prepareWindow(windowing::Window* window, QSurface::SurfaceType surfaceType);
 

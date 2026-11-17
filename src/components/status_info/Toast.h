@@ -49,16 +49,9 @@ class Label;
 namespace fluent::status_info {
 
 /**
- * @brief Transient same-window notification with severity and edge placement.
- * zh_CN: 支持严重级别和边缘定位的同窗口短暂通知。
- *
- * Toast is an in-app overlay rather than an operating-system notification. The
- * application supplies all visible text and the anchor whose top-level window
- * hosts the toast. Managed toasts can stack per placement up to
- * `maximumVisible()`, shifting away from the chosen edge in show order.
- * zh_CN: Toast 是应用内浮层而不是操作系统通知。所有可见文案和用于确定顶层宿主
- * 的锚点均由应用提供。托管 Toast 可按定位点堆叠，数量上限为 `maximumVisible()`，
- * 并按显示顺序沿对应边缘向外偏移。
+ * @brief Transient in-app notification toast anchored to a window edge.
+ * Managed toasts stack per placement up to `maximumVisible()` inside the anchor's top-level window.
+ * zh_CN: 锚定在应用窗口边缘的同窗口短暂通知浮层；通过 showToast() 创建的托管通知会按位置堆叠，上限为 `maximumVisible()`。
  */
 class Toast : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -84,11 +77,8 @@ public:
     Q_ENUM(Severity)
 
     /**
-     * @brief Edge anchor for the toast card.
-     * zh_CN: Toast 卡片的边缘锚点。
-     *
-     * `*Start` / `*End` follow the host layout direction (leading/trailing).
-     * zh_CN: `*Start` / `*End` 跟随宿主布局方向（行首/行尾）。
+     * @brief Edge anchor for the toast card (`*Start` / `*End` follow layout direction).
+     * zh_CN: Toast 卡片的边缘定位方式（`*Start` / `*End` 跟随布局方向）。
      */
     enum Placement { TopStart, Top, TopEnd, BottomStart, Bottom, BottomEnd };
     Q_ENUM(Placement)
@@ -125,38 +115,31 @@ public:
     void setAnimationEnabled(bool enabled);
 
     /**
-     * @brief Optional action button shown inside the toast (without taking QAction ownership).
-     *
-     * Triggering the action from the toast dismisses it with `ActionInvoked`.
-     * zh_CN: 显示在 Toast 内的可选操作按钮（不接管 QAction 所有权）；点击触发后以 `ActionInvoked` 原因关闭。
+     * @brief Optional action button inside the toast; triggering it closes the toast with `ActionInvoked`.
+     * zh_CN: Toast 内的可选操作按钮；点击触发后会以 `ActionInvoked` 原因关闭通知。
      */
     QAction* action() const { return m_action.data(); }
+    /** @brief Sets the action button shown in the toast (still managed by the caller; not deleted by Toast).
+     * zh_CN: 设置要显示的操作按钮（仍由应用管理，不会随通知销毁）。 */
     void setAction(QAction* action);
 
     /**
-     * @brief Whether a close button dismisses the toast with `CloseButton`.
-     * zh_CN: 是否显示关闭按钮，点击后以 `CloseButton` 原因关闭 Toast。
-     *
-     * Disabled by default to preserve pointer pass-through for plain messages.
-     * zh_CN: 默认关闭，以保留纯文本通知的鼠标穿透行为。
+     * @brief Whether a close button is shown to dismiss the toast with `CloseButton` (off by default for pointer pass-through).
+     * zh_CN: 是否显示关闭按钮（点击以 `CloseButton` 关闭，默认关闭以保留鼠标穿透）。
      */
     bool isClosable() const { return m_closable; }
     void setClosable(bool closable);
 
     /**
-     * @brief Whether an active duration timer pauses while the toast is hovered.
-     * zh_CN: 鼠标悬停 Toast 时是否暂停正在运行的持续时间计时器。
-     *
-     * Disabled by default so a non-interactive toast keeps the existing
-     * pointer-pass-through behavior.
-     * zh_CN: 默认为关闭，使非交互 Toast 保持既有的鼠标穿透行为。
+     * @brief Whether hovering pauses the auto-dismiss timer (off by default for pointer pass-through).
+     * zh_CN: 鼠标悬停时是否暂停自动关闭计时器（默认关闭以保留鼠标穿透）。
      */
     bool isPauseOnHoverEnabled() const { return m_pauseOnHoverEnabled; }
     void setPauseOnHoverEnabled(bool enabled);
 
     /**
-     * @brief Optional key used by `showOrUpdateToast()` within one managed stack.
-     * zh_CN: `showOrUpdateToast()` 在单个托管堆栈内使用的可选更新键。
+     * @brief Optional key used by `showOrUpdateToast()` to update an existing toast in place.
+     * zh_CN: 供 `showOrUpdateToast()` 匹配并原地更新的标识键。
      */
     QString updateKey() const { return m_updateKey; }
     void setUpdateKey(const QString& key);
@@ -166,14 +149,9 @@ public:
     void setToastProgress(qreal progress);
 
     /**
-     * @brief Maximum managed toasts kept visible per host and placement.
-     * zh_CN: 同一宿主、同一锚点下同时可见的托管 Toast 上限。
-     *
-     * Intended as process-wide startup configuration. Changing the value does
-     * not dismiss already-open toasts; it only affects subsequent `showToast`
-     * stacking and eviction.
-     * zh_CN: 作为进程级启动配置使用。修改该值不会关闭已打开的 Toast，只影响之后
-     * `showToast` 的堆叠与淘汰。
+     * @brief Maximum managed toasts visible per host window and placement.
+     * Changing this affects only future `showToast()` calls, not already-open toasts.
+     * zh_CN: 同一窗口同一位置同时显示的托管 Toast 上限；修改后仅对之后创建的 Toast 生效。
      */
     static int maximumVisible();
     static void setMaximumVisible(int count);
@@ -191,12 +169,8 @@ public:
     void dismiss();
 
     /**
-     * @brief Creates a self-deleting toast and stacks it with other managed toasts.
-     * zh_CN: 创建自动销毁的 Toast，并与同定位的其他托管 Toast 堆叠。
-     *
-     * When the stack exceeds `maximumVisible()`, the oldest managed toast for
-     * that host and placement is dismissed.
-     * zh_CN: 超过 `maximumVisible()` 时，会关闭该宿主与定位下最旧的托管 Toast。
+     * @brief Shows a self-deleting toast and stacks it with other managed toasts, evicting the oldest if exceeding `maximumVisible()`.
+     * zh_CN: 显示自动销毁的托管 Toast 并按位置堆叠；超过 `maximumVisible()` 时会关闭最早的一条。
      */
     static Toast* showToast(QWidget* anchor,
         const QString& message,
@@ -206,16 +180,9 @@ public:
         const QMargins& margins = QMargins(16, 16, 16, 16));
 
     /**
-     * @brief Shows a managed toast or updates the open toast with the same key.
-     * zh_CN: 显示托管 Toast，或原地更新同一更新键对应的已打开 Toast。
-     *
-     * Matching is scoped by top-level host, placement, and non-empty
-     * `updateKey`. An in-place update preserves stack order, resets the
-     * duration timer, emits `updated()`, and does not consume another
-     * `maximumVisible()` slot. An empty key behaves like `showToast()`.
-     * zh_CN: 匹配范围由顶层宿主、定位和非空 `updateKey` 共同确定。原地更新会保留
-     * 堆叠顺序、重置持续时间计时器并发出 `updated()`，且不额外占用
-     * `maximumVisible()` 名额；空键等同于 `showToast()`。
+     * @brief Shows a managed toast, or updates an open one sharing the same host, placement, and non-empty `updateKey`.
+     * In-place updates reset the timer and emit `updated()`; an empty key behaves like `showToast()`.
+     * zh_CN: 显示托管 Toast，或按窗口、位置与非空 `updateKey` 原地更新已有通知并重置计时器；空键等同于 `showToast()`。
      */
     static Toast* showOrUpdateToast(QWidget* anchor,
         const QString& updateKey,

@@ -38,12 +38,8 @@ class DataGridPinnedView;
 } // namespace detail
 
 /**
- * @brief Fluent two-dimensional table view backed by an external item model.
- * Models, selection models, delegates, sorting, validation, and state persistence
- * remain managed by the caller. Cells are painted by delegates and editors are created
- * only for the active cell, keeping widget count independent of row or column count.
- * zh_CN: 基于外部数据模型的 Fluent 二维表格视图。
- * 模型、选择模型、代理、排序、校验与状态持久化均由外部管理；单元格由代理绘制，仅为当前编辑单元格创建编辑器，控件数量不随行列规模增长。
+ * @brief Table view backed by a Qt item model with selection, sorting, and on-demand editing.
+ * zh_CN: 基于 Qt 数据模型的表格视图，支持行/单元格选择、排序与按需编辑。
  */
 class DataGrid : public QTableView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -68,14 +64,14 @@ public:
     ~DataGrid() override;
 
     /**
-     * @brief Associates an external item model without taking ownership and refreshes table state.
-     * zh_CN: 关联外部数据模型（不接管所有权）并刷新表格状态。
+     * @brief Sets the table item model (still managed by the caller) and refreshes table state.
+     * zh_CN: 设置数据模型（仍由应用管理，不会随视图销毁）并刷新表格状态。
      */
     void setModel(QAbstractItemModel* model) override;
 
     /**
-     * @brief Associates an external selection model without taking ownership.
-     * zh_CN: 关联外部选择模型（不接管所有权）。
+     * @brief Sets the selection model (still managed by the caller).
+     * zh_CN: 设置选择模型（仍由应用管理，不会随视图销毁）。
      */
     void setSelectionModel(QItemSelectionModel* selectionModel) override;
 
@@ -115,7 +111,7 @@ public:
 
     /**
      * @brief Serializes column order, widths, visibility, pinned flags, and sort indicator.
-     * zh_CN: 序列化列顺序、列宽、可见性、固定状态及排序指示器（持久化由外部负责）。
+     * zh_CN: 序列化列顺序、列宽、可见性、固定状态及排序指示器。
      */
     QByteArray saveColumnState() const;
     /**

@@ -15,12 +15,9 @@ class QContextMenuEvent;
 namespace fluent::textfields {
 
 /**
- * @brief Fluent typography label with optional text elision.
- * zh_CN: 支持可选文本省略的 Fluent 排版标签。
- *
- * Label maps text styling to Fluent typography roles while preserving QLabel
- * alignment, text content, and standard widget behavior.
- * zh_CN: Label 将文本样式映射到 Fluent 排版角色，同时保留 QLabel 的对齐、文本内容和标准控件行为。
+ * @brief Fluent text label supporting Typography presets and text elision.
+ * Preserves standard QLabel alignment, content, and widget behavior.
+ * zh_CN: 支持预设字号样式与文本省略的 Fluent 文本标签，保留 QLabel 的对齐与标准控件行为。
  */
 class Label : public QLabel, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -30,8 +27,8 @@ class Label : public QLabel, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QString text READ text WRITE setText)
     /**
-     * @brief Fluent typography role applied to label text.
-     * zh_CN: 应用到标签文本的 Fluent 排版角色。
+     * @brief Fluent Typography preset applied to label text.
+     * zh_CN: 标签文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole fluentTypography
         READ fluentTypography
@@ -60,12 +57,9 @@ public:
     bool isTextElided() const { return m_isTextElided; }
 
     /**
-     * @brief Text color source used on theme updates.
-     *
-     * Default uses QPalette::WindowText. Any explicit role sets the label's own
-     * style sheet so an ancestor style sheet cannot override the color.
-     * zh_CN: 主题更新时文本颜色的设置方式：Default 使用 QPalette::WindowText，指定明确角色时
-     * 改用自身样式表设置颜色，避免被祖先样式表覆盖。
+     * @brief Text color source applied on theme updates.
+     * Default uses QPalette::WindowText; explicit presets apply a local style sheet so parent sheets cannot override them.
+     * zh_CN: 主题更新时的文字颜色来源；Default 使用 QPalette::WindowText，指定具体配色时会写入自身样式表以避免被父控件覆盖。
      */
     enum class TextColorRole { Default, Primary, Secondary, Tertiary, Disabled, OnAccent, Accent, Critical };
 

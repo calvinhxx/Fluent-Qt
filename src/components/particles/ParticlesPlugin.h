@@ -8,15 +8,9 @@
 namespace fluent::particles {
 
 /**
- * @brief Plugin adapter that creates and pauses ParticleBackdrop widgets on deactivation.
- * Register with PluginManager and activate "fluentqt.particles" on the GUI thread. Deactivating
- * pauses tracked backdrops without deleting them or changing properties like animationEnabled;
- * reactivating or destroying the plugin lifts the pause. Must not be parented under a tracked
- * backdrop, and creates no GPU context.
- * zh_CN: 负责创建 ParticleBackdrop 并在停用时统一暂停的插件适配器。
- * 在 GUI 线程向 PluginManager 注册并激活 fluentqt.particles。停用时仅暂停已关联的背景动画，
- * 不销毁控件，也不更改 animationEnabled 等属性；重新激活或销毁插件即恢复运行。插件不能作为
- * 受管理控件的子对象，且不创建 GPU 上下文。
+ * @brief Plugin that manages pausing and resuming ParticleBackdrop widgets.
+ * Deactivating pauses attached backdrops without deleting them; must be used on the GUI thread.
+ * zh_CN: 管理粒子背景暂停与恢复的插件。停用时统一暂停关联的动画（不销毁控件），须在 GUI 线程使用。
  */
 class ParticlesPlugin : public plugins::WidgetPlugin {
     Q_OBJECT
@@ -28,7 +22,7 @@ public:
     QStringList widgetKeys() const override;
     QWidget* createWidget(const QString& key, QWidget* parent, QString* error) override;
     bool isActive() const;
-    /** @brief Attaches an existing ParticleBackdrop while active without reparenting or taking ownership. zh_CN: 在激活状态下关联已有的 ParticleBackdrop（不改变父对象或所有权，保留原设置）。 */
+    /** @brief Attaches an existing ParticleBackdrop while active (caller retains ownership). zh_CN: 激活状态下关联已有的 ParticleBackdrop（仍由应用管理，不会随插件销毁）。 */
     bool attachBackdrop(ParticleBackdrop* backdrop);
 
 protected:

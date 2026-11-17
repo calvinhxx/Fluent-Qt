@@ -62,7 +62,7 @@ inline QString fluentCodepointGlyph(quint32 codepoint)
 
 /**
  * @brief Registers an application font as a script-specific fallback when supported (Qt 6.8+).
- * zh_CN: 在当前 Qt 版本支持时（Qt 6.8+），将应用字体注册为指定文字系统的回退字体。
+ * zh_CN: 在 Qt 6.8 及以上版本中，将应用字体注册为指定文字系统的备用字体。
  */
 inline void fluentAddApplicationFallbackFontFamily(QChar::Script script, const QString& family)
 {

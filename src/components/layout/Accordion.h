@@ -20,11 +20,8 @@ class Expander;
 
 /**
  * @brief Vertical container of Expander items with coordinated expansion and keyboard navigation.
- * zh_CN: 纵向排列多个 Expander 并协调展开状态与键盘焦点的容器。
- *
- * By default items use WidgetOwnership::Borrowed (non-owning); pass WidgetOwnership::Reparented
- * or WidgetOwnership::Owned to restore or transfer item lifetime.
- * zh_CN: 默认不接管条目所有权（WidgetOwnership::Borrowed）；可通过 WidgetOwnership 显式指定恢复原父对象或由容器托管销毁。
+ * Items default to WidgetOwnership::Borrowed; pass WidgetOwnership to restore or transfer item cleanup.
+ * zh_CN: 纵向排列多个 Expander 并协调展开与键盘焦点的容器；条目默认按 WidgetOwnership::Borrowed 管理，也可传入其他销毁方式。
  */
 class Accordion : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -51,38 +48,38 @@ public:
     WidgetOwnership itemOwnershipAt(int index) const;
 
     /**
-     * @brief Appends an Expander item without taking ownership (WidgetOwnership::Borrowed).
-     * zh_CN: 追加 Expander 条目（不接管所有权）。
+     * @brief Appends an Expander item (WidgetOwnership::Borrowed; not deleted by Accordion).
+     * zh_CN: 追加 Expander 条目（默认不自动销毁，可用带 WidgetOwnership 的重载指定销毁方式）。
      */
     bool addItem(Expander* item);
 
     /**
-     * @brief Appends an Expander item with the given lifetime policy.
-     * zh_CN: 按指定的所有权策略追加 Expander 条目。
+     * @brief Appends an Expander item with the given WidgetOwnership cleanup mode.
+     * zh_CN: 追加 Expander 条目，并传入 WidgetOwnership 指定销毁方式。
      */
     bool addItem(Expander* item, WidgetOwnership ownership);
 
     /**
-     * @brief Inserts an Expander item at index without taking ownership (WidgetOwnership::Borrowed).
-     * zh_CN: 在指定位置插入 Expander 条目（不接管所有权）。
+     * @brief Inserts an Expander item at index (WidgetOwnership::Borrowed; not deleted by Accordion).
+     * zh_CN: 在指定位置插入 Expander 条目（默认不自动销毁，可用带 WidgetOwnership 的重载指定销毁方式）。
      */
     bool insertItem(int index, Expander* item);
 
     /**
-     * @brief Inserts an Expander item at index with the given lifetime policy.
-     * zh_CN: 按指定的所有权策略在指定位置插入 Expander 条目。
+     * @brief Inserts an Expander item at index with the given WidgetOwnership cleanup mode.
+     * zh_CN: 在指定位置插入 Expander 条目，并传入 WidgetOwnership 指定销毁方式。
      */
     bool insertItem(int index, Expander* item, WidgetOwnership ownership);
 
     /**
-     * @brief Removes an item and detaches, restores, or deletes it per its ownership policy.
-     * zh_CN: 移除条目，并按其所有权策略解除关联、恢复原父对象或销毁。
+     * @brief Removes the item at index and handles cleanup according to its WidgetOwnership mode.
+     * zh_CN: 移除指定位置的条目，并按其 WidgetOwnership 指定的销毁方式解除关联、恢复原父控件或销毁。
      */
     bool removeItem(int index);
 
     /**
-     * @brief Removes and returns an item without deleting it, transferring ownership to the caller.
-     * zh_CN: 移出并返回条目（不销毁，所有权交还调用方）。
+     * @brief Removes and returns the item at index for the caller to manage or delete.
+     * zh_CN: 移出并返回指定位置的条目控件，改由调用方自行销毁。
      */
     Expander* takeItem(int index);
 

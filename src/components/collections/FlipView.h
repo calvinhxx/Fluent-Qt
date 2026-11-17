@@ -15,11 +15,9 @@ class QPropertyAnimation;
 namespace fluent::collections {
 
 /**
- * @brief Fluent carousel container that displays one QWidget page at a time.
- * Manages previous/next navigation buttons, horizontal or vertical orientation,
- * slide transitions, wheel/trackpad gestures, and optional page indicator dots.
- * zh_CN: 每次展示单个 QWidget 页面的 Fluent 轮播容器。
- * 负责前后翻页按钮、横向/纵向切换、滑动转场动画、滚轮/触控板手势以及可选页码指示点。
+ * @brief Carousel container displaying one QWidget page at a time.
+ * Supports navigation buttons, horizontal/vertical slide transitions, wheel/trackpad gestures, and page dots.
+ * zh_CN: 每次展示单个页面的 Fluent 轮播容器，支持前后翻页按钮、滑动切换动画、滚轮/触控板手势及页码指示点。
  */
 class FlipView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -62,36 +60,36 @@ public:
 
     void addPage(QWidget* page);
     /**
-     * @brief Appends a page widget with an explicit ownership policy.
-     * zh_CN: 按指定所有权策略追加页面控件。
+     * @brief Appends a page widget with an explicit WidgetOwnership disposal mode.
+     * zh_CN: 追加页面控件并指定销毁方式。
      */
     bool addPage(QWidget* page, WidgetOwnership ownership);
     void insertPage(int index, QWidget* page);
     /**
-     * @brief Inserts a page widget at index with an explicit ownership policy.
-     * zh_CN: 按指定所有权策略在 index 处插入页面控件。
+     * @brief Inserts a page widget at index with an explicit WidgetOwnership disposal mode.
+     * zh_CN: 在 index 处插入页面控件并指定销毁方式。
      */
     bool insertPage(int index, QWidget* page, WidgetOwnership ownership);
     /**
-     * @brief Legacy removal that detaches the page without deleting it (ownership returns to caller).
-     * zh_CN: 兼容旧接口：移除页面但不删除，将其交还给调用方。
+     * @brief Legacy removal that detaches the page without deleting it.
+     * zh_CN: 兼容旧接口：移除页面但不删除（交还应用管理）。
      */
     void removePage(int index);
     /**
-     * @brief Removes the page at index and disposes of it according to its ownership policy.
-     * zh_CN: 移除指定索引的页面，并按其配置的所有权策略释放或交还。
+     * @brief Removes the page at index and disposes of it according to its WidgetOwnership mode.
+     * zh_CN: 移除指定索引的页面，并按其配置的销毁方式释放或交还。
      */
     bool releasePage(int index);
     /**
      * @brief Removes and returns the page at index without deleting it.
-     * zh_CN: 移除并返回指定索引的页面控件，不执行删除。
+     * zh_CN: 移除并返回指定索引的页面控件（不删除）。
      */
     QWidget* takePage(int index);
     QWidget* pageAt(int index) const;
     int pageCount() const;
     /**
-     * @brief Returns the ownership policy configured for the page at index.
-     * zh_CN: 返回指定索引页面的所有权策略。
+     * @brief Returns the disposal mode configured for the page at index.
+     * zh_CN: 返回指定索引页面的销毁方式。
      */
     WidgetOwnership pageOwnershipAt(int index) const;
 

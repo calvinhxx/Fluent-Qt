@@ -39,10 +39,9 @@ struct BreadcrumbItem {
 };
 
 /**
- * @brief Path navigation bar with configurable item sizing and overflow truncation.
- * Displays an ordered trail of items, emits activation signals on click or keyboard trigger, and collapses excess segments according to the selected overflow mode.
- * zh_CN: 支持尺寸模式与溢出折叠的路径面包屑控件。
- * 按顺序展示路径条目，触发条目时发出激活信号，并在宽度不足时按所选模式收起或省略部分层级。
+ * @brief Path navigation bar with configurable item sizing and overflow collapsing.
+ * Emits activation signals on item click or keyboard trigger and collapses excess segments when width is limited.
+ * zh_CN: 路径面包屑控件，按顺序展示路径并在点击或按键时发出激活信号，宽度不足时按所选模式折叠多余层级。
  */
 class Breadcrumb : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -70,16 +69,16 @@ class Breadcrumb : public QWidget, public FluentElement, public QMLPlus {
         WRITE setAutoTruncateOnItemClick
         NOTIFY autoTruncateOnItemClickChanged)
     /**
-     * @brief Typography role used by standard breadcrumb items.
-     * zh_CN: 标准面包屑条目使用的排版角色。
+     * @brief Font role used by standard breadcrumb items.
+     * zh_CN: 标准面包屑条目使用的字号样式。
      */
     Q_PROPERTY(Typography::FontRole standardFontRole
         READ standardFontRole
         WRITE setStandardFontRole
         NOTIFY standardFontRoleChanged)
     /**
-     * @brief Typography role used by large breadcrumb items.
-     * zh_CN: 大尺寸面包屑条目使用的排版角色。
+     * @brief Font role used by large breadcrumb items.
+     * zh_CN: 大尺寸面包屑条目使用的字号样式。
      */
     Q_PROPERTY(Typography::FontRole largeFontRole READ largeFontRole WRITE setLargeFontRole NOTIFY largeFontRoleChanged)
 

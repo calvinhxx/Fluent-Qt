@@ -9,12 +9,9 @@
 namespace fluent {
 
 /**
- * @brief Runtime store for Fluent design tokens consumed by FluentElement.
- * zh_CN: 供 FluentElement 使用的运行时设计 token 存储。
- *
- * Seeded with built-in Fluent defaults and updated atomically when applications
- * or UserTheme commit custom palettes, corner radii, or font overrides.
- * zh_CN: 初始化为内置 Fluent 默认值，可在运行时通过应用或 UserTheme 原子更新调色板、圆角与字体覆盖。
+ * @brief Runtime store for Fluent design tokens used by FluentElement.
+ * Initialized with built-in defaults and updated atomically when applications or UserTheme apply overrides.
+ * zh_CN: 供 FluentElement 使用的运行时设计 token 存储。初始化为内置默认值，可通过应用代码或 UserTheme 原子更新。
  */
 class ThemeRegistry {
 public:
@@ -32,12 +29,8 @@ public:
 
     /**
      * @brief Extended theme state including the High Contrast palette.
-     * zh_CN: 包含高对比度调色板的扩展主题状态。
-     *
-     * Snapshot remains the original five-member aggregate so existing
-     * aggregate initialization and structured bindings stay source compatible.
-     * zh_CN: Snapshot 保留原五成员聚合，确保既有聚合初始化和结构化绑定
-     * 继续源码兼容。
+     * Keeps Snapshot as its base member for source compatibility with existing initializers.
+     * zh_CN: 包含高对比度调色板的扩展主题状态；保留 Snapshot 成员以兼容既有初始化写法。
      */
     struct ExtendedSnapshot {
         Snapshot base;
@@ -71,27 +64,20 @@ public:
     static ExtendedSnapshot defaultExtendedSnapshot();
 
     /**
-     * @brief Atomically commits the compatible snapshot while preserving High Contrast.
-     * zh_CN: 原子提交兼容快照，同时保留当前高对比度调色板。
-     *
-     * @return true when the committed state changed; false for an identical or invalid snapshot.
-     * zh_CN: 状态发生变化时返回 true；快照相同或无效时返回 false。
+     * @brief Atomically commits the compatible snapshot while preserving High Contrast; returns true if the state changed.
+     * zh_CN: 原子提交兼容快照并保留当前高对比度调色板；仅在状态发生变化时返回 true。
      */
     bool applySnapshot(const Snapshot& snapshot);
 
     /**
-     * @brief Atomically commits all three palettes and shared theme tokens.
-     * zh_CN: 原子提交三套调色板与共享主题 token。
+     * @brief Atomically commits all three palettes and shared theme tokens; returns true if the state changed.
+     * zh_CN: 原子提交三套调色板与共享主题 token；仅在状态发生变化时返回 true。
      */
     bool applyExtendedSnapshot(const ExtendedSnapshot& snapshot);
 
     /**
-     * @brief Returns a legacy Light/Dark palette selected by a boolean.
-     * zh_CN: 返回由布尔值选择的旧版 Light/Dark 调色板。
-     *
-     * @deprecated Use colors(FluentElement::Theme) so HighContrast cannot be
-     * silently collapsed to the Light palette.
-     * zh_CN: 请改用 colors(FluentElement::Theme)，避免 HighContrast 被静默按 Light 处理。
+     * @brief Returns a Light or Dark palette selected by a boolean (deprecated: use colors(FluentElement::Theme) to support HighContrast).
+     * zh_CN: 按布尔值返回 Light 或 Dark 调色板（已废弃，请改用 colors(FluentElement::Theme) 以支持 HighContrast）。
      */
     Q_DECL_DEPRECATED_X("Use colors(FluentElement::Theme)")
     const FluentElement::Colors& colors(bool dark) const { return dark ? m_dark : m_light; }
@@ -100,8 +86,8 @@ public:
     FluentElement::Radius radius() const { return {m_radiusNone, m_radiusControl, m_radiusOverlay}; }
 
     /**
-     * @brief Resolves a typography role with the active family override and scale.
-     * zh_CN: 使用当前字族覆盖与缩放解析排版角色。
+     * @brief Resolves the font configuration for @p role with the active family override and scale applied.
+     * zh_CN: 按当前自定义字族与缩放倍率解析指定字号档位的字体配置。
      */
     FluentElement::FontStyle resolvedFontStyle(Typography::FontRole role) const;
 
@@ -109,18 +95,14 @@ public:
     qreal fontScale() const { return m_fontScale; }
 
     /**
-     * @brief Updates a legacy Light/Dark palette selected by a boolean.
-     * zh_CN: 更新由布尔值选择的旧版 Light/Dark 调色板。
-     *
-     * @deprecated Use setColors(FluentElement::Theme, const Colors&) so the
-     * HighContrast palette remains addressable.
-     * zh_CN: 请改用 setColors(FluentElement::Theme, const Colors&)，以便显式
-     * 选择 HighContrast 调色板。
+     * @brief Updates a Light or Dark palette selected by a boolean (deprecated: use setColors(FluentElement::Theme, const Colors&)).
+     * zh_CN: 按布尔值更新 Light 或 Dark 调色板（已废弃，请改用 setColors(FluentElement::Theme, const Colors&) 以支持 HighContrast）。
      */
     Q_DECL_DEPRECATED_X("Use setColors(FluentElement::Theme, const Colors&)")
     void setColors(bool dark, const FluentElement::Colors& colors);
 
     // Convenience setters; each commits an atomic snapshot update.
+    // zh_CN: 便捷设置方法，每次调用均原子更新主题快照。
     void setColors(FluentElement::Theme theme, const FluentElement::Colors& colors);
     void setRadius(int none, int control, int overlay);
     void setFontFamilyOverride(const QString& family);
@@ -145,8 +127,8 @@ private:
     int m_radiusNone = 0;
     int m_radiusControl = 4;
     int m_radiusOverlay = 8;
-    QString m_fontFamily;    // empty => keep each role's default family. zh_CN: 空 => 保留各角色默认字族。
-    qreal m_fontScale = 1.0; // multiplies every role's size and line height. zh_CN: 缩放各角色字号与行高。
+    QString m_fontFamily;    // empty => keep each tier's default family. zh_CN: 空 => 保留各档位默认字族。
+    qreal m_fontScale = 1.0; // multiplies every tier's size and line height. zh_CN: 缩放各档位字号与行高。
     int m_revision = 0;
 };
 

@@ -24,12 +24,8 @@ namespace fluent::textfields {
 
 /**
  * @brief Fluent multi-line text input with line-count based sizing.
- * zh_CN: 支持按可见行数计算尺寸的 Fluent 多行文本输入框。
- *
- * TextEdit hosts QTextEdit-style editing while exposing Fluent frame, typography,
- * content margins, focused border, and min/max visible line metrics.
- * zh_CN: TextEdit 承载 QTextEdit 式编辑，并暴露 Fluent 外框、排版、内容边距、
- * 聚焦边线以及最小/最大可见行数参数。
+ * Provides QTextEdit editing with Fluent framing, typography, margins, and min/max visible lines.
+ * zh_CN: 支持按可见行数自适应高度的 Fluent 多行文本输入框，提供统一的外框、字号样式、边距及最小/最大行数控制。
  */
 class TextEdit : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -40,8 +36,8 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
     /**
-     * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * @brief Fluent Typography preset used for text.
+     * zh_CN: 文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -108,10 +104,8 @@ public:
     /** @brief Returns the current editing cursor, including its selection.
      * zh_CN: 返回包含选区的当前编辑光标。 */
     QTextCursor textCursor() const;
-    /** @brief Current caret rectangle in this widget's coordinates, including scroll offsets.
-     * zh_CN: 当前光标在本控件坐标系中的矩形，包含滚动偏移。
-     * The rectangle is not clipped; an offscreen caret can lie outside the widget.
-     * zh_CN: 矩形不做裁剪，滚出视口的光标可能位于控件范围之外。 */
+    /** @brief Current caret rectangle in widget coordinates, including scroll offsets (unclipped if scrolled offscreen).
+     * zh_CN: 当前光标在本控件坐标系中的未裁剪矩形（包含滚动偏移，滚出视口时可能位于控件外）。 */
     Q_PROPERTY(QRect cursorRect READ cursorRect NOTIFY cursorRectChanged)
     QRect cursorRect() const;
     /** @brief Sets a cursor belonging to this editor's document.
@@ -121,12 +115,9 @@ public:
     // Text APIs. zh_CN: 文本相关 API。
     void setPlainText(const QString& text);
     /**
-     * @brief Appends a plain-text paragraph at the end (even when read-only).
-     *
-     * Appends a new paragraph even for an empty string, preserves the current
-     * cursor and selection, and scrolls to the bottom only if already there.
-     * zh_CN: 在末尾追加纯文本段落（只读模式下同样可用）。空字符串也会新增段落；
-     * 保留当前光标与选区，仅当原本位于底部时自动滚动跟随。
+     * @brief Appends a plain-text paragraph at the end, even when read-only.
+     * Preserves the cursor and selection, appends empty strings as blank lines, and auto-scrolls only if already at the bottom.
+     * zh_CN: 在末尾追加纯文本段落（只读模式可用，空串也会换行）；保留光标与选区，仅在原本位于底部时自动滚动到底部。
      */
     void appendPlainText(const QString& text);
     QString toPlainText() const;

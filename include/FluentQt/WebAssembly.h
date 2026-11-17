@@ -7,38 +7,33 @@ class QWidget;
 namespace fluent::webassembly {
 
 /**
- * @brief Initial presentation for a browser-hosted top-level widget.
- * zh_CN: 浏览器宿主中顶层控件的初始展示形态。
+ * @brief Initial window mode when running inside a browser.
+ * zh_CN: 浏览器环境下的初始窗口显示方式（常规窗口或最大化）。
  */
-enum class WindowPresentation {
-    Windowed,
-    Maximized
-};
+enum class WindowPresentation { Windowed, Maximized };
 
 /**
- * @brief Configures FluentQt's browser window and popup capabilities.
- * zh_CN: 配置 FluentQt 的浏览器窗口与弹出表面能力。
+ * @brief Initializes WebAssembly window and popup handling.
+ * zh_CN: 初始化 WebAssembly 环境下的窗口和弹窗适配。
  *
- * Call once before constructing Fluent widgets. The function is idempotent and
- * is supplied by the optional FluentQt::WebAssembly target.
- * zh_CN: 请在创建 Fluent 控件前调用一次。该函数可重复调用，由可选的
- * FluentQt::WebAssembly target 提供。
+ * Call once before creating Fluent widgets (safe to call multiple times).
+ * Supplied by FluentQt::WebAssembly.
+ * zh_CN: 请在创建 Fluent 控件前调用一次（可重复调用），由 FluentQt::WebAssembly 提供。
  */
 void configureRuntime();
 
 /**
- * @brief Shows a top-level widget with stable browser geometry.
- * zh_CN: 使用稳定的浏览器几何显示顶层控件。
+ * @brief Shows a top-level widget inside the browser viewport.
+ * zh_CN: 在浏览器页面区域内显示顶层窗口，并应用尺寸或最大化状态。
  *
- * The adapter hosts the widget inside a single browser-sized Qt desktop
- * surface and applies its normal or maximized geometry there. Native
- * applications continue to call QWidget::show() directly.
- * zh_CN: 适配器会将控件承载到单一浏览器尺寸的 Qt 桌面表面中，并在其中应用
- * normal 或 maximized 几何。原生应用仍直接调用 QWidget::show()。
+ * Places the widget in a browser-sized Qt surface and applies its normal or
+ * maximized geometry. Desktop builds continue to call QWidget::show() directly.
+ * zh_CN: 将控件放入与浏览器画布等大的显示区域中，并设置常规或最大化尺寸。
+ * 桌面原生应用仍直接调用 QWidget::show()。
  */
 void showWindow(QWidget* window,
-                const QRect& normalGeometry,
-                WindowPresentation presentation = WindowPresentation::Windowed);
+    const QRect& normalGeometry,
+    WindowPresentation presentation = WindowPresentation::Windowed);
 
 } // namespace fluent::webassembly
 

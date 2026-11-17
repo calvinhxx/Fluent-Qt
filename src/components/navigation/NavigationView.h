@@ -116,17 +116,17 @@ public:
     void setHeaderChromeWidget(QWidget* widget);
     /**
      * @brief Sets the header chrome widget with an explicit ownership policy.
-     * zh_CN: 设置头部窗格控件并指定所有权策略。
+     * zh_CN: 设置头部窗格控件并指定销毁方式。
      */
     bool setHeaderChromeWidget(QWidget* widget, WidgetOwnership ownership);
     /**
      * @brief Detaches and returns the header chrome widget without applying its ownership cleanup.
-     * zh_CN: 卸下并返回头部窗格控件，不执行其释放或还原策略。
+     * zh_CN: 卸下并返回头部窗格控件，不触发销毁或还原。
      */
     QWidget* takeHeaderChromeWidget();
     /**
      * @brief Removes the header chrome widget and applies its configured ownership policy.
-     * zh_CN: 移除头部窗格控件并按其所有权策略清理或还原。
+     * zh_CN: 移除头部窗格控件，并按指定的销毁方式清理或还原。
      */
     bool releaseHeaderChromeWidget();
     WidgetOwnership headerChromeWidgetOwnership() const { return m_headerChrome.ownership; }
@@ -135,17 +135,17 @@ public:
     void setMainChromeWidget(QWidget* widget);
     /**
      * @brief Sets the main chrome widget with an explicit ownership policy.
-     * zh_CN: 设置主体窗格控件并指定所有权策略。
+     * zh_CN: 设置主体窗格控件并指定销毁方式。
      */
     bool setMainChromeWidget(QWidget* widget, WidgetOwnership ownership);
     /**
      * @brief Detaches and returns the main chrome widget without applying its ownership cleanup.
-     * zh_CN: 卸下并返回主体窗格控件，不执行其释放或还原策略。
+     * zh_CN: 卸下并返回主体窗格控件，不触发销毁或还原。
      */
     QWidget* takeMainChromeWidget();
     /**
      * @brief Removes the main chrome widget and applies its configured ownership policy.
-     * zh_CN: 移除主体窗格控件并按其所有权策略清理或还原。
+     * zh_CN: 移除主体窗格控件，并按指定的销毁方式清理或还原。
      */
     bool releaseMainChromeWidget();
     WidgetOwnership mainChromeWidgetOwnership() const { return m_mainChrome.ownership; }
@@ -154,17 +154,17 @@ public:
     void setFooterChromeWidget(QWidget* widget);
     /**
      * @brief Sets the footer chrome widget with an explicit ownership policy.
-     * zh_CN: 设置底部窗格控件并指定所有权策略。
+     * zh_CN: 设置底部窗格控件并指定销毁方式。
      */
     bool setFooterChromeWidget(QWidget* widget, WidgetOwnership ownership);
     /**
      * @brief Detaches and returns the footer chrome widget without applying its ownership cleanup.
-     * zh_CN: 卸下并返回底部窗格控件，不执行其释放或还原策略。
+     * zh_CN: 卸下并返回底部窗格控件，不触发销毁或还原。
      */
     QWidget* takeFooterChromeWidget();
     /**
      * @brief Removes the footer chrome widget and applies its configured ownership policy.
-     * zh_CN: 移除底部窗格控件并按其所有权策略清理或还原。
+     * zh_CN: 移除底部窗格控件，并按指定的销毁方式清理或还原。
      */
     bool releaseFooterChromeWidget();
     WidgetOwnership footerChromeWidgetOwnership() const { return m_footerChrome.ownership; }

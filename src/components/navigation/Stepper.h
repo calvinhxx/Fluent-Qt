@@ -13,11 +13,9 @@ struct StepperItem;
 class StepperAccessible;
 
 /**
- * @brief Displays a multi-step progress sequence whose workflow state is controlled by the application.
- * Activation emits stepRequested(); only setCurrentIndex() changes the current step, and Pending/Completed/Error states are independent of the current index.
- * Intended for short step flows rather than large lists.
- * zh_CN: 步骤条控件，步骤推进与状态均由应用控制。
- * 点击或键盘确认仅发出 stepRequested()，当前步骤只由 setCurrentIndex() 更新；完成/错误状态与当前索引相互独立。适用于少量步骤展示，大数据集请使用列表视图。
+ * @brief Multi-step progress indicator whose state is controlled by the caller.
+ * Clicks only emit stepRequested(); update the current step and completion or error states via methods.
+ * zh_CN: 多步骤进度指示条，点击仅发出 stepRequested()，当前步骤与完成/错误状态由调用方通过接口更新。
  */
 class Stepper : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT

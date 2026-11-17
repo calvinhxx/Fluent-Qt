@@ -13,12 +13,9 @@ class QFocusEvent;
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent binary on/off toggle switch.
- * zh_CN: Fluent 二元开关控件。
- *
- * Renders only the track, knob, and optional on/off state text; compose field
- * labels externally (for example with Field).
- * zh_CN: 仅绘制轨道、滑块和开关状态文案；字段标题请通过 Field 等外部组件组合。
+ * @brief Fluent on/off toggle switch.
+ * Renders only the track, knob, and optional state text; place field labels externally (for example with Field).
+ * zh_CN: Fluent 开关控件，仅绘制轨道、滑块和开关状态文案；字段标题请通过 Field 等外部组件组合。
  */
 class ToggleSwitch : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -38,8 +35,8 @@ class ToggleSwitch : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QString offContent READ offContent WRITE setOffContent NOTIFY offContentChanged)
     /**
-     * @brief Fluent typography role used while the switch follows theme fonts.
-     * zh_CN: 开关跟随主题字体时用于文本绘制的 Fluent 排版角色。
+     * @brief Fluent Typography preset used while following theme fonts.
+     * zh_CN: 跟随主题字体时文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -72,14 +69,8 @@ public:
 
     qreal visualScale() const { return m_visualScale; }
     /**
-     * @brief Sets the visual scale and updates layout hints without resizing a fixed widget.
-     * zh_CN: 设置视觉缩放并更新布局建议尺寸，不改变已固定的控件大小。
-     *
-     * Finite values are clamped to [0.5, 10.0]; non-finite values are ignored.
-     * The default 1.0 draws a 40x20 logical-pixel track with strokes >= 1 px.
-     * Text keeps its font; use setFontRole() or setFont() to change it.
-     * zh_CN: 有限值限制在 [0.5, 10.0]，忽略 NaN 和无穷值；1.0 对应 40x20 逻辑像素轨道，
-     * 描边至少 1 px；文字字体不变，可通过字体 API 单独调整。
+     * @brief Sets the switch visual scale (clamped to [0.5, 10.0], default 1.0 = 40x20 px) without resizing fixed widgets or text.
+     * zh_CN: 设置开关图形的缩放倍率（限制在 [0.5, 10.0]，默认 1.0 为 40x20 轨道），不改变已固定的控件尺寸或文字字体。
      */
     void setVisualScale(qreal scale);
 

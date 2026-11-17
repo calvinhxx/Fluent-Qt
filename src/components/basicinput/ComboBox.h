@@ -56,8 +56,8 @@ private:
 class ComboBox : public QComboBox, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * @brief Fluent Typography preset used for text.
+     * zh_CN: 文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -107,8 +107,8 @@ public:
 
     Typography::FontRole fontRole() const { return m_fontRole; }
     /**
-     * @brief Restores theme-managed typography, even when the role is unchanged.
-     * zh_CN: 恢复主题排版；角色未变化时也会清除显式字体覆盖。
+     * @brief Applies the Fluent Typography preset and clears any explicit font override, even if unchanged.
+     * zh_CN: 应用预设字号样式；即使样式未变，也会清除之前设置的自定义字体。
      */
     void setFontRole(Typography::FontRole role);
     /**
@@ -159,19 +159,21 @@ public:
     QWidget* trailingWidget() const;
     WidgetOwnership trailingWidgetOwnership() const;
     /**
-     * @brief Hosts one trailing widget beside the text or editor, replacing any suffix text.
-     * Ownership is explicit; call takeTrailingWidget() before re-adding with a different policy.
-     * zh_CN: 在文本或编辑区右侧放置一个尾部控件（会替换文本尾缀）；所有权需显式指定，更换策略前请先调用 takeTrailingWidget()。
+     * @brief Places a trailing widget beside the text or editor, replacing any suffix text.
+     * Pass WidgetOwnership to specify cleanup; call takeTrailingWidget() before changing it.
+     * zh_CN: 在文本或编辑区右侧放置一个尾部控件（会替换文本尾缀），并传入 WidgetOwnership 指定销毁方式；更换方式前请先调用 takeTrailingWidget()。
      */
     bool setTrailingWidget(QWidget* widget, WidgetOwnership ownership);
-    /** @brief Detaches custom trailing content and transfers ownership to the caller.
-     * zh_CN: 移出自定义尾部控件并将所有权交还调用方。 */
+    /** @brief Removes and returns the trailing widget for the caller to manage or delete.
+     * zh_CN: 移出并返回尾部控件，改由调用方自行销毁。 */
     QWidget* takeTrailingWidget();
-    /** @brief Removes and releases custom trailing content according to its ownership policy.
-     * zh_CN: 按设定的所有权策略移除并释放尾部控件。 */
+    /** @brief Removes the trailing widget and handles cleanup according to its WidgetOwnership mode.
+     * zh_CN: 移除尾部控件，并按其 WidgetOwnership 指定的销毁方式处理。 */
     void releaseTrailingWidget();
 
     QAbstractItemModel* model() const { return QComboBox::model(); }
+    /** @brief Sets the item model (still managed by the caller; not deleted by this control).
+     * zh_CN: 设置数据源模型（仍由应用管理，不会随控件销毁）。 */
     void setModel(QAbstractItemModel* model) FLUENT_QT6_ONLY_OVERRIDE;
     void showPopup() override;
     void hidePopup() override;

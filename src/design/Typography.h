@@ -9,20 +9,9 @@
 #include "design/IconCatalog.h"
 
 /**
- * @brief Defines Fluent typography roles, font metrics, and icon glyph tokens.
- * zh_CN: 定义 Fluent 排版角色、字体度量和图标字符 token。
- *
- * Font sizes and line heights are absolute pixel values measured from the
- * Windows UI Kit typography styles.
- * zh_CN: 字号和行高为从 Windows UI Kit 排版样式测得的绝对像素值。
- *
- * FluentQt ships renamed, hinted static faces from the open-source Inter font
- * so every supported Qt/platform combination resolves the same face:
- * - Text: Caption and body roles.
- * - Heading: Subtitle and Title roles.
- * - Display: Title Large and Display roles.
- * zh_CN: FluentQt 内置经过重命名的开源 Inter 静态字体：Text 用于说明与正文，
- * Heading 用于副标题和标题，Display 用于大标题和展示文本。
+ * @brief Defines Fluent typography presets, font metrics, and icon glyph tokens.
+ * Sizes and line heights use fixed pixel values from Windows UI Kit, backed by bundled Inter fonts (Text, Heading, Display).
+ * zh_CN: 定义 Fluent 字号样式、字体度量和图标字符 token。字号与行高采用 Windows UI Kit 的固定像素值，并内置 Text、Heading、Display 三组静态 Inter 字体以保持跨平台一致。
  */
 namespace Typography {
 Q_NAMESPACE
@@ -84,15 +73,14 @@ const int Display = 92;
 namespace FontWeight {
 const int Regular = QFont::Normal;    // 400
 const int Medium = QFont::Medium;     // 500; fallback not defined by Figma. zh_CN: 备用档，Figma 未定义。
-const int SemiBold = QFont::DemiBold; // 600; used by heading roles. zh_CN: 标题类主要使用。
+const int SemiBold = QFont::DemiBold; // 600; used by heading styles. zh_CN: 标题样式使用。
 const int Bold = QFont::Bold; // 700; fallback not defined by current Figma styles. zh_CN: 备用档，当前 Figma 未定义。
 } // namespace FontWeight
 
-// Semantic shortcuts rendered by the complete bundled FluentQt Icons
-// face. Use Icons::catalog()/glyph() for the complete upstream collection.
-// Glyph provenance is documented in THIRD_PARTY_NOTICES.md.
-// zh_CN: 完整内置 FluentQt Icons 字体中的常用语义快捷项；完整上游集合请使用
-// Icons::catalog()/glyph()。字形来源见 THIRD_PARTY_NOTICES.md。
+// Common icon glyph shortcuts from the bundled FluentQt Icons font; use
+// Icons::catalog() or Icons::glyph() for the full upstream set (see THIRD_PARTY_NOTICES.md).
+// zh_CN: 内置 FluentQt Icons 字体的常用图标常量；完整图标列表请使用
+// Icons::catalog() 或 Icons::glyph()（来源见 THIRD_PARTY_NOTICES.md）。
 namespace Icons {
 // Navigation & Window
 extern const QString GlobalNav;
@@ -259,21 +247,16 @@ extern const QString Snow;
 } // namespace Icons
 
 /**
-     * @brief Strongly typed Fluent typography role.
-     * zh_CN: 强类型 Fluent 排版角色。
-     */
+ * @brief Preset Fluent font size and weight tier.
+ * zh_CN: 预设字号档位。
+ */
 enum class FontRole { Caption, Body, BodyStrong, BodyLarge, BodyLargeStrong, Subtitle, Title, TitleLarge, Display };
 Q_ENUM_NS(FontRole)
 
 /**
-     * @brief Complete font metrics for one Fluent typography role.
-     * zh_CN: 一个 Fluent 排版角色的完整字体度量。
-     *
-     * styleName selects an exact static Regular/Semibold face. Optical sizing
-     * is encoded in the FluentQt-specific family itself.
-     * zh_CN: styleName 选择精确的 Regular/Semibold 静态字体；光学尺寸已编码在
-     * FluentQt 专用字族中。
-     */
+ * @brief Complete font configuration for a preset font tier, including static styleName and pixel line height.
+ * zh_CN: 对应某个字号档位的完整字体配置，包含精确的静态字形样式名（styleName）与像素行高。
+ */
 struct FontStyle {
     QString family;
     QString styleName; // Figma style name, e.g. "Small Regular". zh_CN: Figma 字体样式名，如 "Small Regular"。
@@ -309,11 +292,8 @@ struct FontStyle {
     }
 };
 
-// Predefined style instances mapped to Figma typography variables.
-// zh_CN: 与 Figma 排版变量对应的预定义样式实例。
-// family selects the matching static optical-size family; styleName selects
-// the exact face within that family.
-// zh_CN: family 选择对应的静态光学尺寸字族，styleName 选择其中的精确字体。
+// Predefined style instances mapped to each preset font tier.
+// zh_CN: 与各预设字号档位对应的预定义字体配置。
 namespace Styles {
 extern const FontStyle Caption;
 extern const FontStyle Body;
@@ -327,9 +307,9 @@ extern const FontStyle Display;
 } // namespace Styles
 
 /**
-     * @brief Returns the stable serialization key for a typography role.
-     * zh_CN: 返回排版角色用于序列化的稳定 key。
-     */
+ * @brief Returns the stable serialization key for a preset font tier.
+ * zh_CN: 返回字号档位用于序列化的稳定键名。
+ */
 inline QString fontRoleKey(FontRole role)
 {
     switch (role) {
@@ -356,9 +336,9 @@ inline QString fontRoleKey(FontRole role)
 }
 
 /**
-     * @brief Resolves the immutable metrics for a typography role.
-     * zh_CN: 解析排版角色对应的不可变字体度量。
-     */
+ * @brief Returns the predefined font configuration for a preset font tier.
+ * zh_CN: 返回指定字号档位对应的预设字体配置。
+ */
 inline const FontStyle& fontStyle(FontRole role)
 {
     switch (role) {

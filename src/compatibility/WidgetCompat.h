@@ -83,8 +83,8 @@ using FluentItemDataRoles = QVector<int>;
 #endif
 
 /**
- * @brief Returns a stable item-view row height, falling back to view/delegate size hints when visualRect() has no height yet.
- * zh_CN: 返回稳定的列表/表格行高；当 visualRect() 高度尚为 0 时，依次回退到视图或代理的推荐尺寸。
+ * @brief Returns a stable item-view row height, falling back to view or delegate size hints when visualRect() has no height yet.
+ * zh_CN: 返回稳定的列表/表格行高；当 visualRect() 高度为 0 时，依次改用视图或代理的推荐高度。
  */
 inline int fluentItemViewRowHeight(const QAbstractItemView* view, const QModelIndex& index, const QRect& visualRect)
 {

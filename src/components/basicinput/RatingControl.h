@@ -53,13 +53,13 @@ class RatingControl : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(int starSize READ starSize WRITE setStarSize NOTIFY starSizeChanged)
     /**
-     * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * @brief Fluent Typography preset used for text.
+     * zh_CN: 文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
-     * @brief Fluent typography role used for the rating caption.
-     * zh_CN: 评分说明文本使用的 Fluent 排版角色。
+     * @brief Fluent Typography preset used for the rating caption.
+     * zh_CN: 评分说明文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole captionFontRole
         READ captionFontRole

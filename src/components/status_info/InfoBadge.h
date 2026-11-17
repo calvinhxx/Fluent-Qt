@@ -19,11 +19,8 @@ namespace fluent::status_info {
 
 /**
  * @brief Compact Fluent badge for counts, icons, status dots, or alerts.
- * zh_CN: 紧凑 Fluent 徽标，用于显示数字计数、图标、状态点或提醒。
- *
- * Supports numeric values, icon glyphs, dot indicators, status colors, custom
- * background/text colors, and badge opacity.
- * zh_CN: 支持数值、图标字符、提示点模式、状态配色、自定义颜色与不透明度配置。
+ * Supports numeric values, icon glyphs, dot mode, status colors, custom colors, and opacity.
+ * zh_CN: 紧凑的 Fluent 徽标控件，支持数字计数、图标字符、状态点、状态配色、自定义颜色及不透明度。
  */
 class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -66,8 +63,8 @@ class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QColor customTextColor READ customTextColor WRITE setCustomTextColor NOTIFY customTextColorChanged)
     /**
-     * @brief Typography role used by badge value text.
-     * zh_CN: 徽标数值文本使用的排版角色。
+     * @brief Fluent Typography preset used by badge value text.
+     * zh_CN: 徽标数值文本使用的预设字号样式。
      */
     Q_PROPERTY(Typography::FontRole valueFontRole READ valueFontRole WRITE setValueFontRole NOTIFY valueFontRoleChanged)
     /**

@@ -28,11 +28,9 @@ class OverscrollController;
 namespace fluent::collections {
 
 /**
- * @brief Fluent tree view with hierarchical selection indicator motion and check-state sync.
- * Built on QTreeView with animated expand/collapse reveal, moving selection pill indicator,
- * optional header and placeholder text, elastic overscroll, and drag-and-drop reordering.
- * zh_CN: 具备层级感知选中指示器和复选状态同步的 Fluent 树形视图。
- * 基于 QTreeView 构建，提供展开/收起过渡动画、平滑移动的选中指示条、标题与占位文本、边界回弹及拖拽重排。
+ * @brief Tree view with hierarchical selection indicator motion and check-state sync.
+ * Built on QTreeView with animated expand/collapse reveal, moving selection pill, header/placeholder text, and drag reordering.
+ * zh_CN: 具备层级选中指示动效和复选状态同步的树形视图，支持展开/收起动画、标题/占位文本及拖拽重排。
  */
 class TreeView : public QTreeView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -64,7 +62,7 @@ public:
     Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * zh_CN: 文本绘制使用的 Fluent 字号样式。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -143,9 +141,8 @@ public:
         NOTIFY scrollChainingEnabledChanged)
     /**
      * @brief Whether elastic overscroll bounce is enabled at scroll boundaries.
-     * Enabled by default; disable for navigation panes or chrome that should stop cleanly at the edge.
-     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启）。
-     * 希望在边界干脆停住（例如导航窗格）并立即响应反向滚动时可关闭此选项。
+     * Enabled by default; disable when scrolling should stop cleanly at the edge.
+     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启，希望在边界直接停住时可关闭）。
      */
     Q_PROPERTY(bool overscrollEnabled
         READ isOverscrollEnabled

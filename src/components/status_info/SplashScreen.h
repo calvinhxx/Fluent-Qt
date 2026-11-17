@@ -23,14 +23,9 @@ class ProgressRing;
 class ProgressBar;
 
 /**
- * @brief Reusable startup overlay covering its parent widget's content area.
- * zh_CN: 可复用的启动遮罩，覆盖父控件的内容区域。
- *
- * Shows the application icon and loading progress while blocking input inside
- * the covered widget (other windows remain interactive). Owned by its parent;
- * dismiss() hides the overlay and emits dismissed() without deleting it.
- * zh_CN: 显示应用图标与加载进度并拦截被覆盖区域内的输入（其他窗口与区域外控件仍可用）；
- * 由父控件拥有，dismiss() 后隐藏并发出 dismissed()，不会销毁自身。
+ * @brief Reusable startup overlay covering its parent widget while showing an icon and loading progress.
+ * Blocks input only inside the covered area; dismiss() hides it and emits dismissed() without deleting it.
+ * zh_CN: 可复用的启动遮罩，覆盖父控件以展示图标与加载进度并拦截区域内输入；dismiss() 仅隐藏并发出 dismissed()，不会销毁自身。
  */
 class SplashScreen : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -83,33 +78,24 @@ public:
     void setSubtitle(const QString& subtitle);
     QWidget* transitionTarget() const { return m_transitionTarget.data(); }
     /**
-     * @brief Sets the destination widget where the icon animates during Branded dismissal.
-     *
-     * Full motion moves the intact icon into target's contents rectangle when target
-     * is visible, outside this splash screen, and in the same top-level window;
-     * otherwise dismissal fades out. Does not reparent or alter the target widget;
-     * this widget and its descendants are ignored.
-     * zh_CN: 设置 Branded 退场时图标飞向的目标控件。Full 动效下若调用 dismiss() 时目标
-     * 在同一顶层窗口内可见且位于遮罩外，图标会平滑移入目标内容区，否则改用淡出；
-     * 不会修改目标的父控件、外观或可见性，传入自身或其子控件时忽略。
+     * @brief Sets the target widget that the icon flies into during Branded dismissal.
+     * With Full motion, animates smoothly if target is visible in the same window; otherwise fades out.
+     * zh_CN: 设置 Branded 退场动画时图标飞向的目标控件；Full 动画且目标在窗口内可见时平滑飞入，否则直接淡出。
      */
     void setTransitionTarget(QWidget* target);
     int progress() const { return m_progress; }
     /**
-     * @brief Sets clamped determinate progress; total <= 0 selects indeterminate mode.
-     * zh_CN: 设置确定进度并限制在 0–100%；total <= 0 切换为不确定模式。
-     * Does not dismiss at 100%; the application decides when startup is complete.
-     * zh_CN: 达到 100% 不自动关闭，由应用判断启动完成时间。
+     * @brief Sets determinate progress (clamped to 0–100%); total <= 0 switches to indeterminate mode.
+     * Reaching 100% does not auto-dismiss; call dismiss() when startup completes.
+     * zh_CN: 设置确定进度并限制在 0–100%，total <= 0 时切换为不确定模式；达到 100% 不会自动关闭，需由应用调用 dismiss()。
      */
     void setProgress(int done, int total);
     bool isIndeterminate() const { return m_indeterminate; }
     void setIndeterminate(bool indeterminate);
     /**
-     * @brief Dismisses, hides, and emits dismissed() once (ignored when already hidden or dismissing).
-     *
-     * Follows MotionPolicy without waiting for the entrance animation; call show() again to reuse.
-     * zh_CN: 退场并隐藏控件，完成后发出一次 dismissed()（已隐藏或正在退场时直接返回）。
-     * 过渡遵循 MotionPolicy，不等待入场动画完成，关闭后可再次 show() 复用。
+     * @brief Runs the dismiss transition, hides the splash screen, and emits dismissed() once.
+     * Ignored when already hidden or dismissing; call show() again to reuse.
+     * zh_CN: 播放退场过渡后隐藏控件并发出一次 dismissed()（已隐藏或退场中时忽略）；关闭后可再次调用 show() 复用。
      */
     void dismiss();
 
@@ -128,11 +114,9 @@ signals:
     void progressChanged(int progress);
     void indeterminateChanged(bool indeterminate);
     void dismissed();
-    /** @brief Emitted when another SplashScreen covers an overlapping area and hides this one.
-     *
-     * Direct hide() and window minimization do not emit replaced() or dismissed().
-     * zh_CN: 当重叠区域被新的 SplashScreen 接管并隐藏当前实例时发出（不触发 dismissed()，
-     * 直接 hide 或窗口最小化也不触发）。
+    /** @brief Emitted when another overlapping SplashScreen replaces and hides this one.
+     * Does not emit dismissed(); direct hide() or window minimization does not emit replaced().
+     * zh_CN: 当重叠区域被新的 SplashScreen 接管并隐藏当前实例时发出（不会触发 dismissed()，直接调用 hide() 或窗口最小化也不会触发）。
      */
     void replaced();
 

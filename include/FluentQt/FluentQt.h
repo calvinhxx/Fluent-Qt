@@ -4,33 +4,29 @@
 namespace fluent {
 
 /**
- * @brief Configures process-wide High-DPI behavior before QApplication exists.
- * zh_CN: 在 QApplication 创建前配置进程级 High-DPI 行为。
+ * @brief Configures High-DPI scaling before QApplication is created.
+ * zh_CN: 在创建 QApplication 之前开启高分屏（High-DPI）适配。
  *
- * On Qt 5 this enables device-independent scaling and high-resolution pixmaps.
- * On every supported Qt version it selects pass-through fractional scaling so
- * 125%, 150%, 200%, and 300% keep the operating system's requested size.
- * Call this before constructing QApplication; repeated pre-application calls
- * are harmless. A late call emits a warning and leaves global state unchanged.
- * zh_CN: Qt 5 下会启用设备无关缩放与高分辨率位图；所有受支持 Qt 版本都会采用
- * 分数缩放直通策略，使 125%、150%、200% 与 300% 保持系统请求的实际比例。
- * 必须在构造 QApplication 前调用；应用创建前重复调用是安全的。调用过晚时会输出
- * 警告，且不再修改全局状态。
+ * Enables device-independent scaling on Qt 5 and pass-through fractional
+ * scaling (such as 125%, 150%, 200%) across supported Qt versions. Call this
+ * before constructing QApplication; repeated pre-application calls are safe,
+ * while late calls warn and have no effect.
+ * zh_CN: 在 Qt 5 上启用设备无关缩放与高清位图，并在所有受支持版本中直接沿用
+ * 系统的缩放比例（如 125%、150%、200%）。必须在创建 QApplication 之前调用；
+ * 重复调用无副作用，创建之后再调用则会打印警告且不生效。
  */
 void prepareHighDpiApplication();
 
 /**
- * @brief Registers Fluent-Qt bundled resources and application fonts.
- * zh_CN: 注册 Fluent-Qt 内置资源与应用字体。
+ * @brief Loads FluentQt's bundled fonts and icon resources.
+ * zh_CN: 加载 FluentQt 内置的文本字体、图标字体和资源文件。
  *
- * Call this once after constructing QApplication in standalone applications so
- * the bundled open-source text and icon faces are available without depending
- * on platform font matching. A call made before QApplication registers the
- * compiled resource collection but returns false without caching a failed font
- * load; call it again after QApplication exists to initialize the fonts.
- * zh_CN: 独立应用应在构造 QApplication 后调用一次，使内置的开源文本与图标字体
- * 可用，且不依赖平台字体匹配。在 QApplication 创建前调用时会先注册编译资源，
- * 但返回 false 且不会缓存字体加载失败；QApplication 创建后应再次调用以初始化字体。
+ * Call once after constructing QApplication so bundled fonts are ready without
+ * OS font matching. If called before QApplication exists, Qt resources are
+ * registered and false is returned; call it again afterward to load the fonts.
+ * zh_CN: 请在创建 QApplication 之后调用一次，使内置字体和图标立即可用，不必
+ * 依赖系统字体匹配。若在 QApplication 创建前调用，会先注册编译资源并
+ * 返回 false；创建后请再调用一次以初始化字体。
  */
 bool initializeResources();
 

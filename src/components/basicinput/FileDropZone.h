@@ -30,12 +30,9 @@ namespace fluent::basicinput {
 class Button;
 
 /**
- * @brief Drag-and-drop area for local file URLs with an application-handled browse button.
- * Emits dropped local file URLs without inspecting or uploading files; mixed local/remote drags are rejected.
- * The embedded browse button is the sole tab stop and activates on Space or Return.
- * zh_CN: 支持本地文件拖放与外部浏览触发的文件入口控件。
- * 仅透传本地文件 URL（混入远程 URL 时整批拒绝），不打开、校验或上传文件；文件对话框与存储由应用自行管理。
- * 内置选择按钮是唯一 Tab 焦点停靠点，支持空格或回车触发。
+ * @brief Drop area for local files with a button to open an app-provided file picker.
+ * Accepts only local files (ignoring drags that include remote URLs); file dialogs and I/O are handled by the app.
+ * zh_CN: 支持拖拽本地文件或点击按钮选择文件的区域。仅接受本地文件（混入网络 URL 时整批忽略），读写与弹窗由应用自己处理。
  */
 class FileDropZone : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -89,8 +86,8 @@ signals:
     /** @brief Requests an application-provided file picker. zh_CN: 请求应用提供的文件选择器。 */
     void browseRequested();
     /**
-     * @brief Delivers local URLs in their original order after an accepted copy drop.
-     * zh_CN: 接受复制拖放后，按原始顺序发送本地 URL。
+     * @brief Emitted with dropped local file URLs in their original order.
+     * zh_CN: 拖放本地文件后，按原始顺序发出文件 URL 列表。
      */
     void filesDropped(const QList<QUrl>& urls);
 

@@ -29,10 +29,8 @@ struct SplitViewPaneOptions {
 
 /**
  * @brief Resizable multi-pane container with draggable Fluent splitter handles.
- * Manages pane ordering, minimum/preferred/maximum sizes, fill-pane stretching,
- * orientation, and layout state serialization.
- * zh_CN: 带 Fluent 分隔手柄的可调大小多窗格容器。
- * 统一管理窗格顺序、最小/首选/最大尺寸、填充窗格拉伸、方向切换及布局状态序列化。
+ * Manages pane ordering, size bounds, fill-pane stretching, orientation, and state serialization.
+ * zh_CN: 带可拖拽分隔手柄的多窗格容器，支持窗格尺寸约束、填充拉伸、方向切换及布局状态序列化。
  */
 class SplitView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -86,14 +84,14 @@ public:
 
     int addPane(QWidget* pane, const SplitViewPaneOptions& options = SplitViewPaneOptions());
     /**
-     * @brief Appends a pane widget with an explicit ownership policy.
-     * zh_CN: 按指定所有权策略追加窗格。
+     * @brief Appends a pane widget with an explicit WidgetOwnership disposal mode.
+     * zh_CN: 追加窗格控件并指定销毁方式。
      */
     int addPane(QWidget* pane, WidgetOwnership ownership, const SplitViewPaneOptions& options = SplitViewPaneOptions());
     int insertPane(int index, QWidget* pane, const SplitViewPaneOptions& options = SplitViewPaneOptions());
     /**
-     * @brief Inserts a pane widget at index with an explicit ownership policy.
-     * zh_CN: 按指定所有权策略在 index 处插入窗格。
+     * @brief Inserts a pane widget at index with an explicit WidgetOwnership disposal mode.
+     * zh_CN: 在 index 处插入窗格控件并指定销毁方式。
      */
     int insertPane(int index,
         QWidget* pane,
@@ -101,7 +99,7 @@ public:
         const SplitViewPaneOptions& options = SplitViewPaneOptions());
     /**
      * @brief Legacy removal that detaches the pane without deleting it.
-     * zh_CN: 兼容旧接口：移除窗格但不删除（保留外部所有权）。
+     * zh_CN: 兼容旧接口：移除窗格但不删除（仍由应用管理）。
      */
     bool removePane(QWidget* pane);
     /**
@@ -110,18 +108,18 @@ public:
      */
     QWidget* removePaneAt(int index);
     /**
-     * @brief Removes a pane and disposes of it according to its ownership policy.
-     * zh_CN: 移除窗格并按其配置的所有权策略释放或交还。
+     * @brief Removes a pane and disposes of it according to its WidgetOwnership mode.
+     * zh_CN: 移除窗格并按其配置的销毁方式释放或交还。
      */
     bool releasePane(QWidget* pane);
     /**
-     * @brief Removes the pane at index and disposes of it according to its ownership policy.
-     * zh_CN: 移除 index 处的窗格并按其所有权策略释放或交还。
+     * @brief Removes the pane at index and disposes of it according to its WidgetOwnership mode.
+     * zh_CN: 移除 index 处的窗格并按其销毁方式释放或交还。
      */
     bool releasePaneAt(int index);
     /**
      * @brief Removes and returns the pane at index without deleting it.
-     * zh_CN: 移除并返回 index 处的窗格，不执行删除。
+     * zh_CN: 移除并返回 index 处的窗格（不删除）。
      */
     QWidget* takePaneAt(int index);
 
@@ -129,8 +127,8 @@ public:
     int paneCount() const { return m_panes.size(); }
     int indexOf(QWidget* pane) const;
     /**
-     * @brief Returns the ownership policy configured for the pane at index.
-     * zh_CN: 返回 index 处窗格的所有权策略。
+     * @brief Returns the disposal mode configured for the pane at index.
+     * zh_CN: 返回 index 处窗格的销毁方式。
      */
     WidgetOwnership paneOwnershipAt(int index) const;
 

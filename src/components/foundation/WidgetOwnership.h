@@ -8,15 +8,9 @@ namespace fluent {
 Q_NAMESPACE
 
 /**
- * @brief Defines how a widget host releases caller-supplied content.
- * zh_CN: 定义控件宿主释放外部传入 QWidget 时的所有权处理方式。
- *
- * QWidget containers must reparent content while it is displayed. Borrowed
- * content is detached to a parentless widget when released, Reparented content
- * is restored to the QWidget parent it had when attached, and Owned content is
- * destroyed by the host.
- * zh_CN: QWidget 容器在显示内容期间必须重设其父对象。Borrowed 内容释放后变为
- * 无父控件，Reparented 内容恢复到接入时的 QWidget 父控件，Owned 内容由宿主销毁。
+ * @brief Defines how a container handles a caller-supplied QWidget when removing or destroying it.
+ * Borrowed leaves it parentless for the caller to destroy, Reparented restores its previous parent widget, and Owned destroys it with the container.
+ * zh_CN: 定义容器移除或销毁外部传入 QWidget 时的处理方式。Borrowed 只放进容器显示，由应用自己负责销毁；Reparented 移除时恢复原父控件；Owned 随容器一起销毁。
  */
 enum class WidgetOwnership { Borrowed, Reparented, Owned };
 Q_ENUM_NS(WidgetOwnership)

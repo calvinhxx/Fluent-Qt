@@ -59,7 +59,7 @@ struct WindowChromeOptions {
 
     /**
      * @brief Enables Fluent custom title-bar integration while preferring native window management where supported.
-     * zh_CN: 启用自定义标题栏集成；在支持的平台上仍优先使用系统原生窗口管理，仅在需要时启用客户端回退。
+     * zh_CN: 启用自定义标题栏集成；在支持的平台上仍优先使用系统原生窗口管理，不支持时改由客户端接管。
      */
     bool useCustomWindowChrome = false;
 
@@ -76,8 +76,8 @@ struct WindowChromeOptions {
     bool chromeInteractive = true;
 
     /**
-     * @brief Maximize/restore button used for native caption integration (not owned).
-     * zh_CN: 用于原生标题栏命中测试的最大化/还原按钮（不接管所有权）。
+     * @brief Maximize/restore button used for native caption hit-testing.
+     * zh_CN: 用于原生标题栏命中测试的最大化/还原按钮。
      */
     QPointer<QAbstractButton> maximizeButton;
 };
@@ -127,20 +127,20 @@ public:
      */
     BackdropCapabilities backdropCapabilities() const;
     /**
-     * @brief Applies the requested system backdrop effect (kept for compatibility; prefer applySystemBackdropDetailed() for fallback details).
-     * zh_CN: 应用系统背景效果并返回是否成功（兼容旧接口，需要后端及回退详情时请用 applySystemBackdropDetailed()）。
+     * @brief Applies the requested system backdrop effect (legacy helper; use applySystemBackdropDetailed() for resolved backend details).
+     * zh_CN: 应用系统背景效果并返回是否成功（旧接口；如需查看实际后端与降级原因请改用 applySystemBackdropDetailed()）。
      */
     bool applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 
     /**
-     * @brief Applies a backdrop effect and returns the resolved backend and fallback details.
-     * zh_CN: 应用背景效果并返回实际后端、保真度及回退原因等详细信息。
+     * @brief Applies a backdrop effect and returns the resolved backend, fidelity, and fallback reason.
+     * zh_CN: 应用背景效果并返回实际使用的后端、还原程度及降级原因等详情。
      */
     BackdropApplyResult applySystemBackdropDetailed(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 
     /**
-     * @brief Handles forwarded native events and returns true when consumed.
-     * zh_CN: 处理转发来的原生窗口事件；已消费时返回 true。
+     * @brief Handles forwarded native events and returns true when handled.
+     * zh_CN: 处理转发来的原生窗口事件；若已处理则返回 true。
      */
     bool handleNativeEvent(const QByteArray& eventType, void* message, FluentNativeEventResult* result);
 

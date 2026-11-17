@@ -19,8 +19,8 @@ namespace fluent::basicinput {
 class DropDownButton : public Button {
     Q_OBJECT
     /**
-     * @brief Menu opened by the button (not owned by this widget).
-     * zh_CN: 点击按钮时打开的菜单（不接管所有权）。
+     * @brief Menu opened when clicking the button.
+     * zh_CN: 点击按钮时打开的下拉菜单。
      */
     Q_PROPERTY(QMenu* menu READ menu WRITE setMenu NOTIFY menuChanged)
     /**
@@ -59,6 +59,8 @@ public:
     explicit DropDownButton(QWidget* parent = nullptr);
     ~DropDownButton() override;
 
+    /** @brief Sets the dropdown menu (not deleted by this button).
+     * zh_CN: 设置下拉菜单（不会自动销毁菜单）。 */
     void setMenu(QMenu* menu);
     QMenu* menu() const { return m_menu.data(); }
 
