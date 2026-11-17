@@ -28,11 +28,47 @@ import release_pages
 import component_inventory
 import generate_component_previews as previews
 import generate_localized_site
+import generate_playgrounds
 from api_sections import localized_description, reference_headers, reference_path
 from public_api import resolve_type
 from documentation_guides import guides, guide_path
 from test_public_api import PublicApiTest
 from test_documentation_claims import DocumentationClaimsTest
+
+
+class PlaygroundGenerationTest(unittest.TestCase):
+    def test_generation_preserves_unchanged_build_inputs_and_uses_utf8_lf(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            descriptor = root / 'component.json'
+            factory = root / 'factory.cpp'
+            content = {descriptor: '{"label": "\u521d\u59cb\u793a\u4f8b"}\n', factory: '// factory\n'}
+            with patch.object(generate_playgrounds, 'outputs', return_value=content), \
+                    patch.object(sys, 'argv', ['generate_playgrounds']):
+                generate_playgrounds.main()
+                for path, text in content.items():
+                    self.assertEqual(path.read_bytes(), text.encode('utf-8'))
+                    os.utime(path, ns=(1_600_000_000_000_000_000, 1_600_000_000_000_000_000))
+                stamps = {path: path.stat().st_mtime_ns for path in content}
+                generate_playgrounds.main()
+                self.assertEqual({path: path.stat().st_mtime_ns for path in content}, stamps)
+                content[descriptor] = '{"label": "Updated"}\n'
+                generate_playgrounds.main()
+                self.assertEqual(descriptor.read_bytes(), content[descriptor].encode('utf-8'))
+                self.assertNotEqual(descriptor.stat().st_mtime_ns, stamps[descriptor])
+                self.assertEqual(factory.stat().st_mtime_ns, stamps[factory])
+
+    def test_check_rejects_noncanonical_line_endings_without_rewriting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'factory.cpp'
+            path.write_bytes(b'// factory\r\n')
+            with patch.object(generate_playgrounds, 'ROOT', root), \
+                    patch.object(generate_playgrounds, 'outputs', return_value={path: '// factory\n'}), \
+                    patch.object(sys, 'argv', ['generate_playgrounds', '--check']):
+                with self.assertRaisesRegex(SystemExit, 'Stale playground assets'):
+                    generate_playgrounds.main()
+                self.assertEqual(path.read_bytes(), b'// factory\r\n')
 
 
 class PublicTypeDiscoveryTest(unittest.TestCase):
@@ -269,7 +305,7 @@ class VisualDocumentationTest(unittest.TestCase):
 
     def test_playgrounds_cover_all_core_components(self):
         assets = component_docs.ROOT / "app/assets/playgrounds"
-        specs = json.loads((assets / "components.json").read_text())
+        specs = json.loads((assets / "components.json").read_text(encoding="utf-8"))
         routes = {spec['component'] for spec in specs} | {'button'}
         optional = {'particle-backdrop', 'spatial-view', 'spatial-item', 'qml-view'}
         expected = {doc['id'] for doc in self.catalog['components']
@@ -277,7 +313,7 @@ class VisualDocumentationTest(unittest.TestCase):
         self.assertEqual(routes, expected)
         self.assertEqual({p.stem for p in assets.glob('*.json')}, routes | {'components'})
         for spec in specs:
-            generated = json.loads((assets / (spec['component'] + '.json')).read_text())
+            generated = json.loads((assets / (spec['component'] + '.json')).read_text(encoding="utf-8"))
             self.assertEqual(generated['recipe'], spec['recipe'])
             self.assertEqual(generated['properties'], spec['properties'])
             self.assertIn('%PARENT%', spec['recipe']['cpp']['setup'])

@@ -12,7 +12,7 @@ STATE = 'JSON.parse(document.documentElement.dataset.fluentQtPlaygroundState)'
 
 def run(browser, base_url, output, screenshots=False, routes=None, exhaustive=True):
     output.mkdir(parents=True, exist_ok=True)
-    specs = [{'component': 'button'}] + json.loads((ROOT / 'app/assets/playgrounds/components.json').read_text())
+    specs = [{'component': 'button'}] + json.loads((ROOT / 'app/assets/playgrounds/components.json').read_text(encoding='utf-8'))
     if routes is not None: specs = [spec for spec in specs if spec['component'] in routes]
     context = browser.new_context(viewport={'width':1440,'height':1000}, device_scale_factor=2,
                                   permissions=['clipboard-read','clipboard-write'])
@@ -667,14 +667,14 @@ def run(browser, base_url, output, screenshots=False, routes=None, exhaustive=Tr
             assert not errors[start_errors:],errors[start_errors:]
             results.append({'route':route,'status':'pass','fields':sorted(seen),'checks':checked})
         except Exception as error:
-            try:(output/(route+'-failure.json')).write_text(json.dumps({'console':console[-30:],'status':page.locator('.playground-status').text_content(),'state':state()},ensure_ascii=False,indent=2))
+            try:(output/(route+'-failure.json')).write_text(json.dumps({'console':console[-30:],'status':page.locator('.playground-status').text_content(),'state':state()},ensure_ascii=False,indent=2),encoding='utf-8')
             except Exception:pass
             try:page.screenshot(path=str(output/(route+'-failure.png')))
             except Exception:pass
             results.append({'route':route,'status':'fail','error':traceback.format_exc(),'fields':sorted(seen),'checks':checked})
         print(route,results[-1]['status'],results[-1].get('error','')[:220],flush=True)
-        (output/'result.json').write_text(json.dumps({'results':results,'errors':errors},ensure_ascii=False,indent=2))
-        (output/'cases.json').write_text(json.dumps({'cases':cases},ensure_ascii=False,indent=2))
+        (output/'result.json').write_text(json.dumps({'results':results,'errors':errors},ensure_ascii=False,indent=2),encoding='utf-8')
+        (output/'cases.json').write_text(json.dumps({'cases':cases},ensure_ascii=False,indent=2),encoding='utf-8')
     context.close()
     failures=[r for r in results if r['status']!='pass']
     if failures:raise AssertionError(f'{len(failures)} playground contracts failed: '+', '.join(r['route'] for r in failures))

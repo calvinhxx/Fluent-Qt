@@ -363,10 +363,10 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     cases = []
     for path in args.audit:
-        audit = json.loads(path.read_text())
+        audit = json.loads(path.read_text(encoding='utf-8'))
         cases.extend(dict(case, theme=audit.get('theme', 'light')) for case in audit['cases'])
     merged = output / 'input.json'
-    merged.write_text(json.dumps({'cases': cases}, ensure_ascii=False, indent=2) + '\n')
+    merged.write_text(json.dumps({'cases': cases}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     bodies = []
     includes = set()
     for index, case in enumerate(cases):
@@ -375,7 +375,7 @@ def main():
         body = '\n'.join(line for line in lines if not line.startswith('#include'))
         variable = 'button' if case['state']['schema']['component'] == 'button' else 'control'
         bodies.append(f'case {index}: {{\n{body}\nreturn {variable};\n}}')
-    (output / 'probe.cpp').write_text('\n'.join(sorted(includes)) + '\n' + CPP.replace('@CASES@', '\n'.join(bodies)))
+    (output / 'probe.cpp').write_text('\n'.join(sorted(includes)) + '\n' + CPP.replace('@CASES@', '\n'.join(bodies)), encoding='utf-8')
     cmake = '''cmake_minimum_required(VERSION 3.21)
 project(PlaygroundExports LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
@@ -390,11 +390,11 @@ if(APPLE)
         "-framework DiskArbitration" "-framework UniformTypeIdentifiers")
 endif()
 '''.replace('@ROOT@', str(ROOT)).replace('@BUILD@', str(args.build_dir.resolve()))
-    (output / 'CMakeLists.txt').write_text(cmake)
+    (output / 'CMakeLists.txt').write_text(cmake, encoding='utf-8')
     subprocess.run(['cmake', '-S', str(output), '-B', str(output / 'build'), '-DCMAKE_PREFIX_PATH=' + str(args.qt_prefix.resolve())], check=True)
     subprocess.run(['cmake', '--build', str(output / 'build'), '--parallel', '2'], check=True)
     subprocess.run([str(output / 'build/playground_exports'), str(merged), str(output)], check=True)
-    cpp_values = json.loads((output / 'cpp-values.json').read_text())
+    cpp_values = json.loads((output / 'cpp-values.json').read_text(encoding='utf-8'))
 
     sys.path.insert(0, str((args.build_dir / 'python').resolve()))
     import fluentqt
@@ -597,7 +597,7 @@ endif()
                         'cpp_python_pixels': 'pass' if pixel_equal else 'review-required'})
         delete_qobject(outer_host if is_host_surface else button)
     status = 'fail' if failures else ('pass' if all(r['cpp_python_pixels'] == 'pass' for r in results) else 'review-required')
-    (output / 'result.json').write_text(json.dumps({'status': status, 'cases': results, 'failures': failures}, ensure_ascii=False, indent=2) + '\n')
+    (output / 'result.json').write_text(json.dumps({'status': status, 'cases': results, 'failures': failures}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(f'Executed {len(results)} exported C++/Python configurations; {sum(r["cpp_python_pixels"] != "pass" for r in results)} pixel comparisons need review.')
     if failures:
         raise AssertionError(f'{len(failures)} export checks failed; see {output / "result.json"}')
