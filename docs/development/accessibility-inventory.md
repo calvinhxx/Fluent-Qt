@@ -52,6 +52,7 @@ in TextOnly. These offscreen checks are not native visual approval.
 TreeView uses Fluent row selection and indicator painting instead of the macOS
 outer focus ring. The existing platform adapter disables only that native
 decoration; keyboard focus, arrow navigation and selection remain active.
+The adapter clears Qt's focus-ring attribute consistently on all backends.
 `TreeViewTest.Contract_FluentSelectionKeepsKeyboardFocusWithoutNativeOuterRing`
 covers the interaction across themes. The Cocoa-only
 `GallerySpatialTest.Contract_LiveZoomFooterFocusUsesOnlyFluentChrome` exercises
