@@ -352,7 +352,8 @@ int GallerySampleCard::preferredHeightForWidget(QWidget* widget, int width) cons
 int GallerySampleCard::calculatedHeightForWidth(int width) const
 {
     const int contentWidth = contentWidthForCardWidth(width);
-    int height = m_cardMargins.top() + m_cardMargins.bottom();
+    const QMargins frameMargins = contentsMargins();
+    int height = frameMargins.top() + m_cardMargins.top() + m_cardMargins.bottom() + frameMargins.bottom();
     int visibleItemCount = 0;
 
     auto addWidgetHeight = [&](QWidget* widget) {
@@ -374,7 +375,10 @@ int GallerySampleCard::calculatedHeightForWidth(int width) const
 
 int GallerySampleCard::contentWidthForCardWidth(int width) const
 {
-    return qMax(0, width - m_cardMargins.left() - m_cardMargins.right());
+    // Match AnchorLayout's contentsRect, including the styled frame's insets.
+    // zh_CN: 与锚点布局的内容矩形一致，计入样式边框，避免在分列临界宽度低估高度。
+    const QMargins frameMargins = contentsMargins();
+    return qMax(0, width - frameMargins.left() - m_cardMargins.left() - m_cardMargins.right() - frameMargins.right());
 }
 
 void GallerySampleCard::applyPalette()

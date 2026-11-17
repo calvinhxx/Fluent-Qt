@@ -3990,7 +3990,9 @@ TEST_F(GalleryContentPagesTest, InputExamplesWrapWithoutLosingFieldWidthOrOrder)
         ASSERT_NE(second, nullptr);
         for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
             card.setLayoutDirection(direction);
-            for (int width : {900, 420}) {
+            // Exercise both sides of the column breakpoint, including the card's 1 px border.
+            // zh_CN: 覆盖分列临界点两侧，包含卡片左右各 1 像素的边框。
+            for (int width : {900, 844, 845, 846, 420, 900}) {
                 card.resize(width, card.sizeHint().height());
                 card.show();
                 QApplication::processEvents();
@@ -4001,7 +4003,7 @@ TEST_F(GalleryContentPagesTest, InputExamplesWrapWithoutLosingFieldWidthOrOrder)
                 EXPECT_FALSE(a.intersects(b));
                 EXPECT_EQ(first->height(), Spacing::ControlHeight::Standard);
                 EXPECT_EQ(second->height(), Spacing::ControlHeight::Standard);
-                if (width == 900) {
+                if (width >= 846) {
                     EXPECT_EQ(first->width(), 370);
                     EXPECT_EQ(second->width(), 370);
                     EXPECT_EQ(a.top(), b.top());
