@@ -2,6 +2,7 @@
 #include "GalleryPlaygroundData.h"
 
 #include "compatibility/EventConstructionCompat.h"
+#include "compatibility/MetaPropertyCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/RangeSlider.h"
 #include "components/basicinput/FileDropZone.h"
@@ -479,12 +480,12 @@ private:
 
 bool isCollectionsSelectionMode(const QMetaProperty& prop)
 {
-    return prop.isValid() && QByteArray(prop.typeName()) == QByteArrayLiteral("fluent::collections::SelectionMode");
+    return fluentMetaPropertyHasTypeName(prop, QByteArrayLiteral("fluent::collections::SelectionMode"));
 }
 
 bool isBackdropEffect(const QMetaProperty& prop)
 {
-    return prop.isValid() && QByteArray(prop.typeName()) == QByteArrayLiteral("fluent::windowing::BackdropEffect");
+    return fluentMetaPropertyHasTypeName(prop, QByteArrayLiteral("fluent::windowing::BackdropEffect"));
 }
 
 struct GlyphEntry {
@@ -1877,15 +1878,16 @@ void GalleryComponentPlayground::writeGenericValues(const QJsonObject& values)
         } else if (field.value("glyphEnum").toBool()) {
             argument = glyphValueFor(value.toString());
         } else if (isCollectionsSelectionMode(prop)) {
-            argument = QVariant::fromValue(static_cast<collections::SelectionMode>(
-                QMetaEnum::fromType<collections::SelectionMode>().keyToValue(value.toString().toLatin1().constData())));
+            argument = fluentEnumPropertyValue(prop,
+                static_cast<collections::SelectionMode>(QMetaEnum::fromType<collections::SelectionMode>().keyToValue(
+                    value.toString().toLatin1().constData())));
         } else if (isBackdropEffect(prop)) {
             const auto key = value.toString();
             const auto effect = key == QStringLiteral("Solid") ? windowing::BackdropEffect::Solid
                 : key == QStringLiteral("Acrylic")
                 ? windowing::BackdropEffect::Acrylic
                 : windowing::BackdropEffect::Mica;
-            argument = QVariant::fromValue(effect);
+            argument = fluentEnumPropertyValue(prop, effect);
         } else if (field.contains("enumValues"))
             argument = field.value("enumValues").toObject().value(value.toString()).toInt();
         else if (prop.isEnumType())

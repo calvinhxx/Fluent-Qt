@@ -70,6 +70,7 @@ implementation part of that common flow.
 | `QtCompat.h` | Backward-compatible umbrella; existing helper names and synthetic-event macros remain available |
 | `InputEventCompat.h`, `EventConstructionCompat.h` | Event signatures/coordinates, and separately, synthetic event construction |
 | `ObjectCompat.h`, `WidgetCompat.h` | Connections/metatypes, widget signals, layout and item-view signatures |
+| `MetaPropertyCompat.h` | Qualified property type matching and enum values across moc metadata representations |
 | `ApplicationCompat.h`, `QtFeatures.h` | Startup/theme/display changes and lightweight capability declarations |
 | `AccessibilityCompat.h` | Accessibility event and announcement differences |
 | `FontCompat.h`, `PaintCompat.h`, `TextPaintCompat.h` | Font APIs, DPR-aware pixmaps and text painting |

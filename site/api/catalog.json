@@ -24,7 +24,7 @@
   ],
   "summary": {
     "components": 99,
-    "public_headers": 179,
+    "public_headers": 180,
     "categories": 16
   },
   "categories": [
@@ -6523,6 +6523,13 @@
         "FluentWheelInputKind"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/InputEventCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/MetaPropertyCompat.h>",
+      "source": "src/compatibility/MetaPropertyCompat.h",
+      "summary": "Matches a qualified property type, including namespace enum aliases retained by older moc.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/MetaPropertyCompat.h"
     },
     {
       "include": "<FluentQt/compatibility/ObjectCompat.h>",
