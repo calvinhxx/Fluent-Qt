@@ -1793,6 +1793,30 @@ TEST_F(ComboBoxTest, PopupSelectedCheckmarkIsSingleAndFollowsReadingDirection)
     }
 }
 
+TEST_F(ComboBoxTest, PlaceholderTextRendersWhenEmptyAndSyncsWhenEditable)
+{
+    ComboBox cb(window);
+    cb.setGeometry(40, 40, 200, Spacing::ControlHeight::Standard);
+    cb.addItems({"Alpha", "Beta"});
+    cb.setCurrentIndex(-1);
+    EXPECT_EQ(cb.currentIndex(), -1);
+    EXPECT_TRUE(cb.currentText().isEmpty());
+
+    const QImage withoutPlaceholder = cb.grab().toImage();
+    cb.setPlaceholderText(QStringLiteral("Select item"));
+    const QImage withPlaceholder = cb.grab().toImage();
+    EXPECT_NE(withPlaceholder, withoutPlaceholder);
+
+    cb.setEditable(true);
+    ASSERT_NE(cb.lineEdit(), nullptr);
+    EXPECT_EQ(cb.lineEdit()->placeholderText(), QStringLiteral("Select item"));
+
+    cb.setEditable(false);
+    cb.setCurrentIndex(0);
+    EXPECT_EQ(cb.currentText(), QStringLiteral("Alpha"));
+    EXPECT_NE(cb.grab().toImage(), withPlaceholder);
+}
+
 TEST_F(ComboBoxTest, VisualCheck)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {

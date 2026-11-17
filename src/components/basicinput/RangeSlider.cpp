@@ -474,25 +474,10 @@ void RangeSlider::paintEvent(QPaintEvent*)
 
     // 2. Ticks while hovered, as in Slider. zh_CN: 与 Slider 一样仅在悬停时绘制刻度。
     if (m_tickPosition != QSlider::NoTicks && m_widgetHoverRatio > 0.1) {
-        p.setPen(detail::sliderTickColor(colors));
-        const bool before = m_tickPosition == QSlider::TicksAbove || m_tickPosition == QSlider::TicksBothSides;
-        const bool after = m_tickPosition == QSlider::TicksBelow || m_tickPosition == QSlider::TicksBothSides;
-        const QVector<int> ticks = detail::sliderTickValues(m_minimum, m_maximum, m_tickInterval, m_singleStep,
-            m_pageStep);
-        for (const int value : ticks) {
-            const int pixel = valueToPixel(value);
-            if (horizontal) {
-                if (before)
-                    p.drawLine(pixel, trackRect.top() - 4, pixel, trackRect.top() - 2);
-                if (after)
-                    p.drawLine(pixel, trackRect.bottom() + 4, pixel, trackRect.bottom() + 6);
-            } else {
-                if (before)
-                    p.drawLine(trackRect.left() - 4, pixel, trackRect.left() - 2, pixel);
-                if (after)
-                    p.drawLine(trackRect.right() + 4, pixel, trackRect.right() + 6, pixel);
-            }
-        }
+        auto pixels = detail::sliderTickValues(m_minimum, m_maximum, m_tickInterval, m_singleStep, m_pageStep);
+        for (int& pixel : pixels)
+            pixel = valueToPixel(pixel);
+        detail::paintSliderTicks(p, trackRect, m_orientation, m_tickPosition, pixels, detail::sliderTickColor(colors));
     }
 
     // 3. Thumbs; the active thumb paints last so it stays on top.

@@ -169,6 +169,55 @@ protected:
     void TearDown() override { ThemeRegistry::instance().resetToDefaults(); }
 };
 
+TEST_F(ButtonTest, FocusVisualOnlyPaintsWhileEnabledAndActuallyFocused)
+{
+    QWidget window;
+    auto* layout = new QVBoxLayout(&window);
+    Button button(QStringLiteral("Focus"));
+    Button next(QStringLiteral("Next"));
+    layout->addWidget(&button);
+    layout->addWidget(&next);
+    button.setFixedSize(120, 40);
+    button.setInteractionState(Button::Rest);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+
+    for (auto theme : {FluentElement::Light, FluentElement::Dark, FluentElement::HighContrast}) {
+        SCOPED_TRACE(theme);
+        button.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        button.onThemeUpdated();
+        for (auto style : {Button::Standard, Button::Accent, Button::Subtle}) {
+            SCOPED_TRACE(style);
+            button.setFluentStyle(style);
+            button.setInteractionState(Button::Rest);
+            next.setFocus(Qt::TabFocusReason);
+            ASSERT_FALSE(button.hasFocus());
+            button.setFocusVisual(false);
+            const QImage idle = button.grab().toImage();
+            button.setFocusVisual(true);
+            EXPECT_EQ(button.grab().toImage(), idle);
+
+            button.setFocus(Qt::BacktabFocusReason);
+            ASSERT_TRUE(button.hasFocus());
+            EXPECT_NE(button.grab().toImage(), idle);
+            button.setFocusVisual(false);
+            EXPECT_EQ(button.grab().toImage(), idle);
+            button.setFocusVisual(true);
+            next.setFocus(Qt::TabFocusReason);
+            ASSERT_TRUE(next.hasFocus());
+            EXPECT_TRUE(button.hasFocusVisual());
+            EXPECT_EQ(button.grab().toImage(), idle);
+
+            button.setFocus(Qt::TabFocusReason);
+            button.setInteractionState(Button::Disabled);
+            const QImage disabled = button.grab().toImage();
+            button.setFocusVisual(false);
+            EXPECT_EQ(button.grab().toImage(), disabled);
+        }
+    }
+}
+
 TEST_F(ButtonTest, IconPropertyNotifiesOnceAndLayoutObserversMayDeleteTheButton)
 {
     QPixmap pixels(16, 16);

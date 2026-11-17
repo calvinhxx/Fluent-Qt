@@ -127,6 +127,53 @@ TEST_F(CodeBlockTest, CopyButtonIsKeyboardReachableAndDoesNotToggleFolding)
     EXPECT_EQ(QApplication::clipboard()->text(), block.code());
 }
 
+TEST_F(CodeBlockTest, CollapsedHeadersDoNotRetainAnOutlineAfterFocusMoves)
+{
+    QWidget window;
+    auto* layout = new QVBoxLayout(&window);
+    Button anchor(QStringLiteral("Outside source code"));
+    CodeBlock first(QStringLiteral("first();"));
+    CodeBlock second(QStringLiteral("second();"));
+    layout->addWidget(&anchor);
+    layout->addWidget(&first);
+    layout->addWidget(&second);
+    for (auto* block : {&first, &second}) {
+        block->setAnimationEnabled(false);
+        block->setExpanded(false);
+        EXPECT_TRUE(block->headerButton()->hasFocusVisual());
+    }
+    window.resize(480, 200);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+
+    for (auto theme :
+        {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
+        SCOPED_TRACE(theme);
+        fluent::FluentElement::setTheme(theme);
+        anchor.setFocus(Qt::TabFocusReason);
+        QApplication::processEvents();
+        for (auto* block : {&first, &second}) {
+            auto* header = block->headerButton();
+            ASSERT_FALSE(header->hasFocus());
+            const QImage idle = header->grab().toImage();
+            header->setFocusVisual(false);
+            EXPECT_EQ(header->grab().toImage(), idle);
+            header->setFocusVisual(true);
+        }
+        const QImage idle = first.headerButton()->grab().toImage();
+        first.headerButton()->setFocus(Qt::TabFocusReason);
+        ASSERT_TRUE(first.headerButton()->hasFocus());
+        EXPECT_NE(first.headerButton()->grab().toImage(), idle);
+        QTest::keyClick(first.headerButton(), Qt::Key_Space);
+        EXPECT_TRUE(first.isExpanded());
+        QTest::keyClick(first.headerButton(), Qt::Key_Space);
+        EXPECT_FALSE(first.isExpanded());
+        second.headerButton()->setFocus(Qt::TabFocusReason);
+        EXPECT_EQ(first.headerButton()->grab().toImage(), idle);
+    }
+}
+
 TEST_F(CodeBlockTest, BoundedContentScrollsAndUnlimitedContentReflows)
 {
     QWidget window;

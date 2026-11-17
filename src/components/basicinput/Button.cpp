@@ -3,6 +3,7 @@
 #include "compatibility/PaintCompat.h"
 #include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "Button.h"
+#include "private/ButtonContentPainter_p.h"
 
 #include <QLinearGradient>
 #include <QPainterPath>
@@ -66,56 +67,6 @@ QPainterPath roundedRectPath(const QRectF& rect, const QMargins& radii)
 
     path.closeSubpath();
     return path;
-}
-
-void drawCenteredIconGlyph(QPainter& painter,
-    const QString& glyph,
-    const QString& fontFamily,
-    int pixelSize,
-    const QRectF& targetRect,
-    const QPoint& offset,
-    qreal scale,
-    qreal rotation)
-{
-    const bool usesFluentIcons = fontFamily == Typography::FontFamily::FluentIcons;
-    const QRectF paintedRect = targetRect.translated(QPointF(offset.x(), offset.y()));
-    const bool transformed = !qFuzzyCompare(scale, 1.0) || !qFuzzyIsNull(rotation);
-
-    // Fluent icons: shared paintGlyph (device-aligned drawText). Keep transform
-    // wrapping for Button press/scale animations.
-    // zh_CN: Fluent 图标走共享 paintGlyph（设备对齐 drawText）；按压缩放动画仍包一层变换。
-    if (usesFluentIcons) {
-        if (!transformed) {
-            Typography::Icons::paintGlyph(painter, paintedRect, glyph, pixelSize, Qt::AlignCenter);
-            return;
-        }
-        const QPointF targetCenter = paintedRect.center();
-        painter.save();
-        painter.translate(targetCenter);
-        painter.rotate(rotation);
-        painter.scale(scale, scale);
-        painter.translate(-targetCenter);
-        Typography::Icons::paintGlyph(painter, paintedRect, glyph, pixelSize, Qt::AlignCenter);
-        painter.restore();
-        return;
-    }
-
-    QFont iconFont(fontFamily);
-    iconFont.setPixelSize(pixelSize);
-    painter.setFont(iconFont);
-    if (!transformed) {
-        painter.drawText(paintedRect, Qt::AlignCenter, glyph);
-        return;
-    }
-
-    const QPointF targetCenter = paintedRect.center();
-    painter.save();
-    painter.translate(targetCenter);
-    painter.rotate(rotation);
-    painter.scale(scale, scale);
-    painter.translate(-targetCenter);
-    painter.drawText(paintedRect, Qt::AlignCenter, glyph);
-    painter.restore();
 }
 
 } // namespace
@@ -466,27 +417,8 @@ QRectF Button::paintStackedContent(QPainter& painter, const QRectF& bounds) cons
     const QRectF labelRect(bounds.center().x() - labelWidth / 2.0, labelTop, labelWidth, label.height());
     painter.save();
     painter.setClipRect(bounds, Qt::IntersectClip);
-    if (!image.isEmpty()) {
-        if (!m_iconGlyph.isEmpty()) {
-            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect, m_iconOffset,
-                m_iconScale, m_iconRotation);
-        } else {
-            const qreal dpr = painter.device()
-                ? qMax<qreal>(1.0, painter.device()->devicePixelRatioF())
-                : qMax<qreal>(1.0, devicePixelRatioF());
-            const QPixmap pixmap = fluentIconPixmapForLogicalExtent(icon(), image, dpr,
-                window() ? window()->windowHandle() : nullptr);
-            if (!pixmap.isNull()) {
-                const QSizeF size = QSizeF(pixmap.size()) / pixmap.devicePixelRatioF();
-                painter.save();
-                painter.translate(iconRect.center() + QPointF(m_iconOffset));
-                painter.rotate(m_iconRotation);
-                painter.scale(m_iconScale, m_iconScale);
-                fluentDrawPixmapAt(painter, QPointF(-size.width() / 2.0, -size.height() / 2.0), pixmap);
-                painter.restore();
-            }
-        }
-    }
+    if (!image.isEmpty())
+        ButtonContentPainter::paintButtonIcon(*this, painter, iconRect);
     painter.setFont(font());
     fluent::painting::drawVerticallyCenteredText(painter, labelRect, text(), Qt::AlignHCenter);
     painter.restore();
@@ -499,6 +431,11 @@ void Button::paintEvent(QPaintEvent*)
 }
 
 void Button::paintButton(InteractionState state)
+{
+    paintButtonState(state, hasFocus());
+}
+
+void Button::paintButtonState(InteractionState state, bool focused)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -538,6 +475,11 @@ void Button::paintButton(InteractionState state)
         if (state == Pressed) {
             bgColor = colors.accentTertiary;
             borderColor = Qt::transparent; // Border flattens while pressed. zh_CN: 按下时边框扁平化。
+        }
+        if (checked && m_style == Accent && state == Rest) {
+            // Checked accent button shows a deeper active state so toggle is visually distinct.
+            // zh_CN: 选中的强调按钮显示更深的激活态底色，使开关状态清晰可见。
+            bgColor = colors.accentTertiary;
         }
     } else if (m_style == Subtle) {
         bgColor = Qt::transparent;
@@ -596,11 +538,13 @@ void Button::paintButton(InteractionState state)
         painter.drawPath(roundedRectPath(borderStroke.rect, radii));
     }
 
-    if (state != Disabled && hasFocus() && m_focusVisual) {
-        // Use the softer secondary text color with some transparency so it reads less harsh.
-        // zh_CN: 使用更柔和的文本次要色并加一定透明度，使其不那么“黑”。
-        QColor focusColor = colors.textSecondary;
-        focusColor.setAlpha(120); // About 47% opacity. zh_CN: 约 47% 不透明度。
+    // Opting into a focus cue must not paint every unfocused composite header.
+    // zh_CN: 启用焦点提示不应让未聚焦的复合控件标题也绘制焦点框。
+    if (state != Disabled && focused && m_focusVisual) {
+        // High contrast focus line: clean white on filled accent, soft text secondary on standard.
+        // zh_CN: 高对比度焦点线：强调色背景上使用清晰白色，普通背景使用柔和文本次要色。
+        QColor focusColor = filled ? colors.textOnAccent : colors.textSecondary;
+        focusColor.setAlpha(filled ? 220 : 130);
 
         painter.setPen(QPen(focusColor, 1.0));
         painter.setBrush(Qt::NoBrush);
@@ -609,103 +553,19 @@ void Button::paintButton(InteractionState state)
         painter.drawPath(roundedRectPath(surfaceRect.adjusted(1.5, 1.5, -1.5, -1.5), adjustedRadii(radii, -1)));
     }
 
-    // 4. Lay out and paint the icon and text using token gaps. zh_CN: 使用 Token 间距计算并绘制图标和文字。
-    QString txt = (m_layout == IconOnly) ? "" : text();
-    bool hasIconFont = (m_layout != TextOnly) && !m_iconGlyph.isEmpty();
-    const qreal targetDpr = painter.device()
-        ? qMax<qreal>(1.0, painter.device()->devicePixelRatioF())
-        : qMax<qreal>(1.0, devicePixelRatioF());
-    QWindow* targetWindow = window() ? window()->windowHandle() : nullptr;
-    QPixmap pix = (m_layout == TextOnly || hasIconFont || icon().isNull())
-        ? QPixmap()
-        : fluentIconPixmapForLogicalExtent(icon(), iconSize(), targetDpr, targetWindow);
-    int gap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
-
-    QFontMetrics fm = painter.fontMetrics();
-    // horizontalAdvance treats newlines as part of one line, displacing adjacent icons.
-    // zh_CN: horizontalAdvance 将换行文本按一行测量，会把相邻图标挤出按钮。
-    int txtWidth = txt.contains(QLatin1Char('\n')) ? fm.size(0, txt).width() : fm.horizontalAdvance(txt);
-
-    // Icon width: prefer the icon font, else the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
-    int iconWidth = 0;
-    if (hasIconFont) {
-        iconWidth = m_iconPixelSize;
-    } else if (!pix.isNull()) {
-        double dpr = pix.devicePixelRatio();
-        iconWidth = pix.width() / dpr;
-    }
-
-    int totalContentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && (hasIconFont || !pix.isNull())) ? gap : 0);
-
+    // Shared content keeps inherited icon configuration consistent across button surfaces.
+    // zh_CN: 共享内容绘制，使按钮派生组件继承相同的图标配置。
     QRectF contentRect = surfaceRect;
-    // Fluent nudges only the icon/text content down while pressed; moving the
-    // surface would clip its bottom border at the widget edge.
-    // zh_CN: Fluent 按下时只下移图标/文字内容；移动表面会使底边框被控件边界裁掉。
-    if (state == Pressed && m_style != Subtle) {
+    if (state == Pressed && m_style != Subtle)
         contentRect.translate(0, 0.5);
-    }
     const QRectF layoutRect = contentPaintRect(contentRect);
-    double startX = layoutRect.left() + (layoutRect.width() - totalContentWidth) / 2.0;
-    double centerY = layoutRect.center().y();
-
     painter.setPen(textColor);
-    painter.setRenderHint(
-        QPainter::TextAntialiasing); // Keep icon-font glyphs antialiased. zh_CN: 确保 iconfont 文字抗锯齿。
-
-    const auto drawIconPixmap = [&](qreal x, qreal y) {
-        if (pix.isNull())
-            return;
-        const qreal dpr = pix.devicePixelRatio();
-        const QSizeF logicalSize(pix.width() / dpr, pix.height() / dpr);
-        if (qFuzzyIsNull(m_iconRotation)) {
-            fluentDrawPixmapAt(painter, QPointF(x, y), pix);
-            return;
-        }
-        painter.save();
-        painter.translate(QPointF(x, y) + QPointF(logicalSize.width() / 2.0, logicalSize.height() / 2.0));
-        painter.rotate(m_iconRotation);
-        fluentDrawPixmapAt(painter, QPointF(-logicalSize.width() / 2.0, -logicalSize.height() / 2.0), pix);
-        painter.restore();
-    };
-
-    if (m_layout == IconAbove || m_layout == IconBelow) {
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    if (m_layout == IconAbove || m_layout == IconBelow)
         paintStackedContent(painter, layoutRect);
-    } else if (m_layout == IconAfter) {
-        // Text first, icon after. zh_CN: 文本在前，图标在后。
-        if (!txt.isEmpty()) {
-            fluent::painting::drawVerticallyCenteredText(painter,
-                QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), txt, Qt::AlignHCenter);
-            startX += txtWidth + gap;
-        }
-        if (hasIconFont) {
-            QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
-            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect, m_iconOffset,
-                m_iconScale, m_iconRotation);
-            painter.setFont(font());
-        } else if (!pix.isNull()) {
-            double dpr = pix.devicePixelRatio();
-            double pixH = pix.height() / dpr;
-            drawIconPixmap(startX + m_iconOffset.x(), centerY - pixH / 2.0 + m_iconOffset.y());
-        }
-    } else {
-        // Icon first, text after (or icon only). zh_CN: 图标在前，文本在后（或仅图标）。
-        if (hasIconFont) {
-            QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
-            drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily, m_iconPixelSize, iconRect, m_iconOffset,
-                m_iconScale, m_iconRotation);
-            painter.setFont(font());
-            startX += iconWidth + gap;
-        } else if (!pix.isNull()) {
-            double dpr = pix.devicePixelRatio();
-            double pixH = pix.height() / dpr;
-            drawIconPixmap(startX + m_iconOffset.x(), centerY - pixH / 2.0 + m_iconOffset.y());
-            startX += iconWidth + gap;
-        }
-        if (!txt.isEmpty()) {
-            fluent::painting::drawVerticallyCenteredText(painter,
-                QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()), txt, Qt::AlignHCenter);
-        }
-    }
+    else
+        ButtonContentPainter::paintHorizontalButtonContent(*this, painter, layoutRect,
+            m_size == Small ? spacing.gap.tight : spacing.gap.normal);
 }
 
 } // namespace fluent::basicinput

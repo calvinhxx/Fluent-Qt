@@ -19,10 +19,7 @@ class CompoundButtonProbe final : public CompoundButton {
 public:
     using CompoundButton::CompoundButton;
 
-    QRectF exposedContentRect(const QRectF& surface) const
-    {
-        return contentPaintRect(surface);
-    }
+    QRectF exposedContentRect(const QRectF& surface) const { return contentPaintRect(surface); }
 };
 
 } // namespace
@@ -30,17 +27,13 @@ public:
 TEST(CompoundButtonTest, Contract_InheritsButtonInteractionSurface)
 {
     static_assert(std::is_base_of<Button, CompoundButton>::value,
-                  "CompoundButton must reuse Button interaction and painting");
+        "CompoundButton must reuse Button interaction and painting");
 
-    CompoundButton button(
-        QStringLiteral("Install"),
-        QStringLiteral("Download and restart"));
+    CompoundButton button(QStringLiteral("Install"), QStringLiteral("Download and restart"));
     EXPECT_EQ(button.text(), QStringLiteral("Install"));
-    EXPECT_EQ(button.secondaryText(),
-              QStringLiteral("Download and restart"));
+    EXPECT_EQ(button.secondaryText(), QStringLiteral("Download and restart"));
     EXPECT_EQ(button.fluentSize(), Button::Large);
-    EXPECT_EQ(button.accessibleDescription(),
-              QStringLiteral("Download and restart"));
+    EXPECT_EQ(button.accessibleDescription(), QStringLiteral("Download and restart"));
 }
 
 TEST(CompoundButtonTest, Contract_TextAndParentConstructorMatchesButton)
@@ -55,18 +48,15 @@ TEST(CompoundButtonTest, Contract_TextAndParentConstructorMatchesButton)
 TEST(CompoundButtonTest, Contract_SecondaryTextSetterIsRepeatSafe)
 {
     CompoundButton button;
-    QSignalSpy secondarySpy(
-        &button, &CompoundButton::secondaryTextChanged);
+    QSignalSpy secondarySpy(&button, &CompoundButton::secondaryTextChanged);
     button.setSecondaryText(QStringLiteral("Secondary"));
     button.setSecondaryText(QStringLiteral("Secondary"));
     EXPECT_EQ(secondarySpy.count(), 1);
-    EXPECT_EQ(button.accessibleDescription(),
-              QStringLiteral("Secondary"));
+    EXPECT_EQ(button.accessibleDescription(), QStringLiteral("Secondary"));
 
     button.setAccessibleDescription(QStringLiteral("Custom description"));
     button.setSecondaryText(QStringLiteral("Updated"));
-    EXPECT_EQ(button.accessibleDescription(),
-              QStringLiteral("Custom description"));
+    EXPECT_EQ(button.accessibleDescription(), QStringLiteral("Custom description"));
 }
 
 TEST(CompoundButtonTest, Contract_SecondaryLineChangesMeasurementAndContentRegion)
@@ -76,20 +66,16 @@ TEST(CompoundButtonTest, Contract_SecondaryLineChangesMeasurementAndContentRegio
     const QRectF surface(0, 0, 220, 52);
     EXPECT_EQ(button.exposedContentRect(surface), surface);
 
-    button.setSecondaryText(
-        QStringLiteral("A longer secondary description"));
+    button.setSecondaryText(QStringLiteral("A longer secondary description"));
     const QSize compoundSize = button.sizeHint();
     EXPECT_GT(compoundSize.height(), singleLineSize.height());
     EXPECT_GE(compoundSize.width(), singleLineSize.width());
-    EXPECT_LT(button.exposedContentRect(surface).height(),
-              surface.height());
+    EXPECT_LT(button.exposedContentRect(surface).height(), surface.height());
 }
 
 TEST(CompoundButtonTest, Contract_ClickAndIconBehaviorRemainButtonCompatible)
 {
-    CompoundButton button(
-        QStringLiteral("Share"),
-        QStringLiteral("Send a copy to collaborators"));
+    CompoundButton button(QStringLiteral("Share"), QStringLiteral("Send a copy to collaborators"));
     button.setFluentLayout(Button::IconBefore);
     button.setIconGlyph(Typography::Icons::Share);
     button.resize(button.sizeHint());
@@ -106,4 +92,21 @@ TEST(CompoundButtonTest, Contract_ClickAndIconBehaviorRemainButtonCompatible)
     button.render(&painter);
     painter.end();
     EXPECT_GT(qAlpha(rendered.pixel(rendered.rect().center())), 0);
+}
+
+TEST(CompoundButtonTest, Contract_FluentSizeScalesMeasurementAcrossSizes)
+{
+    CompoundButton smallButton(QStringLiteral("Compact action"), QStringLiteral("Helper line"));
+    smallButton.setFluentSize(Button::Small);
+
+    CompoundButton standardButton(QStringLiteral("Compact action"), QStringLiteral("Helper line"));
+    standardButton.setFluentSize(Button::StandardSize);
+
+    CompoundButton largeButton(QStringLiteral("Compact action"), QStringLiteral("Helper line"));
+    largeButton.setFluentSize(Button::Large);
+
+    EXPECT_LT(smallButton.sizeHint().height(), standardButton.sizeHint().height());
+    EXPECT_LT(standardButton.sizeHint().height(), largeButton.sizeHint().height());
+    EXPECT_LT(smallButton.sizeHint().width(), standardButton.sizeHint().width());
+    EXPECT_LT(standardButton.sizeHint().width(), largeButton.sizeHint().width());
 }

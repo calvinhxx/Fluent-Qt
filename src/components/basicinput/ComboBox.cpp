@@ -716,6 +716,8 @@ void ComboBox::setEditable(bool editable)
         editor->setFontRole(m_fontRole);
         editor->setContentMargins(QMargins(0, 0, 0, 0));
         editor->setFrameVisible(false);
+        if (!placeholderText().isEmpty())
+            editor->setPlaceholderText(placeholderText());
         auto* style = new TransparentLineEditStyle();
         style->setParent(editor);
         editor->setStyle(style);
@@ -1117,11 +1119,14 @@ void ComboBox::paintEvent(QPaintEvent*)
 
     // In editable mode, QLineEdit handles text display
     if (!editor) {
-        painter.setPen(textColor);
-        painter.setFont(font());
         const QString text = currentText();
+        const bool showingPlaceholder = text.isEmpty() && !placeholderText().isEmpty();
+        const QString displayText = showingPlaceholder ? placeholderText() : text;
+        const QColor placeholderColor = enabled ? colors.textSecondary : colors.textDisabled;
+        painter.setPen(showingPlaceholder ? placeholderColor : textColor);
+        painter.setFont(font());
         const QFontMetricsF metrics(painter.font());
-        const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
+        const QString elidedText = metrics.elidedText(displayText, Qt::ElideRight, qRound(textSlot.width()));
         fluent::painting::drawVerticallyCenteredText(painter, textSlot, elidedText,
             QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft));
     }
