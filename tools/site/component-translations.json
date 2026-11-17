@@ -422,7 +422,7 @@
     "description": "可配置的粒子动画背景。",
     "capture_size": "1060x1000",
     "example": "流动丝带",
-    "usage": "用 setEffect() 选择粒子风格，setParticleCount() 与 setMaximumFrameRate() 调整密度和帧率；减弱动效模式下自动静止。"
+    "usage": "用 setEffect() 选择粒子风格，setParticleCount() 与 setMaximumFrameRate() 调整密度和帧率；减弱动画模式下自动静止。"
   },
   "spatial-view": {
     "name": "空间视图",
@@ -446,8 +446,8 @@
     "description": "在 Widgets 界面中嵌入 QML 页面，并共享数据与 Fluent 主题。",
     "capture_size": "1060x1000",
     "example": "加载 QML 页面",
-    "usage": "先激活 QmlSession，再通过 QmlSession::createView() 创建 QmlView 并加载 QML 文件。若与 OpenGL 控件共用窗口，需在首个 Quick 表面创建前先选择图形后端。",
-    "usage_en": "Activate a QmlSession, create a QmlView with QmlSession::createView(), and load a QML URL. When sharing a window with OpenGL views, select the Quick graphics backend before creating the first Quick surface."
+    "usage": "先激活 QmlSession，再通过 QmlSession::createView() 创建 QmlView 并加载 QML 文件。若与 OpenGL 控件共用窗口，需在创建首个 Quick 视图前先选择图形后端。",
+    "usage_en": "Activate a QmlSession, create a QmlView with QmlSession::createView(), and load a QML URL. When sharing a window with OpenGL views, select the Quick graphics backend before creating the first Quick view."
   },
   "menu": {
     "name": "菜单",
@@ -478,7 +478,7 @@
   },
   "command-bar-flyout": {
     "name": "浮动命令栏",
-    "description": "在选中内容旁弹出的上下文命令栏，可按需展开更多操作。",
+    "description": "在目标控件附近弹出的快捷操作栏，可按需展开更多命令。",
     "example": "照片的上下文操作",
     "usage": "用 addPrimaryAction() 和 addSecondaryAction() 添加主要和次要操作；调用 showAt() 时可选择 Standard 或 Transient 显示模式。",
     "usage_en": "Add commands with addPrimaryAction() and addSecondaryAction(), then pass Standard or Transient mode to showAt() to match click or context invocation."
@@ -519,7 +519,7 @@
   },
   "tab-view": {
     "name": "标签页视图",
-    "description": "支持新增、关闭和拖拽重排的标签栏，页面内容由应用托管。",
+    "description": "支持新增、关闭和拖拽重排的标签页栏，各页内容由应用自己管理。",
     "description_en": "A tab bar with selection, closing, and drag reordering; pages are hosted by your app.",
     "example": "标签页与页面",
     "usage": "连接 currentChanged 同步切换 StackContentHost 页面；启用 setTabReorderEnabled(true) 后可监听 tabMoved 调整页面顺序。",
@@ -547,7 +547,7 @@
   },
   "scrollbar": {
     "name": "滚动条",
-    "description": "Fluent 样式滚动条，静默时收缩为细条，悬停时自动加宽。",
+    "description": "Fluent 样式滚动条，空闲时自动收窄为细条，悬停时自动加宽。",
     "example": "水平与垂直",
     "usage": "用法与 QScrollBar 一致，使用 setRange()、setPageStep() 和 setValue()。"
   },
@@ -589,7 +589,7 @@
     "description": "环形展示已知百分比进度或不确定加载动画。",
     "description_en": "Shows determinate progress or an indeterminate loading spinner.",
     "example": "三种尺寸",
-    "usage": "用 setRingSize() 选择尺寸，setIsActive(true) 启用旋转；处于 Running 状态且允许动效时自动播放。",
+    "usage": "用 setRingSize() 选择尺寸，setIsActive(true) 启用旋转；动画启用时自动播放。",
     "usage_en": "Pick a size with setRingSize() and start spinning with setIsActive(true) when indeterminate, Running, and motion policy allows animations."
   },
   "splash-screen": {
@@ -644,9 +644,9 @@
   },
   "label": {
     "name": "文本标签",
-    "description": "应用 Fluent 字体层级的文本标签。",
-    "example": "字体层级",
-    "usage": "用 setFluentTypography() 指定 Caption、Body、Subtitle 等字号层级，切换主题后保持一致。"
+    "description": "支持 Fluent 预设字号的文本标签。",
+    "example": "字号样式",
+    "usage": "用 setFluentTypography() 指定 Caption、Body、Subtitle 等预设字号，切换主题后保持一致。"
   },
   "line-edit": {
     "name": "单行输入框",
@@ -658,7 +658,7 @@
     "name": "数值输入框",
     "description": "支持步进调节、表达式计算与拖拽调值的数值框。",
     "example": "拖动调整数值",
-    "usage": "调用 setScrubbingEnabled(true) 允许拖拽手柄调值；按住 Shift 精细微调，按 Esc 取消本次拖动恢复原值。"
+    "usage": "调用 setScrubbingEnabled(true) 允许左右拖动数值；按住 Shift 可精细微调，按 Esc 取消本次拖动恢复原值。"
   },
   "password-box": {
     "name": "密码输入框",
@@ -682,7 +682,7 @@
   },
   "window": {
     "name": "窗口",
-    "description": "带自定义标题栏与系统背景材质的 Fluent 顶层窗口。",
+    "description": "带自定义标题栏和 Mica / Acrylic 背景效果的顶层窗口。",
     "height": 560,
     "example": "设置窗口内容",
     "usage": "用 setContentWidget() 放入主界面，setBackdropEffect() 请求 Mica/Acrylic 等背景效果，并通过 backdropState() 查询平台实际生效的状态。",
@@ -690,16 +690,16 @@
   },
   "font-icon": {
     "name": "字体图标",
-    "description": "显示内置 Fluent 图标或应用自定义字体中的字形。",
+    "description": "显示内置 Fluent 图标或自定义字体里的图标。",
     "example": "不同尺寸",
-    "usage": "默认按字号选用内置 Fluent 图标；调用 setFontFamily() 可切换为应用注册的自定义图标字体（清空字体族即恢复默认）。"
+    "usage": "默认按尺寸选用内置 Fluent 图标；调用 setFontFamily() 可改用应用注册的自定义图标字体（传空字符串即可恢复默认）。"
   },
   "transfer": {
     "name": "双栏选择",
     "description": "搜索条目，并在可选和已选列表间批量移动。",
     "description_en": "Search items and move them between available and selected lists in bulk.",
     "sample": "transfer-project-members",
-    "usage": "用 setModel() 绑定应用持有的一个源模型，两栏共用这份数据。selectedKeys 决定已选栏的条目；移动操作只更新这些键，并跳过禁用项。",
+    "usage": "用 setModel() 绑定数据源，两栏共用这份数据。selectedKeys 决定已选栏的条目；移动操作只更新这些键，并跳过禁用项。",
     "usage_en": "Call setModel() with one model owned by the application. selectedKeys determines which items appear in the selected list; moving items updates these keys and skips disabled rows."
   }
 }

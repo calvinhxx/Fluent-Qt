@@ -77,7 +77,7 @@ def member_markup(member, language, prefix):
         label = '已弃用' if language == 'zh' else 'Deprecated'
         details = f'<p>{label} · {html.escape(member["deprecated"])}</p>' + details
     if member['kind'] == 'properties':
-        labels = {'read': ('Read', '读取'), 'write': ('Write', '设置'), 'reset': ('Reset', '重置'), 'notify': ('Notify', '通知')}
+        labels = {'read': ('Read', '读取'), 'write': ('Write', '设置'), 'reset': ('Reset', '重置'), 'notify': ('Notify', '变化信号')}
         accessors = []
         for key, values in labels.items():
             value = member.get(key)
@@ -118,7 +118,7 @@ def render_type(record, catalog, page, language, include_inherited=False, python
         additions = [m for m in python_extensions(python['module'], python['type']) if m['name'] not in known]
         parts.append(render_members(additions, language, prefix))
     if protected:
-        label = '子类扩展接口' if language == 'zh' else 'Subclass interfaces'
+        label = '受保护成员' if language == 'zh' else 'Protected members'
         parts.append(f'<details class="api-inherited"><summary>{label}</summary>{render_members(protected, language, prefix + "-protected")}</details>')
     if include_inherited:
         for base in inherited_types(record):
@@ -129,7 +129,7 @@ def render_type(record, catalog, page, language, include_inherited=False, python
         qt_bases = list(dict.fromkeys(name for base in [record, *inherited_types(record)] for name in base['bases']
                                     if name.startswith('Q') and resolve_type(name) is None and re.fullmatch(r'Q\w+', name)))
         if qt_bases:
-            label = 'Qt 基类完整成员' if language == 'zh' else 'All inherited Qt members'
+            label = 'Qt 基类文档' if language == 'zh' else 'Qt base class docs'
             links = ' · '.join(f'<a href="https://doc.qt.io/qt-6/{name.lower()}-members.html">{name}</a>' for name in qt_bases)
             parts.append(f'<p class="api-inheritance">{label}：{links}</p>')
     parts.append('</section>')

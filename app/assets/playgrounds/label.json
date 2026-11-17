@@ -34,7 +34,7 @@
       "type": "enum",
       "label": {
         "en": "Fluent typography",
-        "zh": "排版"
+        "zh": "字号样式"
       },
       "category": "basic"
     },
@@ -93,7 +93,7 @@
     56
   ],
   "description": {
-    "en": "Static text rendered with Fluent typography roles and elision.",
+    "en": "Text label supporting Fluent preset font styles and automatic elision.",
     "zh": "应用 Fluent 字体层级的文本标签。"
   },
   "sizeMode": "fixed",

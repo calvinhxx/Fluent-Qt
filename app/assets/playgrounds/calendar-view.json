@@ -75,7 +75,7 @@
     368
   ],
   "description": {
-    "en": "A calendar surface for browsing months and selecting dates.",
+    "en": "Monthly and yearly calendar for browsing and picking dates.",
     "zh": "按月/年浏览并选择日期。"
   },
   "presets": [

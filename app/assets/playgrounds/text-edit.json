@@ -175,7 +175,7 @@
     180
   ],
   "description": {
-    "en": "A multi-line text surface for longer-form input.",
+    "en": "Multi-line text editor that grows with line count and scrolls.",
     "zh": "支持按行数自动增高与滚动的多行文本框。"
   },
   "sizeMode": "contentHeight",

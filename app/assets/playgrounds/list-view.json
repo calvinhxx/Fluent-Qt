@@ -151,7 +151,7 @@
       "type": "enum",
       "label": {
         "en": "Font style",
-        "zh": "字体角色"
+        "zh": "字号样式"
       },
       "default": "Body",
       "effectHint": {
