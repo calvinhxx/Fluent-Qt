@@ -35,10 +35,7 @@ struct GalleryComponentReference {
     QString pythonImport;
     QString pythonType;
 
-    bool isValid() const
-    {
-        return !header.isEmpty() && !qualifiedType.isEmpty() && !cmakeTarget.isEmpty();
-    }
+    bool isValid() const { return !header.isEmpty() && !qualifiedType.isEmpty() && !cmakeTarget.isEmpty(); }
 
     bool hasPythonReference() const
     {

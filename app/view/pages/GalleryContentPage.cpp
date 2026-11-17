@@ -19,8 +19,7 @@ namespace {
 
 class GalleryContentScrollView final : public fluent::scrolling::ScrollView {
 public:
-    explicit GalleryContentScrollView(QWidget* parent = nullptr)
-        : fluent::scrolling::ScrollView(parent)
+    explicit GalleryContentScrollView(QWidget* parent = nullptr) : fluent::scrolling::ScrollView(parent)
     {
         applyTransparentSurface();
     }
@@ -54,13 +53,10 @@ private:
 } // namespace
 
 GalleryContentPage::GalleryContentPage(const QString& routeId,
-                                       const QString& title,
-                                       const QString& subtitle,
-                                       QWidget* parent)
-    : QWidget(parent)
-    , m_routeId(routeId)
-    , m_title(title)
-    , m_subtitle(subtitle)
+    const QString& title,
+    const QString& subtitle,
+    QWidget* parent)
+    : QWidget(parent), m_routeId(routeId), m_title(title), m_subtitle(subtitle)
 {
     setObjectName(QStringLiteral("galleryContentPage"));
     setProperty("galleryRouteId", m_routeId);
@@ -75,15 +71,13 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setFrameShape(QFrame::NoFrame);
     m_scrollArea->setHorizontalScrollMode(fluent::scrolling::ScrollView::ScrollMode::Disabled);
-    m_scrollArea->setHorizontalScrollBarVisibility(
-        fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
+    m_scrollArea->setHorizontalScrollBarVisibility(fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
     // Reserve the vertical scrollbar gutter even before content overflows. With Qt's
     // ScrollBarAsNeeded policy the viewport width changes on the first code-block expansion,
     // making the entire sample column flash/shrink horizontally.
     // zh_CN: 提前保留垂直滚动条槽位。Qt 的按需策略会在代码块首次展开时改变 viewport 宽度，
     // 导致整列示例卡片横向闪缩。
-    m_scrollArea->setVerticalScrollBarVisibility(
-        fluent::scrolling::ScrollView::ScrollBarVisibility::Visible);
+    m_scrollArea->setVerticalScrollBarVisibility(fluent::scrolling::ScrollView::ScrollBarVisibility::Visible);
 
     // GalleryContentScrollView keeps its clip viewport transparent across theme refreshes without
     // promoting it to a separate translucent child layer on macOS.
@@ -107,16 +101,14 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     m_titleLabel->setObjectName(QStringLiteral("galleryContentTitle"));
     m_titleLabel->setProperty("galleryRouteId", m_routeId);
     m_titleLabel->setFluentTypography(Typography::FontRole::Title);
-    m_titleLabel->setTextColorRole(
-        fluent::textfields::Label::TextColorRole::Primary);
+    m_titleLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
     m_titleLabel->setWordWrap(true);
     m_titleLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     m_headerLayout->addWidget(m_titleLabel, 1, Qt::AlignVCenter);
     m_contentLayout->addWidget(m_headerRow);
 
     if (!m_subtitle.isEmpty()) {
-        m_subtitleLabel =
-            createTrackedLabel(m_subtitle, Typography::FontRole::Body, TextRole::Secondary);
+        m_subtitleLabel = createTrackedLabel(m_subtitle, Typography::FontRole::Body, TextRole::Secondary);
         m_subtitleLabel->setObjectName(QStringLiteral("galleryContentSubtitle"));
         m_subtitleLabel->setWordWrap(true);
         m_contentLayout->addWidget(m_subtitleLabel);
@@ -132,8 +124,7 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
 
 fluent::textfields::Label* GalleryContentPage::addSectionHeader(const QString& text)
 {
-    fluent::textfields::Label* header =
-        createTrackedLabel(text, Typography::FontRole::Subtitle, TextRole::Primary);
+    fluent::textfields::Label* header = createTrackedLabel(text, Typography::FontRole::Subtitle, TextRole::Primary);
     header->setObjectName(QStringLiteral("galleryContentSectionHeader"));
     addContentSpacing(8);
     addContentWidget(header);
@@ -142,8 +133,7 @@ fluent::textfields::Label* GalleryContentPage::addSectionHeader(const QString& t
 
 fluent::textfields::Label* GalleryContentPage::addBodyText(const QString& text)
 {
-    fluent::textfields::Label* body =
-        createTrackedLabel(text, Typography::FontRole::Body, TextRole::Secondary);
+    fluent::textfields::Label* body = createTrackedLabel(text, Typography::FontRole::Body, TextRole::Secondary);
     body->setObjectName(QStringLiteral("galleryContentBody"));
     body->setWordWrap(true);
     addContentWidget(body);
@@ -215,14 +205,12 @@ void GalleryContentPage::paintEvent(QPaintEvent* event)
     QWidget::paintEvent(event);
 }
 
-fluent::textfields::Label* GalleryContentPage::createTrackedLabel(const QString& text,
-                                                                  Typography::FontRole fontRole,
-                                                                  TextRole textRole)
+fluent::textfields::Label*
+GalleryContentPage::createTrackedLabel(const QString& text, Typography::FontRole fontRole, TextRole textRole)
 {
     auto* label = new fluent::textfields::Label(text, m_viewport);
     label->setFluentTypography(fontRole);
-    label->setTextColorRole(
-        textRole == TextRole::Primary
+    label->setTextColorRole(textRole == TextRole::Primary
             ? fluent::textfields::Label::TextColorRole::Primary
             : fluent::textfields::Label::TextColorRole::Secondary);
     m_trackedLabels.append({label, textRole});
@@ -234,8 +222,7 @@ void GalleryContentPage::trackLabelColor(fluent::textfields::Label* label, TextR
     if (!label)
         return;
     m_trackedLabels.append({label, textRole});
-    label->setTextColorRole(
-        textRole == TextRole::Primary
+    label->setTextColorRole(textRole == TextRole::Primary
             ? fluent::textfields::Label::TextColorRole::Primary
             : fluent::textfields::Label::TextColorRole::Secondary);
 }
@@ -252,8 +239,7 @@ void GalleryContentPage::applyBackdrop()
     QPalette pagePalette = palette();
     pagePalette.setColor(QPalette::Window, Qt::transparent);
     setPalette(pagePalette);
-    setStyleSheet(QStringLiteral(
-                      "#galleryContentPage, #galleryContentViewport { background: transparent; }"));
+    setStyleSheet(QStringLiteral("#galleryContentPage, #galleryContentViewport { background: transparent; }"));
 }
 
 void GalleryContentPage::applyPalette()

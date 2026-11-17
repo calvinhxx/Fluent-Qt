@@ -14,10 +14,10 @@ namespace Typography::Icons {
  * zh_CN: 内置 Fluent UI System Icons 字体中单个字形的元数据。
  */
 struct IconInfo {
-    QString name;         // Stable upstream key, e.g. ic_fluent_add_20_regular.
-    QString displayName;  // Human-readable semantic name. zh_CN: 易读语义名称。
+    QString name;        // Stable upstream key, e.g. ic_fluent_add_20_regular.
+    QString displayName; // Human-readable semantic name. zh_CN: 易读语义名称。
     quint32 codepoint = 0;
-    int designSize = 0;   // Upstream optical design size in pixels. zh_CN: 上游光学设计尺寸。
+    int designSize = 0; // Upstream optical design size in pixels. zh_CN: 上游光学设计尺寸。
 
     /** @brief Returns the UTF-16 glyph string for this codepoint. */
     QString glyph() const;
@@ -89,10 +89,10 @@ QFont font(int pixelSize);
  * 返回前会恢复 painter 字体，避免图标/文字复合控件误用图标字体绘制标签。
  */
 void paintGlyph(QPainter& painter,
-                const QRectF& targetRect,
-                const QString& glyphOrName,
-                int pixelSize,
-                Qt::Alignment alignment = Qt::AlignCenter);
+    const QRectF& targetRect,
+    const QString& glyphOrName,
+    int pixelSize,
+    Qt::Alignment alignment = Qt::AlignCenter);
 
 } // namespace Typography::Icons
 

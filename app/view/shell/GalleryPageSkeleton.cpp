@@ -24,8 +24,7 @@ constexpr int kCardHeight = 132;
 
 } // namespace
 
-GalleryPageSkeleton::GalleryPageSkeleton(QWidget* parent)
-    : QWidget(parent)
+GalleryPageSkeleton::GalleryPageSkeleton(QWidget* parent) : QWidget(parent)
 {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -55,8 +54,7 @@ void GalleryPageSkeleton::updateSkeletonElements()
     if (!m_shimmer)
         return;
 
-    QRectF content = QRectF(rect()).adjusted(kLeftMargin, kTopMargin,
-                                             -kRightMargin, -kBottomMargin);
+    QRectF content = QRectF(rect()).adjusted(kLeftMargin, kTopMargin, -kRightMargin, -kBottomMargin);
     if (content.isEmpty()) {
         m_shimmer->clearElements();
         return;
@@ -68,18 +66,15 @@ void GalleryPageSkeleton::updateSkeletonElements()
     const qreal titleWidth = qMin<qreal>(320.0, content.width());
     const qreal subtitleWidth = qMin<qreal>(460.0, content.width());
     elements.append({ShimmerPainter::Shape::RoundedRect,
-                     QRectF(content.left(), y, titleWidth, ::Spacing::ControlHeight::Large),
-                     CornerRadius::Control});
+        QRectF(content.left(), y, titleWidth, ::Spacing::ControlHeight::Large), CornerRadius::Control});
     y += ::Spacing::ControlHeight::Large + ::Spacing::Standard;
     elements.append({ShimmerPainter::Shape::RoundedRect,
-                     QRectF(content.left(), y, subtitleWidth, ::Spacing::ControlHeight::Small),
-                     CornerRadius::Control});
+        QRectF(content.left(), y, subtitleWidth, ::Spacing::ControlHeight::Small), CornerRadius::Control});
     y += ::Spacing::ControlHeight::Small + ::Spacing::Medium + ::Spacing::Standard;
 
     for (int i = 0; i < kCardCount; ++i) {
-        elements.append({ShimmerPainter::Shape::RoundedRect,
-                         QRectF(content.left(), y, content.width(), kCardHeight),
-                         CornerRadius::Control});
+        elements.append({ShimmerPainter::Shape::RoundedRect, QRectF(content.left(), y, content.width(), kCardHeight),
+            CornerRadius::Control});
         y += kCardHeight + ::Spacing::Standard;
     }
     m_shimmer->setElements(elements);

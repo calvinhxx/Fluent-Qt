@@ -11,14 +11,8 @@
 
 namespace fluent::gallery {
 
-CompactFlyoutRow::CompactFlyoutRow(const QString& routeId,
-                                   const QString& text,
-                                   bool selected,
-                                   QWidget* parent)
-    : QWidget(parent)
-    , m_routeId(routeId)
-    , m_text(text)
-    , m_selected(selected)
+CompactFlyoutRow::CompactFlyoutRow(const QString& routeId, const QString& text, bool selected, QWidget* parent)
+    : QWidget(parent), m_routeId(routeId), m_text(text), m_selected(selected)
 {
     setObjectName(QStringLiteral("galleryCompactNavigationFlyoutRow_%1").arg(routeId));
     setMouseTracking(true);
@@ -64,9 +58,8 @@ void CompactFlyoutRow::paintEvent(QPaintEvent*)
     painter.setFont(textFont);
     painter.setPen(colors.textPrimary);
     const QRect textRect(14, 0, qMax(0, width() - 24), height());
-    painter.drawText(textRect,
-                     Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
-                     painter.fontMetrics().elidedText(m_text, Qt::ElideRight, textRect.width()));
+    painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+        painter.fontMetrics().elidedText(m_text, Qt::ElideRight, textRect.width()));
 }
 
 void CompactFlyoutRow::enterEvent(FluentEnterEvent* event)
@@ -109,8 +102,7 @@ void CompactFlyoutRow::mouseReleaseEvent(QMouseEvent* event)
     QWidget::mouseReleaseEvent(event);
 }
 
-CompactFlyoutPanel::CompactFlyoutPanel(QWidget* parent)
-    : QWidget(parent)
+CompactFlyoutPanel::CompactFlyoutPanel(QWidget* parent) : QWidget(parent)
 {
     // Transparent: the host Popup already paints the rounded bgLayer card + border + layered shadow.
     // The old opaque SQUARE fill here overpainted that rounded card — hiding the border and squaring

@@ -8,10 +8,15 @@ namespace fluent::gallery {
 
 namespace {
 
-GalleryNavigationItem node(GalleryNavigationItem::Kind kind, const QString& id,
-                           const QString& title, const QString& group, const QString& iconGlyph,
-                           const QColor& color, const QString& parentId = QString(), int depth = 0,
-                           bool expandable = false)
+GalleryNavigationItem node(GalleryNavigationItem::Kind kind,
+    const QString& id,
+    const QString& title,
+    const QString& group,
+    const QString& iconGlyph,
+    const QColor& color,
+    const QString& parentId = QString(),
+    int depth = 0,
+    bool expandable = false)
 {
     GalleryNavigationItem item;
     item.id = id;
@@ -37,11 +42,9 @@ GalleryNavigationItem section(const QString& title)
 
 QColor componentColor(int categoryIndex, int componentIndex)
 {
-    static const QVector<QColor> colors{
-        QColor(QStringLiteral("#F2FBF8")), QColor(QStringLiteral("#FFF6FA")),
-        QColor(QStringLiteral("#F3FBFF")), QColor(QStringLiteral("#FFF9EA")),
-        QColor(QStringLiteral("#F8F8F8")), QColor(QStringLiteral("#F0FBFA")),
-        QColor(QStringLiteral("#F8F5FF")), QColor(QStringLiteral("#F6FAF2")),
+    static const QVector<QColor> colors{QColor(QStringLiteral("#F2FBF8")), QColor(QStringLiteral("#FFF6FA")),
+        QColor(QStringLiteral("#F3FBFF")), QColor(QStringLiteral("#FFF9EA")), QColor(QStringLiteral("#F8F8F8")),
+        QColor(QStringLiteral("#F0FBFA")), QColor(QStringLiteral("#F8F5FF")), QColor(QStringLiteral("#F6FAF2")),
         QColor(QStringLiteral("#F7F7FF")), QColor(QStringLiteral("#F3F7FA"))};
     return colors.at((categoryIndex + componentIndex) % colors.size());
 }
@@ -50,9 +53,8 @@ QColor componentColor(int categoryIndex, int componentIndex)
 
 GalleryNavigationViewModel::GalleryNavigationViewModel()
 {
-    m_items.append(node(GalleryNavigationItem::Kind::RootRoute, QStringLiteral("home"),
-                        QStringLiteral("Home"), QStringLiteral("Root"), Typography::Icons::Home,
-                        QColor(QStringLiteral("#F4F8FF"))));
+    m_items.append(node(GalleryNavigationItem::Kind::RootRoute, QStringLiteral("home"), QStringLiteral("Home"),
+        QStringLiteral("Root"), Typography::Icons::Home, QColor(QStringLiteral("#F4F8FF"))));
 
     // Foundation mirrors the WinUI Gallery "Design / Fundamentals" area: a landing
     // route (feature cards) with one expandable child per design-token topic. Each
@@ -62,27 +64,27 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
     // zh_CN: Foundation 对标 WinUI Gallery 的「Design / Fundamentals」区：一个落地路由（特性卡片）
     // 加每个设计 token 主题一个可展开子项。子项用 ComponentRoute，使其缩进显示在父项下，
     // 与分类下的控件一致。不加分区头——「Foundation」项本身就是名字，再加「Foundation」头只会重复。
-    m_items.append(node(
-        GalleryNavigationItem::Kind::CategoryRoute, QStringLiteral("foundation"),
+    m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, QStringLiteral("foundation"),
         QStringLiteral("Foundation"), QStringLiteral("Foundation"),
-        Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_20_regular")),
-        QColor(QStringLiteral("#F3F1FB")),
+        Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_20_regular")), QColor(QStringLiteral("#F3F1FB")),
         QString(), // top-level category: no parent (not itself). zh_CN: 顶级分类，无父项（不是自己）。
         0, true));
     const struct {
         const char* id;
         const char* title;
     } foundationTopics[] = {
-        {"foundation-qmlplus", "QML+"},      {"foundation-typography", "Typography"},
-        {"foundation-color", "Color"},       {"foundation-iconography", "Iconography"},
-        {"foundation-geometry", "Geometry"}, {"foundation-spacing", "Spacing"},
+        {"foundation-qmlplus", "QML+"},
+        {"foundation-typography", "Typography"},
+        {"foundation-color", "Color"},
+        {"foundation-iconography", "Iconography"},
+        {"foundation-geometry", "Geometry"},
+        {"foundation-spacing", "Spacing"},
     };
     int foundationComponentInsertIndex = -1;
     for (const auto& topic : foundationTopics) {
-        m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute,
-                            QString::fromLatin1(topic.id), QString::fromLatin1(topic.title),
-                            QStringLiteral("Foundation"), QString(),
-                            QColor(QStringLiteral("#F7F6FD")), QStringLiteral("foundation"), 1));
+        m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute, QString::fromLatin1(topic.id),
+            QString::fromLatin1(topic.title), QStringLiteral("Foundation"), QString(),
+            QColor(QStringLiteral("#F7F6FD")), QStringLiteral("foundation"), 1));
         if (QString::fromLatin1(topic.id) == QStringLiteral("foundation-iconography"))
             foundationComponentInsertIndex = m_items.size();
     }
@@ -91,14 +93,11 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
     for (const GalleryComponentCategory& category : galleryComponentCatalog()) {
         if (category.id != QStringLiteral("foundation"))
             continue;
-        for (int componentIndex = 0; componentIndex < category.components.size();
-             ++componentIndex) {
+        for (int componentIndex = 0; componentIndex < category.components.size(); ++componentIndex) {
             const GalleryComponentEntry& component = category.components.at(componentIndex);
             m_items.insert(foundationComponentInsertIndex++,
-                           node(GalleryNavigationItem::Kind::ComponentRoute, component.id,
-                                component.title, category.title, component.iconGlyph,
-                                componentColor(0, componentIndex + 1), QStringLiteral("foundation"),
-                                1));
+                node(GalleryNavigationItem::Kind::ComponentRoute, component.id, component.title, category.title,
+                    component.iconGlyph, componentColor(0, componentIndex + 1), QStringLiteral("foundation"), 1));
         }
         break;
     }
@@ -109,32 +108,27 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
         hasPlugins |= category.plugin;
     if (hasPlugins) {
         m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, QStringLiteral("plugins"),
-                            QStringLiteral("Plugins"), QStringLiteral("Plugins"),
-                            Typography::Icons::AllApps, QColor(QStringLiteral("#F3F1FB")),
-                            QString(), 0, true));
+            QStringLiteral("Plugins"), QStringLiteral("Plugins"), Typography::Icons::AllApps,
+            QColor(QStringLiteral("#F3F1FB")), QString(), 0, true));
         for (int categoryIndex = 0; categoryIndex < catalog.size(); ++categoryIndex) {
             const auto& category = catalog.at(categoryIndex);
             if (!category.plugin)
                 continue;
-            m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, category.id,
-                                category.title, QStringLiteral("Plugins"), category.iconGlyph,
-                                componentColor(categoryIndex, 0), QStringLiteral("plugins"), 1,
-                                !category.components.isEmpty()));
-            for (int componentIndex = 0; componentIndex < category.components.size();
-                 ++componentIndex) {
+            m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, category.id, category.title,
+                QStringLiteral("Plugins"), category.iconGlyph, componentColor(categoryIndex, 0),
+                QStringLiteral("plugins"), 1, !category.components.isEmpty()));
+            for (int componentIndex = 0; componentIndex < category.components.size(); ++componentIndex) {
                 const auto& component = category.components.at(componentIndex);
-                m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute, component.id,
-                                    component.title, category.title, component.iconGlyph,
-                                    componentColor(categoryIndex, componentIndex + 1), category.id,
-                                    2));
+                m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute, component.id, component.title,
+                    category.title, component.iconGlyph, componentColor(categoryIndex, componentIndex + 1), category.id,
+                    2));
             }
         }
     }
 
     m_items.append(section(QStringLiteral("Controls")));
-    m_items.append(node(
-        GalleryNavigationItem::Kind::RootRoute, QStringLiteral("all-controls"),
-        QStringLiteral("All"), QStringLiteral("Controls"),
+    m_items.append(node(GalleryNavigationItem::Kind::RootRoute, QStringLiteral("all-controls"), QStringLiteral("All"),
+        QStringLiteral("Controls"),
         // View reads as "browse the full catalog" without colliding with
         // Collections' Grid glyph. zh_CN: View 表示浏览完整目录，且不与 Collections 的 Grid 撞形。
         Typography::Icons::View, QColor(QStringLiteral("#F8F8FF")), QStringLiteral("controls")));
@@ -144,21 +138,19 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
         if (category.id == QStringLiteral("foundation") || category.plugin)
             continue;
         m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, category.id, category.title,
-                            QStringLiteral("Controls"), category.iconGlyph,
-                            componentColor(categoryIndex, 0), QStringLiteral("controls"), 0,
-                            !category.components.isEmpty()));
-        for (int componentIndex = 0; componentIndex < category.components.size();
-             ++componentIndex) {
+            QStringLiteral("Controls"), category.iconGlyph, componentColor(categoryIndex, 0),
+            QStringLiteral("controls"), 0, !category.components.isEmpty()));
+        for (int componentIndex = 0; componentIndex < category.components.size(); ++componentIndex) {
             const GalleryComponentEntry& component = category.components.at(componentIndex);
-            m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute, component.id,
-                                component.title, category.title, component.iconGlyph,
-                                componentColor(categoryIndex, componentIndex + 1), category.id, 1));
+            m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute, component.id, component.title,
+                category.title, component.iconGlyph, componentColor(categoryIndex, componentIndex + 1), category.id,
+                1));
         }
     }
 
     m_items.append(node(GalleryNavigationItem::Kind::FooterRoute, QStringLiteral("settings"),
-                        QStringLiteral("Settings"), QStringLiteral("Footer"),
-                        Typography::Icons::Settings, QColor(QStringLiteral("#F7F7F7"))));
+        QStringLiteral("Settings"), QStringLiteral("Footer"), Typography::Icons::Settings,
+        QColor(QStringLiteral("#F7F7F7"))));
 
     int routeCount = 0;
     int categoryCount = 0;
@@ -186,9 +178,9 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
         }
     }
 
-    LOG_DEBUG(
-        QStringLiteral("GalleryNavigationViewModel build catalogCategories=%1 totalItems=%2 "
-                       "routes=%3 categories=%4 components=%5 footerRoutes=%6 defaultRoute=%7")
+    LOG_DEBUG(QStringLiteral(
+        "GalleryNavigationViewModel build catalogCategories=%1 totalItems=%2 "
+        "routes=%3 categories=%4 components=%5 footerRoutes=%6 defaultRoute=%7")
             .arg(catalog.size())
             .arg(m_items.size())
             .arg(routeCount)

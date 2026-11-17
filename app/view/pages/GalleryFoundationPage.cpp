@@ -12,8 +12,8 @@
 namespace fluent::gallery {
 
 GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
-                                             const GalleryNavigationViewModel& navigationViewModel,
-                                             QWidget* parent)
+    const GalleryNavigationViewModel& navigationViewModel,
+    QWidget* parent)
     : GalleryContentPage(entry.routeId, entry.title, entry.description, parent)
 {
     setObjectName(QStringLiteral("galleryFoundationPage"));
@@ -34,17 +34,16 @@ GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
         // zh_CN: 优先使用主题专属图片；没有专属图片的组件路由改用目录字形，
         // 不再借用其他组件的图片。
         const QString imageResource = galleryControlImageResource(item->title);
-        entries.append({item->id, item->title, description, imageResource,
-                        imageResource.isEmpty() ? item->iconGlyph : QString()});
+        entries.append(
+            {item->id, item->title, description, imageResource, imageResource.isEmpty() ? item->iconGlyph : QString()});
     }
 
     grid->setEntries(entries);
     connect(grid, &GalleryEntryGrid::activated, this, &GalleryContentPage::routeActivated);
     addContentWidget(grid);
 
-    LOG_DEBUG(QStringLiteral("GalleryFoundationPage created routeId=%1 cards=%2")
-                  .arg(entry.routeId)
-                  .arg(entries.size()));
+    LOG_DEBUG(
+        QStringLiteral("GalleryFoundationPage created routeId=%1 cards=%2").arg(entry.routeId).arg(entries.size()));
 }
 
 } // namespace fluent::gallery

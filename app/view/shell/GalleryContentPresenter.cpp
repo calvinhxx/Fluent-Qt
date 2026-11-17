@@ -33,9 +33,10 @@ constexpr int kSkeletonRevealMs = 32;
 
 } // namespace
 
-GalleryContentPresenter::GalleryContentPresenter(
-    fluent::navigation::StackContentHost* contentHost,
-    const GalleryNavigationViewModel& navigationViewModel, QObject* parent, int maxResidentRoutes)
+GalleryContentPresenter::GalleryContentPresenter(fluent::navigation::StackContentHost* contentHost,
+    const GalleryNavigationViewModel& navigationViewModel,
+    QObject* parent,
+    int maxResidentRoutes)
     : QObject(parent), m_contentHost(contentHost), m_navigationViewModel(navigationViewModel),
       m_maxResidentRoutes(qMax(0, maxResidentRoutes))
 {}
@@ -78,18 +79,15 @@ QWidget* GalleryContentPresenter::currentPage() const
 
 bool GalleryContentPresenter::eventFilter(QObject* watched, QEvent* event)
 {
-    if (event->type() == QEvent::Paint && m_pendingPage && watched == m_pendingPage.data() &&
-        currentPage() == m_pendingPage.data()) {
+    if (event->type() == QEvent::Paint && m_pendingPage && watched == m_pendingPage.data()
+        && currentPage() == m_pendingPage.data()) {
         const QString routeId = m_pendingRouteId;
         const bool cold = m_pendingCold;
         const qint64 buildMs = m_pendingBuildMs;
         const qint64 switchMs = m_pendingSwitchMs;
-        const qint64 totalMs =
-            m_pendingNavigationTimer.isValid() ? m_pendingNavigationTimer.elapsed() : 0;
+        const qint64 totalMs = m_pendingNavigationTimer.isValid() ? m_pendingNavigationTimer.elapsed() : 0;
         cancelNavigationWatch();
-        LOG_DEBUG(
-            QStringLiteral(
-                "PERF navigationPresented routeId=%1 state=%2 buildMs=%3 switchMs=%4 totalMs=%5")
+        LOG_DEBUG(QStringLiteral("PERF navigationPresented routeId=%1 state=%2 buildMs=%3 switchMs=%4 totalMs=%5")
                 .arg(routeId, cold ? QStringLiteral("cold") : QStringLiteral("warm"))
                 .arg(buildMs)
                 .arg(switchMs)
@@ -99,8 +97,7 @@ bool GalleryContentPresenter::eventFilter(QObject* watched, QEvent* event)
     return QObject::eventFilter(watched, event);
 }
 
-void GalleryContentPresenter::beginNavigationWatch(const QString& routeId, bool cold,
-                                                   quint64 requestId)
+void GalleryContentPresenter::beginNavigationWatch(const QString& routeId, bool cold, quint64 requestId)
 {
     cancelNavigationWatch();
     m_pendingRequestId = requestId;
@@ -136,33 +133,31 @@ void GalleryContentPresenter::cancelNavigationWatch()
 bool GalleryContentPresenter::presentRoute(const QString& routeId)
 {
     if (!m_contentHost) {
-        LOG_WARN(QStringLiteral("GalleryContentPresenter presentRoute rejected routeId=%1 "
-                                "reason=missing-content-host")
-                     .arg(routeId));
+        LOG_WARN(QStringLiteral(
+            "GalleryContentPresenter presentRoute rejected routeId=%1 "
+            "reason=missing-content-host")
+                .arg(routeId));
         return false;
     }
 
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!item) {
-        LOG_WARN(
-            QStringLiteral(
-                "GalleryContentPresenter presentRoute rejected routeId=%1 reason=missing-route")
+        LOG_WARN(QStringLiteral("GalleryContentPresenter presentRoute rejected routeId=%1 reason=missing-route")
                 .arg(routeId));
         return false;
     }
     if (routeId != QStringLiteral("settings") && !galleryContentEntry(routeId)) {
-        LOG_WARN(QStringLiteral("GalleryContentPresenter presentRoute rejected routeId=%1 "
-                                "reason=missing-content-entry")
-                     .arg(routeId));
+        LOG_WARN(QStringLiteral(
+            "GalleryContentPresenter presentRoute rejected routeId=%1 "
+            "reason=missing-content-entry")
+                .arg(routeId));
         return false;
     }
 
     const bool routeResident = m_routeStackIndex.contains(routeId);
     const bool routePending = m_pendingRequestId != 0 && m_pendingRouteId == routeId;
     if (m_currentRouteId == routeId && (routeResident || routePending)) {
-        LOG_TRACE(
-            QStringLiteral(
-                "GalleryContentPresenter presentRoute skipped routeId=%1 reason=already-current")
+        LOG_TRACE(QStringLiteral("GalleryContentPresenter presentRoute skipped routeId=%1 reason=already-current")
                 .arg(routeId));
         return true;
     }
@@ -225,8 +220,7 @@ void GalleryContentPresenter::ensureSkeleton()
 
 void GalleryContentPresenter::scheduleLazyBuild(const QString& routeId, quint64 requestId)
 {
-    QTimer::singleShot(kSkeletonRevealMs, this,
-                       [this, routeId, requestId] { buildNextLazyPart(routeId, requestId); });
+    QTimer::singleShot(kSkeletonRevealMs, this, [this, routeId, requestId] { buildNextLazyPart(routeId, requestId); });
 }
 
 void GalleryContentPresenter::buildNextLazyPart(const QString& routeId, quint64 requestId)
@@ -244,8 +238,7 @@ void GalleryContentPresenter::buildNextLazyPart(const QString& routeId, quint64 
         }
         m_lazyPage->hide();
         m_lazyPage->resize(m_contentHost->contentsRect().size());
-    } else if (auto* page = qobject_cast<GalleryComponentPage*>(m_lazyPage.data());
-               page && page->hasPendingSamples()) {
+    } else if (auto* page = qobject_cast<GalleryComponentPage*>(m_lazyPage.data()); page && page->hasPendingSamples()) {
         page->buildNextSample();
     } else {
         const int index = registerPage(routeId, m_lazyPage);
@@ -259,8 +252,7 @@ void GalleryContentPresenter::buildNextLazyPart(const QString& routeId, quint64 
     m_lazyBuildMs += clock.elapsed();
     // A single sample factory is the indivisible GUI-thread unit. Let input
     // and Shimmer paint between units; stale navigation cancels the owned page.
-    QTimer::singleShot(8, this,
-                       [this, routeId, requestId] { buildNextLazyPart(routeId, requestId); });
+    QTimer::singleShot(8, this, [this, routeId, requestId] { buildNextLazyPart(routeId, requestId); });
 }
 
 void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
@@ -279,8 +271,7 @@ void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
     ensureSkeleton();
 
     for (const QString& routeId : routeIds) {
-        if (routeId.isEmpty() || m_routeStackIndex.contains(routeId) ||
-            m_prewarmQueue.contains(routeId))
+        if (routeId.isEmpty() || m_routeStackIndex.contains(routeId) || m_prewarmQueue.contains(routeId))
             continue;
         m_prewarmQueue.enqueue(routeId);
     }
@@ -293,8 +284,7 @@ void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
         return;
     }
     m_prewarmTotal = m_prewarmDone + m_prewarmQueue.size();
-    LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarmRoutes queued=%1")
-                  .arg(m_prewarmQueue.size()));
+    LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarmRoutes queued=%1").arg(m_prewarmQueue.size()));
     const QPointer<GalleryContentPresenter> guard(this);
     emit prewarmProgress(m_prewarmDone, m_prewarmTotal);
     if (!guard)
@@ -343,11 +333,10 @@ void GalleryContentPresenter::scheduleNextPrewarm()
         }
 
         if (m_prewarmQueue.isEmpty()) {
-            LOG_DEBUG(QStringLiteral(
-                          "GalleryContentPresenter prewarm finished ready=%1 total=%2 elapsedMs=%3")
-                          .arg(m_prewarmDone)
-                          .arg(m_prewarmTotal)
-                          .arg(m_prewarmTimer.elapsed()));
+            LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarm finished ready=%1 total=%2 elapsedMs=%3")
+                    .arg(m_prewarmDone)
+                    .arg(m_prewarmTotal)
+                    .arg(m_prewarmTimer.elapsed()));
             emit prewarmFinished();
             return;
         }
@@ -399,9 +388,7 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
 
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!item) {
-        LOG_WARN(
-            QStringLiteral(
-                "GalleryContentPresenter ensurePageBuilt rejected routeId=%1 reason=missing-route")
+        LOG_WARN(QStringLiteral("GalleryContentPresenter ensurePageBuilt rejected routeId=%1 reason=missing-route")
                 .arg(routeId));
         return -1;
     }
@@ -423,9 +410,7 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
         page = pageFactory.createPage(routeId, m_contentHost);
     }
     if (!page) {
-        LOG_WARN(
-            QStringLiteral(
-                "GalleryContentPresenter ensurePageBuilt rejected routeId=%1 reason=missing-page")
+        LOG_WARN(QStringLiteral("GalleryContentPresenter ensurePageBuilt rejected routeId=%1 reason=missing-page")
                 .arg(routeId));
         return -1;
     }
@@ -434,10 +419,10 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
     if (buildMs)
         *buildMs = elapsedBuildMs;
     LOG_DEBUG(QStringLiteral("PERF buildPage routeId=%1 buildMs=%2 pageType=%3 stackIndex=%4")
-                  .arg(routeId)
-                  .arg(elapsedBuildMs)
-                  .arg(QString::fromLatin1(page->metaObject()->className()))
-                  .arg(residentIndex));
+            .arg(routeId)
+            .arg(elapsedBuildMs)
+            .arg(QString::fromLatin1(page->metaObject()->className()))
+            .arg(residentIndex));
     return residentIndex;
 }
 
@@ -476,8 +461,7 @@ void GalleryContentPresenter::trimResidentRoutes(const QString& protectedRouteId
 
         const int removedIndex = m_routeStackIndex.value(victimRouteId);
         if (!m_contentHost->releasePage(removedIndex)) {
-            LOG_WARN(
-                QStringLiteral("GalleryContentPresenter cache eviction failed routeId=%1 index=%2")
+            LOG_WARN(QStringLiteral("GalleryContentPresenter cache eviction failed routeId=%1 index=%2")
                     .arg(victimRouteId)
                     .arg(removedIndex));
             return;
@@ -492,8 +476,7 @@ void GalleryContentPresenter::trimResidentRoutes(const QString& protectedRouteId
         if (m_skeletonIndex > removedIndex)
             --m_skeletonIndex;
 
-        LOG_DEBUG(
-            QStringLiteral("GalleryContentPresenter cache evicted routeId=%1 resident=%2 limit=%3")
+        LOG_DEBUG(QStringLiteral("GalleryContentPresenter cache evicted routeId=%1 resident=%2 limit=%3")
                 .arg(victimRouteId)
                 .arg(m_routeStackIndex.size())
                 .arg(m_maxResidentRoutes));
@@ -503,8 +486,7 @@ void GalleryContentPresenter::trimResidentRoutes(const QString& protectedRouteId
 void GalleryContentPresenter::connectPageNavigation(QWidget* page)
 {
     if (auto* contentPage = dynamic_cast<GalleryContentPage*>(page)) {
-        connect(contentPage, &GalleryContentPage::routeActivated, this,
-                &GalleryContentPresenter::routeActivated);
+        connect(contentPage, &GalleryContentPage::routeActivated, this, &GalleryContentPresenter::routeActivated);
     }
 }
 
@@ -526,9 +508,9 @@ qint64 GalleryContentPresenter::switchToStackPage(int targetIndex)
     }
     const qint64 switchMs = switchTimer.elapsed();
     LOG_DEBUG(QStringLiteral("PERF switchToStackPage from=%1 to=%2 switchMs=%3")
-                  .arg(fromIndex)
-                  .arg(targetIndex)
-                  .arg(switchMs));
+            .arg(fromIndex)
+            .arg(targetIndex)
+            .arg(switchMs));
     return switchMs;
 }
 

@@ -35,8 +35,7 @@ inline QString cssColor(const QColor& color)
 inline bool usesCompositedWindowBackdrop(const QWidget* widget)
 {
     const QWidget* topLevel = widget ? widget->window() : nullptr;
-    return topLevel
-        && topLevel->testAttribute(Qt::WA_TranslucentBackground)
+    return topLevel && topLevel->testAttribute(Qt::WA_TranslucentBackground)
         && windowing::windowBackdropRequiresTransparentClear(topLevel);
 }
 

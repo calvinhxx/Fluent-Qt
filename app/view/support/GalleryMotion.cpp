@@ -20,12 +20,15 @@ public:
     ActiveTransitionTracker()
     {
         auto& policy = fluent::MotionPolicy::instance();
-        QObject::connect(&policy, &fluent::MotionPolicy::modeChanged,
-                         [this](fluent::MotionPolicy::Mode mode) { reconcile(mode); });
+        QObject::connect(&policy, &fluent::MotionPolicy::modeChanged, [this](fluent::MotionPolicy::Mode mode) {
+            reconcile(mode);
+        });
     }
 
-    void start(QVariantAnimation* animation, int fullDurationMs, bool localAnimationEnabled,
-               QAbstractAnimation::DeletionPolicy deletionPolicy)
+    void start(QVariantAnimation* animation,
+        int fullDurationMs,
+        bool localAnimationEnabled,
+        QAbstractAnimation::DeletionPolicy deletionPolicy)
     {
         if (!animation)
             return;
@@ -45,8 +48,7 @@ public:
             tracked->localAnimationEnabled = localAnimationEnabled;
         }
 
-        const int duration = fluent::MotionPolicy::instance().resolvedDuration(
-            fullDurationMs, localAnimationEnabled);
+        const int duration = fluent::MotionPolicy::instance().resolvedDuration(fullDurationMs, localAnimationEnabled);
         animation->setDuration(duration);
         animation->start(deletionPolicy);
     }
@@ -81,10 +83,8 @@ private:
             }
 
             if (mode == fluent::MotionPolicy::Mode::Reduced) {
-                const int reducedRemaining =
-                    policy.resolvedDuration(entry.fullDurationMs, entry.localAnimationEnabled);
-                animation->setDuration(
-                    qMin(entry.fullDurationMs, animation->currentTime() + reducedRemaining));
+                const int reducedRemaining = policy.resolvedDuration(entry.fullDurationMs, entry.localAnimationEnabled);
+                animation->setDuration(qMin(entry.fullDurationMs, animation->currentTime() + reducedRemaining));
             } else {
                 animation->setDuration(entry.fullDurationMs);
             }
@@ -102,9 +102,10 @@ ActiveTransitionTracker& transitionTracker()
 
 } // namespace
 
-void startFiniteTransition(QVariantAnimation* animation, int fullDurationMs,
-                           bool localAnimationEnabled,
-                           QAbstractAnimation::DeletionPolicy deletionPolicy)
+void startFiniteTransition(QVariantAnimation* animation,
+    int fullDurationMs,
+    bool localAnimationEnabled,
+    QAbstractAnimation::DeletionPolicy deletionPolicy)
 {
     transitionTracker().start(animation, fullDurationMs, localAnimationEnabled, deletionPolicy);
 }
