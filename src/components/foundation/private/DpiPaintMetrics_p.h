@@ -27,6 +27,14 @@ public:
           m_scaleX(qAbs(m_deviceTransform.m11())), m_scaleY(qAbs(m_deviceTransform.m22()))
     {}
 
+    QPointF alignedPoint(const QPointF& logicalPoint) const
+    {
+        if (!m_axisAligned)
+            return logicalPoint;
+        const QPointF devicePoint = m_deviceTransform.map(logicalPoint);
+        return m_deviceTransform.inverted().map(QPointF(qRound(devicePoint.x()), qRound(devicePoint.y())));
+    }
+
     QRectF alignedOuterRect(const QRectF& logicalRect) const
     {
         if (!m_axisAligned || !logicalRect.isValid() || logicalRect.isEmpty())

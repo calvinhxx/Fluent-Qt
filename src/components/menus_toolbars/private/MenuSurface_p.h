@@ -3,6 +3,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/SurfacePainter_p.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "design/MenuTokens_p.h"
 #include "design/Typography.h"
 #include <QPixmapCache>
@@ -13,8 +14,10 @@ namespace fluent::menus_toolbars::detail {
 // Shared baseline optically centered on capital height so ascenders/descenders don't shift alignment.
 inline qreal menuTextBaseline(QPainter& painter, const QRectF& row)
 {
-    const qreal dpr = painter.device()->devicePixelRatioF();
-    return qRound((row.center().y() + QFontMetricsF(painter.font()).capHeight() / 2.0) * dpr) / dpr;
+    const qreal baseline = row.center().y() + QFontMetricsF(painter.font()).capHeight() / 2.0;
+    // Redirected QWidget painting keeps the widget DPR; the transform carries the actual target scale.
+    // zh_CN: QWidget 重定向绘制仍报告控件 DPR，实际目标缩放由画笔变换提供。
+    return painting::DpiPaintMetrics(painter).alignedPoint(QPointF(row.center().x(), baseline)).y();
 }
 
 // Center menu glyphs by actual painted ink bounds rather than icon-font line bearings.
