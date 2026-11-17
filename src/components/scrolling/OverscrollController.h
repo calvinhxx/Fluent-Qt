@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <QObject>
+#include <QPointer>
 
 class QWidget;
 class QScrollBar;
@@ -43,6 +44,9 @@ public:
     struct Hooks {
         /// Returns the active-axis scrollbar used for boundary checks. zh_CN: 当前轴用于边界判定的滚动条。
         std::function<QScrollBar*()> scrollBar;
+        /// Optional horizontal range for pixel panning in a vertically scrolling view.
+        /// zh_CN: 纵向视图可选的横向范围，用于横向像素滚动。
+        std::function<QScrollBar*()> horizontalScrollBar;
         /// Performs an in-range scroll of scrollPx pixels on the active axis; returns whether it moved.
         /// zh_CN: 在当前轴执行 scrollPx 像素的范围内滚动；返回是否发生移动。
         std::function<bool(qreal scrollPx)> normalScroll;
@@ -92,6 +96,8 @@ private:
     QWidget* m_viewport = nullptr;
     qreal m_step = 0.0;
     Hooks m_hooks;
+    QPointer<QScrollBar> m_observedScrollBar;
+    QMetaObject::Connection m_scrollValueConnection;
 
     qreal m_overscroll = 0.0;
     bool m_overscrollEnabled = true;

@@ -240,7 +240,9 @@ void ScrollBar::paintEvent(QPaintEvent* event)
         thumbActive.setAlphaF(activeMinAlpha);
 
     QColor thumbColor = thumbRest;
-    if (m_isPressed || m_isHovered) {
+    if (!isEnabled()) {
+        thumbColor = colors.textDisabled;
+    } else if (m_isPressed || m_isHovered) {
         thumbColor = thumbActive;
     }
 

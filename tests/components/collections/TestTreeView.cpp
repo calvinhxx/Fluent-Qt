@@ -5,6 +5,7 @@
 #include <QCoreApplication>
 #include <QImage>
 #include <QItemSelectionModel>
+#include <QLabel>
 #include <QMetaType>
 #include <QPaintEvent>
 #include <QPainter>
@@ -2321,6 +2322,64 @@ TEST_F(TreeViewTest, IconModelPaintNoCrash)
     EXPECT_TRUE(true);
 }
 
+TEST_F(TreeViewTest, OffscreenHeaderAndDisabledStateWorkWithoutShow)
+{
+    TreeView tv(window);
+    auto* model = createSampleTreeModel(&tv);
+    tv.setModel(model);
+    tv.setHeaderText(QStringLiteral("Hierarchy"));
+    tv.setFixedSize(300, 220);
+
+    EXPECT_FALSE(tv.isVisible());
+    ASSERT_NE(tv.viewport(), nullptr);
+    EXPECT_GT(tv.viewport()->geometry().top(), 0);
+    EXPECT_EQ(tv.palette().color(QPalette::Disabled, QPalette::Text), tv.themeColors().textDisabled);
+
+    auto* hdr = tv.findChild<QLabel*>();
+    ASSERT_NE(hdr, nullptr);
+    QFont customFont = tv.font();
+    customFont.setPixelSize(29);
+    tv.setFont(customFont);
+    const QString enabledHeaderStyle = hdr->styleSheet();
+    tv.setEnabled(false);
+    EXPECT_NE(hdr->styleSheet(), enabledHeaderStyle);
+    EXPECT_EQ(tv.font(), customFont);
+    tv.setEnabled(true);
+    EXPECT_EQ(tv.font(), customFont);
+    EXPECT_EQ(hdr->styleSheet(), enabledHeaderStyle);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // VisualCheck
 // ═══════════════════════════════════════════════════════════════════════════════
+
+TEST_F(TreeViewTest, DefaultDelegateShowsSelectionAndSupportsPointerExpansion)
+{
+    for (auto theme : {FluentElement::Light, FluentElement::Dark}) {
+        FluentElement::setTheme(theme);
+        TreeView view;
+        view.resize(520, 270);
+        view.setIndicatorMotionAnimationEnabled(false);
+        QStandardItemModel model;
+        auto* parent = new QStandardItem(QStringLiteral("Parent"));
+        parent->appendRow(new QStandardItem(QStringLiteral("Child")));
+        model.appendRow(parent);
+        view.setModel(&model);
+        view.show();
+        QApplication::processEvents();
+        const auto index = model.index(0, 0);
+        const auto collapsed = view.grab().toImage();
+        const QRect row = view.visualRect(index);
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, QPoint(row.left() + 22, row.center().y()));
+        EXPECT_TRUE(view.isExpanded(index));
+        EXPECT_NE(view.grab().toImage(), collapsed);
+        view.selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
+        const auto selected = view.grab().toImage();
+        view.clearSelection();
+        EXPECT_NE(view.grab().toImage(), selected);
+        view.setEnabled(false);
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, QPoint(row.left() + 22, row.center().y()));
+        EXPECT_TRUE(view.isExpanded(index));
+    }
+    FluentElement::setTheme(FluentElement::Light);
+}

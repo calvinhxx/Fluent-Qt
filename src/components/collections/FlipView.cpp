@@ -85,12 +85,12 @@ protected:
         p.fillPath(outer - inner, parentBg);
 
         // Rounded border. zh_CN: 圆角边框。
-        p.setPen(QPen(c.strokeDefault, 1.0));
+        p.setPen(QPen(m_fv->isEnabled() ? c.strokeDefault : c.strokeDivider, 1.0));
         p.setBrush(Qt::NoBrush);
         p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), r, r);
 
         // Navigation buttons. zh_CN: 导航按钮。
-        if (m_fv->m_showNavButtons && m_fv->m_isHovered && m_fv->m_pages.size() > 1) {
+        if (m_fv->isEnabled() && m_fv->m_showNavButtons && m_fv->m_isHovered && m_fv->m_pages.size() > 1) {
             if (m_fv->m_currentIndex > 0)
                 m_fv->drawNavButton(p, m_fv->prevButtonRect(), false, m_fv->m_prevBtnHovered, m_fv->m_prevBtnPressed);
             if (m_fv->m_currentIndex < m_fv->m_pages.size() - 1)
@@ -157,7 +157,7 @@ void FlipView::onThemeUpdated()
         m_slideAnimation->setDuration(themeAnimation().normal);
         m_slideAnimation->setEasingCurve(themeAnimation().decelerate);
     }
-    update();
+    updateVisuals();
 }
 
 // ── Page management. zh_CN: 页面管理 ─────────────────────────────────────────
@@ -206,7 +206,7 @@ bool FlipView::insertPage(int index, QWidget* page, WidgetOwnership ownership)
 
     layoutPages();
     raiseOverlay();
-    update();
+    updateVisuals();
     detail::notifyFlipViewAccessibilityStructureChanged(this, oldCount, oldIndex);
     return true;
 }
@@ -280,7 +280,7 @@ void FlipView::updateAfterPageRemoval(int index)
 
     layoutPages();
     raiseOverlay();
-    update();
+    updateVisuals();
     emit currentIndexChanged(m_currentIndex);
 }
 
@@ -342,6 +342,7 @@ void FlipView::setCurrentIndex(int index)
     int oldIndex = m_currentIndex;
     m_currentIndex = index;
     animateSlide(oldIndex, index);
+    updateVisuals();
     emit currentIndexChanged(m_currentIndex);
     detail::notifyFlipViewAccessibilityCurrentChanged(this, oldIndex);
 }
@@ -352,7 +353,7 @@ void FlipView::setOrientation(Qt::Orientation orientation)
         return;
     m_orientation = orientation;
     layoutPages();
-    update();
+    updateVisuals();
     emit orientationChanged();
     detail::notifyFlipViewAccessibilityOrientationChanged(this);
 }
@@ -362,7 +363,7 @@ void FlipView::setShowNavigationButtons(bool show)
     if (m_showNavButtons == show)
         return;
     m_showNavButtons = show;
-    update();
+    updateVisuals();
     emit showNavigationButtonsChanged();
 }
 
@@ -371,7 +372,7 @@ void FlipView::setShowPageIndicator(bool show)
     if (m_showPageIndicator == show)
         return;
     m_showPageIndicator = show;
-    update();
+    updateVisuals();
     emit showPageIndicatorChanged();
 }
 
@@ -381,7 +382,7 @@ void FlipView::setSlideOffset(qreal offset)
         return;
     m_slideOffset = offset;
     layoutPages();
-    update();
+    updateVisuals();
 }
 
 void FlipView::goNext()
@@ -583,8 +584,8 @@ void FlipView::drawPageIndicator(QPainter& p)
     // Fluent neutral pip colors. zh_CN: Fluent 中性分页指示点颜色。
     QColor selectedColor, unselectedColor;
     // Fluent neutral pips. zh_CN: Fluent 中性分页点。
-    selectedColor = c.textPrimary;
-    unselectedColor = c.textTertiary;
+    selectedColor = isEnabled() ? c.textPrimary : c.textDisabled;
+    unselectedColor = isEnabled() ? c.textTertiary : c.strokeDivider;
 
     for (int i = 0; i < m_pages.size(); ++i) {
         QRect dotRect;
@@ -613,6 +614,16 @@ void FlipView::updateMask()
     clearMask();
 }
 
+void FlipView::updateVisuals()
+{
+    update();
+    // Opaque child pages can suppress the parent's paint event. The chrome
+    // owns a separate surface and must receive its own invalidation.
+    // zh_CN: 不透明页面可能遮住父控件绘制，导航覆盖层必须独立刷新。
+    if (m_overlay)
+        m_overlay->update();
+}
+
 void FlipView::raiseOverlay()
 {
     if (m_overlay) {
@@ -633,7 +644,7 @@ void FlipView::resizeEvent(QResizeEvent* event)
 void FlipView::enterEvent(FluentEnterEvent* event)
 {
     m_isHovered = true;
-    update();
+    updateVisuals();
     QWidget::enterEvent(event);
 }
 
@@ -644,7 +655,7 @@ void FlipView::leaveEvent(QEvent* event)
     m_nextBtnHovered = false;
     m_prevBtnPressed = false;
     m_nextBtnPressed = false;
-    update();
+    updateVisuals();
     QWidget::leaveEvent(event);
 }
 
@@ -655,12 +666,12 @@ void FlipView::mousePressEvent(QMouseEvent* event)
         if (m_showNavButtons && m_isHovered && m_pages.size() > 1) {
             if (m_currentIndex > 0 && prevButtonRect().contains(pos)) {
                 m_prevBtnPressed = true;
-                update();
+                updateVisuals();
                 return;
             }
             if (m_currentIndex < m_pages.size() - 1 && nextButtonRect().contains(pos)) {
                 m_nextBtnPressed = true;
-                update();
+                updateVisuals();
                 return;
             }
         }
@@ -677,7 +688,7 @@ void FlipView::mouseReleaseEvent(QMouseEvent* event)
             if (prevButtonRect().contains(pos)) {
                 goPrevious();
             }
-            update();
+            updateVisuals();
             return;
         }
         if (m_nextBtnPressed) {
@@ -685,7 +696,7 @@ void FlipView::mouseReleaseEvent(QMouseEvent* event)
             if (nextButtonRect().contains(pos)) {
                 goNext();
             }
-            update();
+            updateVisuals();
             return;
         }
     }
@@ -711,7 +722,7 @@ void FlipView::mouseMoveEvent(QMouseEvent* event)
         m_prevBtnHovered = prevHovered;
         m_nextBtnHovered = nextHovered;
         setCursor((prevHovered || nextHovered) ? Qt::PointingHandCursor : Qt::ArrowCursor);
-        update();
+        updateVisuals();
     }
 
     QWidget::mouseMoveEvent(event);

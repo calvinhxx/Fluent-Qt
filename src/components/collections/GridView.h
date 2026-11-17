@@ -206,6 +206,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
@@ -220,7 +221,7 @@ protected:
     void onThemeUpdated() override;
 
 private:
-    void applyThemeStyle();
+    void applyThemeStyle(bool refreshFonts = true);
     void syncFluentScrollBar();
     void layoutHeader();
     void setViewportHovered(bool hovered);

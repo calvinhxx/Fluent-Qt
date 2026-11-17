@@ -412,7 +412,7 @@ public:
         dirty = false;
         ready = false;
         ++builds;
-        if (currentReadoutVisible)
+        if (currentReadoutVisible || hoverSeries >= 0)
             queueReadoutSync();
     }
     QString rangeText(int seriesIndex, int first, int last) const
@@ -784,8 +784,21 @@ void ChartView::setValueSuffix(const QString& value)
 {
     if (d->suffix == value)
         return;
+    const int savedSeries = d->hoverSeries;
+    const int savedRow = d->hoverRow;
+    const int savedLast = d->hoverLast;
+    const QPointF savedPos = d->hoverPosition;
+    const bool keepCurrent = d->currentReadoutVisible;
     d->suffix = value;
     d->invalidate(true);
+    if (savedSeries >= 0 || keepCurrent) {
+        d->hoverSeries = savedSeries;
+        d->hoverRow = savedRow;
+        d->hoverLast = savedLast;
+        d->hoverPosition = savedPos;
+        d->currentReadoutVisible = keepCurrent;
+        d->syncReadout();
+    }
     emit valueSuffixChanged(value);
 }
 QString ChartView::centerText() const
@@ -1099,8 +1112,12 @@ void ChartViewPrivate::paintCursor(QPainter& p) const
 
 void ChartViewPrivate::syncReadout()
 {
+    const bool surfaceActive = q->isVisible()
+        || (q->window() && q->window()->testAttribute(Qt::WA_DontShowOnScreen) && !q->isHidden());
+    if (dirty && ready && surfaceActive && q->width() > 0 && q->height() > 0)
+        project();
     const auto selected =
-        q->isVisible() && !compact() && (hoverSeries >= 0 || currentReadoutVisible) ? cursor() : Cursor{};
+        surfaceActive && !compact() && (hoverSeries >= 0 || currentReadoutVisible) ? cursor() : Cursor{};
     if (selected.rows.isEmpty()) {
         if (readout)
             readout->close();
@@ -1307,6 +1324,10 @@ void ChartView::mouseMoveEvent(QMouseEvent* event)
 {
     d->currentReadoutVisible = false;
     int series = -1, first = -1, last = -1;
+    const bool surfaceActive = isVisible()
+        || (window() && window()->testAttribute(Qt::WA_DontShowOnScreen) && !isHidden());
+    if (d->dirty && d->ready && surfaceActive && width() > 0 && height() > 0)
+        d->project();
     if (!d->dirty && isEnabled())
         d->hit(event->pos(), series, first, last);
     d->hoverSeries = series;

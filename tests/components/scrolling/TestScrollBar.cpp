@@ -531,3 +531,24 @@ TEST_F(ScrollBarTest, VisualPropertyVerification)
     window->show();
     qApp->exec();
 }
+
+TEST_F(ScrollBarTest, DisabledThumbRendersDistinctly)
+{
+    ScrollBar bar(Qt::Vertical);
+    bar.setRange(0, 100);
+    bar.setPageStep(25);
+    bar.setOpacity(1.0);
+    bar.resize(16, 120);
+
+    auto renderBar = [&bar]() {
+        QImage img(bar.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(Qt::transparent);
+        bar.render(&img);
+        return img;
+    };
+
+    const QImage enabledImg = renderBar();
+    bar.setEnabled(false);
+    const QImage disabledImg = renderBar();
+    EXPECT_NE(enabledImg, disabledImg);
+}

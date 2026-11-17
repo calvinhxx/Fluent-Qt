@@ -1845,10 +1845,10 @@ TEST_F(ListViewTest, BounceInterruptedByPhaseBased)
         1000))
         << "The idle wheel stream must start bouncing back before interruption";
 
-    // Reverse input first clears the elastic offset, then scrolls inside the content.
+    // A single reverse input clears the elastic offset and preserves its remaining travel.
     sendWheel(lv->viewport(), QPoint(0, 100), QPoint(0, 0), Qt::ScrollUpdate);
-    ASSERT_EQ(lv->exposedVerticalOffset(), restingOffset);
-    ASSERT_EQ(lv->verticalScrollBar()->value(), lv->verticalScrollBar()->maximum());
+    ASSERT_LT(lv->verticalScrollBar()->value(), lv->verticalScrollBar()->maximum());
+    ASSERT_EQ(lv->exposedVerticalOffset(), lv->verticalScrollBar()->value());
 
     sendWheel(lv->viewport(), QPoint(0, 30), QPoint(0, 0), Qt::ScrollUpdate);
     EXPECT_LT(lv->verticalScrollBar()->value(), lv->verticalScrollBar()->maximum());
@@ -1946,4 +1946,57 @@ TEST_F(ListViewTest, Contract_InactiveSelectionIndicatorsDoNotExpandLargeSelecti
         EXPECT_LT(model.requests, 100);
         EXPECT_TRUE(view.selectionModel()->hasSelection());
     }
+}
+
+TEST_F(ListViewTest, OffscreenHeaderAndDisabledPaletteWorkWithoutShow)
+{
+    fluent::collections::ListView view;
+    QStringListModel model({QStringLiteral("One"), QStringLiteral("Two")});
+    view.setModel(&model);
+    view.setHeaderText(QStringLiteral("Header"));
+    view.resize(240, 200);
+
+    EXPECT_FALSE(view.isVisible());
+    ASSERT_NE(view.viewport(), nullptr);
+    EXPECT_GT(view.viewport()->geometry().top(), 0);
+    auto* hdr = view.findChild<QLabel*>(QStringLiteral("fluentListViewHeader"));
+    ASSERT_NE(hdr, nullptr);
+    EXPECT_GT(hdr->height(), 0);
+
+    QFont customFont = view.font();
+    customFont.setPixelSize(29);
+    view.setFont(customFont);
+    const QString enabledHeaderStyle = hdr->styleSheet();
+    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text), view.themeColors().textDisabled);
+    view.setEnabled(false);
+    EXPECT_NE(hdr->styleSheet(), enabledHeaderStyle);
+    EXPECT_EQ(view.font(), customFont);
+    view.setEnabled(true);
+    EXPECT_EQ(view.font(), customFont);
+    EXPECT_EQ(hdr->styleSheet(), enabledHeaderStyle);
+}
+
+TEST_F(ListViewTest, CompactWidthWithDecorationIconCentersIconAndKeepsDisplayText)
+{
+    QPixmap pm(16, 16);
+    pm.fill(QColor(QStringLiteral("#0078d4")));
+
+    auto makeImage = [&pm](const QString& text) {
+        fluent::collections::ListView view;
+        view.setSelectionIndicatorVisible(false);
+        QStandardItemModel model;
+        auto* item = new QStandardItem(QIcon(pm), text);
+        model.appendRow(item);
+        view.setModel(&model);
+        view.setIconSize(QSize(16, 16));
+        view.resize(48, 48);
+        view.show();
+        QApplication::processEvents();
+        EXPECT_EQ(model.index(0, 0).data(Qt::DisplayRole).toString(), text);
+        return view.grab().toImage();
+    };
+
+    const QImage homeImg = makeImage(QStringLiteral("Home"));
+    const QImage longImg = makeImage(QStringLiteral("Workspace Overview"));
+    EXPECT_EQ(homeImg, longImg);
 }

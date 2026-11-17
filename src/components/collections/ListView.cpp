@@ -148,11 +148,19 @@ public:
             }
         }
 
+        const bool compactIconOnly = m_listView->flow() == QListView::TopToBottom && background.width() <= 72.0
+            && !iconPixmap.isNull();
         if (!iconPixmap.isNull()) {
-            const QRect iconRect(qRound(cursorX), qRound(background.center().y() - iconExtent.height() / 2.0),
-                iconExtent.width(), iconExtent.height());
+            const int iconX =
+                compactIconOnly ? qRound(background.center().x() - iconExtent.width() / 2.0) : qRound(cursorX);
+            const QRect iconRect(iconX, qRound(background.center().y() - iconExtent.height() / 2.0), iconExtent.width(),
+                iconExtent.height());
             painter->drawPixmap(iconRect, iconPixmap);
             cursorX = iconRect.right() + 12.0;
+        }
+        if (compactIconOnly) {
+            painter->restore();
+            return;
         }
 
         painter->setPen(visual.foreground);
@@ -361,6 +369,7 @@ ListView::ListView(QWidget* parent) : QListView(parent)
 
     // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
+    hooks.horizontalScrollBar = [this] { return horizontalScrollBar(); };
     hooks.isHorizontal = [this] { return flow() == LeftToRight; };
     hooks.scrollBar = [this] { return flow() == LeftToRight ? horizontalScrollBar() : verticalScrollBar(); };
     hooks.normalScroll = [this](qreal scrollPx) {
@@ -1163,6 +1172,16 @@ void ListView::showEvent(QShowEvent* event)
     });
 }
 
+void ListView::changeEvent(QEvent* event)
+{
+    QListView::changeEvent(event);
+    if (event->type() == QEvent::EnabledChange) {
+        applyThemeStyle(false);
+        if (viewport())
+            viewport()->update();
+    }
+}
+
 bool ListView::isPointInSectionHeader(const QPoint& viewportPos) const
 {
     if (!m_sectionEnabled || !m_sectionProxy)
@@ -1925,19 +1944,25 @@ void ListView::onThemeUpdated()
     applyThemeStyle();
 }
 
-void ListView::applyThemeStyle()
+void ListView::applyThemeStyle(bool refreshFonts)
 {
     const auto& c = themeColorsRef();
 
+    const QColor textColor = isEnabled() ? c.textPrimary : c.textDisabled;
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
     pal.setColor(QPalette::Window, Qt::transparent);
-    pal.setColor(QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Active, QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
     pal.setColor(QPalette::Highlight, Qt::transparent);
-    pal.setColor(QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Active, QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::HighlightedText, c.textDisabled);
     setPalette(pal);
 
-    setFont(themeFont(m_fontRole).toQFont());
+    if (refreshFonts)
+        setFont(themeFont(m_fontRole).toQFont());
 
     if (viewport()) {
         viewport()->setAutoFillBackground(false);
@@ -1951,16 +1976,19 @@ void ListView::applyThemeStyle()
     // so an ancestor style sheet (e.g. the gallery sample card) can't clobber it to near-black.
     if (m_ownsHeader) {
         if (auto* lbl = qobject_cast<QLabel*>(m_header)) {
-            lbl->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-            lbl->setStyleSheet(QStringLiteral("color: %1; background: transparent;").arg(cssRgba(c.textPrimary)));
+            if (refreshFonts)
+                lbl->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
+            lbl->setStyleSheet(QStringLiteral("color: %1; background: transparent;").arg(cssRgba(textColor)));
         }
     }
 
     // Footer label theme (only for internally-created labels)
     if (m_ownsFooter) {
         if (auto* lbl = qobject_cast<QLabel*>(m_footer)) {
-            lbl->setFont(themeFont(Typography::FontRole::Caption).toQFont());
-            lbl->setStyleSheet(QStringLiteral("color: %1; background: transparent;").arg(cssRgba(c.textSecondary)));
+            const QColor footerColor = isEnabled() ? c.textSecondary : c.textDisabled;
+            if (refreshFonts)
+                lbl->setFont(themeFont(Typography::FontRole::Caption).toQFont());
+            lbl->setStyleSheet(QStringLiteral("color: %1; background: transparent;").arg(cssRgba(footerColor)));
         }
     }
 
@@ -1976,7 +2004,7 @@ void ListView::applyThemeStyle()
 
 void ListView::layoutHeader()
 {
-    if (!m_header || !m_header->isVisible())
+    if (!m_header || m_header->isHidden())
         return;
 
     const int headerH = m_header->sizeHint().height() + ::Spacing::Gap::Normal;
@@ -1986,7 +2014,7 @@ void ListView::layoutHeader()
 
 void ListView::layoutFooter()
 {
-    if (!m_footer || !m_footer->isVisible())
+    if (!m_footer || m_footer->isHidden())
         return;
 
     const int footerH = m_footer->sizeHint().height() + ::Spacing::Gap::Normal;
@@ -1997,10 +2025,10 @@ void ListView::layoutFooter()
 void ListView::updateViewportMargins()
 {
     int top = 0, bottom = 0;
-    if (m_header && m_header->isVisible()) {
+    if (m_header && !m_header->isHidden()) {
         top = m_header->sizeHint().height() + ::Spacing::Gap::Normal;
     }
-    if (m_footer && m_footer->isVisible()) {
+    if (m_footer && !m_footer->isHidden()) {
         bottom = m_footer->sizeHint().height() + ::Spacing::Gap::Normal;
     }
     setViewportMargins(0, top, 0, bottom);
@@ -2025,7 +2053,7 @@ void ListView::syncFluentScrollBar()
         return;
 
     const QRect r = rect();
-    const int top = (m_header && m_header->isVisible()) ? m_header->geometry().bottom() + 2 : r.top() + 2;
+    const int top = (m_header && !m_header->isHidden()) ? m_header->geometry().bottom() + 2 : r.top() + 2;
     ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top, kScrollBarEdgeInset,
         /*bottomInset=*/2);
 }

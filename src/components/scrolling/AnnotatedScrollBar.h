@@ -304,7 +304,7 @@ private:
     QSize m_minimumBarSize = QSize(48, 96);
     int m_verticalPadding = 17;
     QSize m_caretSize = QSize(14, 16);
-    int m_labelColumnWidth = 31;
+    int m_labelColumnWidth = 48;
     int m_labelLineHeight = 20;
     int m_minimumLabelSpacing = 20;
     int m_indicatorWidth = 29;

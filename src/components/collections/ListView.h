@@ -297,6 +297,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -316,7 +317,7 @@ protected:
     friend class SectionProxyDelegate;
 
 private:
-    void applyThemeStyle();
+    void applyThemeStyle(bool refreshFonts = true);
     void applyPointerSelection(const QModelIndex& index, QMouseEvent* event);
     /** 压制原生条 + 同步 range/pageStep + 定位 + 显隐 Fluent 纵向滚动条 */
     void syncFluentScrollBar();

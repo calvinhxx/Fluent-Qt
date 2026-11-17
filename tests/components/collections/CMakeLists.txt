@@ -1,11 +1,12 @@
 # ListView 仅为视图库组件；FluentListItemDelegate 与 model 组装放在测试中作为业务示例。
 add_qt_test_module(test_list_view
     TestListView.cpp
+    TestCollectionScrollInput.cpp
     TestCollectionItemState.cpp
     FluentListItemDelegate.cpp)
 
 # GridView
-add_qt_test_module(test_grid_view TestGridView.cpp FluentGridItemDelegate.cpp)
+add_qt_test_module(test_grid_view TestGridView.cpp TestCollectionModelRoles.cpp FluentGridItemDelegate.cpp)
 
 # FlowView
 add_qt_test_module(test_flow_view TestFlowView.cpp)

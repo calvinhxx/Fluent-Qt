@@ -1335,3 +1335,48 @@ TEST_F(GridViewTest, DragReorderItemReorderedSignalArgs)
         EXPECT_LT(toIdx, 4);
     }
 }
+
+TEST_F(GridViewTest, DisabledStateUpdatesTextPaletteAndHeaderStyle)
+{
+    GridView view;
+    QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta")});
+    view.setModel(&model);
+    view.setHeaderText(QStringLiteral("Grid Header"));
+    view.resize(260, 180);
+
+    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text), view.themeColors().textDisabled);
+    auto* hdr = view.findChild<QLabel*>();
+    ASSERT_NE(hdr, nullptr);
+    QFont customFont = view.font();
+    customFont.setPixelSize(29);
+    view.setFont(customFont);
+    const QString enabledHeaderStyle = hdr->styleSheet();
+    view.setEnabled(false);
+    EXPECT_NE(hdr->styleSheet(), enabledHeaderStyle);
+    EXPECT_EQ(view.font(), customFont);
+    view.setEnabled(true);
+    EXPECT_EQ(view.font(), customFont);
+    EXPECT_EQ(hdr->styleSheet(), enabledHeaderStyle);
+}
+
+TEST_F(GridViewTest, DefaultDelegateSelectionRemainsVisibleWithoutFocusInBothThemes)
+{
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        GridView view;
+        view.resize(520, 270);
+        QStandardItemModel model;
+        model.appendRow(new QStandardItem(QStringLiteral("First")));
+        model.appendRow(new QStandardItem(QStringLiteral("Second")));
+        view.setModel(&model);
+        view.ensurePolished();
+        view.clearFocus();
+        const auto idle = view.grab().toImage();
+        view.selectionModel()->select(model.index(0, 0), QItemSelectionModel::Select);
+        EXPECT_NE(view.grab().toImage(), idle);
+        EXPECT_EQ(view.palette().color(QPalette::Inactive, QPalette::Highlight), view.themeColors().subtleSecondary);
+        view.clearSelection();
+        EXPECT_EQ(view.grab().toImage(), idle);
+    }
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+}
