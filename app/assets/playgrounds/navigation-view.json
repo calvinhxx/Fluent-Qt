@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "component": "navigation-view",
+  "title": "NavigationView",
+  "className": "fluent::navigation::NavigationView",
+  "surface": "host",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>\n#include <FluentQt/Collections.h>\n#include <FluentQt/Design.h>\n#include <FluentQt/Foundation.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/Navigation.h>\n#include <FluentQt/TextFields.h>\n#include <QHBoxLayout>\n#include <QIcon>\n#include <QIconEngine>\n#include <QItemSelectionModel>\n#include <QListView>\n#include <QPainter>\n#include <QPixmap>\n#include <QStandardItemModel>\n#include <QVBoxLayout>",
+      "setup": "class GlyphEngine final : public QIconEngine {\npublic:\n    explicit GlyphEngine(const QString& glyph) : m_glyph(glyph) {}\n    QIconEngine* clone() const override { return new GlyphEngine(m_glyph); }\n    QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State) override {\n        QPixmap pm(size);\n        pm.fill(Qt::transparent);\n        fluent::FontIcon renderer(m_glyph);\n        renderer.setIconSize(qMin(size.width(), size.height()));\n        renderer.setEnabled(mode != QIcon::Disabled);\n        renderer.resize(size);\n        QPainter painter(&pm);\n        renderer.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);\n        return pm;\n    }\n    void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override {\n        const int dpr = painter->device() ? qMax(1, qRound(painter->device()->devicePixelRatioF())) : 1;\n        painter->drawPixmap(rect, pixmap(rect.size() * dpr, mode, state));\n    }\nprivate:\n    QString m_glyph;\n};\nauto* rootLayout = new QVBoxLayout(%PARENT%);\nrootLayout->setContentsMargins(0, 0, 0, 0);\nauto* control = new fluent::navigation::NavigationView(%PARENT%);\nrootLayout->addWidget(control);\ncontrol->setDisplayMode(fluent::navigation::NavigationView::DisplayMode::Left);\ncontrol->setExpandedPaneWidth(168);\nauto* header = new QWidget(control);\nauto* headerLayout = new QHBoxLayout(header);\nheaderLayout->setContentsMargins(4, 4, 4, 4);\nheaderLayout->setSpacing(6);\nauto* toggle = new fluent::basicinput::Button(header);\ntoggle->setIconGlyph(Typography::Icons::GlobalNav);\ntoggle->setFluentLayout(fluent::basicinput::Button::IconOnly);\ntoggle->setFluentStyle(fluent::basicinput::Button::Subtle);\ntoggle->setAccessibleName(QStringLiteral(\"Toggle navigation pane\"));\ntoggle->setFixedSize(36, 32);\nauto* brand = new fluent::textfields::Label(QStringLiteral(\"Workspace\"), header);\nbrand->setFluentTypography(Typography::FontRole::BodyStrong);\nheaderLayout->addWidget(toggle);\nheaderLayout->addWidget(brand, 1);\ncontrol->setHeaderChromeWidget(header);\nQObject::connect(toggle, &fluent::basicinput::Button::clicked, control, [control] {\n    control->setPaneOpen(!control->isPaneOpen());\n});\nauto* navList = new fluent::collections::ListView(control);\nnavList->setFrameShape(QFrame::NoFrame);\nnavList->setBackgroundVisible(false);\nnavList->setBorderVisible(false);\nnavList->setIconSize(QSize(16, 16));\nauto* navModel = new QStandardItemModel(navList);\nstruct NavEntry {\n    QString title;\n    QString glyph;\n    QString summary;\n    QString detail;\n};\nconst QVector<NavEntry> entries{\n    {QStringLiteral(\"Home\"), Typography::Icons::Home, QStringLiteral(\"Pinned projects & status\"), QStringLiteral(\"Jump back to active Fluent component kits and recent workspace changes.\")},\n    {QStringLiteral(\"Explore\"), Typography::Icons::Search, QStringLiteral(\"Design kits & templates\"), QStringLiteral(\"Browse adaptive layouts, typography tokens, and starter pages.\")},\n    {QStringLiteral(\"Settings\"), Typography::Icons::Settings, QStringLiteral(\"Appearance & behavior\"), QStringLiteral(\"Adjust Light/Dark tokens, pane density, and navigation chrome modes.\")},\n};\nfor (const auto& entry : entries) {\n    auto* item = new QStandardItem(QIcon(new GlyphEngine(entry.glyph)), entry.title);\n    item->setToolTip(entry.title);\n    navModel->appendRow(item);\n}\nnavList->setModel(navModel);\ncontrol->setMainChromeWidget(navList);\nQList<fluent::basicinput::Button*> minimalToggles;\nfor (int row = 0; row < entries.size(); ++row) {\n    const auto& entry = entries.at(row);\n    auto* page = new QWidget(control->contentHost());\n    auto* pageLayout = new QVBoxLayout(page);\n    pageLayout->setContentsMargins(16, 14, 16, 14);\n    pageLayout->setSpacing(10);\n    auto* topRow = new QHBoxLayout;\n    topRow->setContentsMargins(0, 0, 0, 0);\n    topRow->setSpacing(8);\n    auto* minToggle = new fluent::basicinput::Button(page);\n    minToggle->setIconGlyph(Typography::Icons::GlobalNav);\n    minToggle->setFluentLayout(fluent::basicinput::Button::IconOnly);\n    minToggle->setFluentStyle(fluent::basicinput::Button::Subtle);\n    minToggle->setAccessibleName(QStringLiteral(\"Open navigation menu\"));\n    minToggle->setFixedSize(32, 28);\n    QObject::connect(minToggle, &fluent::basicinput::Button::clicked, control, [control] { control->setPaneOpen(true); });\n    minimalToggles.append(minToggle);\n    auto* title = new fluent::textfields::Label(entry.title, page);\n    title->setFluentTypography(Typography::FontRole::Subtitle);\n    topRow->addWidget(minToggle);\n    topRow->addWidget(title, 1);\n    pageLayout->addLayout(topRow);\n    auto* card = new fluent::layout::Card(page);\n    auto* cardLayout = new QVBoxLayout(card);\n    cardLayout->setContentsMargins(14, 12, 14, 12);\n    cardLayout->setSpacing(4);\n    auto* cardTitle = new fluent::textfields::Label(entry.summary, card);\n    cardTitle->setFluentTypography(Typography::FontRole::BodyStrong);\n    auto* cardBody = new fluent::textfields::Label(entry.detail, card);\n    cardBody->setFluentTypography(Typography::FontRole::Caption);\n    cardBody->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\n    cardBody->setWordWrap(true);\n    cardLayout->addWidget(cardTitle);\n    cardLayout->addWidget(cardBody);\n    pageLayout->addWidget(card);\n    pageLayout->addStretch(1);\n    control->contentHost()->insertPage(row, page);\n}\nconst auto syncChrome = [control, headerLayout, toggle, brand, navList, navModel, minimalToggles] {\n    const auto mode = control->effectiveDisplayMode();\n    const bool open = control->isPaneOpen();\n    const bool top = mode == fluent::navigation::NavigationView::DisplayMode::Top;\n    const bool compactClosed = (mode == fluent::navigation::NavigationView::DisplayMode::Left || mode == fluent::navigation::NavigationView::DisplayMode::LeftCompact) && !open;\n    const bool minimalClosed = mode == fluent::navigation::NavigationView::DisplayMode::LeftMinimal && !open;\n    const int compactMargin = qMax(2, (control->compactPaneWidth() - toggle->minimumWidth()) / 2);\n    headerLayout->setContentsMargins(top ? 12 : (compactClosed ? compactMargin : 4), 4, 4, 4);\n    toggle->setVisible(!top);\n    brand->setVisible(!compactClosed);\n    navList->setFlow(top ? QListView::LeftToRight : QListView::TopToBottom);\n    navList->setWrapping(false);\n    navList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);\n    navList->setVerticalScrollBarPolicy(top ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);\n    if (top) {\n        navList->setFixedHeight(control->topBarHeight());\n        navList->setFixedWidth(368);\n    } else {\n        navList->setMinimumSize(0, 0);\n        navList->setMaximumSize(16777215, 16777215);\n    }\n    const int topItemHeight = qBound(34, control->topBarHeight() - 6, 44);\n    for (int i = 0; i < navModel->rowCount(); ++i) {\n        if (auto* item = navModel->item(i))\n            item->setData(top ? QVariant(QSize(88, topItemHeight)) : QVariant(), Qt::SizeHintRole);\n    }\n    for (auto* btn : minimalToggles)\n        btn->setVisible(minimalClosed);\n};\nQObject::connect(control, &fluent::navigation::NavigationView::displayModeChanged, control, [syncChrome](fluent::navigation::NavigationView::DisplayMode) { syncChrome(); });\nQObject::connect(control, &fluent::navigation::NavigationView::effectiveDisplayModeChanged, control, [syncChrome](fluent::navigation::NavigationView::DisplayMode) { syncChrome(); });\nQObject::connect(control, &fluent::navigation::NavigationView::paneOpenChanged, control, [syncChrome](bool) { syncChrome(); });\nQObject::connect(control, &fluent::navigation::NavigationView::compactPaneWidthChanged, control, [syncChrome](int) { syncChrome(); });\nQObject::connect(control, &fluent::navigation::NavigationView::topBarHeightChanged, control, [syncChrome](int) { syncChrome(); });\nQObject::connect(navList->selectionModel(), &QItemSelectionModel::currentChanged, control, [control](const QModelIndex& index) {\n    control->contentHost()->setCurrentIndex(index.row(), 0, false);\n});\nsyncChrome();\nnavList->setCurrentIndex(navModel->index(0, 0));\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPoint, QRect, QSize, Qt\nfrom PySide6.QtGui import QIcon, QIconEngine, QPainter, QPixmap, QRegion, QStandardItem, QStandardItemModel\nfrom PySide6.QtWidgets import QFrame, QHBoxLayout, QListView, QVBoxLayout, QWidget",
+      "setup": "class GlyphEngine(QIconEngine):\n    def __init__(self, glyph):\n        super().__init__()\n        self._glyph = glyph\n    def clone(self):\n        return GlyphEngine(self._glyph)\n    def pixmap(self, size, mode, state):\n        pm = QPixmap(size)\n        pm.fill(Qt.GlobalColor.transparent)\n        renderer = fluentqt.FontIcon(self._glyph)\n        renderer.setIconSize(min(size.width(), size.height()))\n        renderer.setEnabled(mode != QIcon.Mode.Disabled)\n        renderer.resize(size)\n        painter = QPainter(pm)\n        renderer.render(painter, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)\n        painter.end()\n        return pm\n    def paint(self, painter, rect, mode, state):\n        dpr = max(1, round(painter.device().devicePixelRatioF())) if painter.device() else 1\n        painter.drawPixmap(rect, self.pixmap(rect.size() * dpr, mode, state))\n\nroot_layout = QVBoxLayout(%PARENT%)\nroot_layout.setContentsMargins(0, 0, 0, 0)\ncontrol = fluentqt.NavigationView(%PARENT%)\nroot_layout.addWidget(control)\ncontrol.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)\ncontrol.setExpandedPaneWidth(168)\nheader = QWidget(control)\nheader_layout = QHBoxLayout(header)\nheader_layout.setContentsMargins(4, 4, 4, 4)\nheader_layout.setSpacing(6)\ntoggle = fluentqt.Button(header)\ntoggle.setIconGlyph(fluentqt.Typography.Icons.GlobalNav)\ntoggle.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)\ntoggle.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)\ntoggle.setAccessibleName(\"Toggle navigation pane\")\ntoggle.setFixedSize(36, 32)\nbrand = fluentqt.Label(\"Workspace\", header)\nbrand.setFluentTypography(fluentqt.FontRole.BodyStrong)\nheader_layout.addWidget(toggle)\nheader_layout.addWidget(brand, 1)\ncontrol.setHeaderChromeWidget(header)\ntoggle.clicked.connect(lambda: control.setPaneOpen(not control.isPaneOpen()))\nnav_list = fluentqt.ListView(control)\nnav_list.setFrameShape(QFrame.Shape.NoFrame)\nnav_list.setBackgroundVisible(False)\nnav_list.setBorderVisible(False)\nnav_list.setIconSize(QSize(16, 16))\nnav_model = QStandardItemModel(nav_list)\nentries = [\n    (\"Home\", fluentqt.Typography.Icons.Home, \"Pinned projects & status\", \"Jump back to active Fluent component kits and recent workspace changes.\"),\n    (\"Explore\", fluentqt.Typography.Icons.Search, \"Design kits & templates\", \"Browse adaptive layouts, typography tokens, and starter pages.\"),\n    (\"Settings\", fluentqt.Typography.Icons.Settings, \"Appearance & behavior\", \"Adjust Light/Dark tokens, pane density, and navigation chrome modes.\"),\n]\nfor title, glyph, _summary, _detail in entries:\n    item = QStandardItem(QIcon(GlyphEngine(glyph)), title)\n    item.setToolTip(title)\n    nav_model.appendRow(item)\nnav_list.setModel(nav_model)\ncontrol.setMainChromeWidget(nav_list)\nminimal_toggles = []\nfor row, (title, _glyph, summary, detail) in enumerate(entries):\n    page = QWidget(control.contentHost())\n    page_layout = QVBoxLayout(page)\n    page_layout.setContentsMargins(16, 14, 16, 14)\n    page_layout.setSpacing(10)\n    top_row = QHBoxLayout()\n    top_row.setContentsMargins(0, 0, 0, 0)\n    top_row.setSpacing(8)\n    min_toggle = fluentqt.Button(page)\n    min_toggle.setIconGlyph(fluentqt.Typography.Icons.GlobalNav)\n    min_toggle.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)\n    min_toggle.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)\n    min_toggle.setAccessibleName(\"Open navigation menu\")\n    min_toggle.setFixedSize(32, 28)\n    min_toggle.clicked.connect(lambda: control.setPaneOpen(True))\n    minimal_toggles.append(min_toggle)\n    title_label = fluentqt.Label(title, page)\n    title_label.setFluentTypography(fluentqt.FontRole.Subtitle)\n    top_row.addWidget(min_toggle)\n    top_row.addWidget(title_label, 1)\n    page_layout.addLayout(top_row)\n    card = fluentqt.Card(page)\n    card_layout = QVBoxLayout(card)\n    card_layout.setContentsMargins(14, 12, 14, 12)\n    card_layout.setSpacing(4)\n    card_title = fluentqt.Label(summary, card)\n    card_title.setFluentTypography(fluentqt.FontRole.BodyStrong)\n    card_body = fluentqt.Label(detail, card)\n    card_body.setFluentTypography(fluentqt.FontRole.Caption)\n    card_body.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\n    card_body.setWordWrap(True)\n    card_layout.addWidget(card_title)\n    card_layout.addWidget(card_body)\n    page_layout.addWidget(card)\n    page_layout.addStretch(1)\n    control.contentHost().insertPage(row, page)\n\ndef sync_chrome(*_args):\n    mode = control.effectiveDisplayMode()\n    open_state = control.isPaneOpen()\n    modes = fluentqt.NavigationView.DisplayMode\n    top = mode == modes.Top\n    compact_closed = mode in (modes.Left, modes.LeftCompact) and not open_state\n    minimal_closed = mode == modes.LeftMinimal and not open_state\n    compact_margin = max(2, (control.compactPaneWidth() - toggle.minimumWidth()) // 2)\n    header_layout.setContentsMargins(12 if top else (compact_margin if compact_closed else 4), 4, 4, 4)\n    toggle.setVisible(not top)\n    brand.setVisible(not compact_closed)\n    nav_list.setFlow(QListView.Flow.LeftToRight if top else QListView.Flow.TopToBottom)\n    nav_list.setWrapping(False)\n    nav_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)\n    nav_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff if top else Qt.ScrollBarPolicy.ScrollBarAsNeeded)\n    if top:\n        nav_list.setFixedHeight(control.topBarHeight())\n        nav_list.setFixedWidth(368)\n    else:\n        nav_list.setMinimumSize(0, 0)\n        nav_list.setMaximumSize(16777215, 16777215)\n    top_item_height = max(34, min(44, control.topBarHeight() - 6))\n    for i in range(nav_model.rowCount()):\n        item = nav_model.item(i)\n        if item is not None:\n            item.setSizeHint(QSize(88, top_item_height) if top else QSize())\n    for btn in minimal_toggles:\n        btn.setVisible(minimal_closed)\n\ncontrol.displayModeChanged.connect(sync_chrome)\ncontrol.effectiveDisplayModeChanged.connect(sync_chrome)\ncontrol.paneOpenChanged.connect(sync_chrome)\ncontrol.compactPaneWidthChanged.connect(sync_chrome)\ncontrol.topBarHeightChanged.connect(sync_chrome)\nnav_list.selectionModel().currentChanged.connect(lambda index, previous: control.contentHost().setCurrentIndex(index.row(), 0, False))\nsync_chrome()\nnav_list.setCurrentIndex(nav_model.index(0, 0))\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "displayMode",
+      "property": "displayMode",
+      "setter": "setDisplayMode",
+      "type": "enum",
+      "label": {
+        "en": "Display mode",
+        "zh": "显示模式"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "paneOpen",
+      "property": "paneOpen",
+      "setter": "setPaneOpen",
+      "type": "boolean",
+      "label": {
+        "en": "Pane open",
+        "zh": "展开窗格"
+      },
+      "category": "basic",
+      "effectWhen": "displayMode != 'Top'",
+      "effectHint": {
+        "en": "Expands or collapses left navigation panes.",
+        "zh": "在左侧导航模式下控制窗格展开与收起。"
+      },
+      "effectFixture": {
+        "displayMode": "LeftCompact"
+      },
+      "visibleWhen": "displayMode != 'Top'"
+    },
+    {
+      "id": "expandedPaneWidth",
+      "property": "expandedPaneWidth",
+      "setter": "setExpandedPaneWidth",
+      "type": "number",
+      "label": {
+        "en": "Expanded width",
+        "zh": "展开宽度"
+      },
+      "category": "icon",
+      "minimum": 140,
+      "maximum": 220,
+      "step": 10,
+      "integer": true,
+      "control": "range",
+      "effectWhen": "displayMode != 'Top' && paneOpen",
+      "effectHint": {
+        "en": "Used while the left pane is expanded.",
+        "zh": "左侧窗格处于展开状态时生效。"
+      },
+      "effectFixture": {
+        "displayMode": "Left",
+        "paneOpen": true
+      },
+      "visibleWhen": "displayMode != 'Top' && paneOpen"
+    },
+    {
+      "id": "compactPaneWidth",
+      "property": "compactPaneWidth",
+      "setter": "setCompactPaneWidth",
+      "type": "number",
+      "label": {
+        "en": "Compact width",
+        "zh": "紧凑宽度"
+      },
+      "category": "icon",
+      "minimum": 40,
+      "maximum": 72,
+      "step": 4,
+      "integer": true,
+      "control": "range",
+      "effectWhen": "displayMode == 'LeftCompact'",
+      "effectHint": {
+        "en": "Used by the left compact navigation layout.",
+        "zh": "切换为左侧紧凑导航后生效。"
+      },
+      "effectFixture": {
+        "displayMode": "LeftCompact"
+      },
+      "visibleWhen": "displayMode == 'LeftCompact'"
+    },
+    {
+      "id": "topBarHeight",
+      "property": "topBarHeight",
+      "setter": "setTopBarHeight",
+      "type": "number",
+      "label": {
+        "en": "Top bar height",
+        "zh": "顶部栏高度"
+      },
+      "category": "icon",
+      "minimum": 40,
+      "maximum": 64,
+      "step": 4,
+      "integer": true,
+      "control": "range",
+      "effectWhen": "displayMode == 'Top'",
+      "effectHint": {
+        "en": "Used by the top navigation layout.",
+        "zh": "切换为顶部导航后生效。"
+      },
+      "effectFixture": {
+        "displayMode": "Top"
+      },
+      "visibleWhen": "displayMode == 'Top'"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "currentIndex",
+      "property": "currentIndex",
+      "setter": "setCurrentIndex",
+      "type": "number",
+      "label": {
+        "en": "Selected page",
+        "zh": "当前页面"
+      },
+      "category": "basic",
+      "adapter": "navigation-index",
+      "control": "model-select",
+      "minimum": 0,
+      "maximum": 2,
+      "integer": true,
+      "step": 1,
+      "default": 0
+    }
+  ],
+  "previewSize": [
+    540,
+    272
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

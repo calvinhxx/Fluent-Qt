@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "component": "avatar",
+  "title": "Avatar",
+  "className": "fluent::status_info::Avatar",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/StatusInfo.h>\n#include <QColor>",
+      "setup": "auto* control = new fluent::status_info::Avatar(QStringLiteral(\"Ada Lovelace\"), %PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtGui import QColor",
+      "setup": "control = fluentqt.Avatar(\"Ada Lovelace\", %PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "name",
+      "property": "name",
+      "setter": "setName",
+      "type": "text",
+      "label": {
+        "en": "Name",
+        "zh": "姓名"
+      },
+      "category": "basic",
+      "maximumLength": 40,
+      "enabledWhen": "!initials",
+      "disabledHint": {
+        "en": "Custom Initials below overrides automatic letters; clear Initials to regenerate letters from Name.",
+        "zh": "已填写自定义“缩写”覆盖显示；清空“缩写”后，更改姓名将重新生成首字母。"
+      },
+      "effect": "context",
+      "effectHint": {
+        "en": "Avatar renders 1–2 initials derived from Name (e.g. AL) when Initials is empty, and sets the accessible name.",
+        "zh": "头像圆内仅显示从姓名提取的首字母（如 AL），并用作无障碍名称；填写下方“缩写”可自定义覆盖。"
+      },
+      "effectFixture": {
+        "initials": ""
+      }
+    },
+    {
+      "id": "initials",
+      "property": "initials",
+      "setter": "setInitials",
+      "type": "text",
+      "label": {
+        "en": "Initials",
+        "zh": "缩写"
+      },
+      "category": "basic",
+      "maximumLength": 4,
+      "description": {
+        "en": "Optional custom override; leave empty to derive initials from Name.",
+        "zh": "自定义缩写（可选）；留空时由上方“姓名”自动提取首字母。"
+      }
+    },
+    {
+      "id": "avatarSize",
+      "property": "avatarSize",
+      "setter": "setAvatarSize",
+      "type": "enum",
+      "label": {
+        "en": "Size",
+        "zh": "尺寸"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "shape",
+      "property": "shape",
+      "setter": "setShape",
+      "type": "enum",
+      "label": {
+        "en": "Shape",
+        "zh": "形状"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "presence",
+      "property": "presence",
+      "setter": "setPresence",
+      "type": "enum",
+      "label": {
+        "en": "Presence",
+        "zh": "在线状态"
+      },
+      "category": "appearance",
+      "default": "Available"
+    },
+    {
+      "id": "backgroundColor",
+      "property": "backgroundColor",
+      "setter": "setBackgroundColor",
+      "type": "color",
+      "label": {
+        "en": "Background",
+        "zh": "背景色"
+      },
+      "category": "appearance",
+      "nullable": true
+    },
+    {
+      "id": "foregroundColor",
+      "property": "foregroundColor",
+      "setter": "setForegroundColor",
+      "type": "color",
+      "label": {
+        "en": "Foreground",
+        "zh": "前景色"
+      },
+      "category": "appearance",
+      "nullable": true
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    96,
+    96
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

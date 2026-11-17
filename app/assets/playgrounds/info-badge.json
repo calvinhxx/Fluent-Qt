@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "component": "info-badge",
+  "title": "InfoBadge",
+  "className": "fluent::status_info::InfoBadge",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Design.h>\n#include <FluentQt/StatusInfo.h>\n#include <QColor>",
+      "setup": "auto* control = new fluent::status_info::InfoBadge(%PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtGui import QColor",
+      "setup": "control = fluentqt.InfoBadge(%PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "displayMode",
+      "property": "displayMode",
+      "setter": "setDisplayMode",
+      "type": "enum",
+      "label": {
+        "en": "Display mode",
+        "zh": "显示模式"
+      },
+      "category": "basic",
+      "effect": "context",
+      "effectHint": {
+        "en": "Auto displays Value when ≥ 0, or Icon / Dot when -1. Dot and Icon hide unrelated controls.",
+        "zh": "自动模式下数值 ≥ 0 显示数字，设为 -1 时显示图标或圆点；切换显示模式将逐步展开对应选项。"
+      }
+    },
+    {
+      "id": "value",
+      "property": "value",
+      "setter": "setValue",
+      "type": "number",
+      "label": {
+        "en": "Value",
+        "zh": "数值"
+      },
+      "category": "basic",
+      "default": 8,
+      "minimum": -1,
+      "maximum": 999,
+      "step": 1,
+      "integer": true,
+      "effectWhen": "displayMode == 'Value' || displayMode == 'Auto'",
+      "effectHint": {
+        "en": "Non-negative values display directly; set to -1 in Auto mode to reveal Icon selection or Dot.",
+        "zh": "非负整数直接显示；自动模式下设为 -1 将展开下方图标选择（“无”时退化为圆点）。"
+      },
+      "effectFixture": {
+        "displayMode": "Value"
+      },
+      "valueLabels": {
+        "-1": {
+          "en": "No value",
+          "zh": "无数值"
+        }
+      },
+      "visibleWhen": "displayMode == 'Value' || displayMode == 'Auto'"
+    },
+    {
+      "id": "iconGlyph",
+      "property": "iconGlyph",
+      "setter": "setIconGlyph",
+      "type": "enum",
+      "label": {
+        "en": "Glyph",
+        "zh": "图标字形"
+      },
+      "category": "basic",
+      "default": "CheckMark",
+      "glyphEnum": true,
+      "options": [
+        "None",
+        "CheckMark",
+        "Add",
+        "Info",
+        "Warning",
+        "ErrorBadge12",
+        "FavoriteStar"
+      ],
+      "cppPrefix": "Typography::Icons::",
+      "pythonPrefix": "fluentqt.Typography.Icons.",
+      "effectWhen": "displayMode == 'Icon' || (displayMode == 'Auto' && value < 0)",
+      "effectHint": {
+        "en": "Shown in Icon mode, or Automatic mode without a numeric value.",
+        "zh": "图标模式，或自动模式且未设置数值时显示。"
+      },
+      "effectFixture": {
+        "displayMode": "Icon"
+      },
+      "group": "primary-icon",
+      "visibleWhen": "displayMode == 'Icon' || (displayMode == 'Auto' && value < 0)"
+    },
+    {
+      "id": "status",
+      "property": "status",
+      "setter": "setStatus",
+      "type": "enum",
+      "label": {
+        "en": "Status",
+        "zh": "语义状态"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "badgeOpacity",
+      "property": "badgeOpacity",
+      "setter": "setBadgeOpacity",
+      "type": "number",
+      "label": {
+        "en": "Opacity",
+        "zh": "不透明度"
+      },
+      "category": "appearance",
+      "minimum": 0.1,
+      "maximum": 1.0,
+      "step": 0.1,
+      "integer": false,
+      "control": "range"
+    },
+    {
+      "id": "customBackgroundColor",
+      "property": "customBackgroundColor",
+      "setter": "setCustomBackgroundColor",
+      "type": "color",
+      "label": {
+        "en": "Background",
+        "zh": "自定义背景"
+      },
+      "category": "appearance",
+      "nullable": true
+    },
+    {
+      "id": "customTextColor",
+      "property": "customTextColor",
+      "setter": "setCustomTextColor",
+      "type": "color",
+      "label": {
+        "en": "Text color",
+        "zh": "自定义文字色"
+      },
+      "category": "appearance",
+      "nullable": true
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    72,
+    48
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

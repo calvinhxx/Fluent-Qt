@@ -3,7 +3,8 @@
     "name": "复合按钮",
     "description": "在按钮中显示标题和一行说明。",
     "example": "标题与说明",
-    "usage": "构造时传入标题和说明文字；setFluentStyle(Button::Accent) 可将其设为主要操作。"
+    "usage": "构造时传入标题和说明文字；setFluentStyle(Button::Accent) 可将其设为主要操作。 图标配置继承 Button：支持仅文字、图标在前或后、仅图标、图标在上或下；setIconRotation()、setIconScale()、setIconOffset() 在显示图标的布局中生效。 仅图标布局隐藏标题和说明。",
+    "usage_en": "Pass the title and secondary text to the constructor; setFluentStyle(Button::Accent) marks a primary action. Icon configuration follows Button: text only, icon before or after, icon only, and icon above or below. setIconRotation(), setIconScale() and setIconOffset() apply in layouts that display the icon. Icon-only layout hides both the title and secondary text."
   },
   "color-picker": {
     "name": "颜色选择器",
@@ -18,41 +19,47 @@
     "description": "从下拉列表中选择一项。",
     "height": 420,
     "example": "读取选中项",
-    "usage": "addItems() 添加选项；选择变化时 currentIndexChanged 触发，用 currentText() 读取文字。"
+    "usage": "addItems() 添加选项；选择变化时 currentIndexChanged 触发，用 currentText() 读取文字。 占位文字在未选中且输入为空时可见；可编辑模式的占位文字需设置到 lineEdit()，属性动态预览会同步配置。",
+    "usage_en": "addItems() supplies choices; currentIndexChanged reports selection changes and currentText() reads the label. Placeholder text is visible with no selection and empty input. In editable mode, configure the placeholder on lineEdit(); the property preview synchronizes both."
   },
   "dropdown-button": {
     "name": "下拉按钮",
     "description": "点击后展开一组相关命令。",
     "height": 420,
     "example": "展开菜单",
-    "usage": "把命令加入 FluentMenu，再用 setMenu() 交给按钮。按钮本身不执行操作。"
+    "usage": "把 FluentMenu 通过 setMenu() 交给按钮。内置行为是打开菜单；应用仍可连接 clicked 执行自己的逻辑。 图标配置继承 Button：支持仅文字、图标在前或后、仅图标、图标在上或下；setIconRotation()、setIconScale()、setIconOffset() 在显示图标的布局中生效。",
+    "usage_en": "Attach a FluentMenu with setMenu(). The built-in action opens the menu; application handlers may still connect to clicked. Icon configuration follows Button: text only, icon before or after, icon only, and icon above or below. setIconRotation(), setIconScale() and setIconOffset() apply in layouts that display the icon."
   },
   "file-drop-zone": {
     "name": "文件拖放区",
-    "description": "拖入文件，或点击浏览选择文件。",
+    "description": "接收本地文件拖放，并请求应用打开文件选择器。",
     "capture_size": "1060x1000",
     "example": "添加文件",
-    "usage": "setDescription() 和 setHintText() 说明可接受的文件；示例把选中的文件列在下方的 FileListView 中。",
-    "usage_en": "Use setDescription() and setHintText() to describe accepted files. The example lists chosen files in a FileListView below."
+    "usage": "filesDropped 提供本地 URL，browseRequested 请求应用打开选择器。示例由应用检查类型和大小，再更新 FileListView；提示文字本身不会执行这些限制。",
+    "usage_en": "filesDropped delivers local URLs; browseRequested asks the application to open a picker. The sample checks file types and sizes and updates FileListView; hint text alone does not enforce these rules.",
+    "description_en": "Accept local file drops and request an application-provided file picker."
   },
   "hyperlink-button": {
     "name": "链接按钮",
     "description": "外观像链接的按钮，点击后打开网址。",
     "example": "打开网址",
-    "usage": "setUrl() 设置目标地址，点击时用系统浏览器打开。"
+    "usage": "setUrl() 设置 URL；点击时通过 QDesktopServices 请求平台处理程序打开。HTTP 地址通常由浏览器处理，打开请求也可能失败。 setShowUnderline(true) 仅在悬停时显示下划线。 图标配置继承 Button：支持仅文字、图标在前或后、仅图标、图标在上或下；setIconRotation()、setIconScale()、setIconOffset() 在显示图标的布局中生效。",
+    "usage_en": "setUrl() supplies a URL. Clicking requests QDesktopServices to open it with the platform handler; an HTTP URL normally opens a browser, and opening can fail. setShowUnderline(true) enables the underline on hover only. Icon configuration follows Button: text only, icon before or after, icon only, and icon above or below. setIconRotation(), setIconScale() and setIconOffset() apply in layouts that display the icon."
   },
   "multi-select-combobox": {
     "name": "多选下拉框",
     "description": "从下拉列表中选择多项。",
     "height": 420,
     "example": "选择多项",
-    "usage": "setModel() 提供选项，setSelectedRows() 设置初始选择。勾选时列表保持打开，selectionChanged 触发后用 selectedIndexes() 读取已选项。"
+    "usage": "setModel() 提供选项，setSelectedRows() 设置初始选择。勾选时列表保持打开，selectionChanged 触发后用 selectedIndexes() 读取已选项。 maximumVisibleItems 只限制下拉区可见行数，不限制选中数量；其余项目可滚动查看。",
+    "usage_en": "setModel() supplies items and setSelectedRows() sets the initial selection. The list stays open while toggling; read selectedIndexes() after selectionChanged. maximumVisibleItems limits visible dropdown rows, not the number of selected items; additional rows remain scrollable."
   },
   "radio-button": {
     "name": "单选按钮",
     "description": "在一组选项中只能选择一项。",
     "example": "单选按钮组",
-    "usage": "同一父控件下的 RadioButton 自动互斥；在 toggled(true) 时读取选中的选项。"
+    "usage": "RadioButton 默认与同一父控件下的单选按钮互斥；可用 QButtonGroup 或 setAutoExclusive() 改变分组方式，在 toggled(true) 时响应选中。",
+    "usage_en": "RadioButton is auto-exclusive by default among radio buttons with the same parent. QButtonGroup or setAutoExclusive() can change grouping; respond to toggled(true) for selection."
   },
   "tree-select": {
     "name": "树形选择器",
@@ -65,7 +72,8 @@
     "name": "区间滑块",
     "description": "拖动两个手柄选择下限和上限。",
     "example": "实时显示区间",
-    "usage": "setRange() 设置范围，setValues() 同时设置下限和上限；拖动时 valuesChanged 给出当前区间。"
+    "usage": "setRange() 设置范围，setValues() 同时设置下限和上限；拖动时 valuesChanged 给出当前区间。最小间距为 0 时允许两手柄重合。刻度在悬停时显示，位置随轨道方向解释。",
+    "usage_en": "Use setRange() for bounds and setValues() to set both endpoints together; valuesChanged reports the interval while dragging. A zero minimum separation allows overlapping thumbs. Ticks appear on hover and their side follows the track orientation."
   },
   "rating-control": {
     "name": "评分控件",
@@ -77,33 +85,38 @@
     "name": "重复按钮",
     "description": "按住时连续触发点击。",
     "example": "按住连续计数",
-    "usage": "按住按钮时，clicked 会在初始延迟后重复触发；用 setDelay() 和 setInterval() 调整节奏。"
+    "usage": "按住按钮时，clicked 会在初始延迟后重复触发；用 setDelay() 和 setInterval() 调整节奏。 图标配置继承 Button：支持仅文字、图标在前或后、仅图标、图标在上或下；setIconRotation()、setIconScale()、setIconOffset() 在显示图标的布局中生效。",
+    "usage_en": "Holding the button repeats clicked after the initial delay. Adjust the timing with setDelay() and setInterval(). Icon configuration follows Button: text only, icon before or after, icon only, and icon above or below. setIconRotation(), setIconScale() and setIconOffset() apply in layouts that display the icon."
   },
   "slider": {
     "name": "滑块",
     "description": "拖动滑块在范围内选择数值。",
     "example": "实时显示数值",
-    "usage": "setRange() 设置范围，拖动时 valueChanged 给出当前值。"
+    "usage": "setRange() 设置范围，拖动时 valueChanged 给出当前值。刻度在悬停时显示：水平为上方/下方，竖向为左侧/右侧，也可显示双侧刻度。",
+    "usage_en": "Use setRange() to set the bounds; valueChanged reports the value while dragging. Ticks appear on hover: above/below a horizontal track or left/right of a vertical track, with a both-sides option."
   },
   "split-button": {
     "name": "分裂按钮",
     "description": "左侧执行默认操作，右侧打开更多选项。",
     "height": 420,
     "example": "默认操作与菜单",
-    "usage": "点击左侧触发 clicked；右侧打开 setMenu() 设置的菜单，选择结果通过菜单的 triggered 获取。"
+    "usage": "点击左侧触发 clicked；右侧打开 setMenu() 设置的菜单，选择结果通过菜单的 triggered 获取。 未选中时，Subtle 样式使用透明底色。 图标配置继承 Button：支持仅文字、图标在前或后、仅图标、图标在上或下；setIconRotation()、setIconScale()、setIconOffset() 在显示图标的布局中生效。",
+    "usage_en": "The primary region emits clicked; the secondary region opens the menu supplied via setMenu(). Read the menu triggered signal. Subtle uses a transparent rest surface when unchecked. Icon configuration follows Button: text only, icon before or after, icon only, and icon above or below. setIconRotation(), setIconScale() and setIconOffset() apply in layouts that display the icon."
   },
   "toggle-button": {
     "name": "切换按钮",
     "description": "点击后保持选中或未选中状态的按钮。",
     "example": "读取选中状态",
-    "usage": "toggled(bool) 给出按钮当前是否选中。"
+    "usage": "toggled(bool) 给出按钮当前是否选中。 图标配置继承 Button：支持仅文字、图标在前或后、仅图标、图标在上或下；setIconRotation()、setIconScale()、setIconOffset() 在显示图标的布局中生效。",
+    "usage_en": "toggled(bool) reports the current checked state. Icon configuration follows Button: text only, icon before or after, icon only, and icon above or below. setIconRotation(), setIconScale() and setIconOffset() apply in layouts that display the icon."
   },
   "toggle-split-button": {
     "name": "切换分裂按钮",
     "description": "左侧切换开关状态，右侧打开相关选项。",
     "height": 420,
     "example": "切换状态与菜单",
-    "usage": "点击左侧切换选中状态并触发 toggled；右侧打开 setMenu() 设置的菜单。"
+    "usage": "点击左侧切换选中状态并触发 toggled；右侧打开 setMenu() 设置的菜单。 未选中时，Subtle 样式使用透明底色。 图标配置继承 Button：支持仅文字、图标在前或后、仅图标、图标在上或下；setIconRotation()、setIconScale()、setIconOffset() 在显示图标的布局中生效。",
+    "usage_en": "The primary region toggles selection and emits toggled; the secondary region opens the menu supplied via setMenu(). Subtle uses a transparent rest surface when unchecked. Icon configuration follows Button: text only, icon before or after, icon only, and icon above or below. setIconRotation(), setIconScale() and setIconOffset() apply in layouts that display the icon."
   },
   "toggle-switch": {
     "name": "开关",
@@ -143,13 +156,13 @@
     "description_en": "Compares values across categories with vertical bars.",
     "capture_size": "1060x1000",
     "example": "每周活动对比",
-    "usage": "setPoints() 的第二个参数提供类别标签；addSeries() 添加第二组柱形。",
-    "usage_en": "Pass category labels as the second argument to setPoints(). addSeries() adds a second set of bars."
+    "usage": "用 ChartModel::setPoints() 传入数据点和类别标签，再用图表的 setModel() 绑定模型；addSeries() 添加另一个模型用于比较。",
+    "usage_en": "Call ChartModel::setPoints() with points and category labels, then bind that model with setModel(). addSeries() adds another model for comparison."
   },
   "horizontal-bar-chart": {
     "name": "条形图",
-    "description": "用水平条形比较类别，较长的标签也能完整显示。",
-    "description_en": "Compares categories with horizontal bars, leaving room for long labels.",
+    "description": "用水平条形比较类别，为类别标签留出更多空间。",
+    "description_en": "Compare categories with horizontal bars, leaving more space for labels.",
     "capture_size": "1060x1000",
     "example": "流量来源对比",
     "usage": "setYRange() 固定数值范围，setValueSuffix(\"%\") 为数值加上单位。",
@@ -161,8 +174,8 @@
     "description_en": "Shows how each part contributes to a total.",
     "capture_size": "1060x1000",
     "example": "流量来源占比",
-    "usage": "setPoints() 中的每个值对应一个扇区，标签用作扇区名称。",
-    "usage_en": "Each value passed to setPoints() becomes a slice, named by its label."
+    "usage": "用 setModel() 绑定 ChartModel，由 ChartModel::setPoints() 提供数值和标签。只绘制第一个序列中的正值；从模型第 12 行起的数值合并为一个扇区。",
+    "usage_en": "Bind a ChartModel with setModel(); ChartModel::setPoints() supplies values and labels. Only positive values in the first series contribute slices. From the twelfth model row onward, values are grouped into one slice."
   },
   "donut-chart": {
     "name": "环形图",
@@ -170,8 +183,8 @@
     "description_en": "Shows parts of a total as a ring, with room for the total in the middle.",
     "capture_size": "1060x1000",
     "example": "流量来源与总量",
-    "usage": "用法与 PieChart 相同；setCenterText() 和 setCenterCaption() 设置中间的数字和说明。",
-    "usage_en": "Used like PieChart; setCenterText() and setCenterCaption() set the number and caption in the middle."
+    "usage": "DonutChart 与 PieChart 使用相同的首序列和扇区合并规则。setCenterText() 和 setCenterCaption() 设置中心文字；需要显示总数时由应用计算。",
+    "usage_en": "DonutChart uses the same first-series and slice-grouping rules as PieChart. setCenterText() and setCenterCaption() set the text in the center; the application calculates any total it displays."
   },
   "scatter-chart": {
     "name": "散点图",
@@ -200,7 +213,8 @@
     "name": "抽屉视图",
     "description": "从窗口边缘滑出的面板。",
     "example": "右侧抽屉",
-    "usage": "setEdge() 选择滑出方向，setDrawerLength() 设置宽度，open() 打开；点击外部区域会关闭。"
+    "usage": "setEdge() 选择方向；setDrawerLength() 对左右抽屉设置宽度，对上下抽屉设置高度。open() 打开；默认关闭策略支持点击外部或按 Esc 关闭。",
+    "usage_en": "setEdge() selects the edge. setDrawerLength() sets width for left/right drawers and height for top/bottom drawers. open() shows it; the default close policy dismisses on an outside press or Escape."
   },
   "file-list-view": {
     "name": "文件列表",
@@ -212,19 +226,22 @@
     "name": "翻页视图",
     "description": "一次显示一页，逐页浏览图片或其他内容。",
     "example": "翻看照片",
-    "usage": "addPage() 添加页面，setShowPageIndicator(true) 显示页码圆点；可以点箭头或滑动翻页。"
+    "usage": "addPage() 添加页面，setShowPageIndicator(true) 显示页码圆点；鼠标移入时显示可用方向的翻页箭头，也可滑动或使用键盘翻页。",
+    "usage_en": "Use addPage() to add pages and setShowPageIndicator(true) to show page dots. Hover to reveal arrows for available directions; swipe or keyboard navigation also changes pages."
   },
   "flow-view": {
     "name": "流式视图",
     "description": "按可用宽度自动换行排列条目。",
     "example": "照片流",
-    "usage": "setDefaultItemSize() 设置条目默认尺寸，自定义 delegate 绘制每个条目；宽度变窄时自动换行。"
+    "usage": "setDefaultItemSize() 仅在模型和 delegate 未提供有效尺寸时作为后备值；setMinimumItemSize() 和 setMaximumItemSize() 限制实际条目尺寸。默认文本条目提供选中反馈，自定义 delegate 可绘制卡片。示例图片由应用代码加载。 默认代理保留 Qt 模型角色：QIcon 显示图标、QColor 显示色块，不根据其他行自动生成图片。照片卡片由示例自己的模型和 delegate 提供。",
+    "usage_en": "setDefaultItemSize() is a fallback when neither the model nor delegate supplies a valid size. setMinimumItemSize() and setMaximumItemSize() constrain the actual item size. Default text items show selection feedback; custom delegates can paint cards. The application loads the sample images. The default delegate preserves Qt model roles: QIcon displays an icon and QColor a color swatch, without deriving images from other rows. Photo cards are supplied by the sample model and delegate."
   },
   "grid-view": {
     "name": "网格视图",
     "description": "按统一大小的网格显示和选择条目。",
     "example": "照片网格",
-    "usage": "setCellSize() 设置格子大小，自定义 delegate 绘制封面和标题。"
+    "usage": "setCellSize() 设置格子大小；setMaxColumns() 限制最多列数，实际列数还取决于可用宽度。默认文本条目提供选中反馈，自定义 delegate 可绘制封面和标题。 默认代理保留 Qt 模型角色：QIcon 显示图标、QColor 显示色块，不根据其他行自动生成图片。照片卡片由示例自己的模型和 delegate 提供。",
+    "usage_en": "setCellSize() sets cell size. setMaxColumns() caps the column count; available width can reduce it further. Default text items show selection feedback; custom delegates can paint covers and titles. The default delegate preserves Qt model roles: QIcon displays an icon and QColor a color swatch, without deriving images from other rows. Photo cards are supplied by the sample model and delegate."
   },
   "list-view": {
     "name": "列表视图",
@@ -255,7 +272,8 @@
     "name": "树形视图",
     "description": "浏览、展开和选择层级数据。",
     "example": "文件夹层级",
-    "usage": "setModel() 提供树形数据，点击箭头展开或收起；示例用自定义 delegate 绘制箭头和图标。"
+    "usage": "setModel() 提供树形数据。默认文本节点提供可点击的展开箭头和选中反馈；方向键也可展开、收起。示例用自定义 delegate 增加图标和复杂行内容。",
+    "usage_en": "setModel() supplies hierarchical data. Default text nodes provide clickable expansion chevrons and selection feedback; arrow keys also expand and collapse nodes. The sample uses a custom delegate for icons and richer rows."
   },
   "calendar-date-picker": {
     "name": "日历日期选择器",
@@ -291,7 +309,8 @@
     "description": "分别滚动选择小时和分钟。",
     "height": 420,
     "example": "选择时间",
-    "usage": "setTime() 设置初始时间，setMinuteIncrement(5) 让分钟按 5 分钟递增。"
+    "usage": "setTime() 设置打开选择器时的后备时间，不提交或替换选择；setSelectedTime() 设置已选时间。setMinuteIncrement(5) 将分钟步长设为 5。",
+    "usage_en": "setTime() sets the fallback time for opening the picker without committing or replacing a selection. Use setSelectedTime() to select a time. setMinuteIncrement(5) sets a five-minute step."
   },
   "content-dialog": {
     "name": "内容对话框",
@@ -302,10 +321,12 @@
   },
   "dialog": {
     "name": "对话框",
-    "description": "可以放入任意内容的模态对话框。",
+    "description": "在同一窗口内显示应用内容的对话框，可配置是否模态。",
     "height": 560,
     "example": "重命名项目",
-    "usage": "在 Dialog 中放入标题、输入框和按钮，由应用决定应用还是取消修改。"
+    "usage": "在 Dialog 中放入标题、输入框和按钮。需要阻止同一所属窗口中的其他交互时调用 setModal(true)，应用负责处理应用或取消修改。",
+    "description_en": "A same-window dialog surface with configurable modality and application-provided content.",
+    "usage_en": "Place a title, editor and buttons inside Dialog. Call setModal(true) when it should block interaction elsewhere in its owning window; the application handles apply or cancel."
   },
   "flyout": {
     "name": "浮出面板",
@@ -317,7 +338,8 @@
     "name": "弹出层",
     "description": "在应用内容上方显示临时内容。",
     "example": "在按钮旁弹出",
-    "usage": "setPosition() 相对按钮设置位置，open() 显示；点击外部或按 Esc 关闭。"
+    "usage": "setPosition() 相对控件定位，open() 显示。默认关闭策略支持点击外部或按 Esc 关闭；可通过 setClosePolicy() 调整。",
+    "usage_en": "setPosition() places the popup relative to a widget and open() shows it. The default close policy dismisses it on an outside press or Escape; setClosePolicy() can change that behavior."
   },
   "teaching-tip": {
     "name": "教学提示",
@@ -327,9 +349,11 @@
   },
   "coach-mark": {
     "name": "引导标记",
-    "description": "指向目标控件的引导卡片，可以移到下一个目标。",
+    "description": "在同一窗口内指向目标控件的引导卡片，可在目标之间移动。",
     "example": "移到新目标",
-    "usage": "打开后再调用 setTarget()，卡片会移到新的目标控件。"
+    "usage": "打开后调用 setTarget() 会重新定位卡片；动效策略允许时播放移动动画。",
+    "description_en": "A same-window teaching tip that points at a target and can move between targets.",
+    "usage_en": "Calling setTarget() while open repositions the tip. Movement animates when the motion policy permits it."
   },
   "accordion": {
     "name": "折叠面板组",
@@ -364,10 +388,12 @@
   },
   "data-grid-tool-bar": {
     "name": "表格工具栏",
-    "description": "为 DataGrid 提供搜索、筛选和列设置。",
+    "description": "编辑搜索与筛选条件，控制 DataGrid 列的显示、顺序和固定状态；行筛选由应用实现。",
     "example": "筛选与排列项目",
-    "usage": "输入关键词或组合筛选条件来过滤表格，在 Columns 菜单中显示、移动或固定列。筛选规则由应用的代理模型实现。",
-    "capture_size": "920x800"
+    "usage": "示例把搜索与筛选条件连接到应用代理模型。Columns 菜单控制列的显示、顺序和固定状态；保存与恢复只保留本次示例运行中的视图设置。",
+    "capture_size": "920x800",
+    "description_en": "Edit search and filter criteria, and control DataGrid column visibility, order and pinning. The application implements row filtering.",
+    "usage_en": "The sample connects search and filter criteria to an application proxy model. The Columns menu changes visibility, order and pinning; save/restore retains this demo view in memory."
   },
   "property-panel": {
     "name": "属性面板",
@@ -403,26 +429,30 @@
     "height": 560,
     "capture_size": "1060x1000",
     "example": "调整卡片姿态",
-    "usage": "SpatialView::addWidget() 返回的 SpatialItem 控制这张卡片；调整它不会影响其他卡片。"
+    "usage": "SpatialView::addWidget() 返回 SpatialItem，控制所承载控件及其子控件的变换；其他条目的变换不受影响。",
+    "usage_en": "SpatialView::addWidget() returns a SpatialItem that transforms the hosted widget and its children. Other items keep their transforms."
   },
   "qml-view": {
     "name": "QML 视图",
     "description": "在 Widgets 界面中加载 QML 页面，并共享数据和主题。",
     "capture_size": "1060x1000",
     "example": "加载 QML 页面",
-    "usage": "先激活 QmlSession，再用 createView() 创建 QmlView 并加载 QML 文件；激活失败时显示错误信息。"
+    "usage": "先激活 QmlSession，再用 QmlSession::createView() 创建 QmlView 并加载 QML 文件。示例显示激活错误；与 OpenGL 共用时，须在第一个 Quick 表面创建前选择 Quick 后端。",
+    "usage_en": "Activate QmlSession, then use QmlSession::createView() to create a QmlView and load a QML file. The sample shows activation errors; choose the Quick backend before the first Quick surface when sharing OpenGL."
   },
   "menu": {
     "name": "菜单",
     "description": "显示一组命令的弹出菜单。",
     "example": "命令与快捷键",
-    "usage": "addAction() 添加命令，setShortcut() 设置快捷键，addSeparator() 分隔命令组；暂不可用的命令可以禁用。"
+    "usage": "用 addAction() 和 addSeparator() 组织命令，QAction::setShortcut() 设置快捷键；示例还把动作加入所属窗口，以便菜单关闭时也能触发。 用 QMenu::addMenu() 嵌套子菜单；“子菜单与选中项”示例支持继续打开 Sort by → Order，并切换互斥的排序方向。",
+    "usage_en": "Use addAction() and addSeparator() to build groups. QAction::setShortcut() assigns a shortcut; the sample also adds the action to the owning window so it can be invoked while the menu is closed. Use QMenu::addMenu() to nest submenus. The Submenus and checked items sample opens Sort by → Order and lets you select an exclusive sort direction."
   },
   "menu-bar": {
     "name": "菜单栏",
     "description": "窗口顶部的一排菜单。",
     "example": "放在卡片中的菜单栏",
-    "usage": "addMenu() 添加菜单；setBackgroundVisible(false) 去掉自身背景，便于放进卡片或标题栏。"
+    "usage": "addMenu() 添加菜单；setBackgroundVisible(false) 去掉自身背景，便于放进卡片或标题栏。 宽度不足时，剩余菜单从“更多菜单”入口访问；动作的启用、选中状态和子菜单保持一致。",
+    "usage_en": "Use addMenu() to add menus and setBackgroundVisible(false) to blend into a card or title bar. When space is limited, remaining menus are available through More menus, preserving action state and submenus."
   },
   "command-bar": {
     "name": "命令栏",
@@ -441,7 +471,8 @@
     "name": "浮动命令栏",
     "description": "在当前内容旁显示的上下文命令。",
     "example": "照片的上下文操作",
-    "usage": "addPrimaryAction() 添加常用命令，addSecondaryAction() 添加更多命令。左键点击时以 Transient 模式显示且不抢焦点，右键时展开完整菜单。"
+    "usage": "addPrimaryAction() 和 addSecondaryAction() 添加命令。示例明确为左键选择 Transient 模式，为右键或键盘调用选择 Standard 模式；控件不会根据鼠标按键自行推断模式。",
+    "usage_en": "addPrimaryAction() and addSecondaryAction() add commands. This sample explicitly selects Transient mode for a left click and Standard mode for a right click or keyboard invocation; the component does not infer the mode from the mouse button."
   },
   "breadcrumb": {
     "name": "面包屑导航",
@@ -460,13 +491,15 @@
     "name": "枢轴导航",
     "description": "在同级页面之间切换的标签导航。",
     "example": "切换页面",
-    "usage": "addItem() 添加标签，currentChanged 时切换 StackContentHost 中的页面；禁用的标签仍会显示，但不能选择。"
+    "usage": "连接 currentChanged，在外部 StackContentHost 中切换对应页面。禁用的标签仍会显示，但不能选择。",
+    "usage_en": "Connect currentChanged to select the matching page in an external StackContentHost. Disabled items remain visible and cannot be selected."
   },
   "selector-bar": {
     "name": "选择栏",
     "description": "用一排选项切换当前视图。",
     "example": "选择并切换页面",
-    "usage": "addItem() 添加选项并附带数据；currentChanged 切换页面，selectionChanged 提供选中项的数据。"
+    "usage": "用 addItem() 添加选项；连接 currentChanged 切换外部页面，selectionChanged 提供选中项的数据。",
+    "usage_en": "Add items with addItem(). Connect currentChanged to switch an external page; selectionChanged supplies the selected item data."
   },
   "stepper": {
     "name": "步骤导航",
@@ -477,9 +510,11 @@
   },
   "tab-view": {
     "name": "标签页视图",
-    "description": "用标签页组织多个页面。",
+    "description": "管理标签的选中、关闭和重排；页面由应用承载和切换。",
     "example": "标签页与页面",
-    "usage": "currentChanged 切换 StackContentHost 中的页面；开启 setTabReorderEnabled() 后，用 tabMoved 同步页面顺序。"
+    "usage": "连接 currentChanged 切换外部 StackContentHost 的页面；调用 setTabReorderEnabled(true) 后，处理 tabMoved 以同步页面顺序。",
+    "description_en": "A tab strip with selection, closing and reordering; the application hosts and switches the pages.",
+    "usage_en": "Connect currentChanged to an external StackContentHost. After enabling setTabReorderEnabled(true), handle tabMoved to keep page order aligned with tab order."
   },
   "annotated-scrollbar": {
     "name": "标注滚动条",
@@ -498,7 +533,8 @@
     "name": "圆点分页器",
     "description": "用圆点显示和切换页面。",
     "example": "与 FlipView 联动",
-    "usage": "setNumberOfPages() 设置页数，再把两个控件的当前页信号互相连接。"
+    "usage": "setNumberOfPages() 设置页数。示例通过双向连接页码信号同步 PipsPager 与 FlipView，同步逻辑由应用编写。",
+    "usage_en": "setNumberOfPages() sets the page count. The sample connects the pager and FlipView current-page signals in both directions; synchronization is application code."
   },
   "scrollbar": {
     "name": "滚动条",
@@ -539,9 +575,11 @@
   },
   "progress-ring": {
     "name": "进度环",
-    "description": "用旋转的圆环表示任务正在进行。",
+    "description": "显示已知完成比例，或使用不确定进度圆环。",
     "example": "三种尺寸",
-    "usage": "setRingSize() 选择尺寸，setIsActive(true) 开始动画。"
+    "usage": "setRingSize() 选择尺寸，setIsActive(true) 激活指示器。只有在可见、启用、不确定进度且为 Running 状态，自身动效开关打开并且 MotionPolicy 允许持续动画时，圆环才会旋转。",
+    "description_en": "Show a known completion ratio or an indeterminate progress ring.",
+    "usage_en": "setRingSize() selects the size and setIsActive(true) activates the indicator. It spins only when visible, enabled, indeterminate and Running, with local animation enabled and MotionPolicy allowing continuous motion."
   },
   "splash-screen": {
     "name": "启动屏幕",
@@ -589,7 +627,8 @@
     "description": "只读显示代码，带语法高亮和复制按钮。",
     "capture_size": "1060x1000",
     "example": "阅读和复制代码",
-    "usage": "setLanguage() 设置语言，setCode() 设置代码；标题栏可以复制全部代码或折叠代码块。"
+    "usage": "setLanguage() 选择 C++、Python 或 QML 高亮，其他语言使用纯文本；setCode() 设置代码，标题栏支持复制全部代码或折叠。",
+    "usage_en": "setLanguage() selects C++, Python or QML highlighting; other languages use plain text. setCode() supplies the source. The header copies all code or folds the block."
   },
   "label": {
     "name": "文本标签",
@@ -613,13 +652,15 @@
     "name": "密码输入框",
     "description": "输入密码，可以按需显示。",
     "example": "读取密码",
-    "usage": "setPassword() 设置密码，passwordChanged 给出新的密码。"
+    "usage": "setPassword() 更新底层输入框文本，passwordChanged 报告变化。password() 与 text() 读取同一份值，显示模式决定如何呈现。",
+    "usage_en": "setPassword() updates the underlying editor text and passwordChanged reports changes. password() reads the same value as text(); reveal mode controls its display."
   },
   "text-edit": {
     "name": "多行输入框",
     "description": "输入多行文字。",
     "example": "按行数调整高度",
-    "usage": "setMinVisibleLines(2) 和 setMaxVisibleLines(4) 设置高度范围，超过 4 行后出现滚动条。"
+    "usage": "自动调整高度默认开启；setMinVisibleLines(2) 和 setMaxVisibleLines(4) 限定建议高度，更多内容通过滚动查看。显式尺寸或父布局仍可约束实际高度。",
+    "usage_en": "With automatic resizing enabled (the default), setMinVisibleLines(2) and setMaxVisibleLines(4) bound the preferred height. Additional content scrolls; an explicit size or parent layout can constrain the actual height."
   },
   "title-bar": {
     "name": "标题栏",
@@ -632,7 +673,8 @@
     "description": "带自定义标题栏和主题背景的顶层窗口。",
     "height": 560,
     "example": "设置窗口内容",
-    "usage": "setContentWidget() 设置窗口内容，setBackdropEffect() 选择 Mica 等背景效果。"
+    "usage": "setContentWidget() 设置内容，setBackdropEffect() 请求 Mica 等背景效果；backdropState() 报告平台实际应用的效果及回退情况。",
+    "usage_en": "setContentWidget() supplies the content. setBackdropEffect() requests an effect such as Mica; backdropState() reports what the platform applied and any fallback."
   },
   "font-icon": {
     "name": "字体图标",
@@ -641,7 +683,7 @@
     "usage": "默认按尺寸选择内置 Fluent 字形。应用注册自定义字体后，通过 setFontFamily() 指定字体族并传入真实字形；清空字体族恢复默认行为。"
   },
   "transfer": {
-    "name": "Transfer 双栏选择",
+    "name": "双栏选择",
     "description": "两侧搜索、批量移动和禁用项；通过稳定键维护归属，源模型保持调用方所有。",
     "sample": "transfer-project-members"
   }

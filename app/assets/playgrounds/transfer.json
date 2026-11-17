@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "component": "transfer",
+  "previewSize": [
+    600,
+    300
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Content",
+        "zh": "内容"
+      }
+    },
+    {
+      "id": "icon",
+      "label": {
+        "en": "Layout",
+        "zh": "布局"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Search & selection",
+        "zh": "搜索与选择"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Collections.h>\n#include <QStandardItemModel>",
+      "setup": "auto* control = new fluent::collections::Transfer(%PARENT%);\ncontrol->setSourceHeader(QStringLiteral(\"Available members\"));\ncontrol->setTargetHeader(QStringLiteral(\"Project members\"));\ncontrol->setSearchPlaceholderText(QStringLiteral(\"Search members\"));\nauto* model = new QStandardItemModel(control);\nfor (const auto& entry : {QPair<QString, QString>{QStringLiteral(\"Lin Zhou\"), QStringLiteral(\"Design systems\")}, {QStringLiteral(\"Maya Ortiz\"), QStringLiteral(\"Accessibility\")}, {QStringLiteral(\"Noah Kim\"), QStringLiteral(\"Release engineering\")}, {QStringLiteral(\"Elena Rostova\"), QStringLiteral(\"Documentation\")}, {QStringLiteral(\"Ava Patel\"), QStringLiteral(\"QA automation\")}}) {\n    auto* item = new QStandardItem(entry.first);\n    item->setData(entry.first, Qt::UserRole);\n    item->setData(entry.second, Qt::UserRole + 1);\n    model->appendRow(item);\n}\ncontrol->setModel(model);\ncontrol->setDescriptionRole(Qt::UserRole + 1);\ncontrol->setSelectedKeys({QStringLiteral(\"Lin Zhou\"), QStringLiteral(\"Elena Rostova\")});\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel",
+      "setup": "control = fluentqt.Transfer(%PARENT%)\ncontrol.setSourceHeader(\"Available members\")\ncontrol.setTargetHeader(\"Project members\")\ncontrol.setSearchPlaceholderText(\"Search members\")\nmodel = QStandardItemModel(control)\nfor name, desc in [(\"Lin Zhou\", \"Design systems\"), (\"Maya Ortiz\", \"Accessibility\"), (\"Noah Kim\", \"Release engineering\"), (\"Elena Rostova\", \"Documentation\"), (\"Ava Patel\", \"QA automation\")]:\n    item = QStandardItem(name)\n    item.setData(name, Qt.ItemDataRole.UserRole)\n    item.setData(desc, Qt.ItemDataRole.UserRole + 1)\n    model.appendRow(item)\ncontrol.setModel(model)\ncontrol.setDescriptionRole(Qt.ItemDataRole.UserRole + 1)\ncontrol.setSelectedKeys([\"Lin Zhou\", \"Elena Rostova\"])\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "sourceHeader",
+      "property": "sourceHeader",
+      "setter": "setSourceHeader",
+      "category": "basic",
+      "type": "text",
+      "label": {
+        "en": "Available title",
+        "zh": "待选区标题"
+      },
+      "default": "Available members",
+      "maximumLength": 32
+    },
+    {
+      "id": "targetHeader",
+      "property": "targetHeader",
+      "setter": "setTargetHeader",
+      "category": "basic",
+      "type": "text",
+      "label": {
+        "en": "Selected title",
+        "zh": "已选区标题"
+      },
+      "default": "Project members",
+      "maximumLength": 32
+    },
+    {
+      "id": "searchPlaceholderText",
+      "property": "searchPlaceholderText",
+      "setter": "setSearchPlaceholderText",
+      "category": "basic",
+      "type": "text",
+      "label": {
+        "en": "Search placeholder",
+        "zh": "搜索占位文本"
+      },
+      "default": "Search members",
+      "maximumLength": 48
+    },
+    {
+      "id": "sourceFilter",
+      "property": "sourceFilter",
+      "setter": "setSourceFilter",
+      "category": "appearance",
+      "type": "text",
+      "label": {
+        "en": "Source filter",
+        "zh": "源过滤条件"
+      },
+      "default": "",
+      "maximumLength": 32
+    },
+    {
+      "id": "targetFilter",
+      "property": "targetFilter",
+      "setter": "setTargetFilter",
+      "category": "appearance",
+      "type": "text",
+      "label": {
+        "en": "Target filter",
+        "zh": "目标过滤条件"
+      },
+      "default": "",
+      "maximumLength": 32
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    },
+    {
+      "id": "selectedKeys",
+      "property": "selectedKeys",
+      "setter": "setSelectedKeys",
+      "type": "multi-enum",
+      "label": {
+        "en": "Transferred items",
+        "zh": "已移入项目"
+      },
+      "category": "appearance",
+      "options": [
+        "Lin Zhou",
+        "Maya Ortiz",
+        "Noah Kim",
+        "Elena Rostova",
+        "Ava Patel"
+      ],
+      "maximumItems": 5,
+      "default": [
+        "Lin Zhou",
+        "Elena Rostova"
+      ]
+    }
+  ],
+  "title": "Transfer",
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

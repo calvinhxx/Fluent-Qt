@@ -516,8 +516,8 @@
           "zh": "文件拖放区"
         },
         "description": {
-          "en": "A file entry surface with drag feedback, keyboard access, and a separate browse action.",
-          "zh": "拖入文件，或点击浏览选择文件。"
+          "en": "Accept local file drops and request an application-provided file picker.",
+          "zh": "接收本地文件拖放，并请求应用打开文件选择器。"
         },
         "urls": {
           "en": "file-drop-zone/",
@@ -1553,8 +1553,8 @@
           "zh": "条形图"
         },
         "description": {
-          "en": "Compares categories with horizontal bars, leaving room for long labels.",
-          "zh": "用水平条形比较类别，较长的标签也能完整显示。"
+          "en": "Compare categories with horizontal bars, leaving more space for labels.",
+          "zh": "用水平条形比较类别，为类别标签留出更多空间。"
         },
         "urls": {
           "en": "horizontal-bar-chart/",
@@ -2343,7 +2343,7 @@
       "documentation": {
         "name": {
           "en": "Transfer",
-          "zh": "Transfer 双栏选择"
+          "zh": "双栏选择"
         },
         "description": {
           "en": "Search and move items between two lists without changing the source model.",
@@ -2356,7 +2356,7 @@
         "preview": {
           "alt": {
             "en": "Transfer: Choose a project team",
-            "zh": "Transfer 双栏选择的真实 Gallery 示例"
+            "zh": "双栏选择的真实 Gallery 示例"
           },
           "light": {
             "url": "../assets/component-previews/transfer/basic-light.png"
@@ -2920,7 +2920,7 @@
       "id": "dialog",
       "title": "Dialog",
       "category_id": "dialogs-flyouts",
-      "description": "A modal window surface that hosts arbitrary content above the app.",
+      "description": "A same-window dialog surface with configurable modality and application-provided content.",
       "capabilities": [
         "transient-surfaces"
       ],
@@ -2956,8 +2956,8 @@
           "zh": "对话框"
         },
         "description": {
-          "en": "A modal window surface that hosts arbitrary content above the app.",
-          "zh": "可以放入任意内容的模态对话框。"
+          "en": "A same-window dialog surface with configurable modality and application-provided content.",
+          "zh": "在同一窗口内显示应用内容的对话框，可配置是否模态。"
         },
         "urls": {
           "en": "dialog/",
@@ -3164,7 +3164,7 @@
       "id": "coach-mark",
       "title": "CoachMark",
       "category_id": "dialogs-flyouts",
-      "description": "A standalone teaching tip in its own window that points a tail at a target and glides between them.",
+      "description": "A same-window teaching tip that points a tail at a target and can glide between targets.",
       "capabilities": [
         "transient-surfaces"
       ],
@@ -3200,8 +3200,8 @@
           "zh": "引导标记"
         },
         "description": {
-          "en": "A standalone teaching tip in its own window that points a tail at a target and glides between them.",
-          "zh": "指向目标控件的引导卡片，可以移到下一个目标。"
+          "en": "A same-window teaching tip that points at a target and can move between targets.",
+          "zh": "在同一窗口内指向目标控件的引导卡片，可在目标之间移动。"
         },
         "urls": {
           "en": "coach-mark/",
@@ -3566,8 +3566,8 @@
           "zh": "表格工具栏"
         },
         "description": {
-          "en": "Search and combine filters, then show, pin or reorder DataGrid columns.",
-          "zh": "为 DataGrid 提供搜索、筛选和列设置。"
+          "en": "Edit search and filter criteria, and control DataGrid column visibility, order and pinning. The application implements row filtering.",
+          "zh": "编辑搜索与筛选条件，控制 DataGrid 列的显示、顺序和固定状态；行筛选由应用实现。"
         },
         "urls": {
           "en": "data-grid-tool-bar/",
@@ -4755,7 +4755,7 @@
       "id": "tab-view",
       "title": "TabView",
       "category_id": "navigation",
-      "description": "A control that hosts multiple pages of content behind a tab strip.",
+      "description": "A tab strip with selection, closing and reordering; the application hosts and switches the pages.",
       "capabilities": [
         "navigation"
       ],
@@ -4791,8 +4791,8 @@
           "zh": "标签页视图"
         },
         "description": {
-          "en": "A control that hosts multiple pages of content behind a tab strip.",
-          "zh": "用标签页组织多个页面。"
+          "en": "A tab strip with selection, closing and reordering; the application hosts and switches the pages.",
+          "zh": "管理标签的选中、关闭和重排；页面由应用承载和切换。"
         },
         "urls": {
           "en": "tab-view/",
@@ -5401,8 +5401,8 @@
           "zh": "进度环"
         },
         "description": {
-          "en": "Shows determinate or indeterminate progress around a ring.",
-          "zh": "用旋转的圆环表示任务正在进行。"
+          "en": "Show a known completion ratio or an indeterminate progress ring.",
+          "zh": "显示已知完成比例，或使用不确定进度圆环。"
         },
         "urls": {
           "en": "progress-ring/",
@@ -6502,8 +6502,10 @@
     {
       "include": "<FluentQt/compatibility/EventConstructionCompat.h>",
       "source": "src/compatibility/EventConstructionCompat.h",
-      "summary": "Constructs an enter event with distinct local, scene and global positions.",
-      "declarations": [],
+      "summary": "Translates a mouse event while retaining its input identity and timestamp.",
+      "declarations": [
+        "FluentTranslatedMouseEvent"
+      ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/EventConstructionCompat.h"
     },
     {
@@ -7753,7 +7755,7 @@
     {
       "include": "<FluentQt/components/spatial/SpatialView.h>",
       "source": "src/components/spatial/SpatialView.h",
-      "summary": "OpenGL-backed host for a small number of perspective-transformed live widgets.",
+      "summary": "Host for a small number of perspective-transformed widgets, with OpenGL and raster backends.",
       "declarations": [
         "SpatialView",
         "RenderMode",

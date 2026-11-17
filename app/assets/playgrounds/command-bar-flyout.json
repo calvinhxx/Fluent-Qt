@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "component": "command-bar-flyout",
+  "surface": "host",
+  "previewSize": [
+    380,
+    240
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Basic",
+        "zh": "基础属性"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Appearance",
+        "zh": "外观状态"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>\n#include <FluentQt/Design.h>\n#include <FluentQt/DialogsFlyouts.h>\n#include <FluentQt/Foundation.h>\n#include <FluentQt/MenusToolbars.h>\n#include <QAction>\n#include <QIcon>\n#include <QIconEngine>\n#include <QKeySequence>\n#include <QObject>\n#include <QPainter>\n#include <QPixmap>",
+      "setup": "class GlyphEngine final : public QIconEngine {\npublic:\n    explicit GlyphEngine(const QString& glyph) : m_glyph(glyph) {}\n    QIconEngine* clone() const override { return new GlyphEngine(m_glyph); }\n    QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State) override {\n        QPixmap pm(size);\n        pm.fill(Qt::transparent);\n        fluent::FontIcon renderer(m_glyph);\n        renderer.setIconSize(qMin(size.width(), size.height()));\n        renderer.setEnabled(mode != QIcon::Disabled);\n        renderer.resize(size);\n        QPainter painter(&pm);\n        renderer.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);\n        return pm;\n    }\n    void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override {\n        const int dpr = painter->device() ? qMax(1, qRound(painter->device()->devicePixelRatioF())) : 1;\n        painter->drawPixmap(rect, pixmap(rect.size() * dpr, mode, state));\n    }\nprivate:\n    QString m_glyph;\n};\nauto* anchor = new fluent::basicinput::Button(QStringLiteral(\"Selection\"), %PARENT%);\nanchor->move(148, 16);\nanchor->show();\nauto* control = new fluent::menus_toolbars::CommandBarFlyout(%PARENT%);\ncontrol->setAnimationEnabled(false);\ncontrol->setAnchor(anchor);\ncontrol->setLightDismissConsumesPress(true);\nauto makeCommand = [&](const QString& text, const QString& glyph, QKeySequence::StandardKey shortcut) {\n    auto* action = new QAction(text, control);\n    action->setIcon(QIcon(new GlyphEngine(glyph)));\n    if (shortcut != QKeySequence::UnknownKey)\n        action->setShortcut(shortcut);\n    return action;\n};\ncontrol->addPrimaryAction(makeCommand(QStringLiteral(\"Cut\"), Typography::Icons::Cut, QKeySequence::Cut));\ncontrol->addPrimaryAction(makeCommand(QStringLiteral(\"Copy\"), Typography::Icons::Copy, QKeySequence::Copy));\ncontrol->addPrimaryAction(makeCommand(QStringLiteral(\"Delete\"), Typography::Icons::Delete, QKeySequence::Delete));\ncontrol->addSecondaryAction(makeCommand(QStringLiteral(\"Share\"), Typography::Icons::Share, QKeySequence::UnknownKey));\ncontrol->addSecondaryAction(makeCommand(QStringLiteral(\"Select all\"), Typography::Icons::SelectAll, QKeySequence::SelectAll));\nauto* favorite = makeCommand(QStringLiteral(\"Favorite\"), Typography::Icons::FavoriteStar, QKeySequence::UnknownKey);\nfavorite->setCheckable(true);\ncontrol->addSecondaryAction(favorite);\nQObject::connect(anchor, &fluent::basicinput::Button::clicked, control, &fluent::menus_toolbars::CommandBarFlyout::open);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPoint, QRect, Qt\nfrom PySide6.QtGui import QAction, QIcon, QIconEngine, QKeySequence, QPainter, QPixmap, QRegion\nfrom PySide6.QtWidgets import QWidget",
+      "setup": "class GlyphEngine(QIconEngine):\n    def __init__(self, glyph):\n        super().__init__()\n        self._glyph = glyph\n    def clone(self):\n        return GlyphEngine(self._glyph)\n    def pixmap(self, size, mode, state):\n        pm = QPixmap(size)\n        pm.fill(Qt.GlobalColor.transparent)\n        renderer = fluentqt.FontIcon(self._glyph)\n        renderer.setIconSize(min(size.width(), size.height()))\n        renderer.setEnabled(mode != QIcon.Mode.Disabled)\n        renderer.resize(size)\n        painter = QPainter(pm)\n        renderer.render(painter, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)\n        painter.end()\n        return pm\n    def paint(self, painter, rect, mode, state):\n        dpr = max(1, round(painter.device().devicePixelRatioF())) if painter.device() else 1\n        painter.drawPixmap(rect, self.pixmap(rect.size() * dpr, mode, state))\n\nanchor = fluentqt.Button(\"Selection\", %PARENT%)\nanchor.move(148, 16)\nanchor.show()\ncontrol = fluentqt.CommandBarFlyout(%PARENT%)\ncontrol.setAnimationEnabled(False)\ncontrol.setAnchor(anchor)\ncontrol.setLightDismissConsumesPress(True)\ndef make_command(text, glyph, shortcut=None):\n    action = QAction(text, control)\n    action.setIcon(QIcon(GlyphEngine(glyph)))\n    if shortcut is not None:\n        action.setShortcut(shortcut)\n    return action\n\ncontrol.addPrimaryAction(make_command(\"Cut\", fluentqt.Typography.Icons.Cut, QKeySequence.StandardKey.Cut))\ncontrol.addPrimaryAction(make_command(\"Copy\", fluentqt.Typography.Icons.Copy, QKeySequence.StandardKey.Copy))\ncontrol.addPrimaryAction(make_command(\"Delete\", fluentqt.Typography.Icons.Delete, QKeySequence.StandardKey.Delete))\ncontrol.addSecondaryAction(make_command(\"Share\", fluentqt.Typography.Icons.Share))\ncontrol.addSecondaryAction(make_command(\"Select all\", fluentqt.Typography.Icons.SelectAll, QKeySequence.StandardKey.SelectAll))\nfavorite = make_command(\"Favorite\", fluentqt.Typography.Icons.FavoriteStar)\nfavorite.setCheckable(True)\ncontrol.addSecondaryAction(favorite)\nanchor.clicked.connect(control.open)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "isOpen",
+      "property": "isOpen",
+      "setter": "setIsOpen",
+      "category": "basic",
+      "type": "boolean",
+      "label": {
+        "en": "Open",
+        "zh": "打开浮层"
+      },
+      "default": true
+    },
+    {
+      "id": "placement",
+      "property": "placement",
+      "setter": "setPlacement",
+      "category": "basic",
+      "type": "enum",
+      "label": {
+        "en": "Placement",
+        "zh": "弹出方向"
+      },
+      "default": "Auto",
+      "effect": "context",
+      "effectHint": {
+        "en": "Placement also depends on available host space; equivalent positions can look the same.",
+        "zh": "位置也受宿主可用空间约束；落在同一位置时画面可能相同。"
+      }
+    },
+    {
+      "id": "showMode",
+      "property": "showMode",
+      "setter": "setShowMode",
+      "category": "basic",
+      "type": "enum",
+      "label": {
+        "en": "Show mode",
+        "zh": "展示模式"
+      },
+      "default": "Standard",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Standard takes focus on open; Transient retains the original focus. Reopen the flyout to inspect its focus behavior.",
+        "zh": "标准模式打开时获取焦点，瞬态模式保留原焦点；重新打开浮层可观察其焦点行为。"
+      }
+    },
+    {
+      "id": "alwaysExpanded",
+      "property": "alwaysExpanded",
+      "setter": "setAlwaysExpanded",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Always expanded",
+        "zh": "始终展开"
+      },
+      "default": false
+    },
+    {
+      "id": "expanded",
+      "property": "expanded",
+      "setter": "setExpanded",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Expanded",
+        "zh": "展开次级命令"
+      },
+      "default": false,
+      "afterOpen": true,
+      "enabledWhen": "isOpen && !alwaysExpanded",
+      "disabledHint": {
+        "en": "Open the flyout and turn off Always expanded before changing its current expansion state.",
+        "zh": "先打开浮层并关闭“始终展开”，才能切换当前展开状态。"
+      },
+      "effectFixture": {
+        "isOpen": true,
+        "alwaysExpanded": false
+      }
+    },
+    {
+      "id": "anchorOffset",
+      "property": "anchorOffset",
+      "setter": "setAnchorOffset",
+      "category": "appearance",
+      "type": "number",
+      "label": {
+        "en": "Anchor offset",
+        "zh": "锚点间距"
+      },
+      "default": 8,
+      "minimum": 0,
+      "maximum": 32,
+      "step": 2,
+      "integer": true
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "deferOpen": true,
+  "reopenOnChange": [
+    "placement",
+    "anchorOffset",
+    "showMode",
+    "clampToWindow"
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

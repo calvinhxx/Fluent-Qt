@@ -21,6 +21,7 @@
   </script>
   <link rel="stylesheet" href="$style">
   <link rel="stylesheet" href="$navigation_style">
+  <script src="$playground_script" defer></script>
   <script src="$script" defer></script>
 </head>
 <body data-copy-success="$copied" data-copy-error="$copyError">
@@ -33,7 +34,17 @@
     <main id="content" class="document-main">
       <div class="document-intro">
         $breadcrumb
-        <header class="document-heading">$eyebrow<h1>$title</h1><p>$description</p>$version_notice</header>
+        <header class="document-heading">
+          <div class="document-heading-main">
+            $eyebrow
+            <div class="document-title-row">
+              <h1>$title</h1>
+            </div>
+            <p>$description</p>
+            $version_notice
+          </div>
+          $playground_toggle
+        </header>
       </div>
       <aside class="page-outline" aria-label="$onPage">
         <details class="page-outline-menu" open>

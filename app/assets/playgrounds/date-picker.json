@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "component": "date-picker",
+  "title": "DatePicker",
+  "className": "fluent::date_time::DatePicker",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/DateTime.h>\n#include <QDate>",
+      "setup": "auto* control = new fluent::date_time::DatePicker(%PARENT%);\ncontrol->setDate(QDate(2026, 11, 3));\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QDate, Qt",
+      "setup": "control = fluentqt.DatePicker(%PARENT%)\ncontrol.setDate(QDate(2026, 11, 3))\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "date",
+      "property": "date",
+      "setter": "setDate",
+      "type": "date",
+      "label": {
+        "en": "Date",
+        "zh": "日期"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "monthVisible",
+      "property": "monthVisible",
+      "setter": "setMonthVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Month visible",
+        "zh": "显示月份"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "dayVisible",
+      "property": "dayVisible",
+      "setter": "setDayVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Day visible",
+        "zh": "显示日期"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "yearVisible",
+      "property": "yearVisible",
+      "setter": "setYearVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Year visible",
+        "zh": "显示年份"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "monthFormat",
+      "property": "monthFormat",
+      "setter": "setMonthFormat",
+      "type": "enum",
+      "label": {
+        "en": "Month format",
+        "zh": "月份格式"
+      },
+      "category": "icon",
+      "visibleWhen": "monthVisible",
+      "effectWhen": "monthVisible",
+      "effectHint": {
+        "en": "Shown while monthVisible is enabled.",
+        "zh": "显示月份列时可调整其格式。"
+      },
+      "effectFixture": {
+        "monthVisible": true
+      }
+    },
+    {
+      "id": "dayFormat",
+      "property": "dayFormat",
+      "setter": "setDayFormat",
+      "type": "enum",
+      "label": {
+        "en": "Day format",
+        "zh": "日期格式"
+      },
+      "category": "icon",
+      "visibleWhen": "dayVisible",
+      "effectWhen": "dayVisible",
+      "effectHint": {
+        "en": "Shown while dayVisible is enabled.",
+        "zh": "显示日期列时可调整其格式。"
+      },
+      "effectFixture": {
+        "dayVisible": true
+      }
+    },
+    {
+      "id": "yearFormat",
+      "property": "yearFormat",
+      "setter": "setYearFormat",
+      "type": "enum",
+      "label": {
+        "en": "Year format",
+        "zh": "年份格式"
+      },
+      "category": "icon",
+      "visibleWhen": "yearVisible",
+      "effectWhen": "yearVisible",
+      "effectHint": {
+        "en": "Shown while yearVisible is enabled.",
+        "zh": "显示年份列时可调整其格式。"
+      },
+      "effectFixture": {
+        "yearVisible": true
+      }
+    },
+    {
+      "id": "fluentStyle",
+      "property": "fluentStyle",
+      "setter": "setFluentStyle",
+      "type": "enum",
+      "label": {
+        "en": "Style",
+        "zh": "外观样式"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    300,
+    48
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

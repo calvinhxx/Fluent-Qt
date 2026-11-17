@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "component": "command-palette",
+  "surface": "host",
+  "previewSize": [
+    460,
+    300
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Basic",
+        "zh": "基础属性"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Appearance",
+        "zh": "外观状态"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Design.h>\n#include <FluentQt/Foundation.h>\n#include <FluentQt/MenusToolbars.h>\n#include <QAction>\n#include <QIcon>\n#include <QIconEngine>\n#include <QKeySequence>\n#include <QPainter>\n#include <QPixmap>",
+      "setup": "class GlyphEngine final : public QIconEngine {\npublic:\n    explicit GlyphEngine(const QString& glyph) : m_glyph(glyph) {}\n    QIconEngine* clone() const override { return new GlyphEngine(m_glyph); }\n    QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State) override {\n        QPixmap pm(size);\n        pm.fill(Qt::transparent);\n        fluent::FontIcon renderer(m_glyph);\n        renderer.setIconSize(qMin(size.width(), size.height()));\n        renderer.setEnabled(mode != QIcon::Disabled);\n        renderer.resize(size);\n        QPainter painter(&pm);\n        renderer.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);\n        return pm;\n    }\n    void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override {\n        const int dpr = painter->device() ? qMax(1, qRound(painter->device()->devicePixelRatioF())) : 1;\n        painter->drawPixmap(rect, pixmap(rect.size() * dpr, mode, state));\n    }\nprivate:\n    QString m_glyph;\n};\nauto* control = new fluent::menus_toolbars::CommandPalette(%PARENT%);\ncontrol->setAnimationEnabled(false);\nauto addCmd = [&](const QString& text, const QString& glyph, const QString& group, const QStringList& keys, QKeySequence::StandardKey shortcut) {\n    auto* action = new QAction(text, control);\n    action->setIcon(QIcon(new GlyphEngine(glyph)));\n    if (shortcut != QKeySequence::UnknownKey)\n        action->setShortcut(shortcut);\n    control->addCommand(action, group, keys);\n    return action;\n};\naddCmd(QStringLiteral(\"New file\"), Typography::Icons::Add, QStringLiteral(\"File\"), {QStringLiteral(\"create\")}, QKeySequence::New);\naddCmd(QStringLiteral(\"Open recent...\"), Typography::Icons::Folder, QStringLiteral(\"File\"), {QStringLiteral(\"browse\")}, QKeySequence::Open);\naddCmd(QStringLiteral(\"Save workspace\"), Typography::Icons::Save, QStringLiteral(\"File\"), {QStringLiteral(\"write\")}, QKeySequence::Save);\naddCmd(QStringLiteral(\"Open settings\"), Typography::Icons::Settings, QStringLiteral(\"App\"), {QStringLiteral(\"prefs\")}, QKeySequence::Preferences);\ncontrol->open();\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPoint, QRect, Qt\nfrom PySide6.QtGui import QAction, QIcon, QIconEngine, QKeySequence, QPainter, QPixmap, QRegion\nfrom PySide6.QtWidgets import QWidget",
+      "setup": "class GlyphEngine(QIconEngine):\n    def __init__(self, glyph):\n        super().__init__()\n        self._glyph = glyph\n    def clone(self):\n        return GlyphEngine(self._glyph)\n    def pixmap(self, size, mode, state):\n        pm = QPixmap(size)\n        pm.fill(Qt.GlobalColor.transparent)\n        renderer = fluentqt.FontIcon(self._glyph)\n        renderer.setIconSize(min(size.width(), size.height()))\n        renderer.setEnabled(mode != QIcon.Mode.Disabled)\n        renderer.resize(size)\n        painter = QPainter(pm)\n        renderer.render(painter, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)\n        painter.end()\n        return pm\n    def paint(self, painter, rect, mode, state):\n        dpr = max(1, round(painter.device().devicePixelRatioF())) if painter.device() else 1\n        painter.drawPixmap(rect, self.pixmap(rect.size() * dpr, mode, state))\n\ncontrol = fluentqt.CommandPalette(%PARENT%)\ncontrol.setAnimationEnabled(False)\nfor text, glyph, group, keys, shortcut in (\n    (\"New file\", fluentqt.Typography.Icons.Add, \"File\", [\"create\"], QKeySequence.StandardKey.New),\n    (\"Open recent...\", fluentqt.Typography.Icons.Folder, \"File\", [\"browse\"], QKeySequence.StandardKey.Open),\n    (\"Save workspace\", fluentqt.Typography.Icons.Save, \"File\", [\"write\"], QKeySequence.StandardKey.Save),\n    (\"Open settings\", fluentqt.Typography.Icons.Settings, \"App\", [\"prefs\"], QKeySequence.StandardKey.Preferences),\n):\n    action = QAction(text, control)\n    action.setIcon(QIcon(GlyphEngine(glyph)))\n    action.setShortcut(shortcut)\n    control.addCommand(action, group, keys)\ncontrol.open()\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "isOpen",
+      "property": "isOpen",
+      "setter": "setIsOpen",
+      "category": "basic",
+      "type": "boolean",
+      "label": {
+        "en": "Open",
+        "zh": "打开面板"
+      },
+      "default": true
+    },
+    {
+      "id": "query",
+      "property": "query",
+      "setter": "setQuery",
+      "category": "basic",
+      "type": "text",
+      "label": {
+        "en": "Query",
+        "zh": "搜索词"
+      },
+      "default": "",
+      "maximumLength": 48
+    },
+    {
+      "id": "placeholderText",
+      "property": "placeholderText",
+      "setter": "setPlaceholderText",
+      "category": "basic",
+      "type": "text",
+      "label": {
+        "en": "Placeholder",
+        "zh": "占位文本"
+      },
+      "default": "Type a command or search…",
+      "maximumLength": 48
+    },
+    {
+      "id": "emptyText",
+      "property": "emptyText",
+      "setter": "setEmptyText",
+      "category": "basic",
+      "type": "text",
+      "label": {
+        "en": "Empty text",
+        "zh": "空状态提示"
+      },
+      "default": "No matching commands",
+      "maximumLength": 48,
+      "effectFixture": {
+        "isOpen": true,
+        "query": "zzz"
+      },
+      "effectHint": {
+        "en": "Shown when no commands match the current query.",
+        "zh": "仅在当前搜索词没有匹配命令时显示。"
+      }
+    },
+    {
+      "id": "modal",
+      "property": "modal",
+      "setter": "setModal",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Modal",
+        "zh": "模态遮罩"
+      },
+      "default": true
+    },
+    {
+      "id": "dim",
+      "property": "dim",
+      "setter": "setDim",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Dim backdrop",
+        "zh": "背景暗化"
+      },
+      "default": false
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "component": "auto-suggest-box",
+  "title": "AutoSuggestBox",
+  "className": "fluent::textfields::AutoSuggestBox",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/TextFields.h>",
+      "setup": "auto* control = new fluent::textfields::AutoSuggestBox(%PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt",
+      "setup": "control = fluentqt.AutoSuggestBox(%PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "suggestions",
+      "property": "suggestions",
+      "setter": "setSuggestions",
+      "type": "string-list",
+      "default": [
+        "Fluent",
+        "Qt",
+        "Widgets"
+      ],
+      "maximumLength": 80,
+      "maximumItems": 12,
+      "category": "basic",
+      "label": {
+        "en": "Suggestions",
+        "zh": "候选项"
+      },
+      "description": {
+        "en": "One item per line.",
+        "zh": "每行填写一项。"
+      },
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Supplies the suggestion list shown during real text input.",
+        "zh": "提供实际输入时显示的候选列表。"
+      }
+    },
+    {
+      "id": "text",
+      "property": "text",
+      "setter": "setText",
+      "type": "text",
+      "label": {
+        "en": "Text",
+        "zh": "文字"
+      },
+      "category": "basic",
+      "maximumLength": 320
+    },
+    {
+      "id": "placeholderText",
+      "property": "placeholderText",
+      "setter": "setPlaceholderText",
+      "type": "text",
+      "label": {
+        "en": "Placeholder text",
+        "zh": "占位文字"
+      },
+      "category": "basic",
+      "default": "Enter text",
+      "maximumLength": 320,
+      "effectWhen": "!text",
+      "effectHint": {
+        "en": "Shown when the text is empty.",
+        "zh": "文字为空时显示。"
+      },
+      "effectFixture": {
+        "text": ""
+      },
+      "visualChangeExpected": true,
+      "enabledWhen": "!text",
+      "disabledHint": {
+        "en": "Clear Text above to preview and edit the placeholder.",
+        "zh": "清空上方“文本”后显示并可编辑占位提示。"
+      }
+    },
+    {
+      "id": "readOnly",
+      "property": "readOnly",
+      "setter": "setReadOnly",
+      "type": "boolean",
+      "label": {
+        "en": "Read only",
+        "zh": "只读"
+      },
+      "category": "basic",
+      "effectHint": {
+        "en": "Controls whether direct editing is allowed in the preview.",
+        "zh": "控制是否允许在预览组件中直接编辑。"
+      },
+      "effect": "behavior"
+    },
+    {
+      "id": "clearButtonEnabled",
+      "property": "clearButtonEnabled",
+      "setter": "setClearButtonEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Clear button enabled",
+        "zh": "清除按钮"
+      },
+      "category": "basic",
+      "previewInteraction": "hover",
+      "effectWhen": "text && !readOnly && enabled",
+      "effectHint": {
+        "en": "Shown on hover with nonempty, editable, enabled input.",
+        "zh": "有文字、允许编辑且启用时，在悬停态显示。"
+      },
+      "effectFixture": {
+        "text": "Example",
+        "readOnly": false,
+        "enabled": true
+      },
+      "enabledWhen": "text && !readOnly && enabled",
+      "disabledHint": {
+        "en": "Available when Text is non-empty, Read-only is off, and Enabled is on.",
+        "zh": "输入文本非空、未勾选只读且控件启用时，悬停显示清除按钮。"
+      }
+    },
+    {
+      "id": "trailingText",
+      "property": "trailingText",
+      "setter": "setTrailingText",
+      "type": "text",
+      "label": {
+        "en": "Trailing text",
+        "zh": "尾随文字"
+      },
+      "category": "basic",
+      "maximumLength": 320
+    },
+    {
+      "id": "frameVisible",
+      "property": "frameVisible",
+      "setter": "setFrameVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Frame visible",
+        "zh": "边框"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "header",
+      "property": "header",
+      "setter": "setHeader",
+      "type": "text",
+      "label": {
+        "en": "Header",
+        "zh": "标题"
+      },
+      "category": "basic",
+      "maximumLength": 320
+    },
+    {
+      "id": "queryIconVisible",
+      "property": "queryIconVisible",
+      "setter": "setQueryIconVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Query icon visible",
+        "zh": "查询图标"
+      },
+      "category": "icon",
+      "group": "query-icon"
+    },
+    {
+      "id": "queryButtonPlacement",
+      "property": "queryButtonPlacement",
+      "setter": "setQueryButtonPlacement",
+      "type": "enum",
+      "label": {
+        "en": "Query button placement",
+        "zh": "查询按钮位置"
+      },
+      "category": "icon",
+      "effectWhen": "queryIconVisible",
+      "effectHint": {
+        "en": "Left/Right stay fixed; Leading/Trailing mirror automatically in RTL layouts (and match Left/Right in this LTR preview).",
+        "zh": "左/右为固定物理侧，首端/尾端会随布局方向（LTR/RTL）自动翻转；当前从左到右（LTR）布局下，首端=左侧、尾端=右侧。"
+      },
+      "effectFixture": {
+        "queryIconVisible": true
+      },
+      "effect": "context",
+      "group": "query-icon",
+      "visibleWhen": "queryIconVisible",
+      "optionLabels": {
+        "Right": {
+          "en": "Right (fixed right)",
+          "zh": "右侧（固定物理右端）"
+        },
+        "Left": {
+          "en": "Left (fixed left)",
+          "zh": "左侧（固定物理左端）"
+        },
+        "Leading": {
+          "en": "Leading (LTR = left, mirrors RTL)",
+          "zh": "首端（LTR=左侧，随 RTL 翻转）"
+        },
+        "Trailing": {
+          "en": "Trailing (LTR = right, mirrors RTL)",
+          "zh": "尾端（LTR=右侧，随 RTL 翻转）"
+        }
+      }
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    236,
+    72
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

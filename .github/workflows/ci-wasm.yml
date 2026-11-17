@@ -325,6 +325,7 @@ jobs:
             build/wasm/tree-select-validation
             build/wasm/chart-workbench-validation
             build/wasm/diagnostics-validation
+            build/wasm/component-playground-validation
           if-no-files-found: ignore
           retention-days: 7
 

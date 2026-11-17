@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "component": "divider",
+  "title": "Divider",
+  "className": "fluent::layout::Divider",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Layout.h>\n#include <QColor>",
+      "setup": "auto* control = new fluent::layout::Divider(%PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtGui import QColor",
+      "setup": "control = fluentqt.Divider(%PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "orientation",
+      "property": "orientation",
+      "setter": "setOrientation",
+      "type": "enum",
+      "label": {
+        "en": "Orientation",
+        "zh": "方向"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "thickness",
+      "property": "thickness",
+      "setter": "setThickness",
+      "type": "number",
+      "label": {
+        "en": "Thickness",
+        "zh": "线宽"
+      },
+      "category": "appearance",
+      "minimum": 1,
+      "maximum": 6,
+      "step": 0.5,
+      "integer": false,
+      "control": "range"
+    },
+    {
+      "id": "leadingInset",
+      "property": "leadingInset",
+      "setter": "setLeadingInset",
+      "type": "number",
+      "label": {
+        "en": "Leading inset",
+        "zh": "首端缩进"
+      },
+      "category": "icon",
+      "minimum": 0,
+      "maximum": 48,
+      "step": 2,
+      "integer": true,
+      "control": "range"
+    },
+    {
+      "id": "trailingInset",
+      "property": "trailingInset",
+      "setter": "setTrailingInset",
+      "type": "number",
+      "label": {
+        "en": "Trailing inset",
+        "zh": "尾端缩进"
+      },
+      "category": "icon",
+      "minimum": 0,
+      "maximum": 48,
+      "step": 2,
+      "integer": true,
+      "control": "range"
+    },
+    {
+      "id": "color",
+      "property": "color",
+      "setter": "setColor",
+      "type": "color",
+      "label": {
+        "en": "Color",
+        "zh": "线条颜色"
+      },
+      "category": "appearance",
+      "nullable": true
+    }
+  ],
+  "previewSize": [
+    280,
+    32
+  ],
+  "verticalPreviewSize": [
+    32,
+    140
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

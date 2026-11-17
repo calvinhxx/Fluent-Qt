@@ -804,6 +804,7 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             ("            build/wasm/command-palette-validation\n", "            .git\n"),
             ("            build/wasm/data-grid-validation\n", ""),
             ("            build/wasm/chart-workbench-validation\n", ""),
+            ("            build/wasm/component-playground-validation\n", ""),
             ("fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-", "fluentqt-wasm-browser-diagnostics-"),
         ):
             with self.subTest(replacement=after):

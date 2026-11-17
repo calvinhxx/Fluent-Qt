@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "component": "stack-view",
+  "previewSize": [
+    520,
+    270
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Pages",
+        "zh": "页面"
+      }
+    },
+    {
+      "id": "icon",
+      "label": {
+        "en": "Transitions",
+        "zh": "切换效果"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Interaction",
+        "zh": "交互"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Collections.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/TextFields.h>\n#include <FluentQt/Design.h>\n#include <QVBoxLayout>\n#include <FluentQt/BasicInput.h>",
+      "setup": "auto* control = new fluent::collections::StackView(%PARENT%);\nauto* page = new fluent::layout::Card(control);\nauto* layout = new QVBoxLayout(page);\nlayout->setContentsMargins(20, 16, 20, 16);\nlayout->setSpacing(8);\nauto* pageTitle = new fluent::textfields::Label(QStringLiteral(\"Overview\"), page);\npageTitle->setFluentTypography(Typography::FontRole::Subtitle);\nlayout->addWidget(pageTitle);\nauto* pageSummary = new fluent::textfields::Label(QStringLiteral(\"Browse workspace summary and open the detail page to inspect stack navigation.\"), page);\npageSummary->setWordWrap(true);\npageSummary->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\nlayout->addWidget(pageSummary);\nlayout->addStretch();\nauto* next = new fluent::basicinput::Button(QStringLiteral(\"Open details\"), page);\nnext->setFluentStyle(fluent::basicinput::Button::Accent);\nlayout->addWidget(next, 0, Qt::AlignLeft);\nauto* details = new fluent::layout::Card(control);\ndetails->setObjectName(QStringLiteral(\"playgroundDetails\"));\nauto* detailsLayout = new QVBoxLayout(details);\ndetailsLayout->setContentsMargins(20, 16, 20, 16);\ndetailsLayout->setSpacing(8);\nauto* detailsTitle = new fluent::textfields::Label(QStringLiteral(\"Details\"), details);\ndetailsTitle->setFluentTypography(Typography::FontRole::Subtitle);\ndetailsLayout->addWidget(detailsTitle);\nauto* detailsSummary = new fluent::textfields::Label(QStringLiteral(\"Pushed onto the stack. Use Back or the property panel to return to the overview.\"), details);\ndetailsSummary->setWordWrap(true);\ndetailsSummary->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\ndetailsLayout->addWidget(detailsSummary);\ndetailsLayout->addStretch();\nauto* back = new fluent::basicinput::Button(QStringLiteral(\"Back\"), details);\ndetailsLayout->addWidget(back, 0, Qt::AlignLeft);\ndetails->hide();\nQObject::connect(next, &QAbstractButton::clicked, control, [control, details] { control->push(details, fluent::WidgetOwnership::Reparented); });\nQObject::connect(back, &QAbstractButton::clicked, control, [control] { control->pop(); });\ncontrol->push(page, fluent::WidgetOwnership::Owned);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QVBoxLayout",
+      "setup": "control = fluentqt.StackView(%PARENT%)\npage = fluentqt.Card(control)\nlayout = QVBoxLayout(page)\nlayout.setContentsMargins(20, 16, 20, 16)\nlayout.setSpacing(8)\npage_title = fluentqt.Label(\"Overview\", page)\npage_title.setFluentTypography(fluentqt.FontRole.Subtitle)\nlayout.addWidget(page_title)\npage_summary = fluentqt.Label(\"Browse workspace summary and open the detail page to inspect stack navigation.\", page)\npage_summary.setWordWrap(True)\npage_summary.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\nlayout.addWidget(page_summary)\nlayout.addStretch()\nnext_button = fluentqt.Button(\"Open details\", page)\nnext_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nlayout.addWidget(next_button, 0, Qt.AlignmentFlag.AlignLeft)\ndetails = fluentqt.Card(control)\ndetails.setObjectName(\"playgroundDetails\")\ndetails_layout = QVBoxLayout(details)\ndetails_layout.setContentsMargins(20, 16, 20, 16)\ndetails_layout.setSpacing(8)\ndetails_title = fluentqt.Label(\"Details\", details)\ndetails_title.setFluentTypography(fluentqt.FontRole.Subtitle)\ndetails_layout.addWidget(details_title)\ndetails_summary = fluentqt.Label(\"Pushed onto the stack. Use Back or the property panel to return to the overview.\", details)\ndetails_summary.setWordWrap(True)\ndetails_summary.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\ndetails_layout.addWidget(details_summary)\ndetails_layout.addStretch()\nback = fluentqt.Button(\"Back\", details)\ndetails_layout.addWidget(back, 0, Qt.AlignmentFlag.AlignLeft)\ndetails.hide()\nnext_button.clicked.connect(lambda: control.pushReparentedItem(details))\nback.clicked.connect(lambda: control.pop())\ncontrol.pushOwnedItem(page)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "transitionAnimationEnabled",
+      "property": "transitionAnimationEnabled",
+      "setter": "setTransitionAnimationEnabled",
+      "category": "icon",
+      "type": "boolean",
+      "label": {
+        "en": "Transition animation",
+        "zh": "启用转场动画"
+      },
+      "default": true,
+      "effectHint": {
+        "en": "Applies when the component changes pages.",
+        "zh": "在组件切换页面时生效。"
+      },
+      "effect": "behavior"
+    },
+    {
+      "id": "transitionType",
+      "property": "transitionType",
+      "setter": "setTransitionType",
+      "category": "icon",
+      "type": "enum",
+      "label": {
+        "en": "Transition type",
+        "zh": "转场类型"
+      },
+      "default": "SlideFade",
+      "effectHint": {
+        "en": "Applies when the component changes pages.",
+        "zh": "在组件切换页面时生效。"
+      },
+      "effect": "behavior",
+      "visibleWhen": "transitionAnimationEnabled"
+    },
+    {
+      "id": "orientation",
+      "property": "orientation",
+      "setter": "setOrientation",
+      "category": "icon",
+      "type": "enum",
+      "label": {
+        "en": "Orientation",
+        "zh": "方向"
+      },
+      "default": "Horizontal",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Applies when the component changes pages.",
+        "zh": "在组件切换页面时生效。"
+      },
+      "visibleWhen": "transitionAnimationEnabled && transitionType == 'SlideFade'"
+    },
+    {
+      "id": "transitionDuration",
+      "property": "transitionDuration",
+      "setter": "setTransitionDuration",
+      "category": "icon",
+      "type": "number",
+      "label": {
+        "en": "Duration (ms)",
+        "zh": "转场时长 (ms)"
+      },
+      "default": 250,
+      "minimum": 0,
+      "maximum": 600,
+      "step": 50,
+      "integer": true,
+      "effectHint": {
+        "en": "Applies when the component changes pages.",
+        "zh": "在组件切换页面时生效。"
+      },
+      "effect": "behavior",
+      "visibleWhen": "transitionAnimationEnabled && transitionType != 'Immediate'"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    },
+    {
+      "id": "detailsOpen",
+      "property": "detailsOpen",
+      "setter": "",
+      "adapter": "stack-details",
+      "type": "boolean",
+      "category": "basic",
+      "label": {
+        "en": "Page",
+        "zh": "详情页"
+      },
+      "default": false
+    }
+  ],
+  "title": "StackView",
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "component": "shimmer",
+  "title": "Shimmer",
+  "className": "fluent::status_info::Shimmer",
+  "sizeMode": "contentHeight",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/StatusInfo.h>\n#include <QRectF>",
+      "setup": "auto* control = new fluent::status_info::Shimmer(%PARENT%);\ncontrol->setElements({\n    fluent::status_info::ShimmerPainter::Element(fluent::status_info::ShimmerPainter::Shape::RoundedRect, QRectF(8, 6, 264, 52), 6.0),\n    fluent::status_info::ShimmerPainter::Element(fluent::status_info::ShimmerPainter::Shape::Circle, QRectF(8, 68, 32, 32)),\n    fluent::status_info::ShimmerPainter::Element(fluent::status_info::ShimmerPainter::Shape::Line, QRectF(52, 70, 152, 12)),\n    fluent::status_info::ShimmerPainter::Element(fluent::status_info::ShimmerPainter::Shape::Line, QRectF(52, 88, 108, 12)),\n});\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QRectF",
+      "setup": "control = fluentqt.Shimmer(%PARENT%)\ncontrol.setElements([\n    fluentqt.Shimmer.Element(fluentqt.Shimmer.Shape.RoundedRect, QRectF(8, 6, 264, 52), 6.0),\n    fluentqt.Shimmer.Element(fluentqt.Shimmer.Shape.Circle, QRectF(8, 68, 32, 32)),\n    fluentqt.Shimmer.Element(fluentqt.Shimmer.Shape.Line, QRectF(52, 70, 152, 12)),\n    fluentqt.Shimmer.Element(fluentqt.Shimmer.Shape.Line, QRectF(52, 88, 108, 12)),\n])\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "shimmerTemplate",
+      "property": "shimmerTemplate",
+      "setter": "setShimmerTemplate",
+      "type": "enum",
+      "label": {
+        "en": "Template",
+        "zh": "骨架模板"
+      },
+      "category": "basic",
+      "default": "AvatarTextRow"
+    },
+    {
+      "id": "active",
+      "property": "active",
+      "setter": "setActive",
+      "type": "boolean",
+      "label": {
+        "en": "Active",
+        "zh": "加载中"
+      },
+      "category": "basic",
+      "default": true,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Turning off Active hides the placeholder shapes when real content is ready.",
+        "zh": "关闭加载中后会隐藏占位图形，表示真实内容已就绪。"
+      }
+    },
+    {
+      "id": "animationEnabled",
+      "property": "animationEnabled",
+      "setter": "setAnimationEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Animated",
+        "zh": "启用动画"
+      },
+      "category": "appearance",
+      "default": true,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Plays the moving highlight while active; turning it off leaves a static placeholder.",
+        "zh": "加载中时播放扫光；关闭后显示静态占位。"
+      }
+    },
+    {
+      "id": "shimmerProgress",
+      "property": "shimmerProgress",
+      "setter": "setShimmerProgress",
+      "type": "number",
+      "label": {
+        "en": "Progress",
+        "zh": "高亮位置"
+      },
+      "category": "appearance",
+      "default": 0.4,
+      "minimum": 0.05,
+      "maximum": 0.95,
+      "step": 0.05,
+      "integer": false,
+      "control": "range",
+      "effectWhen": "active && animationEnabled",
+      "effectHint": {
+        "en": "Visible while the shimmer is active and animation is enabled.",
+        "zh": "启用占位效果和动画后可见。"
+      },
+      "effectFixture": {
+        "active": true,
+        "animationEnabled": true
+      },
+      "snapshotOnly": true,
+      "enabledWhen": "active && animationEnabled",
+      "disabledHint": {
+        "en": "Requires Active (in Basic) and Animation enabled above to sweep the highlight.",
+        "zh": "需开启“加载中”（基础属性）并启用动画后可见扫光相位。"
+      }
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    280,
+    56
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

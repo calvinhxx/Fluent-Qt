@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "component": "horizontal-bar-chart",
+  "previewSize": [
+    520,
+    270
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Data & content",
+        "zh": "数据与内容"
+      }
+    },
+    {
+      "id": "icon",
+      "label": {
+        "en": "Layout & appearance",
+        "zh": "布局与外观"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Interaction",
+        "zh": "交互"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Charts.h>\n#include <limits>",
+      "setup": "auto* control = new fluent::charts::HorizontalBarChart(%PARENT%);\nauto* model = new fluent::charts::ChartModel(control);\nmodel->setName(QStringLiteral(\"Series A\"));\nmodel->setPoints({{0, 22}, {1, 38}, {2, 31}, {3, 54}, {4, 46}}, {QStringLiteral(\"Mon\"), QStringLiteral(\"Tue\"), QStringLiteral(\"Wed\"), QStringLiteral(\"Thu\"), QStringLiteral(\"Fri\")});\ncontrol->setModel(model);\ncontrol->setTitle(QStringLiteral(\"Weekly traffic\"));\ncontrol->setSubtitle(QStringLiteral(\"Requests per day\"));\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPointF",
+      "setup": "control = fluentqt.HorizontalBarChart(%PARENT%)\nmodel = fluentqt.ChartModel(control)\nmodel.setName(\"Series A\")\nmodel.setPoints([QPointF(0, 22), QPointF(1, 38), QPointF(2, 31), QPointF(3, 54), QPointF(4, 46)], [\"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\"])\ncontrol.setModel(model)\ncontrol.setTitle(\"Weekly traffic\")\ncontrol.setSubtitle(\"Requests per day\")\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "seriesData",
+      "property": "seriesData",
+      "setter": "setSeriesData",
+      "type": "table",
+      "label": {
+        "en": "Data",
+        "zh": "数据"
+      },
+      "category": "basic",
+      "adapter": "chart-data",
+      "columns": [
+        {
+          "label": {
+            "en": "X",
+            "zh": "X"
+          },
+          "type": "number"
+        },
+        {
+          "label": {
+            "en": "Value",
+            "zh": "数值"
+          },
+          "type": "number",
+          "nullable": true
+        },
+        {
+          "label": {
+            "en": "Label",
+            "zh": "标签"
+          },
+          "type": "text"
+        }
+      ],
+      "maximumRows": 32,
+      "ascendingColumn": 0
+    },
+    {
+      "id": "title",
+      "property": "title",
+      "setter": "setTitle",
+      "category": "icon",
+      "type": "text",
+      "label": {
+        "en": "Title",
+        "zh": "标题"
+      },
+      "default": "Weekly traffic",
+      "maximumLength": 48
+    },
+    {
+      "id": "subtitle",
+      "property": "subtitle",
+      "setter": "setSubtitle",
+      "category": "icon",
+      "type": "text",
+      "label": {
+        "en": "Subtitle",
+        "zh": "副标题"
+      },
+      "default": "Requests per day",
+      "maximumLength": 64
+    },
+    {
+      "id": "loading",
+      "property": "loading",
+      "setter": "setLoading",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Loading",
+        "zh": "加载中"
+      },
+      "default": false
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "title": "HorizontalBarChart",
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

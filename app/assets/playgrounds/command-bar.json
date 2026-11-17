@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "component": "command-bar",
+  "previewSize": [
+    360,
+    56
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Basic",
+        "zh": "基础属性"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Appearance",
+        "zh": "外观状态"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Design.h>\n#include <FluentQt/Foundation.h>\n#include <FluentQt/MenusToolbars.h>\n#include <QAction>\n#include <QIcon>\n#include <QIconEngine>\n#include <QPainter>\n#include <QPixmap>",
+      "setup": "class GlyphEngine final : public QIconEngine {\npublic:\n    explicit GlyphEngine(const QString& glyph) : m_glyph(glyph) {}\n    QIconEngine* clone() const override { return new GlyphEngine(m_glyph); }\n    QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State) override {\n        QPixmap pm(size);\n        pm.fill(Qt::transparent);\n        fluent::FontIcon renderer(m_glyph);\n        renderer.setIconSize(qMin(size.width(), size.height()));\n        renderer.setEnabled(mode != QIcon::Disabled);\n        renderer.resize(size);\n        QPainter painter(&pm);\n        renderer.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);\n        return pm;\n    }\n    void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override {\n        const int dpr = painter->device() ? qMax(1, qRound(painter->device()->devicePixelRatioF())) : 1;\n        painter->drawPixmap(rect, pixmap(rect.size() * dpr, mode, state));\n    }\nprivate:\n    QString m_glyph;\n};\nauto* control = new fluent::menus_toolbars::CommandBar(%PARENT%);\nauto makeCommand = [&](const QString& text, const QString& glyph) {\n    auto* action = new QAction(text, control);\n    action->setIcon(QIcon(new GlyphEngine(glyph)));\n    return action;\n};\nauto* addAction = makeCommand(QStringLiteral(\"New\"), Typography::Icons::Add);\naddAction->setPriority(QAction::HighPriority);\nauto* editAction = makeCommand(QStringLiteral(\"Edit\"), Typography::Icons::Edit);\nauto* shareAction = makeCommand(QStringLiteral(\"Share\"), Typography::Icons::Share);\nauto* separator = new QAction(control);\nseparator->setSeparator(true);\nauto* pinAction = makeCommand(QStringLiteral(\"Pin\"), Typography::Icons::Pin);\npinAction->setCheckable(true);\nauto* deleteAction = makeCommand(QStringLiteral(\"Delete\"), Typography::Icons::Delete);\ndeleteAction->setPriority(QAction::LowPriority);\ncontrol->addPrimaryAction(addAction);\ncontrol->addPrimaryAction(editAction);\ncontrol->addPrimaryAction(shareAction);\ncontrol->addPrimaryAction(separator);\ncontrol->addPrimaryAction(pinAction);\ncontrol->addPrimaryAction(deleteAction);\ncontrol->addSecondaryAction(makeCommand(QStringLiteral(\"Settings\"), Typography::Icons::Settings));\ncontrol->addSecondaryAction(makeCommand(QStringLiteral(\"Help\"), Typography::Icons::Info));\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPoint, QRect, Qt\nfrom PySide6.QtGui import QAction, QIcon, QIconEngine, QPainter, QPixmap, QRegion\nfrom PySide6.QtWidgets import QWidget",
+      "setup": "class GlyphEngine(QIconEngine):\n    def __init__(self, glyph):\n        super().__init__()\n        self._glyph = glyph\n    def clone(self):\n        return GlyphEngine(self._glyph)\n    def pixmap(self, size, mode, state):\n        pm = QPixmap(size)\n        pm.fill(Qt.GlobalColor.transparent)\n        renderer = fluentqt.FontIcon(self._glyph)\n        renderer.setIconSize(min(size.width(), size.height()))\n        renderer.setEnabled(mode != QIcon.Mode.Disabled)\n        renderer.resize(size)\n        painter = QPainter(pm)\n        renderer.render(painter, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)\n        painter.end()\n        return pm\n    def paint(self, painter, rect, mode, state):\n        dpr = max(1, round(painter.device().devicePixelRatioF())) if painter.device() else 1\n        painter.drawPixmap(rect, self.pixmap(rect.size() * dpr, mode, state))\n\ncontrol = fluentqt.CommandBar(%PARENT%)\ndef make_command(text, glyph):\n    action = QAction(text, control)\n    action.setIcon(QIcon(GlyphEngine(glyph)))\n    return action\n\nadd_action = make_command(\"New\", fluentqt.Typography.Icons.Add)\nadd_action.setPriority(QAction.Priority.HighPriority)\nedit_action = make_command(\"Edit\", fluentqt.Typography.Icons.Edit)\nshare_action = make_command(\"Share\", fluentqt.Typography.Icons.Share)\nseparator = QAction(control)\nseparator.setSeparator(True)\npin_action = make_command(\"Pin\", fluentqt.Typography.Icons.Pin)\npin_action.setCheckable(True)\ndelete_action = make_command(\"Delete\", fluentqt.Typography.Icons.Delete)\ndelete_action.setPriority(QAction.Priority.LowPriority)\nfor action in (add_action, edit_action, share_action, separator, pin_action, delete_action):\n    control.addPrimaryAction(action)\ncontrol.addSecondaryAction(make_command(\"Settings\", fluentqt.Typography.Icons.Settings))\ncontrol.addSecondaryAction(make_command(\"Help\", fluentqt.Typography.Icons.Info))\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "labelPosition",
+      "property": "labelPosition",
+      "setter": "setLabelPosition",
+      "category": "basic",
+      "type": "enum",
+      "label": {
+        "en": "Label position",
+        "zh": "标签位置"
+      },
+      "default": "Right"
+    },
+    {
+      "id": "dynamicOverflowEnabled",
+      "property": "dynamicOverflowEnabled",
+      "setter": "setDynamicOverflowEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Dynamic overflow",
+        "zh": "动态溢出收纳"
+      },
+      "default": true,
+      "effectHint": {
+        "en": "Moves commands into the overflow menu when space runs out; it does not change a bar whose commands all fit.",
+        "zh": "宽度不足时将命令收进更多菜单；命令都能放下时外观不变。"
+      },
+      "effect": "behavior"
+    },
+    {
+      "id": "backgroundVisible",
+      "property": "backgroundVisible",
+      "setter": "setBackgroundVisible",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Background",
+        "zh": "显示背景"
+      },
+      "default": true
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

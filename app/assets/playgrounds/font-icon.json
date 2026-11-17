@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "component": "font-icon",
+  "title": "FontIcon",
+  "className": "fluent::FontIcon",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Design.h>\n#include <FluentQt/Foundation.h>\n#include <QColor>",
+      "setup": "auto* control = new fluent::FontIcon(Typography::Icons::FavoriteStar, %PARENT%);\ncontrol->setIconSize(28);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtGui import QColor",
+      "setup": "control = fluentqt.FontIcon(fluentqt.Typography.Icons.FavoriteStar, %PARENT%)\ncontrol.setIconSize(28)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "glyph",
+      "property": "glyph",
+      "setter": "setGlyph",
+      "type": "enum",
+      "label": {
+        "en": "Glyph",
+        "zh": "图标字形"
+      },
+      "category": "icon",
+      "glyphEnum": true,
+      "options": [
+        "None",
+        "FavoriteStar",
+        "Add",
+        "CheckMark",
+        "Save",
+        "Settings",
+        "Search",
+        "Mail",
+        "Home",
+        "Document",
+        "Info",
+        "Warning",
+        "ErrorBadge12"
+      ],
+      "cppPrefix": "Typography::Icons::",
+      "pythonPrefix": "fluentqt.Typography.Icons.",
+      "group": "primary-icon"
+    },
+    {
+      "id": "iconSize",
+      "property": "iconSize",
+      "setter": "setIconSize",
+      "type": "number",
+      "label": {
+        "en": "Icon size",
+        "zh": "图标大小"
+      },
+      "category": "icon",
+      "minimum": 12,
+      "maximum": 64,
+      "step": 2,
+      "integer": true,
+      "control": "range",
+      "group": "primary-icon",
+      "visibleWhen": "glyph != 'None'"
+    },
+    {
+      "id": "rotation",
+      "property": "rotation",
+      "setter": "setRotation",
+      "type": "number",
+      "label": {
+        "en": "Rotation",
+        "zh": "旋转角度"
+      },
+      "category": "icon",
+      "minimum": -180,
+      "maximum": 180,
+      "step": 15,
+      "integer": false,
+      "control": "range",
+      "group": "primary-icon",
+      "visibleWhen": "glyph != 'None'"
+    },
+    {
+      "id": "color",
+      "property": "color",
+      "setter": "setColor",
+      "type": "color",
+      "label": {
+        "en": "Color",
+        "zh": "颜色"
+      },
+      "category": "icon",
+      "nullable": true,
+      "group": "primary-icon",
+      "visibleWhen": "glyph != 'None'"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    120,
+    88
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

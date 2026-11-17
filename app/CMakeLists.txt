@@ -52,6 +52,7 @@ if(NOT TARGET FluentQtQmlBridge)
 endif()
 set(FLUENT_QT_GALLERY_RESOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/gallery_resources.qrc
+    ${CMAKE_CURRENT_SOURCE_DIR}/playground_resources.qrc
 )
 if(TARGET FluentQtQmlBridge)
     list(APPEND FLUENT_QT_GALLERY_RESOURCES

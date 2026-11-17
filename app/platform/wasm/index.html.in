@@ -10,6 +10,8 @@
     document.documentElement.dataset.fluentQtLoadStartedAt = String(Date.now());
     const componentParameters = new URLSearchParams(window.location.search);
     window.fluentQtComponentPreview = componentParameters.get('preview') === 'component';
+    window.fluentQtInteractivePlayground = componentParameters.get('playground') === 'interactive';
+    document.documentElement.dataset.fluentQtInteractivePlayground = String(window.fluentQtInteractivePlayground);
     document.documentElement.dataset.fluentQtComponentPreview = String(window.fluentQtComponentPreview);
     window.fluentQtComponentRequest = {
       route: componentParameters.get('route') || '',
@@ -158,6 +160,8 @@
       border-color: #fff;
       border-top-color: #00ffff;
     }
+    html[data-fluent-qt-interactive-playground="true"] body,
+    html[data-fluent-qt-interactive-playground="true"] #qt-container { background: transparent; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
   <link rel="preload" href="fluent_qt_gallery.wasm" as="fetch"
@@ -269,6 +273,29 @@
           showcaseReduced = event.data.reduced;
           syncComponent();
         }
+        if (['component-playground', 'component-playground-pick'].includes(event.data.type)
+            && ['route', 'sample', 'state'].every(key => event.data.example?.[key] === window.fluentQtComponentRequest[key])
+            && typeof event.data.selection === 'string' && event.data.selection.length <= 100
+            && Number.isSafeInteger(event.data.requestId) && event.data.requestId > 0
+            && event.data.requestId <= 2147483647
+            && event.data.command && typeof event.data.command === 'object'
+            && !Array.isArray(event.data.command)) {
+          let serialized;
+          try { serialized = JSON.stringify(event.data.command); } catch { return; }
+          if (serialized.length > 16384) return;
+          const apply = event.data.type === 'component-playground-pick'
+            ? wasmInstance?._fluentQtGalleryPlaygroundPick : wasmInstance?._fluentQtGalleryPlaygroundApply;
+          if (typeof apply === 'function') {
+            window.fluentQtPlaygroundRequest = { ...event.data.command,
+              example: event.data.example, selection: event.data.selection, requestId: event.data.requestId };
+            if (!apply() && event.data.command.operation === 'open')
+              notifyHost('playground-state', {example: event.data.example, selection: event.data.selection,
+                requestId: event.data.requestId, error: 'selection-unavailable'});
+          } else {
+            notifyHost('playground-state', {example: event.data.example, selection: event.data.selection,
+              requestId: event.data.requestId, error: 'unsupported'});
+          }
+        }
       }
       if (showcase && event.data.type === 'showcase-visibility'
           && typeof event.data.active === 'boolean') {
@@ -303,6 +330,54 @@
     window.fluentQtComponentResized = height => {
       if (componentPreview) notifyHost('content-size', { height });
     };
+    window.fluentQtPlaygroundChanged = json => {
+      if (componentPreview) notifyHost('playground-state', JSON.parse(json));
+    };
+    window.fluentQtPlaygroundViewportChanged = json => {
+      if (!window.fluentQtInteractivePlayground) return;
+      // This same-origin geometry handoff runs in Qt's paint turn, before either
+      // document is composited. Full values/code keep the normal message channel.
+      try { window.frameElement?.fluentQtViewport?.(showcaseSession, JSON.parse(json)); }
+      catch { /* A standalone or cross-origin embed does not expose this host callback. */ }
+    };
+    window.fluentQtPickerChanged = json => {
+      if (componentPreview) notifyHost('picker-state', JSON.parse(json));
+    };
+    const syncPlaygroundFocus = () => {
+      if (!window.fluentQtInteractivePlayground) return;
+      const focused = document.hasFocus();
+      const editor = !focused && window.parent.document.activeElement;
+      wasmInstance?._fluentQtGalleryPlaygroundBrowserFocus?.(focused ? 1 : 0);
+      // Qt can refocus its DOM surface while clearing a widget's input context.
+      // Preserve the HTML control the user actually moved to.
+      if (editor?.isConnected && editor !== window.frameElement)
+        editor.focus({preventScroll: true});
+    };
+    // Wait for focus to settle so internal canvas/editor transitions keep Qt focus.
+    window.addEventListener('blur', () => setTimeout(syncPlaygroundFocus, 0));
+    window.addEventListener('focus', () => setTimeout(syncPlaygroundFocus, 0));
+    window.addEventListener('pointerdown', event => {
+      if (window.fluentQtInteractivePlayground) {
+        window.focus();
+        const surface = event.composedPath().find(node => node instanceof HTMLElement && node.tabIndex >= 0);
+        surface?.focus({preventScroll: true});
+      }
+      if (componentPreview) notifyHost('component-pointer');
+    }, true);
+    window.addEventListener('keydown', event => {
+      if (!window.fluentQtInteractivePlayground || event.isComposing) return;
+      if (event.key === 'Tab' && wasmInstance?._fluentQtGalleryPlaygroundTabBoundary?.(event.shiftKey ? 1 : 0, event.ctrlKey ? 1 : 0)) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        notifyHost('playground-focus-exit', {backward: event.shiftKey});
+      }
+      if (event.key === 'Escape') {
+        const hadOverlay = wasmInstance?._fluentQtGalleryPlaygroundHasOverlay?.();
+        setTimeout(() => {
+          // The native overlay owns this key, including its asynchronous closing animation.
+          if (!hadOverlay) notifyHost('playground-escape');
+        }, 0);
+      }
+    }, true);
     const formatScale = value => Number(value).toFixed(2).replace(/\.?0+$/, '');
     const profileLabel = renderProfile.profile === 'adaptive' ? 'adaptive ' : '';
     const softOneX = renderProfile.nativeDpr > 1
@@ -364,7 +439,7 @@
         });
         syncHostTheme();
         syncShowcase();
-        if (componentPreview) selectComponent();
+        if (componentPreview && !window.fluentQtInteractivePlayground) selectComponent();
         syncComponent();
       } catch (error) {
         console.error(error);

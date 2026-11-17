@@ -11,6 +11,7 @@ Read the owning code and the guide sections relevant to the task below.
 |---|---|
 | Local setup and builds | [Build workflow](docs/development/build-workflow.md); [Linux workflow](docs/development/linux-workflow.md) for Linux |
 | C++ or test changes | [Testing workflow](docs/development/testing-workflow.md), including the local static gate; [test conventions](docs/development/qt-component-test-conventions.md) when authoring tests |
+| Any component source change, including private implementation | [Required website alignment review](docs/development/documentation-style.md#component-changes-require-a-website-review); verify affected component pages and shared guides against the changed code |
 | New component behavior or Qt/platform fix, including private implementation | [Design before implementation](docs/development/compatibility-policy.md#design-before-implementation); establish ownership before editing and run the Qt-free boundary gate |
 | Public API change | [API conventions](docs/development/component-api-conventions.md), [compatibility policy](docs/development/compatibility-policy.md) |
 | Trace an earlier API decision or audit a baseline | [Historical API audit](docs/development/component-api-audit.md); its dated addenda are evidence, not current rules |
@@ -108,6 +109,14 @@ ctest --preset vcpkg-osx -L '^test_<name>$' --output-on-failure
 Run focused checks and required owner gates, then broaden only for changed
 dependencies or unresolved risks. Before committing or pushing C++ changes,
 run the read-only [local static gate](docs/development/testing-workflow.md#local-static-gate).
+
+Every component source change requires the
+[website alignment review](docs/development/documentation-style.md#component-changes-require-a-website-review).
+Fix mismatched English/Chinese descriptions, usage examples and API comments
+in the same change; do not defer documentation alignment to a later task.
+If the review finds no documentation impact, record the affected pages and why
+they remain accurate. Report the review outcome and checks at handoff, and
+distinguish local regeneration from publication to the live website.
 
 Follow the [VisualCheck contract](docs/development/testing-workflow.md#visualcheck)
 for window lifetime, layout, skips, and snapshots. A skipped test, registered

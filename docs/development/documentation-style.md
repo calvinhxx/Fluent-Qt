@@ -81,6 +81,81 @@ generated source instead:
 - PySide6 exports: `bindings/pyside6/api-manifest.json`;
 - binary support: `bindings/pyside6/wheel-matrix.json`.
 
+## Verify website claims
+
+Website prose comes from `tools/site/documentation_guides.py`,
+`tools/site/component-docs.json`, `tools/site/component-translations.json`,
+and the Gallery catalog and sample descriptions. API descriptions come from
+installed public headers. Correct the owning source and regenerate; never
+patch a generated HTML page or catalog by hand.
+
+Check each capability against its public declaration and implementation.
+Name the object that owns an API: `ChartModel::setPoints()` supplies data,
+while a chart's `setModel()` attaches the model. Distinguish a component's
+built-in behavior from signal connections, file access, validation or page
+switching implemented by the example. State relevant defaults, motion policy,
+thread affinity, model ownership and platform fallback conditions. Keep the
+English and Chinese text aligned.
+
+### Component changes require a website review
+
+Every component source change must include a website documentation alignment
+review before it is considered complete. This applies to public headers,
+implementation files and private helpers, even when no public signature changes.
+Changes to shared foundations, design tokens, compatibility adapters or bindings
+must also cover the components whose documented behavior they affect.
+
+1. Identify the affected component pages, shared guides, inherited APIs and
+   Gallery examples. Include both English and Chinese text and the C++ and
+   PySide6 examples that describe the changed surface.
+2. Compare their claims with the updated declarations, implementation and owning
+   tests. Check API availability, defaults, parameters, signal behavior,
+   ownership, motion settings, thread requirements and platform limitations as
+   applicable. A passing build or an unchanged API signature does not establish
+   documentation alignment.
+3. Fix mismatches in their owning sources in the same change as the component.
+   Update sample code and previews when their demonstrated behavior changes.
+   Do not describe an application-provided behavior as a built-in capability,
+   or promise an interface that the component does not expose.
+4. Regenerate affected catalogs and pages, run the checks below, and inspect the
+   affected generated pages. Refresh visual evidence through the
+   [preview workflow](gallery-preview-workflow.md) when the documented appearance
+   or interaction changes. Reused draft images are not current visual evidence.
+5. In the PR description or task handoff, name the pages reviewed, summarize the
+   corrections and checks, and state whether the result is local or published.
+   If the review finds no documentation impact, explain why the existing text
+   and examples remain accurate; do not make unrelated wording changes just to
+   produce a documentation diff.
+
+Do not leave known source/documentation mismatches for a later task. A local
+update is not a live-site update: keep deployment status explicit and follow the
+[CI publication workflow](ci-workflow.md) for the authorized release or deployment.
+
+When component, sample or public-header inputs change, regenerate in this order:
+
+```bash
+python3 tools/ai/generate_ai_catalog.py --project-root .
+python3 tools/site/generate_api_reference.py
+```
+
+Run the callable-reference check and generation regressions:
+
+```bash
+python3 tools/site/validate_documentation_claims.py --report build/site-documentation-audit.json
+python3 tools/site/test_generate_api_reference.py
+```
+
+Website generation also runs the callable-reference check. It rejects unknown
+owners and known methods attributed to the wrong component, including inherited
+members. Its small, type-scoped Qt member list is reviewed against Qt headers;
+it is not a complete Qt inventory. An otherwise unknown callable on a Qt-derived
+type is reported as an unverified reference for source review, not as proof of a
+nonexistent API or an automatic site-generation failure. These warnings remain
+in the audit report and generation output. Guide Python examples are checked for
+syntax. Passing these checks does not establish argument correctness, runtime
+behavior, platform support, or visual approval; those still need source review
+and the owning tests. Local regeneration does not update the published site.
+
 ## Keep agent instructions task-specific
 
 Use `AGENTS.md` for the repository map, non-obvious constraints, and links to
@@ -112,6 +187,8 @@ security, lifecycle, or visual acceptance contracts.
 - [ ] Commands are runnable from the stated directory.
 - [ ] A diagram or table is present only when it improves comprehension.
 - [ ] Generated catalogs and local links still validate.
+- [ ] Component source changes include a website alignment review, with either
+      matching documentation updates or a recorded no-impact explanation.
 
 Run the repository check before handing off a documentation change:
 

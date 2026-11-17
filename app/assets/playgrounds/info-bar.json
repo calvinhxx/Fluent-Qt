@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "component": "info-bar",
+  "title": "InfoBar",
+  "className": "fluent::status_info::InfoBar",
+  "sizeMode": "contentHeight",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/StatusInfo.h>",
+      "setup": "auto* control = new fluent::status_info::InfoBar(%PARENT%);\ncontrol->setPreferredWidth(460);\n"
+    },
+    "python": {
+      "imports": "import fluentqt",
+      "setup": "control = fluentqt.InfoBar(%PARENT%)\ncontrol.setPreferredWidth(460)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "title",
+      "property": "title",
+      "setter": "setTitle",
+      "type": "text",
+      "label": {
+        "en": "Title",
+        "zh": "标题"
+      },
+      "category": "basic",
+      "default": "Update available",
+      "maximumLength": 48
+    },
+    {
+      "id": "message",
+      "property": "message",
+      "setter": "setMessage",
+      "type": "text",
+      "label": {
+        "en": "Message",
+        "zh": "正文"
+      },
+      "category": "basic",
+      "default": "Restart to apply updates.",
+      "maximumLength": 96
+    },
+    {
+      "id": "severity",
+      "property": "severity",
+      "setter": "setSeverity",
+      "type": "enum",
+      "label": {
+        "en": "Severity",
+        "zh": "严重级别"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "singleLine",
+      "property": "singleLine",
+      "setter": "setSingleLine",
+      "type": "boolean",
+      "label": {
+        "en": "Single line",
+        "zh": "单行布局"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "isIconVisible",
+      "property": "isIconVisible",
+      "setter": "setIsIconVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Show icon",
+        "zh": "显示图标"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "isClosable",
+      "property": "isClosable",
+      "setter": "setIsClosable",
+      "type": "boolean",
+      "label": {
+        "en": "Closable",
+        "zh": "可关闭"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "isOpen",
+      "property": "isOpen",
+      "setter": "setIsOpen",
+      "type": "boolean",
+      "label": {
+        "en": "Open",
+        "zh": "保持打开"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    460,
+    48
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

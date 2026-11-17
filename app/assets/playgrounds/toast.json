@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "component": "toast",
+  "title": "Toast",
+  "className": "fluent::status_info::Toast",
+  "surface": "host",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/StatusInfo.h>",
+      "setup": "auto* control = new fluent::status_info::Toast(%PARENT%);\ncontrol->setDuration(0);\n"
+    },
+    "python": {
+      "imports": "import fluentqt",
+      "setup": "control = fluentqt.Toast(%PARENT%)\ncontrol.setDuration(0)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "title",
+      "property": "title",
+      "setter": "setTitle",
+      "type": "text",
+      "label": {
+        "en": "Title",
+        "zh": "标题"
+      },
+      "category": "basic",
+      "default": "Backup complete",
+      "maximumLength": 40
+    },
+    {
+      "id": "message",
+      "property": "message",
+      "setter": "setMessage",
+      "type": "text",
+      "label": {
+        "en": "Message",
+        "zh": "正文"
+      },
+      "category": "basic",
+      "default": "3 files synced cleanly",
+      "maximumLength": 80
+    },
+    {
+      "id": "severity",
+      "property": "severity",
+      "setter": "setSeverity",
+      "type": "enum",
+      "label": {
+        "en": "Severity",
+        "zh": "级别"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "placement",
+      "property": "placement",
+      "setter": "setPlacement",
+      "type": "enum",
+      "label": {
+        "en": "Placement",
+        "zh": "停靠位置"
+      },
+      "category": "icon",
+      "effect": "context",
+      "effectHint": {
+        "en": "Anchors the toast card along the host edges and corners.",
+        "zh": "将提示卡片停靠在宿主容器的四边与四角。"
+      }
+    },
+    {
+      "id": "closable",
+      "property": "closable",
+      "setter": "setClosable",
+      "type": "boolean",
+      "label": {
+        "en": "Closable",
+        "zh": "可关闭"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "isOpen",
+      "property": "isOpen",
+      "setter": "setIsOpen",
+      "type": "boolean",
+      "label": {
+        "en": "Open",
+        "zh": "显示"
+      },
+      "category": "basic",
+      "adapter": "toast-open",
+      "default": true
+    }
+  ],
+  "previewSize": [
+    480,
+    200
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

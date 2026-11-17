@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install pinned source formatter
+        run: python -m pip install --disable-pip-version-check "clang-format==22.1.8"
+
       - name: Generate documentation inputs
         run: python tools/site/build_site.py --prepare
 

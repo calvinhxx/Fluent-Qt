@@ -46,15 +46,45 @@ def cpp_literals(source: str):
         yield source.count("\n", 0, token.start()) + 1, value
 
 
-def json_strings(value):
+def json_strings(value, *, playground=False, path=(), component=None):
     if isinstance(value, str):
         yield value
     elif isinstance(value, dict):
-        for child in value.values():
-            yield from json_strings(child)
+        # Website labels are localized metadata, not Gallery example values.
+        # Keep every default, preset value, API name and English label checked.
+        metadata_path = path[1:] if path[:1] == ("*",) else path
+        if playground and not metadata_path:
+            component = value.get("component")
+        if len(metadata_path) == 4 and metadata_path[:3] in {
+            ("properties", "*", "valueLabels"),
+            ("properties", "*", "optionLabels"),
+        }:
+            metadata_path = (*metadata_path[:3], "*")
+        if playground and metadata_path in {
+            ("properties", "*", "label"), ("properties", "*", "description"),
+            ("properties", "*", "effectHint"), ("properties", "*", "disabledHint"),
+            ("properties", "*", "valueLabels", "*"),
+            ("properties", "*", "optionLabels", "*"),
+            ("properties", "*", "columns", "*", "label"),
+            ("presets", "*", "label"), ("categories", "*", "label"), ("description",),
+        }:
+            if (set(value) != {"en", "zh"}
+                    or any(not isinstance(text, str) or not text.strip() for text in value.values())):
+                raise ValueError(f"Playground translation at {'.'.join(path)} requires en/zh strings")
+            yield value["en"]
+            return
+        for key, child in value.items():
+            # This optional locale-format value is input data, not English Gallery copy.
+            # Keep defaults, recipes and labels checked, including the English option label.
+            if (playground and component == "calendar-date-picker"
+                    and metadata_path == ("properties", "*") and key == "options"
+                    and value.get("id") == "displayFormat" and value.get("property") == "displayFormat"
+                    and value.get("setter") == "setDisplayFormat" and isinstance(child, list)):
+                child = [option for option in child if option != "yyyy年M月d日"]
+            yield from json_strings(child, playground=playground, path=(*path, key), component=component)
     elif isinstance(value, list):
         for child in value:
-            yield from json_strings(child)
+            yield from json_strings(child, playground=playground, path=(*path, "*"), component=component)
 
 
 def validate(root: Path) -> list[str]:
@@ -68,7 +98,8 @@ def validate(root: Path) -> list[str]:
                 if path.suffix == ".py":
                     values = python_literals(source)
                 elif path.suffix == ".json":
-                    values = [(1, text) for text in json_strings(json.loads(source))]
+                    playground = path.parent == root / "app/assets/playgrounds"
+                    values = [(1, text) for text in json_strings(json.loads(source), playground=playground)]
                 else:
                     values = cpp_literals(source)
                 for line, value in values:

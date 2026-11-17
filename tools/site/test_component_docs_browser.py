@@ -158,7 +158,9 @@ def main():
         offline.goto(urljoin(args.url, "zh-CN/api/button/"))
         expect(offline.locator("h1")).to_have_text("Button 按钮")
         expect(offline.locator(".preview-panel img").first).to_be_visible()
-        expect(offline.locator("pre").first).to_be_visible()
+        expect(offline.locator(".usage-example pre").first).to_be_visible()
+        expect(offline.locator("[data-playground-toggle]")).to_be_hidden()
+        expect(offline.locator(".playground-popover")).to_have_count(0)
         for path in ("api/?lang=zh", "zh-CN/api/button/", "zh-CN/api/checkbox/"):
             cold = browser.new_context(color_scheme="light")
             cold.route(runtime_url, unavailable)

@@ -336,6 +336,8 @@ class ClassifyCiChangesTest(unittest.TestCase):
     def test_wasm_smoke_change_runs_wasm_only(self):
         for path in (
             ".github/scripts/run-wasm-browser-smoke.py",
+            "tools/site/playground_interaction_audit.py",
+            "tools/site/playground_scroll_audit.py",
             ".github/scripts/run-wasm-plugin-smoke.py",
             ".github/scripts/run-wasm-qml-bridge-smoke.py",
             ".github/scripts/run-wasm-qmlplus-smoke.py",
@@ -376,7 +378,9 @@ class ClassifyCiChangesTest(unittest.TestCase):
                 self.assert_cpp_selection([path], scope="none", labels="", targets=())
 
     def test_website_runtime_hosts_keep_wasm_routing(self):
-        for path in ("site/site.js", "site/spatial-showcase.js"):
+        for path in ("site/site.js", "site/spatial-showcase.js", "site/api/component.js", "site/api/component.css",
+                     "site/api/playground.js", "tools/site/component-preview.template.html",
+                     "tools/site/component.template.html", "tools/site/component_docs.py"):
             for paths in ([path], ["site/styles.css", path]):
                 with self.subTest(paths=paths):
                     self.assert_classification(paths, native=True, pyside=False, wasm=True)
@@ -395,9 +399,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
 
     def test_unrelated_website_documents_keep_documentation_only_routing(self):
         for path in (
-            "tools/site/component.template.html",
             "tools/site/generate_api_reference.py",
-            "site/api/component.css",
             "docs/development/site-workflow.md",
         ):
             with self.subTest(path=path):

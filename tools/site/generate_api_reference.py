@@ -243,6 +243,15 @@ def main() -> int:
         help="Fail instead of reusing stale or placeholder previews (publication)",
     )
     arguments = parser.parse_args()
+    from validate_documentation_claims import validate
+    errors, coverage = validate()
+    if errors:
+        print('\n'.join(errors), file=sys.stderr)
+        return 1
+    for row in coverage:
+        for reference in row['callable_references']:
+            if 'warning' in reference:
+                print('Review required: ' + reference['warning'], file=sys.stderr)
     from component_docs import collect, generated_outputs
     from generate_component_previews import available_previews, validated_manifest
     reference = generate_reference()

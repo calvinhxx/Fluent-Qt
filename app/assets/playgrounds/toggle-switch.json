@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "component": "toggle-switch",
+  "title": "ToggleSwitch",
+  "className": "fluent::basicinput::ToggleSwitch",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>",
+      "setup": "auto* control = new fluent::basicinput::ToggleSwitch(%PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt",
+      "setup": "control = fluentqt.ToggleSwitch(%PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "isOn",
+      "property": "isOn",
+      "setter": "setIsOn",
+      "type": "boolean",
+      "label": {
+        "en": "State",
+        "zh": "状态"
+      },
+      "category": "basic",
+      "control": "segments",
+      "valueLabels": {
+        "false": {
+          "en": "Off",
+          "zh": "关闭"
+        },
+        "true": {
+          "en": "On",
+          "zh": "开启"
+        }
+      }
+    },
+    {
+      "id": "onContent",
+      "property": "onContent",
+      "setter": "setOnContent",
+      "type": "text",
+      "label": {
+        "en": "On text",
+        "zh": "开启文字"
+      },
+      "category": "basic",
+      "maximumLength": 320,
+      "effectFixture": {
+        "isOn": true
+      }
+    },
+    {
+      "id": "offContent",
+      "property": "offContent",
+      "setter": "setOffContent",
+      "type": "text",
+      "label": {
+        "en": "Off text",
+        "zh": "关闭文字"
+      },
+      "category": "basic",
+      "maximumLength": 320,
+      "effectFixture": {
+        "isOn": false
+      }
+    },
+    {
+      "id": "visualScale",
+      "property": "visualScale",
+      "setter": "setVisualScale",
+      "type": "number",
+      "label": {
+        "en": "Visual scale",
+        "zh": "显示比例"
+      },
+      "category": "basic",
+      "minimum": 0.7,
+      "maximum": 1.5,
+      "step": 0.1,
+      "integer": false,
+      "control": "range"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "stateTextPair": {
+    "state": "isOn",
+    "on": "onContent",
+    "off": "offContent"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

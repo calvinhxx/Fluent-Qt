@@ -775,6 +775,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "            build/wasm/tree-select-validation",
         "            build/wasm/chart-workbench-validation",
         "            build/wasm/diagnostics-validation",
+        "            build/wasm/component-playground-validation",
         "          if-no-files-found: ignore",
         "          retention-days: 7",
     ]
@@ -1559,7 +1560,7 @@ def validate_ci_source_contracts_contract(orchestrator: str) -> list[str]:
     prepare = named_step_section(plan, "Generate documentation inputs")
     if uncommented_workflow_lines(prepare) != [
         "      - name: Generate documentation inputs",
-        "        run: python3 tools/site/build_site.py --prepare",
+        "        run: python3 -m venv .venv-format && .venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8 && python3 tools/site/build_site.py --prepare",
     ] or plan.find(prepare) > plan.find("      - name: Validate CI orchestration contracts"):
         return ["ci.yml must generate catalog inputs before source validation"]
     step = named_step_section(job_section(active, "plan"), "Validate CI orchestration contracts")

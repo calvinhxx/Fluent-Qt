@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "component": "radio-button",
+  "title": "RadioButton",
+  "className": "fluent::basicinput::RadioButton",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>",
+      "setup": "auto* control = new fluent::basicinput::RadioButton(%PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt",
+      "setup": "control = fluentqt.RadioButton(%PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "text",
+      "property": "text",
+      "setter": "setText",
+      "type": "text",
+      "label": {
+        "en": "Text",
+        "zh": "文字"
+      },
+      "category": "basic",
+      "default": "Preferred option",
+      "maximumLength": 320
+    },
+    {
+      "id": "checked",
+      "property": "checked",
+      "setter": "setChecked",
+      "type": "boolean",
+      "label": {
+        "en": "Checked",
+        "zh": "已选中"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "circleSize",
+      "property": "circleSize",
+      "setter": "setCircleSize",
+      "type": "number",
+      "label": {
+        "en": "Circle size",
+        "zh": "圆圈大小"
+      },
+      "category": "basic",
+      "minimum": 12,
+      "maximum": 32,
+      "step": 1,
+      "integer": true,
+      "control": "range"
+    },
+    {
+      "id": "textGap",
+      "property": "textGap",
+      "setter": "setTextGap",
+      "type": "number",
+      "label": {
+        "en": "Text gap",
+        "zh": "文字间距"
+      },
+      "category": "basic",
+      "minimum": 0,
+      "maximum": 24,
+      "step": 1,
+      "integer": true,
+      "control": "range"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

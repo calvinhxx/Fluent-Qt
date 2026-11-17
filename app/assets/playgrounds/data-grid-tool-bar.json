@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "component": "data-grid-tool-bar",
+  "title": "DataGridToolBar",
+  "className": "fluent::layout::DataGridToolBar",
+  "sizeMode": "contentHeight",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Collections.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/TextFields.h>\n#include <QStandardItem>\n#include <QStandardItemModel>",
+      "setup": "auto* control = new fluent::layout::DataGridToolBar(%PARENT%);\nauto* model = new QStandardItemModel(2, 3, control);\nmodel->setHorizontalHeaderLabels({QStringLiteral(\"Project\"), QStringLiteral(\"Owner\"), QStringLiteral(\"Status\")});\nmodel->setItem(0, 0, new QStandardItem(QStringLiteral(\"FluentQt\")));\nmodel->setItem(0, 1, new QStandardItem(QStringLiteral(\"Ada\")));\nmodel->setItem(0, 2, new QStandardItem(QStringLiteral(\"Open\")));\nmodel->setItem(1, 0, new QStandardItem(QStringLiteral(\"Gallery\")));\nmodel->setItem(1, 1, new QStandardItem(QStringLiteral(\"Lin\")));\nmodel->setItem(1, 2, new QStandardItem(QStringLiteral(\"Closed\")));\nauto* grid = new fluent::collections::DataGrid(control);\ngrid->setModel(model);\ngrid->hide();\ncontrol->setDataGrid(grid);\ncontrol->searchField()->setPlaceholderText(QStringLiteral(\"Search projects...\"));\ncontrol->addFilter(QStringLiteral(\"status\"), QStringLiteral(\"Status\"), {QStringLiteral(\"Open\"), QStringLiteral(\"Closed\")});\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel",
+      "setup": "control = fluentqt.DataGridToolBar(%PARENT%)\nmodel = QStandardItemModel(2, 3, control)\nmodel.setHorizontalHeaderLabels([\"Project\", \"Owner\", \"Status\"])\nmodel.setItem(0, 0, QStandardItem(\"FluentQt\"))\nmodel.setItem(0, 1, QStandardItem(\"Ada\"))\nmodel.setItem(0, 2, QStandardItem(\"Open\"))\nmodel.setItem(1, 0, QStandardItem(\"Gallery\"))\nmodel.setItem(1, 1, QStandardItem(\"Lin\"))\nmodel.setItem(1, 2, QStandardItem(\"Closed\"))\ngrid = fluentqt.DataGrid(control)\ngrid.setModel(model)\ngrid.hide()\ncontrol.setDataGrid(grid)\ncontrol.searchField().setPlaceholderText(\"Search projects...\")\ncontrol.addFilter(\"status\", \"Status\", [\"Open\", \"Closed\"])\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "searchText",
+      "property": "searchText",
+      "setter": "setSearchText",
+      "type": "text",
+      "label": {
+        "en": "Search text",
+        "zh": "搜索关键字"
+      },
+      "category": "basic",
+      "maximumLength": 32
+    },
+    {
+      "id": "statusFilter",
+      "property": "statusFilter",
+      "setter": "setStatusFilter",
+      "adapter": "data-grid-filter",
+      "key": "status",
+      "type": "multi-enum",
+      "label": {
+        "en": "Status filter",
+        "zh": "状态筛选"
+      },
+      "category": "basic",
+      "options": [
+        "Open",
+        "Closed"
+      ],
+      "maximumItems": 2
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    388,
+    76
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}
