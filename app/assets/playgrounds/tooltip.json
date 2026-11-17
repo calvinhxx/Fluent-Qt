@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "component": "tooltip",
+  "title": "ToolTip",
+  "className": "fluent::status_info::ToolTip",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>\n#include <FluentQt/StatusInfo.h>\n#include <QSizePolicy>\n#include <QVBoxLayout>",
+      "setup": "auto* layout = new QVBoxLayout(%PARENT%);\nlayout->setContentsMargins(16, 12, 16, 14);\nlayout->setSpacing(0);\nauto* control = new fluent::status_info::ToolTip(%PARENT%);\ncontrol->setWindowFlags(Qt::Widget);\nauto policy = control->sizePolicy();\npolicy.setRetainSizeWhenHidden(true);\ncontrol->setSizePolicy(policy);\ncontrol->setAnimationEnabled(false);\ncontrol->show();\ncontrol->setAnimationEnabled(true);\nauto* anchor = new fluent::basicinput::Button(QStringLiteral(\"Archive\"), %PARENT%);\nanchor->setFixedSize(112, 32);\nQObject::connect(anchor, &fluent::basicinput::Button::clicked, control, [control] {\n    control->setVisible(!control->isVisible());\n});\nlayout->addStretch(1);\nlayout->addWidget(control, 0, Qt::AlignHCenter);\nlayout->addWidget(anchor, 0, Qt::AlignHCenter);\nlayout->addStretch(1);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QVBoxLayout",
+      "setup": "layout = QVBoxLayout(%PARENT%)\nlayout.setContentsMargins(16, 12, 16, 14)\nlayout.setSpacing(0)\ncontrol = fluentqt.ToolTip(%PARENT%)\ncontrol.setWindowFlags(Qt.WindowType.Widget)\npolicy = control.sizePolicy()\npolicy.setRetainSizeWhenHidden(True)\ncontrol.setSizePolicy(policy)\ncontrol.setAnimationEnabled(False)\ncontrol.show()\ncontrol.setAnimationEnabled(True)\nanchor = fluentqt.Button(\"Archive\", %PARENT%)\nanchor.setFixedSize(112, 32)\nanchor.clicked.connect(lambda: control.setVisible(not control.isVisible()))\nlayout.addStretch(1)\nlayout.addWidget(control, 0, Qt.AlignmentFlag.AlignHCenter)\nlayout.addWidget(anchor, 0, Qt.AlignmentFlag.AlignHCenter)\nlayout.addStretch(1)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "text",
+      "property": "text",
+      "setter": "setText",
+      "type": "text",
+      "label": {
+        "en": "Text",
+        "zh": "提示文案"
+      },
+      "category": "basic",
+      "default": "Save changes (Ctrl+S)",
+      "maximumLength": 64
+    },
+    {
+      "id": "animationEnabled",
+      "property": "animationEnabled",
+      "setter": "setAnimationEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Animated",
+        "zh": "启用动画"
+      },
+      "category": "appearance",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Controls the fade transition when clicking Archive in the preview to hide/show the tooltip; toggling alone will not replay an open bubble.",
+        "zh": "控制点击预览区“Archive”按钮切换气泡显隐时的渐隐渐现过渡；气泡已打开时仅切换此开关不会重播动画。"
+      }
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    320,
+    148
+  ],
+  "description": {
+    "en": "ToolTips attach to a target widget. Click Archive in the preview to hide or show the tooltip bubble.",
+    "zh": "ToolTip 用于附着在目标控件旁。在上方预览区点击“Archive”按钮，可切换气泡显示与隐藏以体验过渡动画。"
+  },
+  "surface": "host",
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

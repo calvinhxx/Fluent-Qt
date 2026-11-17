@@ -1357,10 +1357,12 @@
         "control",
         "cover",
         "critical",
+        "cue.",
         "danger",
         "destructive",
         "disabled",
         "event.",
+        "focus",
         "forced",
         "gap.",
         "glyphs",
@@ -1371,15 +1373,15 @@
         "input",
         "interaction",
         "keeping",
-        "keyboard-focus",
         "label.",
         "layouts",
         "lightweight",
+        "move",
         "neutral",
         "padding",
-        "pointer",
         "preferred",
         "presets",
+        "pressed",
         "preview",
         "primary",
         "raises",
@@ -1387,9 +1389,8 @@
         "rest.",
         "review.",
         "rows",
+        "see",
         "semantics.",
-        "shown",
-        "side",
         "sit",
         "size",
         "sizes",
@@ -1398,8 +1399,10 @@
         "states",
         "styles",
         "subtle",
+        "tab",
         "text",
         "their",
+        "use",
         "user",
         "uses",
         "while",
@@ -1484,7 +1487,7 @@
         {
           "id": "button-interaction-state",
           "title": "Interaction state preview",
-          "description": "Forced pointer, keyboard-focus, and disabled states are shown side by side for review.",
+          "description": "Hover, pressed, and disabled states are forced for review. Use Tab to move to the Focus button and see its focus cue.",
           "cpp_snippet": "auto* rest = new Button(\"Rest\", this);\n\nauto* hover = new Button(\"Hover\", this);\nhover->setInteractionState(Button::Hover);\n\nauto* pressed = new Button(\"Pressed\", this);\npressed->setInteractionState(Button::Pressed);\n\nauto* focused = new Button(\"Focus\", this);\nfocused->setFocusVisual(true);\n\nauto* disabled = new Button(\"Disabled\", this);\ndisabled->setInteractionState(Button::Disabled);",
           "preview_layout": {
             "orientation": "horizontal",
@@ -5823,17 +5826,15 @@
       "id": "dialog",
       "title": "Dialog",
       "category_id": "dialogs-flyouts",
-      "description": "A modal window surface that hosts arbitrary content above the app.",
+      "description": "A same-window dialog surface with configurable modality and application-provided content.",
       "capabilities": [
         "transient-surfaces"
       ],
       "search_terms": [
-        "above",
         "animated",
         "animation",
-        "app.",
+        "application-provided",
         "apply",
-        "arbitrary",
         "available",
         "backdrop",
         "backdrop.",
@@ -5843,7 +5844,8 @@
         "cancel",
         "change",
         "compare",
-        "content",
+        "configurable",
+        "content.",
         "dialog",
         "dialog-animation-smoke",
         "dialog-backdrop-effects",
@@ -5853,21 +5855,21 @@
         "edit",
         "effects",
         "flyouts",
-        "hosts",
         "instant",
         "interaction.",
         "keep",
         "modal",
+        "modality",
         "name",
         "opening",
         "original.",
         "project",
         "rename",
         "same",
+        "same-window",
         "surface",
         "then",
-        "transient-surfaces",
-        "window"
+        "transient-surfaces"
       ],
       "cpp": {
         "public_header": "<FluentQt/DialogsFlyouts.h>",
@@ -6186,12 +6188,13 @@
       "id": "coach-mark",
       "title": "CoachMark",
       "category_id": "dialogs-flyouts",
-      "description": "A standalone teaching tip in its own window that points a tail at a target and glides between them.",
+      "description": "A same-window teaching tip that points a tail at a target and can glide between targets.",
       "capabilities": [
         "transient-surfaces"
       ],
       "search_terms": [
         "between",
+        "can",
         "coach",
         "coach-mark",
         "coach-mark-targeted-glide",
@@ -6204,16 +6207,15 @@
         "new",
         "open.",
         "overlays",
-        "own",
         "owning",
         "points",
         "retargeted",
-        "standalone",
+        "same-window",
         "tail",
         "target",
         "targeted",
+        "targets.",
         "teaching",
-        "them.",
         "tip",
         "transient-surfaces",
         "when",
@@ -7696,10 +7698,8 @@
       "search_terms": [
         "app",
         "can",
-        "check",
         "checked",
         "choices",
-        "command",
         "command-surfaces",
         "commands",
         "exclusive",
@@ -7707,20 +7707,25 @@
         "fluentmenu",
         "items",
         "keep",
+        "level.",
         "list",
         "menu",
         "menu-cascading-selection",
         "menu-command-shortcuts",
         "menus",
         "native",
-        "nested",
-        "one",
-        "related",
+        "open",
+        "order",
         "shortcuts",
         "shown",
+        "sort",
         "state",
+        "state.",
         "submenus",
         "surface.",
+        "their",
+        "then",
+        "third",
         "toolbars",
         "transient",
         "triggered.",
@@ -7756,13 +7761,13 @@
           "id": "menu-command-shortcuts",
           "title": "Commands and shortcuts",
           "description": "Menu commands can expose native shortcuts and update app state when triggered.",
-          "cpp_snippet": "using fluent::status_info::Toast;\nauto addCommand = [this](FluentMenu* menu, const QString& text,\n                         const QKeySequence& shortcut = QKeySequence()) {\n    auto* action = menu->addAction(text);\n    if (!shortcut.isEmpty()) action->setShortcut(shortcut);\n    connect(action, &QAction::triggered, this, [this, text] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n    return action;\n};\nauto* button = new DropDownButton(\"File\", this);\nauto* menu = new FluentMenu(QString(), button);\naddCommand(menu, \"New\", QKeySequence::New);\naddCommand(menu, \"Open...\", QKeySequence::Open);\naddCommand(menu, \"Save\", QKeySequence::Save);\nmenu->addSeparator();\nmenu->addAction(\"Publish\")->setEnabled(false);\naddCommand(menu, \"Close\");\nbutton->setMenu(menu);"
+          "cpp_snippet": "using fluent::status_info::Toast;\nauto addCommand = [this](FluentMenu* menu, const QString& text, const QString& glyph,\n                         const QKeySequence& shortcut = QKeySequence()) {\n    auto* action = menu->addAction(text);\n    if (!shortcut.isEmpty())\n        action->setShortcut(shortcut);\n    FontIcon icon(glyph);\n    icon.setIconSize(16);\n    icon.resize(20, 20);\n    QPixmap pixmap(20, 20);\n    pixmap.fill(Qt::transparent);\n    icon.render(&pixmap);\n    action->setIcon(QIcon(pixmap));\n    connect(action, &QAction::triggered, this, [this, text] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n    return action;\n};\nauto* button = new DropDownButton(\"File\", this);\nbutton->setIconGlyph(Typography::Icons::Document);\nauto* menu = new FluentMenu(QString(), button);\naddCommand(menu, \"New\", Typography::Icons::Add, QKeySequence::New);\naddCommand(menu, \"Open...\", Typography::Icons::Folder, QKeySequence::Open);\naddCommand(menu, \"Save\", Typography::Icons::Save, QKeySequence::Save);\nmenu->addSeparator();\nmenu->addAction(\"Publish\")->setEnabled(false);\naddCommand(menu, \"Close\", Typography::Icons::Cancel);\nbutton->setMenu(menu);"
         },
         {
           "id": "menu-cascading-selection",
           "title": "Submenus and checked items",
-          "description": "Nested menus and exclusive check items keep related choices in one command surface.",
-          "cpp_snippet": "auto* menu = new FluentMenu(QString(), this);\nauto* sortMenu = new FluentMenu(\"Sort by\", menu);\nsortMenu->addAction(\"Name\");\nsortMenu->addAction(\"Date modified\");\nsortMenu->addAction(\"Type\");\nfor (QAction* action : sortMenu->actions()) {\n    connect(action, &QAction::triggered, this, [this, action] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\",\n            action->text() + \" selected\", Toast::Informational, 2200,\n            Toast::Top, QMargins(16, 50, 16, 16));\n    });\n}\nmenu->addMenu(sortMenu);\n\nauto* viewGroup = new QActionGroup(menu);\nviewGroup->setExclusive(true);\nauto* compact = menu->addAction(\"Compact list\");\ncompact->setCheckable(true);\nviewGroup->addAction(compact);\nauto* comfortable = menu->addAction(\"Comfortable list\");\ncomfortable->setCheckable(true);\ncomfortable->setChecked(true);\nviewGroup->addAction(comfortable);\n\nauto* hidden = menu->addAction(\"Show hidden files\");\nhidden->setCheckable(true);"
+          "description": "Open Sort by, then Order for a third menu level. Exclusive choices keep their checked state.",
+          "cpp_snippet": "auto* menu = new FluentMenu(QString(), this);\nauto* sortMenu = new FluentMenu(\"Sort by\", menu);\nsortMenu->addAction(\"Name\");\nsortMenu->addAction(\"Date modified\");\nsortMenu->addAction(\"Type\");\nfor (QAction* action : sortMenu->actions()) {\n    connect(action, &QAction::triggered, this, [this, action] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\",\n            action->text() + \" selected\", Toast::Informational, 2200,\n            Toast::Top, QMargins(16, 50, 16, 16));\n    });\n}\nauto* orderMenu = new FluentMenu(\"Order\", sortMenu);\nauto* orderGroup = new QActionGroup(orderMenu);\norderGroup->setExclusive(true);\nfor (const QString& name : {QStringLiteral(\"Ascending\"), QStringLiteral(\"Descending\")}) {\n    auto* action = orderMenu->addAction(name);\n    action->setCheckable(true);\n    action->setChecked(name == QStringLiteral(\"Ascending\"));\n    orderGroup->addAction(action);\n}\nsortMenu->addMenu(orderMenu);\nmenu->addMenu(sortMenu);\n\nauto* viewGroup = new QActionGroup(menu);\nviewGroup->setExclusive(true);\nauto* compact = menu->addAction(\"Compact list\");\ncompact->setCheckable(true);\nviewGroup->addAction(compact);\nauto* comfortable = menu->addAction(\"Comfortable list\");\ncomfortable->setCheckable(true);\ncomfortable->setChecked(true);\nviewGroup->addAction(comfortable);\n\nauto* hidden = menu->addAction(\"Show hidden files\");\nhidden->setCheckable(true);"
         }
       ]
     },
@@ -7838,7 +7843,7 @@
           "id": "menu-bar-hosted-surface",
           "title": "Hosted menu bar",
           "description": "A MenuBar can blend into a card or custom title bar by hiding its own canvas.",
-          "cpp_snippet": "using fluent::status_info::Toast;\nauto addCommand = [this](FluentMenu* menu, const QString& text,\n                         const QKeySequence& shortcut = QKeySequence()) {\n    auto* action = menu->addAction(text);\n    if (!shortcut.isEmpty()) action->setShortcut(shortcut);\n    connect(action, &QAction::triggered, this, [this, text] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n    return action;\n};\nauto* menuBar = new FluentMenuBar(this);\nmenuBar->setBackgroundVisible(false);\nauto* fileMenu = new FluentMenu(\"File\", menuBar);\naddCommand(fileMenu, \"New\");\naddCommand(fileMenu, \"Open...\");\naddCommand(fileMenu, \"Save\");\nmenuBar->addMenu(fileMenu);\nauto* editMenu = new FluentMenu(\"Edit\", menuBar);\naddCommand(editMenu, \"Undo\", QKeySequence::Undo);\naddCommand(editMenu, \"Cut\", QKeySequence::Cut);\naddCommand(editMenu, \"Copy\", QKeySequence::Copy);\naddCommand(editMenu, \"Paste\", QKeySequence::Paste);\nmenuBar->addMenu(editMenu);\nauto* helpMenu = new FluentMenu(\"Help\", menuBar);\naddCommand(helpMenu, \"About\");\nmenuBar->addMenu(helpMenu);"
+          "cpp_snippet": "using fluent::status_info::Toast;\nauto addCommand = [this](FluentMenu* menu, const QString& text,\n                         const QKeySequence& shortcut = QKeySequence()) {\n    auto* action = menu->addAction(text);\n    if (!shortcut.isEmpty()) action->setShortcut(shortcut);\n    connect(action, &QAction::triggered, this, [this, text] {\n        Toast::showOrUpdateToast(this, \"gallery.action-feedback\", text + \" selected\",\n            Toast::Informational, 2200, Toast::Top, QMargins(16, 50, 16, 16));\n    });\n    return action;\n};\nauto* menuBar = new FluentMenuBar(this);\nmenuBar->setBackgroundVisible(false);\nauto* fileMenu = new FluentMenu(\"File\", menuBar);\naddCommand(fileMenu, \"New\", QKeySequence::New);\naddCommand(fileMenu, \"Open...\", QKeySequence::Open);\naddCommand(fileMenu, \"Save\", QKeySequence::Save);\nmenuBar->addMenu(fileMenu);\nauto* editMenu = new FluentMenu(\"Edit\", menuBar);\naddCommand(editMenu, \"Undo\", QKeySequence::Undo);\naddCommand(editMenu, \"Cut\", QKeySequence::Cut);\naddCommand(editMenu, \"Copy\", QKeySequence::Copy);\naddCommand(editMenu, \"Paste\", QKeySequence::Paste);\nmenuBar->addMenu(editMenu);\nauto* viewMenu = new FluentMenu(\"View\", menuBar);\nauto* wrap = viewMenu->addAction(\"Word wrap\");\nwrap->setCheckable(true);\nwrap->setChecked(true);\nmenuBar->addMenu(viewMenu);\nauto* helpMenu = new FluentMenu(\"Help\", menuBar);\naddCommand(helpMenu, \"About\");\nmenuBar->addMenu(helpMenu);"
         },
         {
           "id": "menu-bar-access-keys",
@@ -8061,7 +8066,7 @@
           "id": "command-palette-basic",
           "title": "Find and run a command",
           "description": "Search a page name, choose with the arrow keys, and press Enter. Escape closes the palette.",
-          "cpp_snippet": "auto* root = new QWidget(this);\nauto* layout = new QVBoxLayout(root);\nauto* location = new Label(QStringLiteral(\"Current page: Home\"), root);\nlocation->setObjectName(QStringLiteral(\"Gallery.CommandPalette.BasicLocation\"));\nauto* palette = new fluent::menus_toolbars::CommandPalette(root);\npalette->setObjectName(QStringLiteral(\"Gallery.CommandPalette.Basic\"));\npalette->setPlaceholderText(QStringLiteral(\"Search pages...\"));\nconst QStringList pages{QStringLiteral(\"Home\"), QStringLiteral(\"Inbox\"),\n    QStringLiteral(\"Documents\"), QStringLiteral(\"Folders\")};\nfor (const QString& page : pages) {\n    auto* action = new QAction(page, root);\n    palette->addCommand(action, QStringLiteral(\"Navigation\"));\n    QObject::connect(action, &QAction::triggered, location, [location, page] {\n        location->setText(QStringLiteral(\"Current page: %1\").arg(page));\n    });\n}\nauto* open = new Button(QStringLiteral(\"Search pages\"), root);\nopen->setObjectName(QStringLiteral(\"Gallery.CommandPalette.OpenBasic\"));\nopen->setFluentStyle(Button::Accent);\nQObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nlayout->addWidget(location);\nreturn root;"
+          "cpp_snippet": "auto* layout = new QVBoxLayout(this);\nauto* location = new Label(QStringLiteral(\"Current page: Home\"), this);\nauto* palette = new fluent::menus_toolbars::CommandPalette(this);\npalette->setPlaceholderText(QStringLiteral(\"Search pages...\"));\npalette->setDim(true);\npalette->setDimOpacity(0.12);\nconst QStringList pages{QStringLiteral(\"Home\"), QStringLiteral(\"Inbox\"),\n    QStringLiteral(\"Documents\"), QStringLiteral(\"Folders\")};\nfor (const QString& page : pages) {\n    auto* action = new QAction(page, this);\n    palette->addCommand(action, QStringLiteral(\"Navigation\"));\n    QObject::connect(action, &QAction::triggered, location, [location, page] {\n        location->setText(QStringLiteral(\"Current page: %1\").arg(page));\n    });\n}\nauto* open = new Button(QStringLiteral(\"Search pages\"), this);\nopen->setFluentStyle(Button::Accent);\nopen->setIconGlyph(Typography::Icons::Search);\nQObject::connect(open, &Button::clicked, palette, &fluent::menus_toolbars::CommandPalette::open);\nlayout->addWidget(open, 0, Qt::AlignLeft);\nlayout->addWidget(location);"
         },
         {
           "id": "command-palette-shared-actions",
@@ -8755,14 +8760,14 @@
           "id": "stepper-horizontal",
           "title": "Application-controlled steps",
           "description": "Click a step to request navigation. Completion, errors and availability stay independent of the current step.",
-          "cpp_snippet": "auto* stepper = new Stepper(this);\nfor (int i = 0; i < 4; ++i) {\n    StepperItem item(QString(\"Step %1\").arg(i + 1), \"Optional description\");\n    if (i == 0) item.state = Stepper::Completed;\n    if (i == 3) item.enabled = false;\n    stepper->addItem(item);\n}\nstepper->setCurrentIndex(1);\nconnect(stepper, &Stepper::stepRequested, stepper, &Stepper::setCurrentIndex);\nconnect(stepper, &Stepper::currentIndexChanged, statusLabel, [statusLabel](int i) {\n    statusLabel->setText(QString(\"Current step: %1\").arg(i + 1));\n});\nconnect(toggleError, &Button::clicked, stepper, [stepper] {\n    stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending : Stepper::Error);\n});\n",
+          "cpp_snippet": "auto* stepper = new Stepper(this);\nconst QVector<QPair<QString, QString>> steps{\n    {\"Account\", \"Basic info\"}, {\"Workspace\", \"Select tier\"},\n    {\"Billing\", \"Payment method\"}, {\"Review\", \"Confirm setup\"}\n};\nfor (int i = 0; i < steps.size(); ++i) {\n    StepperItem item(steps[i].first, steps[i].second);\n    if (i == 0) item.state = Stepper::Completed;\n    if (i == 3) item.enabled = false;\n    stepper->addItem(item);\n}\nstepper->setCurrentIndex(1);\nconnect(stepper, &Stepper::stepRequested, stepper, &Stepper::setCurrentIndex);\nconnect(stepper, &Stepper::currentIndexChanged, statusLabel, [statusLabel](int i) {\n    statusLabel->setText(QString(\"Current step: %1\").arg(i + 1));\n});\nconnect(toggleError, &Button::clicked, stepper, [stepper] {\n    stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending : Stepper::Error);\n});\n",
           "fill_available_width": true
         },
         {
           "id": "stepper-vertical",
           "title": "Vertical steps",
           "description": "The same steps use a vertical rail. Arrow keys move focus; Enter or Space requests navigation.",
-          "cpp_snippet": "auto* stepper = new Stepper(this);\nfor (int i = 0; i < 4; ++i) {\n    StepperItem item(QString(\"Step %1\").arg(i + 1), \"Optional description\");\n    if (i == 0) item.state = Stepper::Completed;\n    if (i == 3) item.enabled = false;\n    stepper->addItem(item);\n}\nstepper->setCurrentIndex(1);\nconnect(stepper, &Stepper::stepRequested, stepper, &Stepper::setCurrentIndex);\nconnect(stepper, &Stepper::currentIndexChanged, statusLabel, [statusLabel](int i) {\n    statusLabel->setText(QString(\"Current step: %1\").arg(i + 1));\n});\nconnect(toggleError, &Button::clicked, stepper, [stepper] {\n    stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending : Stepper::Error);\n});\nstepper->setOrientation(Qt::Vertical);\n",
+          "cpp_snippet": "auto* stepper = new Stepper(this);\nconst QVector<QPair<QString, QString>> steps{\n    {\"Account\", \"Basic info\"}, {\"Workspace\", \"Select tier\"},\n    {\"Billing\", \"Payment method\"}, {\"Review\", \"Confirm setup\"}\n};\nfor (int i = 0; i < steps.size(); ++i) {\n    StepperItem item(steps[i].first, steps[i].second);\n    if (i == 0) item.state = Stepper::Completed;\n    if (i == 3) item.enabled = false;\n    stepper->addItem(item);\n}\nstepper->setCurrentIndex(1);\nconnect(stepper, &Stepper::stepRequested, stepper, &Stepper::setCurrentIndex);\nconnect(stepper, &Stepper::currentIndexChanged, statusLabel, [statusLabel](int i) {\n    statusLabel->setText(QString(\"Current step: %1\").arg(i + 1));\n});\nconnect(toggleError, &Button::clicked, stepper, [stepper] {\n    stepper->setItemState(1, stepper->itemAt(1).state == Stepper::Error ? Stepper::Pending : Stepper::Error);\n});\nstepper->setOrientation(Qt::Vertical);\n",
           "fill_available_width": true
         }
       ]
@@ -8771,7 +8776,7 @@
       "id": "tab-view",
       "title": "TabView",
       "category_id": "navigation",
-      "description": "A control that hosts multiple pages of content behind a tab strip.",
+      "description": "A tab strip with selection, closing and reordering; the application hosts and switches the pages.",
       "capabilities": [
         "navigation"
       ],
@@ -8783,20 +8788,19 @@
         "affordances.",
         "aligned.",
         "always",
+        "application",
         "apply.",
         "arrow",
         "auto",
-        "behind",
         "button",
         "buttons",
         "can",
         "closable",
         "close",
         "closebuttonoverlaymode",
+        "closing",
         "collapses",
         "compact",
-        "content",
-        "control",
         "currentchanged",
         "disabled.",
         "dragged.",
@@ -8816,7 +8820,6 @@
         "keeps",
         "keyboard",
         "keyboardacceleratorsenabled",
-        "multiple",
         "navigation",
         "onhover",
         "order",
@@ -8824,6 +8827,7 @@
         "own",
         "page",
         "pages",
+        "pages.",
         "per-tab",
         "raise",
         "raises",
@@ -8838,8 +8842,9 @@
         "stackcontenthost",
         "state",
         "still",
-        "strip.",
+        "strip",
         "such",
+        "switches",
         "tab",
         "tab-view",
         "tab-view-add-close",
@@ -9939,7 +9944,7 @@
           "id": "progress-bar-determinate-value",
           "title": "Determinate value",
           "description": "A determinate ProgressBar exposes range, value, ratio, and progress text.",
-          "cpp_snippet": "auto* progressBar = new ProgressBar(this);\nprogressBar->setRange(0, 100);\nprogressBar->setBarWidth(320);\n\nauto* progressBox = new NumberBox(this);\nprogressBox->setHeader(\"Progress\");\nprogressBox->setRange(0, 100);\nprogressBox->setSmallChange(1);\nprogressBox->setLargeChange(10);\nprogressBox->setDisplayPrecision(0);\nprogressBox->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);\n\nauto* status = new Label(\"Progress: 44%\", this);\nstatus->setFixedWidth(124);\n\nconnect(progressBox, &NumberBox::valueChanged, progressBar, [progressBar, status](double value) {\n    progressBar->setValue(std::isfinite(value) ? value : 0.0);\n    status->setText(QStringLiteral(\"Progress: %1%\").arg(progressBar->progressText()));\n});\nprogressBox->setValue(44);"
+          "cpp_snippet": "auto* progressBar = new ProgressBar(this);\nprogressBar->setRange(0, 100);\nprogressBar->setBarWidth(260);\n\nauto* progressBox = new NumberBox(this);\nprogressBox->setHeader(\"Progress\");\nprogressBox->setRange(0, 100);\nprogressBox->setSmallChange(1);\nprogressBox->setLargeChange(10);\nprogressBox->setDisplayPrecision(0);\nprogressBox->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);\n\nauto* status = new Label(\"Progress: 44%\", this);\nstatus->setFixedWidth(124);\n\nconnect(progressBox, &NumberBox::valueChanged, progressBar, [progressBar, status](double value) {\n    progressBar->setValue(std::isfinite(value) ? value : 0.0);\n    status->setText(QStringLiteral(\"Progress: %1%\").arg(progressBar->progressText()));\n});\nprogressBox->setValue(44);"
         },
         {
           "id": "progress-bar-states",
@@ -10193,7 +10198,7 @@
           "id": "shimmer-templates",
           "title": "Built-in templates",
           "description": "Built-in templates cover image cards, avatar rows, and text blocks.",
-          "cpp_snippet": "auto* image = new Shimmer(this);\nimage->setShimmerTemplate(Shimmer::ShimmerTemplate::ImageCard);\nimage->setFixedSize(160, 92);\n\nauto* row = new Shimmer(this);\nrow->setShimmerTemplate(Shimmer::ShimmerTemplate::AvatarTextRow);\nrow->setFixedSize(180, 56);\n\nauto* text = new Shimmer(this);\ntext->setShimmerTemplate(Shimmer::ShimmerTemplate::TextBlock);\ntext->setFixedSize(220, 72);"
+          "cpp_snippet": "auto* image = new Shimmer(this);\nimage->setShimmerTemplate(Shimmer::ShimmerTemplate::ImageCard);\nimage->setFixedSize(136, 84);\n\nauto* row = new Shimmer(this);\nrow->setShimmerTemplate(Shimmer::ShimmerTemplate::AvatarTextRow);\nrow->setFixedSize(168, 56);\n\nauto* text = new Shimmer(this);\ntext->setShimmerTemplate(Shimmer::ShimmerTemplate::TextBlock);\ntext->setFixedSize(176, 72);"
         },
         {
           "id": "shimmer-custom-elements",
@@ -10335,7 +10340,7 @@
           "id": "toast-feedback",
           "title": "Messages",
           "description": "Timely feedback, with a clear next step. Hover pauses the timeout; close or use an action to continue.",
-          "cpp_snippet": "auto* panel = new QWidget(this);\nauto* layout = new QVBoxLayout(panel);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(12);\nauto* retry = new QAction(\"Try again\", panel);\nQObject::connect(retry, &QAction::triggered, panel, [panel]() {\n    Toast::showToast(panel, \"Ready to retry\", Toast::Success, 2200, Toast::TopEnd);\n});\nauto* review = new QAction(\"Review file\", panel);\nQObject::connect(review, &QAction::triggered, panel, [panel]() {\n    Toast::showToast(panel, \"Choose a file under 20 MB\", Toast::Informational, 3500, Toast::TopEnd);\n});\nauto* row = new QWidget(panel);\nauto* buttons = new QHBoxLayout(row);\nbuttons->setContentsMargins(0, 0, 0, 0);\nbuttons->setSpacing(8);\nconst QStringList labels = {\"Saved\", \"Copied\", \"Warning\", \"Error\"};\nfor (int i = 0; i < labels.size(); ++i) {\n    auto* button = new Button(labels.at(i), row);\n    button->setObjectName(QStringLiteral(\"feedback%1\").arg(i));\n    buttons->addWidget(button);\n    QObject::connect(button, &Button::clicked, panel, [panel, retry, review, i]() {\n        for (Toast* previous : panel->window()->findChildren<Toast*>(\"feedbackToast\"))\n            previous->dismiss();\n        auto* toast = new Toast(panel);\n        toast->setObjectName(\"feedbackToast\");\n        toast->setDuration(5500);\n        toast->setPlacement(Toast::TopEnd);\n        toast->setClosable(true);\n        toast->setPauseOnHoverEnabled(true);\n        if (i == 0 || i == 1) {\n            toast->setSeverity(i == 0 ? Toast::Success : Toast::Informational);\n            toast->setMessage(i == 0 ? \"Changes saved\" : \"Link copied\");\n        } else if (i == 2) {\n            toast->setSeverity(Toast::Warning);\n            toast->setTitle(\"One file needs attention\");\n            toast->setMessage(\"archive.zip exceeds the 20 MB limit. The other files can continue.\");\n            toast->setAction(review);\n        } else {\n            toast->setSeverity(Toast::Error);\n            toast->setTitle(\"Upload interrupted\");\n            toast->setMessage(\"Your connection was lost. Try again to resume product-shot.png.\");\n            toast->setAction(retry);\n        }\n        QObject::connect(panel, &QObject::destroyed, toast, &QObject::deleteLater);\n        QObject::connect(toast, &Toast::dismissed, toast, &QObject::deleteLater);\n        toast->present(panel);\n    });\n}\nbuttons->addStretch();\nlayout->addWidget(row);",
+          "cpp_snippet": "auto* panel = new QWidget(this);\nauto* layout = new QVBoxLayout(panel);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(12);\nauto* retry = new QAction(\"Try again\", panel);\nQObject::connect(retry, &QAction::triggered, panel, [panel]() {\n    Toast::showToast(panel, \"Ready to retry\", Toast::Success, 2200, Toast::TopEnd);\n});\nauto* review = new QAction(\"Review file\", panel);\nQObject::connect(review, &QAction::triggered, panel, [panel]() {\n    Toast::showToast(panel, \"Choose a file under 20 MB\", Toast::Informational, 3500, Toast::TopEnd);\n});\nauto* card = new fluent::layout::Card(panel);\ncard->setAppearance(fluent::layout::Card::Canvas);\nauto* buttons = new QHBoxLayout(card);\nbuttons->setContentsMargins(16, 14, 16, 14);\nbuttons->setSpacing(8);\nconst QStringList labels = {\"Saved\", \"Copied\", \"Warning\", \"Error\"};\nfor (int i = 0; i < labels.size(); ++i) {\n    auto* button = new Button(labels.at(i), card);\n    button->setObjectName(QStringLiteral(\"feedback%1\").arg(i));\n    buttons->addWidget(button);\n    QObject::connect(button, &Button::clicked, panel, [panel, retry, review, i]() {\n        for (Toast* previous : panel->window()->findChildren<Toast*>(\"feedbackToast\"))\n            previous->dismiss();\n        auto* toast = new Toast(panel);\n        toast->setObjectName(\"feedbackToast\");\n        toast->setDuration(5500);\n        toast->setPlacement(Toast::TopEnd);\n        toast->setClosable(true);\n        toast->setPauseOnHoverEnabled(true);\n        if (i == 0 || i == 1) {\n            toast->setSeverity(i == 0 ? Toast::Success : Toast::Informational);\n            toast->setMessage(i == 0 ? \"Changes saved\" : \"Link copied\");\n        } else if (i == 2) {\n            toast->setSeverity(Toast::Warning);\n            toast->setTitle(\"One file needs attention\");\n            toast->setMessage(\"archive.zip exceeds the 20 MB limit. The other files can continue.\");\n            toast->setAction(review);\n        } else {\n            toast->setSeverity(Toast::Error);\n            toast->setTitle(\"Upload interrupted\");\n            toast->setMessage(\"Your connection was lost. Try again to resume product-shot.png.\");\n            toast->setAction(retry);\n        }\n        QObject::connect(panel, &QObject::destroyed, toast, &QObject::deleteLater);\n        QObject::connect(toast, &Toast::dismissed, toast, &QObject::deleteLater);\n        toast->present(panel);\n    });\n}\nlayout->addWidget(card, 0, Qt::AlignCenter);",
           "fill_available_width": true
         },
         {
@@ -11090,10 +11095,11 @@
         "box",
         "button",
         "button.",
+        "changes.",
         "conceals",
         "control",
         "credential",
-        "emits",
+        "editor",
         "expected",
         "explains",
         "field",
@@ -11111,15 +11117,16 @@
         "password-box-header-placeholder",
         "password-box-reveal-modes",
         "passwordbox",
-        "passwordchanged.",
+        "passwordchanged",
         "peek",
         "placeholder",
-        "presentation",
+        "reports",
         "reveal",
-        "separately",
-        "stored",
+        "setpassword",
         "text",
         "text-and-numeric-input",
+        "underlying",
+        "updates",
         "value",
         "visible",
         "whether",
@@ -11153,7 +11160,7 @@
         {
           "id": "password-box-basic",
           "title": "Password value",
-          "description": "Password text is stored separately from presentation and emits passwordChanged.",
+          "description": "setPassword() updates the underlying editor text; passwordChanged reports changes.",
           "cpp_snippet": "auto* passwordBox = new PasswordBox(this);\npasswordBox->setPassword(\"Fluent123\");\n\nconnect(passwordBox, &PasswordBox::passwordChanged,\n        statusLabel, [statusLabel](const QString& password) {\n            statusLabel->setText(QStringLiteral(\"Length: %1\").arg(password.size()));\n        });"
         },
         {
@@ -11393,7 +11400,7 @@
           "cpp_snippet": "auto* titleBar = new TitleBar(this);\ntitleBar->setTitleBarHeight(48);\ntitleBar->setContentWidget(toolbarContent);\n\nconnect(titleBar, &TitleBar::chromeGeometryChanged,\n        this, [titleBar] {\n            const auto exclusions = titleBar->dragExclusionRects();\n        });\n\ntitleBar->refreshChromeExclusions();",
           "preview_layout": {
             "orientation": "vertical",
-            "spacing": 8
+            "spacing": 10
           }
         }
       ]
@@ -11408,21 +11415,24 @@
       ],
       "search_terms": [
         "actions",
+        "applied",
         "assign",
+        "backdropstate",
         "bar",
         "behavior.",
         "built-in",
-        "caller-owned",
         "chrome",
         "content",
         "custom",
+        "effect",
+        "fallback.",
         "fluent",
         "host",
         "host.",
         "keeping",
-        "material",
         "mica",
-        "open",
+        "reports",
+        "request",
         "search",
         "theming.",
         "title",
@@ -11464,11 +11474,11 @@
         {
           "id": "window-content-host",
           "title": "Top-level content host",
-          "description": "Open a Fluent Window with Mica material and assign caller-owned content to its content host.",
+          "description": "Request Mica for a Fluent Window and assign content to its host. backdropState() reports the applied effect or fallback.",
           "cpp_snippet": "auto* window = new Window();\nwindow->setAttribute(Qt::WA_DeleteOnClose);\nwindow->setWindowTitle(\"Fluent window\");\nwindow->setCustomWindowChromeEnabled(true);\nwindow->setBackdropEffect(BackdropEffect::Mica);\n\nauto* content = new QWidget();\ncontent->setAutoFillBackground(false);\nwindow->setContentWidget(content);\nwindow->resize(640, 520);\nwindow->show();",
           "preview_layout": {
             "orientation": "vertical",
-            "spacing": 8
+            "spacing": 10
           }
         },
         {
@@ -11478,7 +11488,7 @@
           "cpp_snippet": "auto* window = new Window();\nwindow->setWindowTitle(\"Custom title bar\");\nwindow->setCustomWindowChromeEnabled(true);\nwindow->setBackdropEffect(BackdropEffect::Mica);\nwindow->setCaptionButtonToolTips(\"Minimize\", \"Maximize\",\n                                 \"Close\", \"Restore\");\nwindow->setCaptionButtonAccessibleNames(\"Minimize\", \"Maximize\",\n                                        \"Close\", \"Restore\");\n\nauto* titleBarContent = new QWidget(window->titleBar());\nauto* layout = new QHBoxLayout(titleBarContent);\nlayout->addWidget(titleLabel);\nlayout->addWidget(searchBox);\nlayout->addWidget(shareButton);\n\nwindow->titleBar()->setContentWidget(titleBarContent);\nwindow->titleBar()->refreshChromeExclusions();\nwindow->setContentWidget(pageContent);\nwindow->resize(720, 520);\nwindow->show();",
           "preview_layout": {
             "orientation": "vertical",
-            "spacing": 8
+            "spacing": 10
           }
         }
       ]
@@ -12230,7 +12240,7 @@
       "parent_id": "dialogs-flyouts",
       "group": "Dialogs & flyouts",
       "depth": 1,
-      "description": "A modal window surface that hosts arbitrary content above the app."
+      "description": "A same-window dialog surface with configurable modality and application-provided content."
     },
     {
       "id": "flyout",
@@ -12266,7 +12276,7 @@
       "parent_id": "dialogs-flyouts",
       "group": "Dialogs & flyouts",
       "depth": 1,
-      "description": "A standalone teaching tip in its own window that points a tail at a target and glides between them."
+      "description": "A same-window teaching tip that points a tail at a target and can glide between targets."
     },
     {
       "id": "layout",
@@ -12464,7 +12474,7 @@
       "parent_id": "navigation",
       "group": "Navigation",
       "depth": 1,
-      "description": "A control that hosts multiple pages of content behind a tab strip."
+      "description": "A tab strip with selection, closing and reordering; the application hosts and switches the pages."
     },
     {
       "id": "scrolling",

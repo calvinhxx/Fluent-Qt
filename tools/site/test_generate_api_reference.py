@@ -32,6 +32,7 @@ from api_sections import localized_description, reference_headers, reference_pat
 from public_api import resolve_type
 from documentation_guides import guides, guide_path
 from test_public_api import PublicApiTest
+from test_documentation_claims import DocumentationClaimsTest
 
 
 class PublicTypeDiscoveryTest(unittest.TestCase):
@@ -245,6 +246,42 @@ class VisualDocumentationTest(unittest.TestCase):
         rendered = component_docs.render_document(doc, self.documents, 'en')
         self.assertNotIn('<script>untrusted()</script>', rendered)
         self.assertIn('&lt;script&gt;untrusted()', rendered)
+
+    def test_playground_is_opt_in_and_keeps_bilingual_static_examples(self):
+        documents = {doc['id']: doc for doc in self.documents}
+        for language, label in (('en', 'Property preview'), ('zh', '属性动态预览')) :
+            button = component_docs.render_document(documents['button'], self.documents, language)
+            checkbox = component_docs.render_document(documents['checkbox'], self.documents, language)
+            self.assertIn('data-component="button" data-playground', button)
+            self.assertIn('aria-controls="playground-popover"', button)
+            self.assertIn(f'aria-label="{label}"', button)
+            self.assertIn('hidden></button>', button)
+            self.assertNotIn('id="playground-inspector"', button)
+            self.assertNotIn('id="playground-code-cpp"', button)
+            self.assertNotIn('data-playground-result', button)
+            self.assertLess(button.index('playground.js'), button.index('component.js'))
+            self.assertIn('data-playground-toggle', checkbox)
+            self.assertNotIn('id="playground-inspector"', checkbox)
+            for page in (button, checkbox):
+                self.assertIn('data-sample=', page)
+                self.assertIn('role="tabpanel"', page)
+                self.assertNotIn('<iframe', page)
+
+    def test_playgrounds_cover_all_core_components(self):
+        assets = component_docs.ROOT / "app/assets/playgrounds"
+        specs = json.loads((assets / "components.json").read_text())
+        routes = {spec['component'] for spec in specs} | {'button'}
+        optional = {'particle-backdrop', 'spatial-view', 'spatial-item', 'qml-view'}
+        expected = {doc['id'] for doc in self.catalog['components']
+                    if doc['id'] not in optional}
+        self.assertEqual(routes, expected)
+        self.assertEqual({p.stem for p in assets.glob('*.json')}, routes | {'components'})
+        for spec in specs:
+            generated = json.loads((assets / (spec['component'] + '.json')).read_text())
+            self.assertEqual(generated['recipe'], spec['recipe'])
+            self.assertEqual(generated['properties'], spec['properties'])
+            self.assertIn('%PARENT%', spec['recipe']['cpp']['setup'])
+            self.assertIn('%PARENT%', spec['recipe']['python']['setup'])
 
     def test_document_navigation_keeps_catalog_coverage_without_an_index_page(self):
         outputs = component_docs.generated_outputs(self.documents)

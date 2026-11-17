@@ -74,6 +74,11 @@ Modules upload artifacts into the caller's run. The
 main CI; its manual entry prepares both the website and Gallery for recovery.
 
 Website generation runs on pull requests as well as `main`. The planning job
+and website job install the pinned source formatter before preparing the
+playground factories and descriptors, so clean runners do not depend on a
+developer's local formatter environment. The Gallery language gate validates
+localized category labels as well as property and preset labels.
+The planning job
 regenerates the AI catalog and `site/api/catalog.json` from current source before
 running their consistency checks. The website module repeats this preparation
 before discovering preview recipes, then generates the
@@ -110,6 +115,11 @@ The WASM module retains the real embedded Gallery theme and Spatial contracts;
 changes to its runtime, shell, or browser helpers still select that module.
 The mixed UI/runtime scripts `site/site.js` and `site/spatial-showcase.js` also
 keep the WASM lane because they own real iframe lifecycle and host messages.
+The component preview templates, `component_docs.py`, and `site/api/`'s
+`component.js`, `component.css`, and `playground.js` use the same lane. Its Gallery
+browser group checks the Button property editor against the built Qt payload,
+including accepted values, code copying, stale replies, and recovery. Frontend
+changes can reuse a matching compiled payload; they still run the browser checks.
 
 WASM CI builds an external consumer from the installed SDK on every run. It can
 reuse the Gallery, examples and SDK when their complete build-input fingerprint

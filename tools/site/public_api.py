@@ -37,8 +37,16 @@ class Token:
 
 
 def documentation(comments):
+    # A scope-ending comment or section label must not displace an explicit
+    # description on the declaration that follows it.
+    brief = next((i for i in range(len(comments) - 1, -1, -1)
+                  if re.search(r'@brief\b', comments[i])), None)
+    if brief is not None:
+        comments = comments[brief:]
     lines = []
     for comment in comments:
+        if re.match(r'//\s*namespace\b', comment.strip()):
+            continue
         value = re.sub(r'^/\*+<?|\*/$|^///?<?', '', comment.strip())
         lines.extend(re.sub(r'^\s*\*\s?', '', line).strip() for line in value.splitlines())
     text = '\n'.join(lines).strip()

@@ -1,6 +1,7 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/app">
+        <file alias="playgrounds/button.json">assets/playgrounds/button.json</file>
         <file alias="samples/AsyncSearchSample.h">view/widgets/samples/AsyncSearchSample.h</file>
         <file alias="samples/CaretCompletionSample.h">view/widgets/samples/CaretCompletionSample.h</file>
         <file alias="samples/TransferSample.h">view/widgets/samples/TransferSample.h</file>

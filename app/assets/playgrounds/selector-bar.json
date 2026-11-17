@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "component": "selector-bar",
+  "title": "SelectorBar",
+  "className": "fluent::navigation::SelectorBar",
+  "surface": "host",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Design.h>\n#include <FluentQt/Foundation.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/MenusToolbars.h>\n#include <FluentQt/Navigation.h>\n#include <FluentQt/TextFields.h>\n#include <QAction>\n#include <QIcon>\n#include <QIconEngine>\n#include <QPainter>\n#include <QPixmap>\n#include <QVBoxLayout>",
+      "setup": "class GlyphEngine final : public QIconEngine {\npublic:\n    explicit GlyphEngine(const QString& glyph) : m_glyph(glyph) {}\n    QIconEngine* clone() const override { return new GlyphEngine(m_glyph); }\n    QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State) override {\n        QPixmap pm(size);\n        pm.fill(Qt::transparent);\n        fluent::FontIcon renderer(m_glyph);\n        renderer.setIconSize(qMin(size.width(), size.height()));\n        renderer.setEnabled(mode != QIcon::Disabled);\n        renderer.resize(size);\n        QPainter painter(&pm);\n        renderer.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);\n        return pm;\n    }\n    void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override {\n        const int dpr = painter->device() ? qMax(1, qRound(painter->device()->devicePixelRatioF())) : 1;\n        painter->drawPixmap(rect, pixmap(rect.size() * dpr, mode, state));\n    }\nprivate:\n    QString m_glyph;\n};\nauto* rootLayout = new QVBoxLayout(%PARENT%);\nrootLayout->setContentsMargins(0, 0, 0, 0);\nauto* card = new fluent::layout::Card(%PARENT%);\ncard->setAppearance(fluent::layout::Card::LayerAlt);\nrootLayout->addWidget(card);\nauto* cardLayout = new QVBoxLayout(card);\ncardLayout->setContentsMargins(12, 10, 12, 12);\ncardLayout->setSpacing(8);\nauto* control = new fluent::navigation::SelectorBar(card);\nauto* pageHost = new fluent::navigation::StackContentHost(card);\npageHost->setTransitionAnimationEnabled(false);\nstruct SelectorPageSpec {\n    QString title;\n    QString glyph;\n    QString summary;\n};\nconst QVector<SelectorPageSpec> specs{\n    {QStringLiteral(\"Inbox\"), Typography::Icons::Mail, QStringLiteral(\"Unread messages, mentions, and prioritized threads.\")},\n    {QStringLiteral(\"Calendar\"), Typography::Icons::Calendar, QStringLiteral(\"Upcoming design reviews and release syncs.\")},\n    {QStringLiteral(\"Tasks\"), Typography::Icons::List, QStringLiteral(\"Open action items assigned to this milestone.\")},\n    {QStringLiteral(\"Contacts\"), Typography::Icons::Contact, QStringLiteral(\"Contributors and external collaborators.\")},\n    {QStringLiteral(\"Documents\"), Typography::Icons::Document, QStringLiteral(\"Shared specifications, specs, and notes.\")},\n    {QStringLiteral(\"Flagged\"), Typography::Icons::Flag, QStringLiteral(\"Starred discussions requiring follow-up.\")},\n    {QStringLiteral(\"Settings\"), Typography::Icons::Settings, QStringLiteral(\"Sync interval and section visibility rules.\")},\n};\nfor (int i = 0; i < specs.size(); ++i) {\n    control->addItem(fluent::navigation::SelectorBarItem(specs.at(i).title, specs.at(i).glyph));\n    auto* page = new fluent::layout::Card(pageHost);\n    auto* pageLayout = new QVBoxLayout(page);\n    pageLayout->setContentsMargins(14, 12, 14, 12);\n    pageLayout->setSpacing(4);\n    auto* heading = new fluent::textfields::Label(specs.at(i).title, page);\n    heading->setFluentTypography(Typography::FontRole::BodyStrong);\n    auto* body = new fluent::textfields::Label(specs.at(i).summary, page);\n    body->setFluentTypography(Typography::FontRole::Caption);\n    body->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\n    body->setWordWrap(true);\n    pageLayout->addWidget(heading);\n    pageLayout->addWidget(body);\n    pageLayout->addStretch(1);\n    pageHost->insertPage(i, page);\n}\ncontrol->setSelectedIndex(0);\npageHost->setCurrentIndex(0, 0, false);\nauto* overflowMenu = new fluent::menus_toolbars::FluentMenu(QStringLiteral(\"Overflow\"), control);\nQObject::connect(control, &fluent::navigation::SelectorBar::currentChanged, pageHost, [pageHost](int index) {\n    if (index >= 0 && index < pageHost->count())\n        pageHost->setCurrentIndex(index, 0, false);\n});\nQObject::connect(control, &fluent::navigation::SelectorBar::overflowActivated, control, [control, overflowMenu](const QVector<int>& hiddenIndexes) {\n    if (hiddenIndexes.isEmpty())\n        return;\n    overflowMenu->clear();\n    for (int index : hiddenIndexes) {\n        const auto item = control->itemAt(index);\n        auto* action = overflowMenu->addAction(item.text);\n        if (!item.iconGlyph.isEmpty())\n            action->setIcon(QIcon(new GlyphEngine(item.iconGlyph)));\n        QObject::connect(action, &QAction::triggered, control, [control, index] {\n            control->setSelectedIndex(index);\n        });\n    }\n    const QRect anchor = control->overflowGeometry();\n    overflowMenu->popup(control->mapToGlobal(anchor.isValid() ? anchor.bottomLeft() : QPoint(0, control->height())));\n});\ncardLayout->addWidget(control);\ncardLayout->addWidget(pageHost, 1);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPoint, QRect, Qt\nfrom PySide6.QtGui import QAction, QIcon, QIconEngine, QPainter, QPixmap, QRegion\nfrom PySide6.QtWidgets import QVBoxLayout, QWidget",
+      "setup": "class GlyphEngine(QIconEngine):\n    def __init__(self, glyph):\n        super().__init__()\n        self._glyph = glyph\n    def clone(self):\n        return GlyphEngine(self._glyph)\n    def pixmap(self, size, mode, state):\n        pm = QPixmap(size)\n        pm.fill(Qt.GlobalColor.transparent)\n        renderer = fluentqt.FontIcon(self._glyph)\n        renderer.setIconSize(min(size.width(), size.height()))\n        renderer.setEnabled(mode != QIcon.Mode.Disabled)\n        renderer.resize(size)\n        painter = QPainter(pm)\n        renderer.render(painter, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)\n        painter.end()\n        return pm\n    def paint(self, painter, rect, mode, state):\n        dpr = max(1, round(painter.device().devicePixelRatioF())) if painter.device() else 1\n        painter.drawPixmap(rect, self.pixmap(rect.size() * dpr, mode, state))\n\nroot_layout = QVBoxLayout(%PARENT%)\nroot_layout.setContentsMargins(0, 0, 0, 0)\ncard = fluentqt.Card(%PARENT%)\ncard.setAppearance(fluentqt.Card.Appearance.LayerAlt)\nroot_layout.addWidget(card)\ncard_layout = QVBoxLayout(card)\ncard_layout.setContentsMargins(12, 10, 12, 12)\ncard_layout.setSpacing(8)\ncontrol = fluentqt.SelectorBar(card)\npage_host = fluentqt.StackContentHost(card)\npage_host.setTransitionAnimationEnabled(False)\nspecs = [\n    (\"Inbox\", fluentqt.Typography.Icons.Mail, \"Unread messages, mentions, and prioritized threads.\"),\n    (\"Calendar\", fluentqt.Typography.Icons.Calendar, \"Upcoming design reviews and release syncs.\"),\n    (\"Tasks\", fluentqt.Typography.Icons.List, \"Open action items assigned to this milestone.\"),\n    (\"Contacts\", fluentqt.Typography.Icons.Contact, \"Contributors and external collaborators.\"),\n    (\"Documents\", fluentqt.Typography.Icons.Document, \"Shared specifications, specs, and notes.\"),\n    (\"Flagged\", fluentqt.Typography.Icons.Flag, \"Starred discussions requiring follow-up.\"),\n    (\"Settings\", fluentqt.Typography.Icons.Settings, \"Sync interval and section visibility rules.\"),\n]\nfor i, (title, glyph, summary) in enumerate(specs):\n    control.addItem(fluentqt.SelectorBarItem(title, glyph))\n    page = fluentqt.Card(page_host)\n    page_layout = QVBoxLayout(page)\n    page_layout.setContentsMargins(14, 12, 14, 12)\n    page_layout.setSpacing(4)\n    heading = fluentqt.Label(title, page)\n    heading.setFluentTypography(fluentqt.FontRole.BodyStrong)\n    body = fluentqt.Label(summary, page)\n    body.setFluentTypography(fluentqt.FontRole.Caption)\n    body.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\n    body.setWordWrap(True)\n    page_layout.addWidget(heading)\n    page_layout.addWidget(body)\n    page_layout.addStretch(1)\n    page_host.insertPage(i, page)\ncontrol.setSelectedIndex(0)\npage_host.setCurrentIndex(0, 0, False)\noverflow_menu = fluentqt.FluentMenu(\"Overflow\", control)\ncontrol.currentChanged.connect(lambda index: page_host.setCurrentIndex(index, 0, False) if 0 <= index < page_host.count() else None)\ndef show_overflow(hidden_indexes):\n    if not hidden_indexes:\n        return\n    overflow_menu.clear()\n    for index in hidden_indexes:\n        item = control.itemAt(index)\n        action = overflow_menu.addAction(item.text)\n        if item.iconGlyph:\n            action.setIcon(QIcon(GlyphEngine(item.iconGlyph)))\n        action.triggered.connect(lambda checked=False, target=index: control.setSelectedIndex(target))\n    anchor = control.overflowGeometry()\n    overflow_menu.popup(control.mapToGlobal(anchor.bottomLeft() if anchor.isValid() else QPoint(0, control.height())))\ncontrol.overflowActivated.connect(show_overflow)\ncard_layout.addWidget(control)\ncard_layout.addWidget(page_host, 1)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "selectedIndex",
+      "property": "selectedIndex",
+      "setter": "setSelectedIndex",
+      "type": "number",
+      "label": {
+        "en": "Selected index",
+        "zh": "当前选项"
+      },
+      "category": "basic",
+      "minimum": 0,
+      "maximum": 6,
+      "step": 1,
+      "integer": true,
+      "control": "model-select"
+    },
+    {
+      "id": "overflowBehavior",
+      "property": "overflowBehavior",
+      "setter": "setOverflowBehavior",
+      "type": "enum",
+      "label": {
+        "en": "Overflow",
+        "zh": "溢出处理"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "backgroundVisible",
+      "property": "backgroundVisible",
+      "setter": "setBackgroundVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Background visible",
+        "zh": "显示背景"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "itemFontRole",
+      "property": "itemFontRole",
+      "setter": "setItemFontRole",
+      "type": "enum",
+      "label": {
+        "en": "Font role",
+        "zh": "字体角色"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    520,
+    196
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

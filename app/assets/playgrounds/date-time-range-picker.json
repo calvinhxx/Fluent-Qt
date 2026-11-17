@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "component": "date-time-range-picker",
+  "title": "DateTimeRangePicker",
+  "className": "fluent::date_time::DateTimeRangePicker",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/DateTime.h>\n#include <QDate>\n#include <QDateTime>\n#include <QTime>",
+      "setup": "auto* control = new fluent::date_time::DateTimeRangePicker(%PARENT%);\ncontrol->setStartDateTime(QDateTime(QDate(2026, 11, 13), QTime(9, 0)));\ncontrol->setEndDateTime(QDateTime(QDate(2026, 11, 16), QTime(17, 30)));\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QDate, QDateTime, QTime, Qt",
+      "setup": "control = fluentqt.DateTimeRangePicker(%PARENT%)\ncontrol.setStartDateTime(QDateTime(QDate(2026, 11, 13), QTime(9, 0)))\ncontrol.setEndDateTime(QDateTime(QDate(2026, 11, 16), QTime(17, 30)))\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "startDateTime",
+      "property": "startDateTime",
+      "setter": "setStartDateTime",
+      "type": "datetime",
+      "label": {
+        "en": "Start",
+        "zh": "开始时间"
+      },
+      "category": "basic",
+      "nullable": true,
+      "emptyValue": true
+    },
+    {
+      "id": "endDateTime",
+      "property": "endDateTime",
+      "setter": "setEndDateTime",
+      "type": "datetime",
+      "label": {
+        "en": "End",
+        "zh": "结束时间"
+      },
+      "category": "basic",
+      "nullable": true,
+      "emptyValue": true
+    },
+    {
+      "id": "timeEnabled",
+      "property": "timeEnabled",
+      "setter": "setTimeEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Include time",
+        "zh": "包含时间"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "placeholderText",
+      "property": "placeholderText",
+      "setter": "setPlaceholderText",
+      "type": "text",
+      "label": {
+        "en": "Placeholder",
+        "zh": "占位文本"
+      },
+      "category": "basic",
+      "maximumLength": 48,
+      "effectWhen": "!startDateTime && !endDateTime",
+      "effectHint": {
+        "en": "Shown when both start and end values are cleared.",
+        "zh": "清空开始和结束时间后显示。"
+      },
+      "effectFixture": {
+        "startDateTime": null,
+        "endDateTime": null
+      },
+      "enabledWhen": "!startDateTime && !endDateTime",
+      "disabledHint": {
+        "en": "Clear both Start and End times above to display the placeholder.",
+        "zh": "清空上方的“开始时间”和“结束时间”后显示占位提示。"
+      }
+    },
+    {
+      "id": "startLabelText",
+      "property": "startLabelText",
+      "setter": "setStartLabelText",
+      "type": "text",
+      "label": {
+        "en": "Start caption",
+        "zh": "开始标签"
+      },
+      "category": "icon",
+      "maximumLength": 24,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Labels the start input field inside the range popup.",
+        "zh": "设置打开范围弹层后开始输入栏的标签文案。"
+      }
+    },
+    {
+      "id": "endLabelText",
+      "property": "endLabelText",
+      "setter": "setEndLabelText",
+      "type": "text",
+      "label": {
+        "en": "End caption",
+        "zh": "结束标签"
+      },
+      "category": "icon",
+      "maximumLength": 24,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Labels the end input field inside the range popup.",
+        "zh": "设置打开范围弹层后结束输入栏的标签文案。"
+      }
+    },
+    {
+      "id": "presetsVisible",
+      "property": "presetsVisible",
+      "setter": "setPresetsVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Show presets",
+        "zh": "显示快捷预设"
+      },
+      "category": "icon",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Controls whether quick preset buttons appear inside the range popup.",
+        "zh": "控制打开范围弹层时是否显示左侧快捷时间预设列表。"
+      }
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    340,
+    48
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

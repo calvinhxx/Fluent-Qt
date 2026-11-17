@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "component": "multi-select-combobox",
+  "title": "MultiSelectComboBox",
+  "className": "fluent::basicinput::MultiSelectComboBox",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>\n#include <QStandardItemModel>",
+      "setup": "auto* control = new fluent::basicinput::MultiSelectComboBox(%PARENT%);\nauto* model = new QStandardItemModel(control);\nfor (const auto& text : {QStringLiteral(\"Design\"), QStringLiteral(\"Engineering\"), QStringLiteral(\"Research\"), QStringLiteral(\"Marketing\"), QStringLiteral(\"Security\")}) {\n    auto* item = new QStandardItem(text);\n    item->setData(text, Qt::UserRole);\n    model->appendRow(item);\n}\ncontrol->setModel(model);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItemModel, QStandardItem",
+      "setup": "control = fluentqt.MultiSelectComboBox(%PARENT%)\nmodel = QStandardItemModel(control)\nfor text in [\"Design\", \"Engineering\", \"Research\", \"Marketing\", \"Security\"]:\n    item = QStandardItem(text)\n    item.setData(text, Qt.ItemDataRole.UserRole)\n    model.appendRow(item)\ncontrol.setModel(model)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "isOpen",
+      "property": "isOpen",
+      "setter": "setIsOpen",
+      "type": "boolean",
+      "category": "basic",
+      "default": true,
+      "label": {
+        "en": "Open popup",
+        "zh": "展开下拉"
+      }
+    },
+    {
+      "id": "placeholderText",
+      "property": "placeholderText",
+      "setter": "setPlaceholderText",
+      "type": "text",
+      "label": {
+        "en": "Placeholder text",
+        "zh": "占位文字"
+      },
+      "category": "basic",
+      "default": "Choose teams",
+      "maximumLength": 320,
+      "effectWhen": "selectedRows.length == 0",
+      "effectHint": {
+        "en": "Shown when no items are selected.",
+        "zh": "未选择项目时显示；不会清除已有选择。"
+      },
+      "effectFixture": {
+        "selectedRows": []
+      },
+      "visualChangeExpected": true,
+      "enabledWhen": "selectedRows.length == 0",
+      "disabledHint": {
+        "en": "Clear all selected items below to display the placeholder.",
+        "zh": "取消选中下方所有项目后显示占位文字。"
+      }
+    },
+    {
+      "id": "searchEnabled",
+      "property": "searchEnabled",
+      "setter": "setSearchEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Search enabled",
+        "zh": "允许搜索"
+      },
+      "category": "basic",
+      "effectWhen": "isOpen",
+      "effectHint": {
+        "en": "Shown when the popup is open.",
+        "zh": "展开下拉后可见。"
+      },
+      "effectFixture": {
+        "isOpen": true
+      },
+      "visibleWhen": "isOpen"
+    },
+    {
+      "id": "searchPlaceholderText",
+      "property": "searchPlaceholderText",
+      "setter": "setSearchPlaceholderText",
+      "type": "text",
+      "label": {
+        "en": "Search placeholder text",
+        "zh": "搜索占位文字"
+      },
+      "category": "basic",
+      "maximumLength": 320,
+      "effectWhen": "isOpen && searchEnabled",
+      "effectHint": {
+        "en": "Shown when the popup and its search field are enabled.",
+        "zh": "展开下拉并启用搜索后可见。"
+      },
+      "effectFixture": {
+        "isOpen": true,
+        "searchEnabled": true
+      },
+      "visualChangeExpected": true,
+      "visibleWhen": "isOpen && searchEnabled"
+    },
+    {
+      "id": "selectAllVisible",
+      "property": "selectAllVisible",
+      "setter": "setSelectAllVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Select all visible",
+        "zh": "显示全选"
+      },
+      "category": "basic",
+      "effectWhen": "isOpen",
+      "effectHint": {
+        "en": "Shown when the popup is open.",
+        "zh": "展开下拉后可见。"
+      },
+      "effectFixture": {
+        "isOpen": true
+      },
+      "visibleWhen": "isOpen"
+    },
+    {
+      "id": "maximumVisibleItems",
+      "property": "maximumVisibleItems",
+      "setter": "setMaximumVisibleItems",
+      "type": "number",
+      "label": {
+        "en": "Visible row limit",
+        "zh": "最多显示行数"
+      },
+      "category": "basic",
+      "minimum": 1,
+      "maximum": 5,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "effectWhen": "isOpen",
+      "effectHint": {
+        "en": "Controls dropdown height, not the number of selected items. This example contains five rows.",
+        "zh": "控制下拉区高度，不限制选中数量；当前示例共 5 项。"
+      },
+      "default": 5,
+      "description": {
+        "en": "Controls dropdown height, not the number of selected items. This example contains five rows.",
+        "zh": "控制下拉区高度，不限制选中数量；当前示例共 5 项。"
+      },
+      "effect": "context",
+      "effectFixture": {
+        "isOpen": true
+      },
+      "visualChangeExpected": true,
+      "visibleWhen": "isOpen"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "selectedRows",
+      "property": "selectedRows",
+      "setter": "setSelectedRows",
+      "type": "multi-enum",
+      "options": [
+        "Design",
+        "Engineering",
+        "Research",
+        "Marketing",
+        "Security"
+      ],
+      "default": [],
+      "maximumItems": 5,
+      "category": "basic",
+      "label": {
+        "en": "Selected items",
+        "zh": "已选项目"
+      },
+      "description": {
+        "en": "Selection covers the whole model, including rows outside the visible scroll area.",
+        "zh": "选择作用于整个模型，包含滚动区域外的项目。"
+      }
+    }
+  ],
+  "previewSize": [
+    320,
+    480
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "surface": "host",
+  "sizeMode": "popupContent",
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

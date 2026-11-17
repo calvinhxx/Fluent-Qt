@@ -17,6 +17,19 @@ import generate_component_previews as previews
 
 
 class SiteArtifactTest(unittest.TestCase):
+    def test_ci_prepare_entries_install_the_required_formatter_first(self):
+        root = Path(__file__).resolve().parents[2]
+        for name in ('ci.yml', 'ci-site.yml'):
+            workflow = (root / '.github/workflows' / name).read_text(encoding='utf-8')
+            with self.subTest(workflow=name):
+                prepare = workflow.index('tools/site/build_site.py --prepare')
+                if name == 'ci.yml':
+                    self.assertIn('python3 -m venv .venv-format &&', workflow[:prepare])
+                    self.assertIn('.venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8 &&', workflow[:prepare])
+                else:
+                    self.assertIn('actions/setup-python@', workflow[:prepare])
+                    self.assertIn('pip install --disable-pip-version-check "clang-format==22.1.8"', workflow[:prepare])
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -215,8 +228,9 @@ class SiteGenerationTest(unittest.TestCase):
 
     def test_catalogs_are_generated_before_checks_and_invalid_sources_still_fail(self):
         self.build()
-        self.assertEqual(self.commands[:5], [
+        self.assertEqual(self.commands[:6], [
             ("tools/site/release_history.py",),
+            ("tools/site/generate_playgrounds.py",),
             ("tools/ai/generate_ai_catalog.py", "--project-root", str(build_site.ROOT)),
             ("tools/site/generate_api_reference.py", "--catalog-only"),
             ("tools/ai/generate_ai_catalog.py", "--project-root", str(build_site.ROOT), "--check"),

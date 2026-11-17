@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "component": "image-viewer",
+  "title": "ImageViewer",
+  "className": "fluent::scrolling::ImageViewer",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Scrolling.h>\n#include <QColor>\n#include <QImage>\n#include <QPainter>\n#include <QPixmap>",
+      "setup": "auto* control = new fluent::scrolling::ImageViewer(%PARENT%);\nQImage img(220, 128, QImage::Format_ARGB32);\nimg.fill(QColor(QStringLiteral(\"#1e3a5f\")));\nQPainter p(&img);\np.setPen(Qt::NoPen);\np.setBrush(QColor(QStringLiteral(\"#38bdf8\")));\np.drawRoundedRect(24, 24, 84, 80, 12, 12);\np.setBrush(QColor(QStringLiteral(\"#f59e0b\")));\np.drawEllipse(128, 30, 68, 68);\np.end();\ncontrol->setPixmap(QPixmap::fromImage(img));\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtGui import QColor, QImage, QPainter, QPixmap",
+      "setup": "control = fluentqt.ImageViewer(%PARENT%)\nimg = QImage(220, 128, QImage.Format.Format_ARGB32)\nimg.fill(QColor(\"#1e3a5f\"))\np = QPainter(img)\np.setPen(Qt.PenStyle.NoPen)\np.setBrush(QColor(\"#38bdf8\"))\np.drawRoundedRect(24, 24, 84, 80, 12, 12)\np.setBrush(QColor(\"#f59e0b\"))\np.drawEllipse(128, 30, 68, 68)\np.end()\ncontrol.setPixmap(QPixmap.fromImage(img))\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "fitMode",
+      "property": "fitMode",
+      "setter": "setFitMode",
+      "type": "enum",
+      "label": {
+        "en": "Fit mode",
+        "zh": "适应模式"
+      },
+      "category": "basic",
+      "effect": "context",
+      "effectHint": {
+        "en": "Manual preserves the current scale; adjust Zoom factor to change it.",
+        "zh": "手动模式沿用当前缩放；调整缩放比例可查看变化。"
+      }
+    },
+    {
+      "id": "zoomFactor",
+      "property": "zoomFactor",
+      "setter": "setZoomFactor",
+      "type": "number",
+      "label": {
+        "en": "Zoom factor",
+        "zh": "缩放倍率"
+      },
+      "category": "basic",
+      "minimum": 0.5,
+      "maximum": 3.0,
+      "step": 0.25,
+      "integer": false,
+      "control": "number",
+      "effectHint": {
+        "en": "Changing the zoom selects Manual mode. Automatic fit modes compute the zoom from available space.",
+        "zh": "调整倍率会切换到手动模式；自动适应模式根据可用空间计算倍率。"
+      },
+      "effect": "context",
+      "minimumFrom": "minZoomFactor",
+      "maximumFrom": "maxZoomFactor"
+    },
+    {
+      "id": "wheelAction",
+      "property": "wheelAction",
+      "setter": "setWheelAction",
+      "type": "enum",
+      "label": {
+        "en": "Wheel action",
+        "zh": "滚轮行为"
+      },
+      "category": "icon",
+      "effectHint": {
+        "en": "Applies to a discrete mouse wheel. Touchpad scrolling pans; Ctrl/Command + scroll zooms.",
+        "zh": "控制离散鼠标滚轮；触控板滚动用于平移，按住 Ctrl/⌘ 滚动可缩放。"
+      },
+      "effect": "behavior"
+    },
+    {
+      "id": "controlsVisibility",
+      "property": "controlsVisibility",
+      "setter": "setControlsVisibility",
+      "type": "enum",
+      "label": {
+        "en": "Overlay controls",
+        "zh": "悬浮控制栏"
+      },
+      "category": "appearance",
+      "previewInteraction": "hover",
+      "effectFixture": {
+        "zoomFactor": 2
+      },
+      "effect": "context",
+      "effectHint": {
+        "en": "Auto shows the toolbar on hover or focus; move the pointer and focus away to compare it with Always.",
+        "zh": "自动模式在悬停或聚焦时显示工具栏；移开鼠标并移走焦点可查看与常显模式的区别。"
+      }
+    },
+    {
+      "id": "zoomIndicatorEnabled",
+      "property": "zoomIndicatorEnabled",
+      "setter": "setZoomIndicatorEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Zoom indicator",
+        "zh": "缩放提示"
+      },
+      "category": "appearance",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Shows a transient indicator during zoom input when the toolbar is hidden.",
+        "zh": "工具栏隐藏时，在缩放交互中短暂显示比例提示。"
+      }
+    },
+    {
+      "id": "frameVisible",
+      "property": "frameVisible",
+      "setter": "setFrameVisible",
+      "type": "boolean",
+      "label": {
+        "en": "Frame visible",
+        "zh": "显示边框"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "transformationMode",
+      "property": "transformationMode",
+      "setter": "setTransformationMode",
+      "type": "enum",
+      "label": {
+        "en": "Sampling",
+        "zh": "插值方式"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance",
+      "previewInteraction": "hover"
+    }
+  ],
+  "previewSize": [
+    320,
+    180
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

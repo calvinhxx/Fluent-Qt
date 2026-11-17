@@ -31,6 +31,7 @@ def run(*arguments: str) -> None:
 def prepare_catalogs() -> None:
     """Refresh derived inputs before quality gates or preview recipe discovery."""
     run("tools/site/release_history.py")
+    run("tools/site/generate_playgrounds.py")
     run("tools/ai/generate_ai_catalog.py", "--project-root", str(ROOT))
     run("tools/site/generate_api_reference.py", "--catalog-only")
     run("tools/ai/generate_ai_catalog.py", "--project-root", str(ROOT), "--check")

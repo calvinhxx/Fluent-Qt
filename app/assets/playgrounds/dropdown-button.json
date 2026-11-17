@@ -1,0 +1,380 @@
+{
+  "version": 1,
+  "component": "dropdown-button",
+  "title": "DropDownButton",
+  "className": "fluent::basicinput::DropDownButton",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>\n#include <FluentQt/Design.h>\n#include <FluentQt/MenusToolbars.h>\n#include <QAction>\n#include <QPoint>",
+      "setup": "auto* control = new fluent::basicinput::DropDownButton(%PARENT%);\nauto* menu = new fluent::menus_toolbars::FluentMenu(QStringLiteral(\"Actions\"), control);\nmenu->addAction(new QAction(QStringLiteral(\"Copy\"), menu));\nmenu->addAction(new QAction(QStringLiteral(\"Share\"), menu));\ncontrol->setMenu(menu);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPoint\nfrom PySide6.QtGui import QAction",
+      "setup": "control = fluentqt.DropDownButton(%PARENT%)\nmenu = fluentqt.FluentMenu(\"Actions\", control)\nmenu.addAction(QAction(\"Copy\", menu))\nmenu.addAction(QAction(\"Share\", menu))\ncontrol.setMenu(menu)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "text",
+      "property": "text",
+      "setter": "setText",
+      "type": "text",
+      "label": {
+        "en": "Text",
+        "zh": "文字"
+      },
+      "category": "basic",
+      "default": "Continue",
+      "maximumLength": 320
+    },
+    {
+      "id": "fluentStyle",
+      "property": "fluentStyle",
+      "setter": "setFluentStyle",
+      "type": "enum",
+      "label": {
+        "en": "Fluent style",
+        "zh": "样式"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "fluentSize",
+      "property": "fluentSize",
+      "setter": "setFluentSize",
+      "type": "enum",
+      "label": {
+        "en": "Fluent size",
+        "zh": "尺寸"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "icon",
+      "setter": "setIconGlyph",
+      "type": "enum",
+      "default": "None",
+      "options": [
+        "None",
+        "Add",
+        "Save",
+        "CheckMark"
+      ],
+      "label": {
+        "en": "Icon",
+        "zh": "图标"
+      },
+      "category": "icon",
+      "group": "primary-icon"
+    },
+    {
+      "id": "fluentLayout",
+      "property": "fluentLayout",
+      "setter": "setFluentLayout",
+      "type": "enum",
+      "label": {
+        "en": "Fluent layout",
+        "zh": "图标位置"
+      },
+      "category": "icon",
+      "effectWhen": "hasIcon",
+      "effectHint": {
+        "en": "Add an icon to see the layout.",
+        "zh": "添加图标后可见布局效果。"
+      },
+      "effectFixture": {
+        "icon": "Save",
+        "fluentLayout": "IconAbove"
+      },
+      "group": "primary-icon",
+      "visibleWhen": "hasIcon"
+    },
+    {
+      "id": "checkable",
+      "property": "checkable",
+      "setter": "setCheckable",
+      "type": "boolean",
+      "label": {
+        "en": "Checkable",
+        "zh": "可选中"
+      },
+      "category": "appearance",
+      "effectHint": {
+        "en": "Enables toggle behavior. Change Checked to preview its selected appearance.",
+        "zh": "允许切换选中状态；调整“已选中”查看选中外观。"
+      },
+      "effect": "behavior",
+      "snapshotOnly": true
+    },
+    {
+      "id": "checked",
+      "property": "checked",
+      "setter": "setChecked",
+      "type": "boolean",
+      "label": {
+        "en": "Checked",
+        "zh": "已选中"
+      },
+      "category": "appearance",
+      "enabledWhen": "checkable",
+      "disabledHint": {
+        "en": "Enable Checkable before setting Checked.",
+        "zh": "先启用“可选中”，再设置选中状态。"
+      },
+      "effectFixture": {
+        "checkable": true
+      },
+      "snapshotOnly": true
+    },
+    {
+      "id": "contentOpacity",
+      "property": "contentOpacity",
+      "setter": "setContentOpacity",
+      "type": "number",
+      "label": {
+        "en": "Content opacity",
+        "zh": "不透明度"
+      },
+      "category": "appearance",
+      "minimum": 0,
+      "maximum": 1,
+      "step": 0.05,
+      "integer": false,
+      "control": "range"
+    },
+    {
+      "id": "isOpen",
+      "property": "isOpen",
+      "setter": "setIsOpen",
+      "type": "boolean",
+      "label": {
+        "en": "Open-state appearance",
+        "zh": "展开态外观"
+      },
+      "category": "appearance",
+      "description": {
+        "en": "Previews the button appearance while its menu is open. Menu contents are supplied separately with setMenu().",
+        "zh": "预览菜单展开时的按钮外观；菜单内容需由 setMenu() 单独绑定。"
+      },
+      "visualChangeExpected": true,
+      "snapshotOnly": true
+    },
+    {
+      "id": "chevronGlyph",
+      "property": "chevronGlyph",
+      "setter": "setChevronGlyph",
+      "type": "enum",
+      "glyphEnum": true,
+      "options": [
+        "ChevronDown",
+        "ChevronUp",
+        "ChevronRight",
+        "None"
+      ],
+      "label": {
+        "en": "Chevron icon",
+        "zh": "箭头图标"
+      },
+      "category": "icon",
+      "visualChangeExpected": true,
+      "group": "dropdown-indicator"
+    },
+    {
+      "id": "chevronOffsetX",
+      "property": "chevronOffset",
+      "setter": "setChevronOffset",
+      "pointAxis": "x",
+      "type": "number",
+      "integer": true,
+      "minimum": 0,
+      "maximum": 24,
+      "step": 1,
+      "control": "range",
+      "label": {
+        "en": "Chevron trailing inset",
+        "zh": "箭头尾侧留白"
+      },
+      "category": "icon",
+      "visualChangeExpected": true,
+      "group": "dropdown-indicator",
+      "visibleWhen": "chevronGlyph != 'None'"
+    },
+    {
+      "id": "chevronOffsetY",
+      "property": "chevronOffset",
+      "setter": "setChevronOffset",
+      "pointAxis": "y",
+      "type": "number",
+      "integer": true,
+      "minimum": -8,
+      "maximum": 8,
+      "step": 1,
+      "control": "range",
+      "label": {
+        "en": "Chevron vertical offset",
+        "zh": "箭头垂直偏移"
+      },
+      "category": "icon",
+      "visualChangeExpected": true,
+      "group": "dropdown-indicator",
+      "visibleWhen": "chevronGlyph != 'None'"
+    },
+    {
+      "id": "chevronSize",
+      "property": "chevronSize",
+      "setter": "setChevronSize",
+      "type": "number",
+      "label": {
+        "en": "Chevron size",
+        "zh": "下拉箭头大小"
+      },
+      "category": "icon",
+      "minimum": 8,
+      "maximum": 24,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "group": "dropdown-indicator",
+      "visibleWhen": "chevronGlyph != 'None'"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "iconRotation",
+      "property": "iconRotation",
+      "setter": "setIconRotation",
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180,
+      "step": 15,
+      "default": 0,
+      "label": {
+        "en": "Icon rotation",
+        "zh": "图标旋转"
+      },
+      "category": "icon",
+      "control": "range",
+      "effectWhen": "hasVisibleIcon",
+      "effectHint": {
+        "en": "Add an icon and choose a layout that displays it.",
+        "zh": "添加图标并选择显示图标的布局后可见。"
+      },
+      "effectFixture": {
+        "icon": "Save",
+        "fluentLayout": "IconAbove"
+      },
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon"
+    },
+    {
+      "id": "iconScale",
+      "property": "iconScale",
+      "setter": "setIconScale",
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 2,
+      "step": 0.1,
+      "default": 1,
+      "label": {
+        "en": "Icon scale",
+        "zh": "图标缩放"
+      },
+      "category": "icon",
+      "control": "range",
+      "effectWhen": "hasVisibleIcon",
+      "effectHint": {
+        "en": "Add an icon and choose a layout that displays it.",
+        "zh": "添加图标并选择显示图标的布局后可见。"
+      },
+      "effectFixture": {
+        "icon": "Save",
+        "fluentLayout": "IconAbove"
+      },
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon"
+    },
+    {
+      "id": "iconOffsetX",
+      "type": "number",
+      "integer": true,
+      "minimum": -8,
+      "maximum": 8,
+      "step": 1,
+      "default": 0,
+      "enabledWhen": "hasVisibleIcon",
+      "label": {
+        "en": "Icon offset X",
+        "zh": "图标水平偏移"
+      },
+      "category": "icon",
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon",
+      "property": "iconOffset",
+      "setter": "setIconOffset",
+      "pointAxis": "x",
+      "control": "range",
+      "effectFixture": {
+        "icon": "Save",
+        "fluentLayout": "IconBefore"
+      },
+      "effectWhen": "hasVisibleIcon",
+      "effectHint": {
+        "en": "Add an icon and choose a layout that displays it.",
+        "zh": "添加图标并选择显示图标的布局后可见。"
+      }
+    },
+    {
+      "id": "iconOffsetY",
+      "type": "number",
+      "integer": true,
+      "minimum": -8,
+      "maximum": 8,
+      "step": 1,
+      "default": 0,
+      "enabledWhen": "hasVisibleIcon",
+      "label": {
+        "en": "Icon offset Y",
+        "zh": "图标垂直偏移"
+      },
+      "category": "icon",
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon",
+      "property": "iconOffset",
+      "setter": "setIconOffset",
+      "pointAxis": "y",
+      "control": "range",
+      "effectFixture": {
+        "icon": "Save",
+        "fluentLayout": "IconBefore"
+      },
+      "effectWhen": "hasVisibleIcon",
+      "effectHint": {
+        "en": "Add an icon and choose a layout that displays it.",
+        "zh": "添加图标并选择显示图标的布局后可见。"
+      }
+    }
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

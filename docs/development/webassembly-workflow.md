@@ -176,6 +176,209 @@ preference is restored. The website theme button also cycles through all three
 values, so an embedded Gallery can enter high contrast without relying on an OS
 setting.
 
+### Component property editor
+
+Core component pages with a descriptor have a **Playground**
+button beside the page introduction. Activate it to open an independent centered interactive playground
+and property dialog. `/api/button/?playground=1` opens the playground directly.
+Button retains its styles and interaction-state examples; the other core component
+pages open independent fixtures with reproducible sample data.
+
+Button picking reads the existing Qt widget's public properties. Other core components
+use the published fixture, including their models and initial content. Opening the
+editor creates an isolated Qt WebAssembly iframe with its own component, model,
+focus and overlays. Browser pointer, keyboard, wheel and text input go directly
+to Qt. Native read-only and enabled properties determine which actions work.
+A bounded observer reads back changed values and updates the property fields and
+C++/PySide6 exports. Transient hover, focus and animation-frame progress are not exported as configuration.
+Automatic image fit owns its geometry-dependent zoom; exports only set an explicit
+zoom factor in Manual mode.
+Closing the dialog removes this runtime. Pointer re-entry restores the browser's
+focus to the canvas; Tab boundaries hand it back to the property dialog without
+replacing the component's input policy. Editing, resetting and closing the
+preview do not replace the original sample, change its values or rewrite its source.
+Optional extension component pages retain their existing examples without interactive
+playgrounds.
+
+`app/assets/playgrounds/button.json` defines the original Button editor.
+`app/assets/playgrounds/components.json` owns the other 94 core descriptors and
+their C++/PySide6 setup recipes. `tools/site/generate_playgrounds.py` derives
+individual descriptors, the resource list, and the compiled factory from these
+recipes; do not edit generated files. The generator uses the pinned C++ formatter.
+`GalleryComponentPlayground` applies an allowlisted patch to a real control, then reads back its values and produces matching C++ and
+PySide6 code. Unknown properties or invalid types reject the entire patch.
+Numeric values are clamped to the documented editor range. The editor does not
+change library defaults or expose arbitrary Qt method calls. ComboBox's selection
+editor reads labels, enabled flags and indices from the preview's actual model.
+The No selection entry maps to -1; code still uses numeric `setCurrentIndex()`.
+TreeSelect's selected-key editor follows the component's actual selection mode:
+Single uses radio choices with a clear option, while Multiple uses checkboxes.
+Switching modes reads back the component's retained selection before updating
+the editor, so a new single choice replaces the old choice in one click.
+Navigation, tab, step and page selection fields also derive their choices from
+the current control, and display labels or page numbers rather than a numeric
+slider. Enum options are deduplicated by their actual Qt value; slider tick
+labels follow the current orientation, so aliases are never presented as
+different actions. Related numeric bounds refresh after each accepted change,
+including the other RangeSlider endpoint, its minimum separation, and maximum
+rating. A fixed range disables the editor with an explanation. LineEdit's text
+editor also follows its current maximum length, so typing cannot offer text
+that the component would silently truncate. Special values such as automatic
+tick spacing have explicit labels while exports keep the
+numeric API value. RangeSlider exports both endpoints with `setValues()` so
+constructor defaults cannot clamp the first endpoint before the second is set.
+The Gallery language gate checks defaults, preset values, API names, and English
+copy. Explicit `zh` strings in descriptor descriptions, category labels, property
+labels, property descriptions, and preset labels are treated as website translations.
+
+Chart and collection playgrounds use a wider dialog and descriptor-owned data,
+layout and interaction categories. Their independent fixtures expose bounded
+row editors (32 rows), with meaningful labels for selection and tree paths.
+`GalleryPlaygroundData` owns the preview-only model adapters; native models
+remain owned by those fixtures, never borrowed from the original example.
+Chart data edits preserve ordered finite X values and accept a blank Y as a
+gap. Numeric cells remove redundant leading zeros during input and normalize
+complete numbers on blur; partial decimals, empty gaps and text labels keep
+their editing semantics. Tree data editors rename existing nodes without changing their hierarchy;
+Timeline edits retain timestamp and description roles. Native cell edits,
+column sorting and chart cursor movement read back into the panel and both
+exports. Data reset recreates and validates against a fresh fixture, including
+when all rows were removed. Invalid cell drafts remain visible until corrected
+or reset and are not exported.
+
+Fields follow actual component semantics: FlowView exposes minimum item size,
+so model/delegate hints can grow items above the chosen lower bound; GridView's maximum
+column count is a cap, subject to cell size and available width. Chart-only
+fields appear only for supported chart types. DrawerView uses a file-details
+scene composed from Fluent Card, Label, Button and ScrollView. Its open and
+close buttons update the same component state as the property panel. Size,
+corner radius, scrim strength and background blur use sliders. The initial
+background is clear; the detail body uses a matching Fluent surface and a floating
+scrollbar when needed. Its canvas is clipped to the
+fixed application surface, so all four animated edges keep the preview layout
+stable; it counts as an internal overlay for Escape handling.
+
+The browser bridge checks the parent window, origin, session, route, selection
+generation, and request identifier. Late replies cannot replace newer edits.
+Code copying waits for the accepted Qt state; a failed runtime disables editing
+and offers retry. All property inputs are disabled after a
+timeout; retry creates a fresh preview from the original example and restores
+each field's dependency rules. Unacknowledged edits are not exported.
+The dialog isolates background content and keeps Tab/Shift+Tab focus inside;
+its dropdown options are part of the same dialog and support arrow-key navigation.
+The live preview uses real pointer and keyboard input; it has no simulated state
+selector. Editing a property does not move focus, hover the component, or
+activate it. Property, code and dropdown scrollbars use a slim thumb at the
+scrollable surface's edge. The dialog keeps its height during ordinary input
+and popup opening/closing. Tall controls leave room for the independently
+scrollable property pane, and native popups paint above that pane without
+resizing it. The browser layout contract samples geometry on animation frames
+during menu selection and action feedback, and checks short/narrow viewports
+and access to the final overflowing field. The native canvas width is independent
+of popup bounds; display scaling uses the main surface width. A read-only
+geometry handoff updates the same-origin host before Qt commits a paint, while
+versioned geometry prevents a later property reply from restoring an old clip.
+Closing overlays retain their paint space until they are actually hidden.
+The browser contract checks canvas position/scale and pre-paint clip coverage,
+not just the outer dialog rectangle.
+
+Descriptors own property categories and semantic `group` membership. Button and
+its derivatives share the same renderer; main icons, dropdown indicators and
+query icons are separate groups. `visibleWhen` progressively reveals dependent
+editors without clearing their configured values. Icon transforms require an
+icon-bearing layout. All eight generic button families expose the six inherited
+layouts and the same rotation, scale and two-axis offset controls.
+`enabledWhen` only restricts
+invalid edits; `effectWhen` and localized `effectHint` describe when an editable
+value becomes visible. Behavior-only options explain their effect on input or
+later actions. `effectFixture` supplies reproducible prerequisites for the native
+and browser property audits. Value readback alone does not establish visual
+correctness: focus and hover checks also compare cropped browser pixels before
+and after real input. The native property audit records pixel changes separately;
+a recorded change is not automatically a visual approval.
+Placeholder fields remain editable while content is selected. ComboBox's editable
+fixture configures its real line editor too, and exports that setup. MultiSelectComboBox
+labels its row limit as popup height, independently of the full model's selections.
+Nullable date fields accept an empty value without a theme toggle.
+Popup fixtures marked `deferOpen` apply their configuration before opening, and
+reopen after placement changes. Current-state properties marked `afterOpen`
+(such as CommandBarFlyout expansion) are applied after opening in both the
+preview and exported code. Fixed-width text fixtures retain their viewport
+for elision; popup fixtures crop to the settled content while reserving enough
+host space to demonstrate their row limits.
+Closing restores the background's prior inert state and returns focus when appropriate.
+A null corner radius means **Follow theme**, and reset restores
+the selected component's starting values, including its theme-following radius.
+Closing, changing examples, and unloading the page release the preview copy.
+Removing an icon restores text layout; replacing an icon preserves an explicit
+TextOnly choice. Icon transforms remain available when an icon is selected again.
+Checkable changes toggle behavior; Checked changes the selected appearance.
+The independent Qt canvas is interactive. `focusVisual` permits a ring only
+while the enabled button has actual focus; editing that flag does not focus it.
+The field explains how to focus the preview with a click or Tab. Static native
+capture fixtures may simulate focus for image comparison; this is separate from
+the browser's live interaction contract.
+The embedded runtime clears its Qt focus when the browser moves focus to the
+property editor, and restores an eligible preview control on browser re-entry.
+This policy belongs to the isolated WebAssembly preview host, not Button.
+
+The TimePicker editor writes `selectedTime` through `setSelectedTime()`.
+`setTime()` retains its library contract: it updates the fallback/pending time
+without committing or replacing the selected time.
+
+Run the editor's real-browser regression after building the Gallery and
+generating the website:
+
+```bash
+python3 tools/site/test_component_playground_browser.py \
+  --wasm-root build/wasm --screenshots
+python3 tools/site/test_input_playgrounds_browser.py \
+  --wasm-root build/wasm --screenshots
+```
+
+It serves the website and existing WASM payload locally. The full browser smoke
+also runs this contract and retains its failure evidence under
+`build/wasm/component-playground-validation/`.
+The Button contract audits its 15 live descriptor fields, enum choices, numeric endpoints,
+icon/layout dependencies, selection, disabled input and exact reset behavior.
+It checks native canvas input, read-only/disabled behavior and both generated languages, and writes
+`cases.json` with the configurations and source used by the test.
+Both browser scripts disable Chromium's default headless scrollbar hiding, so
+captures include the real scrollbars and their position can be reviewed.
+The shared `playground_interaction_audit.py` contract visits all 95 registered descriptors and checks each visible
+editor, dependent fields, value readback, both generated languages, source
+isolation, and exact reset. Tag lists and selected items use bounded lists,
+and TextEdit has explicit adapters for its method-based content APIs.
+Collection routes also run `playground_scroll_audit.py`: large boundary wheel
+input must stay bounded, reverse input must move content during a return,
+and dragging the thumb must discard stale elastic displacement. These checks
+preserve selection and generated source, keep the preview's geometry fixed,
+and verify that the native collection and HTML properties scroll independently.
+The fixed tree fixture uses its overflowing horizontal axis; the native shared
+contract also tests a tree with vertical overflow.
+Narrow screens switch between Properties and Code and retain both language tabs
+and copying. Preview geometry respects each control's minimum size, then fits
+the live canvas into the browser stage. Open menus and popups expand its visible bounds. Full reset rebuilds the independent
+fixture to restore internal scroll, cursor and disclosure state.
+Live preview transitions run normally. Raster-only native comparison tests can
+settle finite animations before capture; application animation settings and the
+original Gallery examples remain application-owned.
+
+To compile and execute those exports against a matching Qt 6 static build and
+its PySide6 runtime, run the following with the build's Python interpreter:
+
+```bash
+PYTHONPATH=build/vcpkg-osx/python .venv-pyside69/bin/python \
+  tools/site/verify_playground_exports.py \
+  --audit build/component-playground/browser/cases.json \
+  --build-dir build/vcpkg-osx --qt-prefix /path/to/Qt/6.9.3/macos \
+  --output build/component-playground/exports
+```
+
+The verifier executes trusted local test exports, compares their actual
+properties, and compares C++/PySide6 rendered pixels. It does not infer native
+appearance from the browser result or execute untrusted downloaded snippets.
+
 ### Embedded Spatial sample
 
 `?showcase=spatial` starts the existing `spatial-view-scene` sample without the
@@ -427,6 +630,21 @@ The open-source WebAssembly binary statically links Qt and is distributed under
 GPLv3. FluentQt's own source remains MIT licensed. The deployed payload must
 retain the FluentQt, Qt, Emscripten, and bundled-asset notices plus the exact Qt
 corresponding-source link; see `THIRD_PARTY_NOTICES.md`.
+
+
+The interactive fixtures also export committed tri-state values, editable ComboBox
+text and items, collection selection and expansion, form values, navigation,
+transfer selections, splitter preferences and nullable date/time or number values.
+Collection selection options come from the actual model and honor its selection
+mode. The menu-backed DropDownButton fixture omits inherited toggle fields:
+its primary activation opens the attached menu. Action-only controls report their
+signals without inventing a new component value. Application-owned callbacks implement tab add/close, step navigation and
+StackView forward/back examples; generated snippets contain those callbacks.
+Recipe or component changes must exercise pointer and keyboard behavior in
+addition to setting properties. A successful setter/readback check alone does not
+prove that user interaction, focus, reset and exported state remain aligned.
+Native GUI checks and browser canvas checks are separate from platform and
+screen-reader certification. Record the tested Qt/browser/OS with the report.
 
 <!-- docs-nav:bottom:start -->
 ---

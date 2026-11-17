@@ -41,6 +41,13 @@ first glyph or QIcon promotes an unconfigured Button to IconBefore and reserves
 its width. Explicit TextOnly, including a selection made before setting the
 icon, remains text-only. The default-layout regression covers all eight generic
 button families, both glyph overloads, direct QIcon and Qt property assignment.
+All eight generic button families share horizontal icon/text painting as well
+as stacked painting. HyperlinkButton supports before/after and icon-only layouts,
+and its hover underline follows the painted text rectangle. SplitButton and
+ToggleSplitButton apply inherited rotation, scale and offset within their primary
+region. `ButtonIconConfigurationTest` verifies all six layouts with glyphs and
+QIcons in Light/Dark and both layout directions, including invisible transforms
+in TextOnly. These offscreen checks are not native visual approval.
 
 TreeView uses Fluent row selection and indicator painting instead of the macOS
 outer focus ring. The existing platform adapter disables only that native
@@ -346,6 +353,120 @@ lifetime. This development surface adds no public component classification or
 platform screen-reader certification. See the
 [region-editing workflow](gallery-preview-workflow.md#select-edit-and-compare-a-region).
 
+## Website component property editor
+
+Core component pages with playground descriptors have a labeled **Playground** button.
+The original Button examples retain keyboard focus targets: Enter selects a
+component, and Escape closes the dialog and restores focus to the launcher.
+The modal property dialog provides labeled text, multiline text, range,
+checkbox, multiple-choice and select controls, plus arrow-key radio groups for
+button style and size. Keyboard-navigable tabs group properties. Narrow screens provide Properties
+and Code views, including language selection and copying. Status
+messages announce loading, invalid input and copy errors. While the dialog is
+open, background content is inert and Tab/Shift+Tab stays within the dialog.
+Startup displays a labeled progress ring and noninteractive field/code
+placeholders, without an empty image or stale values from the previous session.
+Reduced motion stops the ring animation. Load failures replace the progress
+indicator with a retry action; closing remains available during loading.
+Dropdown listboxes remain inside the dialog, expose their field label and
+support arrow keys, Home/End and Escape. Closing restores the prior background
+state. Timeout and unavailable states disable property editing until a fresh
+preview is ready; retry reapplies field dependencies. The preview is a labeled,
+independent Qt canvas. The viewport-bounded dialog reserves visible space for
+the property editor; overflowing properties scroll within their pane with a
+stable scrollbar gutter. Native popups overlay the editor without changing
+the dialog or category positions, and action feedback does not shift layout.
+The preview supports
+native pointer, keyboard and text interaction. Tab
+and Shift+Tab cross the canvas boundary into the surrounding property dialog.
+A text editor configured to accept Tab keeps that native behavior; Ctrl+Tab can
+leave its canvas.
+Escape first lets an open native overlay close, then closes the outer dialog.
+Read-only and disabled behavior comes from the actual component. Its values
+update property fields and both code exports, including full tri-state and model
+selection. Hover and focus are native transient states, with no duplicate
+simulation controls. Action-only controls report their recent activation.
+The Button focus-ring field explains that actual focus is required. Browser
+pixel checks distinguish resting, focused, blurred and disabled states in
+Light/Dark and all three button styles. Hover effects are checked using real
+pointer movement. Conditional labels and progress values explain their visible
+state, and are checked separately from setter readback. ToggleSwitch uses an
+Off/On radio group and a shared text editor that updates both native state labels.
+An explicit disclosure exposes separate On/Off text fields; switching editing
+modes preserves their values. Unequal incoming labels open the separate mode.
+Native toggle input updates the state and exported code. Arrow keys operate the
+state selector, and the disclosure reports its expanded state.
+ComboBox selection lists the real model's text and a No selection entry, keeps
+disabled rows unavailable, and exports the corresponding numeric index. Property
+and code scrollbars sit at the pane's right edge with a narrow thumb.
+Display conditions no longer disable otherwise valid property edits. Icon
+groups distinguish main icons from dropdown indicators. Dependent icon editors
+are hidden until their icon and supported layout are selected, preserving their
+values and removing hidden inputs from keyboard navigation. Fieldset legends
+distinguish multiple groups within one tab; a single group uses the field labels
+directly. Group guidance is associated with the icon selector.
+Context
+notes are associated with their fields through `aria-describedby`; a truly
+unavailable edit, such as Checked without Checkable, explains its prerequisite.
+Hover-dependent effects can be inspected by moving the pointer over the component. Placeholder edits remain available with selected content, and
+nullable dates use an empty date input. MultiSelectComboBox distinguishes the
+popup row limit from selections across the whole model.
+Slider tick choices follow horizontal/vertical orientation and expose each Qt
+value once. Navigation and page selection editors use current item labels;
+changing item/page counts updates the available choices. TreeSelect uses native
+radio inputs for single selection (including clearing) and checkboxes for
+multiple selection, preserving label activation and keyboard navigation when
+the mode changes. Linked numeric editors
+refresh their bounds and explain when only one value is allowed; LineEdit's text
+editor follows its maximum length. Sentinel value
+labels also provide `aria-valuetext`, including automatic tick spacing and an
+unrated RatingControl. Slider and RangeSlider share tick painting on both axes,
+including the both-sides mode; focused pixel tests cover light and dark themes.
+
+Chart and collection playground data editors label each cell by field, row
+and column, retain focus while native state refreshes, and use human-readable
+item names for selection. Tree rows show their parent path. Data tables scroll
+horizontally within the property pane; the pane owns vertical scrolling.
+FlowView and GridView preserve the standard Qt model roles, including icons,
+color swatches, fonts, foregrounds and check states. Each row uses its own data;
+Gallery photo cards use application-owned delegates and illustrations. Selection
+remains visible in both light and dark themes when focus moves to the property
+editor. TreeView supplies a default text delegate with clickable expansion
+chevrons, visible selection, inherited text editing and disabled-state handling.
+Application-supplied delegates retain their own painting contract.
+The DrawerView playground has a labeled open button and an icon close button
+with an explicit accessible name. Its detail content uses Fluent ScrollView at
+small drawer sizes, while the close action stays in a separate header. The
+application surface and editor positions remain fixed during open/close motion.
+
+Collection views refresh disabled colors without replacing an application-set
+font. Focused ListView, GridView, FlowView and TreeView tests cover disabling
+and re-enabling with an explicit font.
+The shared collection scrolling controller bounds elastic travel from the first
+pixel input, accepts reverse scrolling during a return animation, and cancels
+elastic displacement when a scrollbar moves. ListView, FileListView, GridView,
+FlowView, TreeView and Timeline have shared input regressions for these behaviors
+and for momentum tails. Horizontal gestures retain the view's native horizontal
+scrolling path, including a tree whose rows fit vertically. Browser checks cover independent property-pane scrolling
+and stable preview geometry. Injected wheel and drag events do not establish
+physical trackpad or native desktop acceptance.
+An input axis without scrollable range leaves the active vertical elastic return
+intact. Narrow menu bars expose remaining actions through a named More menus
+button, including right-to-left layouts, without copying actions or taking
+ownership of their menus. Menu trigger/hide callbacks may destroy their menu
+or owning surface; focused lifetime regressions cover those paths.
+SplitButton and ToggleSplitButton keep the unchecked Subtle surface transparent
+in light, dark and disabled states; their split-action accessibility contract is
+unchanged. ScrollView keeps its floating bar above content when rendering a
+hidden ancestor, so raster comparison captures preserve the same overlay stacking.
+
+The preview runs in a separate Qt runtime, disposed when the dialog closes.
+The original sample retains its native input and accessibility behavior. Input
+fixtures include their own models and content. Browser checks cover all editor
+fields, real input for interactive families, source isolation and reset. Native
+checks cover input policies and ownership. Browser theme, narrow-layout and
+keyboard checks remain distinct from native platform and screen-reader approval.
+
 ## Cross-cutting motion and contrast contract
 
 QMLPlus reactive composition preserves the accessible roles and actions of its
@@ -435,6 +556,15 @@ drop optional padding and use an underline for keyboard focus, preserving the
 original leading hit target. `HyperlinkButton` shows keyboard focus by default
 and clears that cue on mouse input. Its inherited `focusVisual` opt-in remains
 available; the base Button default is unchanged.
+`Button::focusVisual` enables a cue only while the enabled button actually has
+focus. It does not force a focus preview. This also applies to Expander/CodeBlock
+headers, Stepper buttons, Toast actions and command presenters. Regression tests
+cover idle, Tab/Backtab focus, focus departure and disabled rendering in all three
+themes; collapsed code headers retain keyboard activation without idle outlines.
+The website playground uses an isolated Button subclass and the shared protected
+`paintButtonState` painter to preview focus without moving application focus.
+The preview keeps the same disabled, theme and opacity rules as a focused Button;
+ordinary buttons and Expander headers continue to use their actual focus state.
 `Slider` uses a single thumb outline for keyboard focus and updates its layout
 hints when handle or track dimensions change. Its minimum size accommodates
 the painted handle at both endpoints plus at least one handle's width of drag
@@ -585,7 +715,31 @@ cover LTR, RTL, and screen-edge containment.
 FluentMenu icons and checkmarks share the content inset and a centered icon
 slot. `TestMenu.cpp` checks painted bounds across Light/Dark themes, enabled,
 active and disabled icons, and fractional/integer paint scales. Switching to a
-checkmark preserves the label position and row surface.
+checkmark preserves the label position and row surface. Menu checkmarks and
+submenu chevrons center their visible glyphs; CommandBar overflow and
+CommandBarFlyout secondary rows center icons using extent-based coordinates.
+The Gallery Menu sample includes a keyboard-operable third level at
+Sort by → Order with mutually exclusive choices.
+
+FlipView independently repaints its navigation and page-indicator overlay when
+hover, current page, orientation or visibility settings change, including above
+opaque page widgets. Existing keyboard and accessibility actions remain intact. In the full
+Gallery, projected input now enters and leaves the complete widget ancestor
+chain, retaining common parents when moving between child widgets. The native
+FlipView regression exercises the real window input path in 2D and projected
+presentation, including live zoom, and checks the Gallery compositor output for arrows
+and mouse activation. C++ and PySide6 Gallery use the same containment rules.
+The projection router also preserves opted-in Qt hover enter/leave events and
+mouse timestamps/device identity. Hover paths are recomputed after reparenting;
+a receiver removed by an input callback is not used again. Full-window native
+regressions traverse all non-plugin catalog samples for parent/child hover,
+exercise original buttons, fields and collection views in 2D/projected modes at
+75%/100% zoom, and open the original Menu sample through all three popup levels.
+They cover disabled/read-only behavior, focus, selection, drag and release outside
+the pressed control. Implicit mouse capture retains Qt hover semantics while
+dragging; releasing the last button resolves hover at the actual pointer location,
+including outside the scene. These native checks skip on headless hosts; a skipped or
+isolated-preview run does not establish full Gallery input acceptance.
 
 `QmlView` is the optional QWidget host under **Plugins → QmlBridge**. It delegates
 input to its Quick scene; the application QML page supplies its own
@@ -878,6 +1032,8 @@ spinner, and height morph. The "Open GitHub issue" action is the only browser
 handoff; failures provide a retry action while keeping the ready ZIP capsule when
 available. Repeated input shares the pending operation. No recording or
 file-picker controls are required.
+
+`SelectorBar`, `Pivot`, and `Breadcrumb` keep logical accessible names and item metrics unchanged at default body/title roles while expanding row height for larger explicit typography roles and reserving horizontal elision safety margin in `SelectorBar` and `Pivot` so default labels render untruncated. `Stepper` retains checkable active `StepButton` focus and accessible states without painting a resting subtle fill box behind the active step marker. When a `ListView` with `TopToBottom` flow and `DecorationRole` icons is narrower than a compact navigation rail (`<= 72 px`), the default delegate centers the icon cleanly without clipped ellipsis while retaining `Qt::DisplayRole` text for assistive technology and property adapters. `AnnotatedScrollBar` defaults `labelColumnWidth` to `48 px` (with `Qt::ElideRight` elision when narrowed further) and centers its top and bottom carets horizontally over the indicator column so default four-digit labels and carets render cleanly without edge clipping. `Avatar` exposes `effectiveBackgroundColor()` and `effectiveForegroundColor()` for resolved theme/fallback inspection while retaining initials and accessible name behavior, and `ToolTip` uses the shared `0.18` `Elevation::Medium` overlay shadow intensity without altering keyboard or screen-reader contracts.
 
 <!-- docs-nav:bottom:start -->
 ---

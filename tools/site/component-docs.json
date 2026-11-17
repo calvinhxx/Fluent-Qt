@@ -75,8 +75,8 @@
             "zh": "交互状态"
           },
           "description": {
-            "en": "Buttons draw resting, hover, pressed, and disabled states from the current theme. The focus ring is off by default; call setFocusVisual(true) to show it.",
-            "zh": "按钮按当前主题绘制默认、悬停、按下和禁用状态。焦点环默认不显示，调用 setFocusVisual(true) 后才会绘制。"
+            "en": "Buttons repaint resting, hover, pressed and disabled states directly. Button has no animationEnabled switch. The focus ring is off by default; setFocusVisual(true) allows it to appear while the button has focus.",
+            "zh": "按钮直接重绘默认、悬停、按下和禁用状态，没有 animationEnabled 开关。焦点环默认关闭，setFocusVisual(true) 允许按钮在获得焦点时绘制焦点环。"
           }
         }
       ]

@@ -133,11 +133,11 @@ function setupPageOutline() {
 }
 setupPageOutline();
 
-function highlightCodeBlocks() {
+function highlightCodeBlocks(scope = document, prefix = 'fluent') {
   if (!window.CSS?.highlights || !window.Highlight) return;
   const buckets = { kw: [], str: [], cmt: [], num: [], typ: [] };
   const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(auto|const|constexpr|static|explicit|virtual|override|final|noexcept|int|double|float|qreal|bool|void|return|class|struct|enum|public|protected|private|using|namespace|new|true|false|nullptr|import|from|def|None|True|False|lambda|for|in|if|else)\b|\b([A-Z][A-Za-z0-9_]*)\b|\b(\d+(?:\.\d+)?)\b/g;
-  document.querySelectorAll('.code-example pre code, .api-member dt code').forEach(block => {
+  scope.querySelectorAll('.code-example pre code, .api-member dt code, pre code').forEach(block => {
     const node = block.firstChild;
     if (!node || node.nodeType !== Node.TEXT_NODE) return;
     const text = node.nodeValue;
@@ -153,7 +153,7 @@ function highlightCodeBlocks() {
     }
   });
   Object.entries(buckets).forEach(([key, ranges]) => {
-    if (ranges.length) CSS.highlights.set(`fluent-${key}`, new Highlight(...ranges));
+    CSS.highlights.set(`${prefix}-${key}`, new Highlight(...ranges));
   });
 }
 highlightCodeBlocks();
@@ -169,6 +169,7 @@ function createInteractivePreview() {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let frame, timer, session = 0, visible = false, state = 'idle';
   let outerFocus;
+  let playground;
   const selected = () => {
     const tab = root.querySelector('.state-tabs [aria-selected="true"]');
     return { route: root.dataset.component, sample: tab.dataset.sample, state: tab.dataset.state };
@@ -188,6 +189,7 @@ function createInteractivePreview() {
     status.textContent = next === 'loading' ? root.dataset.loadingLabel
       : next === 'error' ? root.dataset.failedLabel : '';
     if (frame) frame.tabIndex = next === 'ready' ? 0 : -1;
+    playground?.setReady(next === 'ready', next === 'error');
   }
   function release(next = 'idle') {
     ++session;
@@ -202,7 +204,7 @@ function createInteractivePreview() {
     post('component-visibility', { active: visible && !document.hidden });
   }
   const previewTheme = () => root.dataset.previewTheme || document.documentElement.dataset.theme;
-  function syncTheme() { post('theme', { theme: previewTheme() }); }
+  function syncTheme() { post('theme', { theme: previewTheme() }); playground?.themeChanged(); }
   function begin() {
     if (state === 'loading' || state === 'ready') return;
     release();
@@ -226,13 +228,24 @@ function createInteractivePreview() {
     timer = setTimeout(() => release('error'), 45000);
   }
   retry.addEventListener('click', begin);
+  playground = window.FluentQtPlayground?.create(root, {
+    example: selected,
+    send: (type, command, requestId, selection) => post(type, {example: selected(), selection, command, requestId})
+  });
   root.addEventListener('selectionchange', () => {
+    playground?.contextChanged();
     if (frame) post('component-select', { selection: selected() });
   });
   window.addEventListener('message', event => {
     if (!frame || event.origin !== location.origin || event.source !== frame.contentWindow
         || event.data?.source !== 'fluent-qt-gallery' || event.data.session !== String(session)) return;
-    if (event.data.state === 'content-size') {
+    if (event.data.state === 'picker-state') {
+      playground?.receiveTargets(event.data.detail);
+    } else if (event.data.state === 'component-pointer') {
+      playground?.originalPointer();
+    } else if (event.data.state === 'playground-state') {
+      playground?.receive(event.data.detail);
+    } else if (event.data.state === 'content-size') {
       // CSS clamps the sample's own height between the document minimum and the viewport.
       const height = Number(event.data.detail?.height);
       if (Number.isFinite(height) && height > 0) root.style.setProperty('--live-height', `${Math.ceil(height)}px`);
@@ -332,7 +345,7 @@ forcedColorsQuery.addEventListener('change', inheritTheme);
 inheritTheme();
 
 document.querySelectorAll("[data-tabs]").forEach(group => {
-  const tabs = [...group.querySelectorAll('[role="tab"]')];
+  const tabs = [...group.querySelectorAll('[role="tab"]')].filter(tab => tab.closest('[data-tabs]') === group);
   function select(tab, focus = false) {
     tabs.forEach(candidate => {
       const active = candidate === tab;

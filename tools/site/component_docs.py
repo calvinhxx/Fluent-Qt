@@ -259,7 +259,7 @@ def api_search(language):
     return f'<label class="api-search"><span class="visually-hidden">{label}</span><input type="search" data-api-filter placeholder="{label}" autocomplete="off"></label><p data-api-empty hidden role="status">{empty}</p>'
 
 
-def render_shell(doc, documents, page, language, title, description, body, toc, neighbors='', eyebrow=None):
+def render_shell(doc, documents, page, language, title, description, body, toc, neighbors='', eyebrow=None, playground_toggle=''):
     """Wrap a document body in the shared shell; non-component pages name their section above the title."""
     words = WORDS[language]
     if eyebrow is None:
@@ -272,6 +272,8 @@ def render_shell(doc, documents, page, language, title, description, body, toc, 
         'directory': component_directory(doc, documents, page, language), 'neighbors': neighbors,
         'style': asset('api/component.css', page), 'navigation_style': asset('api/navigation.css', page),
         'script': asset('api/component.js', page), 'site_navigation': site_navigation(page, language),
+        'playground_script': asset('api/playground.js', page),
+        'playground_toggle': playground_toggle,
         'breadcrumb': breadcrumb(page, language, title), 'app_icon': relative('assets/app-icon-64.png', page),
         'eyebrow': f'<p class="document-eyebrow">{escape(eyebrow)}</p>' if eyebrow else '',
         'version_notice': document_notice(doc['id'], doc.get('source'), page, language),
@@ -299,7 +301,13 @@ def render_document(doc, documents, language):
         panels.append(f'<div class="preview-panel" role="tabpanel" aria-labelledby="tab-{pid}" id="{pid}"{" hidden" if i else ""}>{picture(preview, page, language, i == 0)}</div>')
     # The live example may grow to its sample's reported height, never below this.
     minimum = doc.get('minimum_preview_height', 196)
+    playground = (ROOT / 'app/assets/playgrounds' / (doc['id'] + '.json')).is_file()
+    customize = '属性动态预览' if language == 'zh' else 'Property preview'
     preview_values = {**words, 'component_id': doc['id'], 'runtime_url': relative('gallery/', page) + '/',
+        'playground_attribute': (' data-playground data-playground-layout="data"' if doc['component']['category_id'] in ('charts', 'collections') else ' data-playground') if playground else '',
+        'playground_toggle': (f'<button type="button" class="playground-toggle" data-playground-toggle '
+            f'aria-label="{customize}" title="{customize}" aria-pressed="false" aria-expanded="false" '
+            'aria-controls="playground-popover" hidden></button>') if playground else '',
         'title': escape(title), 'preview_light': doc['previews'][0]['images']['light']['background'],
         'preview_dark': doc['previews'][0]['images']['dark']['background'],
         'preview_min': minimum, 'preview_height': min(720, max(minimum,
@@ -317,7 +325,8 @@ def render_document(doc, documents, language):
     category = next(c for c in doc['catalog']['categories'] if c['id'] == component['category_id'])
     return render_shell(doc, documents, page, language, title, doc['description'][language], body,
                         [('appearance', words['overview']), ('usage', words['usage']), ('api', 'API')], ''.join(neighbors),
-                        eyebrow=category_label(category, category_owners(doc['catalog']), language))
+                        eyebrow=category_label(category, category_owners(doc['catalog']), language),
+                        playground_toggle=preview_values['playground_toggle'])
 
 
 def render_guide(guide, documents, catalog, language):

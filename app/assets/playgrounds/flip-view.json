@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "component": "flip-view",
+  "previewSize": [
+    520,
+    270
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Pages",
+        "zh": "页面"
+      }
+    },
+    {
+      "id": "icon",
+      "label": {
+        "en": "Layout",
+        "zh": "布局"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Interaction & appearance",
+        "zh": "交互与外观"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Collections.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/TextFields.h>\n#include <FluentQt/Design.h>\n#include <QVBoxLayout>",
+      "setup": "auto* control = new fluent::collections::FlipView(%PARENT%);\nconst struct { QString badge; QString title; QString summary; } slides[] = {\n    {QStringLiteral(\"Slide 1 of 3\"), QStringLiteral(\"Sunrise\"), QStringLiteral(\"Warm amber highlights and hero-banner contrast check.\")},\n    {QStringLiteral(\"Slide 2 of 3\"), QStringLiteral(\"Ocean\"), QStringLiteral(\"Balanced blue palette for calm workspace surfaces.\")},\n    {QStringLiteral(\"Slide 3 of 3\"), QStringLiteral(\"Forest\"), QStringLiteral(\"Natural green accents with high-legibility captions.\")},\n};\nfor (const auto& slide : slides) {\n    auto* page = new fluent::layout::Card;\n    auto* lay = new QVBoxLayout(page);\n    lay->setContentsMargins(20, 16, 20, 16);\n    lay->setSpacing(6);\n    auto* badge = new fluent::textfields::Label(slide.badge, page);\n    badge->setFluentTypography(Typography::FontRole::Caption);\n    badge->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\n    lay->addWidget(badge);\n    auto* heading = new fluent::textfields::Label(slide.title, page);\n    heading->setFluentTypography(Typography::FontRole::Subtitle);\n    lay->addWidget(heading);\n    auto* summary = new fluent::textfields::Label(slide.summary, page);\n    summary->setWordWrap(true);\n    summary->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\n    lay->addWidget(summary);\n    lay->addStretch();\n    control->addPage(page, fluent::WidgetOwnership::Owned);\n}\ncontrol->setCurrentIndex(0);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QVBoxLayout",
+      "setup": "control = fluentqt.FlipView(%PARENT%)\nfor badge_text, title, summary_text in [\n    (\"Slide 1 of 3\", \"Sunrise\", \"Warm amber highlights and hero-banner contrast check.\"),\n    (\"Slide 2 of 3\", \"Ocean\", \"Balanced blue palette for calm workspace surfaces.\"),\n    (\"Slide 3 of 3\", \"Forest\", \"Natural green accents with high-legibility captions.\"),\n]:\n    page = fluentqt.Card()\n    lay = QVBoxLayout(page)\n    lay.setContentsMargins(20, 16, 20, 16)\n    lay.setSpacing(6)\n    badge = fluentqt.Label(badge_text, page)\n    badge.setFluentTypography(fluentqt.FontRole.Caption)\n    badge.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\n    lay.addWidget(badge)\n    heading = fluentqt.Label(title, page)\n    heading.setFluentTypography(fluentqt.FontRole.Subtitle)\n    lay.addWidget(heading)\n    summary = fluentqt.Label(summary_text, page)\n    summary.setWordWrap(True)\n    summary.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\n    lay.addWidget(summary)\n    lay.addStretch()\n    control.addOwnedPage(page)\ncontrol.setCurrentIndex(0)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "currentIndex",
+      "property": "currentIndex",
+      "setter": "setCurrentIndex",
+      "category": "basic",
+      "type": "number",
+      "label": {
+        "en": "Current page",
+        "zh": "当前页"
+      },
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "step": 1,
+      "integer": true,
+      "control": "model-select"
+    },
+    {
+      "id": "orientation",
+      "property": "orientation",
+      "setter": "setOrientation",
+      "category": "icon",
+      "type": "enum",
+      "label": {
+        "en": "Orientation",
+        "zh": "方向"
+      },
+      "default": "Horizontal"
+    },
+    {
+      "id": "showNavigationButtons",
+      "property": "showNavigationButtons",
+      "setter": "setShowNavigationButtons",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Navigation buttons",
+        "zh": "显示导航按钮"
+      },
+      "default": true,
+      "previewInteraction": "hover"
+    },
+    {
+      "id": "showPageIndicator",
+      "property": "showPageIndicator",
+      "setter": "setShowPageIndicator",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Page indicator",
+        "zh": "显示页码指示"
+      },
+      "default": true
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "title": "FlipView",
+  "verticalPreviewSize": [
+    380,
+    300
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

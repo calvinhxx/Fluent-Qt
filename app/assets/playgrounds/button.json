@@ -1,0 +1,363 @@
+{
+  "version": 1,
+  "component": "button",
+  "properties": [
+    {
+      "id": "text",
+      "property": "text",
+      "setter": "setText",
+      "type": "text",
+      "default": "Continue",
+      "maximumLength": 160,
+      "label": {
+        "en": "Text",
+        "zh": "文字"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "fluentStyle",
+      "property": "fluentStyle",
+      "setter": "setFluentStyle",
+      "type": "enum",
+      "default": "Standard",
+      "options": [
+        "Standard",
+        "Accent",
+        "Subtle"
+      ],
+      "cppPrefix": "Button::",
+      "pythonPrefix": "fluentqt.Button.ButtonStyle.",
+      "label": {
+        "en": "Style",
+        "zh": "样式"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "fluentSize",
+      "property": "fluentSize",
+      "setter": "setFluentSize",
+      "type": "enum",
+      "default": "StandardSize",
+      "options": [
+        "Small",
+        "StandardSize",
+        "Large"
+      ],
+      "cppPrefix": "Button::",
+      "pythonPrefix": "fluentqt.Button.ButtonSize.",
+      "label": {
+        "en": "Size",
+        "zh": "尺寸"
+      },
+      "description": {
+        "en": "Changes height and padding; font size is independent.",
+        "zh": "调整高度和留白，字体大小独立设置。"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "default": true,
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "icon",
+      "type": "enum",
+      "default": "None",
+      "options": [
+        "None",
+        "Add",
+        "CheckMark",
+        "Save"
+      ],
+      "label": {
+        "en": "Icon",
+        "zh": "图标"
+      },
+      "category": "icon",
+      "group": "primary-icon"
+    },
+    {
+      "id": "cornerRadius",
+      "type": "number",
+      "control": "range",
+      "nullable": true,
+      "integer": true,
+      "minimum": 0,
+      "maximum": 24,
+      "step": 1,
+      "default": null,
+      "advanced": true,
+      "api": "cornerRadii",
+      "label": {
+        "en": "Corner radius",
+        "zh": "圆角"
+      },
+      "description": {
+        "en": "Use the theme radius or override all four corners.",
+        "zh": "跟随主题，或统一设置四个角。"
+      },
+      "effectHint": {
+        "en": "The Subtle background and its corners appear on hover or when checked.",
+        "zh": "轻量样式的背景和圆角在悬停或选中时可见。"
+      },
+      "effectWhen": "fluentStyle != 'Subtle' || checked",
+      "category": "appearance"
+    },
+    {
+      "id": "contentOpacity",
+      "property": "contentOpacity",
+      "setter": "setContentOpacity",
+      "type": "number",
+      "control": "range",
+      "minimum": 0,
+      "maximum": 1,
+      "step": 0.05,
+      "default": 1,
+      "advanced": true,
+      "label": {
+        "en": "Opacity",
+        "zh": "不透明度"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "fluentLayout",
+      "property": "fluentLayout",
+      "setter": "setFluentLayout",
+      "type": "enum",
+      "default": "TextOnly",
+      "options": [
+        "TextOnly",
+        "IconBefore",
+        "IconAfter",
+        "IconOnly",
+        "IconAbove",
+        "IconBelow"
+      ],
+      "cppPrefix": "Button::",
+      "pythonPrefix": "fluentqt.Button.ButtonLayout.",
+      "enabledWhen": "hasIcon",
+      "advanced": true,
+      "label": {
+        "en": "Icon placement",
+        "zh": "图标位置"
+      },
+      "category": "icon",
+      "group": "primary-icon",
+      "visibleWhen": "hasIcon"
+    },
+    {
+      "id": "checkable",
+      "property": "checkable",
+      "setter": "setCheckable",
+      "type": "boolean",
+      "default": false,
+      "advanced": true,
+      "label": {
+        "en": "Checkable",
+        "zh": "可选中"
+      },
+      "description": {
+        "en": "Enables toggling. Use Checked to preview the selected appearance.",
+        "zh": "开启后支持选中状态；通过“已选中”属性预览选中外观。"
+      },
+      "effectHint": {
+        "en": "Allows clicks to toggle selection; enabling this option does not select the button.",
+        "zh": "允许点击按钮切换选中状态；开启此选项不会自动选中。"
+      },
+      "effect": "behavior",
+      "category": "appearance"
+    },
+    {
+      "id": "checked",
+      "property": "checked",
+      "setter": "setChecked",
+      "type": "boolean",
+      "default": false,
+      "enabledWhen": "checkable",
+      "advanced": true,
+      "label": {
+        "en": "Checked",
+        "zh": "已选中"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "focusVisual",
+      "property": "focusVisual",
+      "setter": "setFocusVisual",
+      "type": "boolean",
+      "default": false,
+      "advanced": true,
+      "label": {
+        "en": "Ring on focus",
+        "zh": "聚焦时边框"
+      },
+      "previewInteraction": "focus",
+      "effectHint": {
+        "en": "When enabled, click or Tab to the preview button to see the ring. It disappears on blur or when disabled.",
+        "zh": "开启后，点击预览按钮或用 Tab 聚焦才显示边框；失去焦点或禁用时隐藏。"
+      },
+      "effect": "behavior",
+      "category": "appearance"
+    },
+    {
+      "id": "interactionState",
+      "property": "interactionState",
+      "setter": "setInteractionState",
+      "type": "enum",
+      "default": "Rest",
+      "options": [
+        "Rest",
+        "Hover",
+        "Pressed",
+        "Disabled"
+      ],
+      "cppPrefix": "Button::",
+      "pythonPrefix": "fluentqt.Button.InteractionState.",
+      "advanced": true,
+      "label": {
+        "en": "Preview state",
+        "zh": "模拟状态"
+      },
+      "description": {
+        "en": "Simulates the painted state. Enabled controls whether the actual component accepts input.",
+        "zh": "模拟绘制状态；实际组件是否响应输入由“启用”属性决定。"
+      },
+      "snapshotOnly": true,
+      "category": "appearance"
+    },
+    {
+      "id": "iconRotation",
+      "property": "iconRotation",
+      "setter": "setIconRotation",
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180,
+      "step": 15,
+      "default": 0,
+      "enabledWhen": "hasVisibleIcon",
+      "advanced": true,
+      "label": {
+        "en": "Icon rotation",
+        "zh": "图标旋转"
+      },
+      "category": "icon",
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon"
+    },
+    {
+      "id": "iconScale",
+      "property": "iconScale",
+      "setter": "setIconScale",
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 2,
+      "step": 0.1,
+      "default": 1,
+      "enabledWhen": "hasVisibleIcon",
+      "advanced": true,
+      "label": {
+        "en": "Icon scale",
+        "zh": "图标缩放"
+      },
+      "category": "icon",
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon"
+    },
+    {
+      "id": "iconOffsetX",
+      "type": "number",
+      "integer": true,
+      "minimum": -8,
+      "maximum": 8,
+      "step": 1,
+      "default": 0,
+      "enabledWhen": "hasVisibleIcon",
+      "advanced": true,
+      "api": "iconOffset.x",
+      "label": {
+        "en": "Icon offset X",
+        "zh": "图标水平偏移"
+      },
+      "category": "icon",
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon"
+    },
+    {
+      "id": "iconOffsetY",
+      "type": "number",
+      "integer": true,
+      "minimum": -8,
+      "maximum": 8,
+      "step": 1,
+      "default": 0,
+      "enabledWhen": "hasVisibleIcon",
+      "advanced": true,
+      "api": "iconOffset.y",
+      "label": {
+        "en": "Icon offset Y",
+        "zh": "图标垂直偏移"
+      },
+      "category": "icon",
+      "group": "primary-icon",
+      "visibleWhen": "hasVisibleIcon"
+    }
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Default example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    },
+    {
+      "id": "primary",
+      "label": {
+        "en": "Primary action",
+        "zh": "主要操作"
+      },
+      "values": {
+        "text": "Continue",
+        "fluentStyle": "Accent",
+        "fluentSize": "Large"
+      }
+    },
+    {
+      "id": "subtle",
+      "label": {
+        "en": "Quiet action",
+        "zh": "轻量操作"
+      },
+      "values": {
+        "text": "Learn more",
+        "fluentStyle": "Subtle"
+      }
+    },
+    {
+      "id": "with-icon",
+      "label": {
+        "en": "Action with an icon",
+        "zh": "带图标操作"
+      },
+      "values": {
+        "text": "Add item",
+        "fluentStyle": "Accent",
+        "icon": "Add",
+        "fluentLayout": "IconBefore"
+      }
+    }
+  ]
+}

@@ -13,8 +13,8 @@
 
 namespace fluent::spatial {
 /**
- * @brief OpenGL-backed host for a small number of perspective-transformed live widgets.
- * zh_CN: 使用 OpenGL 承载少量具有透视变换的真实控件。
+ * @brief Host for a small number of perspective-transformed widgets, with OpenGL and raster backends.
+ * zh_CN: 承载少量具有透视变换的控件，提供 OpenGL 和光栅绘制后端。
  *
  * Compose a Card with normal Fluent controls, then add the whole Card with addWidget().
  * Its returned SpatialItem controls that surface and all of its children.

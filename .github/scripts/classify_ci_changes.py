@@ -121,6 +121,12 @@ WASM_CI_FILES = {
     ".github/scripts/wasm_chart_workbench.py",
     ".github/scripts/wasm_data_grid.py",
     ".github/scripts/wasm_diagnostics.py",
+    ".github/scripts/wasm_component_playground.py",
+    "tools/site/test_component_playground_browser.py",
+    "tools/site/playground_interaction_audit.py",
+    "tools/site/playground_scroll_audit.py",
+    "tools/site/test_input_playgrounds_browser.py",
+    "tools/site/generate_playgrounds.py",
     ".github/scripts/wasm_auto_suggest.py",
     ".github/scripts/wasm_tree_select.py",
     ".github/scripts/wasm_tag_input.py",
@@ -135,6 +141,12 @@ WASM_CI_FILES = {
     # These mixed UI/runtime hosts own iframe lifecycle and messages to WASM.
     "site/site.js",
     "site/spatial-showcase.js",
+    "site/api/component.js",
+    "site/api/component.css",
+    "site/api/playground.js",
+    "tools/site/component-preview.template.html",
+    "tools/site/component.template.html",
+    "tools/site/component_docs.py",
 }
 
 # These paths build only the opt-in browser adapter, even when they live under

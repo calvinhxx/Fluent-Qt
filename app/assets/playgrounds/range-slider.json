@@ -1,0 +1,231 @@
+{
+  "version": 1,
+  "component": "range-slider",
+  "title": "RangeSlider",
+  "className": "fluent::basicinput::RangeSlider",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>",
+      "setup": "auto* control = new fluent::basicinput::RangeSlider(%PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QSlider",
+      "setup": "control = fluentqt.RangeSlider(%PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "orientation",
+      "property": "orientation",
+      "setter": "setOrientation",
+      "type": "enum",
+      "label": {
+        "en": "Orientation",
+        "zh": "方向"
+      },
+      "category": "icon"
+    },
+    {
+      "id": "minimum",
+      "property": "minimum",
+      "setter": "setMinimum",
+      "type": "number",
+      "label": {
+        "en": "Minimum",
+        "zh": "最小值"
+      },
+      "category": "basic",
+      "default": 0,
+      "minimum": -100,
+      "maximum": 100,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "effectHint": {
+        "en": "Sets the allowed bound. Values outside the new range are adjusted by the control.",
+        "zh": "设置可选范围；超出新范围的当前值会随之调整。"
+      },
+      "effect": "behavior"
+    },
+    {
+      "id": "maximum",
+      "property": "maximum",
+      "setter": "setMaximum",
+      "type": "number",
+      "label": {
+        "en": "Maximum",
+        "zh": "最大值"
+      },
+      "category": "basic",
+      "default": 100,
+      "minimum": 0,
+      "maximum": 200,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "effectHint": {
+        "en": "Sets the allowed bound. Values outside the new range are adjusted by the control.",
+        "zh": "设置可选范围；超出新范围的当前值会随之调整。"
+      },
+      "effect": "behavior"
+    },
+    {
+      "id": "lowerValue",
+      "property": "lowerValue",
+      "setter": "setLowerValue",
+      "type": "number",
+      "label": {
+        "en": "Lower value",
+        "zh": "下限"
+      },
+      "category": "basic",
+      "default": 25,
+      "minimum": -100,
+      "maximum": 200,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "minimumFrom": "minimum",
+      "maximumFrom": "maximum"
+    },
+    {
+      "id": "upperValue",
+      "property": "upperValue",
+      "setter": "setUpperValue",
+      "type": "number",
+      "label": {
+        "en": "Upper value",
+        "zh": "上限"
+      },
+      "category": "basic",
+      "default": 75,
+      "minimum": -100,
+      "maximum": 200,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "minimumFrom": "minimum",
+      "maximumFrom": "maximum"
+    },
+    {
+      "id": "minimumRange",
+      "property": "minimumRange",
+      "setter": "setMinimumRange",
+      "type": "number",
+      "label": {
+        "en": "Minimum separation",
+        "zh": "最小间距"
+      },
+      "category": "basic",
+      "minimum": 0,
+      "maximum": 80,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "effect": "context",
+      "effectHint": {
+        "en": "0 allows the thumbs to overlap. Each endpoint is limited by the other endpoint and this minimum separation.",
+        "zh": "0 允许两个手柄重合；上下限的可调范围随另一端及最小间距联动。"
+      }
+    },
+    {
+      "id": "singleStep",
+      "property": "singleStep",
+      "setter": "setSingleStep",
+      "type": "number",
+      "label": {
+        "en": "Single step",
+        "zh": "单步步长"
+      },
+      "category": "basic",
+      "minimum": 1,
+      "maximum": 20,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "effectHint": {
+        "en": "Step per keyboard adjustment; changing it does not move the current value.",
+        "zh": "键盘单次调整的步长；修改步长不会移动当前值。"
+      },
+      "effect": "behavior"
+    },
+    {
+      "id": "tickPosition",
+      "property": "tickPosition",
+      "setter": "setTickPosition",
+      "type": "enum",
+      "label": {
+        "en": "Tick position",
+        "zh": "刻度位置"
+      },
+      "category": "appearance",
+      "previewInteraction": "hover"
+    },
+    {
+      "id": "tickInterval",
+      "property": "tickInterval",
+      "setter": "setTickInterval",
+      "type": "number",
+      "label": {
+        "en": "Tick interval",
+        "zh": "刻度间距"
+      },
+      "category": "appearance",
+      "minimum": 0,
+      "maximum": 50,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "previewInteraction": "hover",
+      "effectWhen": "tickPosition != 'NoTicks'",
+      "effectHint": {
+        "en": "0 derives spacing from the steps. Select a tick position to see it on hover.",
+        "zh": "0 表示根据步长自动确定间距；选定刻度位置后在悬停时显示。"
+      },
+      "effectFixture": {
+        "tickPosition": "TicksBothSides"
+      },
+      "valueLabels": {
+        "0": {
+          "en": "Automatic",
+          "zh": "自动"
+        }
+      },
+      "effect": "context",
+      "visibleWhen": "tickPosition != 'NoTicks'"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    236,
+    40
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "verticalPreviewSize": [
+    48,
+    160
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

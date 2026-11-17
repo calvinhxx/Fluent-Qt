@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "component": "calendar-date-picker",
+  "title": "CalendarDatePicker",
+  "className": "fluent::date_time::CalendarDatePicker",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/DateTime.h>\n#include <QDate>",
+      "setup": "auto* control = new fluent::date_time::CalendarDatePicker(%PARENT%);\ncontrol->setPlaceholderText(QStringLiteral(\"Pick a date\"));\ncontrol->setDate(QDate(2026, 11, 13));\ncontrol->setDisplayFormat(QStringLiteral(\"yyyy-MM-dd\"));\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QDate, Qt",
+      "setup": "control = fluentqt.CalendarDatePicker(%PARENT%)\ncontrol.setPlaceholderText(\"Pick a date\")\ncontrol.setDate(QDate(2026, 11, 13))\ncontrol.setDisplayFormat(\"yyyy-MM-dd\")\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "date",
+      "property": "date",
+      "setter": "setDate",
+      "type": "date",
+      "label": {
+        "en": "Date",
+        "zh": "日期"
+      },
+      "category": "basic",
+      "nullable": true
+    },
+    {
+      "id": "placeholderText",
+      "property": "placeholderText",
+      "setter": "setPlaceholderText",
+      "type": "text",
+      "label": {
+        "en": "Placeholder",
+        "zh": "占位文本"
+      },
+      "category": "basic",
+      "maximumLength": 40,
+      "effectWhen": "!date",
+      "effectHint": {
+        "en": "Shown when no date is selected. Clear the date to preview it.",
+        "zh": "未选日期时显示；清空日期可查看效果。"
+      },
+      "effectFixture": {
+        "date": null
+      },
+      "visualChangeExpected": true,
+      "enabledWhen": "!date",
+      "disabledHint": {
+        "en": "Clear Date above to display the placeholder.",
+        "zh": "清空上方“日期”后显示占位提示。"
+      }
+    },
+    {
+      "id": "displayFormat",
+      "property": "displayFormat",
+      "setter": "setDisplayFormat",
+      "type": "text",
+      "control": "select",
+      "label": {
+        "en": "Display format",
+        "zh": "显示格式"
+      },
+      "category": "icon",
+      "maximumLength": 24,
+      "options": [
+        "yyyy-MM-dd",
+        "yyyy/MM/dd",
+        "MM/dd/yyyy",
+        "MMM d, yyyy",
+        "yyyy年M月d日",
+        ""
+      ],
+      "optionLabels": {
+        "yyyy-MM-dd": {
+          "en": "ISO (2026-11-13)",
+          "zh": "标准横线 (2026-11-13)"
+        },
+        "yyyy/MM/dd": {
+          "en": "Slash (2026/11/13)",
+          "zh": "斜杠分隔 (2026/11/13)"
+        },
+        "MM/dd/yyyy": {
+          "en": "US (11/13/2026)",
+          "zh": "美式日期 (11/13/2026)"
+        },
+        "MMM d, yyyy": {
+          "en": "Abbreviated (Nov 13, 2026)",
+          "zh": "月份缩写 (Nov 13, 2026)"
+        },
+        "yyyy年M月d日": {
+          "en": "Chinese date",
+          "zh": "中文日期 (2026年11月13日)"
+        },
+        "": {
+          "en": "System locale short",
+          "zh": "系统区域短格式"
+        }
+      },
+      "effectWhen": "date",
+      "effectHint": {
+        "en": "Shown after a date is selected.",
+        "zh": "选中日期后可见。"
+      },
+      "effectFixture": {
+        "date": "2026-11-03"
+      },
+      "enabledWhen": "date",
+      "disabledHint": {
+        "en": "Select a Date in Basic properties first to format it.",
+        "zh": "先在“基础属性”中选中日期，再设置自定义显示格式。"
+      }
+    },
+    {
+      "id": "firstDayOfWeek",
+      "property": "firstDayOfWeek",
+      "setter": "setFirstDayOfWeek",
+      "type": "enum",
+      "label": {
+        "en": "First day of week",
+        "zh": "每周起始日"
+      },
+      "category": "icon",
+      "options": [
+        "Monday",
+        "Sunday",
+        "Saturday"
+      ],
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Sets the first weekday column inside the popup calendar when you click the button.",
+        "zh": "设置点击日期按钮弹出的日历面板中每周起始列。"
+      }
+    },
+    {
+      "id": "fluentStyle",
+      "property": "fluentStyle",
+      "setter": "setFluentStyle",
+      "type": "enum",
+      "label": {
+        "en": "Style",
+        "zh": "外观样式"
+      },
+      "category": "appearance"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "previewSize": [
+    240,
+    48
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "component": "code-block",
+  "title": "CodeBlock",
+  "className": "fluent::textfields::CodeBlock",
+  "sizeMode": "contentHeight",
+  "previewSize": [
+    480,
+    260
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/TextFields.h>",
+      "setup": "auto* control = new fluent::textfields::CodeBlock(%PARENT%);\n"
+    },
+    "python": {
+      "imports": "import fluentqt",
+      "setup": "control = fluentqt.CodeBlock(%PARENT%)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "code",
+      "property": "code",
+      "setter": "setCode",
+      "type": "text",
+      "label": {
+        "en": "Code",
+        "zh": "代码"
+      },
+      "category": "basic",
+      "default": "auto* button = new Button(\"Continue\", this);\nbutton->setFluentStyle(Button::Accent);\nbutton->setIconGlyph(Icons::Checkmark);\nbutton->setToolTip(QStringLiteral(\"Confirm current workflow changes\"));\nconnect(button, &Button::clicked, this, [this] { handlePrimaryAction(); });\nlayout->addWidget(button);\nbutton->setEnabled(true);",
+      "maximumLength": 2000,
+      "control": "textarea"
+    },
+    {
+      "id": "language",
+      "property": "language",
+      "setter": "setLanguage",
+      "type": "text",
+      "label": {
+        "en": "Language",
+        "zh": "高亮语言"
+      },
+      "category": "basic",
+      "default": "cpp",
+      "control": "select",
+      "options": [
+        "cpp",
+        "python",
+        "qml",
+        "plain"
+      ],
+      "optionLabels": {
+        "cpp": {
+          "en": "C++ (syntax highlighted)",
+          "zh": "C++（支持语法高亮）"
+        },
+        "python": {
+          "en": "Python (syntax highlighted)",
+          "zh": "Python（支持语法高亮）"
+        },
+        "qml": {
+          "en": "QML (syntax highlighted)",
+          "zh": "QML（支持语法高亮）"
+        },
+        "plain": {
+          "en": "Plain text (unhighlighted)",
+          "zh": "纯文本（无高亮 / 其他语言回退）"
+        }
+      },
+      "effect": "context",
+      "effectHint": {
+        "en": "Only C++, Python, and QML have built-in syntax highlighting; any other identifier renders as plain text.",
+        "zh": "组件仅内置 C++、Python 和 QML 三种语法高亮；其余语言标识均按无高亮纯文本显示。可修改上方代码内容对比高亮效果。"
+      },
+      "maximumLength": 24
+    },
+    {
+      "id": "wordWrap",
+      "property": "wordWrap",
+      "setter": "setWordWrap",
+      "type": "boolean",
+      "label": {
+        "en": "Word wrap",
+        "zh": "自动换行"
+      },
+      "category": "basic"
+    },
+    {
+      "id": "maxVisibleLines",
+      "property": "maxVisibleLines",
+      "setter": "setMaxVisibleLines",
+      "type": "number",
+      "label": {
+        "en": "Max visible lines",
+        "zh": "最多可见行"
+      },
+      "category": "basic",
+      "minimum": 2,
+      "maximum": 20,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "default": 5
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "category": "appearance"
+    }
+  ],
+  "description": {
+    "en": "Edit an independent example. Sample items and content are included in the generated code.",
+    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+  },
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

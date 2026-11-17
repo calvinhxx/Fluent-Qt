@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "component": "menu",
+  "sizeMode": "content",
+  "categories": [
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Appearance",
+        "zh": "外观状态"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Design.h>\n#include <FluentQt/Foundation.h>\n#include <FluentQt/MenusToolbars.h>\n#include <QAction>\n#include <QIcon>\n#include <QIconEngine>\n#include <QKeySequence>\n#include <QPainter>\n#include <QPixmap>",
+      "setup": "class GlyphEngine final : public QIconEngine {\npublic:\n    explicit GlyphEngine(const QString& glyph) : m_glyph(glyph) {}\n    QIconEngine* clone() const override { return new GlyphEngine(m_glyph); }\n    QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State) override {\n        QPixmap pm(size);\n        pm.fill(Qt::transparent);\n        fluent::FontIcon renderer(m_glyph);\n        renderer.setIconSize(qMin(size.width(), size.height()));\n        renderer.setEnabled(mode != QIcon::Disabled);\n        renderer.resize(size);\n        QPainter painter(&pm);\n        renderer.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);\n        return pm;\n    }\n    void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override {\n        const int dpr = painter->device() ? qMax(1, qRound(painter->device()->devicePixelRatioF())) : 1;\n        painter->drawPixmap(rect, pixmap(rect.size() * dpr, mode, state));\n    }\nprivate:\n    QString m_glyph;\n};\nauto* control = new fluent::menus_toolbars::FluentMenu(QStringLiteral(\"File\"), %PARENT%);\nauto addCommand = [&](const QString& text, const QString& glyph, QKeySequence::StandardKey shortcut) {\n    auto* action = new QAction(text, control);\n    action->setIcon(QIcon(new GlyphEngine(glyph)));\n    if (shortcut != QKeySequence::UnknownKey)\n        action->setShortcut(shortcut);\n    control->addAction(action);\n    return action;\n};\naddCommand(QStringLiteral(\"New\"), Typography::Icons::Add, QKeySequence::New);\naddCommand(QStringLiteral(\"Open...\"), Typography::Icons::Folder, QKeySequence::Open);\naddCommand(QStringLiteral(\"Save\"), Typography::Icons::Save, QKeySequence::Save);\ncontrol->addSeparator();\nauto* wrap = control->addAction(QStringLiteral(\"Word wrap\"));\nwrap->setCheckable(true);\nwrap->setChecked(true);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QPoint, QRect, Qt\nfrom PySide6.QtGui import QAction, QIcon, QIconEngine, QKeySequence, QPainter, QPixmap, QRegion\nfrom PySide6.QtWidgets import QWidget",
+      "setup": "class GlyphEngine(QIconEngine):\n    def __init__(self, glyph):\n        super().__init__()\n        self._glyph = glyph\n    def clone(self):\n        return GlyphEngine(self._glyph)\n    def pixmap(self, size, mode, state):\n        pm = QPixmap(size)\n        pm.fill(Qt.GlobalColor.transparent)\n        renderer = fluentqt.FontIcon(self._glyph)\n        renderer.setIconSize(min(size.width(), size.height()))\n        renderer.setEnabled(mode != QIcon.Mode.Disabled)\n        renderer.resize(size)\n        painter = QPainter(pm)\n        renderer.render(painter, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)\n        painter.end()\n        return pm\n    def paint(self, painter, rect, mode, state):\n        dpr = max(1, round(painter.device().devicePixelRatioF())) if painter.device() else 1\n        painter.drawPixmap(rect, self.pixmap(rect.size() * dpr, mode, state))\n\ncontrol = fluentqt.FluentMenu(\"File\", %PARENT%)\nfor text, glyph, shortcut in (\n    (\"New\", fluentqt.Typography.Icons.Add, QKeySequence.StandardKey.New),\n    (\"Open...\", fluentqt.Typography.Icons.Folder, QKeySequence.StandardKey.Open),\n    (\"Save\", fluentqt.Typography.Icons.Save, QKeySequence.StandardKey.Save),\n):\n    action = QAction(text, control)\n    action.setIcon(QIcon(GlyphEngine(glyph)))\n    action.setShortcut(shortcut)\n    control.addAction(action)\ncontrol.addSeparator()\nwrap = control.addAction(\"Word wrap\")\nwrap.setCheckable(True)\nwrap.setChecked(True)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "fontStyle",
+      "property": "fontStyle",
+      "setter": "setFontStyle",
+      "category": "appearance",
+      "type": "enum",
+      "label": {
+        "en": "Font style",
+        "zh": "字体角色"
+      },
+      "default": "Body"
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

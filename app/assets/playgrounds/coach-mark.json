@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "component": "coach-mark",
+  "surface": "host",
+  "previewSize": [
+    580,
+    290
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Basic",
+        "zh": "基础属性"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Appearance",
+        "zh": "外观状态"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/BasicInput.h>\n#include <FluentQt/Design.h>\n#include <FluentQt/DialogsFlyouts.h>\n#include <FluentQt/TextFields.h>\n#include <QSize>\n#include <QVBoxLayout>",
+      "setup": "auto* anchor = new fluent::basicinput::Button(QStringLiteral(\"Workspace\"), %PARENT%);\nanchor->setFixedSize(112, 32);\nanchor->move(234, 129);\nanchor->show();\nauto* control = new fluent::dialogs_flyouts::CoachMark(%PARENT%);\ncontrol->setCardSize(QSize(210, 102));\ncontrol->setTarget(anchor);\nauto* layout = new QVBoxLayout(control->contentHost());\nlayout->setContentsMargins(14, 10, 14, 10);\nlayout->setSpacing(4);\nauto* heading = new fluent::textfields::Label(QStringLiteral(\"New workspace\"), control->contentHost());\nheading->setFluentTypography(Typography::FontRole::BodyStrong);\nlayout->addWidget(heading);\nauto* body = new fluent::textfields::Label(QStringLiteral(\"Switch views or pin folders here.\"), control->contentHost());\nbody->setWordWrap(true);\nbody->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\nlayout->addWidget(body);\nlayout->addStretch(1);\nauto* acknowledge = new fluent::basicinput::Button(QStringLiteral(\"Got it\"), control->contentHost());\nacknowledge->setFluentStyle(fluent::basicinput::Button::Accent);\nacknowledge->setFixedHeight(26);\nlayout->addWidget(acknowledge, 0, Qt::AlignRight);\nQObject::connect(acknowledge, &fluent::basicinput::Button::clicked, control, &fluent::dialogs_flyouts::CoachMark::close);\nQObject::connect(anchor, &fluent::basicinput::Button::clicked, control, &fluent::dialogs_flyouts::CoachMark::open);\ncontrol->open();\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import QSize, Qt\nfrom PySide6.QtWidgets import QVBoxLayout",
+      "setup": "anchor = fluentqt.Button(\"Workspace\", %PARENT%)\nanchor.setFixedSize(112, 32)\nanchor.move(234, 129)\nanchor.show()\ncontrol = fluentqt.CoachMark(%PARENT%)\ncontrol.setCardSize(QSize(210, 102))\ncontrol.setTarget(anchor)\nlayout = QVBoxLayout(control.contentHost())\nlayout.setContentsMargins(14, 10, 14, 10)\nlayout.setSpacing(4)\nheading = fluentqt.Label(\"New workspace\", control.contentHost())\nheading.setFluentTypography(fluentqt.FontRole.BodyStrong)\nlayout.addWidget(heading)\nbody = fluentqt.Label(\"Switch views or pin folders here.\", control.contentHost())\nbody.setWordWrap(True)\nbody.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\nlayout.addWidget(body)\nlayout.addStretch(1)\nacknowledge = fluentqt.Button(\"Got it\", control.contentHost())\nacknowledge.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nacknowledge.setFixedHeight(26)\nlayout.addWidget(acknowledge, 0, Qt.AlignmentFlag.AlignRight)\nacknowledge.clicked.connect(control.close)\nanchor.clicked.connect(control.open)\ncontrol.open()\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "open",
+      "property": "open",
+      "setter": "setOpen",
+      "category": "basic",
+      "type": "boolean",
+      "label": {
+        "en": "Open",
+        "zh": "打开引导浮层"
+      },
+      "default": true
+    },
+    {
+      "id": "placement",
+      "property": "placement",
+      "setter": "setPlacement",
+      "category": "basic",
+      "type": "enum",
+      "label": {
+        "en": "Placement",
+        "zh": "引导方向"
+      },
+      "default": "Auto",
+      "effect": "context",
+      "effectHint": {
+        "en": "Placement also depends on available host space; equivalent positions can look the same.",
+        "zh": "位置也受宿主可用空间约束；落在同一位置时画面可能相同。"
+      }
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

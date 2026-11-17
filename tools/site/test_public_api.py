@@ -7,6 +7,20 @@ from public_api import ROOT, documentation, parse_header, inventory, resolve_typ
 
 
 class PublicApiTest(unittest.TestCase):
+    def test_scope_comments_do_not_replace_type_documentation(self):
+        records = parse_header('''namespace fluent {
+namespace detail { class Helper; } // namespace detail
+/** @brief Public surface. zh_CN: 公开界面。 */
+class Surface {};
+namespace detail { class Other; } // namespace detail
+class Undocumented {};
+}''')
+        descriptions = {r['name']: r['description'] for r in records}
+        self.assertEqual(descriptions['Surface'], {'en': 'Public surface.', 'zh': '公开界面。'})
+        self.assertEqual(descriptions['Undocumented'], {'en': '', 'zh': ''})
+        for name in ('DataGrid', 'CodeBlock'):
+            self.assertNotIn('namespace', resolve_type(name)['description']['en'])
+
     def test_public_members_and_bodies_are_separate(self):
         source = '''namespace fluent::demo {
 class Example : public QObject {

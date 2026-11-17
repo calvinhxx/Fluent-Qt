@@ -1,0 +1,258 @@
+{
+  "version": 1,
+  "component": "drawer-view",
+  "surface": "host",
+  "previewSize": [
+    520,
+    300
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "State",
+        "zh": "状态"
+      }
+    },
+    {
+      "id": "icon",
+      "label": {
+        "en": "Layout",
+        "zh": "布局"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Interaction & scrim",
+        "zh": "交互与遮罩"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Collections.h>\n#include <FluentQt/TextFields.h>\n#include <FluentQt/BasicInput.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/Scrolling.h>\n#include <FluentQt/Design.h>\n#include <QVBoxLayout>\n#include <QHBoxLayout>",
+      "setup": "auto* scene = new fluent::layout::Card(%PARENT%);\nscene->setGeometry(0, 0, 520, 300);\nauto* control = new fluent::collections::DrawerView(%PARENT%);\ncontrol->setAnimationEnabled(false);\ncontrol->setEdge(fluent::collections::DrawerView::DrawerEdge::Right);\ncontrol->setDrawerLength(240);\nauto* sceneLayout = new QVBoxLayout(scene);\nsceneLayout->setContentsMargins(20, 16, 20, 16);\nsceneLayout->setSpacing(8);\nauto* heading = new fluent::textfields::Label(QStringLiteral(\"Project files\"), scene);\nheading->setFluentTypography(Typography::FontRole::Subtitle);\nsceneLayout->addWidget(heading);\nauto* caption = new fluent::textfields::Label(QStringLiteral(\"Workspace / 3 documents\"), scene);\ncaption->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\nsceneLayout->addWidget(caption);\nfor (const auto& name : {QStringLiteral(\"Design guidelines\"), QStringLiteral(\"Component library\"), QStringLiteral(\"Release notes\")}) {\n    auto* file = new fluent::textfields::Label(name, scene);\n    file->setMinimumHeight(30);\n    sceneLayout->addWidget(file);\n}\nsceneLayout->addStretch();\nauto* openButton = new fluent::basicinput::Button(QStringLiteral(\"View details\"), scene);\nopenButton->setObjectName(QStringLiteral(\"drawerOpen\"));\nopenButton->setFluentStyle(fluent::basicinput::Button::Accent);\nsceneLayout->addWidget(openButton, 0, Qt::AlignLeft);\nauto* panel = new QWidget;\nauto* panelLayout = new QVBoxLayout(panel);\npanelLayout->setContentsMargins(12, 12, 12, 12);\npanelLayout->setSpacing(8);\nauto* header = new QHBoxLayout;\nauto* title = new fluent::textfields::Label(QStringLiteral(\"Details\"), panel);\ntitle->setFluentTypography(Typography::FontRole::BodyStrong);\nheader->addWidget(title, 1);\nauto* closeButton = new fluent::basicinput::Button(panel);\ncloseButton->setObjectName(QStringLiteral(\"drawerClose\"));\ncloseButton->setAccessibleName(QStringLiteral(\"Close drawer\"));\ncloseButton->setIconGlyph(Typography::Icons::ChromeClose);\ncloseButton->setFluentLayout(fluent::basicinput::Button::IconOnly);\ncloseButton->setFluentStyle(fluent::basicinput::Button::Subtle);\ncloseButton->setFixedSize(28, 28);\nheader->addWidget(closeButton);\npanelLayout->addLayout(header);\nauto* scroll = new fluent::scrolling::ScrollView(panel);\nscroll->setWidgetResizable(true);\nscroll->setVerticalScrollBarVisibility(fluent::scrolling::ScrollView::ScrollBarVisibility::Visible);\nscroll->setHorizontalScrollMode(fluent::scrolling::ScrollView::ScrollMode::Disabled);\nscroll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Ignored);\nauto* details = new fluent::layout::Card;\ndetails->setBorderVisible(false);\nauto* detailsLayout = new QVBoxLayout(details);\ndetailsLayout->setContentsMargins(0, 0, 4, 0);\ndetailsLayout->setSpacing(10);\nauto* name = new fluent::textfields::Label(QStringLiteral(\"Design guidelines\"), details);\nname->setFluentTypography(Typography::FontRole::BodyStrong);\nname->setWordWrap(true);\ndetailsLayout->addWidget(name);\nfor (const auto& text : {QStringLiteral(\"Markdown document\"), QStringLiteral(\"Shared layouts, typography and component guidance.\"), QStringLiteral(\"Updated today\")}) {\n    auto* label = new fluent::textfields::Label(text, details);\n    label->setWordWrap(true);\n    label->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\n    detailsLayout->addWidget(label);\n}\ndetailsLayout->addStretch();\nscroll->setWidget(details);\npanelLayout->addWidget(scroll, 1);\ncontrol->setContentWidget(panel);\nQObject::connect(openButton, &fluent::basicinput::Button::clicked, control, &fluent::collections::DrawerView::open);\nQObject::connect(closeButton, &fluent::basicinput::Button::clicked, control, &fluent::collections::DrawerView::close);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy",
+      "setup": "scene = fluentqt.Card(%PARENT%)\nscene.setGeometry(0, 0, 520, 300)\ncontrol = fluentqt.DrawerView(%PARENT%)\ncontrol.setAnimationEnabled(False)\ncontrol.setEdge(fluentqt.DrawerView.DrawerEdge.Right)\ncontrol.setDrawerLength(240)\nscene_layout = QVBoxLayout(scene)\nscene_layout.setContentsMargins(20, 16, 20, 16)\nscene_layout.setSpacing(8)\nheading = fluentqt.Label(\"Project files\", scene)\nheading.setFluentTypography(fluentqt.FontRole.Subtitle)\nscene_layout.addWidget(heading)\ncaption = fluentqt.Label(\"Workspace / 3 documents\", scene)\ncaption.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\nscene_layout.addWidget(caption)\nfor name in [\"Design guidelines\", \"Component library\", \"Release notes\"]:\n    file = fluentqt.Label(name, scene)\n    file.setMinimumHeight(30)\n    scene_layout.addWidget(file)\nscene_layout.addStretch()\nopen_button = fluentqt.Button(\"View details\", scene)\nopen_button.setObjectName(\"drawerOpen\")\nopen_button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nscene_layout.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)\npanel = QWidget()\npanel_layout = QVBoxLayout(panel)\npanel_layout.setContentsMargins(12, 12, 12, 12)\npanel_layout.setSpacing(8)\nheader = QHBoxLayout()\ntitle = fluentqt.Label(\"Details\", panel)\ntitle.setFluentTypography(fluentqt.FontRole.BodyStrong)\nheader.addWidget(title, 1)\nclose_button = fluentqt.Button(panel)\nclose_button.setObjectName(\"drawerClose\")\nclose_button.setAccessibleName(\"Close drawer\")\nclose_button.setIconGlyph(fluentqt.Typography.Icons.ChromeClose)\nclose_button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)\nclose_button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)\nclose_button.setFixedSize(28, 28)\nheader.addWidget(close_button)\npanel_layout.addLayout(header)\nscroll = fluentqt.ScrollView(panel)\nscroll.setWidgetResizable(True)\nscroll.setVerticalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Visible)\nscroll.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Disabled)\nscroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)\ndetails = fluentqt.Card()\ndetails.setBorderVisible(False)\ndetails_layout = QVBoxLayout(details)\ndetails_layout.setContentsMargins(0, 0, 4, 0)\ndetails_layout.setSpacing(10)\nname = fluentqt.Label(\"Design guidelines\", details)\nname.setFluentTypography(fluentqt.FontRole.BodyStrong)\nname.setWordWrap(True)\ndetails_layout.addWidget(name)\nfor text in [\"Markdown document\", \"Shared layouts, typography and component guidance.\", \"Updated today\"]:\n    label = fluentqt.Label(text, details)\n    label.setWordWrap(True)\n    label.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\n    details_layout.addWidget(label)\ndetails_layout.addStretch()\nscroll.setWidget(details)\npanel_layout.addWidget(scroll, 1)\ncontrol.setContentWidget(panel)\nopen_button.clicked.connect(control.open)\nclose_button.clicked.connect(control.close)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "isOpen",
+      "property": "isOpen",
+      "setter": "setIsOpen",
+      "category": "basic",
+      "type": "boolean",
+      "label": {
+        "en": "Open",
+        "zh": "打开抽屉"
+      },
+      "default": true
+    },
+    {
+      "id": "edge",
+      "property": "edge",
+      "setter": "setEdge",
+      "category": "icon",
+      "type": "enum",
+      "label": {
+        "en": "Edge",
+        "zh": "停靠边缘"
+      },
+      "default": "Right"
+    },
+    {
+      "id": "drawerLength",
+      "property": "drawerLength",
+      "setter": "setDrawerLength",
+      "category": "icon",
+      "type": "number",
+      "label": {
+        "en": "Drawer length",
+        "zh": "抽屉尺寸"
+      },
+      "default": 240,
+      "minimum": 120,
+      "maximum": 280,
+      "step": 10,
+      "integer": true,
+      "control": "range",
+      "effectHint": {
+        "en": "Width on the left/right; height on the top/bottom.",
+        "zh": "左右侧为宽度，上下侧为高度。"
+      }
+    },
+    {
+      "id": "outerCornerRadius",
+      "property": "outerCornerRadius",
+      "setter": "setOuterCornerRadius",
+      "category": "icon",
+      "type": "number",
+      "label": {
+        "en": "Outer corner radius",
+        "zh": "外侧圆角"
+      },
+      "default": 8,
+      "minimum": 0,
+      "maximum": 16,
+      "step": 2,
+      "integer": true,
+      "control": "range"
+    },
+    {
+      "id": "modal",
+      "property": "modal",
+      "setter": "setModal",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Block background input",
+        "zh": "阻止背景操作"
+      },
+      "default": true,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Controls background input. The scrim settings control its appearance.",
+        "zh": "控制背景能否接收操作；遮罩外观由下方属性设置。"
+      }
+    },
+    {
+      "id": "dim",
+      "property": "dim",
+      "setter": "setDim",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Dim backdrop",
+        "zh": "背景暗化"
+      },
+      "default": true
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    },
+    {
+      "id": "interactive",
+      "property": "interactive",
+      "setter": "setInteractive",
+      "type": "boolean",
+      "label": {
+        "en": "Edge dragging",
+        "zh": "允许边缘拖动"
+      },
+      "category": "appearance",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Drag from the preview edge to open the drawer.",
+        "zh": "从预览边缘拖动可打开抽屉。"
+      }
+    },
+    {
+      "id": "dragMargin",
+      "property": "dragMargin",
+      "setter": "setDragMargin",
+      "category": "appearance",
+      "type": "number",
+      "label": {
+        "en": "Edge drag margin",
+        "zh": "边缘拖拽热区"
+      },
+      "default": 20,
+      "minimum": 8,
+      "maximum": 64,
+      "step": 4,
+      "integer": true,
+      "control": "range",
+      "visibleWhen": "interactive",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Width of the edge zone where dragging opens a closed drawer.",
+        "zh": "抽屉关闭时从边缘拖拽打开的触发区域宽度。"
+      }
+    },
+    {
+      "id": "dimOpacity",
+      "property": "dimOpacity",
+      "setter": "setDimOpacity",
+      "category": "appearance",
+      "type": "number",
+      "label": {
+        "en": "Scrim opacity",
+        "zh": "遮罩强度"
+      },
+      "default": 0.16,
+      "minimum": 0,
+      "maximum": 0.6,
+      "step": 0.02,
+      "control": "range",
+      "visibleWhen": "dim",
+      "effectWhen": "isOpen && dim",
+      "effectHint": {
+        "en": "Visible while the drawer is open and backdrop dimming is enabled.",
+        "zh": "抽屉打开且背景暗化开启时可见。"
+      }
+    },
+    {
+      "id": "backdropBlurRadius",
+      "property": "backdropBlurRadius",
+      "setter": "setBackdropBlurRadius",
+      "category": "appearance",
+      "type": "number",
+      "label": {
+        "en": "Backdrop blur",
+        "zh": "背景模糊"
+      },
+      "default": 0,
+      "minimum": 0,
+      "maximum": 12,
+      "step": 1,
+      "integer": true,
+      "control": "range",
+      "effectWhen": "isOpen",
+      "effectHint": {
+        "en": "Visible while the drawer is open; zero keeps the background clear.",
+        "zh": "抽屉打开时可见；0 表示背景保持清晰。"
+      }
+    },
+    {
+      "id": "animationEnabled",
+      "property": "animationEnabled",
+      "setter": "setAnimationEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Open/close animation",
+        "zh": "开合动画"
+      },
+      "default": true,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Applies to the preview buttons; property edits commit immediately.",
+        "zh": "预览按钮开合时生效；属性修改直接切换状态。"
+      }
+    }
+  ],
+  "title": "DrawerView",
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

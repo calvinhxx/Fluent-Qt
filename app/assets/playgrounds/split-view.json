@@ -1,0 +1,197 @@
+{
+  "version": 1,
+  "component": "split-view",
+  "previewSize": [
+    520,
+    270
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "label": {
+        "en": "Panes",
+        "zh": "窗格"
+      }
+    },
+    {
+      "id": "icon",
+      "label": {
+        "en": "Layout",
+        "zh": "布局"
+      }
+    },
+    {
+      "id": "appearance",
+      "label": {
+        "en": "Interaction",
+        "zh": "交互"
+      }
+    }
+  ],
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Collections.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/TextFields.h>\n#include <FluentQt/Design.h>\n#include <QVBoxLayout>",
+      "setup": "auto* control = new fluent::collections::SplitView(%PARENT%);\nfor (const auto& entry : {QPair<QString, QString>{QStringLiteral(\"Navigation\"), QStringLiteral(\"Folders, saved views and quick filters.\")}, {QStringLiteral(\"Workspace\"), QStringLiteral(\"Active document canvas and inspector details.\")}}) {\n    auto* pane = new fluent::layout::Card;\n    auto* lay = new QVBoxLayout(pane);\n    lay->setContentsMargins(16, 14, 16, 14);\n    lay->setSpacing(6);\n    auto* title = new fluent::textfields::Label(entry.first, pane);\n    title->setFluentTypography(Typography::FontRole::Subtitle);\n    lay->addWidget(title);\n    auto* summary = new fluent::textfields::Label(entry.second, pane);\n    summary->setWordWrap(true);\n    summary->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);\n    lay->addWidget(summary);\n    lay->addStretch();\n    control->addPane(pane, fluent::WidgetOwnership::Owned);\n}\ncontrol->setPanePreferredSize(0, 220);\ncontrol->setPanePreferredSize(1, 294);\ncontrol->setPaneFill(1, true);\n"
+    },
+    "python": {
+      "imports": "import fluentqt\nfrom PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QVBoxLayout",
+      "setup": "control = fluentqt.SplitView(%PARENT%)\nfor title_text, summary_text in [\n    (\"Navigation\", \"Folders, saved views and quick filters.\"),\n    (\"Workspace\", \"Active document canvas and inspector details.\"),\n]:\n    pane = fluentqt.Card()\n    lay = QVBoxLayout(pane)\n    lay.setContentsMargins(16, 14, 16, 14)\n    lay.setSpacing(6)\n    title = fluentqt.Label(title_text, pane)\n    title.setFluentTypography(fluentqt.FontRole.Subtitle)\n    lay.addWidget(title)\n    summary = fluentqt.Label(summary_text, pane)\n    summary.setWordWrap(True)\n    summary.setTextColorRole(fluentqt.Label.TextColorRole.Secondary)\n    lay.addWidget(summary)\n    lay.addStretch()\n    control.addOwnedPane(pane)\ncontrol.setPanePreferredSize(0, 220)\ncontrol.setPanePreferredSize(1, 294)\ncontrol.setPaneFill(1, True)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "orientation",
+      "property": "orientation",
+      "setter": "setOrientation",
+      "category": "icon",
+      "type": "enum",
+      "label": {
+        "en": "Orientation",
+        "zh": "分割方向"
+      },
+      "default": "Horizontal"
+    },
+    {
+      "id": "handleWidth",
+      "property": "handleWidth",
+      "setter": "setHandleWidth",
+      "category": "icon",
+      "type": "number",
+      "label": {
+        "en": "Handle width",
+        "zh": "手柄宽度"
+      },
+      "default": 8,
+      "minimum": 2,
+      "maximum": 16,
+      "step": 2,
+      "integer": true
+    },
+    {
+      "id": "handleVisualThickness",
+      "property": "handleVisualThickness",
+      "setter": "setHandleVisualThickness",
+      "category": "icon",
+      "type": "number",
+      "label": {
+        "en": "Handle thickness",
+        "zh": "分隔线粗细"
+      },
+      "default": 2,
+      "minimum": 1,
+      "maximum": 8,
+      "step": 1,
+      "integer": true
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    },
+    {
+      "id": "paneSize0",
+      "property": "paneSize0",
+      "setter": "setPaneSize0",
+      "type": "number",
+      "label": {
+        "en": "Pane 1 preferred size",
+        "zh": "窗格 1 期望尺寸"
+      },
+      "category": "basic",
+      "adapter": "pane-size",
+      "index": 0,
+      "minimum": 48,
+      "maximum": 600,
+      "step": 1,
+      "integer": true,
+      "effect": "context",
+      "effectHint": {
+        "en": "Actual pane size also depends on available space and neighboring panes. Dragging the divider updates this preference.",
+        "zh": "实际尺寸还受可用空间与相邻面板约束；拖动分隔线会回写期望尺寸。"
+      },
+      "valueLabels": {
+        "-1": {
+          "en": "Auto",
+          "zh": "自动"
+        }
+      }
+    },
+    {
+      "id": "paneSize1",
+      "property": "paneSize1",
+      "setter": "setPaneSize1",
+      "type": "number",
+      "label": {
+        "en": "Pane 2 preferred size",
+        "zh": "窗格 2 期望尺寸"
+      },
+      "category": "basic",
+      "adapter": "pane-size",
+      "index": 1,
+      "minimum": 48,
+      "maximum": 600,
+      "step": 1,
+      "integer": true,
+      "effect": "context",
+      "effectHint": {
+        "en": "Actual pane size also depends on available space and neighboring panes. Dragging the divider updates this preference.",
+        "zh": "实际尺寸还受可用空间与相邻面板约束；拖动分隔线会回写期望尺寸。"
+      },
+      "valueLabels": {
+        "-1": {
+          "en": "Auto",
+          "zh": "自动"
+        }
+      }
+    },
+    {
+      "id": "fillPaneIndex",
+      "property": "fillPaneIndex",
+      "setter": "setFillPaneIndex",
+      "category": "basic",
+      "type": "number",
+      "label": {
+        "en": "Fill pane",
+        "zh": "填充剩余空间的窗格"
+      },
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "step": 1,
+      "integer": true,
+      "valueLabels": {
+        "0": {
+          "en": "Pane 1",
+          "zh": "窗格 1"
+        },
+        "1": {
+          "en": "Pane 2",
+          "zh": "窗格 2"
+        }
+      },
+      "effect": "context",
+      "effectHint": {
+        "en": "Selects which pane absorbs leftover space when resizing.",
+        "zh": "指定调整尺寸时吸收剩余空间的窗格。"
+      }
+    }
+  ],
+  "title": "SplitView",
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}
