@@ -840,3 +840,19 @@ TEST(QtCompat, Contract_ListSelectionRemovalHandlesModelResetOrDestructionDuring
         EXPECT_TRUE(repainted);
     }
 }
+
+TEST(QtCompat, PublicMouseTranslationPreservesFractionalCoordinatesAndMetadata)
+{
+    QMouseEvent original(QEvent::MouseButtonPress, QPointF(2.5, 4.25), QPointF(12.5, 14.25), QPointF(102.5, 104.25),
+        Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier, Qt::MouseEventSynthesizedByApplication);
+    original.setTimestamp(4321);
+    FluentTranslatedMouseEvent translated(&original, QPointF(1.25, 3.5), QPointF(11.25, 13.5), QPointF(101.25, 103.5));
+    EXPECT_EQ(compatibility::detail::mouseLocalPosition(&translated), QPointF(1.25, 3.5));
+    EXPECT_EQ(compatibility::detail::mouseGlobalPosition(&translated), QPointF(101.25, 103.5));
+    EXPECT_EQ(translated.type(), original.type());
+    EXPECT_EQ(translated.timestamp(), original.timestamp());
+    EXPECT_EQ(translated.source(), original.source());
+    EXPECT_EQ(translated.button(), original.button());
+    EXPECT_EQ(translated.buttons(), original.buttons());
+    EXPECT_EQ(translated.modifiers(), original.modifiers());
+}

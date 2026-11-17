@@ -1,5 +1,6 @@
 #pragma once
 
+#include "compatibility/EventConstructionCompat.h"
 #include <QCoreApplication>
 #include <QEnterEvent>
 #include <QMouseEvent>
@@ -26,36 +27,8 @@ inline QPointF mouseGlobalPosition(const QMouseEvent* event)
 #endif
 }
 
-// QMouseEvent is non-copyable in newer Qt releases. Construct it in place so
-// metadata survives without allocating a new event for each pointer movement.
-// zh_CN: 新版 Qt 禁止复制 QMouseEvent；直接构造并保留元数据，避免每次移动都堆分配。
-class TranslatedMouseEvent final : public QMouseEvent {
-public:
-    TranslatedMouseEvent(const QMouseEvent* event, const QPointF& local, const QPointF& window, const QPointF& global)
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        : QMouseEvent(event->type(),
-              local,
-              window,
-              global,
-              event->button(),
-              event->buttons(),
-              event->modifiers(),
-              event->source(),
-              event->pointingDevice())
-#else
-        : QMouseEvent(event->type(),
-              local,
-              window,
-              global,
-              event->button(),
-              event->buttons(),
-              event->modifiers(),
-              event->source())
-#endif
-    {
-        setTimestamp(event->timestamp());
-    }
-};
+// Reuse the public construction adapter for internal widget/scene mapping.
+using TranslatedMouseEvent = FluentTranslatedMouseEvent;
 
 // An embedded scene uses the widget-local point as its window-local point.
 // zh_CN: 嵌入场景以控件局部坐标作为窗口局部坐标，并保留原始输入元数据。

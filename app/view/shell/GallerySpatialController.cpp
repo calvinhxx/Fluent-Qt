@@ -1,4 +1,6 @@
 #include "compatibility/PaintCompat.h"
+#include <QHoverEvent>
+#include <QScopeGuard>
 #include "GallerySpatialController.h"
 #include "compatibility/QtCompat.h"
 #include "compatibility/WindowGeometryCompat.h"
@@ -1312,6 +1314,8 @@ struct GallerySpatialController::Private {
     QPointer<SurfaceCapture> contentCapture;
     DirectCompositionObserver* compositionObserver = nullptr;
     QPointer<QWidget> grabbed, hovered;
+    QVector<QPointer<QWidget>> hoverPath;
+    QPoint hoverSource;
     struct NativePopupAnchor {
         QPointer<QWidget> source;
         QPoint point;
@@ -1470,6 +1474,17 @@ struct GallerySpatialController::Private {
         return widget == host || host->isAncestorOf(widget);
     }
 
+    auto forwardInput()
+    {
+        const QPointer<QObject> guard(owner);
+        const bool previous = forwarding;
+        forwarding = true;
+        return qScopeGuard([this, guard, previous] {
+            if (guard)
+                forwarding = previous;
+        });
+    }
+
     void syncNativePopups()
     {
         const auto popups = nativePopupAnchors.keys();
@@ -1480,7 +1495,7 @@ struct GallerySpatialController::Private {
             if (!anchor.source || !popup->isVisible() || anchor.source->window() != window->window()) {
                 continue;
             }
-            QScopedValueRollback<bool> forward(forwarding, true);
+            const auto forward = forwardInput();
             const QPoint presented = overlay::presentation::mapToGlobal(anchor.source, anchor.point);
             QPoint position = presented + anchor.offset;
             auto* screen = QGuiApplication::screenAt(presented);
@@ -1597,6 +1612,7 @@ struct GallerySpatialController::Private {
             backdropDirty = true;
             grabbed = nullptr;
             hovered = nullptr;
+            hoverPath.clear();
         }
         sync();
         navigation->update();
@@ -1604,17 +1620,60 @@ struct GallerySpatialController::Private {
     }
     void hover(QWidget* target, const QPoint& source)
     {
-        if (hovered == target)
-            return;
-        if (hovered) {
-            QEvent leave(QEvent::Leave);
-            QApplication::sendEvent(hovered, &leave);
+        QVector<QPointer<QWidget>> next;
+        for (QWidget* widget = target; widget; widget = widget->parentWidget()) {
+            next.append(widget);
+            if (widget == navigation)
+                break;
+        }
+        const QPoint previousSource = hoverSource;
+        hoverSource = source;
+        const auto previous = hoverPath;
+        int leaving = previous.size();
+        int entering = next.size();
+        while (leaving > 0 && entering > 0 && previous[leaving - 1] == next[entering - 1]) {
+            --leaving;
+            --entering;
         }
         hovered = target;
-        if (target) {
-            const QPoint local = target->mapFrom(navigation, source);
-            FLUENT_MAKE_ENTER_EVENT_AT(enter, local, target->mapTo(window, local), target->mapToGlobal(local));
-            QApplication::sendEvent(target, &enter);
+        hoverPath = next;
+        const QPointer<QObject> guard(owner);
+        // Qt normally enters the widget's ancestor chain. The projection layer
+        // suppresses native hover, so it must preserve that same containment:
+        // leave from child to parent, enter from parent to child, keep common parents.
+        // zh_CN: 投影层拦截原生悬停后，须补齐 Qt 的祖先链语义：由内向外离开，
+        // 由外向内进入；在兄弟控件间移动时保留共同父控件的悬停状态。
+        for (int i = 0; i < leaving; ++i) {
+            if (previous[i]) {
+                QEvent leave(QEvent::Leave);
+                QApplication::sendEvent(previous[i], &leave);
+                if (!guard)
+                    return;
+                if (previous[i] && navigation && previous[i]->testAttribute(Qt::WA_Hover)) {
+                    auto* widget = previous[i].data();
+                    const QPoint oldLocal = widget->mapFrom(navigation, previousSource);
+                    FLUENT_MAKE_HOVER_EVENT(hover, QEvent::HoverLeave, widget, QPoint(-1, -1), oldLocal);
+                    QApplication::sendEvent(widget, &hover);
+                    if (!guard)
+                        return;
+                }
+            }
+        }
+        for (int i = entering - 1; i >= 0; --i) {
+            if (next[i] && navigation && window) {
+                auto* widget = next[i].data();
+                const QPoint local = widget->mapFrom(navigation, source);
+                FLUENT_MAKE_ENTER_EVENT_AT(enter, local, widget->mapTo(window, local), widget->mapToGlobal(local));
+                QApplication::sendEvent(widget, &enter);
+                if (!guard)
+                    return;
+                if (next[i] && next[i]->testAttribute(Qt::WA_Hover)) {
+                    FLUENT_MAKE_HOVER_EVENT(hover, QEvent::HoverEnter, next[i], local, QPoint(-1, -1));
+                    QApplication::sendEvent(next[i], &hover);
+                    if (!guard)
+                        return;
+                }
+            }
         }
     }
 };
@@ -2012,6 +2071,7 @@ void GallerySpatialController::disableSpatial(const QString& reason)
     d->scene.backdrop = {};
     d->grabbed = nullptr;
     d->hovered = nullptr;
+    d->hoverPath.clear();
     if (d->canvas) {
         if (auto* surface = dynamic_cast<GpuSurface*>(d->canvas.data())) {
             surface->initialized = {};
@@ -2321,6 +2381,25 @@ void GallerySpatialController::applyMode(bool enabled)
         return;
     }
     if (enabled) {
+        if (!d->capture->isEnabled()) {
+            // Adopt Qt's existing native hover chain when taking over input.
+            // Otherwise a subsequent exit cannot clear a parent that was
+            // entered in 2D before the presentation mode changed.
+            // zh_CN: 接管输入时继承 Qt 已有的原生悬停链，确保切换模式后的离开
+            // 仍能清除在 2D 模式中进入过的父控件状态。
+            QWidget* leaf = d->navigation->underMouse() ? d->navigation.data() : nullptr;
+            for (auto* candidate : d->navigation->findChildren<QWidget*>()) {
+                if (candidate->underMouse() && (!leaf || leaf->isAncestorOf(candidate)))
+                    leaf = candidate;
+            }
+            d->hovered = leaf;
+            d->hoverPath.clear();
+            for (QWidget* widget = leaf; widget; widget = widget->parentWidget()) {
+                d->hoverPath.append(widget);
+                if (widget == d->navigation)
+                    break;
+            }
+        }
         d->setFiltering(true);
         d->canvas->show();
         d->navigation->setAttribute(Qt::WA_NoSystemBackground);
@@ -2377,11 +2456,8 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
                 // zh_CN: 在 Qt 分发原生移动并启动提示计时前清理旧悬停，避免合成 Leave 取消提示。
                 const QPointer<GallerySpatialController> guard(this);
                 const QPointer<QObject> receiver(watched);
-                const QPointer<QWidget> previous = d->hovered;
-                d->hovered = nullptr;
                 d->forwarding = true;
-                QEvent leave(QEvent::Leave);
-                QApplication::sendEvent(previous, &leave);
+                d->hover(target, source.toPoint());
                 if (!guard)
                     return true;
                 d->forwarding = false;
@@ -2452,8 +2528,11 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         && event->type() == QEvent::MouseMove
         && (widget != d->window || !d->navigation->rect().contains(d->navigation->mapFromGlobal(mouseGlobal)));
     if ((widget == d->window && event->type() == QEvent::Leave) || outsideSceneMove) {
-        QScopedValueRollback<bool> forward(d->forwarding, true);
+        const QPointer<GallerySpatialController> guard(this);
+        const auto forward = d->forwardInput();
         d->hover(nullptr, {});
+        if (!guard)
+            return true;
         if (!d->grabbed && !d->firstOverlay())
             d->followPointer({});
     }
@@ -2477,7 +2556,7 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
             const QPoint point = declaredSource ? declaration.point : source->mapFromGlobal(widget->pos());
             const QPoint presented = overlay::presentation::mapToGlobal(source, point);
             if (!declaredSource) {
-                QScopedValueRollback<bool> forward(d->forwarding, true);
+                const auto forward = d->forwardInput();
                 widget->move(presented);
             }
             if (!d->nativePopupAnchors.contains(widget))
@@ -2515,7 +2594,7 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         // Ignored input from an overlay label can bubble to the window. It must
         // never be reinterpreted as an interaction with the projected background.
         // zh_CN: 浮层文字未处理的输入可能冒泡到窗口，但不能再被解释为投影背景上的交互。
-        QScopedValueRollback<bool> forward(d->forwarding, true);
+        const auto forward = d->forwardInput();
         d->grabbed = nullptr;
         d->hover(nullptr, {});
         return true;
@@ -2541,12 +2620,19 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         d->navigation->setPaneOpen(false);
         return true;
     }
+    // Qt holds hover during implicit mouse capture, then resolves the actual hit on release.
+    // zh_CN: 和 Qt 一样在隐式鼠标捕获期间保留悬停，释放后再按实际命中位置恢复。
+    const QPoint hoverPosition = source.toPoint();
     if (d->grabbed) {
         const auto& panel = d->belongsToContent(d->grabbed) ? d->scene.content : d->scene.navigation;
         source = panel.transform.inverted().map(presented);
     }
-    QScopedValueRollback<bool> forward(d->forwarding, true);
-    QWidget* target = d->grabbed ? d->grabbed.data() : hit ? d->navigation->childAt(source.toPoint()) : nullptr;
+    const QPointer<GallerySpatialController> guard(this);
+    const auto forward = d->forwardInput();
+    QPointer<QWidget> target = d->grabbed ? d->grabbed.data()
+        : hit
+        ? d->navigation->childAt(source.toPoint())
+        : nullptr;
     if (!target) {
         d->hover(nullptr, {});
         return true;
@@ -2556,18 +2642,24 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
     if (mouse) {
         auto* input = static_cast<QMouseEvent*>(event);
         d->hover(target, source.toPoint());
+        if (!guard || !target)
+            return true;
         if (event->type() == QEvent::MouseButtonPress)
             d->grabbed = target;
-        QMouseEvent forwarded(event->type(), local, target->mapTo(d->window, local), sourceGlobal, input->button(),
-            input->buttons(), input->modifiers(), input->source());
+        FluentTranslatedMouseEvent forwarded(input, local, target->mapTo(d->window, local), sourceGlobal);
         // Queue composition alongside the drag's source update, before Qt starts
         // painting. The capture then joins this frame instead of requesting another.
         // zh_CN: 拖动时提前合并合成与源更新，捕获结果进入本帧，避免额外提交一帧旧画面。
         if (input->buttons() != Qt::NoButton || input->button() != Qt::NoButton)
             requestCanvasFrame(d->canvas, true);
         QApplication::sendEvent(target, &forwarded);
-        if (event->type() == QEvent::MouseButtonRelease)
+        if (guard && event->type() == QEvent::MouseButtonRelease && input->buttons() == Qt::NoButton) {
             d->grabbed = nullptr;
+            QWidget* hoverTarget = hit && d->navigation->rect().contains(presented) && !d->nativeOverlayAt(global)
+                ? d->navigation->childAt(hoverPosition)
+                : nullptr;
+            d->hover(hoverTarget, hoverPosition);
+        }
     } else if (wheel) {
         auto* input = static_cast<QWheelEvent*>(event);
         // Qt deliberately does not bubble synthetic wheel events. Walk the widget
@@ -2580,7 +2672,7 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
             forwarded.setTimestamp(input->timestamp());
             forwarded.ignore();
             QApplication::sendEvent(receiver, &forwarded);
-            if (!receiver || forwarded.isAccepted() || receiver->isWindow()
+            if (!guard || !receiver || forwarded.isAccepted() || receiver->isWindow()
                 || receiver->testAttribute(Qt::WA_NoMousePropagation))
                 break;
             receiver = receiver->parentWidget();

@@ -19,7 +19,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QColor, QContextMenuEvent, QEnterEvent, QGuiApplication, QHelpEvent,
-    QImage, QMatrix4x4, QMouseEvent, QOffscreenSurface, QOpenGLContext,
+    QHoverEvent, QImage, QMatrix4x4, QMouseEvent, QOffscreenSurface, QOpenGLContext,
     QPaintEngine, QPainter, QPainterPath, QPixmap, QPolygonF, QRegion, QTransform,
     QVector3D, QSurfaceFormat, QWheelEvent,
 )
@@ -1223,6 +1223,7 @@ class GallerySpatialController(QObject):
         self.forwarding = False
         self.filtering = False
         self.grabbed = self.hovered = None
+        self.hover_path = []
         self.native_popup_anchors = {}
         self._direct_composition_required = False
         self._composing_requirements = False
@@ -1357,6 +1358,7 @@ class GallerySpatialController(QObject):
         self.backdrop = QPixmap()
         self.backdrop_dirty = True
         self.grabbed = self.hovered = None
+        self.hover_path = []
         self.navigation.update()
         self.window.update()
 
@@ -1677,6 +1679,7 @@ class GallerySpatialController(QObject):
         self.reset_revisions()
         self.backdrop = QPixmap()
         self.grabbed = self.hovered = None
+        self.hover_path = []
         if _alive(self.canvas):
             self.canvas.clear_frame_caches()
             self.canvas.hide()
@@ -1805,6 +1808,17 @@ class GallerySpatialController(QObject):
             self.set_filtering(False)
             return
         if enabled:
+            if not self.capture.isEnabled():
+                leaf = self.navigation if self.navigation.underMouse() else None
+                for candidate in self.navigation.findChildren(QWidget):
+                    if candidate.underMouse() and (leaf is None or leaf.isAncestorOf(candidate)):
+                        leaf = candidate
+                self.hovered, self.hover_path = leaf, []
+                while _alive(leaf):
+                    self.hover_path.append(leaf)
+                    if leaf is self.navigation:
+                        break
+                    leaf = leaf.parentWidget()
             self.set_filtering(True)
             self.layout()
             self.canvas.show()
@@ -1856,6 +1870,7 @@ class GallerySpatialController(QObject):
             self.backdrop = QPixmap()
             self.backdrop_dirty = True
             self.grabbed = self.hovered = None
+            self.hover_path = []
         self.sync()
         self.navigation.update()
         self.window.update()
@@ -2057,14 +2072,42 @@ class GallerySpatialController(QObject):
         return widget.mapTo(self.window, point)
 
     def hover(self, target, source):
-        if target == self.hovered:
-            return
-        if _alive(self.hovered):
-            QApplication.sendEvent(self.hovered, QEvent(QEvent.Leave))
-        self.hovered = target
-        if _alive(target):
-            local = target.mapFrom(self.navigation, source)
-            QApplication.sendEvent(target, QEnterEvent(local, target.mapTo(self.window, local), target.mapToGlobal(local)))
+        next_path = []
+        widget = target
+        while _alive(widget):
+            next_path.append(widget)
+            if widget is self.navigation:
+                break
+            widget = widget.parentWidget()
+        previous_source = getattr(self, "hover_source", QPoint())
+        self.hover_source = QPoint(source)
+        previous = self.hover_path
+        leaving, entering = len(previous), len(next_path)
+        while leaving and entering and previous[leaving - 1] is next_path[entering - 1]:
+            leaving -= 1
+            entering -= 1
+        self.hovered, self.hover_path = target, next_path
+        for widget in previous[:leaving]:
+            if _alive(widget):
+                QApplication.sendEvent(widget, QEvent(QEvent.Leave))
+                if not _alive(self):
+                    return
+                if _alive(widget) and _alive(self.navigation) and widget.testAttribute(Qt.WA_Hover):
+                    QApplication.sendEvent(widget, QHoverEvent(
+                        QEvent.HoverLeave, QPointF(-1, -1), QPointF(widget.mapFrom(self.navigation, previous_source))))
+                    if not _alive(self):
+                        return
+        for widget in reversed(next_path[:entering]):
+            if _alive(widget) and _alive(self.navigation) and _alive(self.window):
+                local = widget.mapFrom(self.navigation, source)
+                QApplication.sendEvent(widget, QEnterEvent(
+                    local, widget.mapTo(self.window, local), widget.mapToGlobal(local)))
+                if not _alive(self):
+                    return
+                if _alive(widget) and widget.testAttribute(Qt.WA_Hover):
+                    QApplication.sendEvent(widget, QHoverEvent(QEvent.HoverEnter, QPointF(local), QPointF(-1, -1)))
+                    if not _alive(self):
+                        return
 
     def _blocks_pending_qml_input(self, watched, event):
         if not (self.canvas.property(_QML_FAILURE_PENDING) and self.canvas.property("presenting")):
@@ -2124,10 +2167,9 @@ class GallerySpatialController(QObject):
                 # Clear projected hover before Qt dispatches the native QWidget
                 # move and starts its tooltip timer. A later synthetic Leave
                 # cancels that timer; the forwarded move cannot restart it.
-                previous, self.hovered = self.hovered, None
                 self.forwarding = True
                 try:
-                    QApplication.sendEvent(previous, QEvent(QEvent.Leave))
+                    self.hover(target, source.toPoint() if target is not None else QPoint())
                 finally:
                     if _alive(self):
                         self.forwarding = False
@@ -2234,6 +2276,8 @@ class GallerySpatialController(QObject):
         if not self.grabbed and floating and hit != 0 and kind == QEvent.MouseButtonPress:
             nav.setPaneOpen(False)
             return True
+        # Match Qt: retain hover during capture, then resolve the actual hit on final release.
+        hover_position = source.toPoint()
         if self.grabbed:
             index = 1 if self.in_content(self.grabbed) else 0
             source = self.panels[index][1].inverted()[0].map(QPointF(presented))
@@ -2247,16 +2291,22 @@ class GallerySpatialController(QObject):
             source_global = nav.mapToGlobal(source.toPoint())
             if mouse:
                 self.hover(target, source.toPoint())
+                if not _alive(self) or not _alive(target):
+                    return True
                 if kind == QEvent.MouseButtonPress:
                     self.grabbed = target
                 forwarded = QMouseEvent(kind, local, target.mapTo(self.window, local), source_global,
-                                        event.button(), event.buttons(), event.modifiers(), event.source())
+                                        event.button(), event.buttons(), event.modifiers(), event.source(), event.pointingDevice())
                 # Compose the drag's source update in this frame, not a later one.
                 if (event.buttons() != Qt.NoButton or event.button() != Qt.NoButton) and _alive(self.canvas):
                     self.canvas.request_frame(with_input=True)
+                forwarded.setTimestamp(event.timestamp())
                 QApplication.sendEvent(target, forwarded)
-                if kind == QEvent.MouseButtonRelease:
+                if _alive(self) and kind == QEvent.MouseButtonRelease and event.buttons() == Qt.NoButton:
                     self.grabbed = None
+                    hover_target = (nav.childAt(hover_position) if hit is not None
+                                    and nav.rect().contains(presented) and not self.native_overlay_at(global_pos) else None)
+                    self.hover(hover_target, hover_position)
             elif wheel:
                 receiver = target
                 while _alive(receiver):
@@ -2274,5 +2324,6 @@ class GallerySpatialController(QObject):
             else:
                 QApplication.sendEvent(target, QContextMenuEvent(event.reason(), local, source_global, event.modifiers()))
         finally:
-            self.forwarding = False
+            if _alive(self):
+                self.forwarding = False
         return True
