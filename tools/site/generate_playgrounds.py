@@ -78,11 +78,13 @@ def main() -> None:
     args = parser.parse_args()
     stale = []
     for path, content in outputs(ROOT).items():
+        data = content.encode("utf-8")
+        if path.exists() and path.read_bytes() == data:
+            continue
         if args.check:
-            if not path.exists() or path.read_text(encoding="utf-8") != content:
-                stale.append(str(path.relative_to(ROOT)))
+            stale.append(str(path.relative_to(ROOT)))
         else:
-            path.write_text(content, encoding="utf-8")
+            path.write_bytes(data)
     if stale:
         raise SystemExit("Stale playground assets: " + ", ".join(stale))
 
