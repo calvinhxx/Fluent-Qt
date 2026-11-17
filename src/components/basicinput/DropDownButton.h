@@ -29,8 +29,8 @@ class DropDownButton : public Button {
      */
     Q_PROPERTY(QMenu* menu READ menu WRITE setMenu NOTIFY menuChanged)
     /**
-     * @brief Whether the popup, drawer, or notification surface is open.
-     * zh_CN: 弹层、抽屉或通知表面是否处于打开状态。
+     * @brief Menu-open state for appearance and accessibility; setting it does not show or hide the menu.
+     * zh_CN: 用于外观和无障碍信息的菜单打开状态；设置它不会显示或隐藏菜单。
      */
     Q_PROPERTY(bool isOpen READ isOpen WRITE setIsOpen NOTIFY openChanged)
     /**

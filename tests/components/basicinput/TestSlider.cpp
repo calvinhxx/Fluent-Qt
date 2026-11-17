@@ -266,6 +266,31 @@ TEST(SliderContractTest, Contract_AutomaticTicksHandleZeroStepsAndFullIntegerRan
     EXPECT_EQ(slider.grab().toImage(), noTicks);
 }
 
+TEST(SliderContractTest, Contract_TicksPaintTheRequestedSidesOnBothAxes)
+{
+    for (const auto orientation : {Qt::Horizontal, Qt::Vertical}) {
+        for (const auto theme : {FluentElement::Light, FluentElement::Dark}) {
+            Slider slider(orientation);
+            slider.setProperty("fluentThemeOverride", int(theme));
+            slider.resize(orientation == Qt::Horizontal ? QSize(240, 48) : QSize(48, 240));
+            slider.setRange(0, 100);
+            slider.setValue(50);
+            slider.setTickInterval(10);
+            slider.setHoverRatio(1.0);
+            slider.setTickPosition(QSlider::NoTicks);
+            const auto empty = testutils::renderControlSurface(slider, 1, QColor(17, 23, 31));
+            const QRect before = orientation == Qt::Horizontal ? QRect(0, 0, 240, 20) : QRect(0, 0, 20, 240);
+            const QRect after = orientation == Qt::Horizontal ? QRect(0, 28, 240, 20) : QRect(28, 0, 20, 240);
+            for (const auto sides : {QSlider::TicksAbove, QSlider::TicksBelow, QSlider::TicksBothSides}) {
+                slider.setTickPosition(sides);
+                const auto painted = testutils::renderControlSurface(slider, 1, QColor(17, 23, 31));
+                EXPECT_EQ(painted.copy(before) != empty.copy(before), sides != QSlider::TicksBelow);
+                EXPECT_EQ(painted.copy(after) != empty.copy(after), sides != QSlider::TicksAbove);
+            }
+        }
+    }
+}
+
 TEST(SliderContractTest, Contract_LightAndDarkRangeExtremesPaintDistinctly)
 {
     const FluentElement::Theme themes[]{FluentElement::Light, FluentElement::Dark};

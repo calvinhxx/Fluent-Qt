@@ -148,6 +148,32 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertEqual(button.fluentLayout(), layouts.TextOnly)
             delete_qobject(button)
 
+    def test_explicit_button_focus_paint_is_available_without_moving_focus(self):
+        class FocusPreviewButton(fluentqt.Button):
+            def paintEvent(self, event):
+                self.paintButtonState(self.interactionState(), True)
+
+        ordinary = fluentqt.Button("Focus")
+        preview = FocusPreviewButton("Focus")
+        previous_focus = QApplication.focusWidget()
+        for button in (ordinary, preview):
+            button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+            button.resize(120, 40)
+        idle = preview.grab().toImage()
+        ordinary_idle = ordinary.grab().toImage()
+        preview.setFocusVisual(True)
+        ordinary.setFocusVisual(True)
+        self.assertNotEqual(preview.grab().toImage(), idle)
+        self.assertEqual(ordinary.grab().toImage(), ordinary_idle)
+        preview.setEnabled(False)
+        disabled = preview.grab().toImage()
+        preview.setFocusVisual(False)
+        self.assertEqual(preview.grab().toImage(), disabled)
+        self.assertFalse(preview.hasFocus())
+        self.assertIs(QApplication.focusWidget(), previous_focus)
+        delete_qobject(preview)
+        delete_qobject(ordinary)
+
     def test_icon_above_layout_is_available_on_generic_button_families(self):
         layouts = fluentqt.Button.ButtonLayout
         self.assertEqual([int(value) for value in (layouts.TextOnly, layouts.IconBefore,

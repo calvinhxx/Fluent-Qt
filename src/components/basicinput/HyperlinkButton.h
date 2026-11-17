@@ -27,8 +27,8 @@ class HyperlinkButton : public Button {
      */
     Q_PROPERTY(QUrl url READ url WRITE setUrl NOTIFY urlChanged)
     /**
-     * @brief Whether the hyperlink text draws an underline.
-     * zh_CN: 超链接文本是否绘制下划线。
+     * @brief Whether the hyperlink text draws an underline while hovered.
+     * zh_CN: 悬停时是否为超链接文本绘制下划线。
      */
     Q_PROPERTY(bool showUnderline READ showUnderline WRITE setShowUnderline NOTIFY showUnderlineChanged)
 

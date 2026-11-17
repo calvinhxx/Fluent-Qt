@@ -19,6 +19,8 @@
 
 namespace fluent::basicinput {
 
+class ButtonContentPainter;
+
 /**
  * @brief Fluent-styled push button with token-driven painting and optional iconfont content.
  * zh_CN: 基于 Fluent 设计 token 自绘的 QPushButton，支持文本、图标字体和多种视觉状态。
@@ -31,6 +33,7 @@ namespace fluent::basicinput {
  */
 class Button : public QPushButton, public FluentElement, public QMLPlus {
     Q_OBJECT
+    friend class ButtonContentPainter;
 
     /**
      * @brief Visual treatment: Standard, Accent, or Subtle.
@@ -99,9 +102,9 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
     Q_PROPERTY(qreal iconRotation READ iconRotation WRITE setIconRotation)
     /**
      * @brief Uniform scale applied to the painted iconfont glyph (1.0 = no scaling).
-     * Drives WinUI-style press feedback (a brief scale-down) without touching geometry.
-     * zh_CN: 作用于自绘 iconfont 字形的等比缩放（1.0 为不缩放），用于实现 WinUI 风格的按下反馈
-     *（短暂缩小），且不改变几何布局。
+     * Applications can animate this property for press feedback; Button does not start a scale animation itself.
+     * zh_CN: 作用于自绘 iconfont 字形的等比缩放（1.0 为不缩放）。应用可以对该属性播放按下反馈动画；
+     * Button 自身不会启动缩放动画。
      */
     Q_PROPERTY(qreal iconScale READ iconScale WRITE setIconScale)
     /**
@@ -254,6 +257,12 @@ protected:
      * zh_CN: 按指定视觉状态绘制，不修改 interactionState 属性。
      */
     void paintButton(InteractionState state);
+
+    /**
+     * @brief Paints an explicit focus state without moving focus; focusVisual and disabled state still apply.
+     * zh_CN: 不移动实际焦点，按指定焦点状态绘制；仍遵循 focusVisual 和禁用状态。
+     */
+    void paintButtonState(InteractionState state, bool focused);
 
     /**
      * @brief Returns the rectangle used to lay out painted icon and text content.

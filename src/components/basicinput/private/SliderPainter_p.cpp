@@ -62,6 +62,31 @@ void paintSliderThumb(QPainter& painter, const FluentElement::Colors& colors, co
     painter.drawEllipse(thumb.center, innerRadius, innerRadius);
 }
 
+void paintSliderTicks(QPainter& painter,
+    const QRect& track,
+    Qt::Orientation orientation,
+    QSlider::TickPosition sides,
+    const QVector<int>& pixels,
+    const QColor& color)
+{
+    painter.setPen(color);
+    const bool before = sides == QSlider::TicksAbove || sides == QSlider::TicksBothSides;
+    const bool after = sides == QSlider::TicksBelow || sides == QSlider::TicksBothSides;
+    for (const int pixel : pixels) {
+        if (orientation == Qt::Horizontal) {
+            if (before)
+                painter.drawLine(pixel, track.top() - 4, pixel, track.top() - 2);
+            if (after)
+                painter.drawLine(pixel, track.bottom() + 4, pixel, track.bottom() + 6);
+        } else {
+            if (before)
+                painter.drawLine(track.left() - 4, pixel, track.left() - 2, pixel);
+            if (after)
+                painter.drawLine(track.right() + 4, pixel, track.right() + 6, pixel);
+        }
+    }
+}
+
 QVector<int> sliderTickValues(int minimum, int maximum, int tickInterval, int singleStep, int pageStep)
 {
     QVector<int> values;

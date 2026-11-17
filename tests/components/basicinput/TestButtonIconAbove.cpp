@@ -114,6 +114,65 @@ QRect coloredInk(const QImage& image, const QColor& color, const QRectF& logical
     return result;
 }
 
+template <typename Base> void checkInheritedIconConfiguration()
+{
+    Base button(QStringLiteral("Read"));
+    if constexpr (std::is_same<Base, CompoundButton>::value)
+        button.setSecondaryText(QStringLiteral("Description"));
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.resize(260, 120);
+    for (auto theme : {FluentElement::Light, FluentElement::Dark}) {
+        button.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            button.setLayoutDirection(direction);
+            for (bool glyph : {true, false}) {
+                button.setIconGlyph(glyph ? Typography::Icons::Save : QString(), 24);
+                QPixmap source(24, 24);
+                source.fill(Qt::transparent);
+                QPainter sourcePainter(&source);
+                sourcePainter.fillRect(QRect(2, 2, 7, 18), Qt::magenta);
+                sourcePainter.fillRect(QRect(2, 14, 16, 6), Qt::magenta);
+                sourcePainter.end();
+                button.setIcon(glyph ? QIcon() : QIcon(source));
+                button.setIconSize(QSize(24, 24));
+                QImage beforeImage;
+                for (auto layout : {Button::TextOnly, Button::IconBefore, Button::IconAfter, Button::IconOnly,
+                         Button::IconAbove, Button::IconBelow}) {
+                    SCOPED_TRACE(::testing::Message()
+                        << button.metaObject()->className() << " theme=" << theme << " direction=" << direction
+                        << " glyph=" << glyph << " layout=" << layout);
+                    button.setFluentLayout(layout);
+                    button.setIconRotation(0);
+                    button.setIconScale(1);
+                    button.setIconOffset(QPoint());
+                    const QImage initial = renderButton(button, 1.5);
+                    if (layout == Button::IconBefore)
+                        beforeImage = initial;
+                    if (layout == Button::IconAfter)
+                        EXPECT_NE(initial, beforeImage);
+                    button.setIconRotation(90);
+                    const QImage rotated = renderButton(button, 1.5);
+                    button.setIconRotation(0);
+                    button.setIconScale(0.6);
+                    const QImage scaled = renderButton(button, 1.5);
+                    button.setIconScale(1);
+                    button.setIconOffset(QPoint(5, -3));
+                    const QImage offset = renderButton(button, 1.5);
+                    if (layout == Button::TextOnly) {
+                        EXPECT_EQ(initial, rotated);
+                        EXPECT_EQ(initial, scaled);
+                        EXPECT_EQ(initial, offset);
+                    } else {
+                        EXPECT_NE(initial, rotated);
+                        EXPECT_NE(initial, scaled);
+                        EXPECT_NE(initial, offset);
+                    }
+                }
+            }
+        }
+    }
+}
+
 template <typename Base>
 void checkStackedContent(const QString& text, Button::ButtonLayout stackedLayout = Button::IconAbove)
 {
@@ -387,4 +446,31 @@ TEST(ButtonIconBelowTest, Contract_CompoundEmptyRowsDoNotReserveUnusedSpace)
     textOnly.setFluentLayout(Button::IconBelow);
     textOnly.setIconGlyph(Typography::Icons::Undo, 24);
     EXPECT_EQ(compound.sizeHint(), textOnly.sizeHint());
+}
+
+TEST(ButtonIconConfigurationTest, AllDerivedButtonsPaintEveryLayoutAndTransformForGlyphsAndQIcons)
+{
+    checkInheritedIconConfiguration<Button>();
+    checkInheritedIconConfiguration<CompoundButton>();
+    checkInheritedIconConfiguration<DropDownButton>();
+    checkInheritedIconConfiguration<HyperlinkButton>();
+    checkInheritedIconConfiguration<RepeatButton>();
+    checkInheritedIconConfiguration<SplitButton>();
+    checkInheritedIconConfiguration<ToggleButton>();
+    checkInheritedIconConfiguration<ToggleSplitButton>();
+}
+
+TEST(ButtonIconConfigurationTest, CompoundIconOnlyHidesBothTextRowsAndTheirSpace)
+{
+    StackedButtonProbe<CompoundButton> button(QStringLiteral("Title"));
+    button.setSecondaryText(QStringLiteral("Description"));
+    button.setIconGlyph(Typography::Icons::Save);
+    button.setFluentLayout(Button::IconOnly);
+    const QSize size = button.sizeHint();
+    button.resize(size);
+    const QImage iconOnly = renderButton(button, 2);
+    button.setText(QString());
+    button.setSecondaryText(QString());
+    EXPECT_EQ(button.sizeHint(), size);
+    EXPECT_EQ(renderButton(button, 2), iconOnly);
 }

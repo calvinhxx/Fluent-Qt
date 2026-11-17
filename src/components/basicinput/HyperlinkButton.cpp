@@ -1,5 +1,6 @@
 #include "compatibility/TextPaintCompat.h"
 #include "HyperlinkButton.h"
+#include "private/ButtonContentPainter_p.h"
 #include "components/basicinput/private/HyperlinkButtonAccessibility_p.h"
 #include <QDesktopServices>
 #include <QFocusEvent>
@@ -123,23 +124,23 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
 
     QString txt = text();
     QFontMetrics fm = painter.fontMetrics();
-    int txtWidth = fm.horizontalAdvance(txt);
 
     QRectF textRect = rect();
     if (fluentLayout() == IconAbove || fluentLayout() == IconBelow)
         textRect = paintStackedContent(painter, textRect);
     else
-        fluent::painting::drawVerticallyCenteredText(painter, textRect, txt, Qt::AlignHCenter);
+        textRect = ButtonContentPainter::paintHorizontalButtonContent(*this, painter, textRect,
+            fluentSize() == Small ? spacing.gap.tight : spacing.gap.normal);
 
     // 5. Underline: the explicit opt-in draws on hover. zh_CN:
     // 显式开启后在悬停时绘制下划线。
     const bool underlineExplicit = m_showUnderline && state == Hover;
-    if (underlineExplicit && !txt.isEmpty()) {
-        int textX = (width() - txtWidth) / 2;
+    if (underlineExplicit && !txt.isEmpty() && !textRect.isEmpty()) {
+        const qreal textX = textRect.left();
         const int textY = fluent::painting::verticallyCenteredTextBaseline(textRect, fm);
         // Draw the line 2px under the text in the text color. zh_CN: 在文字下方 2 像素处用文字色画线。
         painter.setPen(textColor);
-        painter.drawLine(textX, textY + 2, textX + txtWidth, textY + 2);
+        painter.drawLine(QPointF(textX, textY + 2), QPointF(textRect.right(), textY + 2));
     }
 
     if (state != Disabled && hasFocus() && (m_keyboardFocusVisible || hasFocusVisual())) {
@@ -151,7 +152,6 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
             qMax<qreal>(0.0, radius.control - 1.0));
     }
 
-    Q_UNUSED(spacing);
     Q_UNUSED(event);
 }
 

@@ -5,6 +5,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QVector>
+#include <QSlider>
 
 #include "components/foundation/FluentElement.h"
 
@@ -32,6 +33,15 @@ QColor sliderTickColor(const FluentElement::Colors& colors);
 // Paints a fully rounded bar; empty rectangles paint nothing.
 // zh_CN: 绘制全圆角条；空矩形不绘制。
 void paintSliderBar(QPainter& painter, const QRectF& rect, const QColor& color);
+
+// Tick sides follow the track axis; Above/Left and Below/Right are Qt aliases.
+// zh_CN: 刻度侧随轨道方向变化，Above/Left 和 Below/Right 是 Qt 的同值别名。
+void paintSliderTicks(QPainter& painter,
+    const QRect& track,
+    Qt::Orientation orientation,
+    QSlider::TickPosition sides,
+    const QVector<int>& pixels,
+    const QColor& color);
 
 // Paints the Fluent thumb: solid outer circle with a ring and an accent inner dot
 // that grows from 0.45 (rest) to 0.7 (hover) of the radius.

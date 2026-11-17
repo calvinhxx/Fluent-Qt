@@ -314,6 +314,17 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     detail::paintSliderBar(p, QRectF(trackRect), detail::sliderTrackColor(colors, isEnabled()));
     detail::paintSliderBar(p, filledRect, detail::sliderFillColor(colors, isEnabled()));
 
+    // Ticks share the same axis-aware painter as RangeSlider.
+    // zh_CN: 与 RangeSlider 共用随方向变化的刻度绘制。
+    if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
+        auto pixels = detail::sliderTickValues(opt.minimum, opt.maximum, opt.tickInterval, opt.singleStep,
+            opt.pageStep);
+        for (int& pixel : pixels)
+            pixel = valueToPixelPos(pixel);
+        detail::paintSliderTicks(p, trackRect, opt.orientation, opt.tickPosition, pixels,
+            detail::sliderTickColor(colors));
+    }
+
     // 3. Thumb. zh_CN: 绘制拇指。
     detail::SliderThumbVisual thumb;
     thumb.center = center;
@@ -323,18 +334,6 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt)
     thumb.keyboardFocused = hasFocus() && m_keyboardFocusVisible;
     thumb.enabled = isEnabled();
     detail::paintSliderThumb(p, colors, thumb);
-
-    // 4. Ticks. zh_CN: 绘制刻度线。
-    if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
-        p.setPen(detail::sliderTickColor(colors));
-        const int ty = (opt.tickPosition == QSlider::TicksAbove) ? (trackRect.top() - 4) : (trackRect.bottom() + 4);
-        const QVector<int> ticks = detail::sliderTickValues(opt.minimum, opt.maximum, opt.tickInterval, opt.singleStep,
-            opt.pageStep);
-        for (const int val : ticks) {
-            const int x = valueToPixelPos(val);
-            p.drawLine(x, ty, x, ty + 2);
-        }
-    }
 }
 
 void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
@@ -358,6 +357,17 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt)
     // 2. Track background and filled portion. zh_CN: 绘制轨道背景与已填充部分。
     detail::paintSliderBar(p, QRectF(trackRect), detail::sliderTrackColor(colors, isEnabled()));
     detail::paintSliderBar(p, filledRect, detail::sliderFillColor(colors, isEnabled()));
+
+    // Ticks share the same axis-aware painter as RangeSlider.
+    // zh_CN: 与 RangeSlider 共用随方向变化的刻度绘制。
+    if (opt.tickPosition != QSlider::NoTicks && m_hoverRatio > 0.1) {
+        auto pixels = detail::sliderTickValues(opt.minimum, opt.maximum, opt.tickInterval, opt.singleStep,
+            opt.pageStep);
+        for (int& pixel : pixels)
+            pixel = valueToPixelPos(pixel);
+        detail::paintSliderTicks(p, trackRect, opt.orientation, opt.tickPosition, pixels,
+            detail::sliderTickColor(colors));
+    }
 
     // 3. Thumb. zh_CN: 绘制拇指。
     detail::SliderThumbVisual thumb;
