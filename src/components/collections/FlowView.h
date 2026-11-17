@@ -70,8 +70,8 @@ public:
      */
     Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     /**
-     * @brief Default item size used when the model does not provide one.
-     * zh_CN: model 未提供尺寸时使用的默认条目尺寸。
+     * @brief Fallback item size when neither the model nor delegate provides a valid size.
+     * zh_CN: 模型和代理均未提供有效尺寸时使用的后备条目尺寸。
      */
     Q_PROPERTY(QSize defaultItemSize READ defaultItemSize WRITE setDefaultItemSize NOTIFY defaultItemSizeChanged)
     /**
@@ -226,6 +226,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -256,7 +257,7 @@ private:
         int bottom = 0;
     };
 
-    void applyThemeStyle();
+    void applyThemeStyle(bool refreshFonts = true);
     void layoutHeader();
     void updateViewportMargins();
     void refreshAccessibleName();

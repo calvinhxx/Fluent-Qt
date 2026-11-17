@@ -831,7 +831,13 @@ FileListView::FileListView(QWidget* parent) : ListView(parent), d(std::make_uniq
     });
 }
 
-FileListView::~FileListView() = default;
+FileListView::~FileListView()
+{
+    for (const auto& connection : d->modelConnections)
+        disconnect(connection);
+    d->modelConnections.clear();
+    d->timer.stop();
+}
 
 void FileListView::setModel(QAbstractItemModel* model)
 {

@@ -48,22 +48,20 @@ void sendWheel(QWidget* target, int x, int y, int angleDeltaY)
 // resulting Accessibility permission dialog that QTest::mouse*/keyClick cause.
 void simulateMouseMove(QWidget* w, QPoint pt)
 {
-    QMouseEvent ev(QEvent::MouseMove, QPointF(pt), QPointF(w->mapToGlobal(pt)),
-                   Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+    QMouseEvent ev(QEvent::MouseMove, QPointF(pt), QPointF(w->mapToGlobal(pt)), Qt::NoButton, Qt::NoButton,
+        Qt::NoModifier);
     QApplication::sendEvent(w, &ev);
 }
 
 void simulateMousePress(QWidget* w, Qt::MouseButton btn, Qt::KeyboardModifiers mod, QPoint pt)
 {
-    QMouseEvent ev(QEvent::MouseButtonPress, QPointF(pt), QPointF(w->mapToGlobal(pt)),
-                   btn, btn, mod);
+    QMouseEvent ev(QEvent::MouseButtonPress, QPointF(pt), QPointF(w->mapToGlobal(pt)), btn, btn, mod);
     QApplication::sendEvent(w, &ev);
 }
 
 void simulateMouseRelease(QWidget* w, Qt::MouseButton btn, Qt::KeyboardModifiers mod, QPoint pt)
 {
-    QMouseEvent ev(QEvent::MouseButtonRelease, QPointF(pt), QPointF(w->mapToGlobal(pt)),
-                   btn, Qt::NoButton, mod);
+    QMouseEvent ev(QEvent::MouseButtonRelease, QPointF(pt), QPointF(w->mapToGlobal(pt)), btn, Qt::NoButton, mod);
     QApplication::sendEvent(w, &ev);
 }
 
@@ -94,16 +92,9 @@ QWidget* createContent(const QSize& size)
 
 class ColorSectionsContent : public QWidget, public fluent::FluentElement {
 public:
-    explicit ColorSectionsContent(QWidget* parent = nullptr)
-        : QWidget(parent)
-    {
-        setFixedSize(600, 1200);
-    }
+    explicit ColorSectionsContent(QWidget* parent = nullptr) : QWidget(parent) { setFixedSize(600, 1200); }
 
-    void onThemeUpdated() override
-    {
-        update();
-    }
+    void onThemeUpdated() override { update(); }
 
 protected:
     void paintEvent(QPaintEvent*) override
@@ -112,13 +103,8 @@ protected:
         painter.setRenderHint(QPainter::Antialiasing);
         painter.fillRect(rect(), themeColors().bgLayer);
 
-        const QList<QColor> colors = {
-            QColor("#0078D4"),
-            QColor("#C239B3"),
-            QColor("#00B7C3"),
-            QColor("#FFB900"),
-            QColor("#107C10")
-        };
+        const QList<QColor> colors = {QColor("#0078D4"), QColor("#C239B3"), QColor("#00B7C3"), QColor("#FFB900"),
+            QColor("#107C10")};
         for (int section = 0; section < colors.size(); ++section) {
             QColor fill = colors.at(section);
             fill.setAlphaF(currentTheme() == fluent::FluentElement::Dark ? 0.68 : 0.84);
@@ -151,10 +137,7 @@ class VisualPanel : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
 
-    void onThemeUpdated() override
-    {
-        update();
-    }
+    void onThemeUpdated() override { update(); }
 
 protected:
     void paintEvent(QPaintEvent*) override
@@ -175,8 +158,7 @@ QVector<AnnotatedScrollBarLabel> yearLabels()
     QVector<AnnotatedScrollBarLabel> labels;
     for (int year = 2023; year >= 2015; --year) {
         const int offset = (2023 - year) * 120;
-        labels.append(AnnotatedScrollBarLabel(QString::number(year), offset,
-                                              QStringLiteral("October %1").arg(year)));
+        labels.append(AnnotatedScrollBarLabel(QString::number(year), offset, QStringLiteral("October %1").arg(year)));
     }
     return labels;
 }
@@ -185,15 +167,9 @@ QVector<AnnotatedScrollBarLabel> yearLabels()
 
 class AnnotatedScrollBarTest : public ::testing::Test {
 protected:
-    void SetUp() override
-    {
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
+    void SetUp() override { fluent::FluentElement::setTheme(fluent::FluentElement::Light); }
 
-    void TearDown() override
-    {
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
+    void TearDown() override { fluent::FluentElement::setTheme(fluent::FluentElement::Light); }
 };
 
 TEST_F(AnnotatedScrollBarTest, DefaultsExposeExpectedApi)
@@ -243,11 +219,9 @@ TEST_F(AnnotatedScrollBarTest, ConfigurableLayoutMetricsAffectHintsAndLabelDensi
 
     bar.resize(144, 180);
     bar.setRange(0, 400);
-    bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("A"), 0),
-                   AnnotatedScrollBarLabel(QStringLiteral("B"), 100),
-                   AnnotatedScrollBarLabel(QStringLiteral("C"), 200),
-                   AnnotatedScrollBarLabel(QStringLiteral("D"), 300),
-                   AnnotatedScrollBarLabel(QStringLiteral("E"), 400)});
+    bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("A"), 0), AnnotatedScrollBarLabel(QStringLiteral("B"), 100),
+        AnnotatedScrollBarLabel(QStringLiteral("C"), 200), AnnotatedScrollBarLabel(QStringLiteral("D"), 300),
+        AnnotatedScrollBarLabel(QStringLiteral("E"), 400)});
 
     const int sparseCount = bar.visibleLabelCount();
     bar.setMinimumLabelSpacing(10);
@@ -286,12 +260,8 @@ TEST_F(AnnotatedScrollBarTest, LabelsSortAndCollapseWhenHeightIsConstrained)
     bar.setRange(0, 1000);
     QSignalSpy labelsSpy(&bar, &AnnotatedScrollBar::labelsChanged);
 
-    bar.setLabels({
-        AnnotatedScrollBarLabel(QStringLiteral("C"), 500),
-        AnnotatedScrollBarLabel(QStringLiteral("A"), 0),
-        AnnotatedScrollBarLabel(QStringLiteral("B"), 250),
-        AnnotatedScrollBarLabel(QStringLiteral("D"), 1000)
-    });
+    bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("C"), 500), AnnotatedScrollBarLabel(QStringLiteral("A"), 0),
+        AnnotatedScrollBarLabel(QStringLiteral("B"), 250), AnnotatedScrollBarLabel(QStringLiteral("D"), 1000)});
 
     ASSERT_EQ(labelsSpy.count(), 1);
     const QVector<AnnotatedScrollBarLabel> visible = bar.visibleLabels();
@@ -317,9 +287,7 @@ TEST_F(AnnotatedScrollBarTest, DetailProviderAndFallbackDrivePopupState)
     showAndProcess(bar);
 
     QSignalSpy requestedSpy(&bar, &AnnotatedScrollBar::detailLabelRequested);
-    bar.setDetailLabelProvider([](int offset) {
-        return QStringLiteral("Offset %1").arg(offset);
-    });
+    bar.setDetailLabelProvider([](int offset) { return QStringLiteral("Offset %1").arg(offset); });
     simulateMouseMove(&bar, QPoint(110, 120));
     QApplication::processEvents();
 
@@ -445,8 +413,8 @@ TEST_F(AnnotatedScrollBarTest, RenderReflectsThemeAndDisabledState)
     bar.resize(120, 300);
     bar.setRange(0, 1000);
     bar.setValue(500);
-    bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("A"), 0),
-                   AnnotatedScrollBarLabel(QStringLiteral("B"), 1000)});
+    bar.setLabels(
+        {AnnotatedScrollBarLabel(QStringLiteral("A"), 0), AnnotatedScrollBarLabel(QStringLiteral("B"), 1000)});
     showAndProcess(bar);
 
     auto renderIndicator = [&bar]() {
@@ -470,6 +438,46 @@ TEST_F(AnnotatedScrollBarTest, RenderReflectsThemeAndDisabledState)
     EXPECT_NE(darkColor.rgba(), disabledColor.rgba());
 }
 
+TEST_F(AnnotatedScrollBarTest, DefaultLabelColumnFitsFourDigitLabelsWithoutLeftClippingAndCentersCarets)
+{
+    AnnotatedScrollBar bar;
+    bar.resize(132, 200);
+    bar.setRange(0, 100);
+    bar.setValue(25);
+    bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("2024"), 10),
+        AnnotatedScrollBarLabel(QStringLiteral("2025"), 45), AnnotatedScrollBarLabel(QStringLiteral("2026"), 85)});
+    showAndProcess(bar);
+
+    EXPECT_GE(bar.labelColumnWidth(), 48);
+
+    QImage image(bar.size(), QImage::Format_ARGB32);
+    image.fill(Qt::transparent);
+    bar.render(&image);
+
+    const auto xBoundsIn = [&image](int yStart, int yEnd) {
+        int minX = image.width();
+        int maxX = -1;
+        for (int y = yStart; y < yEnd; ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (qAlpha(image.pixel(x, y)) > 0) {
+                    minX = std::min(minX, x);
+                    maxX = std::max(maxX, x);
+                }
+            }
+        }
+        return std::pair<int, int>(minX, maxX);
+    };
+
+    const auto [labelMinX, labelMaxX] = xBoundsIn(22, 46);
+    EXPECT_GT(labelMinX, 0);
+    EXPECT_LE(labelMaxX, bar.labelColumnWidth());
+
+    const auto [caretMinX, caretMaxX] = xBoundsIn(0, 18);
+    ASSERT_GE(caretMaxX, caretMinX);
+    const qreal indicatorCenterX = bar.indicatorCenter().x();
+    const qreal caretCenterX = (caretMinX + caretMaxX) / 2.0;
+    EXPECT_LE(std::abs(caretCenterX - indicatorCenterX), 1.5);
+}
 
 TEST_F(AnnotatedScrollBarTest, VisualCheck)
 {
@@ -552,13 +560,9 @@ TEST_F(AnnotatedScrollBarTest, VisualCheck)
     linkedBar->setPreferredSize(QSize(164, 460));
     linkedBar->setMinimumBarSize(QSize(128, 240));
     linkedBar->setFixedSize(164, 460);
-    linkedBar->setLabels({
-        AnnotatedScrollBarLabel(QStringLiteral("Azure"), 0),
-        AnnotatedScrollBarLabel(QStringLiteral("Crimson"), 180),
-        AnnotatedScrollBarLabel(QStringLiteral("Cyan"), 360),
-        AnnotatedScrollBarLabel(QStringLiteral("Fuchsia"), 540),
-        AnnotatedScrollBarLabel(QStringLiteral("Gold"), 700)
-    });
+    linkedBar->setLabels({AnnotatedScrollBarLabel(QStringLiteral("Azure"), 0),
+        AnnotatedScrollBarLabel(QStringLiteral("Crimson"), 180), AnnotatedScrollBarLabel(QStringLiteral("Cyan"), 360),
+        AnnotatedScrollBarLabel(QStringLiteral("Fuchsia"), 540), AnnotatedScrollBarLabel(QStringLiteral("Gold"), 700)});
     linkedBar->setDetailLabelProvider([linkedBar](int offset) {
         const QVector<AnnotatedScrollBarLabel> labels = linkedBar->labels();
         AnnotatedScrollBarLabel current = labels.first();
@@ -574,8 +578,11 @@ TEST_F(AnnotatedScrollBarTest, VisualCheck)
     linkedAnchors.top = {scrollView, Edge::Top, 0};
     root->addAnchoredWidget(linkedBar, linkedAnchors);
 
-    auto* heightDescription = new Label(QStringLiteral("Changing the AnnotatedScrollBar height "
-                               "refreshes its Labels layout."), settingsPanel);
+    auto* heightDescription = new Label(
+        QStringLiteral(
+            "Changing the AnnotatedScrollBar height "
+            "refreshes its Labels layout."),
+        settingsPanel);
     heightDescription->setFluentTypography(Typography::FontRole::Body);
     heightDescription->setWordWrap(true);
     heightDescription->setFixedSize(360, 42);
@@ -614,8 +621,8 @@ TEST_F(AnnotatedScrollBarTest, VisualCheck)
 
     QObject::connect(themeButton, &Button::clicked, []() {
         fluent::FluentElement::setTheme(fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                                    ? fluent::FluentElement::Dark
-                                    : fluent::FluentElement::Light);
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light);
     });
     QObject::connect(compactButton, &Button::clicked, heightSlider, [heightSlider]() {
         heightSlider->setValue(heightSlider->value() > 320 ? 260 : 460);

@@ -968,3 +968,43 @@ TEST(ChartViewTest, Contract_CopyDataRejectsWrongThreadWithoutTouchingClipboard)
     EXPECT_FALSE(copied.first().first().toBool());
     EXPECT_EQ(clipboardChanges.count(), 0);
 }
+
+TEST(ChartViewTest, Contract_SetValueSuffixUpdatesActiveReadout)
+{
+    QWidget window;
+    window.resize(640, 400);
+    ChartModel model;
+    model.setName(QStringLiteral("Latency"));
+    model.setPoints({{0, 12}, {1, 24}, {2, 36}}, {"P0", "P1", "P2"});
+    auto* view = new LineChart(&window);
+    view->setGeometry(0, 0, 640, 400);
+    view->setModel(&model);
+    view->setXRange(0, 2);
+    view->setYRange(0, 40);
+    view->setValueSuffix(QStringLiteral(" ms"));
+    window.show();
+    if (!tests::support::isHeadlessPlatform())
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    view->grab();
+
+    movePointer(*view, view->plotRect().center().toPoint());
+    QPointer<fluent::dialogs_flyouts::Popup> readout = window.findChild<fluent::dialogs_flyouts::Popup*>();
+    ASSERT_TRUE(readout);
+    ASSERT_TRUE(readout->isOpen());
+
+    const auto hasLabelText = [&](const QString& needle) {
+        for (auto* label : readout->findChildren<fluent::textfields::Label*>()) {
+            if (label->text().contains(needle))
+                return true;
+        }
+        return false;
+    };
+    EXPECT_TRUE(hasLabelText(QStringLiteral(" ms")));
+
+    view->setValueSuffix(QStringLiteral(" req/s"));
+    QApplication::processEvents();
+    ASSERT_TRUE(readout);
+    EXPECT_TRUE(readout->isOpen());
+    EXPECT_TRUE(hasLabelText(QStringLiteral("req/s")));
+    EXPECT_FALSE(hasLabelText(QStringLiteral(" ms")));
+}

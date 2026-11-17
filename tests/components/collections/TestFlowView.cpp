@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QImage>
+#include <QLabel>
 #include <QMetaEnum>
 #include <QPainter>
 #include <QPainterPath>
@@ -56,8 +57,7 @@ public:
         return QSize();
     }
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing);
@@ -84,8 +84,7 @@ public:
 
         painter->setFont(option.font);
         painter->setPen(text);
-        painter->drawText(card.adjusted(10, 0, -10, 0), Qt::AlignCenter,
-                          index.data(Qt::DisplayRole).toString());
+        painter->drawText(card.adjusted(10, 0, -10, 0), Qt::AlignCenter, index.data(Qt::DisplayRole).toString());
         painter->restore();
     }
 
@@ -115,14 +114,10 @@ public:
 
 class LargeFlowModel final : public QAbstractListModel {
 public:
-    explicit LargeFlowModel(int rowCount, QObject* parent = nullptr)
-        : QAbstractListModel(parent), m_rowCount(rowCount)
+    explicit LargeFlowModel(int rowCount, QObject* parent = nullptr) : QAbstractListModel(parent), m_rowCount(rowCount)
     {}
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override
-    {
-        return parent.isValid() ? 0 : m_rowCount;
-    }
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override { return parent.isValid() ? 0 : m_rowCount; }
 
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
     {
@@ -154,10 +149,7 @@ class CountingFlowDelegate final : public QStyledItemDelegate {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
-    void paint(QPainter*, const QStyleOptionViewItem&, const QModelIndex&) const override
-    {
-        ++m_paintCount;
-    }
+    void paint(QPainter*, const QStyleOptionViewItem&, const QModelIndex&) const override { ++m_paintCount; }
 
     void resetPaintCount() const { m_paintCount = 0; }
     int paintCount() const { return m_paintCount; }
@@ -204,17 +196,21 @@ void showOffscreen(QWidget* widget)
     processEvents();
 }
 
-void sendMouseEvent(QWidget* target, QEvent::Type type, const QPoint& position,
-                    Qt::MouseButton button, Qt::MouseButtons buttons,
-                    Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+void sendMouseEvent(QWidget* target,
+    QEvent::Type type,
+    const QPoint& position,
+    Qt::MouseButton button,
+    Qt::MouseButtons buttons,
+    Qt::KeyboardModifiers modifiers = Qt::NoModifier)
 {
     FLUENT_MAKE_MOUSE_EVENT(event, type, target, position, button, buttons, modifiers);
     QApplication::sendEvent(target, &event);
 }
 
-QStandardItemModel* createModel(QObject* parent, const QStringList& labels,
-                                const QList<QSize>& roleSizes = {},
-                                const QList<QSize>& delegateSizes = {})
+QStandardItemModel* createModel(QObject* parent,
+    const QStringList& labels,
+    const QList<QSize>& roleSizes = {},
+    const QList<QSize>& delegateSizes = {})
 {
     auto* model = new QStandardItemModel(parent);
     for (int row = 0; row < labels.size(); ++row) {
@@ -249,8 +245,7 @@ class FlowViewTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        qRegisterMetaType<fluent::collections::FlowView::SelectionMode>(
-            "fluent::collections::FlowView::SelectionMode");
+        qRegisterMetaType<fluent::collections::FlowView::SelectionMode>("fluent::collections::FlowView::SelectionMode");
     }
 
     void SetUp() override
@@ -275,13 +270,14 @@ TEST_F(FlowViewTest, Contract_RemovingRowsUpdatesGeometryHitTestingAndScrollRang
     FlowView flow;
     flow.resize(140, 100);
     auto* model = createModel(&flow, {"A", "B", "C", "D"},
-                              {QSize(100, 100), QSize(100, 40), QSize(100, 60), QSize(100, 80)});
+        {QSize(100, 100), QSize(100, 40), QSize(100, 60), QSize(100, 80)});
     flow.setModel(model);
     showOffscreen(&flow);
 
     // Even a geometry query during the about-to-remove notification must not cache old rows.
-    QObject::connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, &flow,
-                     [&]() { flow.visualRect(model->index(0, 0)); });
+    QObject::connect(model, &QAbstractItemModel::rowsAboutToBeRemoved, &flow, [&]() {
+        flow.visualRect(model->index(0, 0));
+    });
     for (int row : {0, 1, 1}) {
         ASSERT_TRUE(model->removeRow(row));
         flow.scrollTo(model->index(0, 0), QAbstractItemView::PositionAtTop);
@@ -289,10 +285,9 @@ TEST_F(FlowViewTest, Contract_RemovingRowsUpdatesGeometryHitTestingAndScrollRang
         EXPECT_EQ(first.size(), QSize(100, 40));
         EXPECT_EQ(flow.indexAt(first.center()), model->index(0, 0));
         const QRect last = flow.visualRect(model->index(model->rowCount() - 1, 0));
-        const int contentBottom =
-            last.bottom() + 1 + flow.verticalScrollBar()->value() + flow.contentMargins().bottom();
-        EXPECT_EQ(flow.verticalScrollBar()->maximum(),
-                  qMax(0, contentBottom - flow.viewport()->height()));
+        const int contentBottom = last.bottom() + 1 + flow.verticalScrollBar()->value()
+            + flow.contentMargins().bottom();
+        EXPECT_EQ(flow.verticalScrollBar()->maximum(), qMax(0, contentBottom - flow.viewport()->height()));
     }
     ASSERT_TRUE(model->removeRow(0));
     processEvents();
@@ -367,8 +362,9 @@ TEST_F(FlowViewTest, Contract_GeometryQueryDuringPaintDefersScrollRangeChanges)
 
     bool inDelegatePaint = false;
     bool repainted = false;
-    QObject::connect(flow.verticalScrollBar(), &QScrollBar::rangeChanged, &flow,
-                     [&]() { EXPECT_FALSE(inDelegatePaint); });
+    QObject::connect(flow.verticalScrollBar(), &QScrollBar::rangeChanged, &flow, [&]() {
+        EXPECT_FALSE(inDelegatePaint);
+    });
     delegate.onPaint = [&]() {
         repainted = true;
         inDelegatePaint = true;
@@ -430,8 +426,7 @@ TEST_F(FlowViewTest, Contract_IncrementalLayoutMatchesFullLayoutAfterWrapAndResi
             const QRect appended = incremental.visualRect(model.index(row, 0));
             static_cast<QAbstractItemView&>(reference).reset();
             EXPECT_EQ(appended, reference.visualRect(model.index(row, 0)));
-            EXPECT_EQ(incremental.verticalScrollBar()->maximum(),
-                      reference.verticalScrollBar()->maximum());
+            EXPECT_EQ(incremental.verticalScrollBar()->maximum(), reference.verticalScrollBar()->maximum());
         }
         incremental.scrollTo(model.index(10, 0), QAbstractItemView::PositionAtTop);
         const QRect anchor = incremental.visualRect(model.index(10, 0));
@@ -444,8 +439,7 @@ TEST_F(FlowViewTest, Contract_IncrementalLayoutMatchesFullLayoutAfterWrapAndResi
         incremental.scrollTo(model.index(0, 0), QAbstractItemView::PositionAtTop);
         reference.scrollTo(model.index(0, 0), QAbstractItemView::PositionAtTop);
         for (int row = 0; row < model.rowCount(); ++row)
-            EXPECT_EQ(incremental.visualRect(model.index(row, 0)),
-                      reference.visualRect(model.index(row, 0)));
+            EXPECT_EQ(incremental.visualRect(model.index(row, 0)), reference.visualRect(model.index(row, 0)));
     }
 }
 
@@ -493,8 +487,7 @@ TEST_F(FlowViewTest, RowWrapLayoutVisualRectAndHitTestingUseVariableSizes)
     flow->setHorizontalSpacing(10);
     flow->setVerticalSpacing(10);
     attachDelegate(flow);
-    flow->setModel(
-        createModel(flow, {"A", "B", "C"}, {QSize(100, 40), QSize(120, 80), QSize(160, 50)}));
+    flow->setModel(createModel(flow, {"A", "B", "C"}, {QSize(100, 40), QSize(120, 80), QSize(160, 50)}));
 
     showOffscreen(window);
 
@@ -528,9 +521,8 @@ TEST_F(FlowViewTest, ItemSizeResolutionUsesRoleDelegateAndDefaultWithClamping)
     flow->setMinimumItemSize(QSize(40, 30));
     flow->setMaximumItemSize(QSize(150, 90));
     attachDelegate(flow);
-    flow->setModel(createModel(flow, {"Role", "Delegate", "Default"},
-                               {QSize(300, 5), QSize(), QSize()},
-                               {QSize(), QSize(130, 70), QSize()}));
+    flow->setModel(createModel(flow, {"Role", "Delegate", "Default"}, {QSize(300, 5), QSize(), QSize()},
+        {QSize(), QSize(130, 70), QSize()}));
 
     showOffscreen(window);
 
@@ -746,8 +738,7 @@ TEST_F(FlowViewTest, PointerSelectionKeyboardNavigationAndDisabledState)
     flow->setHorizontalSpacing(10);
     flow->setVerticalSpacing(10);
     attachDelegate(flow);
-    flow->setModel(
-        createModel(flow, {"A", "B", "C"}, {QSize(100, 40), QSize(100, 40), QSize(100, 40)}));
+    flow->setModel(createModel(flow, {"A", "B", "C"}, {QSize(100, 40), QSize(100, 40), QSize(100, 40)}));
 
     showOffscreen(window);
     QSignalSpy inheritedPressSpy(flow, &QAbstractItemView::pressed);
@@ -758,11 +749,9 @@ TEST_F(FlowViewTest, PointerSelectionKeyboardNavigationAndDisabledState)
     processEvents();
     EXPECT_EQ(flow->selectedIndex(), 1);
     ASSERT_EQ(inheritedPressSpy.count(), 1);
-    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedPressSpy.takeFirst().at(0)),
-              flow->model()->index(1, 0));
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedPressSpy.takeFirst().at(0)), flow->model()->index(1, 0));
     ASSERT_EQ(inheritedClickSpy.count(), 1);
-    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedClickSpy.takeFirst().at(0)),
-              flow->model()->index(1, 0));
+    EXPECT_EQ(qvariant_cast<QModelIndex>(inheritedClickSpy.takeFirst().at(0)), flow->model()->index(1, 0));
     ASSERT_EQ(clickSpy.count(), 1);
     EXPECT_EQ(clickSpy.takeFirst().at(0).toInt(), 1);
 
@@ -816,8 +805,7 @@ TEST_F(FlowViewTest, LargeModelPaintAndHitTestingStayViewportBounded)
     painter.end();
 
     EXPECT_GT(delegate->paintCount(), 0);
-    EXPECT_LT(delegate->paintCount(), 100)
-        << "A viewport repaint must delegate only visible large-model rows";
+    EXPECT_LT(delegate->paintCount(), 100) << "A viewport repaint must delegate only visible large-model rows";
 }
 
 TEST_F(FlowViewTest, MultiSelectRequiresControlClickAndDragDoesNotRubberBandSelect)
@@ -829,8 +817,7 @@ TEST_F(FlowViewTest, MultiSelectRequiresControlClickAndDragDoesNotRubberBandSele
     flow->setHorizontalSpacing(10);
     flow->setVerticalSpacing(10);
     attachDelegate(flow);
-    flow->setModel(
-        createModel(flow, {"A", "B", "C"}, {QSize(100, 40), QSize(100, 40), QSize(100, 40)}));
+    flow->setModel(createModel(flow, {"A", "B", "C"}, {QSize(100, 40), QSize(100, 40), QSize(100, 40)}));
 
     showOffscreen(window);
     const QRect r0 = flow->visualRect(flow->model()->index(0, 0));
@@ -842,11 +829,9 @@ TEST_F(FlowViewTest, MultiSelectRequiresControlClickAndDragDoesNotRubberBandSele
     processEvents();
     EXPECT_EQ(flow->selectedRows(), QList<int>({0, 1}));
 
-    QTest::mousePress(flow->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      r0.topLeft() + QPoint(2, 2));
+    QTest::mousePress(flow->viewport(), Qt::LeftButton, Qt::NoModifier, r0.topLeft() + QPoint(2, 2));
     QTest::mouseMove(flow->viewport(), r2.bottomRight() + QPoint(2, 2));
-    QTest::mouseRelease(flow->viewport(), Qt::LeftButton, Qt::NoModifier,
-                        r2.bottomRight() + QPoint(2, 2));
+    QTest::mouseRelease(flow->viewport(), Qt::LeftButton, Qt::NoModifier, r2.bottomRight() + QPoint(2, 2));
     processEvents();
     EXPECT_EQ(flow->selectedRows(), QList<int>({0, 1}));
 }
@@ -861,7 +846,7 @@ TEST_F(FlowViewTest, DragReorderUsesVariableGeometryAndPreservesSelection)
     flow->setCanReorderItems(true);
     attachDelegate(flow);
     auto* model = createModel(flow, {"A", "B", "C", "D"},
-                              {QSize(80, 40), QSize(120, 50), QSize(80, 40), QSize(140, 50)});
+        {QSize(80, 40), QSize(120, 50), QSize(80, 40), QSize(140, 50)});
     flow->setModel(model);
 
     showOffscreen(window);
@@ -874,16 +859,12 @@ TEST_F(FlowViewTest, DragReorderUsesVariableGeometryAndPreservesSelection)
     const QPoint dragStart = start + QPoint(QApplication::startDragDistance() + 4, 0);
     const QPoint dropPoint(targetRect.right() + 18, targetRect.center().y());
 
-    sendMouseEvent(flow->viewport(), QEvent::MouseButtonPress, start, Qt::LeftButton,
-                   Qt::LeftButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
     sendMouseEvent(flow->viewport(), QEvent::MouseMove, dragStart, Qt::NoButton, Qt::LeftButton);
     sendMouseEvent(flow->viewport(), QEvent::MouseMove, dropPoint, Qt::NoButton, Qt::LeftButton);
-    EXPECT_LE(flow->findChildren<QVariantAnimation*>(
-                      QStringLiteral("_q_fluentFlowDragDisplacementAnimation"))
-                  .size(),
-              1);
-    sendMouseEvent(flow->viewport(), QEvent::MouseButtonRelease, dropPoint, Qt::LeftButton,
-                   Qt::NoButton);
+    EXPECT_LE(flow->findChildren<QVariantAnimation*>(QStringLiteral("_q_fluentFlowDragDisplacementAnimation")).size(),
+        1);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonRelease, dropPoint, Qt::LeftButton, Qt::NoButton);
     processEvents();
 
     ASSERT_EQ(reorderSpy.count(), 1);
@@ -904,12 +885,11 @@ TEST_F(FlowViewTest, DragReorderWithoutModifierSelectsOnlyDraggedItem)
     flow->setCanReorderItems(true);
     attachDelegate(flow);
     auto* model = createModel(flow, {"A", "B", "C", "D"},
-                              {QSize(80, 40), QSize(120, 50), QSize(80, 40), QSize(140, 50)});
+        {QSize(80, 40), QSize(120, 50), QSize(80, 40), QSize(140, 50)});
     flow->setModel(model);
 
     showOffscreen(window);
-    QTest::mouseClick(flow->viewport(), Qt::LeftButton, Qt::NoModifier,
-                      flow->visualRect(model->index(0, 0)).center());
+    QTest::mouseClick(flow->viewport(), Qt::LeftButton, Qt::NoModifier, flow->visualRect(model->index(0, 0)).center());
     processEvents();
     EXPECT_EQ(flow->selectedRows(), QList<int>({0}));
 
@@ -919,18 +899,15 @@ TEST_F(FlowViewTest, DragReorderWithoutModifierSelectsOnlyDraggedItem)
     const QPoint dragStart = start + QPoint(QApplication::startDragDistance() + 4, 0);
     const QPoint dropPoint(targetRect.right() + 18, targetRect.center().y());
 
-    sendMouseEvent(flow->viewport(), QEvent::MouseButtonPress, start, Qt::LeftButton,
-                   Qt::LeftButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
     sendMouseEvent(flow->viewport(), QEvent::MouseMove, dragStart, Qt::NoButton, Qt::LeftButton);
     sendMouseEvent(flow->viewport(), QEvent::MouseMove, dropPoint, Qt::NoButton, Qt::LeftButton);
-    sendMouseEvent(flow->viewport(), QEvent::MouseButtonRelease, dropPoint, Qt::LeftButton,
-                   Qt::NoButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonRelease, dropPoint, Qt::LeftButton, Qt::NoButton);
     processEvents();
 
     const QList<int> selectedRows = flow->selectedRows();
     ASSERT_EQ(selectedRows.size(), 1);
-    EXPECT_EQ(model->index(selectedRows.first(), 0).data(Qt::DisplayRole).toString(),
-              QStringLiteral("C"));
+    EXPECT_EQ(model->index(selectedRows.first(), 0).data(Qt::DisplayRole).toString(), QStringLiteral("C"));
 }
 
 TEST_F(FlowViewTest, VisualCheck)
@@ -966,11 +943,9 @@ TEST_F(FlowViewTest, VisualCheck)
     layout->addWidget(flow);
 
     auto* model = createModel(flow,
-                              {"Compact", "Wide card", "Tall", "Chip", "Large", "Small",
-                               "Dashboard", "Tag", "Media", "Action"},
-                              {QSize(116, 48), QSize(220, 72), QSize(120, 124), QSize(92, 40),
-                               QSize(260, 96), QSize(84, 44), QSize(180, 110), QSize(100, 40),
-                               QSize(210, 120), QSize(138, 54)});
+        {"Compact", "Wide card", "Tall", "Chip", "Large", "Small", "Dashboard", "Tag", "Media", "Action"},
+        {QSize(116, 48), QSize(220, 72), QSize(120, 124), QSize(92, 40), QSize(260, 96), QSize(84, 44), QSize(180, 110),
+            QSize(100, 40), QSize(210, 120), QSize(138, 54)});
     flow->setModel(model);
 
     auto* disabled = new FlowView(window);
@@ -980,8 +955,7 @@ TEST_F(FlowViewTest, VisualCheck)
     disabled->setHorizontalSpacing(8);
     disabled->setVerticalSpacing(8);
     attachDelegate(disabled);
-    disabled->setModel(createModel(disabled, {"One", "Two", "Three"},
-                                   {QSize(96, 44), QSize(136, 56), QSize(112, 44)}));
+    disabled->setModel(createModel(disabled, {"One", "Two", "Three"}, {QSize(96, 44), QSize(136, 56), QSize(112, 44)}));
     disabled->anchors()->top = {flow, Edge::Top, 0};
     disabled->anchors()->left = {flow, Edge::Right, 32};
     disabled->anchors()->right = {title, Edge::Right, 0};
@@ -1009,8 +983,7 @@ TEST_F(FlowViewTest, VisualCheck)
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &Button::clicked, themeButton, [themeButton]() {
         const bool dark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Dark;
-        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light
-                                             : fluent::FluentElement::Dark);
+        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light : fluent::FluentElement::Dark);
         themeButton->setText(dark ? QStringLiteral("Dark") : QStringLiteral("Light"));
     });
 
@@ -1022,4 +995,50 @@ TEST_F(FlowViewTest, VisualCheck)
     }
 
     qApp->exec();
+}
+
+TEST_F(FlowViewTest, DisabledStateUpdatesTextPaletteAndHeaderStyle)
+{
+    FlowView view;
+    QStandardItemModel model;
+    model.appendRow(new QStandardItem(QStringLiteral("Tag A")));
+    view.setModel(&model);
+    view.setHeaderText(QStringLiteral("Flow Header"));
+    view.resize(260, 180);
+
+    EXPECT_EQ(view.palette().color(QPalette::Disabled, QPalette::Text), view.themeColors().textDisabled);
+    auto* hdr = view.findChild<QLabel*>();
+    ASSERT_NE(hdr, nullptr);
+    QFont customFont = view.font();
+    customFont.setPixelSize(29);
+    view.setFont(customFont);
+    const QString enabledHeaderStyle = hdr->styleSheet();
+    view.setEnabled(false);
+    EXPECT_NE(hdr->styleSheet(), enabledHeaderStyle);
+    EXPECT_EQ(view.font(), customFont);
+    view.setEnabled(true);
+    EXPECT_EQ(view.font(), customFont);
+    EXPECT_EQ(hdr->styleSheet(), enabledHeaderStyle);
+}
+
+TEST_F(FlowViewTest, DefaultDelegateSelectionRemainsVisibleWithoutFocusInBothThemes)
+{
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+        FlowView view;
+        view.resize(520, 270);
+        QStandardItemModel model;
+        model.appendRow(new QStandardItem(QStringLiteral("First")));
+        model.appendRow(new QStandardItem(QStringLiteral("Second")));
+        view.setModel(&model);
+        view.ensurePolished();
+        view.clearFocus();
+        const auto idle = view.grab().toImage();
+        view.selectionModel()->select(model.index(0, 0), QItemSelectionModel::Select);
+        EXPECT_NE(view.grab().toImage(), idle);
+        EXPECT_EQ(view.palette().color(QPalette::Inactive, QPalette::Highlight), view.themeColors().subtleSecondary);
+        view.clearSelection();
+        EXPECT_EQ(view.grab().toImage(), idle);
+    }
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
 }

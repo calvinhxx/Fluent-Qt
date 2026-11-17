@@ -512,6 +512,16 @@ void FlowView::showEvent(QShowEvent* event)
     syncFluentScrollBar();
 }
 
+void FlowView::changeEvent(QEvent* event)
+{
+    QAbstractItemView::changeEvent(event);
+    if (event->type() == QEvent::EnabledChange) {
+        applyThemeStyle(false);
+        if (viewport())
+            viewport()->update();
+    }
+}
+
 void FlowView::enterEvent(FluentEnterEvent* event)
 {
     setViewportHovered(true);
@@ -840,18 +850,27 @@ void FlowView::onThemeUpdated()
     viewport()->update();
 }
 
-void FlowView::applyThemeStyle()
+void FlowView::applyThemeStyle(bool refreshFonts)
 {
     const auto& colors = themeColorsRef();
 
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
     pal.setColor(QPalette::Window, Qt::transparent);
-    pal.setColor(QPalette::Text, colors.textPrimary);
-    pal.setColor(QPalette::Highlight, Qt::transparent);
-    pal.setColor(QPalette::HighlightedText, colors.textPrimary);
+    pal.setColor(QPalette::Active, QPalette::Text, colors.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::Text, colors.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::Text, colors.textDisabled);
+    // The inherited Qt delegate needs a visible selection even without a custom delegate.
+    // zh_CN: 未安装自定义 delegate 时，Qt 默认条目也需要可见的选中反馈。
+    pal.setColor(QPalette::Active, QPalette::Highlight, colors.subtleSecondary);
+    pal.setColor(QPalette::Inactive, QPalette::Highlight, colors.subtleSecondary);
+    pal.setColor(QPalette::Disabled, QPalette::Highlight, Qt::transparent);
+    pal.setColor(QPalette::Active, QPalette::HighlightedText, colors.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::HighlightedText, colors.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::HighlightedText, colors.textDisabled);
     setPalette(pal);
-    setFont(themeFont(m_fontRole).toQFont());
+    if (refreshFonts)
+        setFont(themeFont(m_fontRole).toQFont());
 
     if (viewport()) {
         viewport()->setAutoFillBackground(false);
@@ -862,18 +881,21 @@ void FlowView::applyThemeStyle()
     }
 
     if (m_headerLabel) {
-        m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
+        const QColor headerColor = isEnabled() ? colors.textPrimary : colors.textDisabled;
+        if (refreshFonts)
+            m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
         // Color via the label's OWN style sheet rather than its palette: a palette WindowText color is
         // dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the subtree
         // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
         // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
         // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
         m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
-                .arg(colors.textPrimary.red())
-                .arg(colors.textPrimary.green())
-                .arg(colors.textPrimary.blue())
-                .arg(colors.textPrimary.alpha()));
+                .arg(headerColor.red())
+                .arg(headerColor.green())
+                .arg(headerColor.blue())
+                .arg(headerColor.alpha()));
     }
+    update();
 }
 
 void FlowView::layoutHeader()
@@ -967,7 +989,7 @@ void FlowView::syncFluentScrollBar()
 
     const QRect r = rect();
     const int top =
-        (m_headerLabel && m_headerLabel->isVisible()) ? m_headerLabel->geometry().bottom() + 2 : r.top() + 2;
+        (m_headerLabel && !m_headerLabel->isHidden()) ? m_headerLabel->geometry().bottom() + 2 : r.top() + 2;
     ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
         /*rightInset=*/0, /*bottomInset=*/2);
 }

@@ -90,6 +90,7 @@ GridView::GridView(QWidget* parent) : QListView(parent)
 
     // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
+    hooks.horizontalScrollBar = [this] { return horizontalScrollBar(); };
     hooks.scrollBar = [this] { return verticalScrollBar(); };
     hooks.normalScroll = [this](qreal scrollPx) {
         // ScrollPerPixel: a fixed pixel step per notch instead of Qt's whole-row jump.
@@ -153,6 +154,8 @@ void GridView::setFontRole(Typography::FontRole role)
         return;
     m_fontRole = role;
     applyThemeStyle();
+    if (viewport())
+        viewport()->update();
     emit fontRoleChanged();
 }
 
@@ -474,6 +477,16 @@ void GridView::showEvent(QShowEvent* event)
     QTimer::singleShot(0, this, &GridView::syncFluentScrollBar);
 }
 
+void GridView::changeEvent(QEvent* event)
+{
+    QListView::changeEvent(event);
+    if (event->type() == QEvent::EnabledChange) {
+        applyThemeStyle(false);
+        if (viewport())
+            viewport()->update();
+    }
+}
+
 void GridView::enterEvent(FluentEnterEvent* event)
 {
     setViewportHovered(true);
@@ -526,19 +539,28 @@ void GridView::onThemeUpdated()
     applyThemeStyle();
 }
 
-void GridView::applyThemeStyle()
+void GridView::applyThemeStyle(bool refreshFonts)
 {
     const auto& c = themeColorsRef();
 
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
     pal.setColor(QPalette::Window, Qt::transparent);
-    pal.setColor(QPalette::Text, c.textPrimary);
-    pal.setColor(QPalette::Highlight, Qt::transparent);
-    pal.setColor(QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Active, QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
+    // The inherited Qt delegate needs a visible selection even without a custom delegate.
+    // zh_CN: 未安装自定义 delegate 时，Qt 默认条目也需要可见的选中反馈。
+    pal.setColor(QPalette::Active, QPalette::Highlight, c.subtleSecondary);
+    pal.setColor(QPalette::Inactive, QPalette::Highlight, c.subtleSecondary);
+    pal.setColor(QPalette::Disabled, QPalette::Highlight, Qt::transparent);
+    pal.setColor(QPalette::Active, QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::HighlightedText, c.textDisabled);
     setPalette(pal);
 
-    setFont(themeFont(m_fontRole).toQFont());
+    if (refreshFonts)
+        setFont(themeFont(m_fontRole).toQFont());
 
     if (viewport()) {
         viewport()->setAutoFillBackground(false);
@@ -549,17 +571,19 @@ void GridView::applyThemeStyle()
     }
 
     if (m_headerLabel) {
-        m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
+        const QColor headerColor = isEnabled() ? c.textPrimary : c.textDisabled;
+        if (refreshFonts)
+            m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
         // Color via the label's OWN style sheet rather than its palette: a palette WindowText color is
         // dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the subtree
         // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
         // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
         // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
         m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
-                .arg(c.textPrimary.red())
-                .arg(c.textPrimary.green())
-                .arg(c.textPrimary.blue())
-                .arg(c.textPrimary.alpha()));
+                .arg(headerColor.red())
+                .arg(headerColor.green())
+                .arg(headerColor.blue())
+                .arg(headerColor.alpha()));
     }
 
     update();
@@ -603,7 +627,7 @@ void GridView::syncFluentScrollBar()
 
     const QRect r = rect();
     const int top =
-        (m_headerLabel && m_headerLabel->isVisible()) ? m_headerLabel->geometry().bottom() + 2 : r.top() + 2;
+        (m_headerLabel && !m_headerLabel->isHidden()) ? m_headerLabel->geometry().bottom() + 2 : r.top() + 2;
     ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
         /*rightInset=*/0, /*bottomInset=*/2);
 }
@@ -824,6 +848,7 @@ QPixmap GridView::renderItemPixmap(int row) const
     QStyleOptionViewItem opt;
     FLUENT_INIT_VIEW_ITEM_OPTION(&opt);
     opt.rect = QRect(QPoint(0, 0), rect.size());
+    opt.font = font();
     opt.state |= QStyle::State_Selected;
     itemDelegate()->paint(&p, opt, idx);
     p.end();

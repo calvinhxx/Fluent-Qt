@@ -687,7 +687,9 @@ void ScrollView::positionFloatingScrollBar()
     const QRect target(qMax(0, area->width() - thickness), 0, thickness, qMax(0, area->height()));
     if (m_floatingVerticalBar->geometry() != target)
         m_floatingVerticalBar->setGeometry(target);
-    if (m_floatingVerticalBar->isVisible())
+    // Preserve overlay stacking even when an ancestor is hidden during rendering.
+    // zh_CN: 父级隐藏时捕获控件也应保留覆盖条在内容之上的层级。
+    if (!m_floatingVerticalBar->isHidden())
         m_floatingVerticalBar->raise();
 }
 

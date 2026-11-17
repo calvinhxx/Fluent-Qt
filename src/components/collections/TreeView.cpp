@@ -17,6 +17,7 @@
 #include <QScopeGuard>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QStyledItemDelegate>
 #include <QTimer>
 #include <QVariantAnimation>
 #include <QWheelEvent>
@@ -24,6 +25,7 @@
 #include <QtMath>
 
 #include "components/collections/CollectionViewBackdrop_p.h"
+#include "components/collections/private/CollectionItemState_p.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/scrolling/OverlayScrollChrome.h"
@@ -37,6 +39,74 @@
 namespace fluent::collections {
 
 namespace {
+
+// Keep ordinary model text usable without an application-provided row delegate.
+// zh_CN: 普通文本模型不应依赖应用自定义行代理才能获得展开与选中反馈。
+class DefaultTreeItemDelegate final : public QStyledItemDelegate {
+public:
+    explicit DefaultTreeItemDelegate(TreeView* view) : QStyledItemDelegate(view), m_view(view) {}
+
+    QRect arrowRect(const QStyleOptionViewItem& option) const
+    {
+        const bool rtl = option.direction == Qt::RightToLeft;
+        return QRect(rtl ? option.rect.right() - 31 : option.rect.left() + 12, option.rect.center().y() - 10, 20, 20);
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        auto content = option;
+        const auto& colors = m_view->themeColorsRef();
+        const auto visual = detail::collectionItemVisualStyle(option.state, colors);
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(visual.background);
+        painter->drawRoundedRect(QRectF(option.rect).adjusted(2, 1, -2, -1), CornerRadius::Control,
+            CornerRadius::Control);
+        if (index.model()->hasChildren(index) && m_view->itemsExpandable()) {
+            painter->setPen(visual.foreground);
+            painter->setFont(Typography::Icons::font(Typography::IconSize::Compact));
+            painter->drawText(arrowRect(option), Qt::AlignCenter,
+                m_view->isExpanded(index)
+                    ? Typography::Icons::ChevronDown
+                    : (option.direction == Qt::RightToLeft
+                              ? Typography::Icons::ChevronLeft
+                              : Typography::Icons::ChevronRight));
+        }
+        painter->restore();
+        if (option.direction == Qt::RightToLeft)
+            content.rect.adjust(4, 0, -36, 0);
+        else
+            content.rect.adjust(36, 0, -4, 0);
+        content.state &= ~(QStyle::State_Selected | QStyle::State_MouseOver | QStyle::State_HasFocus);
+        QStyledItemDelegate::paint(painter, content, index);
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        const auto size = QStyledItemDelegate::sizeHint(option, index);
+        return QSize(size.width() + 40, qMax(size.height(), int(Spacing::ControlHeight::Standard)));
+    }
+
+    bool editorEvent(QEvent* event,
+        QAbstractItemModel* model,
+        const QStyleOptionViewItem& option,
+        const QModelIndex& index) override
+    {
+        if (event->type() == QEvent::MouseButtonRelease && (option.state & QStyle::State_Enabled)
+            && (model->flags(index) & Qt::ItemIsEnabled) && m_view->itemsExpandable() && model->hasChildren(index)) {
+            auto* mouse = static_cast<QMouseEvent*>(event);
+            if (mouse->button() == Qt::LeftButton && arrowRect(option).contains(mouse->pos())) {
+                m_view->setExpanded(index, !m_view->isExpanded(index));
+                return true;
+            }
+        }
+        return QStyledItemDelegate::editorEvent(event, model, option, index);
+    }
+
+private:
+    TreeView* m_view;
+};
 
 // Namespace-scope constant: no FluentElement instance, so read the raw token.
 // zh_CN: 命名空间级常量没有 FluentElement 实例，直接读原始 token。
@@ -156,6 +226,7 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     QTreeView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
+    setItemDelegate(new DefaultTreeItemDelegate(this));
     // Pixel scrolling so the wheel moves a fixed pixel step per notch (matches ListView),
     // instead of ScrollPerItem's chunky per-row jumps. zh_CN: 像素级滚动，每个滚轮刻度滚动固定像素
     //（与 ListView 一致），而非 ScrollPerItem 的整行跳动。
@@ -183,6 +254,7 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
 
     // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
+    hooks.horizontalScrollBar = [this] { return horizontalScrollBar(); };
     hooks.scrollBar = [this] { return verticalScrollBar(); };
     hooks.normalScroll = [this](qreal scrollPx) {
         QScrollBar* sb = verticalScrollBar();
@@ -844,6 +916,16 @@ void TreeView::showEvent(QShowEvent* event)
         syncFluentScrollBar();
         syncFluentHScrollBar();
     });
+}
+
+void TreeView::changeEvent(QEvent* event)
+{
+    QTreeView::changeEvent(event);
+    if (event->type() == QEvent::EnabledChange) {
+        applyThemeStyle(false);
+        if (viewport())
+            viewport()->update();
+    }
 }
 
 void TreeView::enterEvent(FluentEnterEvent* event)
@@ -1681,19 +1763,24 @@ void TreeView::onThemeUpdated()
     applyThemeStyle();
 }
 
-void TreeView::applyThemeStyle()
+void TreeView::applyThemeStyle(bool refreshFonts)
 {
     const auto& c = themeColorsRef();
 
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
     pal.setColor(QPalette::Window, Qt::transparent);
-    pal.setColor(QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Active, QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::Text, c.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
     pal.setColor(QPalette::Highlight, Qt::transparent);
-    pal.setColor(QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Active, QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Inactive, QPalette::HighlightedText, c.textPrimary);
+    pal.setColor(QPalette::Disabled, QPalette::HighlightedText, c.textDisabled);
     setPalette(pal);
 
-    setFont(themeFont(m_fontRole).toQFont());
+    if (refreshFonts)
+        setFont(themeFont(m_fontRole).toQFont());
 
     if (viewport()) {
         viewport()->setAutoFillBackground(false);
@@ -1705,17 +1792,19 @@ void TreeView::applyThemeStyle()
 
     // Header label theme
     if (m_headerLabel) {
-        m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
+        const QColor headerColor = isEnabled() ? c.textPrimary : c.textDisabled;
+        if (refreshFonts)
+            m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
         // Color via the label's OWN style sheet rather than its palette: a palette WindowText color is
         // dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the subtree
         // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
         // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
         // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
         m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
-                .arg(c.textPrimary.red())
-                .arg(c.textPrimary.green())
-                .arg(c.textPrimary.blue())
-                .arg(c.textPrimary.alpha()));
+                .arg(headerColor.red())
+                .arg(headerColor.green())
+                .arg(headerColor.blue())
+                .arg(headerColor.alpha()));
     }
 
     updateViewportMargins();
@@ -1727,7 +1816,7 @@ void TreeView::applyThemeStyle()
 
 void TreeView::layoutHeader()
 {
-    if (!m_headerLabel || !m_headerLabel->isVisible())
+    if (!m_headerLabel || m_headerLabel->isHidden())
         return;
 
     const int headerH = m_headerLabel->sizeHint().height() + ::Spacing::Gap::Normal;
@@ -1739,7 +1828,7 @@ void TreeView::updateViewportMargins()
 {
     int top =
         2; // First-row margin; with the delegate bgRect inset it matches ListView spacing. zh_CN: 首行边距，配合 delegate bgRect inset 与 ListView 间距一致。
-    if (m_headerLabel && m_headerLabel->isVisible()) {
+    if (m_headerLabel && !m_headerLabel->isHidden()) {
         top = m_headerLabel->sizeHint().height() + ::Spacing::Gap::Normal;
     }
     setViewportMargins(0, top, 0, 0);
@@ -1756,7 +1845,7 @@ void TreeView::syncFluentScrollBar()
     constexpr int kScrollBarRightInset = ::Spacing::XSmall / 2;
     constexpr int kScrollBarVerticalInset = ::Spacing::XSmall / 2;
     const QRect r = rect();
-    const int top = (m_headerLabel && m_headerLabel->isVisible())
+    const int top = (m_headerLabel && !m_headerLabel->isHidden())
         ? m_headerLabel->geometry().bottom() + 1 + kScrollBarVerticalInset
         : r.top() + kScrollBarVerticalInset;
     ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top, kScrollBarRightInset,

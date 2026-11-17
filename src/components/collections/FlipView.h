@@ -162,6 +162,7 @@ private:
     void drawPageIndicator(QPainter& p);
     void updateMask();
     void raiseOverlay();
+    void updateVisuals();
     int indexOfPage(const QWidget* page) const;
     PageRecord extractPageRecord(int index);
     void updateAfterPageRemoval(int index);

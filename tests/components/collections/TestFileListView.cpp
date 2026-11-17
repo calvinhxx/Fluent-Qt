@@ -752,3 +752,14 @@ TEST(FileListViewTest, Contract_AnimationToggleIsIdempotentAndReducedMotionSafe)
     fluent::MotionPolicy::instance().setMode(previous);
     EXPECT_FALSE(view.isAnimationEnabled());
 }
+
+TEST(FileListViewTest, Contract_DestroyingViewWithChildModelDisconnectsModelSignals)
+{
+    auto view = std::make_unique<FileListView>();
+    auto* model = new QStandardItemModel(view.get());
+    addFile(*model, QStringLiteral("child-owned.pdf"));
+    view->setModel(model);
+    QPointer<QStandardItemModel> guardedModel(model);
+    view.reset();
+    EXPECT_TRUE(guardedModel.isNull());
+}

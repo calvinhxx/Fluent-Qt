@@ -2,11 +2,13 @@
 #include "components/collections/FlipView.h"
 #include "components/foundation/FluentElement.h"
 #include <QApplication>
+#include <QImage>
 #include <QPropertyAnimation>
 #include <QSignalSpy>
 #include <QTest>
 #include <QWheelEvent>
 #include <gtest/gtest.h>
+#include <functional>
 
 using namespace fluent::collections;
 
@@ -385,8 +387,8 @@ TEST_F(FlipViewTest, MouseWheelDiscreteFlipsImmediately)
     EXPECT_EQ(fv.currentIndex(), 0);
 
     // 向下滚动一格 → goNext
-    QWheelEvent wheelDown(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120),
-                          Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QWheelEvent wheelDown(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120), Qt::NoButton,
+        Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::sendEvent(&fv, &wheelDown);
     EXPECT_EQ(fv.currentIndex(), 1);
 
@@ -397,12 +399,11 @@ TEST_F(FlipViewTest, MouseWheelDiscreteFlipsImmediately)
     QPropertyAnimation* slideAnimation = fv.findChild<QPropertyAnimation*>();
     ASSERT_NE(slideAnimation, nullptr);
     EXPECT_EQ(slideAnimation->propertyName(), QByteArrayLiteral("slideOffset"));
-    ASSERT_TRUE(QTest::qWaitFor(
-        [&] { return (slideAnimation->state()) == (QAbstractAnimation::Stopped); }, 1500));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return (slideAnimation->state()) == (QAbstractAnimation::Stopped); }, 1500));
 
     // 向上滚动一格 → goPrevious
-    QWheelEvent wheelUp(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, 120),
-                        Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QWheelEvent wheelUp(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, 120), Qt::NoButton,
+        Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::sendEvent(&fv, &wheelUp);
     EXPECT_EQ(fv.currentIndex(), 0);
 }
@@ -423,8 +424,8 @@ TEST_F(FlipViewTest, WindowsTouchpadHighFreqFlipsOnce)
     // 发送 10 个高频事件，每个 angleDelta.y = -30, 总计 -300 (远超阈值 50)
     // 应只翻一页
     for (int i = 0; i < 10; ++i) {
-        QWheelEvent ev(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -30),
-                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QWheelEvent ev(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -30), Qt::NoButton, Qt::NoModifier,
+            Qt::NoScrollPhase, false);
         QApplication::sendEvent(&fv, &ev);
         QTest::qWait(10); // 模拟 10ms 间隔
     }
@@ -446,8 +447,8 @@ TEST_F(FlipViewTest, RdpTouchpadHighFreq120FlipsOnce)
 
     // 发送 8 个高频 ±120 事件（模拟 Mac 触控板 RDP 传输）
     for (int i = 0; i < 8; ++i) {
-        QWheelEvent ev(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120),
-                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QWheelEvent ev(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120), Qt::NoButton,
+            Qt::NoModifier, Qt::NoScrollPhase, false);
         QApplication::sendEvent(&fv, &ev);
         QTest::qWait(10);
     }
@@ -471,15 +472,15 @@ TEST_F(FlipViewTest, NoScrollPhaseNoPendingDuringAnimation)
     EXPECT_EQ(fv.currentIndex(), 0);
 
     // 第一次翻页 → 触发动画
-    QWheelEvent wheel1(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120),
-                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QWheelEvent wheel1(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120), Qt::NoButton,
+        Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::sendEvent(&fv, &wheel1);
     EXPECT_EQ(fv.currentIndex(), 1);
 
     // 动画期间发送第二次事件（新 cluster）→ 应被消费，不设 pending
     QTest::qWait(130); // > 120ms = 新 cluster，但仍在动画中
-    QWheelEvent wheel2(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120),
-                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QWheelEvent wheel2(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120), Qt::NoButton,
+        Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::sendEvent(&fv, &wheel2);
 
     // 等动画完成 — 不应链式翻页
@@ -487,8 +488,86 @@ TEST_F(FlipViewTest, NoScrollPhaseNoPendingDuringAnimation)
     EXPECT_EQ(fv.currentIndex(), 1); // 停在 page 1，无 pending
 
     // 动画结束后再操作 → 正常翻页
-    QWheelEvent wheel3(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120),
-                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QWheelEvent wheel3(QPointF(200, 135), QPointF(200, 135), QPoint(0, 0), QPoint(0, -120), Qt::NoButton,
+        Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::sendEvent(&fv, &wheel3);
     EXPECT_EQ(fv.currentIndex(), 2);
+}
+
+TEST_F(FlipViewTest, DisabledStateRendersDistinctly)
+{
+    FlipView fv;
+    fv.addPage(new QWidget());
+    fv.addPage(new QWidget());
+    fv.resize(220, 140);
+
+    auto renderView = [&fv]() {
+        QImage img(fv.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(Qt::transparent);
+        fv.render(&img);
+        return img;
+    };
+
+    const QImage enabledImg = renderView();
+    fv.setEnabled(false);
+    const QImage disabledImg = renderView();
+    EXPECT_NE(enabledImg, disabledImg);
+}
+
+namespace {
+class FlipChromePaintCounter final : public QObject {
+public:
+    int paints = 0;
+    bool eventFilter(QObject*, QEvent* event) override
+    {
+        if (event->type() == QEvent::Paint)
+            ++paints;
+        return false;
+    }
+};
+} // namespace
+
+TEST_F(FlipViewTest, ChromeRepaintsAboveOpaquePagesWhenInteractionChanges)
+{
+    FlipView view(window);
+    view.setGeometry(20, 20, 320, 180);
+    for (int i = 0; i < 3; ++i) {
+        auto* page = new QWidget;
+        page->setAutoFillBackground(true);
+        view.addPage(page);
+    }
+    QWidget* chrome = nullptr;
+    for (auto* child : view.findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
+        if (child->testAttribute(Qt::WA_TransparentForMouseEvents))
+            chrome = child;
+    }
+    ASSERT_NE(chrome, nullptr);
+    FlipChromePaintCounter counter;
+    chrome->installEventFilter(&counter);
+    window->show();
+    QTest::qWait(50);
+    const auto expectPaint = [&](const std::function<void()>& change) {
+        counter.paints = 0;
+        change();
+        EXPECT_TRUE(QTest::qWaitFor([&] { return counter.paints > 0; }, 500));
+    };
+    expectPaint([&] {
+        FLUENT_MAKE_ENTER_EVENT(enter, 5, 80);
+        QApplication::sendEvent(&view, &enter);
+    });
+    expectPaint([&] { view.setShowNavigationButtons(false); });
+    expectPaint([&] { view.setShowNavigationButtons(true); });
+    expectPaint([&] { view.setShowPageIndicator(false); });
+    expectPaint([&] { view.setShowPageIndicator(true); });
+    expectPaint([&] { view.setCurrentIndex(1); });
+    QTest::mouseClick(&view, Qt::LeftButton, Qt::NoModifier, QPoint(view.width() - 10, view.height() / 2));
+    EXPECT_EQ(view.currentIndex(), 2);
+    QTest::mouseClick(&view, Qt::LeftButton, Qt::NoModifier, QPoint(10, view.height() / 2));
+    EXPECT_EQ(view.currentIndex(), 1);
+    expectPaint([&] { view.setOrientation(Qt::Vertical); });
+    expectPaint([&] {
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(&view, &leave);
+    });
+    chrome->removeEventFilter(&counter);
 }

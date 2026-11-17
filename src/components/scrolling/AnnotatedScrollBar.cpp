@@ -34,6 +34,13 @@ QColor withAlpha(QColor color, qreal alpha)
     color.setAlphaF(std::clamp(alpha, 0.0, 1.0));
     return color;
 }
+
+int caretXForColumn(int widgetWidth, int indicatorWidth, int caretWidth)
+{
+    const int columnWidth = std::min(widgetWidth, std::max(caretWidth, indicatorWidth));
+    const int clampedCaret = std::min(caretWidth, widgetWidth);
+    return std::max(0, widgetWidth - columnWidth + (columnWidth - clampedCaret) / 2);
+}
 } // namespace
 
 AnnotatedScrollBar::AnnotatedScrollBar(QWidget* parent) : QWidget(parent)
@@ -378,10 +385,18 @@ void AnnotatedScrollBar::paintEvent(QPaintEvent*)
     if (enabled && (m_pressed || m_hovered))
         indicatorColor = m_indicatorHoverColor;
 
-    painter.setFont(labelFont());
+    const QFont labelTypography = labelFont();
+    painter.setFont(labelTypography);
     painter.setPen(labelColor);
-    for (const VisibleLabel& visible : m_visibleLabels)
-        painter.drawText(visible.rect, Qt::AlignRight | Qt::AlignVCenter, visible.label.text);
+    const QFontMetrics labelMetrics(labelTypography);
+    for (const VisibleLabel& visible : m_visibleLabels) {
+        if (visible.rect.width() <= 0)
+            continue;
+        const QString text = labelMetrics.horizontalAdvance(visible.label.text) > visible.rect.width()
+            ? labelMetrics.elidedText(visible.label.text, Qt::ElideRight, visible.rect.width())
+            : visible.label.text;
+        painter.drawText(visible.rect, Qt::AlignRight | Qt::AlignVCenter, text);
+    }
 
     painter.setPen(caretColor);
     Typography::Icons::paintGlyph(painter, QRectF(topCaretRect()), Typography::Icons::FlipViewPrevV, 8,
@@ -774,14 +789,15 @@ QRect AnnotatedScrollBar::labelColumnRect() const
 
 QRect AnnotatedScrollBar::topCaretRect() const
 {
-    return QRect(std::max(0, width() - m_caretSize.width()), 1, std::min(m_caretSize.width(), width()),
-        m_caretSize.height());
+    const int caretWidth = std::min(m_caretSize.width(), width());
+    return QRect(caretXForColumn(width(), m_indicatorWidth, m_caretSize.width()), 1, caretWidth, m_caretSize.height());
 }
 
 QRect AnnotatedScrollBar::bottomCaretRect() const
 {
-    return QRect(std::max(0, width() - m_caretSize.width()), std::max(0, height() - m_caretSize.height() - 1),
-        std::min(m_caretSize.width(), width()), m_caretSize.height());
+    const int caretWidth = std::min(m_caretSize.width(), width());
+    return QRect(caretXForColumn(width(), m_indicatorWidth, m_caretSize.width()),
+        std::max(0, height() - m_caretSize.height() - 1), caretWidth, m_caretSize.height());
 }
 
 QRectF AnnotatedScrollBar::indicatorRectForValue(int value) const
