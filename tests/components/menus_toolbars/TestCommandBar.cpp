@@ -971,8 +971,8 @@ TEST(CommandPresenterTest, OverflowIconCentersAtActualPaintResolution)
                 }
             }
             ASSERT_FALSE(ink.isEmpty());
-            EXPECT_NEAR(QRectF(ink).center().y() / dpr, 22.0, 0.5 / dpr);
-            EXPECT_NEAR(ink.height() / dpr, 16.0, 1.0 / dpr);
+            EXPECT_NEAR(QRectF(ink).center().y(), 22.0 * dpr, 0.5);
+            EXPECT_NEAR(ink.height(), 16.0 * dpr, 1.0);
         }
     }
 }

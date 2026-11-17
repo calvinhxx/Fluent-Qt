@@ -102,12 +102,21 @@ QRect coloredInk(const QImage& image, const QColor& color, const QRectF& logical
 {
     const qreal dpr = image.devicePixelRatio();
     const QRect area = QRectF(logicalArea.topLeft() * dpr, logicalArea.size() * dpr).toAlignedRect() & image.rect();
+    if (area.isEmpty())
+        return {};
+    // Text tokens can be translucent; compare against their painted color on the surface.
+    // zh_CN: 文字令牌可能半透明，应与合成到表面后的可见颜色比较。
+    const QColor background = image.pixelColor(area.topLeft());
+    const qreal alpha = color.alphaF();
+    const QColor painted(qRound(color.red() * alpha + background.red() * (1 - alpha)),
+        qRound(color.green() * alpha + background.green() * (1 - alpha)),
+        qRound(color.blue() * alpha + background.blue() * (1 - alpha)));
     QRect result;
     for (int y = area.top(); y <= area.bottom(); ++y) {
         for (int x = area.left(); x <= area.right(); ++x) {
             const QColor pixel = image.pixelColor(x, y);
-            if (pixel.alpha() > 200 && qAbs(pixel.red() - color.red()) < 30 && qAbs(pixel.green() - color.green()) < 30
-                && qAbs(pixel.blue() - color.blue()) < 30)
+            if (pixel.alpha() > 200 && qAbs(pixel.red() - painted.red()) < 30
+                && qAbs(pixel.green() - painted.green()) < 30 && qAbs(pixel.blue() - painted.blue()) < 30)
                 result |= QRect(x, y, 1, 1);
         }
     }
