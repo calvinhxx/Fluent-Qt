@@ -171,8 +171,8 @@ with adaptive navigation; the standalone example's narrow case uses 420×860.
    A `QApplication` may already exist, but no Quick surface may have been created.
    This is application-wide policy; session activation never selects a backend.
 2. Construct `QmlSession(host, parent)` on the GUI thread and check `activate()`.
-   The host is borrowed; the QObject parent owns the session. Activation alone
-   does not load a QML page.
+   `QmlSession` does not take ownership of `host`; the `parent` argument owns
+   the session itself. Activation alone does not load a QML page.
 3. Check `createView(parent)` for null, or check `attachView(existingView)` for
    failure. The application owns the QWidget through its usual parent or local
    lifetime. A view can join only one plugin scope at a time.
@@ -190,10 +190,10 @@ asynchronous failure. `status()` distinguishes Unloaded, Loading, Ready, and
 Error. `errors()` and `lastError()` expose diagnostics without Qt Quick types
 in the public API.
 
-`rootObject()` is borrowed. Unloading or replacing a page invalidates that root
-and its scene-owned children; retain guarded pointers rather than using them
-after a lifecycle change. Loading the same Ready source is a no-op. Call
-`unload()` before explicitly reloading that file.
+`rootObject()` returns a non-owning pointer that becomes invalid when the page
+is unloaded or replaced; keep a `QPointer` instead of using it across lifecycle
+changes. Calling `load()` with the same Ready URL does nothing—call `unload()`
+first to reload that file.
 
 ## Composition and Gallery mode
 
@@ -245,8 +245,8 @@ that page when the panel and page origins differ. Reserve `requiredBytes()`
 alongside the Widgets and particle caches before allocating a frame.
 On Qt 5.15 and Qt 6.2, texture DPR must match the view's native window DPR;
 Qt 6.3+ supports the explicit target DPR used by the cache sampling policy.
-`compose()` accepts a resolved panel texture and returns a borrowed composed
-texture. Treat texture IDs as invalid after release, resize, or context change.
+`compose()` accepts a resolved panel texture and returns a non-owning OpenGL
+texture ID. Treat texture IDs as invalid after release, resize, or context change.
 `clearFrameCaches()` releases GPU targets while retaining scene delegation and
 QML state. `release()` also restores native Quick presentation.
 Handle `renderingFailed` by stopping ancestor captures before releasing the
@@ -269,13 +269,13 @@ leaves Quick's backend selection unchanged. If RHI preflight fails, Gallery
 tries OpenGL only when Quick can share that host API. Otherwise it uses 2D.
 Gallery builds without QmlBridge retain their existing OpenGL fallback.
 
-With an RHI host, QML pages use native 2D; other pages can still use RHI 3D.
-The saved 3D preference and application models are retained. With an OpenGL
-host, a failed QML frame preserves the last completed frame until queued 2D
-restoration. A new or resized framebuffer draws the ordinary panels while
-waiting for that restoration. Projected input pauses during this interval and
-resumes with native presentation. Errors already pending on the borrowed GL
-context are reported separately from errors raised during QML rendering.
+With an RHI host, QML pages use native 2D while other pages can continue using
+RHI 3D, keeping the saved 3D preference and application models intact. With an
+OpenGL host, a failed QML frame keeps displaying the previous completed frame
+while falling back to 2D. A new or resized framebuffer draws ordinary panels in
+the meantime, and projected input pauses until native presentation resumes.
+Pre-existing errors on the caller's GL context are reported separately from
+errors raised during QML rendering.
 
 Other hosts must choose compatible graphics APIs before Quick initialization.
 This integration does not add QML support to the ordinary

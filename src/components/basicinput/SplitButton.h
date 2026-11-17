@@ -11,12 +11,8 @@ class QKeyEvent;
 namespace fluent::basicinput {
 
 /**
- * @brief Button with separate primary action and secondary menu regions.
- * zh_CN: 将主操作区和二级菜单区拆开的按钮。
- *
- * SplitButton keeps the primary click distinct from the dropdown affordance so
- * callers can expose a default command together with additional choices.
- * zh_CN: SplitButton 将主点击和下拉入口分离，便于调用方同时提供默认命令和更多选项。
+ * @brief Button split into a primary action area and a secondary dropdown menu trigger.
+ * zh_CN: 分为主操作区和二级下拉菜单触发区的拆分按钮。
  */
 class SplitButton : public Button {
     Q_OBJECT

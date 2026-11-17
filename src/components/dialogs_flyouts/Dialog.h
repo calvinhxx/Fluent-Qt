@@ -26,14 +26,12 @@ class OverlayCoordinator;
 namespace fluent::dialogs_flyouts {
 
 /**
- * @brief Same-window Fluent dialog shell with optional smoke scrim and enter/exit fade.
- * zh_CN: 同窗口 Fluent 对话框外壳，可选烟雾遮罩与进出场淡入淡出。
+ * @brief Same-window Fluent dialog host with optional smoke scrim and fade animation.
+ * zh_CN: 同窗口 Fluent 对话框基类，支持可选烟雾遮罩与进出场淡入淡出。
  *
- * Dialog follows the WinUI ContentDialog model: it is a child of the owning top-level window
- * (like Popup / DrawerView), not a separate native top-level window. ContentDialog and related
- * modal surfaces reuse this shell.
- * zh_CN: Dialog 对齐 WinUI ContentDialog：作为 owning top-level 的子控件（与 Popup / DrawerView
- * 相同），而非独立原生顶层窗口。ContentDialog 等模态表面复用此外壳。
+ * Hosted as a child widget inside the owning top-level window rather than a
+ * separate native window; used as the base for ContentDialog and related dialogs.
+ * zh_CN: 作为所属顶层窗口的子控件显示（不创建独立原生窗口），供 ContentDialog 等模态对话框复用。
  */
 class Dialog : public QDialog, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -52,16 +50,16 @@ public:
     Q_FLAG(ClosePolicy)
 
     /**
-     * @brief Logical requested open state, not animation-complete or QWidget visibility.
-     * zh_CN: 逻辑请求打开态，不是动画完成态，也不是 QWidget 可见性。
+     * @brief Requested open state (independent of animation progress or widget visibility).
+     * zh_CN: 逻辑上的打开状态（不代表动画已结束或 QWidget 当前可见）。
      */
     Q_PROPERTY(bool isOpen READ isOpen WRITE setIsOpen NOTIFY isOpenChanged)
     Q_PROPERTY(double animationProgress READ animationProgress WRITE setAnimationProgress)
     Q_PROPERTY(bool dragEnabled READ isDragEnabled WRITE setDragEnabled NOTIFY dragEnabledChanged)
     Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
     /**
-     * @brief Historical smoke bundle; enabled only while modal and dim are both on.
-     * zh_CN: 历史烟雾包；仅在 modal 与 dim 同时开启时视为启用。
+     * @brief Legacy combined toggle; true only while both modal and dim are enabled.
+     * zh_CN: 兼容旧版遮罩开关；仅在 modal 与 dim 同时开启时为 true。
      */
     Q_PROPERTY(bool smokeEnabled READ isSmokeEnabled WRITE setSmokeEnabled NOTIFY smokeEnabledChanged)
     Q_PROPERTY(bool modal READ isModal WRITE setModal NOTIFY modalChanged)
@@ -72,11 +70,12 @@ public:
      */
     Q_PROPERTY(double dimOpacity READ dimOpacity WRITE setDimOpacity NOTIFY dimOpacityChanged)
     /**
-     * @brief Cached owning-window blur radius in logical pixels [0, 32]; 0 disables blur.
-     * zh_CN: 所属窗口背景快照的模糊半径，范围 [0, 32] 逻辑像素；0 关闭模糊。
-     * Defaults to 4 for modal surfaces and 0 otherwise until explicitly set.
-     * Explicit values, including 0, persist across modality changes.
-     * zh_CN: 未显式设置时，模态默认 4，非模态默认 0；显式值（包括 0）不随模态变化。
+     * @brief Blur radius in logical pixels [0, 32] for the captured window backdrop (0 disables blur).
+     *
+     * Defaults to 4 when modal and 0 otherwise until explicitly set; explicit
+     * values (including 0) persist across modality changes.
+     * zh_CN: 所属窗口背景快照的模糊半径（逻辑像素 [0, 32]，0 表示关闭模糊）；
+     * 未手动设置时模态默认 4、非模态默认 0，显式设置后（含 0）不再随模态改变。
      */
     Q_PROPERTY(double backdropBlurRadius
         READ backdropBlurRadius
@@ -165,8 +164,8 @@ protected:
     bool isAnimating() const { return m_isAnimating; }
 
     /**
-     * @brief Owning top-level used for centering, theme inheritance, and the smoke scrim.
-     * zh_CN: 用于居中、主题继承与烟雾遮罩的 owning top-level。
+     * @brief Owning top-level window used for centering, theme inheritance, and the smoke scrim.
+     * zh_CN: 所属顶层窗口，用于居中定位、主题继承与烟雾遮罩挂载。
      */
     QWidget* ownerWidget() const;
 

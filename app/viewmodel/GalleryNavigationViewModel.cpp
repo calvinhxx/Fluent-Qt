@@ -56,14 +56,8 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
     m_items.append(node(GalleryNavigationItem::Kind::RootRoute, QStringLiteral("home"), QStringLiteral("Home"),
         QStringLiteral("Root"), Typography::Icons::Home, QColor(QStringLiteral("#F4F8FF"))));
 
-    // Foundation mirrors the WinUI Gallery "Design / Fundamentals" area: a landing
-    // route (feature cards) with one expandable child per design-token topic. Each
-    // child is a ComponentRoute so it renders indented under the parent, exactly like
-    // a control under its category. No section header — the "Foundation" item names
-    // itself, so a "Foundation" header above it would just be a duplicate label.
-    // zh_CN: Foundation 对标 WinUI Gallery 的「Design / Fundamentals」区：一个落地路由（特性卡片）
-    // 加每个设计 token 主题一个可展开子项。子项用 ComponentRoute，使其缩进显示在父项下，
-    // 与分类下的控件一致。不加分区头——「Foundation」项本身就是名字，再加「Foundation」头只会重复。
+    // Group Foundation and its design-token topics under a single expandable node (no duplicate header).
+    // zh_CN: 将 Foundation 及其设计 token 主题归入同一可展开节点，不额外添加重复分区头。
     m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute, QStringLiteral("foundation"),
         QStringLiteral("Foundation"), QStringLiteral("Foundation"),
         Typography::Icons::glyph(QStringLiteral("ic_fluent_cube_20_regular")), QColor(QStringLiteral("#F3F1FB")),

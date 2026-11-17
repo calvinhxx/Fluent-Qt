@@ -153,8 +153,7 @@ public:
     }
 
 protected:
-    // Qt keeps pointer, focus and Space semantics; the application owns checking.
-    // zh_CN: 保留 Qt 指针、焦点和空格语义，勾选状态由应用控制。
+    // Checked state is driven externally via setCurrentIndex(); keep Button focus/Space behavior without auto-toggling.
     void nextCheckState() override {}
     void resizeEvent(QResizeEvent* event) override
     {
@@ -168,10 +167,8 @@ protected:
         p.setRenderHint(QPainter::Antialiasing);
         const auto& c = themeColorsRef();
         const QRectF surfaceRect = QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0);
-        // Active steps stay anchored by the accent badge and bold title rather than a full-tile
-        // Subtle checked fill, which clashes with the track connector.
-        // zh_CN: 当前步骤通过强调色徽章和加粗标题区分，不在静止态叠加铺满整格的灰色选中底块，
-        // 避免与步骤连接线冲突；仅在悬停或按下时提供轻量交互反馈。
+        // Active steps are indicated by the accent badge and bold title; only hover/press paint a tile fill
+        // so resting tiles don't clash with the connector track.
         if (isEnabled()) {
             const QColor hoverBg = isDown() ? c.subtleTertiary : (underMouse() ? c.subtleSecondary : QColor());
             if (hoverBg.isValid()) {
@@ -438,8 +435,7 @@ public:
     }
 };
 
-// The actual focus widget and the logical tree expose one accessible step.
-// zh_CN: 实际焦点控件与逻辑树共同暴露同一个步骤无障碍对象。
+// Share one logical accessible node between the focusable StepButton and the Stepper tree.
 class StepButtonAccessible final : public QAccessibleWidget {
 public:
     explicit StepButtonAccessible(StepButton* button) : QAccessibleWidget(button, QAccessible::PageTab) {}

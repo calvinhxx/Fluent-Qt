@@ -4,7 +4,7 @@
 
 namespace compatibility::detail {
 
-// Every platform implements this internal backend contract.
+// Internal per-OS window chrome backend interface.
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options);
 bool handlePlatformNativeEvent(QWidget* window,
     const WindowChromeOptions& options,

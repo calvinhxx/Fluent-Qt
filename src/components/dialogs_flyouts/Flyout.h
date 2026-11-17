@@ -7,13 +7,13 @@
 namespace fluent::dialogs_flyouts {
 
 /**
- * @brief Popup anchored to a target with placement and window clamping rules.
- * zh_CN: 按目标锚点定位并支持窗口边界约束的 Popup 派生浮层。
+ * @brief Popup anchored to a target widget with placement options and window clamping.
+ * zh_CN: 锚定到目标控件的浮层，支持方位策略与窗口边界约束。
  *
- * Flyout extends Popup with placement, anchor offset, and clamp-to-window behavior
- * for controls such as ComboBox, teaching tips, and contextual command surfaces.
- * zh_CN: Flyout 在 Popup 基础上增加位置、锚点偏移和窗口内约束，适合 ComboBox、
- * TeachingTip 和上下文命令表面。
+ * Extends Popup with anchor offset and edge clamping for ComboBox dropdowns,
+ * teaching tips, and contextual command bars.
+ * zh_CN: 在 Popup 基础上增加锚点偏移和窗口内约束，适用于 ComboBox 下拉、
+ * TeachingTip 与上下文命令栏。
  */
 class Flyout : public Popup {
     Q_OBJECT
@@ -58,11 +58,12 @@ public:
 
     QWidget* anchor() const { return m_anchor.data(); }
 
-    /// Opens the flyout at the anchor; equals setAnchor(anchor) + open().
-    /// zh_CN: 在指定 anchor 控件上弹出 flyout，等价于 setAnchor(anchor) + open()。
+    /** @brief Opens the flyout anchored to anchor (equivalent to setAnchor(anchor) + open()).
+     * zh_CN: 在指定锚点控件旁弹出浮层，等价于 setAnchor(anchor) + open()。 */
     void showAt(QWidget* anchor);
 
-    /// Sets the anchor without opening. zh_CN: 仅设置 anchor，不立即弹出。
+    /** @brief Sets the anchor widget without opening the flyout.
+     * zh_CN: 仅设置锚点控件，不立即弹出。 */
     void setAnchor(QWidget* anchor);
 
 signals:
@@ -71,23 +72,14 @@ signals:
     void clampToWindowChanged(bool enabled);
 
 protected:
-    /// Override: computes the move() target from the anchor geometry, the
-    /// placement, and the flyout size (including shadow-margin compensation).
-    /// zh_CN: 重写——按 anchor 几何 + Placement + 自身尺寸返回 move() 目标坐标
-    /// （含 shadow margin 偏移补偿）。
+    /** @brief Computes the move() position from anchor geometry, placement, and shadow margin.
+     * zh_CN: 按锚点几何、Placement 及阴影边距计算窗口内 move() 目标坐标。 */
     QPoint computePosition() const override;
     QWidget* automaticPositionAnchor() const override { return m_anchor.data(); }
 
 private:
-    /// Resolves the effective placement from available space in Auto mode.
-    /// zh_CN: Auto 模式下根据可用空间决定实际 placement。
     Placement resolveAutoPlacement() const;
-
-    /// Maps the anchor geometry into top-level coordinates. zh_CN: 把 anchor 几何映射到 top-level 坐标系。
     QRect anchorRectInTopLevel() const;
-
-    /// Clamps the card position (by its top-left) inside the top-level rect.
-    /// zh_CN: 在 top-level 矩形内 clamp 卡片位置（基于卡片左上角）。
     QPoint clampCardPos(const QPoint& cardTopLeft) const;
 
     QPointer<QWidget> m_anchor;

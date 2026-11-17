@@ -45,10 +45,7 @@ Dialog::Dialog(QWidget* parent) : QDialog(parent), m_originalParent(parent)
         m_overlayCoordinator->raiseStack();
     });
 
-    // Same-window overlay contract (WinUI ContentDialog / Popup / DrawerView): stay a Qt::Widget
-    // child of the owning top-level. Never host Dialog as a native top-level window.
-    // zh_CN: 同窗口浮层契约（WinUI ContentDialog / Popup / DrawerView）：保持为 owning top-level 的
-    // Qt::Widget 子控件，绝不把 Dialog 做成原生顶层窗口。
+    // Keep Dialog as a child widget of the owning top-level window rather than a native top-level window.
     setWindowFlags(Qt::Widget | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::NoDropShadowWindowHint);
     attachToOwner();
 

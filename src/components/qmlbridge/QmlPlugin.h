@@ -8,13 +8,13 @@ namespace fluent::qmlbridge {
 class QmlView;
 
 /**
- * @brief Registers QML widget hosts with the optional plugin lifecycle.
- * zh_CN: 将 QML 控件宿主接入可选插件生命周期。
- * Deactivation unloads tracked scenes, preserving caller-owned widgets and
- * models. Reactivation permits explicit loading and never reloads old pages.
- * A view can belong to one plugin at a time. All calls use the GUI thread.
- * zh_CN: 停用卸载受追踪场景，保留调用方控件和模型。重新激活允许显式加载，
- * 不自动重载旧页面。视图同时只能关联一个插件；所有调用均须在 GUI 线程执行。
+ * @brief Plugin adapter that manages QmlView creation and scene unloading on deactivation.
+ * Deactivating unloads attached views without deleting the QmlView widgets or external models;
+ * reactivating allows new loads without restoring previous pages. Each view attaches to one plugin
+ * at a time, and all calls must run on the GUI thread.
+ * zh_CN: 管理 QmlView 创建与停用卸载的插件适配器。
+ * 停用时会卸载已关联视图的 QML 场景，但保留 QmlView 控件与外部模型；重新激活后可重新加载，
+ * 不会自动恢复旧页面。每个视图同一时间只能关联一个插件，所有调用须在 GUI 线程执行。
  */
 class QmlPlugin : public plugins::WidgetPlugin {
     Q_OBJECT
@@ -26,8 +26,10 @@ public:
     QStringList widgetKeys() const override;
     QWidget* createWidget(const QString& key, QWidget* parent, QString* error = nullptr) override;
     bool isActive() const;
-    /** @brief Tracks an existing borrowed view without changing its parent.
-     * zh_CN: 追踪借用视图，不改变父对象。 */
+    /**
+     * @brief Attaches an existing QmlView without reparenting or taking ownership; fails if attached elsewhere.
+     * zh_CN: 关联已有的 QmlView（不改变父对象或所有权）；若视图已关联其他插件则返回 false。
+     */
     bool attachView(QmlView* view);
 
 protected:

@@ -20,9 +20,7 @@ void drawCenteredIconGlyph(QPainter& painter,
     const QRectF paintedRect = targetRect.translated(QPointF(offset.x(), offset.y()));
     const bool transformed = !qFuzzyCompare(scale, 1.0) || !qFuzzyIsNull(rotation);
 
-    // Fluent icons: shared paintGlyph (device-aligned drawText). Keep transform
-    // wrapping for Button press/scale animations.
-    // zh_CN: Fluent 图标走共享 paintGlyph（设备对齐 drawText）；按压缩放动画仍包一层变换。
+    // Fluent icons use shared paintGlyph; keep transform wrapping for Button press/scale animations.
     if (usesFluentIcons) {
         if (!transformed) {
             Typography::Icons::paintGlyph(painter, paintedRect, glyph, pixelSize, Qt::AlignCenter);

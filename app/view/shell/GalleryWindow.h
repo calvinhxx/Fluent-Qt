@@ -41,18 +41,13 @@ class GalleryTopNavigationPane;
 class SettingsPage;
 
 /**
- * @brief Application shell: title bar, left navigation pane, right content area.
- * zh_CN: 应用外壳：标题栏、左侧导航栏、右侧 content 区。
+ * @brief Application shell hosting the title bar, navigation pane, and content area.
+ * zh_CN: 应用主窗口外壳：包含标题栏、导航栏和右侧内容区。
  *
- * Construction is three symmetric build steps (title bar, navigation shell,
- * content presenter) plus the initial route. After that every route change —
- * pane click, search, back, in-page card — funnels through selectRoute:
- * zh_CN: 构造分三个对称的构建步骤（标题栏、导航壳、content 呈现器）加初始路由。
- * 之后所有路由变化——导航点击、搜索、后退、页面内卡片——都汇入 selectRoute：
- *
- *   selectRoute -> GalleryNavigationState (selection)
- *               -> handleSelectedRouteChanged -> history
- *               -> GalleryContentPresenter::presentRoute (page swap)
+ * Every route change (pane click, search, history back, or in-page card) funnels
+ * through selectRoute() -> GalleryNavigationState -> GalleryContentPresenter::presentRoute().
+ * zh_CN: 所有路由跳转（导航点击、搜索、后退、页内卡片）统一经由 selectRoute()
+ * 流入 GalleryNavigationState 和 GalleryContentPresenter::presentRoute()。
  */
 class GalleryWindow : public fluent::windowing::Window {
 public:
@@ -81,9 +76,8 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
-    // Pause splash-phase page warming while the user is moving/resizing the window so a synchronous
-    // build never stutters the drag; a short debounce resumes once they stop. zh_CN: 用户移动/缩放窗口期间
-    // 暂停 splash 期建页，使同步构建绝不卡顿拖拽；停止后经短防抖恢复。
+    // Pause splash-phase page prewarm during move/resize so synchronous builds do not stutter the drag.
+    // zh_CN: 移动或缩放窗口期间暂停启动预热，避免同步建页导致拖拽卡顿。
     void moveEvent(QMoveEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
@@ -109,14 +103,11 @@ private:
     void setTopNavigationChrome(bool top);
     void toggleNavigationDisplayMode();
     void setNavigationPanesCompact(bool compact);
-    // Drives the inline panes' icon-only vs labelled density off the pane's open state: full labels
-    // only once an opened pane has settled at full width (avoids label clipping mid-slide); icons
-    // immediately when collapsing. zh_CN: 依据窗格开合驱动内联窗格的“仅图标 vs 带标签”密度：仅当展开的窗格
-    // 在全宽稳定后才显示完整标签（避免滑动中标签被裁剪）；收起时立即变为图标。
+    // Collapse inline labels immediately on close; reveal them on open only after widening finishes to avoid clipping.
+    // zh_CN: 收起时立即切换为图标模式，展开时待宽度动画完成后再显示文字标签，避免滑动过程中被裁剪。
     void applyNavigationPaneDensity();
     void updateNavigationCommands();
-    // Pause prewarm now and (re)arm the idle timer that resumes it shortly after interaction stops.
-    // zh_CN: 立即暂停预热，并（重新）启动在交互停止片刻后恢复预热的空闲计时器。
+    // Pause prewarm immediately and schedule resume once window move/resize goes idle.
     void deferPrewarmDuringInteraction();
 
     GalleryNavigationViewModel m_navigationViewModel;

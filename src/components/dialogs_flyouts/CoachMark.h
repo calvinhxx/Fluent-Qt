@@ -21,15 +21,14 @@ class OverlayCoordinator;
 namespace fluent::dialogs_flyouts {
 
 /**
- * @brief Same-window teaching tip with a tail aimed at a target.
- * zh_CN: 指向目标的同窗口操作引导提示。
+ * @brief Same-window teaching tip with a pointer tail aimed at a target widget.
+ * zh_CN: 指向目标控件的同窗口操作引导浮层。
  *
- * CoachMark hosts caller content via contentHost(), paints a Fluent card + shadow + tail, fades
- * in/out, and glides between targets while open. Like TeachingTip / Popup, it is always hosted as a
- * child of the owning top-level window (WinUI-aligned same-window overlay).
- * zh_CN: CoachMark 通过 contentHost() 承载调用方内容，绘制 Fluent 卡片 + 阴影 + 尾巴，支持淡入淡出，
- * 并在打开时于目标间滑动。与 TeachingTip / Popup 一样，始终作为 owning top-level 的子控件
- * （对齐 WinUI 的同窗口浮层）。
+ * Hosts caller widgets via contentHost(), draws a shadowed card with tail,
+ * fades in and out, and glides between targets while open. Always hosted as a
+ * child of the owning top-level window.
+ * zh_CN: 通过 contentHost() 承载内容，绘制带阴影和指向尾巴的卡片，支持淡入淡出及
+ * 目标切换时的平移动效；始终作为所属顶层窗口的子控件显示。
  */
 class CoachMark : public QWidget, public fluent::FluentElement, public fluent::QMLPlus {
     Q_OBJECT
@@ -41,21 +40,21 @@ class CoachMark : public QWidget, public fluent::FluentElement, public fluent::Q
 
 public:
     /**
-     * @brief Historical surface mode; both values host the tip inside the owner top-level.
-     * zh_CN: 历史 surface 模式；两种取值都把提示承载在宿主顶层窗口内。
+     * @brief Legacy display mode; both values host the tip inside the owning window.
+     * zh_CN: 历史显示模式；两种取值均在所属顶层窗口内显示。
      */
     enum SurfaceMode {
         TopLevelSurface,  ///< Deprecated alias of SameWindowSurface. zh_CN: SameWindowSurface 的废弃别名。
-        SameWindowSurface ///< Child widget inside the owner top-level. zh_CN: 宿主顶层窗口内的子控件。
+        SameWindowSurface ///< Child widget inside the owning top-level window. zh_CN: 所属顶层窗口内的子控件。
     };
     Q_ENUM(SurfaceMode)
 
     enum Placement {
         Auto,   ///< Resolves to Bottom. zh_CN: 解析为 Bottom。
-        Top,    ///< Card above the target, tail down.
-        Bottom, ///< Card below the target, tail up.
-        Left,   ///< Card left of the target, tail right.
-        Right,  ///< Card right of the target, tail left.
+        Top,    ///< Card above the target, tail down. zh_CN: 卡片在目标上方，尾巴朝下。
+        Bottom, ///< Card below the target, tail up. zh_CN: 卡片在目标下方，尾巴朝上。
+        Left,   ///< Card left of the target, tail right. zh_CN: 卡片在目标左侧，尾巴朝右。
+        Right,  ///< Card right of the target, tail left. zh_CN: 卡片在目标右侧，尾巴朝左。
     };
     Q_ENUM(Placement)
 
@@ -96,7 +95,7 @@ signals:
      */
     void opened();
     /**
-     * @brief Emitted after the exit fade completes and the surface is hidden.
+     * @brief Emitted after the exit fade completes and the tip is hidden.
      * zh_CN: 退场淡出完成并隐藏后发出。
      */
     void closed();

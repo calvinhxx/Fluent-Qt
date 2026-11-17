@@ -1,12 +1,8 @@
 #pragma once
 
 /**
- * @brief Source-compatible umbrella for Qt and platform adaptation helpers.
- * zh_CN: 保留既有调用的 Qt 与平台兼容层总入口。
- *
- * New implementation files include the owning domain header directly.
- * Existing types, functions, and event-construction macros remain available.
- * zh_CN: 新实现按职责引用对应头文件；已有类型、函数和事件构造宏继续可用。
+ * @brief Umbrella header for Qt and platform compatibility helpers; new code should include the specific domain header directly.
+ * zh_CN: Qt 与平台兼容层总入口；新代码建议直接按需引入对应子头文件。
  */
 
 #include "AccessibilityCompat.h"

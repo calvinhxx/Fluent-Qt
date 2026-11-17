@@ -117,10 +117,7 @@ private:
     void handleModeChanged(MotionPolicy::Mode mode)
     {
         prune();
-        // Reaching an animation's end can synchronously emit finished; those callbacks may
-        // start another tracked transition. Iterate over a snapshot so appends cannot
-        // invalidate this traversal. zh_CN: 到达终点可能同步发送 finished，而回调又可能
-        // 启动新的受管过渡；使用快照遍历，避免追加元素使当前迭代失效。
+        // Finishing an animation may emit finished() synchronously and append to m_active, so iterate a snapshot.
         const QList<Entry> active = m_active;
         for (const Entry& entry : active) {
             QAbstractAnimation* animation = entry.animation.data();

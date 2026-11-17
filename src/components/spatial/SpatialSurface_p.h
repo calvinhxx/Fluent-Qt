@@ -21,8 +21,7 @@
 
 namespace fluent::spatial {
 
-// Decorations are siblings of the widget's painted contents, never QWidget effects.
-// The proxy's bounds, input mapping and native child hierarchy stay unchanged.
+// Draw shadow/rim as a sibling graphics item rather than a QGraphicsEffect to keep proxy bounds and input mapping intact.
 class SpatialSurfaceDecoration final : public QGraphicsItem {
 public:
     explicit SpatialSurfaceDecoration(QGraphicsItem* parent) : QGraphicsItem(parent)
@@ -66,7 +65,7 @@ public:
         if (m_intensity <= 0 || m_rect.isEmpty())
             return;
         const QRectF bounds = boundingRect();
-        // Bound cache memory for unusually large hosted widgets. Typical cards retain DPR.
+        // Cap shadow cache resolution for oversized widgets while keeping native DPR on normal cards.
         const qreal dpr = std::min(painter->device()->devicePixelRatioF(),
             1536.0 / std::max(bounds.width(), bounds.height()));
         if (m_rest.isNull() || !qFuzzyCompare(m_rest.devicePixelRatio(), dpr)) {
@@ -118,9 +117,7 @@ private:
                 const qreal py = (y + .5) / dpr + bounds.top();
                 const qreal cast = .125 * std::erfc(distance(px, py, raised ? 12 : 5) / (raised ? 18 : 10));
                 const qreal contact = .08 * std::erfc(distance(px, py, 1.5) / 2.4);
-                // Raster painting can lose a projective clip. Cut the content hole into
-                // the shadow's alpha before transforming it, so no shadow covers the card.
-                // zh_CN: 透视下的软件裁剪可能失效；在阴影纹理中预先镂空内容区域。
+                // Cut the card interior out of the shadow alpha because software rasterization can drop projective clips.
                 const qreal outside = std::clamp(distance(px, py, 0) * dpr, 0.0, 1.0);
                 row[x] = qRgba(0, 0, 0, qRound(255 * outside * (1 - (1 - cast) * (1 - contact))));
             }
@@ -174,9 +171,7 @@ protected:
             || change == ItemSceneHasChanged) {
             if (widget() && !m_presentationNotificationPending) {
                 m_presentationNotificationPending = true;
-                // Never reposition or close an overlay inside a scene mutation.
-                // Coalesce projection changes and let the common anchor tracker act.
-                // zh_CN: 不在场景更新栈中关闭或移动浮层；合并投影变化后通知共用锚点跟踪器。
+                // Defer overlay anchor notifications out of itemChange() so overlays don't move or close mid-mutation.
                 QTimer::singleShot(0, this, [this] {
                     m_presentationNotificationPending = false;
                     if (QWidget* source = widget()) {
@@ -203,7 +198,7 @@ protected:
     }
     void mousePressEvent(QGraphicsSceneMouseEvent* event) override
     {
-        // Freeze before dispatch, preserving the coordinates of switches, sliders and drags.
+        // Freeze hover lift on press so controls inside the proxy don't shift under the cursor.
         m_pressed = true;
         m_motion.stop();
         QGraphicsProxyWidget::mousePressEvent(event);

@@ -11,11 +11,8 @@ class QWindow;
 
 namespace compatibility::detail {
 
-// Capture before opening a borrowed popup, attach after it has a native window,
-// and restore when the component ends that invocation. QObject ownership stays
-// with the caller; the component retains its lifetime and reentrancy guards.
-// zh_CN: 打开借用弹窗前记录，创建原生窗口后关联，调用结束时还原；
-// QObject 所有权仍属调用方，组件继续负责生命周期和重入保护。
+// Tracks and restores transientParent for an externally owned popup across show/hide without taking QObject ownership.
+// zh_CN: 在弹窗显示/关闭期间关联并还原 transientParent，不接管外部弹窗的 QObject 所有权。
 class PopupWindowHost {
 public:
     PopupWindowHost() = default;

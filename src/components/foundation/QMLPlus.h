@@ -154,28 +154,27 @@ struct BindingOptions {
 };
 
 /**
- * @brief Copyable, non-owning control for a target-owned property binding.
- * zh_CN: 可复制且不持有所有权的属性绑定控制句柄；绑定由目标对象持有。
+ * @brief Copyable non-owning handle to a target-owned property binding.
+ * zh_CN: 指向目标对象所拥有属性绑定的可复制控制句柄（不接管绑定所有权）。
  *
- * Destruction of a handle does not unbind. A successful replacement invalidates
- * all old handles; an invalid replacement preserves the previous binding.
- * pause()/resume() retain enabled state; state overrides also suspend both
- * binding directions. refresh() evaluates immediately when active.
- * zh_CN: 销毁句柄不会解绑。成功替换会使旧句柄失效；无效替换保留原绑定。
- * pause()/resume() 保留 enabled 状态；状态覆盖也会暂停双向同步。
- * refresh() 在绑定活动时立即计算。
+ * Destroying a handle does not unbind. Installing a valid replacement invalidates
+ * prior handles, whereas an invalid replacement keeps the existing binding intact.
+ * pause()/resume() preserve enabled state; state overrides also suspend both
+ * binding directions. refresh() evaluates active bindings immediately.
+ * zh_CN: 销毁句柄不会解除绑定。成功替换会使旧句柄失效，无效替换则保留原绑定。
+ * pause()/resume() 保留启用状态；状态覆盖期间也会暂停双向同步；refresh() 在绑定活动时立即求值。
  */
 class BindingHandle {
 public:
     BindingHandle() = default;
     /**
-     * @brief Reports whether the binding and its endpoints remain available.
+     * @brief Reports whether the binding and its endpoints remain valid.
      * zh_CN: 返回绑定及其端点是否仍然有效。
      */
     bool isValid() const;
     /**
-     * @brief Returns enablement independently of manual or state suspension.
-     * zh_CN: 返回启用状态，不受手动暂停或状态覆盖影响。
+     * @brief Returns enablement independently of pause or state suspension.
+     * zh_CN: 返回启用状态，不受暂停或状态覆盖影响。
      */
     bool isEnabled() const;
     /**
@@ -340,8 +339,8 @@ struct StateTransition {
 };
 
 /**
- * @brief Lazy QObject-host-owned observation surface for QMLPlus state transitions.
- * zh_CN: 由 QObject 宿主持有、按需创建的 QMLPlus 状态过渡观察对象。
+ * @brief Lazily created QObject-host-owned observer for QMLPlus state transitions.
+ * zh_CN: 由 QObject 宿主按需创建并管理的状态过渡观察对象。
  *
  * Signals describe managed state changes. transitionFinished is emitted once
  * after the destination settles, including immediate transitions. Interrupted
@@ -435,14 +434,14 @@ public:
      * default state. setState() remains manual until the next reevaluation.
      * Replacement preserves state order. extend applies ancestors first, with
      * derived changes winning; missing or cyclic ancestors leave state intact.
-     * zh_CN: 依赖通知会自动重新计算；无匹配时进入默认状态。setState() 的手动
-     * 选择保持到下次计算。替换保留注册顺序；extend 先应用祖先，再由派生变更
-     * 覆盖；祖先缺失或循环时保持当前状态不变。
+     * zh_CN: 依赖属性通知触发时会自动重新求值；无匹配条件时切回默认状态。setState() 的手动
+     * 选择保持到下次求值。替换状态会保留注册顺序；extend 先应用祖先定义再由派生变更覆盖，
+     * 若祖先缺失或存在循环则保持当前状态不变。
      */
     void evaluateStates();
     /**
-     * @brief Returns the lazy host-owned state observation object.
-     * zh_CN: 返回按需创建、由宿主持有的状态观察对象。
+     * @brief Returns the lazily created state observer owned by this host.
+     * zh_CN: 返回由当前宿主按需创建并管理的状态观察对象。
      */
     QMLPlusRuntime* runtime();
 
@@ -497,10 +496,10 @@ public:
      * @brief Sets the default animation for this host's managed property writes.
      * zh_CN: 设置宿主受管理属性写入时使用的默认动画。
      *
-     * Explicit state transitions take precedence. Arbitrary QWidget setters
+     * Explicit state transitions take precedence. Direct QWidget setter calls
      * are not intercepted. Retargeting starts from the current visible value.
-     * zh_CN: 显式状态过渡优先；不会拦截任意 QWidget setter；重新定向从当前
-     * 可见值开始。
+     * zh_CN: 显式状态过渡优先级更高；不会拦截直接调用的 QWidget setter；
+     * 动画重新定向会从当前可见值平滑过渡。
      */
     void setBehavior(const char* propertyName, const PropertyAnimation& animation);
     /**

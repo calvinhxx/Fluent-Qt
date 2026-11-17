@@ -2,10 +2,10 @@
 #include "ChartView.h"
 
 namespace fluent::charts {
-/** @brief A dedicated line chart with its own bounded renderer.
- * zh_CN: 独立的折线图组件，拥有专用且受预算约束的绘制器。
- * Borrows ChartModel; presentation is fixed for the lifetime of this widget.
- * zh_CN: 借用 ChartModel；此组件的图表类型在生命周期内保持不变。
+/**
+ * @brief Dedicated line chart widget with a fixed Line presentation.
+ * References external ChartModel data without taking ownership.
+ * zh_CN: 专用折线图控件，图表类型固定为折线图，关联外部 ChartModel 而不接管所有权。
  */
 class LineChart : public ChartView {
     Q_OBJECT

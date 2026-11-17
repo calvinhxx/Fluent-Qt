@@ -116,8 +116,8 @@
     236
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation.",
+    "zh": "根据属性定义自动生成分组编辑表单。"
   },
   "presets": [
     {

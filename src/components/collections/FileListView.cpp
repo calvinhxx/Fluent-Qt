@@ -177,16 +177,9 @@ public:
         if (!guardedView || !selection)
             return;
 
-        // A direct currentChanged callback can delete the view. Qt's selection
-        // model still emits currentRowChanged/currentColumnChanged afterwards,
-        // and QAbstractItemView::setCurrentIndex writes its private state after
-        // those signals. Keep only a view-owned selection model alive through
-        // its call and bypass the unsafe outer Qt setter. Borrowed selection
-        // models retain their parent and ownership throughout.
-        // zh_CN: currentChanged 回调可能直接删除视图；Qt 的 selection model 此后
-        // 仍会发出行列变化信号，外层 setCurrentIndex 还会写视图私有状态。因此仅
-        // 暂时保护视图持有的 selection model，直接调用它，借用对象的父级和所有权
-        // 始终保持不变。
+        // Keep view-owned selection models alive across currentChanged callbacks that may delete this view;
+        // bypass QAbstractItemView::setCurrentIndex (which writes view state after emitting) and leave
+        // external selection models untouched.
         struct SelectionLifetime {
             QPointer<QItemSelectionModel> selection;
             QPointer<FileListView> owner;
@@ -447,11 +440,7 @@ public:
         const auto interaction = detail::collectionItemInteractionState(rowState);
         const bool animateHover = interaction == detail::CollectionItemInteractionState::Normal
             || interaction == detail::CollectionItemInteractionState::Hovered;
-        // Resolve shared collection colors, retaining a fading hover's endpoint
-        // after Qt clears MouseOver. Disabled/selected/pressed states use the
-        // same appearance as ListView and never inherit stale hover opacity.
-        // zh_CN: 复用集合状态配色；Qt 清除 MouseOver 后仍保留悬停淡出的颜色终点。
-        // 禁用、选中和按压状态与 ListView 一致，不继承残留的悬停透明度。
+        // Reuse shared collection colors while retaining fade-out hover opacity after MouseOver clears.
         if (animateHover)
             rowState |= QStyle::State_MouseOver;
         QColor fill = detail::collectionItemVisualStyle(rowState, colors).background;

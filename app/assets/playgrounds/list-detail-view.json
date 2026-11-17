@@ -101,8 +101,8 @@
     180
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes.",
+    "zh": "宽屏时并排显示列表与详情，窄屏时自动切为单栏切换。"
   },
   "sizeMode": "fixed",
   "presets": [

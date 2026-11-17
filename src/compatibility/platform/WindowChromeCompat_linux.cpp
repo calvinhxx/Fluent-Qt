@@ -164,14 +164,8 @@ bool qtXcbRoundTrip(QWidget* window)
     QScreen* screen = handle ? handle->screen() : nullptr;
     if (!screen || !screen->handle())
         return false;
-    // Qt 5.15's public QScreen path enters QXcbScreen::grabWindow only after
-    // checking the platform-screen handle and nonzero native sample size.
-    // Its first request waits for GetGeometry(root) on Qt's own connection;
-    // a later GetImage failure therefore does not invalidate that round trip.
-    // Use enough logical pixels to remain nonzero at fractional scale factors.
-    // No pixels are kept and no events are dispatched. Connection health is
-    // rechecked on our private client, rather than treating an empty image as
-    // evidence that Qt's ordered request failed.
+    // Qt 5.15 exposes no XCB connection; grabWindow() forces a GetGeometry(root) sync on Qt's
+    // connection before GetImage, then we check transport health on our private client.
     const int extent = qMax(1, qCeil(1.0 / qMax<qreal>(0.01, screen->devicePixelRatio())));
     screen->grabWindow(window->internalWinId(), 0, 0, extent, extent);
     xcb::Connection* native = client->connection();
@@ -577,12 +571,8 @@ private:
             return;
         m_blurEnabled = false;
         m_capabilityProbe.stop();
-        // Leave the last blur hint in place until Window has submitted its
-        // opaque fallback. The shared transition then removes it through the
-        // Solid backend after the Qt-connection submission fence. A compositor that exits
-        // independently cannot be kept alive by retaining this property.
-        // zh_CN: 保留 blur 属性到 Window 提交不透明回退帧并完成 XCB 同连接同步之后；
-        // 共享流程经 Solid 后端移除属性。保留属性不能阻止外部 compositor 退出。
+        // Keep the blur hint until Window commits its opaque fallback frame and syncs XCB, avoiding black flicker.
+        // zh_CN: 保留模糊属性直到 Window 提交不透明回退帧并完成 XCB 同步，避免取消模糊时闪烁。
         compatibility::detail::requestWindowBackdropReevaluation(m_window);
     }
 
@@ -826,9 +816,7 @@ applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, b
         return result;
     }
     if (effect == BackdropEffect::Mica) {
-        // X11 blur-behind matches Acrylic semantics. Mica remains on the stable
-        // UILib-painted material instead of being misreported as a
-        // high-fidelity compositor implementation.
+        // X11 blur-behind maps to Acrylic only; Mica stays on the software material fallback.
         result.reason = QStringLiteral("linux-blur-represents-acrylic-only");
         return result;
     }

@@ -9,66 +9,57 @@ namespace fluent::qmlbridge {
 class QmlView;
 
 /**
- * @brief Owns QML bridge activation for C++, PySide6 and WebAssembly applications.
- * zh_CN: 为 C++、PySide6 与 WebAssembly 应用管理 QML 桥接激活。
- * Host, returned views and business models remain borrowed. The optional QObject
- * parent owns only this session and must not be a tracked view or its descendant.
- * Destroy or deactivate the session before dismantling its host. All calls use
- * QApplication's GUI thread; activation does not select a global graphics API.
- * zh_CN: 宿主、交付视图和业务模型仍被借用。可选 QObject 父对象仅持有本会话，
- * 不得为受追踪视图或其后代。拆卸宿主前先销毁或停用会话。所有调用均须在
- * QApplication 的 GUI 线程执行；激活不选择全局图形 API。
+ * @brief Manages QmlPlugin activation and view lifecycle for C++, PySide6, and WebAssembly apps.
+ * Caller retains ownership of the host, views, and context models; parent owns only this session
+ * and must not be a tracked view or its descendant. Deactivate or destroy the session before
+ * tearing down the host. All calls must run on the GUI thread, and activation leaves the global
+ * graphics API unchanged.
+ * zh_CN: 管理 QmlPlugin 激活与视图生命周期的会话类（支持 C++、PySide6 和 WebAssembly）。
+ * 调用方负责宿主、视图及上下文模型的生命周期；parent 仅管理本会话，且不能是已关联视图或其子对象。
+ * 销毁宿主前需先停用或销毁会话。所有调用须在 GUI 线程执行，激活不会更改全局图形 API。
  */
 class QmlSession : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool active READ isActive NOTIFY activeChanged)
 public:
-    /** @brief Selects the graphics API shared by Quick and its native widget host.
-     * zh_CN: 选择 Quick 与原生控件宿主共用的图形 API。 */
+    /** @brief Graphics API shared between Qt Quick and native widget hosts. zh_CN: Qt Quick 与原生控件宿主共用的图形 API。 */
     enum class GraphicsApi { Automatic, OpenGL, Direct3D11, Metal };
     Q_ENUM(GraphicsApi)
 
     explicit QmlSession(QObject* host = nullptr, QObject* parent = nullptr);
     ~QmlSession() override;
     /**
-     * @brief Selects Qt Quick OpenGL before the first Quick surface is created.
-     * zh_CN: 在首次创建 Quick 表面前选择 Qt Quick OpenGL。
-     * Call explicitly when sharing a window with Spatial/QOpenGLWidget. This is
-     * application-wide policy, not an activation side effect; Qt 5 keeps its
-     * default OpenGL/software selection. Do not call after Quick initialization.
-     * zh_CN: 与 Spatial/QOpenGLWidget 共用窗口时显式调用。这是应用级策略，非激活副作用；
-     * Qt 5 保留默认 OpenGL/软件选择。Quick 初始化后不得调用。
+     * @brief Selects OpenGL for Qt Quick before the first Quick surface is created.
+     * Call explicitly before Quick initializes when sharing a window with SpatialView or QOpenGLWidget;
+     * on Qt 5, the existing OpenGL or software selection is kept.
+     * zh_CN: 在创建首个 Quick 界面前将 Qt Quick 设为 OpenGL 后端。
+     * 与 SpatialView 或 QOpenGLWidget 共用窗口时需显式调用，且不能在 Quick 初始化之后调用；
+     * Qt 5 下保持其默认 OpenGL 或软件渲染选择。
      */
     static void prepareApplication();
     /**
-     * @brief Selects a Quick graphics API before the first Quick surface exists.
-     * zh_CN: 在首次创建 Quick 表面前选择其图形 API。
-     * Automatic restores Qt's platform/environment selection. Qt 5 keeps its
-     * existing OpenGL/software backend. This never changes Spatial's settings.
-     * zh_CN: Automatic 恢复 Qt 的平台及环境选择；Qt 5 保留原有 OpenGL/软件后端。
-     * 此调用不会修改 Spatial 设置。
+     * @brief Selects a Qt Quick graphics API before the first Quick surface is created.
+     * Automatic restores Qt's platform/environment default; Qt 5 keeps its existing OpenGL/software
+     * backend. Does not affect Spatial settings.
+     * zh_CN: 在创建首个 Quick 界面前指定 Qt Quick 图形 API。
+     * Automatic 会恢复 Qt 的平台或环境变量默认设置；Qt 5 下保持原有 OpenGL/软件后端，不影响 Spatial 设置。
      */
     static void prepareApplication(GraphicsApi api);
     /**
-     * @brief Checks whether Quick can share the requested widget graphics API.
-     * zh_CN: 检查 Quick 是否能与指定图形 API 的控件共用窗口。
-     * Queries Qt's current selection without changing it; software Quick is
-     * compatible with any host API. Automatic imposes no host requirement.
-     * zh_CN: 只查询 Qt 当前选择；软件 Quick 兼容任意宿主 API，Automatic 不限定宿主。
+     * @brief Checks whether Qt Quick's current backend can share a window with the given API.
+     * Queries Qt's selection without modifying it; software Quick and Automatic are always compatible.
+     * zh_CN: 检查当前 Qt Quick 后端是否可与指定图形 API 共用窗口。
+     * 仅查询不修改当前配置；软件渲染的 Quick 与 Automatic 均兼容任意后端。
      */
     static bool isGraphicsApiCompatible(GraphicsApi api);
-    /** @brief Activates the bridge; repeating an active call is a no-op.
-     * zh_CN: 激活桥接；重复激活为空操作。 */
+    /** @brief Registers and activates QmlPlugin; returns true immediately if already active. zh_CN: 注册并激活 QmlPlugin；已激活时直接返回 true。 */
     bool activate(QString* error = nullptr);
-    /** @brief Unloads tracked scenes, retaining caller-owned views and models.
-     * zh_CN: 卸载受追踪场景，保留调用方视图和模型。 */
+    /** @brief Unloads all tracked QML scenes while keeping views and external models intact. zh_CN: 卸载所有已关联视图的 QML 场景，保留视图控件与外部模型。 */
     bool deactivate(QString* error = nullptr);
     bool isActive() const;
-    /** @brief Creates a caller-owned view only while the session is active.
-     * zh_CN: 仅在会话激活时创建调用方持有的视图。 */
+    /** @brief Creates a QmlView attached to this session; returns nullptr while inactive. zh_CN: 创建并关联一个 QmlView（由 parent 或调用方管理生命周期）；未激活时返回 nullptr。 */
     QmlView* createView(QWidget* parent = nullptr);
-    /** @brief Tracks an existing caller-owned view only while active.
-     * zh_CN: 仅在激活时追踪调用方已有视图。 */
+    /** @brief Attaches an existing QmlView while active without taking ownership. zh_CN: 在激活状态下关联已有的 QmlView（不改变父对象或所有权）。 */
     bool attachView(QmlView* view);
 
 signals:

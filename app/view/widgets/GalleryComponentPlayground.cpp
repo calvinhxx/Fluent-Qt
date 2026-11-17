@@ -953,9 +953,8 @@ GalleryComponentPlayground* GalleryComponentPlayground::fromButton(const Button*
     auto* result = create(QStringLiteral("button"), parent);
     if (!result)
         return nullptr;
-    // The website's styles/states examples use text buttons and public properties.
-    // The borrowed source is read once; only the separate preview is ever written.
-    // zh_CN: 官网样式/状态示例使用文字按钮；仅读取一次源控件，后续只写独立预览。
+    // Read the source button's public properties once without mutating it; edits target only the preview.
+    // zh_CN: 仅从源按钮读取一次初始属性，后续修改只作用于独立预览控件。
     result->m_customRadius = source->cornerRadii() != result->m_button->cornerRadii();
     result->writeValues(result->valuesFor(source));
     result->m_initial = result->values();

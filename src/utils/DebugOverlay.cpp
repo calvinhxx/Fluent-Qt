@@ -9,14 +9,12 @@ DebugOverlay::DebugOverlay(QWidget* target, const QColor& color, QWidget* parent
     if (!m_target)
         return;
 
-    // 设置属性：不接受鼠标事件（穿透）、不抢占焦点
+    // Click-through overlay that never steals focus.
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setAttribute(Qt::WA_NoSystemBackground);
 
-    // 安装事件过滤器，监听目标控件的移动和缩放
     m_target->installEventFilter(this);
 
-    // 初始对齐
     updateGeometryToTarget();
     show();
 }
@@ -39,10 +37,9 @@ bool DebugOverlay::eventFilter(QObject* obj, QEvent* event)
 void DebugOverlay::updateGeometryToTarget()
 {
     if (m_target) {
-        // 将高亮框的大小和位置设置得与目标一致
-        // 注意：这里假设 overlay 和 target 在同一个父控件下
+        // Assumes target and overlay share the same parent so geometry() maps 1:1.
         setGeometry(m_target->geometry());
-        raise(); // 确保高亮框在最上层
+        raise();
     }
 }
 
@@ -54,9 +51,8 @@ void DebugOverlay::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // 画一个描边框
+    // Dashed stroke keeps widget alignment legible against solid borders.
     QPen pen(m_color, m_thickness);
-    // 习惯上使用虚线更容易看清对齐情况
     pen.setStyle(Qt::DashLine);
     painter.setPen(pen);
 

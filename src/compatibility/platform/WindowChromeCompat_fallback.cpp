@@ -27,12 +27,8 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
     if (!window)
         return;
 
-    // A runtime-owned desktop surface keeps application windows as regular
-    // child widgets. Re-applying Qt::Window during showEvent() would promote
-    // them back to browser top-level canvases and lose stable move/resize
-    // geometry.
-    // zh_CN: 运行时桌面表面把应用窗口作为普通子控件承载。showEvent() 中若重新
-    // 施加 Qt::Window，会再次提升为浏览器顶层画布并丢失稳定的移动/缩放几何。
+    // Desktop-hosted (e.g. WASM) windows stay child widgets; re-applying Qt::Window in showEvent() detaches them.
+    // zh_CN: 宿主桌面表面内的应用窗口须保持普通子控件；若在 showEvent() 重设 Qt::Window 会脱离宿主容器。
     if (runtimePlatformCapabilities().hostsApplicationWindowsInDesktopSurface)
         return;
 

@@ -11,10 +11,8 @@ QTransform translation(const QPoint& point)
     return QTransform::fromTranslate(point.x(), point.y());
 }
 
-// Compose each QWidget segment, then cross a proxy boundary through its real
-// viewport. This also composes an inner SpatialView with an outer compositor.
-// zh_CN: 逐段组合 QWidget 坐标，经代理的真实视口跨越边界；可叠加内层 SpatialView
-// 与外层合成器，而不是把卡片的逻辑 window() 当成应用窗口。
+// Compose each QWidget segment and cross proxy boundaries via their viewport,
+// allowing inner SpatialView transforms to compose with an outer host transform.
 QTransform presentedTransform(const QWidget* source)
 {
     QTransform result;
@@ -45,9 +43,8 @@ QPoint presentedPointInTopLevel(const QWidget* source, const QPoint& localPoint)
 
 QRect presentedRectInTopLevel(const QWidget* source)
 {
-    // QRectF uses size, not QRect's inclusive bottom/right. Identity and integer
-    // translations therefore retain the exact ordinary 2D rectangle.
-    // zh_CN: 使用 size 构造浮点矩形，保留普通 2D 路径精确的整数边界。
+    // Use QRectF(size) rather than QRect's inclusive bottom/right so identity
+    // and integer translations keep exact bounds.
     return source ? presentedTransform(source).mapRect(QRectF(QPointF(), source->size())).toAlignedRect() : QRect();
 }
 

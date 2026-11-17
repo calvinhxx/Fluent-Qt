@@ -15,19 +15,18 @@ class Label;
 namespace fluent::dialogs_flyouts {
 
 /**
- * @brief WinUI-style content dialog with title, content, and command buttons.
- * zh_CN: 具备标题、内容和命令按钮的 WinUI 风格内容对话框。
+ * @brief WinUI-style content dialog with title, content area, and action buttons.
+ * zh_CN: 具备标题、内容区和动作按钮的 WinUI 风格内容对话框。
  *
- * ContentDialog specializes Dialog with primary, secondary, and close actions,
- * button text APIs, default-button selection, and standard content hosting.
- * zh_CN: ContentDialog 在 Dialog 基础上增加主按钮、次按钮、关闭按钮、按钮文本 API、
- * 默认按钮选择和标准内容承载。
+ * Extends Dialog with primary, secondary, and close buttons, button-text
+ * properties, default-button accent highlighting, and anchored content layout.
+ * zh_CN: 在 Dialog 基础上增加主按钮、次按钮、关闭按钮及其文本配置、默认按钮强调样式和内容区布局。
  */
 class ContentDialog : public Dialog {
     Q_OBJECT
     /**
-     * @brief Title text displayed by the surface.
-     * zh_CN: 界面显示的标题文本。
+     * @brief Title text shown in the dialog header.
+     * zh_CN: 对话框标题文本。
      */
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     /**
@@ -52,8 +51,8 @@ class ContentDialog : public Dialog {
      */
     Q_PROPERTY(QString closeButtonText READ closeButtonText WRITE setCloseButtonText NOTIFY closeButtonTextChanged)
     /**
-     * @brief Command button selected as the default action.
-     * zh_CN: 作为默认操作的命令按钮。
+     * @brief Command button highlighted as the default action.
+     * zh_CN: 作为默认动作高亮显示的命令按钮。
      */
     Q_PROPERTY(int defaultButton READ defaultButton WRITE setDefaultButton NOTIFY defaultButtonChanged)
 
@@ -67,11 +66,9 @@ public:
 
     explicit ContentDialog(QWidget* parent = nullptr);
 
-    // --- Title ---
     QString title() const;
     void setTitle(const QString& text);
 
-    // --- Button text ---
     QString primaryButtonText() const;
     void setPrimaryButtonText(const QString& text);
 
@@ -81,18 +78,16 @@ public:
     QString closeButtonText() const;
     void setCloseButtonText(const QString& text);
 
-    // --- DefaultButton ---
     int defaultButton() const;
     void setDefaultButton(int btn);
 
-    // --- Content ---
     QWidget* content() const;
     void setContent(QWidget* widget);
 
-    // --- Command bar ---
-    // Overrides the standard command-bar height (default 68px) for compact,
-    // bespoke prompts. Leave at the default to match the WinUI ContentDialog.
-    // zh_CN: 覆盖标准命令栏高度（默认 68px），用于紧凑的定制弹窗；保持默认即与 WinUI ContentDialog 一致。
+    /**
+     * @brief Overrides the bottom button-bar height (default 68 px).
+     * zh_CN: 覆盖底部按钮栏高度（默认 68 px）。
+     */
     void setButtonBarHeight(int px);
 
     void onThemeUpdated() override;

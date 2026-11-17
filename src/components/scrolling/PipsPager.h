@@ -23,13 +23,9 @@ class PipsPagerAccessible;
 }
 
 /**
- * @brief Fluent page indicator with selectable pips and navigation buttons.
- * zh_CN: 带可选圆点和导航按钮的 Fluent 页码指示器。
- *
- * PipsPager controls selected page index, visible pip window, previous/next
- * button visibility, orientation, and selection animation metrics.
- * zh_CN: PipsPager 管理选中页索引、可见圆点窗口、上一页/下一页按钮可见性、方向
- * 和选中动画参数。
+ * @brief Page indicator displaying selectable pips with optional previous/next buttons.
+ * Supports horizontal or vertical layout, windowed scrolling past maxVisiblePips, and animated selection transitions.
+ * zh_CN: 分页圆点指示器，支持可点击圆点、可选上一页/下一页按钮、横纵方向切换、滑动窗口及指示器动画。
  */
 class PipsPager : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -49,8 +45,8 @@ class PipsPager : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(int maxVisiblePips READ maxVisiblePips WRITE setMaxVisiblePips NOTIFY maxVisiblePipsChanged)
     /**
-     * @brief Primary layout or motion orientation.
-     * zh_CN: 主要布局或运动方向。
+     * @brief Orientation of the pip strip.
+     * zh_CN: 圆点指示器的排列方向。
      */
     Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation NOTIFY orientationChanged)
     /**

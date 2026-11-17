@@ -41,10 +41,7 @@ void logThemeWarning(const QString& message)
     qCWarning(fluent::logging::themeCategory, "%s", qUtf8Printable(message));
 }
 
-// Parse "#RRGGBB", "#RRGGBBAA", or any color name understood by QColor.
-// Failure returns an invalid color so the caller can preserve the current token.
-// zh_CN: 解析十六进制或 QColor 可识别的颜色名；失败时返回无效颜色，
-// 由调用方保留当前 token。
+// Parse "#RRGGBB", "#RRGGBBAA", or Qt color names; returns invalid QColor so callers keep the existing token.
 QColor parseColor(const QString& text)
 {
     const QString s = text.trimmed();
@@ -67,8 +64,6 @@ QColor withAlpha(QColor color, int alpha)
     return color;
 }
 
-// Serialize to the "#RRGGBB"/"#RRGGBBAA" form understood by parseColor().
-// zh_CN: 序列化为 parseColor() 可识别的十六进制形式。
 QString colorToHex(const QColor& c)
 {
     if (c.alpha() == 255)
@@ -76,9 +71,7 @@ QString colorToHex(const QColor& c)
     return QString::asprintf("#%02X%02X%02X%02X", c.red(), c.green(), c.blue(), c.alpha());
 }
 
-// Single source of truth for the JSON-overridable color tokens: the exact set applyColorSpec READS
-// is also what colorsToJson WRITES, so the parser and the exported template can never drift apart.
-// zh_CN: JSON 可覆盖颜色 token 的唯一字段表；读取与导出共享它，避免漂移。
+// Single source of truth so JSON parsing (applyColorSpec) and template export (colorsToJson) stay in sync.
 template <typename Fn> void forEachColorField(FluentElement::Colors& c, Fn&& fn)
 {
     fn("accentDefault", c.accentDefault);
@@ -128,9 +121,7 @@ template <typename Fn> void forEachColorField(FluentElement::Colors& c, Fn&& fn)
     fn("bgLayerOverlay", c.bgLayerOverlay);
 }
 
-// Serialize one mode's overridable tokens to a complete spec object. Because
-// every key is present, importing the exported template is lossless.
-// zh_CN: 将单个明暗模式的可覆盖 token 序列化为完整 spec，重新导入时无损。
+// Emit every overridable key so exported templates round-trip losslessly.
 QJsonObject colorsToJson(const FluentElement::Colors& colors)
 {
     FluentElement::Colors copy = colors;
@@ -139,9 +130,7 @@ QJsonObject colorsToJson(const FluentElement::Colors& colors)
     return obj;
 }
 
-// Apply color overrides to one mode. Missing accent variants are derived from
-// accentDefault so a sparse user file only needs to specify the primary accent.
-// zh_CN: 将颜色覆盖应用到单个模式；未指定的强调色变体由 accentDefault 派生。
+// Derive missing accent variants from accentDefault so sparse user files only need one key.
 void applyColorSpec(FluentElement::Colors& c, const QJsonObject& obj, bool keepAccentVariantsOpaque = false)
 {
     forEachColorField(c, [&](const char* key, QColor& field) {
@@ -153,8 +142,6 @@ void applyColorSpec(FluentElement::Colors& c, const QJsonObject& obj, bool keepA
         }
     });
 
-    // Derive variants not pinned by the spec.
-    // zh_CN: 对 spec 未固定的强调色变体执行派生。
     if (obj.contains(QLatin1String("accentDefault"))) {
         if (!obj.contains(QLatin1String("accentSecondary"))) {
             c.accentSecondary = keepAccentVariantsOpaque ? c.accentDefault : withAlpha(c.accentDefault, 230);
@@ -170,17 +157,12 @@ void applyColorSpec(FluentElement::Colors& c, const QJsonObject& obj, bool keepA
     }
 }
 
-// Layer a spec ({ radius?, font?, light?, dark?, contrast? }) onto a candidate snapshot.
-// zh_CN: 将 spec 分层应用到候选主题快照。
 void applySpec(ThemeRegistry::ExtendedSnapshot& snapshot, const QJsonObject& spec)
 {
     if (spec.contains(QLatin1String("radius"))) {
         const QJsonObject r = spec.value(QLatin1String("radius")).toObject();
         const FluentElement::Radius base = snapshot.base.radius;
-        // Clamp user-file radii to a sane range: a malformed/hostile themes/*.json could otherwise set a
-        // negative or absurd corner radius that flows into every control's drawRoundedRect. Qt would clamp
-        // it at paint time, but bounding it here keeps the stored token sane.
-        // zh_CN: 在入口约束用户圆角，避免异常值流入所有控件的绘制路径。
+        // Clamp radii on load so malformed JSON cannot push extreme values into widget painting.
         constexpr int kMaxRadius = 64;
         snapshot.base.radius = {qBound(0, r.value(QLatin1String("none")).toInt(base.none), kMaxRadius),
             qBound(0, r.value(QLatin1String("control")).toInt(base.control), kMaxRadius),
@@ -192,8 +174,7 @@ void applySpec(ThemeRegistry::ExtendedSnapshot& snapshot, const QJsonObject& spe
         if (f.contains(QLatin1String("family")))
             snapshot.base.fontFamilyOverride = f.value(QLatin1String("family")).toString();
         if (f.contains(QLatin1String("scale"))) {
-            // Bound the font scale so a stray "scale": 100000 can't blow up every QFont pixel size and
-            // text-layout allocation. zh_CN: 限制字号缩放，避免异常值放大字体与文本布局分配。
+            // Clamp font scale to prevent extreme QFont sizes from malformed JSON.
             snapshot.base.fontScale = qBound(0.5, f.value(QLatin1String("scale")).toDouble(1.0), 4.0);
         }
     }
@@ -209,14 +190,7 @@ void applySpec(ThemeRegistry::ExtendedSnapshot& snapshot, const QJsonObject& spe
     }
 }
 
-// Fluent is seeded directly by ThemeRegistry::defaultExtendedSnapshot(). User JSON is
-// layered on top, so there is no second built-in brand spec to maintain.
-// zh_CN: Fluent 直接由 defaultExtendedSnapshot() 提供，用户 JSON 再叠加其上。
-
-// Build the full editable template exported only through the explicit API. It
-// snapshots the built-in Fluent tokens before user overrides are layered.
-// zh_CN: 构建仅由显式 API 导出的完整模板；内容是叠加用户覆盖之前的内置 Fluent
-// token 快照。
+// Snapshot default tokens before user overrides so exportTemplate() writes a clean baseline.
 QJsonObject resolvedPresetSpec()
 {
     ThemeRegistry::ExtendedSnapshot snapshot = ThemeRegistry::defaultExtendedSnapshot();
@@ -312,8 +286,6 @@ UserSpecResult readUserSpec()
     return {UserSpecState::Current, root.value(QLatin1String("overrides")).toObject()};
 }
 
-// Atomically write a pretty-printed user override.
-// zh_CN: 以原子方式写入格式化的用户覆盖文件。
 bool writeUserSpec(const QJsonObject& spec)
 {
     if (!QDir().mkpath(themesDir()))
@@ -340,8 +312,6 @@ bool writeUserSpec(const QJsonObject& spec)
     return true;
 }
 
-// Set obj[mode][key], creating the nested mode object when needed.
-// zh_CN: 设置 obj[mode][key]，必要时创建嵌套模式对象。
 void setNestedColor(QJsonObject& obj, const char* mode, const char* key, const QString& value)
 {
     QJsonObject m = obj.value(QLatin1String(mode)).toObject();
@@ -349,8 +319,6 @@ void setNestedColor(QJsonObject& obj, const char* mode, const char* key, const Q
     obj.insert(QLatin1String(mode), m);
 }
 
-// Remove obj[mode][key] and drop an empty mode object.
-// zh_CN: 移除 obj[mode][key]，模式对象为空时一并删除。
 void removeNestedColor(QJsonObject& obj, const char* mode, const char* key)
 {
     if (!obj.contains(QLatin1String(mode)))
@@ -437,8 +405,6 @@ void apply()
     ThemeRegistry& reg = ThemeRegistry::instance();
     ThemeRegistry::ExtendedSnapshot next = ThemeRegistry::defaultExtendedSnapshot();
 
-    // User overrides win over the built-in Fluent tokens.
-    // zh_CN: 用户覆盖优先于内置 Fluent token。
     const UserSpecResult userSpec = readUserSpec();
     if (userSpec.isUsable() && !userSpec.spec.isEmpty())
         applySpec(next, userSpec.spec);
@@ -497,10 +463,7 @@ void setAccent(const QColor& accent)
 {
     if (!accent.isValid())
         return;
-    // One accent drives both modes; the per-mode variants (secondary/tertiary/textOnAccent/...) are
-    // re-derived from accentDefault at apply() time, so we pin accentDefault and DROP any stale
-    // variants to keep the palette internally consistent.
-    // zh_CN: 单个强调色驱动明暗模式，并清除旧派生值以保持调色板一致。
+    // Drop derived accent keys so apply() re-derives a consistent palette from accentDefault.
     const QString hex = colorToHex(accent);
     const UserSpecResult userSpec = readUserSpec();
     if (!userSpec.canModify()) {
@@ -523,9 +486,7 @@ void clearAccent()
     if (!userSpec.canModify() || userSpec.spec.isEmpty())
         return;
     QJsonObject spec = userSpec.spec;
-    // Drop accentDefault AND the derived variants so the theme reverts cleanly to the preset accent
-    // (no half-overridden palette left behind).
-    // zh_CN: 同时移除主强调色与派生值，完整回退到预设。
+    // Drop derived accent keys alongside accentDefault so the theme reverts cleanly to defaults.
     for (const char* mode : {"light", "dark"}) {
         removeNestedColor(spec, mode, "accentDefault");
         for (const char* key : kDerivedAccentKeys)
@@ -536,8 +497,7 @@ void clearAccent()
 
 QColor defaultAccent(bool dark)
 {
-    // Use the built-in Fluent seed accent, independent of user overrides.
-    // zh_CN: 使用内置 Fluent 种子强调色，不受用户覆盖影响。
+    // Built-in seed accent, unaffected by user overrides.
     return dark ? QColor(QStringLiteral("#60CDFF")) : QColor(QStringLiteral("#005FB8"));
 }
 

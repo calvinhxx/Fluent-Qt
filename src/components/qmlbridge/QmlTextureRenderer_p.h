@@ -14,8 +14,7 @@ class QQuickWindow;
 namespace fluent::qmlbridge {
 class QmlView;
 
-// The widget and its engine retain ownership; only the root's visual parent moves.
-// zh_CN: 控件及其引擎保留所有权，仅迁移根对象的视觉父项。
+// Renders a QmlView's root QQuickItem offscreen in an internal QQuickWindow while QQuickWidget keeps engine ownership.
 class QmlTextureRenderer final : public QObject {
 public:
     explicit QmlTextureRenderer(QmlView* view);

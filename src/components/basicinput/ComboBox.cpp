@@ -56,7 +56,7 @@ int popupRowHeight(const QFont& font)
     return qMax(::Spacing::ControlHeight::Standard, QFontMetrics(font).height() + 2 * kPopupItemVerticalPadding);
 }
 
-// Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
+// Suppress QStyle's native panel since ComboBox paints its own frame.
 class TransparentLineEditStyle : public QProxyStyle {
 public:
     void drawPrimitive(PrimitiveElement pe, const QStyleOption* opt, QPainter* p, const QWidget* w = nullptr)
@@ -70,8 +70,6 @@ public:
 } // namespace
 
 namespace fluent::basicinput {
-
-// ─── ComboBox popup window. zh_CN: ComboBox 弹层窗口 ───────────────────────
 
 class ComboBox::ComboBoxPopup : public fluent::dialogs_flyouts::Flyout {
 public:
@@ -95,8 +93,6 @@ private:
     ComboBoxItemDelegate* m_delegate;
     bool m_geometryUpdatePending = false;
 };
-
-// ─── ComboBoxItemDelegate implementation. zh_CN: ComboBoxItemDelegate 实现 ──
 
 ComboBoxItemDelegate::ComboBoxItemDelegate(FluentElement* themeHost, QAbstractItemView* view, QObject* parent)
     : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view)
@@ -187,8 +183,6 @@ QSize ComboBoxItemDelegate::sizeHint(const QStyleOptionViewItem& option, const Q
     return QSize(0, popupRowHeight(option.font));
 }
 
-// ─── ComboBoxPopup implementation. zh_CN: ComboBoxPopup 实现 ────────────────
-
 ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox) : Flyout(comboBox), m_comboBox(comboBox)
 {
     setObjectName("ComboBoxPopup");
@@ -203,20 +197,9 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox) : Flyout(comboBox), m
     m_listView->setObjectName("ComboBoxPopupListView");
     m_listView->setAccessibleName(tr("Options"));
     m_listView->setBorderVisible(false);
-    // ComboBoxPopup already paints an opaque bgLayer surface rounded at the
-    // overlay radius (8px). A second ListView background would also paint an opaque corner mask
-    // rounded at only the control radius (4px) and inset just 2px, so its filled corners poke past
-    // the card's 8px-rounded corners as white "dog-ears". Let the card be the single surface.
-    // zh_CN: ComboBoxPopup 已绘制按 overlay 圆角(8px)的不透明 bgLayer 表面。再让 ListView
-    // 画背景会叠加一层按 control 圆角(4px)、仅内缩 2px 的不透明圆角遮罩,其填充的四角会超出卡片 8px 圆角,
-    // 形成白色「狗耳」。让卡片成为唯一表面即可。
+    // Let ComboBoxPopup draw the single card surface; ListView's smaller radius would poke through 8px corners.
     m_listView->setBackgroundVisible(false);
-    // The transparent collection viewport must preserve that parent-painted
-    // card. On Mica windows its normal stale-pixel cleanup uses Source mode;
-    // without this opt-out it erases the locally themed popup surface and
-    // exposes the window backdrop (most visible in a dark Gallery preview).
-    // zh_CN: 透明列表视口必须保留父级绘制的卡片。Mica 窗口下常规清屏会用
-    // Source 模式擦掉局部主题底板，露出窗口背景；暗色 Gallery 预览最明显。
+    // Opt out of Source-mode viewport clear so transparent ListView keeps the popup card background on Mica windows.
     m_listView->setProperty("fluentPreserveParentSurface", true);
     if (m_listView->viewport())
         m_listView->viewport()->setProperty("fluentPreserveParentSurface", true);
@@ -265,9 +248,7 @@ void ComboBox::ComboBoxPopup::showForComboBox()
     if (!guard || !isOpen())
         return;
 
-    // The Flyout initially focuses its surface. Keyboard navigation belongs to
-    // the list, while its pending item stays separate from the committed value.
-    // zh_CN: Flyout 先聚焦弹层；随后把焦点交给列表，待选项与已提交值保持分离。
+    // Hand keyboard navigation to the list while keeping pending row distinct from committed value.
     m_listView->setFocus(Qt::PopupFocusReason);
     if (!guard)
         return;
@@ -278,8 +259,7 @@ void ComboBox::ComboBoxPopup::showForComboBox()
                 m_comboBox->rootModelIndex()),
             QAbstractItemView::PositionAtCenter);
     } else {
-        // Focus entry must not revive a previously selected row for a placeholder.
-        // zh_CN: 占位状态取得焦点时，不得恢复上一次弹层遗留的选中行。
+        // Do not keep a stale selected row when currentIndex is -1.
         m_listView->selectionModel()->clear();
     }
 }
@@ -295,10 +275,7 @@ void ComboBox::ComboBoxPopup::commitIndex(const QModelIndex& index)
 
     QPointer<ComboBox> comboBox(m_comboBox);
     const QPersistentModelIndex selected(index);
-    // hidePopup clears the owner's visible flag before Flyout emits closing,
-    // when isOpen() is still true. The entry guard rejects reentrant commits.
-    // zh_CN: hidePopup 先清除所属控件的展开标记，再由 Flyout 发出 closing；
-    // 此时 isOpen() 仍为 true，入口检查可阻止重入提交。
+    // Clear m_popupVisible before Flyout closes so reentrant commits are rejected while closing.
     comboBox->hidePopup();
     if (!comboBox || !comboBox->isEnabled() || !selected.isValid() || selected.model() != comboBox->model()
         || selected.parent() != comboBox->rootModelIndex() || selected.column() != comboBox->modelColumn()
@@ -430,9 +407,7 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
             return true;
         }
     }
-    // ListView is independently registered for theme updates. Keep the owner's
-    // effective font regardless of the theme broadcast order.
-    // zh_CN: ListView 独立接收主题更新；无论广播顺序如何都保持所属 ComboBox 的字体。
+    // ListView tracks theme updates separately; keep the owning ComboBox's font regardless of broadcast order.
     if (watched == m_listView && event->type() == QEvent::FontChange && m_listView->font() != m_comboBox->font()) {
         m_listView->setFont(m_comboBox->font());
     }
@@ -451,17 +426,12 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
     return Flyout::eventFilter(watched, event);
 }
 
-// ─── ComboBox implementation. zh_CN: ComboBox 主体实现 ─────────────────────
-
 ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
 {
     detail::ensureComboBoxAccessibilityFactory();
     setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
-    // QComboBox defaults to WheelFocus, which grants focus before wheelEvent and changes the
-    // selection merely by hovering and scrolling. Fluent ComboBox accepts wheel selection only
-    // after deliberate click/tab focus. zh_CN: QComboBox 默认 WheelFocus，会在 wheelEvent 前先抢
-    // 焦点，导致仅悬停滚轮就切换选项；Fluent ComboBox 只接受点击/Tab 明确取得焦点后的滚轮输入。
+    // Use StrongFocus instead of WheelFocus so hovering and scrolling doesn't steal focus and switch items.
     setFocusPolicy(Qt::StrongFocus);
     m_trailingContent = std::make_unique<::fluent::detail::FieldTrailingContent>(this);
     connect(m_trailingContent.get(), &::fluent::detail::FieldTrailingContent::geometryChanged, this,
@@ -566,8 +536,7 @@ void ComboBox::changeEvent(QEvent* event)
 
 void ComboBox::synchronizeFont()
 {
-    // Preserve a height explicitly constrained by the application.
-    // zh_CN: 保留应用主动设置的高度约束。
+    // Only auto-adjust height when the caller hasn't overridden fixed/min/max height.
     if (minimumHeight() == m_autoHeight && maximumHeight() == m_autoHeight) {
         m_autoHeight = sizeHint().height();
         setFixedHeight(m_autoHeight);
@@ -666,18 +635,13 @@ QSize ComboBox::sizeHint() const
 {
     const auto& sp = themeSpacing();
     QFontMetrics fm(font());
-    // Find widest item
-    int maxTextW = 80; // Figma: min width 80px
+    int maxTextW = 80;
     for (int i = 0; i < count(); ++i) {
         int w = fm.horizontalAdvance(itemText(i));
         maxTextW = qMax(maxTextW, w);
     }
-    // chevron area: offset.x + icon size + gap
     const int chevronArea = chevronAreaWidth();
-    // QFontMetrics::horizontalAdvance() is the logical glyph advance. Leave a
-    // small clearance so integer layout/raster rounding cannot make an item
-    // that nominally fits cross the elision boundary on another platform.
-    // zh_CN: 为字形逻辑宽度预留少量余量，避免不同平台的整数布局和栅格化舍入触发省略号。
+    // Leave small clearance past horizontalAdvance() so integer layout/raster rounding won't clip/elide.
     const QSize trailing = m_trailingContent ? m_trailingContent->sizeHint() : QSize(0, 0);
     const int w = m_contentPaddingH + maxTextW + kClosedFieldTextFitClearance + chevronArea
         + (trailing.width() > 0 ? trailing.width() + ::Spacing::XSmall : 0);
@@ -701,8 +665,6 @@ QSize ComboBox::minimumSizeHint() const
     return hint;
 }
 
-// ── Editable ─────────────────────────────────────────────────────────────────
-
 void ComboBox::setEditable(bool editable)
 {
     if (editable == QComboBox::isEditable())
@@ -724,8 +686,7 @@ void ComboBox::setEditable(bool editable)
         editor->setFocusPolicy(Qt::ClickFocus);
         const Qt::ContextMenuPolicy contextMenuPolicy = editor->contextMenuPolicy();
         QComboBox::setLineEdit(editor);
-        // QComboBox forces its editor to NoContextMenu. Restore the editor's
-        // policy so the Fluent LineEdit keeps its standard editing surface.
+        // Restore editor's policy since QComboBox::setLineEdit forces NoContextMenu.
         editor->setContextMenuPolicy(contextMenuPolicy);
         m_editorMutationInProgress = false;
         synchronizeLineEdit();
@@ -797,9 +758,7 @@ void ComboBox::synchronizeLineEdit()
 
 QLineEdit* ComboBox::observedLineEdit() const
 {
-    // Qt can deliver QWidget teardown events after the QLineEdit destructor
-    // has run, while the guarded QObject is still alive.
-    // zh_CN: 输入框析构后仍可能收到 QWidget 事件；此时 QObject 弱引用尚未清空。
+    // Qt can deliver teardown events after ~QLineEdit() while QObject is still valid.
     return m_editorMutationInProgress ? nullptr : qobject_cast<QLineEdit*>(m_observedLineEdit.data());
 }
 
@@ -828,9 +787,7 @@ void ComboBox::layoutLineEdit()
     }
     const QRect textRect = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
         QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW + m_trailingContentWidth, m_contentPaddingV));
-    // Only the leading edge needs the native text inset; keep the chevron side
-    // at the text slot so the editor never takes the chevron's hit area.
-    // zh_CN: 仅首端需要补偿原生文字留白；箭头一侧保持在文字区域边界，编辑框不占用箭头的点击区域。
+    // Clamp the trailing edge to textRect so the editor never overlaps the chevron hit area.
     QRect geometry = compatibility::detail::lineEditGeometryForTextRect(*editor, textRect);
     if (layoutDirection() == Qt::RightToLeft)
         geometry.setLeft(qMax(geometry.left(), textRect.left()));
@@ -879,8 +836,6 @@ void ComboBox::resizeEvent(QResizeEvent* event)
     layoutLineEdit();
 }
 
-// ── Popup ────────────────────────────────────────────────────────────────────
-
 void ComboBox::showPopup()
 {
     if (!isEnabled() || count() == 0 || (m_popupVisible && m_popup))
@@ -917,7 +872,6 @@ void ComboBox::hidePopup()
         detail::notifyComboBoxPopupChanged(this);
 }
 
-// Private helper called from the popup close lifecycle.
 void ComboBox::onPopupHidden()
 {
     const bool needsUpdate = m_popupVisible || m_pressed;
@@ -928,8 +882,6 @@ void ComboBox::onPopupHidden()
         detail::notifyComboBoxPopupChanged(this);
     }
 }
-
-// ── Input events. zh_CN: 输入事件 ────────────────────────────────────────────
 
 void ComboBox::enterEvent(FluentEnterEvent* event)
 {
@@ -984,14 +936,12 @@ void ComboBox::mousePressEvent(QMouseEvent* event)
         }
 
         m_pressed = true;
-        // Fire-and-forget bounce animation (0→1, qSin gives 0→peak→0)
         m_pressAnimation->stop();
         m_pressAnimation->setStartValue(0.0);
         m_pressAnimation->setEndValue(1.0);
         ::fluent::detail::startMotionTransition(m_pressAnimation, themeAnimation().slow);
 
-        // Toggle popup ourselves — base class has its own popup management
-        // that conflicts with our custom popup
+        // Manage popup directly because QComboBox's built-in popup conflicts with ComboBoxPopup.
         if (m_popupVisible)
             hidePopup();
         else
@@ -1026,25 +976,19 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event)
 {
     if (auto* editor = watched == m_observedLineEdit ? observedLineEdit() : nullptr) {
         if ((event->type() == QEvent::Move || event->type() == QEvent::Resize) && !m_editorLayoutInProgress) {
-            // QComboBox reapplies its native editor rectangle on selection/model
-            // changes, including a repeated index that emits no change signal.
-            // Discard that superseded event; our corrected geometry sends its own.
-            // zh_CN: Qt 会在选择/模型变化（含不发信号的同索引设置）后重置编辑框矩形；
-            // 修正后的几何会发送新事件，旧几何事件不再交给编辑器处理。
+            // QComboBox resets editor geometry on selection/model updates; reapply ours and drop the stale event.
             const QPointer<ComboBox> guard(this);
             const QPointer<QLineEdit> editorGuard(editor);
             layoutLineEdit();
             if (!guard || !editorGuard)
                 return true;
-            // Qt may still send the original Resize after we correct Move.
-            // zh_CN: 修正 Move 后，Qt 仍可能继续派发携带旧尺寸的 Resize。
+            // Discard stale Move/Resize if layoutLineEdit() already moved/resized the editor.
             if ((event->type() == QEvent::Move && static_cast<QMoveEvent*>(event)->pos() != editorGuard->pos())
                 || (event->type() == QEvent::Resize
                     && static_cast<QResizeEvent*>(event)->size() != editorGuard->size()))
                 return true;
         } else if (event->type() == QEvent::FontChange && editor->font() != font()) {
-            // The embedded Fluent editor also refreshes independently.
-            // zh_CN: 内嵌 Fluent 编辑框也独立刷新主题，字体始终跟随 ComboBox。
+            // Embedded Fluent LineEdit also updates on theme changes; keep ComboBox's font.
             editor->setFont(font());
         } else if (event->type() == QEvent::StyleChange || event->type() == QEvent::ContentsRectChange) {
             layoutLineEdit();
@@ -1062,17 +1006,12 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event)
                 return true;
             }
 
-            // Leave an unavailable shared menu unhandled so the original
-            // editor can continue through its native context-menu path.
-            // zh_CN: 共享菜单不可用时不吞掉事件，让原始 editor
-            // 继续执行其原生右键菜单路径。
+            // Leave unhandled if the shared menu is unavailable so native context menu runs.
             contextEvent->ignore();
         }
     }
     return QComboBox::eventFilter(watched, event);
 }
-
-// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
 
 int ComboBox::chevronAreaWidth() const
 {
@@ -1108,16 +1047,12 @@ void ComboBox::paintEvent(QPaintEvent*)
     state.pressed = m_pressed;
     ::fluent::detail::paintTextInputFrame(painter, r, colors, radius.control, state);
 
-    // ── Text ─────────────────────────────────────────────────────────────
-    // Figma: text 14px, color rgba(0,0,0,0.9) → textPrimary
     QColor textColor = enabled ? colors.textPrimary : colors.textDisabled;
 
-    // Chevron area calculation
     const int chevronAreaW = chevronAreaWidth();
     const QRectF textSlot = ::fluent::detail::fieldTextRect(rect(), layoutDirection(),
         QMargins(m_contentPaddingH, m_contentPaddingV, chevronAreaW + m_trailingContentWidth, m_contentPaddingV));
 
-    // In editable mode, QLineEdit handles text display
     if (!editor) {
         const QString text = currentText();
         const bool showingPlaceholder = text.isEmpty() && !placeholderText().isEmpty();
@@ -1131,13 +1066,7 @@ void ComboBox::paintEvent(QPaintEvent*)
             QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft));
     }
 
-    // ── Chevron ──────────────────────────────────────────────────────────
-    // Figma: 12 px symbol, color rgba(0,0,0,0.61) → textSecondary
-    // Press fade/bounce must use sin(progress·π) like DropDownButton: the click
-    // animation ends at progress=1 while the popup stays open — a linear fade
-    // would leave the chevron at 50% alpha until the next cycle.
-    // zh_CN: 按下淡化/下沉须与 DropDownButton 一样用 sin(progress·π)：点击动画结束在
-    // progress=1 且 popup 仍打开，若线性淡化会把箭头一直留在 50% 透明度。
+    // Use sin(progress*pi) so chevron opacity recovers to 1.0 even while the popup remains open at progress=1.
     QColor chevronColor = enabled ? colors.textSecondary : colors.textDisabled;
     const qreal pressEffect = qSin(m_pressProgress * M_PI);
     if (pressEffect > 0.0 && enabled) {
@@ -1145,14 +1074,11 @@ void ComboBox::paintEvent(QPaintEvent*)
         chevronColor.setAlphaF(chevronColor.alphaF() * alphaFactor);
     }
 
-    // Shared trailing chip slot (hover + glyph), SplitButton-style AlignCenter.
-    // zh_CN: 悬停底与字形共用尾缘芯片槽，按 SplitButton 方式 AlignCenter。
     const qreal maxBounce = 3.0;
     const qreal pressOffset = qRound(maxBounce * pressEffect);
     QRectF chevronSlot = chevronButtonRect();
     chevronSlot.translate(0, pressOffset);
 
-    // Editable mode: draw chevron button hover/press background
     if (editor && enabled) {
         QColor chevronBg = Qt::transparent;
         if (m_chevronHovered && m_pressed) {

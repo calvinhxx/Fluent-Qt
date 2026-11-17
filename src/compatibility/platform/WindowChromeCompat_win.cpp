@@ -41,9 +41,8 @@
 namespace compatibility {
 namespace {
 
-// Store the extended-client-area top margin on the HWND so native event
-// handling can keep DWM frame geometry synchronized after Qt recreates state.
-// zh_CN: 将扩展客户区的顶部 margin 存到 HWND 上，便于 Qt 重建状态后继续同步 DWM frame 几何。
+// Store extended top margin on the HWND so DWM frame geometry can be restored after Qt state resets.
+// zh_CN: 将扩展客户区的顶部边距保存在 HWND 上，便于 Qt 重置状态后重新同步 DWM 边框几何。
 constexpr wchar_t ChromeTopMarginProperty[] = L"FluentWindowChromeTopMargin";
 
 struct WindowsVersionInfo {
@@ -84,9 +83,9 @@ bool platformProvidesHwnd()
 
 HWND hwndForWindow(QWidget* window)
 {
-    // A prepared QWindow may not have a native surface yet. Chrome queries must
-    // not create it before QWidget submits its pending geometry on show.
-    // zh_CN: 已准备的 QWindow 可能尚无原生 surface；查询 chrome 不能抢先创建并覆盖 QWidget 的待显示几何。
+    // A prepared QWindow may not have a native surface yet; chrome queries must not trigger winId()
+    // before QWidget submits its pending show geometry.
+    // zh_CN: 已准备的 QWindow 可能尚无原生表面；查询窗口状态时不能抢先创建原生句柄并覆盖 QWidget 的待显示几何。
     if (!window || !window->windowHandle() || !window->windowHandle()->handle() || !platformProvidesHwnd())
         return nullptr;
 
@@ -116,8 +115,8 @@ void clearChromeTopMargin(HWND hwnd)
         RemovePropW(hwnd, ChromeTopMarginProperty);
 }
 
-// Window flags replaced by custom chrome; the native values return when it is disabled.
-// zh_CN: 自定义 chrome 替换的窗口标志；关闭时恢复原生取值。
+// Window flags replaced by custom chrome; native values are restored when disabled.
+// zh_CN: 自绘标题栏替换的窗口标志；关闭时恢复原生设置。
 Qt::WindowFlags customChromeReplacedFlags()
 {
     Qt::WindowFlags flags = Qt::CustomizeWindowHint | Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint
@@ -158,19 +157,12 @@ protected:
         const QSize requested = static_cast<QResizeEvent*>(event)->oldSize();
         if (!requested.isValid() || requested == window->size())
             return false;
-        // QPA can include the system frame in its first expanded-client resize.
-        // Preserve the requested client extent before QWidget records it as the
-        // shown or restore geometry; ordinary and maximized first shows both pass
-        // here. The native handle exists, but WinIdChange has not arrived yet.
-        // Later system resizes of the created window are not changed.
-        // zh_CN: QPA 的首个扩展客户区 resize 可能计入系统边框；原生句柄已存在、WinIdChange 尚未到达时，
-        // 在 QWidget 将其记为显示或还原几何前恢复请求的客户区尺寸，普通与最大化首次显示均经过此处，
-        // 不猜测边框宽度。窗口创建后的系统缩放不受影响。
+        // QPA's initial expanded-client resize can include the system frame before WinIdChange arrives;
+        // restore the requested client size once so QWidget records accurate normal/restore geometry.
+        // zh_CN: QPA 首次扩展客户区时可能把系统边框算入大小；在窗口首次显示前恢复原请求尺寸，以免还原几何出错。
         m_corrected = true;
         window->resize(requested);
-        // The original notification now carries a superseded size; the resize
-        // above delivers or queues the corrected notification instead.
-        // zh_CN: 原事件的尺寸已失效；上面的 resize 会投递或排队正确的尺寸事件。
+        // Drop the superseded QPA resize event; window->resize() above delivers the corrected size.
         return true;
     }
 
@@ -195,16 +187,10 @@ void ensureDwmChromeStyle(QWidget* window)
 
     const LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
     LONG_PTR desiredStyle = style;
-    // DWM still needs thick-frame/sysmenu styles even when Qt paints the visible chrome
-    // (resize, Win11 rounded corners, taskbar/system menu). zh_CN: 即使可见 chrome 由 Qt 绘制，
-    // DWM 仍需要 thick-frame/sysmenu 样式（缩放、Win11 圆角、任务栏/系统菜单）。
+    // Keep thick-frame/sysmenu styles for resize, Snap, and Win11 rounded corners,
+    // but strip WS_CAPTION so DWM does not draw a native strip over right/bottom edges.
+    // zh_CN: 保留缩放、系统菜单与圆角所需样式，同时移除 WS_CAPTION 以避免 DWM 在右/底边缘绘制原生残留边框。
     desiredStyle |= WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
-
-    // Custom chrome owns the whole caption row. Keeping WS_CAPTION lets older DWM paths repaint a
-    // native non-client strip at the right/bottom edges, which shows up as black borders or ghosted
-    // glass beside overlay scroll bars. WS_THICKFRAME keeps resize behavior.
-    // zh_CN: 自绘 chrome 接管整条标题栏。保留 WS_CAPTION 会让旧 DWM 路径在右/底边重绘原生非客户区，
-    // 表现为滚动条旁的黑边或玻璃残影。WS_THICKFRAME 继续保留缩放行为。
     desiredStyle &= ~WS_CAPTION;
 
     if (desiredStyle == style)
@@ -297,22 +283,16 @@ QPoint logicalClientPointForNativeScreenPoint(QWidget* window, HWND hwnd, const 
     if (nativeWidth <= 0 || nativeHeight <= 0 || logicalSize.isEmpty())
         return window->mapFromGlobal(nativeScreenPoint);
 
-    // WM_NCHITTEST supplies physical screen pixels, while QWidget geometry is
-    // expressed in Qt logical pixels. QT_SCALE_FACTOR can make those spaces
-    // differ even on a 100%-scaled Windows desktop. Map through the live native
-    // client extent instead of feeding physical coordinates to mapFromGlobal().
-    // zh_CN: WM_NCHITTEST 使用物理屏幕像素，而 QWidget 几何使用 Qt 逻辑像素；
-    // QT_SCALE_FACTOR 即使在系统 100% 缩放下也会让两者不同。应通过当前原生客户区
-    // 尺寸换算，不能把物理坐标直接交给 mapFromGlobal()。
+    // WM_NCHITTEST uses physical screen pixels while QWidget uses Qt logical pixels (which diverge
+    // under QT_SCALE_FACTOR even at 100% OS DPI); scale through the live HWND client rect instead of mapFromGlobal().
+    // zh_CN: WM_NCHITTEST 为物理像素，而 QWidget 为逻辑像素（QT_SCALE_FACTOR 下两者不等），须按原生客户区比例换算。
     return QPoint(qFloor(static_cast<qreal>(nativeClientPoint.x) * logicalSize.width() / nativeWidth),
         qFloor(static_cast<qreal>(nativeClientPoint.y) * logicalSize.height() / nativeHeight));
 }
 
-// Windows routes HTMAXBUTTON input through the non-client path. Translate it
-// back to the borrowed Qt button so its existing command, signals and painting
-// remain authoritative, while native hover messages still reach the shell.
-// zh_CN: Windows 将 HTMAXBUTTON 输入送入非客户区；转交借用的 Qt 按钮以保留原有命令、
-// 信号和绘制，同时让原生悬停消息继续到达系统 Snap Layouts。
+// Forward HTMAXBUTTON input to the Qt maximize button while keeping non-client hover
+// messages native so Windows 11 Snap Layouts still appear.
+// zh_CN: 将 HTMAXBUTTON 点击转发给 Qt 最大化按钮，同时保留原生悬停消息以触发 Windows 11 Snap Layouts。
 class WindowsCaptionButtonState final : public QObject {
 public:
     explicit WindowsCaptionButtonState(QWidget* window) : QObject(window), m_window(window)
@@ -543,8 +523,8 @@ bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result)
             if (!monitorInfoForWindow(hwnd, &monitorInfo))
                 return false;
 
-            // Use the monitor work area so maximized custom chrome avoids the taskbar.
-            // zh_CN: 最大化自定义 chrome 时使用 monitor work area，避免覆盖任务栏。
+            // Use the monitor work area so maximized custom chrome avoids covering the taskbar.
+            // zh_CN: 最大化时使用显示器工作区范围，避免遮挡任务栏。
             params->rgrc[0] = monitorInfo.rcWork;
         }
     }
@@ -577,14 +557,8 @@ bool handleCustomChromeMinMaxInfo(QWidget* window, MSG* msg, FluentNativeEventRe
     minMaxInfo->ptMaxSize.x = work.right - work.left;
     minMaxInfo->ptMaxSize.y = work.bottom - work.top;
 
-    // We intercept WM_GETMINMAXINFO and return handled, which bypasses Qt's own
-    // minimum-size enforcement (Qt applies setMinimumSize through ptMinTrackSize here).
-    // Re-apply it, or the frameless window can be dragged down to almost nothing. The
-    // NCCALCSIZE handler makes the client fill the whole window, so the logical minimum
-    // (scaled to physical pixels) maps directly onto the window track size.
-    // zh_CN: 我们拦截了 WM_GETMINMAXINFO 并返回已处理，绕过了 Qt 自身经 ptMinTrackSize 施加的最小尺寸
-    // 约束（setMinimumSize 就由它生效）。在此重新施加，否则无边框窗口能被拖到几乎为零。NCCALCSIZE
-    // 让客户区铺满整窗，故逻辑最小尺寸（换算到物理像素）可直接作为窗口轨迹尺寸。
+    // Handling WM_GETMINMAXINFO bypasses Qt's ptMinTrackSize setup, so re-apply minimumSize() in physical pixels.
+    // zh_CN: 拦截 WM_GETMINMAXINFO 会绕过 Qt 的最小尺寸限制，需按物理像素手动填回 ptMinTrackSize。
     const QSize minimumDip = window->minimumSize();
     if (minimumDip.width() > 0 || minimumDip.height() > 0) {
         const qreal dpr = window->devicePixelRatioF();
@@ -625,11 +599,8 @@ bool flushPlatformWindowBackdropSurface(QWidget* window)
         || !window->windowHandle()->isExposed())
         return false;
 
-    // QWidget must submit its replacement frame before this presentation fence.
-    // DwmSetWindowAttribute alone accepts the request; it does not order the
-    // existing transparent client surface against the material's removal.
-    // zh_CN: 此处先等待 QWidget 已提交的替代帧呈现；设置 DWM 属性成功本身并不保证
-    // 旧透明客户区与移除材质之间的时序。
+    // Wait for DwmFlush so the opaque replacement frame is presented before tearing down DWM backdrop.
+    // zh_CN: 调用 DwmFlush 确保不透明替换帧已呈现，再关闭 DWM 透明材质。
     using DwmFlushFn = HRESULT(WINAPI*)();
     const auto flush = resolveDwmProc<DwmFlushFn>("DwmFlush");
     return flush && SUCCEEDED(flush());
@@ -659,8 +630,6 @@ applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, b
     const WindowsVersionInfo version = currentWindowsVersion();
     const bool dwmSystemBackdrop = supportsDwmSystemBackdrop(version);
 
-    // Match the DWM-managed bits (frame/caption) to the theme, then request the chosen backdrop.
-    // zh_CN: 先让 DWM 管理的部分（frame/caption）匹配主题，再请求所选背景。
     if (setAttr) {
         const BOOL darkMode = dark ? TRUE : FALSE;
         setAttr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
@@ -684,11 +653,8 @@ applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, b
         return result;
     }
 
-    // Windows 10 legacy Acrylic is intentionally not used as a Fluent window backdrop: with Qt's
-    // backing store it can leave transparent client regions black, especially in Win10 VMs.
-    // Windows 10 therefore stays on the opaque app-painted fallback.
-    // Mica and Acrylic share this exact plumbing — only the DWMWA_SYSTEMBACKDROP_TYPE value differs.
-    // zh_CN: Mica 与 Acrylic 走完全相同的管线——仅 DWMWA_SYSTEMBACKDROP_TYPE 取值不同。
+    // Win10 legacy Acrylic leaves transparent Qt backing-store areas black (especially in VMs), so Win10 stays on the opaque software fallback.
+    // zh_CN: Win10 旧版 Acrylic 会让 Qt 透明客户区发黑，故仅在支持系统材质的 Win11+ 上启用 DWM 背景。
     int backdropType = DWMSBT_MAINWINDOW;
     switch (effect) {
     case BackdropEffect::Acrylic:
@@ -708,26 +674,17 @@ applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, b
         return result;
     }
 
-    // Only first-show/explicit native repair needs a frame recomputation. A
-    // material-only change does not change the client geometry.
-    // zh_CN: 仅首屏或显式原生修复需要重算窗框；单纯切换材质不改变客户区几何。
+    // Only first-show or explicit repair needs SWP_FRAMECHANGED; switching materials keeps the same client geometry.
+    // zh_CN: 仅首次显示或显式修复需要重算非客户区几何，纯切换材质无需触发。
     if (forceRecomposite) {
         SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
             SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
-    // On first show DWM intermittently leaves a flat default glass instead of the real,
-    // wallpaper-tinted Mica material, and only an activation round-trip paints the material in.
-    // Re-setting the same backdrop value is a no-op, and SWP_FRAMECHANGED alone is unreliable, so
-    // replicate exactly what the user's "switch to another app and back" does: send the active
-    // window an NCACTIVATE deactivate→activate pair. DwmDefWindowProc (already wired in our native
-    // event handler) services these and re-composites the backdrop, without changing real focus.
-    // This is ONLY for the first-show race — it briefly flashes the caption active/inactive, so
-    // runtime theme/effect changes (which are already composited) skip it to avoid a visible flicker.
-    // zh_CN: 首屏时 DWM 会间歇性地留下一层扁平默认玻璃，而非真正带壁纸着色的 Mica 材质，只有一次激活往返才会
-    // 把材质绘入。重设相同的背景值是空操作，单靠 SWP_FRAMECHANGED 也不可靠，于是精确复现用户"切到别的 app 再切
-    // 回来"的动作：给活动窗口发一对 NCACTIVATE 失活→激活消息。DwmDefWindowProc（已接入）会处理它们并重新合成背景，
-    // 且不改变真实焦点。此操作仅用于首屏竞争——它会让标题栏短暂闪一下激活/非激活，故运行时切主题/效果（已合成）跳过它避免可见闪烁。
+    // On first show DWM intermittently renders flat glass instead of wallpaper-tinted Mica until an
+    // activation cycle; send a synthetic deactivate/activate WM_NCACTIVATE pair once at startup (skipped
+    // on runtime switches to avoid caption flicker).
+    // zh_CN: 首次显示时 DWM 偶发未绘出壁纸着色；启动时发送一对失活/激活 WM_NCACTIVATE 触发重绘，运行时切换跳过以免闪烁。
     if (forceRecomposite && GetActiveWindow() == hwnd) {
         SendMessageW(hwnd, WM_NCACTIVATE, FALSE, 0);
         SendMessageW(hwnd, WM_NCACTIVATE, TRUE, 0);
@@ -740,8 +697,6 @@ applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark, b
     return result;
 }
 
-// Forward declaration — full definition follows handlePlatformNativeEvent.
-// zh_CN: 前向声明，完整定义在 handlePlatformNativeEvent 之后。
 bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos);
 
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options)
@@ -756,11 +711,8 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
         state->correctsCreationGeometry = false;
         if (!state->hasNativeFlags)
             return;
-        // Return the replaced flags. Otherwise an expanded client area remains
-        // without custom chrome, and the first show adds the system frame to it.
-        // Like enabling, a visible window keeps its flags until it is hidden.
-        // zh_CN: 恢复被替换的标志，否则关闭自定义 chrome 后仍保留扩展客户区，首次显示会计入系统边框。
-        // 与启用一致，可见窗口在隐藏前保持现有标志。
+        // Restore original flags when custom chrome is disabled; defer flag changes on visible windows until hidden.
+        // zh_CN: 关闭自定义标题栏时恢复原窗口标志（否则会保留扩展客户区）；与启用时一样，可见窗口延迟到隐藏后生效。
         window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, state->nativeSafeAreaMargins);
         if (window->isVisible())
             return;
@@ -809,9 +761,8 @@ bool handlePlatformNativeEvent(QWidget* window,
         return false;
 
     if (msg->message == WM_ERASEBKGND) {
-        // Qt preserves an existing backing store instead of erasing it. Only a new native surface
-        // needs a theme seed before its first real paint; never wipe a warm UI between paint events.
-        // zh_CN: Qt 会保留现有后备缓冲；仅新 surface 首次绘制前补主题底色，不能擦除已显示的界面。
+        // Seed only cold, unpainted opaque surfaces; never wipe warm UI between paint events.
+        // zh_CN: 仅对尚未首次绘制的不透明窗口补底色，避免在重绘间隙擦除已显示界面。
         if (!windowBackdropSurfaceWasPainted(window)
             && window->property("fluentBackdropSurfaceMode").toInt()
                 != static_cast<int>(fluent::windowing::BackdropSurfaceMode::CompositedTransparent)) {
@@ -842,12 +793,8 @@ bool handlePlatformNativeEvent(QWidget* window,
             return true;
     }
 
-    // A native handle/state transition in Qt 5 or Qt 6.2 may restore Qt's
-    // default Win32 style after the window was shown. Repair the resize style
-    // at the point of use as a final guard; ensureDwmChromeStyle is a no-op when
-    // the expected flags are already present.
-    // zh_CN: Qt 5 或 Qt 6.2 的原生句柄/状态切换可能在显示后恢复默认 Win32 style；
-    // 在命中测试入口做最后一次自愈，正常状态下 ensureDwmChromeStyle 不产生操作。
+    // Qt 5/6.2 can revert Win32 styles after show; re-assert DWM chrome styles on hit-test (unchanged if already valid).
+    // zh_CN: Qt 5/6.2 在窗口显示后可能恢复默认 Win32 样式，命中测试时重新校验一次。
     if (msg->message == WM_NCHITTEST)
         ensureDwmChromeStyle(window);
 
@@ -855,12 +802,8 @@ bool handlePlatformNativeEvent(QWidget* window,
         clearChromeTopMargin(msg->hwnd);
     }
 
-    // Handle right-click on the caption area: show the system menu on button-up
-    // (matching DefWindowProc behavior which shows system menu on WM_NCRBUTTONUP).
-    // This must be done explicitly because DwmDefWindowProc may consume the message
-    // before DefWindowProc gets a chance to show the menu.
-    // zh_CN: 在 caption 区域处理右键松开：显示系统菜单（与 DefWindowProc 在 WM_NCRBUTTONUP
-    // zh_CN: 上的行为一致）。由于 DwmDefWindowProc 可能先消费该消息，需在此显式处理。
+    // Handle caption right-click release explicitly before DwmDefWindowProc consumes WM_NCRBUTTONUP.
+    // zh_CN: 在 DwmDefWindowProc 拦截前显式弹出标题栏右键系统菜单。
     if (msg->message == WM_NCRBUTTONUP) {
         const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
         const QPoint localPos = logicalClientPointForNativeScreenPoint(window, msg->hwnd, globalPos);
@@ -881,16 +824,9 @@ bool handlePlatformNativeEvent(QWidget* window,
     if (handleDwmFrameMessage(msg, result))
         return true;
 
-    // Suppress the non-client frame repaint on focus changes. For a frameless + translucent (Mica)
-    // window, DefWindowProc otherwise redraws the default system caption/border on every WM_NCACTIVATE,
-    // which flashes a light/white edge when the user fast-switches apps (Alt-Tab away and back).
-    // DwmDefWindowProc has already serviced this message above to recomposite the backdrop; we now call
-    // DefWindowProc with lParam == -1, which Windows documents as "do not repaint the non-client area to
-    // reflect the state change," while still returning the correct activate/deactivate value so the shell
-    // and taskbar keep tracking activation. zh_CN: 抑制焦点变化时的非客户区 frame 重绘。无边框 + 半透明(Mica)窗口下,
-    // DefWindowProc 会在每个 WM_NCACTIVATE 重绘系统默认标题栏/边框，使用户快速切换 app(Alt-Tab 切走再切回)时闪现浅/白边。
-    // 上面 DwmDefWindowProc 已处理过该消息以重新合成背景；此处以 lParam == -1 调用 DefWindowProc——Windows 文档为
-    //「不重绘非客户区以反映状态变化」——同时仍返回正确的激活/失活值，使 shell 与任务栏继续跟踪激活状态。
+    // Call DefWindowProc(..., -1) on WM_NCACTIVATE so Windows updates shell/taskbar state without
+    // repainting the default caption border (which flashes a white edge on fast Alt-Tab).
+    // zh_CN: 以 lParam == -1 调用 DefWindowProc 通知系统更新激活状态但不重绘非客户区边框，避免 Alt-Tab 切换时闪出白边。
     if (msg->message == WM_NCACTIVATE) {
         *result = static_cast<FluentNativeEventResult>(DefWindowProcW(msg->hwnd, WM_NCACTIVATE, msg->wParam, -1));
         return true;
@@ -901,8 +837,6 @@ bool handlePlatformNativeEvent(QWidget* window,
 
     const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
     const QPoint localPos = logicalClientPointForNativeScreenPoint(window, msg->hwnd, globalPos);
-    // Convert the repository-level hit-test result to the native HT* code expected by Windows.
-    // zh_CN: 将项目内逻辑命中结果转换为 Windows 期望的原生 HT* code。
     const auto hitTest = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);
 
     if (hitTest == WindowChromeCompat::HitTest::Client) {
@@ -990,8 +924,6 @@ bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos)
     if (!systemMenu)
         return false;
 
-    // Update menu item states to reflect current window state.
-    // zh_CN: 根据当前窗口状态更新菜单项的启用/禁用状态。
     const bool isMaximized = IsZoomed(hwnd) != FALSE;
     const bool isMinimized = IsIconic(hwnd) != FALSE;
     const bool canResize = (GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME) != 0;
@@ -1045,11 +977,9 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
     if (!hwnd)
         return;
 
-    // On a translucent window the whole client area must be a "sheet of glass" so the DWM backdrop
-    // fills it; otherwise transparent regions render black. Keyed off the window's translucency (fixed
-    // for its lifetime), so it stays a sheet of glass across Normal/Mica/Acrylic — Normal just paints
-    // its surfaces opaque over it. zh_CN: 半透明窗口下整个客户区要做成「玻璃」，让 DWM 背景填满；否则透明区域会渲染成
-    // 黑色。以窗口半透明性（整生命周期固定）为准，故 Normal/Mica/Acrylic 下始终是玻璃——Normal 只是在其上自绘不透明表面。
+    // Keep sheet-of-glass margins (-1) on translucent windows across all modes (Solid paints opaque over it);
+    // otherwise transparent client regions render black.
+    // zh_CN: 半透明窗口在所有模式下都需保持整窗玻璃边距（-1），否则透明客户区会黑屏；纯色模式下直接在其上画实底覆盖。
     if (window && window->testAttribute(Qt::WA_TranslucentBackground)) {
         using DwmExtendFrameFn = HRESULT(WINAPI*)(HWND, const MARGINS*);
         if (auto* extendFrame = resolveDwmProc<DwmExtendFrameFn>("DwmExtendFrameIntoClientArea")) {

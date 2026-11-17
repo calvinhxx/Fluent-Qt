@@ -37,14 +37,12 @@ class AutoSuggestBoxAccessible;
 }
 
 /**
- * @brief LineEdit-based input box with query affordance and suggestion flyout.
- * zh_CN: 基于 LineEdit、带查询入口和建议浮层的输入框。
+ * @brief LineEdit-based search box with query button and suggestion popup.
+ * zh_CN: 基于 LineEdit 的搜索输入框，带查询图标与候选建议弹层。
  *
- * AutoSuggestBox combines query icon, clear button, suggestion model, popup
- * open state, item metrics, and suggestion typography for search-style
- * workflows. zh_CN: AutoSuggestBox
- * 组合查询图标、清除按钮、建议模型、弹层打开态、item 尺寸和建议排版，
- * 用于搜索式输入流程。
+ * Combines a query icon, inline clear button, suggestion list or external model,
+ * and async loading states for search workflows.
+ * zh_CN: 组合了查询图标、行内清除按钮、静态或外部数据模型及异步加载状态，适用于搜索输入场景。
  */
 class AutoSuggestBox : public LineEdit {
     Q_OBJECT
@@ -81,8 +79,8 @@ class AutoSuggestBox : public LineEdit {
         WRITE setQueryButtonPlacement
         NOTIFY queryButtonPlacementChanged)
     /**
-     * @brief Preferred height of the input surface.
-     * zh_CN: 输入表面的首选高度。
+     * @brief Preferred height of the input box.
+     * zh_CN: 输入框的首选高度。
      */
     Q_PROPERTY(int inputHeight READ inputHeight WRITE setInputHeight NOTIFY inputHeightChanged)
     /**
@@ -169,11 +167,12 @@ public:
     int suggestionItemHeight() const { return m_suggestionItemHeight; }
     bool isSuggestionListOpen() const;
 
-    /** @brief Borrows a flat model using column zero, DisplayRole and optional UserRole payloads.
-     *  zh_CN: 借用扁平模型第零列，DisplayRole 显示文字，UserRole 可提供选中项数据。
-     * The model remains caller-owned. nullptr restores QStringList mode;
-     * setSuggestions also returns to that mode. No external rows are copied.
-     * zh_CN: 模型由调用方持有；nullptr 或 setSuggestions 切回字符串列表模式，不复制外部行。
+    /**
+     * @brief Uses an external flat model (column 0, DisplayRole for text, optional UserRole for data) without taking ownership.
+     *
+     * Passing nullptr or calling setSuggestions() switches back to QStringList mode; rows are not copied.
+     * zh_CN: 使用外部平面模型提供候选项（第 0 列 DisplayRole 为文本，可选 UserRole 存附加数据），不接管所有权；
+     * 传入 nullptr 或调用 setSuggestions() 可切回字符串列表模式，不复制外部行数据。
      */
     void setSuggestionModel(QAbstractItemModel* model);
     QAbstractItemModel* suggestionModel() const;
@@ -207,25 +206,31 @@ public:
     QString loadMoreText() const { return m_loadMoreText; }
     void setLoadMoreText(const QString& text);
 
-    /** @brief Tests a request token before the application changes its borrowed model.
-     *  zh_CN: 应用修改借用模型之前，用此函数检查请求 token 是否仍有效。
-     * Editing, dismissal, model replacement and disabling invalidate requests.
-     * Network work and model mutation remain application-owned, on the GUI thread.
-     * zh_CN: 编辑、关闭、替换模型和禁用均使请求失效；网络与模型更新由应用负责，结果在 GUI 线程交付。
+    /**
+     * @brief Checks whether requestId is still the active request before updating an external model.
+     *
+     * Editing, closing the popup, replacing the model, or disabling async suggestions invalidates prior IDs.
+     * Async queries and model updates must finish on the GUI thread.
+     * zh_CN: 更新外部模型前校验 requestId 是否仍为当前有效请求。编辑、关闭弹层、更换模型或禁用异步模式
+     * 都会使旧请求失效；网络请求结果与模型更新需在 GUI 线程处理。
      */
     bool isSuggestionRequestCurrent(quint64 requestId) const;
-    /** @brief Finishes a current request after guarded application model updates.
-     *  zh_CN: 应用通过 token 检查并更新模型后，完成当前请求；过期结果返回 false。
+    /**
+     * @brief Completes requestId after updating an external suggestion model; returns false if outdated.
+     * zh_CN: 更新外部模型后完成 requestId 对应的请求；请求已过期时返回 false。
      */
     bool completeSuggestionRequest(quint64 requestId, bool hasMore = false);
-    /** @brief Accepts current string results, appending only for a load-more request.
-     *  zh_CN: 接收当前字符串结果；仅加载更多请求追加结果，过期结果不会写入列表。
-     * Available in QStringList mode. External models use completeSuggestionRequest.
-     * zh_CN: 仅用于 QStringList 模式；外部模型使用 completeSuggestionRequest。
+    /**
+     * @brief Applies string results for requestId (appends when load-more); returns false if outdated.
+     *
+     * Only for QStringList mode; external models use completeSuggestionRequest().
+     * zh_CN: 在字符串列表模式下写入 requestId 的结果（加载更多时追加）；请求已过期时返回 false。
+     * 仅适用于 QStringList 模式，外部模型请使用 completeSuggestionRequest()。
      */
     bool setSuggestionsForRequest(quint64 requestId, const QStringList& suggestions, bool hasMore = false);
-    /** @brief Shows a current request failure; pagination failures retain existing rows.
-     *  zh_CN: 展示当前请求失败；分页失败保留已有结果。
+    /**
+     * @brief Shows an error state for requestId (retains existing rows on pagination errors).
+     * zh_CN: 显示 requestId 的失败状态（分页加载失败时保留已有结果）；请求已过期时返回 false。
      */
     bool failSuggestionRequest(quint64 requestId, const QString& message, const QString& details = QString());
 
@@ -282,12 +287,12 @@ signals:
     void moreResultsTextChanged();
     void retryTextChanged();
     void loadMoreTextChanged();
-    /** @brief Requests application data; append is true only for pagination or its retry.
-     *  zh_CN: 请求应用数据；仅分页及其重试的 append 为 true。
+    /** @brief Emitted to request suggestion data; append is true when loading or retrying the next page.
+     * zh_CN: 请求候选项数据时发出；加载下一页或其重试时 append 为 true。
      */
     void suggestionsRequested(const QString& query, quint64 requestId, bool append);
-    /** @brief Asks the application to cancel transport work for an invalidated token.
-     *  zh_CN: 通知应用取消已失效 token 对应的传输工作。
+    /** @brief Emitted when an in-flight requestId is canceled or superseded.
+     * zh_CN: 进行中的 requestId 被取消或被新请求取代时发出。
      */
     void suggestionRequestCanceled(quint64 requestId);
 
@@ -295,7 +300,8 @@ protected:
     QRect trailingContentBounds() const override;
     void trailingContentGeometryChanged() override;
     ::fluent::basicinput::Button* clearActionButton() const override { return m_clearButton; }
-    // Composed selectors keep the query slot as decoration and own one input target.
+    /** @brief Shows the query icon as non-interactive decoration for composite pickers.
+     * zh_CN: 将查询图标设为仅装饰显示，供组合选择器保留单一输入焦点目标。 */
     void setQueryIconDecorative(bool decorative);
     void paintEvent(QPaintEvent* event) override;
     void paintFrame(QPainter& painter) override;

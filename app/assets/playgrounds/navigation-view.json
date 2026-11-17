@@ -157,8 +157,8 @@
     272
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "An adaptive left pane plus content area for top-level navigation.",
+    "zh": "提供左侧（或顶部）导航面板与右侧内容区的页面框架。"
   },
   "presets": [
     {

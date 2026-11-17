@@ -12,8 +12,7 @@ class Label;
 
 namespace fluent::detail {
 
-// One optional field adornment; the field still owns its native editing and chrome.
-// zh_CN: 管理一个可选字段附加内容；原生编辑与内置按钮仍由字段自身管理。
+// Manages an optional trailing text or widget adornment for a field control.
 class FieldTrailingContent final : public QObject {
     Q_OBJECT
 public:

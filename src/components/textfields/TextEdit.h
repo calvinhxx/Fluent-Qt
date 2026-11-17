@@ -34,9 +34,9 @@ namespace fluent::textfields {
 class TextEdit : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Minimum insets around the editable text; vertical values share
-     *        the line slot and expand the control only when they overflow it.
-     * zh_CN: 可编辑文本周围的最小内边距；垂直值优先包含在行槽中，仅在超出时扩展控件。
+     * @brief Minimum insets around the editable text; vertical margins fit inside
+     *        lineHeight and expand the control only when exceeding it.
+     * zh_CN: 文本四周的最小内边距；垂直边距优先利用行高富余空间，超出时才撑高控件。
      */
     Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
     /**
@@ -121,14 +121,12 @@ public:
     // Text APIs. zh_CN: 文本相关 API。
     void setPlainText(const QString& text);
     /**
-     * @brief Appends a plain-text paragraph, including when the editor is read-only.
-     * zh_CN: 在文档末尾追加纯文本段落，只读模式下也允许程序追加。
+     * @brief Appends a plain-text paragraph at the end (even when read-only).
      *
-     * Existing text is followed by a new paragraph, even for an empty string.
-     * Preserves the cursor and selection; follows new text only when already at
-     * the bottom. Visible-line bounds still control height, not history length.
-     * zh_CN: 已有内容后先换段，空字符串也可追加空段落；保留光标和选区，
-     * 仅在原本位于底部时跟随新内容。可见行数限制高度，不限制历史长度。
+     * Appends a new paragraph even for an empty string, preserves the current
+     * cursor and selection, and scrolls to the bottom only if already there.
+     * zh_CN: 在末尾追加纯文本段落（只读模式下同样可用）。空字符串也会新增段落；
+     * 保留当前光标与选区，仅当原本位于底部时自动滚动跟随。
      */
     void appendPlainText(const QString& text);
     QString toPlainText() const;

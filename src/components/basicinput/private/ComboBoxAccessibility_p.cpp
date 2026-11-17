@@ -10,9 +10,8 @@ namespace fluent::basicinput::detail {
 
 #if QT_CONFIG(accessibility)
 
-// Qt's native combo interface enumerates only its fallback list and editor.
-// Use the actual widget children so hosted actions retain their own interfaces.
-// zh_CN: Qt 原生组合框接口只枚举备用列表和编辑器；枚举真实子控件，保留托管操作自身的接口。
+// Qt's default combo accessible interface only exposes its standard list and editor;
+// expose actual child widgets so hosted actions keep their own accessibility nodes.
 class ComboBoxAccessible final : public QAccessibleWidget {
 public:
     explicit ComboBoxAccessible(ComboBox* box) : QAccessibleWidget(box, QAccessible::ComboBox) {}

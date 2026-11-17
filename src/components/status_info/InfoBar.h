@@ -41,18 +41,18 @@ class InfoBarAccessible;
 class InfoBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Whether the popup, drawer, or notification surface is open.
-     * zh_CN: 弹层、抽屉或通知表面是否处于打开状态。
+     * @brief Whether the info bar is open.
+     * zh_CN: 通知栏是否处于打开状态。
      */
     Q_PROPERTY(bool isOpen READ isOpen WRITE setIsOpen NOTIFY isOpenChanged)
     /**
-     * @brief Title text displayed by the surface.
-     * zh_CN: 界面显示的标题文本。
+     * @brief Title text shown in the info bar.
+     * zh_CN: 通知栏标题文本。
      */
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     /**
-     * @brief Message body text displayed by the notification surface.
-     * zh_CN: 通知表面显示的消息正文。
+     * @brief Message body text shown in the info bar.
+     * zh_CN: 通知栏消息正文。
      */
     Q_PROPERTY(QString message READ message WRITE setMessage NOTIFY messageChanged)
     /**
@@ -117,8 +117,8 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(int closeButtonSize READ closeButtonSize WRITE setCloseButtonSize NOTIFY closeButtonSizeChanged)
     /**
-     * @brief Accessible name supplied by the application for the icon-only close button.
-     * zh_CN: 由应用为纯图标关闭按钮提供的无障碍名称。
+     * @brief Custom accessible name for the icon-only close button.
+     * zh_CN: 纯图标关闭按钮的自定义无障碍名称。
      */
     Q_PROPERTY(QString closeButtonAccessibleName
         READ closeButtonAccessibleName

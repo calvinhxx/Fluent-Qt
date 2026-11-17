@@ -18,14 +18,12 @@ namespace fluent::status_info {
 class InfoBadge;
 
 /**
- * @brief Fluent identity image with initials fallback and optional presence status.
- * zh_CN: 带首字母回退与可选在线状态的 Fluent 身份头像。
+ * @brief Fluent identity avatar with initials fallback and optional presence badge.
+ * zh_CN: Fluent 身份头像控件，支持图片、首字母回退与可选在线状态角标。
  *
- * Avatar keeps all user-facing text caller-owned. The name is used only for
- * initials generation and accessibility, while an explicit initials value or
- * pixmap overrides the visual fallback.
- * zh_CN: Avatar 的可见文本均由调用方提供。姓名只用于生成首字母和辅助功能名称；
- * 显式首字母或位图会覆盖对应的视觉回退。
+ * Uses name to generate fallback initials and for accessibility; setting an
+ * explicit initials string or image overrides the fallback display.
+ * zh_CN: 姓名用于自动生成首字母和无障碍名称；显式设置首字母或图片后会覆盖默认回退显示。
  */
 class Avatar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -54,8 +52,8 @@ public:
     Q_ENUM(AvatarSize)
 
     /**
-     * @brief Presence state rendered by the composed InfoBadge.
-     * zh_CN: 由内部组合的 InfoBadge 呈现的在线状态。
+     * @brief Presence state displayed by the corner InfoBadge.
+     * zh_CN: 右下角 InfoBadge 显示的在线状态。
      */
     enum class PresenceStatus { None, Available, Away, Busy, DoNotDisturb, Offline };
     Q_ENUM(PresenceStatus)

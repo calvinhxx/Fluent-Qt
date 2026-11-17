@@ -210,12 +210,9 @@ bool GalleryWindowPlacement::eventFilter(QObject* watched, QEvent* event)
         scheduleSave();
         break;
     case QEvent::WindowStateChange:
-        // Show/move/resize already recorded a visible window's client bounds.
-        // Keep that snapshot: Qt's state transition can replace normalGeometry()
-        // with frame-adjusted bounds. Hidden windows may still have pending
-        // geometry events, so capture their normal target here.
-        // zh_CN: 显示/移动/缩放已记录可见窗口的客户区，保留该快照，避免状态切换时 Qt 的窗框换算改写它；
-        // 隐藏窗口可能仍有待投递的几何事件，在此捕获其普通窗口目标。
+        // Keep the recorded client bounds for visible windows because Qt state transitions can overwrite
+        // normalGeometry() with frame-adjusted bounds; capture hidden windows here in case geometry events are pending.
+        // zh_CN: 可见窗口保留先前记录的客户区边界，避免状态切换时 Qt 改写 normalGeometry()；隐藏窗口则在此捕获目标矩形。
         if (isNormalWindowState(static_cast<QWindowStateChangeEvent*>(event)->oldState())) {
             if (!m_window->isVisible() || !m_lastNormalGeometry.isValid())
                 rememberNormalGeometry(m_window->normalGeometry());

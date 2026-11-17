@@ -97,7 +97,7 @@ constexpr int kSlowPresentationStreak = 6;
 // Presentation latency of content frames, those that repainted panel texture rows while
 // the window was active. The caller skips other frames, which neither confirm nor clear
 // a streak; a resize or cache release interrupts it.
-// zh_CN: 统计窗口活动时重画了面板纹理行的内容帧的呈现延迟；其他帧由调用方跳过，既不累计
+// zh_CN: 统计窗口活动时重画了面板纹理行的内容帧上屏耗时；其他帧由调用方跳过，既不累计
 // 也不清零；尺寸变化或缓存释放会中断累计。
 struct SlowPresentationTracker {
     qreal lastMs = 0;

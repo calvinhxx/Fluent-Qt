@@ -38,9 +38,11 @@ public:
     explicit GalleryCommands(QWidget* window);
     ~GalleryCommands() override;
 
-    /// Registers a caller-owned @p action under @p group. zh_CN: 在 @p group 下注册调用方持有的 @p action。
+    /// Registers an external @p action under @p group without taking ownership.
+    /// zh_CN: 在 @p group 下注册外部传入的 @p action（不接管所有权）。
     void addCommand(Group group, QAction* action);
-    /// Creates and registers a window-owned command. zh_CN: 创建并注册由窗口持有的命令。
+    /// Creates and registers a command owned by the window.
+    /// zh_CN: 创建并注册由窗口管理生命周期的命令。
     QAction*
     addCommand(Group group, const QString& objectName, const QString& text, const QList<QKeySequence>& shortcuts = {});
 

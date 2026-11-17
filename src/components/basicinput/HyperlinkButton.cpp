@@ -18,8 +18,6 @@ HyperlinkButton::HyperlinkButton(const QString& text, QWidget* parent) : Button(
     setFluentStyle(Subtle);
     setCursor(Qt::PointingHandCursor);
 
-    // On click, open the URL automatically when one is set.
-    // zh_CN: 连接点击信号，设置了 URL 则自动打开。
     connect(this, &QPushButton::clicked, this, [this]() {
         if (m_url.isValid()) {
             if (QDesktopServices::openUrl(m_url) && !m_accessibilityVisited) {
@@ -59,18 +57,11 @@ void HyperlinkButton::setShowUnderline(bool show)
 
 void HyperlinkButton::onThemeUpdated()
 {
-    // Force accent text: Button::paintEvent derives colors from m_style, but a
-    // HyperlinkButton wants accent text even in the Subtle style.
-    // zh_CN: 强制使用 Accent 文本色——Button::paintEvent 按 m_style 取色，而
-    // HyperlinkButton 即使是 Subtle 样式也希望文本用 Accent 色。
     Button::onThemeUpdated();
 }
 
 void HyperlinkButton::paintEvent(QPaintEvent* event)
 {
-    // A hyperlink is an accent-colored text link with minimal fill.
-    // zh_CN: 超链接是使用强调色文字和轻量填充的文本链接。
-
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -80,7 +71,6 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
     const auto& radius = themeRadius();
     const auto& spacing = themeSpacing();
 
-    // 1. Resolve the interaction state. zh_CN: 确定交互状态。
     InteractionState state = interactionState();
     if (!isEnabled()) {
         state = Disabled;
@@ -91,13 +81,9 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
             state = Hover;
     }
 
-    // 2. Resolve colors. Default-init the fill to transparent so the invalid-QColor trap
-    // (alpha()==255 on an unassigned QColor → solid black) can never fire. zh_CN: 填充默认透明,
-    // 杜绝「未赋值 QColor 的 alpha()==255 → 涂黑」陷阱。
-    QColor bgColor = Qt::transparent; // resting/pressed surface fill (Fluent path). zh_CN: 静息/按下表面填充(Fluent)。
+    QColor bgColor = Qt::transparent;
     QColor textColor = colors.accentDefault;
 
-    // Fluent text-link treatment. zh_CN: Fluent 文本链接样式。
     if (state == Hover) {
         bgColor = colors.subtleSecondary;
         textColor = colors.accentSecondary;
@@ -109,8 +95,6 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
         textColor = colors.textDisabled;
     }
 
-    // 3. Paint the subtle Fluent surface.
-    // zh_CN: 绘制轻量 Fluent 表面。
     const QRectF surfaceRect = rect();
     if (bgColor.isValid() && bgColor.alpha() > 0 && bgColor != QColor(Qt::transparent)) {
         painter.setPen(Qt::NoPen);
@@ -118,7 +102,6 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
         painter.drawRoundedRect(surfaceRect, radius.control, radius.control);
     }
 
-    // 4. Paint the text (centered). zh_CN: 居中绘制文字。
     painter.setFont(font());
     painter.setPen(textColor);
 
@@ -132,13 +115,10 @@ void HyperlinkButton::paintEvent(QPaintEvent* event)
         textRect = ButtonContentPainter::paintHorizontalButtonContent(*this, painter, textRect,
             fluentSize() == Small ? spacing.gap.tight : spacing.gap.normal);
 
-    // 5. Underline: the explicit opt-in draws on hover. zh_CN:
-    // 显式开启后在悬停时绘制下划线。
     const bool underlineExplicit = m_showUnderline && state == Hover;
     if (underlineExplicit && !txt.isEmpty() && !textRect.isEmpty()) {
         const qreal textX = textRect.left();
         const int textY = fluent::painting::verticallyCenteredTextBaseline(textRect, fm);
-        // Draw the line 2px under the text in the text color. zh_CN: 在文字下方 2 像素处用文字色画线。
         painter.setPen(textColor);
         painter.drawLine(QPointF(textX, textY + 2), QPointF(textRect.right(), textY + 2));
     }

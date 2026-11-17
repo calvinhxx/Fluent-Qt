@@ -30,10 +30,7 @@ Field::Field(QWidget* parent) : QWidget(parent)
 
     setObjectName(QStringLiteral("fluentField"));
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-    // Field is presentation chrome, not an input target. The hosted editor
-    // remains the only Tab stop and receives explicit focus through the proxy.
-    // zh_CN: Field 只是展示外壳，不是输入目标；Tab 焦点由 editor 自己拥有，
-    // 显式聚焦 Field 时再通过 focusProxy 转交。
+    // Non-interactive wrapper; Tab focus goes directly to the hosted editor via focusProxy.
     setFocusPolicy(Qt::NoFocus);
 
     auto* root = new QGridLayout(this);
@@ -211,10 +208,7 @@ bool Field::setEditor(QWidget* widget, WidgetOwnership ownership)
         return false;
 
     if (m_editor == widget) {
-        // Changing lifetime policy in place is ambiguous for language
-        // bindings. Require an explicit transfer boundary first.
-        // zh_CN: 原地切换生命周期策略会让语言绑定的所有权不明确；
-        // 必须先 takeEditor()，再按新策略装回。
+        // Require takeEditor() before switching ownership policy so lifetime changes stay explicit.
         return !widget || m_editorOwnership == ownership;
     }
 
@@ -404,9 +398,7 @@ void Field::updateAccessible()
         return;
 
     if (m_editor->accessibleName() != m_editorManagedAccessibleName) {
-        // The caller replaced Field's generated name while the editor was
-        // hosted. Stop managing it so later label changes and release do not
-        // overwrite the caller's accessibility contract.
+        // Caller set an explicit accessibleName on the editor; stop auto-syncing labelText to it.
         m_editorAccessibleNameManaged = false;
         m_editorOriginalAccessibleName.clear();
         m_editorManagedAccessibleName.clear();

@@ -12,6 +12,10 @@
 #include <QWheelEvent>
 #include <type_traits>
 
+/**
+ * @brief Enter-event parameter type for QWidget::enterEvent() overrides (QEnterEvent on Qt 6, QEvent on Qt 5).
+ * zh_CN: QWidget::enterEvent() 重写使用的进入事件类型（Qt 6 为 QEnterEvent，Qt 5 为 QEvent）。
+ */
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 using FluentEnterEvent = QEnterEvent;
 #else
@@ -22,10 +26,10 @@ static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value, "FluentEnterEven
 
 enum class FluentWheelInputKind { PhaseBased, NoPhasePixel, NoPhaseDiscrete };
 
-// Mouse event coordinates.
-// zh_CN: 鼠标事件坐标。
-// Qt 6: QMouseEvent::position() / globalPosition() return QPointF.
-// Qt 5: QMouseEvent::pos() / globalPos() return QPoint.
+/**
+ * @brief Local cursor position from a mouse event across Qt 5 and Qt 6.
+ * zh_CN: 跨 Qt 5/6 读取鼠标事件的控件局部坐标。
+ */
 inline QPoint fluentMousePos(const QMouseEvent* e)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -90,10 +94,10 @@ inline QKeySequence fluentKeySequence(const QKeyEvent* e)
 #endif
 }
 
-// Wheel and native gesture coordinates.
-// zh_CN: 滚轮和原生手势事件坐标。
-// Qt 5.15+/Qt 6: QWheelEvent::position().
-// Qt 6: QNativeGestureEvent::position(); Qt 5: localPos().
+/**
+ * @brief Native gesture event alias for wheel and gesture position helpers.
+ * zh_CN: 原生手势事件类型别名。
+ */
 using FluentNativeGestureEvent = QNativeGestureEvent;
 
 inline QPointF fluentWheelPosition(const QWheelEvent* e)

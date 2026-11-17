@@ -198,19 +198,9 @@ void GalleryNavigationPane::onThemeUpdated()
 
 void GalleryNavigationPane::paintEvent(QPaintEvent* event)
 {
-    // The inline pane is window chrome (no own surface), so it must follow the chrome contract like
-    // the title bar / NavigationView: paint an opaque `themeBackdrop` when there is NO real OS backdrop
-    // (Normal), stay transparent when there is one (Mica / Acrylic — reveal the backdrop). Without this
-    // the pane's non-row areas (top padding, footer) inherit a transparent palette on the always-
-    // translucent Windows top-level and leak the desktop wallpaper in Normal (the TreeView rows are
-    // already covered, but the surrounding pane was not). The drawer variant (`m_surfaceVisible`) paints
-    // its own card panel, so it stays transparent here. PaintedOpaque shares the root material;
-    // CompositedTransparent clears through typed helpers; Solid uses `themeBackdrop(active)`.
-    // zh_CN: 内嵌窗格是窗口 chrome（无自身表面），须像标题栏 / NavigationView 一样遵循 chrome 契约：无真实系统
-    // 背景（Normal）时画不透明 themeBackdrop，有（Mica / Acrylic）时透明露背景。否则在「始终半透明」顶层下，
-    // 窗格非行区域（顶部留白、页脚）继承透明 palette，Normal 下漏出桌面壁纸（TreeView 行已覆盖，但周围窗格未）。
-    // 抽屉变体（m_surfaceVisible）自绘卡片面板，故此处保持透明。windowChromeBackdropFill 在真实背景下返回无效色（→不画），
-    // 否则返回纯色 themeBackdrop(active)。
+    // Inline pane chrome paints windowChromeBackdropFill under Normal mode so non-row areas
+    // do not turn transparent over an un-composited top-level; floating drawers paint their own card.
+    // zh_CN: 内联窗格在 Normal 模式下填充窗体背景色，避免空白区域在透明顶层窗口下漏出桌面；浮动抽屉保持透明以透出卡片。
     if (!m_surfaceVisible && !usesPaintedWindowBackdrop(this)) {
         const QColor fill = windowing::windowChromeBackdropFill(*this, window(),
             window() && window()->isActiveWindow());
@@ -229,19 +219,11 @@ bool GalleryNavigationPane::event(QEvent* event)
         if (m_treeView && m_treeView->viewport())
             m_treeView->viewport()->update();
     }
-    // Repaint when the window's activation changes so the inline pane's themeBackdrop tracks
-    // active/inactive in lockstep with the title bar (both read isActiveWindow() via
-    // windowChromeBackdropFill). Without this the pane would stay at the active tint while the title bar
-    // washes toward bgLayer on focus loss. zh_CN: 窗口激活态变化时重绘，使内嵌窗格的 themeBackdrop 与标题栏
-    // 同步跟随激活/非激活（二者都经 windowChromeBackdropFill 读 isActiveWindow()）；否则窗格会停在激活色，而标题栏失焦时已洗向 bgLayer。
+    // Track window activation so the inline pane tint updates in lockstep with the title bar.
     if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
         update();
-    // NavigationView hints, via this dynamic property, when the pane is floating inside the overlay
-    // flyout: there the pane must drop its own chrome background (switch to the transparent "surface"
-    // mode) so the flyout's single elevated card shows through without a per-region seam; back on the
-    // inline rail it paints the normal chrome background again. zh_CN: NavigationView 通过该动态属性提示
-    // 窗格何时浮在浮层抽屉中：此时窗格须放弃自身 chrome 背景（切到透明 surface 模式），让浮层那张抬升卡片无缝透出；
-    // 回到内联栏后重新绘制正常 chrome 背景。
+    // Switch to transparent surface mode while floating inside NavigationView's overlay drawer.
+    // zh_CN: 处于浮层抽屉时切换为透明模式，让下方的浮动卡片面板完整透出。
     if (event->type() == QEvent::DynamicPropertyChange) {
         const auto* propertyEvent = static_cast<QDynamicPropertyChangeEvent*>(event);
         if (propertyEvent->propertyName() == "fluentNavPaneFloating")
@@ -345,9 +327,7 @@ void GalleryNavigationPane::rebuild()
         m_treeView->viewport()->installEventFilter(this);
     }
     m_treeView->setHorizontalFluentScrollBarEnabled(false);
-    // Navigation chrome stops cleanly at the scroll edge — an elastic bounce reads as a glitch
-    // here and would briefly trap the wheel at the boundary. zh_CN: 导航 chrome 在滚动边界干脆
-    // 停住——此处的弹性回弹会显得突兀，且会在边界处短暂卡住滚轮。
+    // Disable elastic overscroll so wheel scrolling stops cleanly at the pane edge.
     m_treeView->setOverscrollEnabled(false);
     m_treeView->setIndentation(0);
     m_treeView->setIndicatorMotionAnimationEnabled(true);
@@ -455,13 +435,8 @@ void GalleryNavigationPane::activateRouteIndex(const QModelIndex& index, bool po
     setSelectedRouteId(routeId);
 
     if (pointerActivation) {
-        // The child popup is strictly a COMPACT-RAIL affordance: the 48px icon rail has no room to
-        // expand a category inline, so it shows the children in a flyout. In the drawer flyout the pane
-        // is floating + wide (m_surfaceVisible) and already shows text labels, so a category expands
-        // INLINE there — exactly like the inline expanded pane — instead of spawning a popup that then
-        // orphans itself as the drawer collapses. zh_CN: 子弹窗只属于「紧凑栏」：48px 图标栏没有空间内联展开分类，
-        // 故用浮窗显示子项。抽屉浮层中窗格是浮起且加宽的（m_surfaceVisible）、已显示文字标签，故分类在此「内联展开」——
-        // 与内联展开窗格一致——而非弹出一个随抽屉收起就被孤立的浮窗。
+        // Only the 48px compact rail opens categories in a flyout; the wider floating drawer expands inline.
+        // zh_CN: 仅 48px 窄图标栏使用浮层展开子项；加宽的浮动抽屉直接内联展开。
         const bool compactRail = m_compact && !m_surfaceVisible;
         if (compactRail && hasChildren) {
             showCompactFlyoutForIndex(index);
@@ -554,14 +529,8 @@ void GalleryNavigationPane::updateDividerPalette()
     if (!m_footerDivider)
         return;
 
-    // Inset the separator so it reads as a refined, centered hairline rather than a hard
-    // edge-to-edge bar — the latter looks crude against the clean Mica/vibrancy chrome (and an
-    // inset rule is the native macOS convention). The stroke is softened to ~40% alpha so it
-    // whispers the separation instead of drawing a hard gray line over the translucent pane.
-    // Divider owns the backing-store composition detail so the Gallery only supplies appearance.
-    // zh_CN: 让分隔线内缩，呈现精致、居中的细线，而非生硬的整宽横条（在干净的 Mica/vibrancy chrome 上更协调，
-    // 内缩也符合 macOS 原生习惯）。描边淡化到约 40% alpha，在半透明窗格上轻声示意分隔。
-    // 后备缓冲的合成细节由 Divider 负责，Gallery 只提供外观参数。
+    // Soften and inset the divider so it reads subtly over Mica and floating cards.
+    // zh_CN: 降低分隔线透明度并留出左右内缩，使其在 Mica 与浮层上更柔和。
     const auto colors = themeColors();
     QColor divider = colors.strokeDivider;
     divider.setAlphaF(divider.alphaF() * 0.4);

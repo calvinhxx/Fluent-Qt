@@ -10,32 +10,18 @@ namespace fluent::collections {
 class FileListItemDelegate;
 
 /**
- * @brief Presents file names, transfer status, and commands from a caller-owned model.
- * zh_CN: 从调用方持有的模型展示文件名、传输状态和操作。
- *
- * Qt::DisplayRole supplies the full file name. MetadataRole supplies supporting
- * text; both wrap without elision. This view performs no I/O and never changes
- * the model. Connect its request signals to the application's file controller.
- * Delete/Backspace requests removal; Ctrl+R requests retry for the current row
- * (Cmd+R on macOS with Qt's default modifier mapping).
- * zh_CN: Qt::DisplayRole 提供完整文件名，MetadataRole 提供辅助说明，均换行而不
- * 截断。视图不执行 I/O 或修改模型；应用自行处理操作信号。Delete/Backspace 请求
- * 移除当前行，Ctrl+R 请求重试（macOS 默认 Qt 修饰键映射下为 Cmd+R）。
- * Row-body clicks retain ListView's pressed/clicked signals. The remove and
- * retry hit regions emit only their command request, not a row click.
- * zh_CN: 行主体点击保留 ListView 的 pressed/clicked 信号；移除和重试热区只发送
- * 对应操作请求，不再触发行点击。
- *
- * Rows are painted by a private delegate; no widgets are allocated per file.
- * Long rows are measured as they enter the viewport. Compact height metadata
- * is retained for visited rows; text layout and motion only use visible rows.
- * zh_CN: 行由私有 delegate 绘制，不为每个文件分配控件。长行进入视口时才测量；
- * 已访问行仅保留紧凑的高度信息，文字排版和动效只处理可见行。
- *
- * The view owns its file delegate. Replacing it through inherited delegate
- * setters is unsupported; use ListView for application-defined row rendering.
- * zh_CN: 视图持有文件 delegate，不支持通过继承的 setter 替换；需要自定义行绘制
- * 时应使用 ListView。
+ * @brief List view for displaying file names, transfer status, and per-row remove/retry actions.
+ * Uses an external model without taking ownership and performs no I/O itself. Qt::DisplayRole supplies
+ * the file name and MetadataRole supplies supporting text (both wrap without elision). Row clicks preserve
+ * ListView's pressed/clicked signals, while the remove/retry buttons emit only removeRequested() or
+ * retryRequested(). Delete/Backspace requests removal and Ctrl+R (Cmd+R on macOS) requests retry for
+ * Rejected rows. Uses a private delegate without per-row widgets; replacing the delegate is unsupported
+ * (use ListView for custom row rendering).
+ * zh_CN: 用于展示文件名、传输状态及移除/重试操作的列表视图。
+ * 关联外部数据模型（不接管所有权），组件自身不执行文件 I/O。Qt::DisplayRole 提供文件名，MetadataRole 提供辅助说明，
+ * 两者均自动换行不截断。点击行主体保持 ListView 的 pressed/clicked 信号，点击移除/重试按钮仅发出 removeRequested()
+ * 或 retryRequested()；Delete/Backspace 请求移除当前行，Ctrl+R（macOS 下为 Cmd+R）请求重试 Rejected 行。
+ * 内部使用私有代理绘制且不逐行创建控件；不支持替换代理，自定义行样式请改用 ListView。
  */
 class FileListView : public ListView {
     Q_OBJECT
@@ -43,26 +29,22 @@ class FileListView : public ListView {
 
 public:
     /**
-     * @brief File presentation status; transfer work remains application-owned.
-     * zh_CN: 文件展示状态；实际传输由应用负责。
+     * @brief Display status of a file row; actual transfers are handled by the application.
+     * zh_CN: 文件行的展示状态；实际传输逻辑由应用外部处理。
      */
     enum Status { Ready = 0, Uploading = 1, Rejected = 2 };
     Q_ENUM(Status)
 
     /**
-     * @brief Model roles used by the file delegate, in addition to Qt::DisplayRole.
-     * zh_CN: 文件 delegate 在 Qt::DisplayRole 之外使用的模型角色。
-     *
-     * MetadataRole is QString; StatusRole is Status (Ready by default);
-     * ProgressRole is a finite fraction clamped to [0, 1]; RemovableRole is
-     * bool (true by default); RetryableRole is bool (false by default).
-     * Retry is available only for Rejected rows. Standard ItemIsEnabled flags
-     * gate all commands. Qt::AccessibleTextRole/AccessibleDescriptionRole may
-     * override the generated accessible name and supporting description.
-     * zh_CN: MetadataRole 为 QString，StatusRole 默认 Ready，ProgressRole 为
-     * 限定在 [0, 1] 的有限小数；RemovableRole 默认 true，RetryableRole 默认
-     * false。仅 Rejected 行可以重试，所有操作遵守 ItemIsEnabled。标准无障碍
-     * 文本角色可覆盖自动生成的名称和说明。
+     * @brief Model roles read by FileListView in addition to Qt::DisplayRole.
+     * MetadataRole takes QString, StatusRole defaults to Ready, ProgressRole is clamped to [0, 1],
+     * RemovableRole defaults to true, and RetryableRole defaults to false (effective only when Status is
+     * Rejected). Standard Qt::ItemIsEnabled flags gate actions, and Qt::AccessibleTextRole /
+     * Qt::AccessibleDescriptionRole override the generated accessibility text.
+     * zh_CN: 除 Qt::DisplayRole 外使用的自定义模型角色。
+     * MetadataRole 为 QString；StatusRole 默认 Ready；ProgressRole 为限制在 [0, 1] 的进度值；
+     * RemovableRole 默认 true；RetryableRole 默认 false（仅 Status 为 Rejected 时可重试）。
+     * 所有操作受 Qt::ItemIsEnabled 约束，可用 Qt::AccessibleTextRole / AccessibleDescriptionRole 覆盖默认无障碍文本。
      */
     enum DataRole { MetadataRole = Qt::UserRole + 1, StatusRole, ProgressRole, RemovableRole, RetryableRole };
     Q_ENUM(DataRole)
@@ -71,28 +53,28 @@ public:
     ~FileListView() override;
 
     /**
-     * @brief Borrows a model without reparenting or modifying it.
-     * zh_CN: 借用模型，不改变其父对象或修改其内容。
+     * @brief Associates an external model without taking ownership or modifying its data.
+     * zh_CN: 关联外部数据模型，不改变其父对象也不修改其数据。
      */
     void setModel(QAbstractItemModel* model) override;
 
     bool isAnimationEnabled() const;
     /**
-     * @brief Enables short hover and progress transitions, subject to MotionPolicy.
-     * zh_CN: 在 MotionPolicy 允许时启用短暂的悬停和进度过渡。
+     * @brief Enables or disables hover and progress transition animations (subject to MotionPolicy).
+     * zh_CN: 启用或关闭悬停与进度条过渡动画（同时受 MotionPolicy 控制）。
      */
     void setAnimationEnabled(bool enabled);
 
 signals:
     void animationEnabledChanged(bool enabled);
     /**
-     * @brief Requests removal; the application decides whether to change its model.
-     * zh_CN: 请求移除；由应用决定是否修改模型。
+     * @brief Emitted when the user triggers removal for a row; the caller updates the model.
+     * zh_CN: 用户请求移除指定行时发出；是否修改模型由调用方决定。
      */
     void removeRequested(const QModelIndex& index);
     /**
-     * @brief Requests retry without starting a transfer or changing file status.
-     * zh_CN: 请求重试，不启动传输或更改文件状态。
+     * @brief Emitted when the user triggers retry for a Rejected row.
+     * zh_CN: 用户请求重试 Rejected 状态的行时发出。
      */
     void retryRequested(const QModelIndex& index);
 

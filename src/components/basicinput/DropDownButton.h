@@ -13,19 +13,14 @@ class QKeyEvent;
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent button that opens an attached dropdown or flyout.
- * zh_CN: 用于打开下拉菜单或浮层的 Fluent 按钮。
- *
- * DropDownButton extends Button with open-state visuals, chevron glyph metrics,
- * and press progress so popup-backed entry controls can share one surface style.
- * zh_CN: DropDownButton 在 Button 基础上增加打开态视觉、下拉箭头绘制参数和按压进度，
- * 让基于弹层的入口控件复用同一套按钮表面风格。
+ * @brief Fluent button with a trailing chevron that opens an attached menu or flyout.
+ * zh_CN: 带右侧下拉箭头、可关联打开菜单或浮层的 Fluent 按钮。
  */
 class DropDownButton : public Button {
     Q_OBJECT
     /**
-     * @brief Caller-owned menu opened by the button.
-     * zh_CN: 按钮打开的调用方所有菜单。
+     * @brief Menu opened by the button (not owned by this widget).
+     * zh_CN: 点击按钮时打开的菜单（不接管所有权）。
      */
     Q_PROPERTY(QMenu* menu READ menu WRITE setMenu NOTIFY menuChanged)
     /**
@@ -54,8 +49,8 @@ class DropDownButton : public Button {
      */
     Q_PROPERTY(QPoint chevronOffset READ chevronOffset WRITE setChevronOffset NOTIFY chevronChanged)
     /**
-     * @brief Animated press progress used by the painted surface.
-     * zh_CN: 自绘表面使用的按压动画进度。
+     * @brief Animated press progress for chevron click feedback.
+     * zh_CN: 按压下拉箭头时的动画进度。
      */
     Q_PROPERTY(qreal pressProgress READ pressProgress WRITE setPressProgress)
 

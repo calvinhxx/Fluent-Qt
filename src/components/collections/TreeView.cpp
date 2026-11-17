@@ -40,8 +40,7 @@ namespace fluent::collections {
 
 namespace {
 
-// Keep ordinary model text usable without an application-provided row delegate.
-// zh_CN: 普通文本模型不应依赖应用自定义行代理才能获得展开与选中反馈。
+// Fallback delegate so plain text models get Fluent hover, selection, and chevron feedback.
 class DefaultTreeItemDelegate final : public QStyledItemDelegate {
 public:
     explicit DefaultTreeItemDelegate(TreeView* view) : QStyledItemDelegate(view), m_view(view) {}
@@ -108,19 +107,14 @@ private:
     TreeView* m_view;
 };
 
-// Namespace-scope constant: no FluentElement instance, so read the raw token.
-// zh_CN: 命名空间级常量没有 FluentElement 实例，直接读原始 token。
+// Namespace-scope constant has no FluentElement instance; read the raw token directly.
 constexpr int kExpandRevealDuration = ::Animation::Duration::Fast;
 
-// Pixels scrolled per wheel notch (delta 120), shared with the other collection views so
-// the wheel feel matches ListView. zh_CN: 每个滚轮刻度（delta 120）滚动的像素数，与 ListView 统一手感。
+// Pixels scrolled per 120-delta wheel notch, matching ListView.
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 
-// QTreeView paints PE_PanelItemViewRow across the full row before invoking the item delegate.
-// Fluent delegates paint their own rounded state surface from the hierarchy-adjusted content
-// edge, so keeping the native panel leaves a separate block in the indentation gutter.
-// zh_CN: QTreeView 会先在整行绘制 PE_PanelItemViewRow，再调用 delegate。Fluent delegate 已从
-// 层级缩进后的内容边缘自绘圆角状态面；保留原生面板会在缩进槽中残留一块分离背景。
+// Suppress native PE_PanelItemViewRow (which paints across the indent gutter instead of the content edge)
+// and QFrame::NoFrame (Cocoa's frame painter requests a raster CGContext even for NoFrame, breaking GPU composition).
 class DelegateOwnedRowStyle final : public QProxyStyle {
 public:
     void drawControl(ControlElement element,
@@ -128,9 +122,6 @@ public:
         QPainter* painter,
         const QWidget* widget = nullptr) const override
     {
-        // NoFrame needs no native decoration. Cocoa's frame painter requires a raster
-        // CGContext even for this no-op, which is unavailable during GPU composition.
-        // zh_CN: NoFrame 无需原生边框；Cocoa 即使不画边框也索取光栅 CGContext，无法用于 GPU 合成。
         const auto* frame = qobject_cast<const QFrame*>(widget);
         if (element == CE_ShapedFrame && frame && frame->frameShape() == QFrame::NoFrame)
             return;
@@ -185,9 +176,7 @@ qreal lerp(qreal from, qreal to, qreal progress)
     return from + (to - from) * progress;
 }
 
-// Leading edge runs ahead, trailing edge lags — produces the directional
-// stretch-then-settle motion used by the moving selection indicator.
-// zh_CN: 前缘领先、后缘滞后，形成选中指示器的方向性拉伸-回弹动效。
+// Leading edge runs ahead and trailing edge lags to give the selection indicator a stretch-then-settle motion.
 qreal indicatorLeadingProgress(qreal progress)
 {
     return qBound(0.0, progress * 1.35, 1.0);
@@ -216,34 +205,27 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     setMouseTracking(true);
     setIndentation(16); // WinUI 3: 16px per level
     setItemsExpandable(true);
-    setRootIsDecorated(
-        false); // The delegate paints the chevron; native arrows off. zh_CN: 由 delegate 绘制 chevron，禁用原生展开箭头。
-    setAnimated(
-        false); // Custom reveal painting; Qt's animation delays child exposure. zh_CN: 自绘 reveal，避免 Qt 内置动画延迟暴露子项。
-    setExpandsOnDoubleClick(false); // Single-click expands; double-click off. zh_CN: 单击展开，禁用双击。
-    setHeaderHidden(true);          // Hide column headers. zh_CN: 隐藏列标题。
+    setRootIsDecorated(false); // Delegate paints the chevron.
+    setAnimated(false);        // Custom height reveal in drawRow() avoids delayed child exposure.
+    setExpandsOnDoubleClick(false);
+    setHeaderHidden(true);
 
     QTreeView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setItemDelegate(new DefaultTreeItemDelegate(this));
-    // Pixel scrolling so the wheel moves a fixed pixel step per notch (matches ListView),
-    // instead of ScrollPerItem's chunky per-row jumps. zh_CN: 像素级滚动，每个滚轮刻度滚动固定像素
-    //（与 ListView 一致），而非 ScrollPerItem 的整行跳动。
+    // Match ListView's fixed pixel step per wheel notch instead of ScrollPerItem's whole-row jumps.
     setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
-    // WinUI-style navigation can react on press, while itemClicked keeps the
-    // usual release-based activation contract.
+    // itemPressed enables press-time navigation while itemClicked preserves release activation.
     connect(this, &QAbstractItemView::pressed, this, [this](const QModelIndex& idx) { emit itemPressed(idx); });
     connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) { emit itemClicked(idx); });
 
-    // Header label
     m_headerLabel = new QLabel(this);
     m_headerLabel->setObjectName(QStringLiteral("fluentTreeViewHeader"));
     m_headerLabel->setIndent(::Spacing::Padding::ListItemHorizontal);
     m_headerLabel->hide();
 
-    // --- Fluent scroll bars ---
     m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(Qt::Vertical, this, verticalScrollBar(),
         QStringLiteral("fluentTreeViewVScrollBar"));
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &TreeView::syncFluentScrollBar);
@@ -252,7 +234,6 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
         QStringLiteral("fluentTreeViewHScrollBar"));
     connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, &TreeView::syncFluentHScrollBar);
 
-    // --- Overscroll bounce (shared controller) ---
     fluent::scrolling::OverscrollController::Hooks hooks;
     hooks.horizontalScrollBar = [this] { return horizontalScrollBar(); };
     hooks.scrollBar = [this] { return verticalScrollBar(); };
@@ -267,7 +248,6 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     m_overscroll = new fluent::scrolling::OverscrollController(viewport(), kDiscreteWheelStepPx, std::move(hooks),
         this);
 
-    // --- Selected indicator motion ---
     m_indicatorMotionAnim = new QVariantAnimation(this);
     m_indicatorMotionAnim->setDuration(themeAnimation().normal);
     m_indicatorMotionAnim->setEasingCurve(themeAnimation().decelerate);
@@ -276,10 +256,6 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
     connect(m_indicatorMotionAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         setIndicatorMotionProgress(value.toReal());
         if (viewport())
-            // The viewport may intentionally preserve a transparent parent surface.
-            // A partial repaint then cannot reliably erase the previous overlay frame
-            // on every backing-store implementation, leaving accent-colored trails.
-            // The transition is brief, so recompose the full viewport while it runs.
             viewport()->update(indicatorMotionDirtyRect());
     });
     connect(m_indicatorMotionAnim, &QVariantAnimation::finished, this, [this]() {
@@ -288,20 +264,12 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
             viewport()->update(indicatorMotionDirtyRect());
     });
 
-    // --- Expand / collapse reveal animation ---
-    // A single reversible animation drives the height reveal of the active
-    // subtree. Progress 0 = collapsed, 1 = fully expanded; m_animExpanding picks
-    // the direction. Collapse is deferred: rows stay laid out while the height
-    // animates closed, then the real collapse happens on finish.
-    // zh_CN: 单个可逆动画驱动子树高度展开；收起为延迟收起，先动画再真正折叠。
+    // Reversible height reveal (0 = collapsed, 1 = expanded); collapse stays laid out until finished.
     m_expandRevealAnim = new QVariantAnimation(this);
     m_expandRevealAnim->setDuration(kExpandRevealDuration);
     m_expandRevealAnim->setEasingCurve(themeAnimation().standard);
     connect(m_expandRevealAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant&) {
-        // Full-viewport repaint: the reveal slides rows below the subtree via a
-        // painter translate, so a partial region would tear against the rows whose
-        // untranslated rects fall outside it. zh_CN: 整块重绘——展开时子树下方的行用
-        // painter 平移绘制，局部重绘会与"未平移矩形落在区域外"的行撕裂。
+        // Full repaint: rows below the subtree translate in drawRow(), so partial updates would tear.
         if (viewport())
             viewport()->update();
     });
@@ -318,8 +286,7 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
         startExpandReveal(idx);
     });
     connect(this, &QTreeView::collapsed, this, [this](const QModelIndex& idx) {
-        // Programmatic / instant collapse: just clean up indicator + reveal state.
-        // Deferred animated collapse is handled in toggleExpanded().
+        // Instant collapse cleanup; deferred animated collapse finishes in toggleExpanded()/finalizeDeferredCollapse().
         if (m_animParent.isValid() && (m_animParent == idx || isDescendantOf(QModelIndex(m_animParent), idx))
             && !m_pendingCollapseFinalize) {
             clearExpandRevealState();
@@ -346,9 +313,8 @@ TreeView::TreeView(QWidget* parent) : QTreeView(parent)
 
 TreeView::~TreeView()
 {
-    // Detaching the model resets animation state. Do not expose that reset to
-    // callbacks whose Python wrapper has already entered destruction.
-    // zh_CN: 解绑模型会重置动效状态，析构时不向已进入销毁流程的 Python 包装器发信号。
+    // Suppress signals from animation/model reset and detach external model/delegate before ~QTreeView
+    // so PySide6/Shiboken teardown doesn't race Qt's internal disconnect order.
     blockSignals(true);
     if (m_indicatorMotionAnim)
         m_indicatorMotionAnim->stop();
@@ -356,11 +322,6 @@ TreeView::~TreeView()
         m_expandRevealAnim->stop();
     disconnectIndicatorMotionModel();
 
-    // Detach caller-owned Python model/delegate objects while Shiboken still
-    // retains their wrappers. QTreeView's base teardown can otherwise race the
-    // retained-reference cleanup on PySide6 6.2 for Windows.
-    // zh_CN: 在 Shiboken 仍保留包装器时先解除 Python model/delegate；避免
-    // PySide6 6.2 Windows 上 QTreeView 基类析构与引用清理交错。
     QTreeView::setItemDelegate(nullptr);
     QTreeView::setModel(nullptr);
 }
@@ -537,15 +498,14 @@ void TreeView::toggleExpanded(const QModelIndex& index)
     if (!index.isValid())
         return;
 
-    // Reverse an in-flight reveal on the same subtree for a continuous feel
-    // when the user clicks quickly. zh_CN: 同一子树动画进行中反向播放，保证快速点击连贯。
+    // Reverse an active reveal on the same subtree so rapid clicks stay continuous.
     if (m_animParent.isValid() && QModelIndex(m_animParent) == index && m_expandRevealAnim
         && m_expandRevealAnim->state() == QAbstractAnimation::Running) {
         if (m_animExpanding) {
-            startCollapseReveal(index); // was expanding → reverse to collapse
+            startCollapseReveal(index);
         } else {
             m_pendingCollapseFinalize = false;
-            startExpandReveal(index); // was collapsing → reverse to expand (still expanded)
+            startExpandReveal(index);
         }
         return;
     }
@@ -555,12 +515,12 @@ void TreeView::toggleExpanded(const QModelIndex& index)
 
     if (isExpanded(index)) {
         if (m_animEnabled && isVisible() && computeSubtreeHeight(index) > 0.0) {
-            startCollapseReveal(index); // deferred animated collapse
+            startCollapseReveal(index);
         } else {
             setExpanded(index, false);
         }
     } else {
-        setExpanded(index, true); // expand → triggers reveal via expanded()
+        setExpanded(index, true);
     }
 }
 
@@ -758,17 +718,9 @@ void TreeView::paintEvent(QPaintEvent* event)
         p.fillRect(viewport()->rect(), c.bgLayer);
         p.end();
     } else if (detail::shouldClearCompositedViewport(this)) {
-        // Background hidden under a REAL OS backdrop (Windows DWM/Acrylic, macOS vibrancy): keep the
-        // viewport transparent so the backdrop shows, erasing each paint (the backing store isn't
-        // auto-cleared on macOS, so scrolled/expanded rows would otherwise ghost on stale pixels).
-        // Gated on the typed CompositedTransparent mode, NOT bare WA_TranslucentBackground: backdrop-capable
-        // Windows keeps the top-level translucent in Normal mode too, and erasing there reveals BLACK
-        // (no backdrop) instead of the opaque chrome. With no real backdrop we skip the erase so the
-        // opaque chrome surface (bgCanvas) behind shows.
-        // zh_CN: 仅在「真实系统背景」(Windows DWM/Acrylic、macOS vibrancy) 下保持 viewport 透明并每帧擦除(macOS
-        // 后备缓冲不自动清除,否则滚动/展开行会重影)。用强类型 CompositedTransparent 判定,而非裸的半透明:支持背景的
-        // Windows 上 Normal 模式窗口同样半透明,此时擦成透明会露出黑色(无背景)而非不透明 chrome——这正是 Normal 下导航栏
-        // 「标题栏≠导航栏」的缝。无真实背景时跳过擦除,让背后不透明 chrome 表面(bgCanvas)透出。
+        // Clear stale pixels on real OS backdrops (macOS backing store doesn't auto-clear).
+        // Gate via shouldClearCompositedViewport() rather than WA_TranslucentBackground alone,
+        // because Normal-mode Windows windows also carry that flag and clearing them paints black.
         QPainter p(viewport());
         p.setCompositionMode(QPainter::CompositionMode_Source);
         p.fillRect(viewport()->rect(), Qt::transparent);
@@ -908,7 +860,7 @@ void TreeView::showEvent(QShowEvent* event)
     QTreeView::showEvent(event);
     updateViewportMargins();
     layoutHeader();
-    // Defer scrolling and sync to avoid a first-frame flash. zh_CN: 延迟滚动和同步，避免首帧闪缩。
+    // Defer initial scroll/sync until layout stabilizes to avoid a first-frame flash.
     QTimer::singleShot(0, this, [this]() {
         if (currentIndex().isValid()) {
             scrollTo(currentIndex(), QAbstractItemView::EnsureVisible);
@@ -949,11 +901,8 @@ void TreeView::wheelEvent(QWheelEvent* event)
 
 int TreeView::verticalOffset() const
 {
-    // Keep hit-testing / visualRect consistent with the overscroll shift. (QTreeView paints
-    // items from the scrollbar value rather than this offset, so the visible bounce is applied
-    // as a painter translate in drawRow.) m_overscroll may be null during base construction.
-    // zh_CN: 让命中测试/visualRect 与回弹位移一致；QTreeView 绘制按滚动条值而非此偏移，故可见的
-    // 回弹在 drawRow 里用画笔平移实现。构造期间 m_overscroll 可能尚未创建。
+    // Keep indexAt()/visualRect() aligned with the overscroll shift applied in drawRow();
+    // m_overscroll may be null while QTreeView queries offsets during construction.
     const qreal overscroll = m_overscroll ? m_overscroll->value() : 0.0;
     return QTreeView::verticalOffset() - qRound(overscroll);
 }
@@ -970,26 +919,20 @@ void TreeView::selectionChanged(const QItemSelection& selected, const QItemSelec
     syncCheckStatesWithSelection(selected, deselected);
     if (selected.indexes().isEmpty() && (!selectionModel() || selectionModel()->selectedIndexes().isEmpty()))
         clearIndicatorMotionState();
-    // Selecting the same current row again has no currentChanged signal.
-    // zh_CN: 重新选中仍为 current 的行时，不会再次发出 currentChanged。
+    // Re-selecting the current row emits no currentChanged(), so restore the indicator here.
     else if (!m_currentIndicatorIndex.isValid() && selectionModel() && selectionModel()->isSelected(currentIndex()))
         updateIndicatorMotionForIndex(currentIndex(), QModelIndex());
 }
 
 void TreeView::drawBranches(QPainter* /*painter*/, const QRect& /*rect*/, const QModelIndex& /*index*/) const
 {
-    // Skip native branch indicators; the delegate paints Fluent chevrons.
-    // zh_CN: 不绘制原生 branch 指示器 — delegate 自行绘制 Fluent 风格 chevron。
+    // Native branches suppressed; the delegate paints Fluent chevrons.
 }
 
 void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options, const QModelIndex& index) const
 {
-    // --- Overscroll bounce ---
-    // QTreeView positions items from the scrollbar value, not verticalOffset(), so the elastic
-    // overscroll is rendered here by shifting every painted row; the container background drawn
-    // in paintEvent stays put, so the rows visibly bounce within it.
-    // zh_CN: QTreeView 按滚动条值定位行（非 verticalOffset），故在此通过平移每一行来渲染弹性回弹；
-    // paintEvent 绘制的容器背景保持不动，行在其中可见地回弹。
+    // QTreeView positions rows from scrollbar value rather than verticalOffset(),
+    // so apply elastic bounce via painter translation while the container background stays put.
     const int overscrollDy = m_overscroll ? qRound(m_overscroll->value()) : 0;
     if (overscrollDy != 0)
         painter->translate(0, overscrollDy);
@@ -998,11 +941,7 @@ void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options, c
             painter->translate(0, -overscrollDy);
     });
 
-    // --- Height-based expand / collapse reveal ---
-    // The animating subtree is revealed by a growing clip window just below the
-    // parent; rows below the subtree translate to follow the window edge so the
-    // surrounding content slides smoothly instead of snapping.
-    // zh_CN: 通过紧贴父项下方逐渐展开的裁剪窗口实现高度展开；子树下方的行随窗口边缘平移，平滑滑动。
+    // Clip the animating subtree to its revealed height and slide rows below along with that edge.
     if (m_animParent.isValid() && m_expandRevealAnim && m_expandRevealAnim->state() == QAbstractAnimation::Running) {
         const QModelIndex parent = QModelIndex(m_animParent);
         const QRect parentRect = visualRect(parent);
@@ -1011,7 +950,6 @@ void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options, c
         const qreal slideUp = m_animSubtreeHeight * (1.0 - progress);
 
         if (index != parent && isDescendantOf(index, parent)) {
-            // Reveal window: only the portion above the growing boundary is shown.
             if (options.rect.top() >= boundaryY)
                 return;
             QRect clip = options.rect;
@@ -1023,7 +961,6 @@ void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options, c
             return;
         }
         if (index != parent && options.rect.top() >= parentRect.bottom()) {
-            // Rows below the subtree slide with the reveal edge.
             painter->save();
             painter->translate(0, -slideUp);
             QTreeView::drawRow(painter, options, index);
@@ -1045,9 +982,7 @@ void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options, c
 
 qreal TreeView::chevronRotation(const QModelIndex& index) const
 {
-    // The chevron of the animating parent tracks the reveal progress so the
-    // arrow rotates in lock-step with the expand/collapse motion.
-    // zh_CN: 动画父项的箭头跟随展开进度旋转，与展开/收起动作同步。
+    // Keep the animating parent's chevron synced with the height reveal progress.
     if (m_animParent.isValid() && QModelIndex(m_animParent) == index && m_expandRevealAnim
         && m_expandRevealAnim->state() == QAbstractAnimation::Running) {
         return qBound(0.0, m_expandRevealAnim->currentValue().toReal(), 1.0);
@@ -1726,15 +1661,11 @@ QRect TreeView::indicatorMotionDirtyRect() const
     if (!viewport())
         return {};
 
-    // A partial repaint cannot reconstruct pixels exposed from the parent surface.
-    // Recompose transparent previews completely so old accent frames cannot remain.
-    // zh_CN: 局部重绘无法恢复来自父级表面的像素；透明预览需完整重组，避免残留强调色轨迹。
+    // Transparent views recompose the full viewport so parent surfaces don't retain accent trails;
+    // opaque views only need the vertical band spanning the previous and current rows.
     if (!m_backgroundVisible)
         return viewport()->rect();
 
-    // The pill only ever travels within the vertical span of the previous and
-    // current rows; repaint that full-width band instead of the whole viewport.
-    // zh_CN: 指示器药丸只在前一行与当前行之间纵向移动，重绘这条整宽窄带即可。
     QRect band;
     if (m_currentIndicatorIndex.isValid())
         band = visualRect(QModelIndex(m_currentIndicatorIndex));
@@ -1790,16 +1721,11 @@ void TreeView::applyThemeStyle(bool refreshFonts)
         viewport()->setPalette(vpal);
     }
 
-    // Header label theme
     if (m_headerLabel) {
         const QColor headerColor = isEnabled() ? c.textPrimary : c.textDisabled;
         if (refreshFonts)
             m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-        // Color via the label's OWN style sheet rather than its palette: a palette WindowText color is
-        // dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the subtree
-        // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
-        // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
-        // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
+        // Style via the label's own stylesheet so ancestor QStyleSheetStyle rules won't override QPalette::WindowText.
         m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
                 .arg(headerColor.red())
                 .arg(headerColor.green())
@@ -1826,8 +1752,7 @@ void TreeView::layoutHeader()
 
 void TreeView::updateViewportMargins()
 {
-    int top =
-        2; // First-row margin; with the delegate bgRect inset it matches ListView spacing. zh_CN: 首行边距，配合 delegate bgRect inset 与 ListView 间距一致。
+    int top = 2; // Top margin aligns first row spacing with ListView alongside the delegate inset.
     if (m_headerLabel && !m_headerLabel->isHidden()) {
         top = m_headerLabel->sizeHint().height() + ::Spacing::Gap::Normal;
     }

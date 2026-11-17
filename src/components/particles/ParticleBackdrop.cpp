@@ -59,7 +59,7 @@ public:
                 pulses.end());
             ++frameRevision;
             if (frameOwner && requestFrame) {
-                // Copy before dispatch: the consumer may destroy either owner.
+                // Copy before calling because the callback may release or destroy this backdrop.
                 const auto notify = requestFrame;
                 notify();
             } else {
@@ -306,8 +306,7 @@ public:
             draw(painter, hues);
             applyFades(painter);
         } else if (isolated && hasFade()) {
-            // The caller supplies a private transparent target. Mask directly
-            // there; no full-size CPU image or per-frame texture upload.
+            // Isolated target is already private and transparent; mask in place without a temporary QImage.
             painter.save();
             draw(painter, hues);
             painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
@@ -513,8 +512,7 @@ ParticleBackdrop::ParticleBackdrop(QWidget* parent)
 }
 ParticleBackdrop::~ParticleBackdrop()
 {
-    // A child/external presentation owner may outlive this derived pimpl.
-    // Disconnect before QWidget teardown delivers Hide/destroyed callbacks.
+    // Disconnect external frame owner before QWidget teardown emits Hide/destroyed.
     d->timer.stop();
     QObject::disconnect(d->frameOwnerDestroyed);
     d->frameOwner.clear();

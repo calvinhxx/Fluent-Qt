@@ -20,8 +20,8 @@ class GallerySampleCard;
 enum class GalleryPreviewTheme { System, Light, Dark };
 
 /**
- * @brief Parsed, development-only Gallery preview command-line contract.
- * zh_CN: 解析后的开发期 Gallery 预览命令行契约。
+ * @brief Parsed, development-only Gallery preview command-line options.
+ * zh_CN: 开发期 Gallery 预览的命令行参数选项。
  */
 struct GalleryPreviewOptions {
     bool requested = false;

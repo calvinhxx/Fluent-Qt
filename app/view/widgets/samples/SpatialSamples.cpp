@@ -358,8 +358,7 @@ QVector<GallerySample> spatialViewSamples()
                 view->setCameraDistance(1200);
                 view->setZoom(0.9);
                 view->setMaximumTilt(QPointF(6, 12));
-                // Response time (140 ms), animation limit (60 fps), cache and Auto renderer use UILib defaults.
-                // See SpatialView.h for the full parameter contract.
+                // Response time (140 ms), animation limit (60 fps), cache, and Auto renderer use UILib defaults (see SpatialView.h).
 
                 // Both layers use the same size and data, making perspective easy to compare.
                 const auto makeLayer = [](const QString& title, const QString& caption) {

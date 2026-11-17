@@ -13,13 +13,8 @@ class QMouseEvent;
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent checkbox with animated check-state painting.
- * zh_CN: 带选中态动画的 Fluent 复选框。
- *
- * CheckBox keeps QCheckBox interaction semantics while drawing the box,
- * mixed state, hover treatment, and text spacing with Fluent design tokens.
- * zh_CN: CheckBox 保留 QCheckBox 的交互语义，并通过 Fluent 设计 token 自绘方框、
- * 半选状态、悬停反馈和文本间距。
+ * @brief Fluent check box with animated check and mixed states.
+ * zh_CN: 支持半选与选中态动画的 Fluent 复选框。
  */
 class CheckBox : public QCheckBox, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -73,7 +68,6 @@ public:
     bool hoverBackgroundEnabled() const { return m_hoverBackgroundEnabled; }
     void setHoverBackgroundEnabled(bool enabled);
 
-    // Size hints for the layout system. zh_CN: 提供给布局系统的尺寸提示。
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -95,10 +89,10 @@ private:
     void initAnimation();
 
     qreal m_checkProgress = 1.0;
-    int m_boxSize = 20;                    // Defaults to 20px. zh_CN: 默认 20px。
-    int m_boxMargin = 8;                   // Defaults to 8px. zh_CN: 默认 8px。
-    int m_textGap = 8;                     // Defaults to 8px. zh_CN: 默认 8px。
-    bool m_hoverBackgroundEnabled = false; // Hover fill off by default. zh_CN: 默认不启用 hover 背景。
+    int m_boxSize = 20;
+    int m_boxMargin = 8;
+    int m_textGap = 8;
+    bool m_hoverBackgroundEnabled = false;
     QPropertyAnimation* m_checkAnimation = nullptr;
     bool m_keyboardFocusVisible = false;
 };

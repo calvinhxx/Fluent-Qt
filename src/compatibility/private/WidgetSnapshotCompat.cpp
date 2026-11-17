@@ -80,8 +80,8 @@ void renderWidgetSnapshot(QPainter& painter, QWidget* widget, const QPoint& orig
         : widget->grab(captureRect);
     painter.save();
     painter.setClipRect(sourceRect.translated(origin), Qt::IntersectClip);
-    // grab() ignores the root widget mask; restore the ordinary render contract.
-    // zh_CN: grab() 忽略根控件遮罩，合成时恢复普通 render 的裁剪契约。
+    // grab() ignores the widget mask; reapply it during composition.
+    // zh_CN: grab() 会忽略根控件遮罩，合成时补上裁剪。
     if (!mask.isEmpty())
         painter.setClipRegion(mask.translated(origin), Qt::IntersectClip);
     painter.drawPixmap(origin + captureRect.topLeft(), snapshot);

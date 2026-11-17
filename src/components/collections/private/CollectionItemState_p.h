@@ -64,11 +64,7 @@ inline CollectionItemVisualStyle collectionItemVisualStyle(QStyle::State state, 
     return visual;
 }
 
-// Preserve the state bits supplied by Qt and add only the item-specific bits
-// that the collection view owns. Enabled is the sole normalized bit because
-// both migrated call sites already set or clear it explicitly.
-// zh_CN: 保留 Qt 提供的状态位，只补集合视图拥有的条目状态；Enabled 是唯一
-// 会被规范化的状态位，因为两个迁移点原本就显式设置或清除它。
+// Preserve Qt's state bits and apply collection-owned flags; Enabled is explicitly synced.
 inline void applyCollectionItemState(QStyle::State& state,
     bool enabled,
     bool selected,

@@ -15,14 +15,13 @@ class ParticleBackdropPrivate;
 class ParticleBackdropRenderAccess;
 
 /**
- * @brief CPU-default particle presets behind caller-composed content.
- * zh_CN: 在调用方组合的内容后方，用 CPU 绘制可切换预设的粒子背景。
- *
- * Uses ordinary QWidget child layouts. Hidden, clipped and reduced-motion
- * surfaces stop their timer; decorative interaction never takes keyboard focus.
- * zh_CN: 使用普通 QWidget 子布局；隐藏、完全裁剪或减少动态效果时停表，装饰交互不获取键盘焦点。
- * Defaults to FlowingRibbons, 240 particles and at most 30 frames per second.
- * zh_CN: 默认使用流动光带、240 个粒子，每秒最多调度 30 帧。
+ * @brief Animated particle backdrop widget using CPU rendering by default.
+ * Supports normal child widget layouts, pauses automatically when hidden, clipped, or under
+ * reduced-motion policies, and never steals keyboard focus during pointer interaction. Defaults to
+ * FlowingRibbons with 240 particles at up to 30 fps.
+ * zh_CN: 默认使用 CPU 绘制的动态粒子背景控件，可在其上正常放置子控件布局。
+ * 控件隐藏、被完全裁剪或系统开启减弱动效时会自动停止计时；鼠标交互不抢占键盘焦点。
+ * 默认效果为 FlowingRibbons，240 个粒子，帧率上限 30 fps。
  */
 class ParticleBackdrop : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -45,7 +44,7 @@ class ParticleBackdrop : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(QMarginsF fadeMargins READ fadeMargins WRITE setFadeMargins NOTIFY fadeMarginsChanged)
 
 public:
-    /** @brief Built-in CPU particle effects. zh_CN: 内置的 CPU 粒子特效。 */
+    /** @brief Built-in CPU particle presets. zh_CN: 内置粒子特效预设。 */
     enum Effect {
         FlowingRibbons, ///< Orbiting ribbons and sparks. zh_CN: 轨道光带与拖尾亮点。
         FloatingDots,   ///< Soft lights drifting upward. zh_CN: 缓慢向上漂浮的柔和光点。
@@ -53,7 +52,7 @@ public:
     };
     Q_ENUM(Effect)
 
-    /** @brief Background composition. zh_CN: 背景合成方式。 */
+    /** @brief Background fill mode. zh_CN: 背景填充模式。 */
     enum BackgroundMode { Transparent, Solid };
     Q_ENUM(BackgroundMode)
 
@@ -62,56 +61,48 @@ public:
 
     Effect effect() const;
     /**
-     * @brief Switches the effect, preserving settings and restarting its phase; invalid values are ignored.
-     * zh_CN: 切换特效并重置运动相位，保留其他设置；忽略无效值。
-     * Switching clears transient pointer and ripple state and never resumes paused motion.
-     * zh_CN: 切换时清除临时指针与涟漪状态，不会恢复已暂停的动效。
+     * @brief Switches the active preset, resets simulation phase, and clears transient ripples/pointer state.
+     * Preserves other settings and never resumes paused motion; invalid values are ignored.
+     * zh_CN: 切换粒子特效并重置运动相位，同时清除临时指针与涟漪状态；保留其他配置且不会自动恢复已暂停的动效，忽略无效值。
      */
     void setEffect(Effect effect);
 
     bool isAnimationEnabled() const;
     void setAnimationEnabled(bool enabled);
-    /** @brief Effective timer state after policy and visibility. zh_CN: 策略与可见性收敛后的实际计时状态。 */
+    /** @brief Whether the animation timer is currently running after visibility and motion policies. zh_CN: 综合可见性与动效策略后，计时器当前是否正在运行。 */
     bool isAnimating() const;
 
     /**
-     * @brief Permit an optional Spatial compositor to accelerate painting; false by default.
-     * zh_CN: 允许可选 Spatial 合成器加速绘制，默认关闭。
-     * This is a request, not an active-backend flag. Without a capable host it
-     * keeps CPU painting; no context, timer or OpenGL dependency is created.
-     * zh_CN: 此值是请求而非实际后端；无可用宿主时仍用 CPU，不创建上下文、计时器或 OpenGL 依赖。
+     * @brief Allows an optional Spatial compositor (ParticleLayer) to paint this widget on GPU; default false.
+     * Without an active compositor, rendering stays on CPU and no OpenGL context or timer is created.
+     * zh_CN: 允许可选的 Spatial 合成器（ParticleLayer）将本控件切换为 GPU 绘制，默认 false。
+     * 未接入合成器时仍使用 CPU 绘制，不会创建任何 OpenGL 上下文或额外计时器。
      */
     bool isGpuAccelerationEnabled() const;
     void setGpuAccelerationEnabled(bool enabled);
 
     qreal speed() const;
-    /** @brief Sets speed in [0, 4]; zero freezes motion. zh_CN: 设置 0 到 4 倍速度，零表示静止。 */
+    /** @brief Sets simulation speed multiplier in [0, 4]; 0 pauses motion. zh_CN: 设置速度倍率 [0, 4]；设为 0 表示静止。 */
     void setSpeed(qreal speed);
     int particleCount() const;
-    /**
-     * @brief Sets the particle count in [0, 960]; ribbon accents are independent.
-     * zh_CN: 设置粒子总数，范围 0 到 960；流动光带的光带、微粒与拖尾不计入此数量。
-     */
+    /** @brief Sets particle count in [0, 960]; FlowingRibbons ribbons and sparks are counted separately. zh_CN: 设置粒子数量 [0, 960]；FlowingRibbons 的光带与拖尾亮点不计入此数量。 */
     void setParticleCount(int count);
     int maximumFrameRate() const;
-    /** @brief Caps scheduled frames to [1, 60] per second. zh_CN: 将计划帧率限制为每秒 1 到 60 帧。 */
+    /** @brief Caps animation timer rate to [1, 60] fps. zh_CN: 将动画调度帧率限制在 [1, 60] fps。 */
     void setMaximumFrameRate(int framesPerSecond);
     bool isInteractive() const;
     void setInteractive(bool interactive);
     bool isPauseWhenInactive() const;
-    /** @brief Controls pausing on application deactivation. zh_CN: 控制应用失活时是否暂停。 */
+    /** @brief Whether to pause animation when the application becomes inactive. zh_CN: 应用切到后台失活时是否自动暂停动画。 */
     void setPauseWhenInactive(bool pause);
 
     BackgroundMode backgroundMode() const;
     void setBackgroundMode(BackgroundMode mode);
     QMarginsF fadeMargins() const;
-    /** @brief Sets nonnegative edge fade widths in logical pixels. zh_CN: 设置非负的边缘渐隐宽度，单位为逻辑像素。 */
+    /** @brief Sets non-negative edge fade widths in logical pixels. zh_CN: 设置非负的边缘渐隐宽度（逻辑像素）。 */
     void setFadeMargins(const QMarginsF& margins);
 
-    /**
-     * @brief Emits a decorative ripple in local coordinates when motion is allowed.
-     * zh_CN: 动效允许时，在局部坐标处产生装饰涟漪，最多同时保留三圈。
-     */
+    /** @brief Emits a decorative ripple at local coordinates when motion is allowed (up to 3 active). zh_CN: 在允许动效时于局部坐标处触发装饰涟漪（最多同时保留 3 个）。 */
     Q_INVOKABLE void triggerRipple(const QPointF& position);
     void onThemeUpdated() override;
 

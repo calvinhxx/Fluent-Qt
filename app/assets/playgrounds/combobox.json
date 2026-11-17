@@ -173,8 +173,8 @@
     36
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A drop-down list for selecting one item from a set of options.",
+    "zh": "从下拉列表中选择一项。"
   },
   "presets": [
     {

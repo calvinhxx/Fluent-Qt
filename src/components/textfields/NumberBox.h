@@ -20,13 +20,12 @@ class RepeatButton;
 namespace fluent::textfields {
 
 /**
- * @brief Numeric LineEdit with value bounds, expression input, and spin
- * buttons. zh_CN: 支持数值边界、表达式输入和步进按钮的数值输入框。
+ * @brief Numeric LineEdit with value bounds, expression evaluation, and spin buttons.
+ * zh_CN: 支持数值边界、表达式求值与步进按钮的数值输入框。
  *
- * NumberBox builds on LineEdit while exposing numeric formatting, small/large
- * increments, spin-button placement, compact metrics, and display precision.
- * zh_CN: NumberBox 基于 LineEdit，并暴露数值格式、小/大步进、步进按钮位置、
- * 紧凑布局参数和显示精度。
+ * Extends LineEdit with numeric formatting, small/large step increments,
+ * spin-button placement, compact metrics, and display precision.
+ * zh_CN: 基于 LineEdit 扩展数值格式化、大小步进、步进按钮布局模式、紧凑尺寸参数与显示精度。
  */
 class NumberBox : public LineEdit {
     Q_OBJECT
@@ -97,8 +96,8 @@ class NumberBox : public LineEdit {
         WRITE setSpinButtonRightMargin
         NOTIFY spinButtonRightMarginChanged)
     /**
-     * @brief Width reserved for compact spin buttons inside the input surface.
-     * zh_CN: 紧凑模式下输入表面为步进按钮预留的宽度。
+     * @brief Width reserved for compact spin buttons inside the input box.
+     * zh_CN: 紧凑模式下输入框内为步进按钮预留的宽度。
      */
     Q_PROPERTY(int compactSpinButtonReservedWidth
         READ compactSpinButtonReservedWidth
@@ -210,11 +209,10 @@ public:
      * zh_CN: 回滚当前拖拽，包括恢复开始时的空值。 */
     Q_SLOT void cancelScrub();
 
-    /** @brief Commits current text using the numeric bounds and expression policy.
-     * Invalid input retains its text and sets value to NaN; unchanged formatted
-     * text preserves the original precision. No external model is modified.
-     * zh_CN: 按数值范围和表达式规则提交当前文本；无效输入保留文本并将值设为 NaN，
-     * 未编辑的格式化文本保留原始精度，不修改外部模型。 */
+    /** @brief Parses and commits the current text using bounds and expression rules.
+     *
+     * Invalid input keeps its text and sets value to NaN; unchanged formatted text keeps its original precision.
+     * zh_CN: 按数值范围与表达式规则解析并提交当前文本；无效输入保留文本并将 value 设为 NaN，未修改的格式化文本保留原精度。 */
     void commitInput();
 
     QSize sizeHint() const override;
@@ -243,11 +241,11 @@ signals:
     void scrubbingEnabledChanged(bool enabled);
     void scrubSensitivityChanged(double sensitivity);
     void scrubbingChanged(bool scrubbing);
-    /** @brief One transaction starts; valueChanged still reports each live value.
-     * zh_CN: 一次编辑开始；valueChanged 仍报告每次实时值变化。 */
+    /** @brief Emitted when a drag scrub starts; valueChanged() continues to report live changes.
+     * zh_CN: 拖拽数值编辑开始时发出；过程中 valueChanged() 仍实时上报数值变化。 */
     void scrubStarted(double initialValue);
-    /** @brief Ends once; cancellation restores initialValue before this signal.
-     * zh_CN: 一次编辑结束；取消时在此信号之前恢复初始值。 */
+    /** @brief Emitted when a drag scrub ends; cancellation restores initialValue first.
+     * zh_CN: 拖拽数值编辑结束时发出；取消时会先恢复到 initialValue。 */
     void scrubFinished(double initialValue, double finalValue, bool canceled);
 
 protected:

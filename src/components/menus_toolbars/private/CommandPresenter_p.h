@@ -17,8 +17,7 @@ namespace fluent::menus_toolbars::detail {
 // Composite key handlers call this before consuming events that do not reach the button.
 void updateCommandFocusVisual(basicinput::Button* button, const QEvent* event);
 
-// Private QAction presenter shared by the inline row and its overflow surface.
-// The action is borrowed and remains the only source of command semantics.
+// Private QAction presenter shared by inline and overflow rows; QAction remains the source of truth.
 class CommandPresenter final : public basicinput::Button {
 public:
     enum class Mode {
@@ -63,8 +62,7 @@ private:
     QIcon m_displayIcon;
 };
 
-// The More button is not backed by a synthetic QAction. Keeping it separate
-// prevents it from leaking into the caller-owned semantic collections.
+// The More button has no synthetic QAction so it never enters caller action lists.
 class CommandMoreButton final : public basicinput::Button {
 public:
     explicit CommandMoreButton(QWidget* parent = nullptr);

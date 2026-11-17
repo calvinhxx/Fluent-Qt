@@ -54,8 +54,7 @@ QStringList presetLabels(const QLocale& locale)
         detail::dateTimeRangeText(locale, QT_TRANSLATE_NOOP("fluent::date_time::DateTimeRangePicker", "Past year"))};
 }
 
-// Reserve a trailing action inside the existing Fluent button surface.
-// zh_CN: 在现有 Fluent 按钮表面内为尾部清除操作预留空间。
+// Reserve space inside the Fluent button for the trailing clear action.
 class RangeDateInput final : public CalendarDatePicker {
 public:
     explicit RangeDateInput(QWidget* parent) : CalendarDatePicker(parent)
@@ -373,8 +372,7 @@ public:
         for (auto& text : m_localizedTexts) {
             if (!text.object)
                 continue;
-            // Refresh defaults without replacing application-authored text.
-            // zh_CN: 刷新默认文案，保留应用自行设置的文字。
+            // Refresh defaults without replacing custom text.
             const bool usesDefault = text.followsLocale
                 && text.object->property(text.property).toString() == text.previous;
             text.followsLocale = usesDefault;
@@ -1004,8 +1002,7 @@ void DateTimeRangePicker::openPicker()
 {
     if (!isEnabled() || !isVisible() || !m_popup || isPickerOpen())
         return;
-    // The popup is reparented to the overlay host, which can have another locale.
-    // zh_CN: 弹窗会重挂到可能使用其他区域设置的浮层宿主，保留范围控件的区域设置。
+    // Keep the range picker's locale after reparenting the popup to the overlay host.
     m_popup->setLocale(locale());
     m_editingStart = !m_startDateTime.isValid() || m_endDateTime.isValid();
     m_completingRange = !m_endDateTime.isValid();

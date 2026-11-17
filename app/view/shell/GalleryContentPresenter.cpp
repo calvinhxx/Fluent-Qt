@@ -171,8 +171,6 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
 
     const int existing = m_routeStackIndex.value(routeId, -1);
     if (existing >= 0) {
-        // Warm: the page is already built and resident — a pure show/hide (~1 ms).
-        // zh_CN: 已预热：页面已建好常驻——纯显示/隐藏（约 1ms）。
         beginNavigationWatch(routeId, false, requestId);
         touchResidentRoute(routeId);
         watchNavigationPage(m_contentHost->pageWidget(existing), 0);
@@ -181,9 +179,8 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
     }
 
     if (m_routeStackIndex.isEmpty()) {
-        // First / startup route, built behind the splash: build synchronously so the splash
-        // hands straight to real content with no skeleton flash.
-        // zh_CN: 首个/启动路由，在 splash 背后构建：同步建好，使 splash 直接交给真内容，无骨架闪烁。
+        // Build the initial startup route synchronously so the splash hands off directly to real content.
+        // zh_CN: 启动首路由在遮罩后同步构建，确保退场时直接切换到真实内容而无骨架闪烁。
         beginNavigationWatch(routeId, true, requestId);
         qint64 buildMs = 0;
         const int index = ensurePageBuilt(routeId, &buildMs);
@@ -196,9 +193,8 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
         return true;
     }
 
-    // Cold route during normal use: show the shimmer skeleton immediately, return from the
-    // input handler, then build the real page after the skeleton has painted one frame.
-    // zh_CN: 正常使用中的冷路由先显示 shimmer 骨架并退出输入处理，再在骨架绘制一帧后构建真页。
+    // Cold route: show the shimmer skeleton first and start incremental construction after one frame.
+    // zh_CN: 冷路由先展示骨架屏，待其完成首帧绘制后再分步构建真页。
     beginNavigationWatch(routeId, true, requestId);
     ensureSkeleton();
     switchToStackPage(m_skeletonIndex);
@@ -210,9 +206,7 @@ void GalleryContentPresenter::ensureSkeleton()
 {
     if (m_skeletonIndex >= 0)
         return;
-    // One reusable skeleton, appended once and then only ever shown/hidden. Appending keeps
-    // every route's recorded stack index stable. zh_CN: 单个可复用骨架，只追加一次，之后仅显示/隐藏。
-    // 追加保证每个路由记录的栈索引稳定。
+    // Append once so previously recorded page stack indices never shift.
     m_skeleton = new GalleryPageSkeleton;
     m_skeletonIndex = m_contentHost->count();
     m_contentHost->insertPage(m_skeletonIndex, m_skeleton);
@@ -262,12 +256,7 @@ void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
         return;
     }
 
-    // Prepare the reusable skeleton behind the startup splash, after Home is
-    // already current. It stays hidden (and its animation timer stays stopped)
-    // until a genuinely cold route is requested, removing Shimmer construction
-    // and first layout from the user's click path.
-    // zh_CN: Home 已成为当前页后，在启动 splash 背后预先准备可复用骨架。它保持隐藏，
-    // 动画定时器也不启动，直到真正请求冷路由；由此把 Shimmer 构造和首次布局移出点击路径。
+    // Pre-create the hidden skeleton behind the splash so the first cold route never stalls on Shimmer setup.
     ensureSkeleton();
 
     for (const QString& routeId : routeIds) {
@@ -276,7 +265,7 @@ void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
         m_prewarmQueue.enqueue(routeId);
     }
     if (m_prewarmQueue.isEmpty()) {
-        // Nothing to warm — still notify so the splash dismisses. zh_CN: 没有要预热的——仍通知，让 splash 关闭。
+        // Notify even when empty so the splash screen can dismiss.
         const QPointer<GalleryContentPresenter> guard(this);
         emit prewarmProgress(0, 0);
         if (guard)
@@ -299,8 +288,7 @@ void GalleryContentPresenter::setPrewarmPaused(bool paused)
     if (m_prewarmPaused == paused)
         return;
     m_prewarmPaused = paused;
-    // Resuming re-kicks the pump only if there is still work; a drained queue stays finished so we
-    // never re-emit prewarmFinished. zh_CN: 恢复时仅在仍有待预热项时重启泵；已排空的队列保持完成，绝不重复发 prewarmFinished。
+    // Resume only when work remains so an empty queue never re-emits prewarmFinished.
     if (!paused && !m_prewarmQueue.isEmpty())
         scheduleNextPrewarm();
 }
@@ -310,19 +298,14 @@ void GalleryContentPresenter::scheduleNextPrewarm()
     if (m_prewarmScheduled || m_prewarmPaused)
         return;
     m_prewarmScheduled = true;
-    // One sample factory per turn, followed by a separate first-layout turn. Never process
-    // events recursively inside a factory: ownership and navigation stay non-reentrant.
-    // zh_CN: 每轮一个示例工厂，首次布局单独一轮；不在工厂内递归处理事件，保证所有权和导航不重入。
+    // Build one sample per turn without nested event loops so ownership and navigation stay non-reentrant.
+    // zh_CN: 每轮事件循环只构建一个示例，且不递归处理事件，保证页面所有权与导航状态不重入。
     QTimer::singleShot(0, this, [this]() {
         m_prewarmScheduled = false;
-        // Paused after this tick was queued (user grabbed the window): skip the build and wait —
-        // setPrewarmPaused(false) re-kicks the pump. zh_CN: 排队后才被暂停（用户抓住了窗口）：跳过本次建页等待，
-        // 由 setPrewarmPaused(false) 重启泵。
         if (m_prewarmPaused)
             return;
 
-        // Skip anything already built (e.g. the user reached it first), then warm the next.
-        // zh_CN: 跳过已建好的（如用户先到达的），再预热下一个。
+        // Skip routes already built (e.g. if the user navigated to one before prewarm reached it).
         while (!m_prewarmQueue.isEmpty() && m_routeStackIndex.contains(m_prewarmQueue.head())) {
             m_prewarmQueue.dequeue();
             ++m_prewarmDone;
@@ -492,12 +475,8 @@ void GalleryContentPresenter::connectPageNavigation(QWidget* page)
 
 qint64 GalleryContentPresenter::switchToStackPage(int targetIndex)
 {
-    // A pure show/hide of an already-built, already-laid-out page: ~1ms. We deliberately
-    // do NOT cross-dissolve — that needs a full-page grab() of the outgoing page, which
-    // costs ~0.5s when leaving a heavy live-demo page (e.g. Home) and was the last source
-    // of click jank once builds moved to startup.
-    // zh_CN: 对已建好、已布局的页面做纯显示/隐藏：约 1ms。刻意不做交叉淡化——那需要 grab() 旧页整页，
-    // 离开重型 live demo 页（如 Home）时要约 0.5s，是建页移到启动后最后的点击卡顿来源。
+    // Switch directly without cross-fade; grabbing heavy live-demo pages like Home takes ~500 ms.
+    // zh_CN: 直接切换不做交叉淡化，避免离屏抓取首页等重型实时示例页面带来约 0.5 秒卡顿。
     const int fromIndex = m_contentHost->currentIndex();
     QElapsedTimer switchTimer;
     switchTimer.start();

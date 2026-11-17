@@ -447,17 +447,10 @@ public:
     {
         if (!q)
             return;
-        // Reconcile the nested scroll viewport after the popup backing store
-        // and native geometry are live. Before exposure, QScrollArea can still
-        // report its default viewport width rather than the flyout card width.
-        // zh_CN: 弹出层 backing store 与原生几何生效后再校准嵌套滚动视口；
-        // 显示前 QScrollArea 仍可能报告默认视口宽度，而不是 Flyout 卡片宽度。
+        // Before exposure QScrollArea can report its default viewport width;
+        // relayout once the popup backing store is live, then queue another pass
+        // after an as-needed vertical scrollbar gutter settles.
         layoutPresentation(true);
-        // Let QAbstractScrollArea settle an as-needed vertical scrollbar, then
-        // reconcile once more so the fixed content never creates horizontal
-        // range behind that gutter.
-        // zh_CN: 等按需垂直滚动条完成布局后再校准一次，避免固定内容宽度
-        // 在沟槽后方产生水平滚动范围。
         queueHostRelayout();
         if (showMode == CommandBarFlyout::ShowMode::Standard || keyboardInteractive) {
             enterKeyboardMode();
@@ -1011,12 +1004,8 @@ private:
             const int height = dynamic_cast<CommandPresenter*>(widget) ? kCommandTargetExtent : kSeparatorExtent;
             widget->setGeometry(0, y, width, height);
             widget->show();
-            // A hidden popup can receive a theme or layout-direction refresh
-            // before its scroll viewport is exposed. Explicitly invalidate
-            // each row when it becomes visible so the custom overflow text
-            // paint is not left with the pre-open backing-store contents.
-            // zh_CN: 隐藏的弹出层可能在滚动视口显示前收到主题或布局方向刷新；
-            // 行重新可见时显式失效，避免自绘溢出文本沿用打开前的 backing store。
+            // Hidden popups can receive theme/RTL updates before the scroll viewport
+            // is exposed; force row repaint on show so custom overflow text is fresh.
             widget->update();
             y += height;
         }
@@ -1029,10 +1018,8 @@ private:
         QVector<FocusTarget> result;
         const auto appendAction = [this, &result](QAction* action) {
             QWidget* widget = primaryPresenters.value(action);
-            // A destroyed borrowed action can remain in the previous
-            // inline projection until the queued presenter rebuild. The
-            // presenter map is cleared first, so use it as the lifetime
-            // guard before reading QAction state.
+            // The model drops destroyed QActions before the queued presenter rebuild runs;
+            // check the presenter map first so focus tracking never reads a dead pointer.
             if (!action || !widget || action->isSeparator() || !widget->isVisible() || !action->isVisible()
                 || !action->isEnabled()) {
                 return;
@@ -1578,8 +1565,7 @@ void CommandBarFlyout::showAt(QWidget* anchor)
     }
 
     setAnchor(anchor);
-    // A closing flyout is still visible; let Popup::open() reverse its transition.
-    // zh_CN: 退场中的浮层仍可见，交给 Popup::open() 中断退场并重新打开。
+    // If a closing flyout is still visible, Popup::open() reverses its transition.
     if (isOpen()) {
         d->recomputePresentation(CommandBarFlyoutPrivate::RecomputeReason::OpenStateChange);
         move(computePosition());

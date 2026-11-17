@@ -746,8 +746,7 @@ QSize StackView::minimumSizeHint() const
 
 void StackView::onThemeUpdated()
 {
-    // Duration tokens are theme-independent; only the painted surface refreshes.
-    // zh_CN: 时长 token 不随主题变化，这里只需刷新绘制表面。
+    // Duration tokens are theme-independent; only repaint the surface.
     update();
 }
 
@@ -1253,9 +1252,7 @@ void StackView::setGraphicsOpacity(QWidget* item, qreal opacity, QPointer<QGraph
     if (!item)
         return;
     auto* effect = new QGraphicsOpacityEffect(item);
-    // Skip the effect's direct-source path at full opacity: QWidget::render
-    // otherwise applies a nested effect's offset twice before its cache exists.
-    // zh_CN: 完全不透明时绕过特效，避免缓存建立前嵌套特效的坐标被重复应用。
+    // Disable the effect at opacity 1.0 so QWidget::render won't double-offset nested effects before caching.
     connect(effect, &QGraphicsOpacityEffect::opacityChanged, effect, [effect](qreal value) {
         effect->setEnabled(value < 1.0);
     });

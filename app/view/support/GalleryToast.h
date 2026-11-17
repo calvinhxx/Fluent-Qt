@@ -10,13 +10,9 @@ class QWidget;
 namespace fluent::gallery {
 
 /**
- * @brief Applies Gallery placement policy to the reusable UILib Toast.
- * zh_CN: 在 anchor 所属窗口上弹出一个短暂的半透明状态提示 toast。
- *
- * Visible text remains application-owned while severity, animation, lifecycle,
- * replacement, and host tracking are provided by fluent::status_info::Toast.
- * zh_CN: toast 在标题栏下方（顶部居中）下滑淡入，短暂停留后淡出并自销毁；它是轻盈的半透明胶囊
- * （后面的窗口内容会透出），对鼠标透明；同窗口的操作反馈原地更新，避免连续点击堆叠。
+ * @brief Shows a transient Gallery Toast positioned below the title bar on @p anchor's window.
+ * Visible text is caller-supplied while severity, animation, and replacement follow fluent::status_info::Toast.
+ * zh_CN: 在 @p anchor 所属窗口标题栏下方弹出半透明状态提示 Toast；文案由调用方传入，样式、动效与原地替换由 fluent::status_info::Toast 统一处理。
  */
 void showGalleryToast(QWidget* anchor,
     const QString& message,

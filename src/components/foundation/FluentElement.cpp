@@ -61,8 +61,6 @@ bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
 
 } // namespace
 
-// --- FluentElement lifetime management. zh_CN: FluentElement 生命周期管理。---
-
 FluentElement::FluentElement() : d_ptr(nullptr)
 {
     FluentThemeManager::instance()->elements.insert(this);
@@ -73,8 +71,6 @@ FluentElement::~FluentElement()
     FluentThemeManager::instance()->elements.remove(this);
     delete d_ptr;
 }
-
-// --- Static global management. zh_CN: 静态全局管理。---
 
 void FluentElement::setTheme(Theme theme)
 {
@@ -137,8 +133,6 @@ bool FluentElement::effectiveThemeUsesDarkAppearance() const
     return themeUsesDarkAppearance(effectiveTheme());
 }
 
-// --- Token accessors. zh_CN: 数据获取实现。---
-
 FluentElement::Colors FluentElement::themeColors() const
 {
     return themeColorsRef();
@@ -152,8 +146,7 @@ bool FluentElement::setThemeOverrides(const QJsonObject& overrides)
         d_ptr = new FluentElementPrivate;
     d_ptr->overrides = overrides;
     d_ptr->registryRevision = -1;
-    // Callbacks may destroy this element; do not access members afterwards.
-    // zh_CN: 回调可能销毁当前元素，调用后不再访问成员。
+    // onThemeUpdated() may destroy this element; do not access members afterward.
     if (auto* widget = dynamic_cast<QWidget*>(this)) {
         widget->updateGeometry();
         widget->update();
@@ -271,12 +264,8 @@ QColor FluentElement::themeBackdrop(bool active) const
 {
     const Colors& c = themeColorsRef();
     if (active)
-        return c.bgCanvas; // Standard chrome tint, consistent with the rest of the surfaces.
-    // Inactive: wash the canvas tint most of the way toward the content layer so the chrome
-    // visibly flattens/lightens when the window loses focus (cross-platform stand-in for
-    // Mica's inactive fallback — no wallpaper tint, but a clear active/inactive cue).
-    // zh_CN: 非激活：把 canvas 色调大幅推向内容层，使窗口失焦时 chrome 明显变扁/变浅
-    //（跨平台替代 Mica 非激活回退——没有壁纸着色，但有清晰的激活/非激活区分）。
+        return c.bgCanvas;
+    // Inactive windows blend 70% toward bgLayer so chrome visibly dims on focus loss (Mica inactive fallback).
     constexpr qreal t = 0.7;
     return QColor::fromRgbF(c.bgCanvas.redF() + (c.bgLayer.redF() - c.bgCanvas.redF()) * t,
         c.bgCanvas.greenF() + (c.bgLayer.greenF() - c.bgCanvas.greenF()) * t,

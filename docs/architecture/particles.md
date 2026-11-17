@@ -48,37 +48,35 @@ it does not discover or load binary plugins.
 
 ## Ownership and motion
 
-The caller owns the session, plugin, and produced widgets. A requested QWidget
-parent owns its child normally; attaching an existing backdrop never reparents
-it. Keep unparented Python wrappers alive. A session or plugin must not belong
-to the QObject ancestry below a tracked backdrop.
+The caller owns the session, plugin, and created widgets. A parent widget owns
+its children as usual in Qt; attaching an existing backdrop keeps its current
+parent. Keep Python references to any unparented wrappers. Do not parent a
+session or plugin under a backdrop it tracks.
 
-The host is a borrowed context, not the lifetime owner of the session. As with
-PluginManager, a destroyed host becomes null; explicitly deactivate the session
-or give it an appropriate QObject parent to tie its lifetime to the application.
+The host pointer is non-owning; if the host is destroyed, its reference clears
+automatically. Deactivate the session explicitly or parent it to an application
+QObject to match the scope lifetime.
 
-Deactivation pauses tracked backdrops through an internal gate. It does not
-change `animationEnabled`, the effect, speed, particle count, child content, or
-simulation phase, so a preference the application changes while the session is
-inactive is kept. Reactivating or destroying the session removes its pause.
-When several sessions track one backdrop, it runs only after every one of them
-has removed its pause. All lifecycle operations run on QApplication's GUI thread.
+Deactivating a session pauses its tracked backdrops without modifying
+`animationEnabled`, the active effect, speed, particle count, child widgets, or
+simulation phase. Reactivating or destroying the session resumes playback (if
+multiple sessions track the same backdrop, all of them must be active for it
+to run). All lifecycle methods run on the GUI thread.
 
-Visibility, clipping, inactive-window handling, High Contrast, and reduced or
-disabled motion continue to gate the component's existing timer. Decoration
-does not acquire keyboard focus; child controls keep their ordinary input and
-accessibility semantics.
+Visibility, clipping, window activation, High Contrast, and motion policy
+settings continue to drive the particle timer as usual. Backdrops do not accept
+keyboard focus, leaving child controls' input and accessibility intact.
 
 ## Dependencies
 
 The implementation lives in `src/components/particles` (`fluent::particles`), and
-`plugin/Particles/CMakeLists.txt` owns its target. The base `FluentQt::FluentQt`
-library contains no particle code; themes and the shared motion policy stay in
-it. Dependencies run one way: Spatial → Particles → Plugins → FluentQt.
+`plugin/Particles/CMakeLists.txt` owns its target. The core `FluentQt::FluentQt`
+library contains no particle code. Dependencies run one way: Spatial → Particles →
+Plugins → FluentQt.
 
-Gallery, PySide6 and Spatial builds turn Particles on automatically. Spatial's
-`ParticleLayer` borrows a backdrop's state and an existing OpenGL context; if
-acceleration fails, drawing returns to the CPU without restarting the effect.
+Gallery, PySide6, and Spatial builds enable Particles automatically. Spatial's
+`ParticleLayer` renders a caller-managed backdrop on an existing OpenGL context,
+falling back to CPU painting on failure while keeping the animation running.
 The installed-package CI integration requests `COMPONENTS Particles` and checks
 that the base package contains no particle headers or targets.
 

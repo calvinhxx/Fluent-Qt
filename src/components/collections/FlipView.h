@@ -15,42 +15,40 @@ class QPropertyAnimation;
 namespace fluent::collections {
 
 /**
- * @brief Fluent carousel that presents one item at a time.
- * zh_CN: 一次展示一个 item 的 Fluent 轮播视图。
- *
- * FlipView manages previous/next navigation, orientation, animated transitions,
- * and optional page indicators while leaving item content to the model/delegate path.
- * zh_CN: FlipView 管理上一项/下一项导航、方向、过渡动画和可选页码指示器，
- * item 内容仍由 model/delegate 路径提供。
+ * @brief Fluent carousel container that displays one QWidget page at a time.
+ * Manages previous/next navigation buttons, horizontal or vertical orientation,
+ * slide transitions, wheel/trackpad gestures, and optional page indicator dots.
+ * zh_CN: 每次展示单个 QWidget 页面的 Fluent 轮播容器。
+ * 负责前后翻页按钮、横向/纵向切换、滑动转场动画、滚轮/触控板手势以及可选页码指示点。
  */
 class FlipView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Index of the currently visible item.
-     * zh_CN: 当前可见条目的索引。
+     * @brief Index of the currently displayed page (-1 when empty).
+     * zh_CN: 当前显示页面的索引（无页面时为 -1）。
      */
     Q_PROPERTY(int currentIndex READ currentIndex WRITE setCurrentIndex NOTIFY currentIndexChanged)
     /**
-     * @brief Primary layout or motion orientation.
-     * zh_CN: 主要布局或运动方向。
+     * @brief Navigation and slide direction (Horizontal or Vertical).
+     * zh_CN: 翻页与滑动方向（横向或纵向）。
      */
     Q_PROPERTY(Qt::Orientation orientation READ orientation WRITE setOrientation NOTIFY orientationChanged)
     /**
-     * @brief Whether previous and next navigation buttons are visible.
-     * zh_CN: 上一项和下一项导航按钮是否可见。
+     * @brief Whether previous/next navigation buttons appear on hover.
+     * zh_CN: 悬停时是否显示上一页/下一页按钮。
      */
     Q_PROPERTY(bool showNavigationButtons
         READ showNavigationButtons
         WRITE setShowNavigationButtons
         NOTIFY showNavigationButtonsChanged)
     /**
-     * @brief Whether the page indicator is visible.
-     * zh_CN: 页码指示器是否可见。
+     * @brief Whether the page indicator dots are visible.
+     * zh_CN: 是否显示页码指示点。
      */
     Q_PROPERTY(bool showPageIndicator READ showPageIndicator WRITE setShowPageIndicator NOTIFY showPageIndicatorChanged)
     /**
      * @brief Current slide transition offset in pixels.
-     * zh_CN: 当前滑动转场偏移，单位为像素。
+     * zh_CN: 当前滑动过渡的像素偏移量。
      */
     Q_PROPERTY(qreal slideOffset READ slideOffset WRITE setSlideOffset)
 
@@ -62,43 +60,41 @@ public:
 
     void onThemeUpdated() override;
 
-    // ── Page management. zh_CN: 页面管理 ──
     void addPage(QWidget* page);
     /**
-     * @brief Appends a page with an explicit release policy.
-     * zh_CN: 使用显式释放策略追加页面。
+     * @brief Appends a page widget with an explicit ownership policy.
+     * zh_CN: 按指定所有权策略追加页面控件。
      */
     bool addPage(QWidget* page, WidgetOwnership ownership);
     void insertPage(int index, QWidget* page);
     /**
-     * @brief Inserts a page with an explicit release policy.
-     * zh_CN: 使用显式释放策略插入页面。
+     * @brief Inserts a page widget at index with an explicit ownership policy.
+     * zh_CN: 按指定所有权策略在 index 处插入页面控件。
      */
     bool insertPage(int index, QWidget* page, WidgetOwnership ownership);
     /**
-     * @brief Legacy removal that transfers the page to the caller.
-     * zh_CN: 兼容旧行为，移除页面并将其转交给调用方。
+     * @brief Legacy removal that detaches the page without deleting it (ownership returns to caller).
+     * zh_CN: 兼容旧接口：移除页面但不删除，将其交还给调用方。
      */
     void removePage(int index);
     /**
-     * @brief Removes a page and applies its configured ownership policy.
-     * zh_CN: 移除页面并执行其已配置的所有权策略。
+     * @brief Removes the page at index and disposes of it according to its ownership policy.
+     * zh_CN: 移除指定索引的页面，并按其配置的所有权策略释放或交还。
      */
     bool releasePage(int index);
     /**
-     * @brief Removes a page without deleting it and transfers it to the caller.
-     * zh_CN: 移除页面但不删除，并将其转交给调用方。
+     * @brief Removes and returns the page at index without deleting it.
+     * zh_CN: 移除并返回指定索引的页面控件，不执行删除。
      */
     QWidget* takePage(int index);
     QWidget* pageAt(int index) const;
     int pageCount() const;
     /**
-     * @brief Returns the configured release policy for a hosted page.
-     * zh_CN: 返回托管页面已配置的释放策略。
+     * @brief Returns the ownership policy configured for the page at index.
+     * zh_CN: 返回指定索引页面的所有权策略。
      */
     WidgetOwnership pageOwnershipAt(int index) const;
 
-    // ── Properties. zh_CN: 属性 ──
     int currentIndex() const { return m_currentIndex; }
     void setCurrentIndex(int index);
 
@@ -119,7 +115,6 @@ public:
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
-    // ── Navigation. zh_CN: 导航 ──
     void goNext();
     void goPrevious();
 
@@ -188,13 +183,13 @@ private:
     bool m_prevBtnPressed = false;
     bool m_nextBtnPressed = false;
 
-    // Wheel / trackpad input. zh_CN: 滚轮/触控板。
+    // Wheel / trackpad input
     QElapsedTimer m_wheelCooldown;
-    int m_gestureAccum = 0;         // Phase-based accumulation. zh_CN: phase-based 累积。
-    bool m_gestureConsumed = false; // Phase-based gesture consumed. zh_CN: phase-based 手势已消费。
-    int m_pendingFlipDir = 0; // Flip queued during animation (-1=prev, 0=none, 1=next). zh_CN: 动画期间排队的翻页方向。
-    int m_npAccum = 0;        // NoScrollPhase cluster accumulation. zh_CN: NoScrollPhase cluster 累积。
-    bool m_npConsumed = false; // Current NoScrollPhase cluster consumed. zh_CN: NoScrollPhase 当前 cluster 已消费。
+    int m_gestureAccum = 0;         // Phase-based gesture accumulation
+    bool m_gestureConsumed = false; // Current phase gesture already flipped
+    int m_pendingFlipDir = 0;       // Queued flip during animation (-1 prev, 0 none, 1 next)
+    int m_npAccum = 0;              // NoScrollPhase cluster accumulation
+    bool m_npConsumed = false;      // Current NoScrollPhase cluster already flipped
     bool m_destroying = false;
 };
 

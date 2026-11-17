@@ -10,8 +10,7 @@ class QPainter;
 namespace fluent::particles {
 class ParticleBackdrop;
 
-// Backend-neutral bridge for optional modules. Not installed.
-// The particle implementation still owns the only simulation and its visibility policy.
+// Internal bridge for optional GPU compositors; simulation and visibility policy stay in ParticleBackdrop.
 class ParticleBackdropRenderAccess {
 public:
     static bool claim(ParticleBackdrop* backdrop, QObject* owner, std::function<void()> requestFrame);
@@ -21,8 +20,7 @@ public:
     static bool isInViewport(const ParticleBackdrop* backdrop);
     static void paintIsolated(ParticleBackdrop* backdrop, QPainter& painter);
 
-    // Lifecycle pauses keep public settings. Each owner removes only its own pause;
-    // destroying the owner removes it too.
+    // Per-owner pause gate that preserves public settings and auto-lifts when owner is destroyed.
     static void suspend(ParticleBackdrop* backdrop, QObject* owner);
     static void resume(ParticleBackdrop* backdrop, const QObject* owner);
     static bool isSuspendedBy(const ParticleBackdrop* backdrop, const QObject* owner);

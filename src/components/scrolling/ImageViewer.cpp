@@ -35,8 +35,7 @@ constexpr qreal kPanStep = 48.0;
 constexpr qreal kPanTolerance = 0.5;
 constexpr int kChromeMargin = 12;
 constexpr qint64 kNativeZoomPinchSuppressionMs = 350;
-// Browser-style steps used by zoomIn() / zoomOut(), the toolbar and the keyboard.
-// zh_CN: zoomIn() / zoomOut()、工具条和键盘使用的浏览器式缩放档位。
+// Browser-style presets used by zoomIn()/zoomOut(), the toolbar, and keyboard shortcuts.
 constexpr std::array<qreal, 13> kZoomPresets = {0.1, 0.25, 1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0,
     10.0};
 
@@ -72,7 +71,6 @@ ImageViewer::ImageViewer(QWidget* parent)
         updateAnimationFrame(value.toReal());
     });
     // QVariantAnimation skips valueChanged when a zero-length run repeats the previous end value.
-    // zh_CN: 零时长动画的终值与上次相同时，QVariantAnimation 不会发出 valueChanged。
     connect(m_viewAnimation, &QVariantAnimation::finished, this, [this]() { updateAnimationFrame(1.0); });
 
     m_zoomBar = new ImageViewerZoomBar(
@@ -105,8 +103,6 @@ ImageViewer::~ImageViewer()
     if (m_viewAnimation)
         m_viewAnimation->stop();
 }
-
-// ── Image. zh_CN: 图片 ─────────────────────────────────────────────────────
 
 void ImageViewer::setPixmap(const QPixmap& pixmap)
 {
@@ -158,8 +154,6 @@ qreal ImageViewer::fitZoomFactor() const
         return 1.0;
     return std::min(width() / m_imageSize.width(), height() / m_imageSize.height());
 }
-
-// ── Properties. zh_CN: 属性 ────────────────────────────────────────────────
 
 void ImageViewer::setZoomFactor(qreal factor)
 {
@@ -279,8 +273,6 @@ void ImageViewer::setTransformationMode(Qt::TransformationMode mode)
     emit transformationModeChanged(m_transformationMode);
 }
 
-// ── Commands. zh_CN: 命令 ──────────────────────────────────────────────────
-
 void ImageViewer::zoomIn(bool animated)
 {
     stepZoom(true, animated, ChangeSource::Program);
@@ -343,8 +335,6 @@ QSize ImageViewer::minimumSizeHint() const
     return QSize(120, 80);
 }
 
-// ── View geometry. zh_CN: 视图几何 ─────────────────────────────────────────
-
 bool ImageViewer::hasImage() const
 {
     return !m_pixmap.isNull() && m_imageSize.width() > 0.0 && m_imageSize.height() > 0.0;
@@ -362,8 +352,7 @@ QPointF ImageViewer::imageCenter() const
 
 qreal ImageViewer::effectiveMinZoom() const
 {
-    // The fit factor stays reachable even when it is below minZoomFactor.
-    // zh_CN: 即使适应比例低于 minZoomFactor，也保证可以到达。
+    // Keep the fit factor reachable even if it is below minZoomFactor.
     return hasImage() ? std::min(m_minZoomFactor, fitZoomFactor()) : m_minZoomFactor;
 }
 
@@ -383,8 +372,7 @@ QPointF ImageViewer::clampedCenter(qreal zoom, const QPointF& center) const
 {
     if (!hasImage())
         return QPointF();
-    // An axis that fits stays centered; otherwise the image edges never enter the viewport.
-    // zh_CN: 能完整放下的轴保持居中；否则图片边缘不会进入视口内侧。
+    // Center axes that fit inside the viewport; clamp larger axes so image edges never enter the viewport.
     const auto clampAxis = [zoom](qreal extent, qreal view, qreal value) {
         if (view <= 0.0 || extent * zoom <= view)
             return extent / 2.0;
@@ -436,8 +424,6 @@ qreal ImageViewer::presetStep(bool zoomIn) const
     return low;
 }
 
-// ── View changes. zh_CN: 视图变更 ──────────────────────────────────────────
-
 void ImageViewer::applyView(qreal zoom, const QPointF& center, FitMode mode, ChangeSource source)
 {
     const qreal targetZoom = clampedZoom(zoom);
@@ -450,8 +436,7 @@ void ImageViewer::applyView(qreal zoom, const QPointF& center, FitMode mode, Cha
 
     const bool couldZoomIn = m_zoomFactor < effectiveMaxZoom();
     const bool couldZoomOut = m_zoomFactor > effectiveMinZoom();
-    // Assign the whole view before notifying so slots read a consistent state.
-    // zh_CN: 先写入完整视图再通知，确保槽函数读取到一致的状态。
+    // Commit all state before emitting signals so slot listeners read consistent geometry.
     m_zoomFactor = targetZoom;
     m_viewCenter = targetCenter;
     m_fitMode = mode;
@@ -483,7 +468,7 @@ void ImageViewer::zoomAround(qreal factor, const QPointF& viewportAnchor, bool a
     if (sameZoom(target, m_zoomFactor))
         return;
 
-    // Keep the image point under the anchor fixed. zh_CN: 保持锚点下的图片点不动。
+    // Keep the image point under the anchor fixed.
     const QPointF imageAnchor = mapToImage(viewportAnchor);
     const QPointF center = imageAnchor - (viewportAnchor - viewportCenter()) / target;
     if (animated) {
@@ -565,8 +550,7 @@ void ImageViewer::updateAnimationFrame(qreal progress)
     }
     const qreal from = std::max(m_animationFrom.zoom, 1e-6);
     const qreal to = std::max(m_animationTo.zoom, 1e-6);
-    // Interpolate zoom geometrically so equal steps feel equally fast.
-    // zh_CN: 缩放按几何插值，使相同倍率的变化速度一致。
+    // Interpolate zoom geometrically so equal scale steps feel uniform in speed.
     const qreal zoom = from * std::pow(to / from, progress);
     const QPointF center = m_animationAnchored
         ? m_animationImageAnchor - (m_animationAnchor - viewportCenter()) / zoom
@@ -596,13 +580,10 @@ void ImageViewer::reapplyConstraints()
         else
             applyView(m_zoomFactor, m_viewCenter, FitMode::Manual, ChangeSource::Program);
     }
-    // Fit factor and pan ranges may change without changing the view.
-    // zh_CN: 适应比例和平移范围可能变化，即使视图本身没有变化。
+    // Refresh cursor/chrome even if view state was unchanged, since fit factor and pan ranges can still shift.
     updateCursorShape();
     updateChrome();
 }
-
-// ── Chrome. zh_CN: 工具条与提示 ────────────────────────────────────────────
 
 bool ImageViewer::areControlsShown() const
 {
@@ -635,7 +616,7 @@ void ImageViewer::layoutChrome()
 {
     if (!m_zoomBar)
         return;
-    // Narrow viewports keep only the zoom group. zh_CN: 视口较窄时只保留缩放组。
+    // Narrow viewports show only the zoom buttons.
     m_zoomBar->setCompact(width() < m_zoomBar->surfaceWidth(false) + 2 * kChromeMargin);
     const QSize hint = m_zoomBar->sizeHint();
     const int margin = ImageViewerZoomBar::shadowMargin();
@@ -668,8 +649,6 @@ void ImageViewer::updateCursorShape()
     }
 }
 
-// ── Painting. zh_CN: 绘制 ──────────────────────────────────────────────────
-
 void ImageViewer::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
@@ -692,8 +671,7 @@ void ImageViewer::paintEvent(QPaintEvent* event)
             const QPixmap& source = m_transformationMode == Qt::SmoothTransformation
                 ? m_pixmapCache->sourceForScale(m_pixmap, deviceScale)
                 : m_pixmap;
-            // Rounding the cached width and height can produce different scale factors.
-            // zh_CN: 缓存宽高分别取整后，两个方向的实际缩放比可能不同。
+            // Cached width and height are rounded separately, so x and y scales can differ slightly.
             const qreal sourceX = source.width() / imageRect.width();
             const qreal sourceY = source.height() / imageRect.height();
             const QRectF sourceRect((visible.left() - imageRect.left()) * sourceX,
@@ -711,7 +689,6 @@ void ImageViewer::paintEvent(QPaintEvent* event)
         painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
     }
     if (hasFocus() && m_keyboardFocusVisible) {
-        // Fluent two-layer focus visual inside the bounds. zh_CN: 在边界内绘制 Fluent 双层焦点框。
         painter.setPen(QPen(colors.strokeFocusOuter, 2.0));
         painter.drawRoundedRect(QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0), radius, radius);
         painter.setPen(QPen(colors.strokeFocusInner, 1.0));
@@ -719,8 +696,6 @@ void ImageViewer::paintEvent(QPaintEvent* event)
         painter.drawRoundedRect(QRectF(rect()).adjusted(2.5, 2.5, -2.5, -2.5), innerRadius, innerRadius);
     }
 }
-
-// ── Events. zh_CN: 事件 ────────────────────────────────────────────────────
 
 bool ImageViewer::event(QEvent* event)
 {
@@ -769,8 +744,7 @@ void ImageViewer::leaveEvent(QEvent* event)
 
 void ImageViewer::mousePressEvent(QMouseEvent* event)
 {
-    // Without pan range the press belongs to the parent, e.g. a FlipView.
-    // zh_CN: 没有平移范围时按下事件交给父控件，例如 FlipView。
+    // When neither axis has pan range, let the parent (e.g. FlipView) handle the press.
     if (event->button() != Qt::LeftButton || !hasImage() || !isEnabled()
         || (!canPanHorizontally() && !canPanVertically())) {
         QWidget::mousePressEvent(event);
@@ -846,7 +820,7 @@ void ImageViewer::wheelEvent(QWheelEvent* event)
         if (!qFuzzyIsNull(steps))
             zoomAround(m_zoomFactor * std::pow(kWheelZoomStep, steps), fluentWheelPosition(event), false,
                 ChangeSource::Input);
-        // Zoom input is consumed even at a limit. zh_CN: 缩放输入在达到上下限时仍被消费。
+        // Consume zoom wheel events even at zoom limits so they don't bubble out.
         event->accept();
         return;
     }
@@ -862,8 +836,7 @@ void ImageViewer::wheelEvent(QWheelEvent* event)
         delta = pixel.isNull() ? -QPointF(event->angleDelta()) / 120.0 * kPanStep : -QPointF(pixel);
     }
 
-    // Decide by the dominant axis; an axis without range belongs to the parent.
-    // zh_CN: 按主方向判断；没有平移范围的轴交给父控件。
+    // Pass events along the dominant axis to the parent if that axis cannot pan.
     const bool horizontal = std::abs(delta.x()) > std::abs(delta.y());
     const bool canPan = delta.isNull()
         ? (canPanHorizontally() || canPanVertically())
@@ -912,7 +885,7 @@ void ImageViewer::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Down: {
         const bool horizontal = event->key() == Qt::Key_Left || event->key() == Qt::Key_Right;
         if (horizontal ? !canPanHorizontally() : !canPanVertically()) {
-            // No range: let a parent such as FlipView navigate. zh_CN: 没有范围时交给父控件（如 FlipView）导航。
+            // Pass unpannable axis keys to the parent (e.g. FlipView navigation).
             QWidget::keyPressEvent(event);
             return;
         }
@@ -963,8 +936,7 @@ void ImageViewer::onThemeUpdated()
 
 bool ImageViewer::shouldSuppressWheel() const
 {
-    // macOS can deliver residual scroll events right after a pinch.
-    // zh_CN: 捏合结束后可能紧接着收到残余滚动事件。
+    // macOS can deliver trailing scroll wheel momentum right after a trackpad pinch gesture.
     if (m_nativeZoomGestureActive && m_nativeZoomGestureHasZoomed)
         return true;
     return m_lastNativeZoomGestureTime.isValid()

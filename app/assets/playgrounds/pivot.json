@@ -70,8 +70,8 @@
     196
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Header-based navigation between peer views with an animated indicator.",
+    "zh": "用于在同级页面间切换的标签式导航栏。"
   },
   "presets": [
     {

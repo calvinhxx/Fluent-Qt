@@ -13,8 +13,7 @@ class QWidget;
 
 namespace fluent::menus_toolbars::detail {
 
-// Shared semantic action registry for CommandBar surfaces. Actions are
-// borrowed: this model never reparents or deletes them.
+// Shared action registry for CommandBar surfaces; never reparents or deletes actions.
 class CommandActionModel final : public QObject {
     Q_OBJECT
 

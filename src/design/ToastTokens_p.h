@@ -6,8 +6,7 @@
 
 namespace fluent::toast_tokens {
 
-// Toast refinement, Figma 59:250 / 60:348. Component-local tokens leave other
-// surfaces unchanged. zh_CN: Toast 专用设计 token，不改变其它表面。
+// Toast-specific tokens (Figma 59:250 / 60:348), kept separate so other overlays stay unchanged.
 constexpr int minimumWidth = 220;
 constexpr int maximumWidth = 380;
 constexpr int cornerRadius = 12;

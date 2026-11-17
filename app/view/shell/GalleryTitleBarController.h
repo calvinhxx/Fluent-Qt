@@ -31,16 +31,11 @@ namespace fluent::gallery {
 class GallerySearchService;
 
 /**
- * @brief Owns the gallery's custom title-bar chrome: back / menu buttons, app icon + title,
- * the search box, their Fluent tooltips, press feedback, the back-button reveal animation, and
- * the adaptive layout that reflows everything against the live bar width.
- * zh_CN: 负责画廊自定义标题栏：返回/菜单按钮、应用图标+标题、搜索框、它们的 Fluent 气泡提示、按下反馈、
- * 返回按钮显隐动画，以及按实时栏宽重排一切的自适应布局。
+ * @brief Owns Gallery custom title-bar controls, search box, tooltips, and width-adaptive layout.
+ * zh_CN: 管理 Gallery 自定义标题栏控件、搜索框、提示气泡及随栏宽变化的自适应布局。
  *
- * Extracted from GalleryWindow to decouple title-bar concerns from the shell. The controller
- * talks back to the shell only through the small Callbacks set (navigation intents + a query
- * for the nav's minimal layout state). zh_CN: 从 GalleryWindow 抽出，使标题栏与外壳解耦；控制器仅
- * 通过少量 Callbacks（导航意图 + 查询导航是否处于最小布局）回到外壳。
+ * Communicates navigation actions and layout queries back to GalleryWindow via Callbacks.
+ * zh_CN: 通过 Callbacks 与主窗口交互，触发导航操作并查询最小布局状态。
  */
 class GalleryTitleBarController : public QObject {
     Q_OBJECT
@@ -48,10 +43,10 @@ public:
     struct Callbacks {
         std::function<void()> onBack;      ///< Back button clicked. zh_CN: 点击返回。
         std::function<void()> onToggleNav; ///< Menu button clicked. zh_CN: 点击菜单。
-        /// A search result was chosen; carries its route id. zh_CN: 选中了搜索结果，携带其路由 id。
+        /// Route selected from search suggestions. zh_CN: 选中搜索结果，参数为路由 id。
         std::function<void(const QString&)> onSearchResultChosen;
-        /// True when the nav pane is in its minimal layout, where the app title/icon give way to
-        /// the search box. zh_CN: 导航处于最小布局时为真，此时应用标题/图标让位给搜索框。
+        /// Returns true in LeftMinimal layout when app title/icon hide to give search space.
+        /// zh_CN: 导航处于最小布局时返回 true，此时隐藏应用标题/图标以给搜索框留出空间。
         std::function<bool()> isMinimalNavLayout;
     };
 

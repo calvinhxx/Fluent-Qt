@@ -23,14 +23,14 @@ class ProgressRing;
 class ProgressBar;
 
 /**
- * @brief Reusable startup surface covering its parent widget's content area.
- * zh_CN: 可重复使用的启动遮罩，覆盖父控件内容区。
- * Set application artwork and status, show the surface, then dismiss when work finishes.
- * The parent owns the surface; dismiss hides it and emits dismissed without deleting it.
- * Input inside the covered host is blocked while visible, including during dismissal.
- * Other windows and controls outside the host remain available. No task or event loop is owned.
- * zh_CN: 设置应用图标和状态后显示，任务完成时调用 dismiss；父控件拥有它，关闭后隐藏并发送
- * dismissed，不自行销毁。显示和退场期间拦截宿主内输入，宿主外控件及其他窗口仍可用；不管理任务或事件循环。
+ * @brief Reusable startup overlay covering its parent widget's content area.
+ * zh_CN: 可复用的启动遮罩，覆盖父控件的内容区域。
+ *
+ * Shows the application icon and loading progress while blocking input inside
+ * the covered widget (other windows remain interactive). Owned by its parent;
+ * dismiss() hides the overlay and emits dismissed() without deleting it.
+ * zh_CN: 显示应用图标与加载进度并拦截被覆盖区域内的输入（其他窗口与区域外控件仍可用）；
+ * 由父控件拥有，dismiss() 后隐藏并发出 dismissed()，不会销毁自身。
  */
 class SplashScreen : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -55,8 +55,8 @@ public:
     ~SplashScreen() override;
 
     Presentation presentation() const { return m_presentation; }
-    /** @brief Selects the startup presentation without changing progress or ownership.
-     * zh_CN: 选择启动效果，不改变进度或所有权；未知枚举值忽略。
+    /** @brief Selects the startup presentation style (ignores unknown enum values).
+     * zh_CN: 选择启动画面风格（忽略未知枚举值）。
      */
     void setPresentation(Presentation presentation);
     QIcon icon() const { return m_icon; }
@@ -83,14 +83,15 @@ public:
     void setSubtitle(const QString& subtitle);
     QWidget* transitionTarget() const { return m_transitionTarget.data(); }
     /**
-     * @brief Borrows an icon holder as the destination of the Branded dismissal.
-     * zh_CN: 借用图标容器作为 Branded 退场的目标。
-     * Full motion moves the intact icon into the target's contents rectangle. The target
-     * must be visible, outside this surface, and in the same window when dismiss is called.
-     * Otherwise dismissal uses a fade. Never reparents or changes the target's appearance.
-     * This surface and its descendants are ignored as targets.
-     * zh_CN: Full 动效将完整图标移入目标内容矩形；调用 dismiss 时目标须可见、位于本遮罩外
-     * 且属于同一窗口，否则淡出。不改变目标的父控件、外观或可见性；忽略自身及其子控件。
+     * @brief Sets the destination widget where the icon animates during Branded dismissal.
+     *
+     * Full motion moves the intact icon into target's contents rectangle when target
+     * is visible, outside this splash screen, and in the same top-level window;
+     * otherwise dismissal fades out. Does not reparent or alter the target widget;
+     * this widget and its descendants are ignored.
+     * zh_CN: 设置 Branded 退场时图标飞向的目标控件。Full 动效下若调用 dismiss() 时目标
+     * 在同一顶层窗口内可见且位于遮罩外，图标会平滑移入目标内容区，否则改用淡出；
+     * 不会修改目标的父控件、外观或可见性，传入自身或其子控件时忽略。
      */
     void setTransitionTarget(QWidget* target);
     int progress() const { return m_progress; }
@@ -104,11 +105,11 @@ public:
     bool isIndeterminate() const { return m_indeterminate; }
     void setIndeterminate(bool indeterminate);
     /**
-     * @brief Dismisses, hides and emits dismissed once; repeated or hidden calls do nothing.
-     * zh_CN: 退场并隐藏后发送一次 dismissed；重复调用或已隐藏时不做任何操作。
-     * MotionPolicy controls the transition. Show again after dismissal to reuse the surface.
-     * Never waits for the decorative entrance to finish.
-     * zh_CN: 过渡遵循 MotionPolicy；不等待装饰性入场完成，关闭后可再次 show 复用。
+     * @brief Dismisses, hides, and emits dismissed() once (ignored when already hidden or dismissing).
+     *
+     * Follows MotionPolicy without waiting for the entrance animation; call show() again to reuse.
+     * zh_CN: 退场并隐藏控件，完成后发出一次 dismissed()（已隐藏或正在退场时直接返回）。
+     * 过渡遵循 MotionPolicy，不等待入场动画完成，关闭后可再次 show() 复用。
      */
     void dismiss();
 
@@ -127,10 +128,11 @@ signals:
     void progressChanged(int progress);
     void indeterminateChanged(bool indeterminate);
     void dismissed();
-    /** @brief Emitted after another cover hides this one on an overlapping host.
-     * zh_CN: 被重叠宿主上的新遮罩替换并隐藏后发送；不发送 dismissed，也不自动销毁。
-     * Direct hide and window minimization do not emit this signal.
-     * zh_CN: 直接 hide 和窗口最小化不发送此信号。
+    /** @brief Emitted when another SplashScreen covers an overlapping area and hides this one.
+     *
+     * Direct hide() and window minimization do not emit replaced() or dismissed().
+     * zh_CN: 当重叠区域被新的 SplashScreen 接管并隐藏当前实例时发出（不触发 dismissed()，
+     * 直接 hide 或窗口最小化也不触发）。
      */
     void replaced();
 

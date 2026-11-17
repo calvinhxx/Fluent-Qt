@@ -13,21 +13,17 @@ namespace fluent::plugins {
 
 /**
  * @brief Registers optional extensions and manages dependency-ordered lifetimes.
- * zh_CN: 注册可选扩展，并按依赖顺序管理激活生命周期。
+ * zh_CN: 注册可选扩展，并按依赖顺序管理启停生命周期。
  *
- * Registered plugins and the optional host remain caller-owned. All calls must
- * use the manager's thread. Keep registered plugins, host and manager on that
- * thread; do not move them while plugins are registered.
- * Mutations during hooks or manager signals are rejected;
- * queue a later call instead. Destruction deactivates plugins in reverse activation
- * order without destroying borrowed plugins. Do not delete the manager in its
- * hooks or direct signal handlers. This module manages linked plugin objects,
- * without discovering or loading shared libraries.
- * zh_CN: 注册的插件与可选宿主仍由调用方持有；所有调用须在管理器线程执行。
- * 存在已注册插件期间，不得迁移插件、宿主或管理器的线程归属。
- * 回调或管理器信号期间的修改会被拒绝，应排队稍后执行。管理器析构时按激活逆序停用，
- * 不销毁借用插件。不得在回调或直接信号处理中销毁管理器。本模块管理已链接插件对象，
- * 不负责发现或加载动态库。
+ * Does not take ownership of registered plugins or the optional host, and does not
+ * discover or load shared libraries. All calls must run on the manager's thread,
+ * and registered objects must remain on that thread. Mutations during hooks or
+ * manager signals are rejected. Destruction deactivates plugins in reverse
+ * activation order without deleting them; do not delete the manager inside its
+ * hooks or direct signal handlers.
+ * zh_CN: 管理器不接管插件或可选宿主的所有权，也不负责动态库发现或加载。所有调用须在
+ * 管理器线程执行，且已注册对象不得跨线程迁移。回调或信号触发期间的修改请求会被拒绝。
+ * 析构时按激活逆序停用全部插件但不销毁对象；请勿在回调或直接信号槽中销毁管理器。
  */
 class PluginManager : public QObject {
     Q_OBJECT
@@ -36,31 +32,32 @@ public:
     ~PluginManager() override;
 
     /**
-     * @brief Registers a borrowed plugin without activating it or changing its parent.
-     * zh_CN: 注册借用插件，不激活，也不改变其父对象。
+     * @brief Registers a plugin without taking ownership, activating it, or changing its parent.
+     * zh_CN: 注册插件，不接管所有权、不立即激活，也不改变其父对象。
      *
      * IDs must be nonempty and trimmed; dependencies may be registered later.
-     * Duplicate IDs, duplicate dependencies and cross-thread objects are rejected.
-     * zh_CN: ID 必须非空且无首尾空白；依赖可稍后注册。重复 ID、重复依赖与跨线程对象会被拒绝。
+     * Duplicate IDs, duplicate dependencies, and cross-thread objects are rejected.
+     * zh_CN: ID 必须非空且无首尾空白；依赖项可稍后注册。重复 ID、重复依赖或跨线程对象会被拒绝。
      */
     bool registerPlugin(Plugin* plugin, QString* error = nullptr);
 
     /**
      * @brief Stops active dependents and the plugin, then removes its registration.
-     * zh_CN: 停用活动依赖方与插件，再移除注册。
+     * zh_CN: 停用活动依赖方与当前插件，随后移除注册。
      *
-     * Does not delete the plugin. Dependent plugins stay registered but inactive.
-     * zh_CN: 不销毁插件；依赖方保留注册但处于停用状态。
+     * Does not delete the plugin; dependent plugins stay registered as inactive.
+     * zh_CN: 不会销毁插件对象；依赖方保留注册但变为未激活状态。
      */
     bool unregisterPlugin(const QString& id, QString* error = nullptr);
 
     /**
      * @brief Activates dependencies first and rolls back this attempt on failure.
-     * zh_CN: 先激活依赖，失败时回滚本次操作。
+     * zh_CN: 先激活依赖项，失败时回滚本次已激活的插件。
      *
-     * Missing dependencies and cycles fail before hooks run. Already active
-     * plugins remain active after a failed attempt; repeated activation is a no-op.
-     * zh_CN: 缺失依赖或循环在执行回调前失败；本次操作前已激活的插件不会被回滚，重复激活无操作。
+     * Missing dependencies and cycles fail before hooks run. Previously active
+     * plugins remain active after a failed attempt; already-active targets return true directly.
+     * zh_CN: 缺失依赖或存在循环依赖时会在回调执行前失败；本次之前已激活的插件保持不变，
+     * 目标已处于激活状态时直接返回 true。
      */
     bool activate(const QString& id, QString* error = nullptr);
 
@@ -68,8 +65,8 @@ public:
      * @brief Deactivates all active dependents before the requested plugin.
      * zh_CN: 先停用所有活动依赖方，再停用指定插件。
      *
-     * Dependencies and unrelated plugins stay active. Repeated deactivation is a no-op.
-     * zh_CN: 依赖与无关插件保持激活；重复停用无操作。
+     * Dependencies and unrelated plugins stay active; inactive targets return true directly.
+     * zh_CN: 其依赖项与无关插件保持激活；目标未激活时直接返回 true。
      */
     bool deactivate(const QString& id, QString* error = nullptr);
 
@@ -88,12 +85,12 @@ public:
     const PluginContext& context() const;
 
     /**
-     * @brief Creates a caller-owned widget through an active WidgetPluginInterface.
-     * zh_CN: 通过已激活的 WidgetPluginInterface 创建调用方持有的控件。
+     * @brief Creates a widget through an active WidgetPluginInterface; ownership follows @p parent.
+     * zh_CN: 通过已激活的 WidgetPluginInterface 创建控件；所有权归属 @p parent（@p parent 为空时归调用方）。
      *
-     * Requires QApplication and its GUI thread. Does not implicitly activate the
-     * plugin. Returns null and an optional error on an unsupported key or failure.
-     * zh_CN: 需要 QApplication 及其 GUI 线程，不隐式激活插件；不支持的 key 或失败会返回空指针及可选错误。
+     * Requires QApplication and its GUI thread, and does not implicitly activate
+     * the plugin. Returns null and an optional error on an unsupported key or failure.
+     * zh_CN: 须在 QApplication 的 GUI 线程调用，且不会隐式激活插件；遇到不支持的 key 或失败时返回空指针。
      */
     QWidget*
     createWidget(const QString& pluginId, const QString& key, QWidget* parent = nullptr, QString* error = nullptr);

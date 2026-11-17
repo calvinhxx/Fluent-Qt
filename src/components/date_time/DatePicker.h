@@ -14,19 +14,18 @@ namespace fluent::date_time {
 class DatePickerFlyout;
 
 /**
- * @brief Button-like date picker with nullable selected-date semantics.
- * zh_CN: 支持可空选中日期语义的按钮式日期选择器。
+ * @brief Button-style date picker that supports clearing the selection.
+ * zh_CN: 按钮式日期选择器，支持清空已选日期。
  *
- * DatePicker controls date bounds, visible fields, day/month/year formatting,
- * committed date text, and dropdown state for compact form entry scenarios.
- * zh_CN: DatePicker 管理日期边界、字段可见性、日/月/年格式、提交后的日期文本
- * 和下拉打开态，适合紧凑表单输入。
+ * Manages date bounds, field visibility, day/month/year formatting, and the
+ * wheel flyout for compact form entry.
+ * zh_CN: 支持配置可选日期范围、字段显隐及年月日显示格式，通过下拉滚轮面板选择日期。
  */
 class DatePicker : public fluent::basicinput::Button {
     Q_OBJECT
     /**
      * @brief Current date value displayed by the picker.
-     * zh_CN: picker 当前显示的日期值。
+     * zh_CN: 当前显示的日期值。
      */
     Q_PROPERTY(QDate date READ date WRITE setDate NOTIFY dateChanged)
     /**
@@ -80,7 +79,7 @@ class DatePicker : public fluent::basicinput::Button {
     Q_PROPERTY(YearFormat yearFormat READ yearFormat WRITE setYearFormat NOTIFY yearFormatChanged)
     /**
      * @brief Whether the picker dropdown is open.
-     * zh_CN: picker 下拉面板是否打开。
+     * zh_CN: 下拉滚轮面板是否打开。
      */
     Q_PROPERTY(bool dropDownOpen READ isDropDownOpen NOTIFY dropDownOpenChanged)
     /**
@@ -89,16 +88,16 @@ class DatePicker : public fluent::basicinput::Button {
      */
     Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
     /**
-     * @brief Accessible name supplied by the application for the confirm button.
-     * zh_CN: 由应用为确认按钮提供的无障碍名称。
+     * @brief Custom accessible name for the confirm button.
+     * zh_CN: 确认按钮的自定义无障碍名称。
      */
     Q_PROPERTY(QString confirmButtonAccessibleName
         READ confirmButtonAccessibleName
         WRITE setConfirmButtonAccessibleName
         NOTIFY confirmButtonAccessibleNameChanged)
     /**
-     * @brief Accessible name supplied by the application for the cancel button.
-     * zh_CN: 由应用为取消按钮提供的无障碍名称。
+     * @brief Custom accessible name for the cancel button.
+     * zh_CN: 取消按钮的自定义无障碍名称。
      */
     Q_PROPERTY(QString cancelButtonAccessibleName
         READ cancelButtonAccessibleName
@@ -164,8 +163,8 @@ public slots:
     void setYearFormat(YearFormat format);
     void setLocale(const QLocale& locale);
     /**
-     * @brief Sets application-owned placeholder text for one date field.
-     * zh_CN: 为一个日期字段设置由应用拥有的占位文本。
+     * @brief Sets custom placeholder text for one date field.
+     * zh_CN: 为指定日期字段设置自定义占位文本。
      */
     void setPlaceholderText(DateField field, const QString& text);
     void setConfirmButtonAccessibleName(const QString& name);

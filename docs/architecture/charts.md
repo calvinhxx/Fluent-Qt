@@ -188,9 +188,9 @@ All eight dedicated chart components inherit the same export and clipboard
 operations from `ChartView`. Export is independent of the Gallery workbench.
 
 `exportImage(scale)` and `exportPng(scale)` render the current logical layout at
-the requested pixel scale. They omit the data cursor, hover readout and focus
-ring, refresh pending model changes, and preserve the live widget's geometry,
-selection and borrowed models. The background follows the current Fluent theme.
+the requested pixel scale without affecting the live widget's geometry,
+selection, or attached models. They omit the data cursor, hover readout, and
+focus ring while refreshing pending model changes against the current theme.
 Invalid scales, empty dimensions or outputs above 16 million pixels return an
 empty result. Rendering and encoding run on the GUI thread.
 
@@ -217,7 +217,7 @@ as an alternative and never reports a denied write as successful.
 
 `test_chart_model` covers validation, batch signals, snapshot independence,
 index updates, extreme values, gaps, and million-point extrema preservation.
-`test_chart_view` covers borrowed ownership, bounded model reads, cached
+`test_chart_view` covers non-owning model lifetimes, bounded model reads, cached
 repainting, coalesced streaming, hidden views, all eight presentations, themes,
 narrow geometry, and accessible keyboard navigation. `ChartViewTest.VisualCheck`
 is a separate native review surface. The Gallery has a route for each dedicated component; `chart-view` demonstrates

@@ -25,14 +25,9 @@ namespace fluent::menus_toolbars {
 class FluentMenu;
 
 /**
- * @brief Fluent-styled menu bar with configurable font role.
- * zh_CN: 支持配置字体角色的 Fluent 菜单栏。
- *
- * FluentMenuBar keeps QMenuBar behavior while aligning menu-bar typography and
- * theme updates with the rest of the component library.
- * zh_CN: FluentMenuBar 保留 QMenuBar 行为，并让菜单栏排版和主题更新与组件库保持一致。
- * Actions that do not fit remain available through the More menus button.
- * zh_CN: 宽度不足的动作仍可从“更多菜单”按钮访问。
+ * @brief Fluent-styled menu bar with overflow menu and configurable font role.
+ * Actions that exceed the available bar width remain accessible from the overflow button.
+ * zh_CN: 支持响应式溢出与字体角色配置的 Fluent 菜单栏；宽度不足时超出的菜单项会收起到溢出按钮中。
  */
 class FluentMenuBar : public QMenuBar, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -42,21 +37,14 @@ class FluentMenuBar : public QMenuBar, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(Typography::FontRole fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
     /**
-     * @brief Whether the bar paints its canvas background.
-     * zh_CN: 是否绘制菜单栏的画布背景。
-     *
-     * Disable it to let the bar blend into a host surface that already paints
-     * its own background, such as a card or a custom title bar.
-     * zh_CN: 关闭后菜单栏融入自带背景的宿主表面，例如卡片或自定义标题栏。
+     * @brief Whether the menu bar paints its background fill.
+     * Disable to blend into a parent container that already provides a background, such as a card or custom title bar.
+     * zh_CN: 是否绘制菜单栏背景；关闭后可融入卡片或自定义标题栏等自带背景的容器。
      */
     Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
 public:
     explicit FluentMenuBar(QWidget* parent = nullptr);
 
-    /**
-     * @brief Sets the Fluent typography role used by the menu bar.
-     * zh_CN: 设置菜单栏使用的 Fluent 排版角色。
-     */
     void setFontStyle(Typography::FontRole role);
     Typography::FontRole fontStyle() const { return m_fontStyle; }
 

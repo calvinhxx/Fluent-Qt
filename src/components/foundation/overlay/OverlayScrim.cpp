@@ -13,9 +13,7 @@
 namespace fluent::overlay {
 namespace {
 
-// Three separable box passes approximate a Gaussian without private Qt APIs.
-// Work is bounded by a downsampled, opaque content snapshot, never the desktop.
-// zh_CN: 三次分离盒式模糊近似高斯，无 Qt 私有 API；仅处理限尺寸的内容快照，不读取桌面。
+// Three separable box passes approximate a Gaussian on a downsampled snapshot without private Qt APIs.
 QImage blurPass(const QImage& input, int radius, bool horizontal)
 {
     QImage output(input.size(), QImage::Format_RGB32);
@@ -56,10 +54,8 @@ OverlayScrim::OverlayScrim(QWidget* parent, const QString& objectName) : QWidget
 {
     if (!objectName.isEmpty())
         setObjectName(objectName);
-    // Shared-backing SourceOver dim — same contract as former Dialog SmokeOverlay. Do not use
-    // WA_TranslucentBackground or CompositionMode_Source clears on Mica hosts.
-    // zh_CN: 共享后备缓冲上的 SourceOver 压暗——与原先 Dialog SmokeOverlay 契约一致。Mica 宿主上不要用
-    // WA_TranslucentBackground 或 CompositionMode_Source 清屏。
+    // Paint via SourceOver on the shared backing; WA_TranslucentBackground or CompositionMode_Source
+    // would punch holes through Mica hosts.
     setAttribute(Qt::WA_NoSystemBackground, true);
     setAutoFillBackground(false);
     setFocusPolicy(Qt::NoFocus);
@@ -144,9 +140,8 @@ void OverlayScrim::refreshBackdrop()
         painter.scale(scale, scale);
         painter.translate(-geometry().topLeft());
         const auto* hostTheme = dynamic_cast<FluentElement*>(host);
-        // Suppress Qt's default system background fill on unthemed plain QWidget hosts/stages
-        // so custom paintEvent() still runs while unpainted areas use Fluent bgCanvas below.
-        // zh_CN: 跳过无主题普通 QWidget 宿主/舞台的系统默认背景填充，保留自定义 paintEvent 并由下方使用 Fluent bgCanvas 填充。
+        // Suppress Qt's default system fill on plain QWidget hosts so custom paintEvent() runs
+        // while unpainted pixels fall back to Fluent bgCanvas below.
         struct ScopedUnthemedBackgroundBypass {
             explicit ScopedUnthemedBackgroundBypass(QWidget* widget)
                 : m_widget(shouldSuppress(widget) ? widget : nullptr)
@@ -176,9 +171,7 @@ void OverlayScrim::refreshBackdrop()
             const ScopedUnthemedBackgroundBypass hostBypass(host);
             host->render(&painter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
         }
-        // Render only siblings below this overlay. Hiding widgets to grab the host
-        // would disturb focus, layout and nested popups. QObject child order follows stacking.
-        // zh_CN: 只绘制当前浮层下方的同级控件；不通过隐藏控件抓图，避免改变焦点、布局和嵌套弹层。
+        // Render only siblings stacked below this overlay rather than hiding widgets to capture.
         const auto siblings = host->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
         for (QWidget* child : siblings) {
             if (child == m_overlay)
@@ -189,13 +182,9 @@ void OverlayScrim::refreshBackdrop()
                 ::compatibility::detail::renderWidgetSnapshot(painter, child, child->pos(), visible);
             }
         }
-        // Native vibrancy is not part of QWidget rendering. Fill only its transparent
-        // areas with the Fluent surface token before filtering the application content.
-        // zh_CN: 原生材质不属于 QWidget 绘制；用 Fluent 表面 token 填补透明区域后再模糊应用内容。
+        // Fill transparent backdrop areas (native vibrancy isn't part of QWidget::render) before blurring.
         painter.resetTransform();
         painter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
-        // Use the synced Fluent canvas token when an unthemed plain QWidget host has no custom palette.
-        // zh_CN: 无自定义调色板的普通 QWidget 宿主，使用已同步的 Fluent 画布 token 填充透明区域。
         const QColor fallbackColor = hostTheme
             ? hostTheme->themeColorsRef().bgCanvas
             : (host->testAttribute(Qt::WA_SetPalette) ? host->palette().window().color() : themeColorsRef().bgCanvas);
@@ -218,9 +207,7 @@ void OverlayScrim::refreshBackdrop()
 void OverlayScrim::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    // QWidget::render also delivers pending hidden resizes during capture. The
-    // capture already handles that size; queuing it again stalls the entrance.
-    // zh_CN: QWidget::render 会在抓图期间送达隐藏控件的 resize；无需重复抓取同一尺寸。
+    // QWidget::render may deliver pending resizes during capture; ignore them to avoid re-queuing.
     if (!m_capturing && size() != m_backdropSize)
         queueBackdropRefresh();
 }

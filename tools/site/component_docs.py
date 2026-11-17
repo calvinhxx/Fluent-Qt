@@ -360,7 +360,7 @@ def render_reference(reference, documents, catalog, language):
     # Lead with the header's namesake type; a helper struct's brief would misdescribe the page.
     primary = primary_type(reference['types'], reference['source'])
     lead = localized_description(primary, language) if primary else ''
-    fallback = '该头文件公开的类型、函数与常量参考。' if language == 'zh' else 'Public types, functions, and constants declared in this header.'
+    fallback = '该头文件公开的类型、函数与常量。' if language == 'zh' else 'Public types, functions, and constants declared in this header.'
     description = lead or fallback
     body = '<section id="api" class="reference-body">' + api_search(language)
     body += ''.join(render_type(record, catalog, page, language, include_inherited=True,

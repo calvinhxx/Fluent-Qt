@@ -8,9 +8,8 @@ class QPaintDevice;
 
 namespace compatibility::detail {
 
-// A bounded intermediate can still represent native backing-store damage.
-// Keep captures distinct: only the native repaint adapter enters this scope.
-// zh_CN: 有界中间画布仍可携带原生后备缓冲的脏区；仅原生刷新适配层进入此作用域，截图不进入。
+// Only the native repaint adapter enters this scope so offscreen captures stay distinct from backing-store paints.
+// zh_CN: 仅原生刷新适配层进入此作用域，以区分屏幕绘制缓冲的脏区和普通截图。
 inline thread_local const QPaintDevice* nativeRasterDevice = nullptr;
 class ScopedNativeRasterDevice;
 inline thread_local ScopedNativeRasterDevice* nativeRasterScope = nullptr;
@@ -38,9 +37,8 @@ public:
         callbacks.append({context, std::move(callback)});
     }
 
-    // Only a successful copy into the backing store publishes paint evidence.
-    // Abandoned tiles and ordinary offscreen captures publish nothing.
-    // zh_CN: 仅成功写回后备缓冲才公布绘制证据；放弃的图块及普通离屏抓图不公布。
+    // Only a successful write back to the backing store counts as a committed surface paint (skips abandoned tiles and grab()).
+    // zh_CN: 仅成功写回绘制缓冲后才触发提交回调（放弃的图块与普通截图不计入）。
     void commit()
     {
         const auto pending = std::move(callbacks);

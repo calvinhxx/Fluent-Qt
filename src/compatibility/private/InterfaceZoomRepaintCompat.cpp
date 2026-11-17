@@ -132,12 +132,9 @@ protected:
                 QScopedValueRollback<bool> handling(m_handling, true);
                 QPointer<QWidget> alive(widget);
                 {
-                    // Qt clears an alpha backing store before painting and flushes
-                    // after it. This pass skips raster painting, so its flush would
-                    // present a transparent hole until the tile below; on Windows the
-                    // whole window can vanish for a frame. Keep the presented pixels.
-                    // zh_CN: Qt 会先把带 alpha 的后备缓冲清为透明、绘制后再提交。此轮跳过位图绘制，
-                    // 提交的透明空洞会一直显示到下面的图块完成，Windows 上整窗可能闪失一帧；保留已显示的像素。
+                    // Qt clears an alpha backing store before painting and flushes after. Because this pass skips raster
+                    // painting, keep already-presented pixels so the window doesn't flash transparent before the tile below paints.
+                    // zh_CN: Qt 会先清空带 alpha 的绘制缓冲再重绘，此轮跳过位图绘制时先保留已显示的像素，避免图块完成前闪出透明空洞。
                     QScopedValueRollback<QImage> presented(m_presented, presentedPixels(widget, aligned));
                     QScopedValueRollback<QPointer<QWidget>> nativePass(m_nativePass, widget);
                     QCoreApplication::sendEvent(watched, event);
@@ -188,8 +185,8 @@ private:
         QRegion clip;
         for (const QRect& rect : region.translated(widget->mapTo(root, QPoint())))
             clip += pixelBounds(rect, dpr);
-        // Pixel coordinates over the borrowed buffer, as in repaintLowDprRegion.
-        // zh_CN: 与 repaintLowDprRegion 相同，以像素坐标视图借用原生缓冲区。
+        // Pixel-coordinate wrapper directly over the native buffer, matching repaintLowDprRegion.
+        // zh_CN: 与 repaintLowDprRegion 相同，直接以像素视图写入原生缓冲区。
         QImage pixels(native->bits(), native->width(), native->height(), native->bytesPerLine(), native->format());
         QPainter painter(&pixels);
         painter.setClipRegion(clip);

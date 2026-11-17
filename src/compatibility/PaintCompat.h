@@ -8,16 +8,11 @@
 #include <QPixmap>
 #include <QWindow>
 
-// Explicit bitmap caches retain their requested DPR metadata. Compensate only
-// when the painter ignored a sub-unit DPR; newer Qt already has the right matrix.
-// zh_CN: 显式位图缓存保留原 DPR 元数据；仅在画笔忽略小于 1 的 DPR 时补偿，新 Qt 的矩阵保持不变。
 /**
- * @brief Painter for explicit image/pixmap caches, including DPR below 1 on older Qt.
- * zh_CN: 用于显式图像缓存的画笔，兼容旧 Qt 上小于 1 的 DPR。
+ * @brief Painter for explicit image/pixmap caches that compensates when older Qt ignores DPR < 1.0.
+ * zh_CN: 用于显式图像缓存的画笔，在旧版 Qt 忽略小于 1.0 的 DPR 时自动补齐缩放。
  *
- * Construct with the cache device after setting its DPR. Do not use for QWidget
- * painting or restart with begin(); the compensation belongs to this paint session.
- * zh_CN: 先设置缓存 DPR 再构造画笔；不用于 QWidget 或通过 begin() 重启绘制。
+ * Construct with the cache device after setting its DPR; do not use for QWidgets or restart with begin().
  */
 class FluentRasterCachePainter final : public QPainter {
 public:
@@ -32,14 +27,9 @@ public:
     }
 };
 
-// Qt 5.15/6.2 clamp a paint device's DPR to 1. Qt effect filters also assume
-// at least unit density. Keep explicit render targets at >= 1 and apply the
-// remaining scale in the painter; allocation and dirty tiles stay unchanged.
-// zh_CN: Qt 5.15/6.2 将画布 DPR 钳制到 1，特效滤镜也假定至少单位密度。
-// 显式渲染目标保持 DPR >= 1，剩余缩放交给画笔；不扩大分配尺寸或脏图块。
 /**
- * @brief Sets an explicit render target DPR; pair with fluentApplyRenderTargetScale().
- * zh_CN: 设置显式渲染目标的 DPR；配合 fluentApplyRenderTargetScale() 使用。
+ * @brief Sets an explicit render-target DPR clamped to >= 1.0 (required by Qt 5.15/6.2 and effect filters); pair with fluentApplyRenderTargetScale().
+ * zh_CN: 为显式渲染目标设置不低于 1.0 的 DPR（适配 Qt 5.15/6.2 及特效滤镜），需配合 fluentApplyRenderTargetScale() 使用。
  */
 template <class Device> inline void fluentSetRenderTargetDevicePixelRatio(Device& device, qreal dpr)
 {
@@ -47,8 +37,8 @@ template <class Device> inline void fluentSetRenderTargetDevicePixelRatio(Device
 }
 
 /**
- * @brief Applies the remaining scale to a normalized explicit render target.
- * zh_CN: 对已归一化的显式渲染目标补充剩余缩放；每次绘制开始时调用一次。
+ * @brief Applies the remaining sub-1.0 scale once at the start of painting a normalized render target.
+ * zh_CN: 对已归一化 DPR 的显式渲染目标在绘制开始时补充小于 1.0 的剩余缩放。
  */
 inline void fluentApplyRenderTargetScale(QPainter& painter, qreal dpr)
 {
@@ -141,15 +131,8 @@ inline qreal fluentPainterDevicePixelRatio(const QPainter& painter)
 }
 
 /**
- * @brief Draws a pixmap into a logical rect using the painter device DPR.
- * zh_CN: 按绘制器设备 DPR 将 pixmap 画进逻辑矩形。
- *
- * Scales the source to the physical pixel extent of `logicalRect`, sets the
- * pixmap DPR, and centers the result. Prefer this over `drawPixmap(rect,
- * source)` when painting Gallery thumbnails or other 1x assets into HiDPI /
- * fractional-scale surfaces.
- * zh_CN: 将源图缩放到 `logicalRect` 的物理像素范围、设置 pixmap DPR 并居中绘制。
- * 在 HiDPI / 分数缩放下绘制缩略图或其他 1x 素材时，优先于 `drawPixmap(rect, source)`。
+ * @brief Draws a pixmap centered in a logical rect at the painter device's DPR (preferred for 1x thumbnails on HiDPI/fractional scales).
+ * zh_CN: 按绘制设备 DPR 将位图居中绘制到逻辑矩形内（适合 HiDPI/分数缩放下的 1x 缩略图等素材）。
  */
 inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRectF& logicalRect, const QPixmap& source)
 {
@@ -176,12 +159,8 @@ inline void fluentDrawPixmapInLogicalRect(QPainter& painter, const QRect& logica
 }
 
 /**
- * @brief Draws a pixmap with cover-crop scaling into a logical rect.
- * zh_CN: 以 cover（裁切铺满）方式将 pixmap 画进逻辑矩形。
- *
- * Scales uniformly so the rect is fully covered, then centers the crop. Used by
- * photo cards and similar media tiles.
- * zh_CN: 等比放大至铺满矩形后居中裁切；用于照片卡等媒体瓦片。
+ * @brief Draws a pixmap scaled uniformly to cover a logical rect with centered cropping.
+ * zh_CN: 等比缩放并居中裁切铺满逻辑矩形（cover 模式）。
  */
 inline void fluentDrawCoverPixmapInLogicalRect(QPainter& painter, const QRectF& logicalRect, const QPixmap& source)
 {
@@ -200,9 +179,10 @@ inline void fluentDrawCoverPixmapInLogicalRect(QPainter& painter, const QRectF& 
     painter.drawPixmap(logicalRect, source, fluentPixmapSourceRectForDraw(crop, source));
 }
 
-// QColor::getHsvF / getRgbF / getHslF component pointer type.
-// zh_CN: QColor::getHsvF / getRgbF / getHslF 分量指针类型。
-// Qt 6 takes float*; Qt 5 takes qreal* (= double*).
+/**
+ * @brief QColor::getHsvF / getRgbF / getHslF component pointer type (float on Qt 6, qreal on Qt 5).
+ * zh_CN: QColor::getHsvF / getRgbF / getHslF 的颜色分量类型（Qt 6 为 float，Qt 5 为 qreal）。
+ */
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 using FluentColorComponent = float;
 #else

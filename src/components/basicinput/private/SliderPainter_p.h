@@ -48,10 +48,7 @@ void paintSliderTicks(QPainter& painter,
 // zh_CN: 绘制 Fluent 手柄：带细环的实心外圆，以及半径从 0.45（静止）增长到 0.7（悬停）的强调色内圆。
 void paintSliderThumb(QPainter& painter, const FluentElement::Colors& colors, const SliderThumbVisual& thumb);
 
-// Tick values using QSlider's automatic interval fallback. Returns no ticks when
-// there would be 100 or more, matching the existing Slider density limit.
-// zh_CN: 使用 QSlider 的自动间隔回退规则计算刻度值；刻度数达到 100 及以上时返回空列表，
-// 与现有 Slider 的密度上限一致。
+// Computes tick values using QSlider's automatic interval rules; returns empty when 100 or more ticks would be drawn.
 QVector<int> sliderTickValues(int minimum, int maximum, int tickInterval, int singleStep, int pageStep);
 
 } // namespace fluent::basicinput::detail

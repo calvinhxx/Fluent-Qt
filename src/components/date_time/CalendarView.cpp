@@ -1066,7 +1066,6 @@ void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal y
             painter.drawRect(band);
         }
 
-        // Fluent treatment. zh_CN: Fluent 样式。
         if (!current && !selected && (hovered || pressed || focused)) {
             QColor bg = pressed ? colors.subtleTertiary : colors.subtleSecondary;
             painter.setPen(Qt::NoPen);
@@ -1644,14 +1643,8 @@ void CalendarView::startMonthTransition(const QDate& previousMonth,
     qreal startProgress,
     bool animate)
 {
-    // Animate only when this view itself is on screen. Checking the top-level
-    // window is not enough: inside a same-window overlay (the date picker
-    // flyout) the host window is visible while the flyout is still hidden, so
-    // the open-time jump to the selected month would start an entrance
-    // animation — and day-cell hits are rejected while it runs.
-    // zh_CN: 仅当视图自身在屏幕上时才播放动画。只查顶层窗口不够：在同窗口
-    // overlay（日期选择器 flyout）里，宿主窗口可见而 flyout 尚未显示，打开时
-    // 跳到选中月份会触发入场动画——动画期间日期单元格的点击会被拒绝。
+    // Skip animation unless the view itself is visible (not just its host window),
+    // so opening a DatePicker flyout does not start a transition that rejects day-cell hits.
     if (!previousMonth.isValid() || !currentMonth.isValid() || previousMonth == currentMonth || !isVisible()) {
         finishMonthTransition();
         return;

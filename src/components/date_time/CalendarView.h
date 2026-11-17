@@ -25,13 +25,12 @@ class CalendarViewAccessible;
 }
 
 /**
- * @brief Fluent calendar surface for browsing and selecting dates across levels.
- * zh_CN: 用于按日、月、年层级浏览和选择日期的 Fluent 日历视图。
+ * @brief Fluent calendar widget for browsing and selecting dates by day, month, or year.
+ * zh_CN: Fluent 日历控件，支持按日、月、年视图浏览和选择日期。
  *
- * CalendarView owns visible range, selected date, min/max bounds, first-day rules,
- * content-level transitions, keyboard focus, and frame painting without depending on picker chrome.
- * zh_CN: CalendarView 独立管理可见范围、选中日期、最小/最大边界、一周起始日、
- * 内容层级过渡、键盘焦点和外框绘制，不绑定 picker 外壳。
+ * Manages visible month, selected date, date bounds, week start day, level
+ * transitions, keyboard navigation, and outer frame painting.
+ * zh_CN: 独立管理可见月份、选中日期、可选范围、周起始日、层级过渡动效、键盘导航与外框绘制。
  */
 class CalendarView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -46,13 +45,13 @@ class CalendarView : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QDate visibleMonth READ visibleMonth WRITE setVisibleMonth NOTIFY visibleMonthChanged)
     /**
-     * @brief Minimum date accepted by the calendar surface.
-     * zh_CN: 日历表面接受的最小日期。
+     * @brief Minimum selectable date.
+     * zh_CN: 允许选择的最小日期。
      */
     Q_PROPERTY(QDate minDate READ minDate WRITE setMinDate NOTIFY minDateChanged)
     /**
-     * @brief Maximum date accepted by the calendar surface.
-     * zh_CN: 日历表面接受的最大日期。
+     * @brief Maximum selectable date.
+     * zh_CN: 允许选择的最大日期。
      */
     Q_PROPERTY(QDate maxDate READ maxDate WRITE setMaxDate NOTIFY maxDateChanged)
     /**
@@ -164,9 +163,8 @@ private:
     int weekHeaderHeight() const;
     int dayCellHeight() const;
 
-    // Range decoration is owned by DateTimeRangePicker; ordinary calendars
-    // retain their single-date selection contract.
-    // zh_CN: 范围装饰由 DateTimeRangePicker 管理，普通日历仍保持单日期选择契约。
+    // Range highlight is used by DateTimeRangePicker; standalone calendars remain single-date.
+    // zh_CN: 范围高亮仅由 DateTimeRangePicker 使用，独立日历仍保持单选行为。
     void setHighlightedDateRange(const QDate& start, const QDate& end);
     bool isHighlightedDate(const QDate& date) const;
 

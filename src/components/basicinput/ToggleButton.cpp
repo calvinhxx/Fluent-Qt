@@ -11,7 +11,6 @@ ToggleButton::ToggleButton(const QString& text, QWidget* parent) : Button(text, 
 {
     qRegisterMetaType<Qt::CheckState>("Qt::CheckState");
     setCheckable(true);
-    // Keep m_checkState in sync via the toggled signal. zh_CN: 连接 toggled 信号同步 m_checkState。
     connect(this, &QPushButton::toggled, this, [this](bool checked) {
         if (m_syncingCheckedState)
             return;
@@ -46,9 +45,7 @@ void ToggleButton::setCheckState(Qt::CheckState state)
         m_syncingCheckedState = true;
         QPointer<ToggleButton> guard(this);
 
-        // Older Qt versions access the button after emitting toggled. Finish their setter
-        // before notifying callers that may delete us. Groups retain Qt's notification order.
-        // zh_CN: 旧版 Qt 在 toggled 后仍访问按钮；无组时先完成底层设置，再同步通知。
+        // Complete QPushButton::setChecked before emitting toggled when ungrouped, in case a slot destroys this button.
         const bool stageToggled = !group() && !autoExclusive();
         const bool wasBlocked = signalsBlocked();
         if (stageToggled)
@@ -65,8 +62,7 @@ void ToggleButton::setCheckState(Qt::CheckState state)
         }
         m_syncingCheckedState = wasSyncing;
 
-        // A toggled callback may replace either the tri-state value or Qt's checked state.
-        // zh_CN: toggled 回调可能替换三态值或 Qt 的选中状态。
+        // Re-sync if a toggled() slot modified checked or checkState.
         if (isChecked() != (m_checkState != Qt::Unchecked)) {
             setCheckState(isChecked() ? Qt::Checked : Qt::Unchecked);
             return;
@@ -103,8 +99,7 @@ void ToggleButton::onThemeUpdated()
 
 void ToggleButton::paintEvent(QPaintEvent* event)
 {
-    // The indeterminate state uses a plain Button plus a bottom accent bar.
-    // zh_CN: 中间态使用普通 Button 加底部强调色指示条。
+    // PartiallyChecked paints a normal button with a bottom accent indicator bar.
     if (m_threeState && m_checkState == Qt::PartiallyChecked) {
         Button::paintEvent(event);
 
@@ -112,7 +107,6 @@ void ToggleButton::paintEvent(QPaintEvent* event)
         p.setRenderHint(QPainter::Antialiasing);
         const auto& colors = themeColorsRef();
 
-        // A small bottom bar marks the indeterminate state. zh_CN: 底部小横条表示中间态。
         int barHeight = 2;
         int barWidth = width() / 2;
         QRect barRect((width() - barWidth) / 2, height() - barHeight - 4, barWidth, barHeight);

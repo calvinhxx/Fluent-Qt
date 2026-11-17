@@ -19,11 +19,8 @@ namespace fluent::menus_toolbars {
 
 /**
  * @brief Menu item action with Fluent typography metadata.
- * zh_CN: 带 Fluent 排版元数据的菜单项 action。
- *
- * FluentMenuItem lets menu rows resolve text styling from theme font roles while
- * keeping QAction behavior and menu ownership intact.
- * zh_CN: FluentMenuItem 允许菜单行从主题字体角色解析文本样式，同时保留 QAction 行为和菜单所有权。
+ * Resolves row typography from theme font roles while preserving standard QAction behavior.
+ * zh_CN: 带 Fluent 排版角色的菜单动作项，在保留标准 QAction 行为的同时按主题字体角色解析文本样式。
  */
 class FluentMenuItem : public QWidgetAction, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -35,10 +32,9 @@ class FluentMenuItem : public QWidgetAction, public FluentElement, public QMLPlu
 public:
     explicit FluentMenuItem(const QString& text, QObject* parent = nullptr);
 
-    /** @brief 设置菜单项的字体角色，默认 Typography::FontRole::Body。 */
     /**
-     * @brief Sets the Fluent typography role used by the menu item.
-     * zh_CN: 设置菜单项使用的 Fluent 排版角色。
+     * @brief Sets the Fluent typography role (default Typography::FontRole::Body).
+     * zh_CN: 设置菜单项使用的字体角色，默认为 Typography::FontRole::Body。
      */
     void setFontStyle(Typography::FontRole role);
     Typography::FontRole fontStyle() const { return m_fontStyle; }
@@ -53,12 +49,8 @@ private:
 };
 
 /**
- * @brief Fluent-styled QMenu with token-driven item typography.
- * zh_CN: 使用 token 驱动菜单项排版的 Fluent QMenu。
- *
- * FluentMenu exposes FluentElement access so menu styling can follow the same
- * theme update path as widget-based controls.
- * zh_CN: FluentMenu 暴露 FluentElement 能力，使菜单样式跟随 QWidget 控件相同的主题更新路径。
+ * @brief Fluent-styled QMenu with token-driven typography and custom shadow painting.
+ * zh_CN: 遵循 Fluent 规范的 QMenu，支持主题字体排版以及阴影与圆角自绘。
  */
 class FluentMenu : public QMenu, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -70,10 +62,9 @@ class FluentMenu : public QMenu, public FluentElement, public QMLPlus {
 public:
     explicit FluentMenu(const QString& title, QWidget* parent = nullptr);
 
-    /** @brief 设置菜单的字体角色，默认 Typography::FontRole::Body。 */
     /**
-     * @brief Sets the Fluent typography role used by the menu.
-     * zh_CN: 设置菜单使用的 Fluent 排版角色。
+     * @brief Sets the Fluent typography role (default Typography::FontRole::Body).
+     * zh_CN: 设置菜单使用的字体角色，默认为 Typography::FontRole::Body。
      */
     void setFontStyle(Typography::FontRole role);
     Typography::FontRole fontStyle() const { return m_fontStyle; }
@@ -109,9 +100,7 @@ private:
 
     QPointer<QMenu> m_cascadeParent;
 
-    // Alpha-capable popup surfaces reserve a painted shadow; opaque runtime
-    // fallbacks use the complete popup rect. zh_CN: 支持 alpha 的 popup 预留
-    // 自绘阴影；不透明运行时回退使用完整 popup 矩形。
+    // Alpha-capable popups reserve painted shadow padding; opaque fallbacks use the full rect.
     int m_shadowSize = ::Spacing::Standard;
     bool m_translucentSurface = true;
     bool m_surfaceMaskApplied = false;

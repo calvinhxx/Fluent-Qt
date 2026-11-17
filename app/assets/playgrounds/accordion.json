@@ -65,8 +65,8 @@
     180
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Coordinates a vertical group of expandable sections with single or multiple expansion.",
+    "zh": "一组可展开的分区，可以设为一次只展开一个。"
   },
   "presets": [
     {

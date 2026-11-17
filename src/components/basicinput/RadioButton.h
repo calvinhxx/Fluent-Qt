@@ -15,13 +15,8 @@ class QMouseEvent;
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent radio button with animated selection feedback.
- * zh_CN: 带选中动画反馈的 Fluent 单选按钮。
- *
- * RadioButton preserves QRadioButton grouping behavior while painting the ring,
- * selected dot, text spacing, and hover state through the component theme.
- * zh_CN: RadioButton 保留 QRadioButton 的分组语义，并通过组件主题绘制圆环、
- * 选中圆点、文本间距和悬停状态。
+ * @brief Fluent radio button with animated selection dot.
+ * zh_CN: 带选中圆点动画的 Fluent 单选按钮。
  */
 class RadioButton : public QRadioButton, public FluentElement, public QMLPlus {
     Q_OBJECT

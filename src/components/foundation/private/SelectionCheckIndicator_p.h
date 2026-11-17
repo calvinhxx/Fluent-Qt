@@ -6,8 +6,7 @@
 
 namespace fluent::detail {
 
-// Shared by model-backed multi-selection surfaces; no widget is retained per row.
-// zh_CN: 模型驱动多选表面共用，不为每一行保留独立控件。
+// Shared check indicator painter for model-backed multi-selection views without per-row widgets.
 inline void paintSelectionCheckIndicator(QPainter& painter,
     const QRect& rect,
     const FluentElement::Colors& colors,

@@ -19,14 +19,12 @@ namespace fluent::layout {
 class Expander;
 
 /**
- * @brief Vertical group of Expander items with coordinated expansion and keyboard focus.
- * zh_CN: 纵向组织多个 Expander，并统一管理展开状态与键盘焦点的容器。
+ * @brief Vertical container of Expander items with coordinated expansion and keyboard navigation.
+ * zh_CN: 纵向排列多个 Expander 并协调展开状态与键盘焦点的容器。
  *
- * Accordion composes existing Expander instances instead of duplicating their
- * header, content, animation, or ownership contracts. Items are borrowed by
- * default; callers opt into Reparented or Owned lifetime behavior explicitly.
- * zh_CN: Accordion 直接组合现有 Expander，不重复实现其标题、内容、动画或所有权契约。
- * 默认仅借用条目；调用方可显式选择 Reparented 或 Owned 生命周期语义。
+ * By default items use WidgetOwnership::Borrowed (non-owning); pass WidgetOwnership::Reparented
+ * or WidgetOwnership::Owned to restore or transfer item lifetime.
+ * zh_CN: 默认不接管条目所有权（WidgetOwnership::Borrowed）；可通过 WidgetOwnership 显式指定恢复原父对象或由容器托管销毁。
  */
 class Accordion : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -53,38 +51,38 @@ public:
     WidgetOwnership itemOwnershipAt(int index) const;
 
     /**
-     * @brief Appends a borrowed Expander item.
-     * zh_CN: 追加一个仅借用的 Expander 条目。
+     * @brief Appends an Expander item without taking ownership (WidgetOwnership::Borrowed).
+     * zh_CN: 追加 Expander 条目（不接管所有权）。
      */
     bool addItem(Expander* item);
 
     /**
-     * @brief Appends an Expander item with explicit lifetime ownership.
-     * zh_CN: 使用显式生命周期所有权追加 Expander 条目。
+     * @brief Appends an Expander item with the given lifetime policy.
+     * zh_CN: 按指定的所有权策略追加 Expander 条目。
      */
     bool addItem(Expander* item, WidgetOwnership ownership);
 
     /**
-     * @brief Inserts a borrowed Expander at the requested index.
-     * zh_CN: 在指定位置插入一个仅借用的 Expander。
+     * @brief Inserts an Expander item at index without taking ownership (WidgetOwnership::Borrowed).
+     * zh_CN: 在指定位置插入 Expander 条目（不接管所有权）。
      */
     bool insertItem(int index, Expander* item);
 
     /**
-     * @brief Inserts an Expander with explicit lifetime ownership.
-     * zh_CN: 使用显式生命周期所有权在指定位置插入 Expander。
+     * @brief Inserts an Expander item at index with the given lifetime policy.
+     * zh_CN: 按指定的所有权策略在指定位置插入 Expander 条目。
      */
     bool insertItem(int index, Expander* item, WidgetOwnership ownership);
 
     /**
-     * @brief Removes an item and applies its configured ownership policy.
-     * zh_CN: 移除条目并执行其已配置的所有权策略。
+     * @brief Removes an item and detaches, restores, or deletes it per its ownership policy.
+     * zh_CN: 移除条目，并按其所有权策略解除关联、恢复原父对象或销毁。
      */
     bool removeItem(int index);
 
     /**
-     * @brief Removes an item without deleting it and transfers it to the caller.
-     * zh_CN: 移除条目但不删除，并将其转交给调用方。
+     * @brief Removes and returns an item without deleting it, transferring ownership to the caller.
+     * zh_CN: 移出并返回条目（不销毁，所有权交还调用方）。
      */
     Expander* takeItem(int index);
 

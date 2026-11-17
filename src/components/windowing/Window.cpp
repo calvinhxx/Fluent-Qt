@@ -98,13 +98,9 @@ Window::Window(QWidget* parent)
 {
     registerBackdropMetaTypes();
 
-    // Resolve the alpha-surface requirement before any platform adapter can call winId() and
-    // create the native window. Some platform backends derive native opacity from this initial
-    // surface format; setting WA_TranslucentBackground after handle creation can leave an opaque
-    // backing store even though later paint code writes transparent pixels.
-    // zh_CN: 必须在平台适配器调用 winId() 创建原生窗口前确定 alpha surface。部分平台后端会从
-    // 首次 surface format 推导原生不透明状态；句柄创建后再设置 WA_TranslucentBackground，可能
-    // 留下“原生 backing store 声明不透明、绘制却写透明像素”的错误组合。
+    // Resolve alpha-surface requirements before any platform call triggers winId(): some backends
+    // latch native surface opacity on handle creation and ignore later WA_TranslucentBackground changes.
+    // zh_CN: 必须在触发 winId() 创建原生句柄前确定是否需要透明表面，部分后端会在句柄创建时锁定不透明度。
     refreshBackdropCapabilities();
     m_windowTranslucent = requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     if (m_windowTranslucent)
@@ -115,9 +111,8 @@ Window::Window(QWidget* parent)
     setAutoFillBackground(false);
     setMinimumSize(Breakpoints::MinWindowWidth, Breakpoints::MinWindowHeight);
 
-    // Keep top-level translucency as a platform-level decision. Runtime effect changes update paint
-    // hints and requested backdrop type, not native flags.
-    // zh_CN: 顶层半透明是平台级决策；运行时切换效果只更新绘制提示和请求的系统背景类型。
+    // Keep top-level translucency fixed; runtime effect changes only update paint state and OS backdrop attributes.
+    // zh_CN: 顶层半透明在窗口期保持固定；运行时切换效果只更新绘制状态与系统背景属性。
     setEffectiveBackdropState(paintedFallbackState(m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
             ? QStringLiteral("platform-backdrop-pending")
             : QStringLiteral("painted-fallback")));
@@ -183,10 +178,8 @@ Window::Window(QWidget* parent)
 
 Window::~Window()
 {
-    // QWidget may deliver WindowDeactivate to child chrome while its base destructor tears the
-    // hierarchy down. Disconnect derived-class slots before that phase so activation publishing
-    // cannot re-enter an already-destroyed Window vtable.
-    // zh_CN: QWidget 基类析构子控件树时可能向 chrome 派发 WindowDeactivate；提前断开派生类槽，避免重入已析构的 Window。
+    // Disconnect before ~QWidget tears down children, which can emit WindowDeactivate back into this Window.
+    // zh_CN: 提前断开连接，避免 ~QWidget 析构子控件时向半析构的 Window 派发 WindowDeactivate。
     if (m_titleBar)
         disconnect(m_titleBar, nullptr, this, nullptr);
     if (QWidget::mouseGrabber() == this)
@@ -224,10 +217,8 @@ void Window::setCustomWindowChromeEnabled(bool enabled)
 
     refreshBackdropCapabilities();
     const bool resolvedTranslucency = requiresAlphaSurface(m_backdropCapabilities, m_chrome.clientSideFrameMargin());
-    // Once an alpha-capable native surface has been requested, keep it sticky.
-    // Disabling it on a live QWidget can recreate the platform surface and
-    // produce focus churn/black edges; opaque modes simply paint every pixel.
-    // zh_CN: 顶层 alpha surface 一旦启用便保持不变；不透明模式通过完整绘制覆盖。
+    // Keep WA_TranslucentBackground sticky once enabled to avoid recreating the native surface and causing focus churn.
+    // zh_CN: 启用半透明后保持不变，避免运行期关闭导致重建原生句柄和焦点抖动。
     m_windowTranslucent = m_windowTranslucent || resolvedTranslucency;
     setAttribute(Qt::WA_TranslucentBackground, m_windowTranslucent);
     resolveBackdropState(isVisible());
@@ -282,9 +273,8 @@ void Window::setEffectiveBackdropState(const BackdropState& state)
     if (!current())
         return;
 
-    // Keep the old dynamic properties as compatibility aliases while all new
-    // consumers use the typed state published by WindowBackdrop.
-    // zh_CN: 保留旧动态属性作为兼容别名；新消费者统一读取 WindowBackdrop 发布的类型化状态。
+    // Keep legacy dynamic properties synchronized for callers not yet using WindowBackdrop.
+    // zh_CN: 同步保留旧动态属性，方便尚未迁移到 WindowBackdrop 的调用方读取。
     setProperty("fluentWindowBackdropEffect", static_cast<int>(state.requestedEffect));
     if (!current())
         return;
@@ -323,9 +313,8 @@ void Window::setEffectiveBackdropState(const BackdropState& state)
 
 void Window::prepareBackdropSurface()
 {
-    // Preserve the old native material until its opaque replacement is submitted.
-    // A cold native window instead starts with the same theme color as Qt's first paint.
-    // zh_CN: 旧原生材质保留到不透明替代帧提交；冷启动底色与 Qt 首次绘制的主题色一致。
+    // Keep the active native backdrop until the opaque replacement frame is painted; cold windows seed with theme color.
+    // zh_CN: 旧原生材质保留到不透明替代帧提交后；冷启动窗口则先以主题色打底。
     const auto mode =
         m_backdropDisablePending ? BackdropSurfaceMode::CompositedTransparent : m_backdropState.surfaceMode;
     const auto baseColor = [this](bool active) {
@@ -380,8 +369,8 @@ void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
             : QStringLiteral("painted-fallback"));
 
     const bool canUsePlatform = m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect);
-    // An opaque request or capability fallback must not tear down a still-transparent frame.
-    // zh_CN: 不透明请求以及能力回退均须先覆盖旧透明帧，再拆除原生材质。
+    // Commit an opaque frame before tearing down an active transparent backdrop.
+    // zh_CN: 先完成不透明帧提交，再拆除当前的透明背景。
     if (!canUsePlatform)
         beginOpaqueBackdropCommit(next);
     if (applyPlatform && !m_backdropDisablePending && (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
@@ -455,11 +444,8 @@ void Window::reapplySystemBackdrop()
 
 void Window::prepareForNativeRestore()
 {
-    // A compositor can hide/unmap a window without delivering matching leave or
-    // release events to its client-side caption controls. Reset those transient
-    // states before remapping so the close button cannot reopen in critical hover.
-    // zh_CN: compositor 隐藏/取消映射窗口时，可能不会向客户端标题栏按钮投递对应的
-    // leave/release 事件。重新映射前清理这些瞬态，避免关闭按钮以危险悬停色重新出现。
+    // Reset hover/pressed state before remapping, since compositors may hide windows without leave/release events.
+    // zh_CN: 重新显示前清除悬停和按下状态，防止窗口隐藏时未收到离开/松开事件导致关闭按钮残留高亮。
     for (auto* button : {m_minimizeButton, m_maximizeButton, m_closeButton}) {
         if (!button)
             continue;
@@ -515,9 +501,8 @@ void Window::finishPendingBackdropChange()
 
     m_backdropDisablePending = false;
     m_backdropCommitWinId = 0;
-    // Prepare the native opaque base before removing the material. Platform adapters own the
-    // content-layer preparation and the native submission boundaries.
-    // zh_CN: 移除材质前先准备原生不透明底色；平台适配器负责内容图层以及原生提交边界。
+    // Seed the native opaque base before removing the compositor material.
+    // zh_CN: 移除材质前先设置好原生不透明底色。
     prepareBackdropSurface();
     if (m_backdropEffect != BackdropEffect::Solid)
         m_chrome.applySystemBackdropDetailed(BackdropEffect::Solid, effectiveThemeUsesDarkAppearance());
@@ -665,9 +650,8 @@ void Window::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
     QBackingStore* const store = backingStore();
-    // A native handle can exist before Qt allocates its backing-store image.
-    // Cache rendering must neither query that empty device nor count as a native paint.
-    // zh_CN: 原生句柄可能早于后备图像创建；缓存绘制不能读取空设备，也不能计为原生绘制。
+    // Native handles can predate backing-store allocation; ignore cache/offscreen paints when tracking real surface commits.
+    // zh_CN: 原生句柄可能早于绘制缓冲分配；离屏缓存绘制不计为窗口真实表面绘制。
     const bool paintsNativeSurface = !QWidget::sharedPainter() && store && !store->size().isEmpty()
         && painter.paintEngine() && painter.paintEngine()->paintDevice() == store->paintDevice();
     if (m_backdropDisablePending || !compatibility::detail::windowBackdropSurfaceWasPainted(this)) {
@@ -687,9 +671,8 @@ void Window::paintEvent(QPaintEvent*)
         if (paintsNativeSurface) {
             painted();
         } else if (painter.paintEngine()) {
-            // A low-DPR tile counts only after it reaches the backing store.
-            // Ordinary render()/grab() captures never publish native paint.
-            // zh_CN: 低 DPR 图块写回后备缓冲后才计入原生绘制；普通抓图不公布绘制证据。
+            // Low-DPR tiles count only after committing to the backing store; render()/grab() captures do not.
+            // zh_CN: 低 DPR 图块写回绘制缓冲后才标记为已绘制；render()/grab() 截图不计入。
             compatibility::detail::afterNativeRasterCommit(painter.paintEngine()->paintDevice(), this, painted);
         }
     }
@@ -791,9 +774,8 @@ void Window::showEvent(QShowEvent* event)
     updateChromeOptions();
     scheduleNativeChromeRepair();
 
-    // Re-assert the system backdrop after the first event-loop turn, once the
-    // native window is realized and placed.
-    // zh_CN: 首次显示后等原生窗口完成创建和定位，再重新施加系统背景。
+    // Re-apply the system backdrop after the first event-loop turn once the native window is mapped.
+    // zh_CN: 首次显示后等原生窗口创建并定位完成，再重新应用系统背景。
     if (m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect) && !m_backdropPrimed) {
         m_backdropPrimed = true;
         scheduleBackdropResolution();
@@ -846,9 +828,8 @@ bool Window::event(QEvent* event)
         compatibility::detail::resetWindowBackdropSurfacePaint(this);
     if (type == QEvent::WinIdChange
         && (m_backdropDisablePending || m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent)) {
-        // The old material belonged to a destroyed surface. Never seed its replacement transparent
-        // or reuse an opaque-paint observation from the old backing store.
-        // zh_CN: 旧材质属于已销毁的 surface；新窗口不能继承透明底色或旧 backing store 的绘制证据。
+        // Native surface changed: discard pending opaque-commit state and paint history from the destroyed handle.
+        // zh_CN: 原生窗口句柄已重建，丢弃旧表面的待提交状态与已绘制标记。
         m_backdropDisablePending = false;
         m_backdropOpaqueFramePainted = false;
         m_backdropCommitWinId = 0;
@@ -997,11 +978,8 @@ void Window::setupCaptionButtons()
         m_closeTooltip, m_closeAccessibleName);
     m_closeButton->setCriticalOnHover(true);
 
-    // Linux leaves the caption surface square and lets the top-level frame
-    // overlay clip the complete client surface once. Windows and macOS retain
-    // their established per-button corner radius.
-    // zh_CN: Linux 保持标题按钮表面为直角，由顶层窗框 overlay 对完整客户区统一裁剪；
-    // Windows/macOS 继续保留既有的按钮圆角。
+    // Linux clips the entire client surface once in the frame overlay; Windows/macOS round the close button directly.
+    // zh_CN: Linux 保持标题按钮直角，由顶层边框遮罩统一裁剪；Windows/macOS 保留按钮自身圆角。
     const int windowCornerRadius = m_frameHost ? 0 : themeRadius().control;
     m_minimizeButton->setCornerRadii(QMargins(0, 0, 0, 0));
     m_maximizeButton->setCornerRadii(QMargins(0, 0, 0, 0));
@@ -1031,8 +1009,8 @@ void Window::syncCaptionButtons()
     if (!m_captionButtonHost || !m_titleBar)
         return;
 
-    // Fluent caption buttons are used only when this window owns custom chrome.
-    // zh_CN: 仅在窗口拥有自定义 chrome 时显示 Fluent 标题栏按钮。
+    // Show Fluent caption buttons only when custom window chrome is enabled.
+    // zh_CN: 仅在启用自定义窗口标题栏时显示自绘控制按钮。
     const bool showCaptionButtons = usesFluentCaptionButtons(m_chrome);
     const int buttonHeight = m_titleBar->titleBarHeight();
     const int buttonCount = 3;
@@ -1145,11 +1123,8 @@ void Window::syncClientSideFrameShape()
     if (property(surfaceProperty).toRect() != effectiveSurface)
         setProperty(surfaceProperty, effectiveSurface);
 
-    // Windows and macOS do not own a client-side frame host. Stop here so
-    // Linux-only hit zones and rounded-frame repaints never enter their
-    // visible-window update path.
-    // zh_CN: Windows/macOS 没有客户端窗框容器；在此直接返回，使 Linux 专属遮罩、
-    // 命中区和圆角重绘完全不进入其可见窗口更新路径。
+    // Windows and macOS have no client-side frame host; skip Linux mask and overlay updates.
+    // zh_CN: Windows/macOS 不使用自绘边框宿主，直接跳过 Linux 的圆角遮罩与命中区更新。
     if (!m_frameHost) {
         const char* radiusProperty = ::fluent::overlay::clientSideFrameRadiusPropertyName();
         if (!qFuzzyIsNull(property(radiusProperty).toDouble()))
@@ -1204,12 +1179,8 @@ void Window::syncClientSideResizeInput()
 
 bool Window::usesClientSideResizeInput() const
 {
-    // Linux client-side chrome needs an application-owned edge surface on both
-    // Wayland and X11. The press is offered to QWindow::startSystemResize()
-    // first; only X11 falls back to manual geometry changes when the window
-    // manager declines that request.
-    // zh_CN: Linux 客户端窗框在 Wayland 和 X11 下都需要由应用提供边缘输入面。
-    // 首先调用 QWindow::startSystemResize()；仅当 X11 窗管拒绝时才回退到手动改几何。
+    // Linux client-side chrome always needs edge hit zones; X11 falls back to manual resize if the WM declines startSystemResize().
+    // zh_CN: Linux 自绘窗框在 Wayland/X11 下均需边缘输入区；先尝试 startSystemResize()，X11 窗管不支持时再回退手动缩放。
     return m_chrome.usesCustomWindowChrome() && m_chrome.clientSideFrameMargin() > 0;
 }
 

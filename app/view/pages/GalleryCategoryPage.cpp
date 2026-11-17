@@ -21,10 +21,8 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
     const bool pluginIndex = entry.routeId == QStringLiteral("plugins");
     addSectionHeader(pluginIndex ? QStringLiteral("Plugin modules") : QStringLiteral("Components"));
 
-    // The cards are now data-driven and painted by a single virtualized grid rather
-    // than one widget per control — this is what removes the bulk of a category page's
-    // build cost. zh_CN: 卡片改为数据驱动、由单个虚拟化网格绘制，而非每个控件一个 widget——
-    // 这正是砍掉分类页建页开销大头的关键。
+    // Virtualized single-widget grid keeps category page construction O(1) instead of creating per-card widgets.
+    // zh_CN: 使用单控件虚拟化网格绘制卡片，避免为每个组件创建独立卡片控件造成建页开销。
     auto* grid = new GalleryEntryGrid(this);
     QVector<GalleryEntryGrid::Entry> entries;
 

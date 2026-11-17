@@ -211,8 +211,8 @@
     40
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Drag two thumbs along a track to select a lower and upper bound.",
+    "zh": "通过两个滑块分别选择下限与上限数值。"
   },
   "verticalPreviewSize": [
     48,

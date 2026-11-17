@@ -6,13 +6,8 @@
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent button with persistent checked or tri-state behavior.
- * zh_CN: 支持持久选中态或三态的 Fluent 按钮。
- *
- * ToggleButton reuses the Button visual contract while making check state part
- * of the public API for toolbar commands, filters, and selectable actions.
- * zh_CN: ToggleButton 复用 Button 的视觉契约，并把 check state 暴露为公开 API，
- * 适合工具栏命令、筛选项和可选操作。
+ * @brief Checkable Fluent button supporting two-state or tri-state toggling.
+ * zh_CN: 支持两态或三态切换的 Fluent 按钮。
  */
 class ToggleButton : public Button {
     Q_OBJECT

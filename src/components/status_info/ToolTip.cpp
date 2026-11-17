@@ -58,29 +58,21 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent)
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
 
-    // Keep the top-level tooltip window at its native opacity and fade its
-    // rendered widget tree. This works on Wayland/WSLg and headless QPA
-    // plugins that do not implement native window opacity.
-    // zh_CN: 顶层 Tooltip 窗口保持原生不透明度，改为淡入控件渲染树；
-    // 兼容不实现原生窗口透明度的 Wayland、WSLg 与无头 QPA 后端。
+    // Keep the top-level window opaque and fade the widget subtree via QGraphicsOpacityEffect
+    // for Wayland/WSLg and headless QPA backends without native window opacity.
     auto* opacityEffect = new QGraphicsOpacityEffect(this);
     opacityEffect->setOpacity(kHiddenOpacity);
     setGraphicsEffect(opacityEffect);
 
     m_textBlock = new Label(this);
-    // Keep the label background transparent so ToolTip::paintEvent owns it.
-    // zh_CN: 确保标签背景透明，由 ToolTip 的 paintEvent 处理背景绘制。
 
-    // 1. Text style: Caption size, regular weight by default. zh_CN: 默认使用 Caption 字号，不加粗。
     QFont f = m_textBlock->font();
     f.setBold(false);
     f.setPixelSize(Typography::FontSize::Caption);
     m_textBlock->setFont(f);
     m_textBlock->setAlignment(Qt::AlignCenter);
 
-    // 2. Initialize the padding. Figma "Tooltip" spec: 8 horizontal, 5 top / 7 bottom
-    //    (the asymmetric vertical padding optically centers the caption text).
-    // zh_CN: 初始化内边距。Figma「Tooltip」规范：水平 8，上 5、下 7（不对称纵向内边距让文字视觉居中）。
+    // Figma Tooltip padding: 8 horizontal, 5 top / 7 bottom (optically centers caption text).
     m_margins = QMargins(8, 5, 8, 7);
 
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -88,11 +80,7 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent)
     setLayout(layout);
     applyLayoutMargins();
 
-    // 3. Initialize both paint colors and the label's own theme-aware text
-    // style. This is required even before a theme source is attached because
-    // a parent may already install QStyleSheetStyle over the subtree.
-    // zh_CN: 初始化绘制颜色与标签自身的主题文字样式；即使尚未设置主题源也必须
-    // 执行，因为父级可能已经在子树上安装 QStyleSheetStyle。
+    // Initialize colors and label style sheet immediately, even before a theme source is attached.
     onThemeUpdated();
 }
 
@@ -227,11 +215,7 @@ void ToolTip::onThemeUpdated()
     m_bgColor = c.bgLayer; // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = isEnabled() ? c.textPrimary : c.textDisabled;
-    // Color via the label's OWN style sheet rather than its palette: a ToolTip can sit under an ancestor
-    // style sheet (the gallery sample card installs QStyleSheetStyle over its subtree and ignores child
-    // palettes), which would drop a palette WindowText color and render the text near-black in dark
-    // theme. A style-sheet color always wins. zh_CN: 用标签自身样式表上色而非 palette：ToolTip 可能位于带样式表的
-    // 祖先下（画廊示例卡会安装 QStyleSheetStyle 并忽略子 palette），palette 颜色会被丢弃，深色主题里文字变近黑；样式表颜色始终生效。
+    // Color via the label's own style sheet so an ancestor style sheet does not override QPalette.
     m_textBlock->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
             .arg(m_textColor.red())
             .arg(m_textColor.green())
@@ -288,14 +272,10 @@ void ToolTip::paintEvent(QPaintEvent*)
     const auto& r = themeRadius();
     const QRect bubble = fluent::overlay::visibleCardRect(rect(), kShadowMargin);
 
-    // 1. Soft drop shadow, drawn with the shared overlay painter so it matches menus/flyouts;
-    //    using subtle intensity keeps the tooltip crisp and avoids heavy dark halos.
-    // zh_CN: 柔和投影，复用浮层共享绘制器并与菜单保持同一轻量强度，避免提示气泡周围出现过重的暗色阴影。
+    // Subtle shadow intensity avoids heavy dark halos around the compact bubble.
     fluent::overlay::paintLayeredShadow(p, bubble, r.control, themeShadow(Elevation::Medium), 0.18);
 
-    // 2. Background and border. The Figma "Tooltip" uses the 4px control radius,
-    //    not the 8px overlay radius used by dialogs/flyouts.
-    // zh_CN: 绘制背景和边框。Figma「Tooltip」用 4px 控件圆角，而非 dialog/flyout 的 8px 浮层圆角。
+    // Figma Tooltip uses 4px control radius rather than 8px overlay radius.
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = m_bgColor;
     surface.border = m_borderColor;

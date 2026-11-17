@@ -28,13 +28,11 @@ class OverscrollController;
 namespace fluent::collections {
 
 /**
- * @brief Fluent tree collection view with hierarchy-aware selection visuals.
- * zh_CN: 具备层级感知选中视觉的 Fluent 树形集合视图。
- *
- * TreeView builds on QTreeView while coordinating checkbox selection, parent/child
- * state propagation, indicator motion, header text, placeholder text, and reordering.
- * zh_CN: TreeView 基于 QTreeView，并统一处理 checkbox 选中、父子状态传播、
- * 指示器动效、标题、占位文本和拖拽重排。
+ * @brief Fluent tree view with hierarchical selection indicator motion and check-state sync.
+ * Built on QTreeView with animated expand/collapse reveal, moving selection pill indicator,
+ * optional header and placeholder text, elastic overscroll, and drag-and-drop reordering.
+ * zh_CN: 具备层级感知选中指示器和复选状态同步的 Fluent 树形视图。
+ * 基于 QTreeView 构建，提供展开/收起过渡动画、平滑移动的选中指示条、标题与占位文本、边界回弹及拖拽重排。
  */
 class TreeView : public QTreeView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -70,8 +68,8 @@ public:
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
-     * @brief Whether the item-view viewport is currently hovered.
-     * zh_CN: item-view viewport 当前是否处于悬停状态。
+     * @brief Whether the viewport is currently hovered.
+     * zh_CN: 视口当前是否处于悬停状态。
      */
     Q_PROPERTY(bool viewportHovered READ viewportHovered NOTIFY viewportHoveredChanged)
     /**
@@ -125,8 +123,8 @@ public:
      */
     Q_PROPERTY(QString headerText READ headerText WRITE setHeaderText NOTIFY headerTextChanged)
     /**
-     * @brief Text shown when the tree model has no rows to present.
-     * zh_CN: 树形 model 没有可展示行时显示的占位文本。
+     * @brief Text shown when the model has no items.
+     * zh_CN: 模型为空时显示的占位文本。
      */
     Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
 
@@ -144,11 +142,10 @@ public:
         WRITE setScrollChainingEnabled
         NOTIFY scrollChainingEnabledChanged)
     /**
-     * @brief Whether the view shows an elastic overscroll/bounce at the scroll boundary.
-     * Enabled by default; disable for chrome (e.g. a navigation pane) that should stop
-     * cleanly at the edge so reversing the wheel scrolls again immediately.
-     * zh_CN: 滚动到边界时是否显示弹性回弹。默认开启；用于不希望回弹的 chrome（如导航窗格）时关闭，
-     * 使其在边界干脆停住、反向滚动立即响应。
+     * @brief Whether elastic overscroll bounce is enabled at scroll boundaries.
+     * Enabled by default; disable for navigation panes or chrome that should stop cleanly at the edge.
+     * zh_CN: 滚动到达边界时是否启用弹性回弹（默认开启）。
+     * 希望在边界干脆停住（例如导航窗格）并立即响应反向滚动时可关闭此选项。
      */
     Q_PROPERTY(bool overscrollEnabled
         READ isOverscrollEnabled
@@ -162,11 +159,9 @@ public:
     void setModel(QAbstractItemModel* model) override;
     void setSelectionModel(QItemSelectionModel* selectionModel) override;
 
-    // --- Selection ---
     SelectionMode selectionMode() const { return m_selectionMode; }
     void setSelectionMode(SelectionMode mode);
 
-    // --- Appearance ---
     Typography::FontRole fontRole() const { return m_fontRole; }
     void setFontRole(Typography::FontRole role);
 
@@ -187,7 +182,6 @@ public:
     bool viewportHovered() const { return m_viewportHovered; }
     bool isViewportHovered() const { return viewportHovered(); }
 
-    // --- Drag reorder ---
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
@@ -197,17 +191,14 @@ public:
     bool isOverscrollEnabled() const;
     void setOverscrollEnabled(bool enabled);
 
-    // --- Tree API ---
     void expandAll();
     void collapseAll();
     void toggleExpanded(const QModelIndex& index);
 
-    // --- Selection API ---
     QModelIndex selectedItem() const;
     QModelIndexList selectedItems() const;
     void setSelectedItem(const QModelIndex& index);
 
-    // --- Selected indicator motion API ---
     qreal indicatorMotionProgress() const { return m_indicatorMotionProgress; }
     IndicatorVerticalDirection indicatorMotionDirection() const { return m_indicatorMotionDirection; }
     IndicatorHierarchyTransition indicatorHierarchyTransition() const { return m_indicatorHierarchyTransition; }
@@ -218,11 +209,9 @@ public:
     QModelIndex indicatorMotionPreviousIndex() const;
     QModelIndex indicatorMotionCurrentIndex() const;
 
-    // --- Selected indicator pill rendering ---
-    // zh_CN: 选中指示器药丸的绘制开关与样式参数。
     /**
      * @brief Returns the current selected indicator geometry in viewport coordinates.
-     * zh_CN: 返回当前选中指示器在 viewport 坐标系中的几何区域。
+     * zh_CN: 返回当前选中指示器在视口坐标系中的几何区域。
      */
     QRectF selectedIndicatorRect() const;
     /**
@@ -283,13 +272,13 @@ signals:
     void headerTextChanged();
     void placeholderTextChanged();
     /**
-     * @brief Mirrors the inherited pressed() signal for the same model index.
-     * zh_CN: 使用同一模型索引镜像继承的 pressed() 信号。
+     * @brief Convenience signal mirroring QAbstractItemView::pressed().
+     * zh_CN: 与 QAbstractItemView::pressed() 同步发出的便捷信号。
      */
     void itemPressed(const QModelIndex& index);
     /**
-     * @brief Mirrors the inherited clicked() signal for the same model index.
-     * zh_CN: 使用同一模型索引镜像继承的 clicked() 信号。
+     * @brief Convenience signal mirroring QAbstractItemView::clicked().
+     * zh_CN: 与 QAbstractItemView::clicked() 同步发出的便捷信号。
      */
     void itemClicked(const QModelIndex& index);
     void canReorderItemsChanged();
@@ -349,9 +338,8 @@ private:
     QRectF selectedIndicatorBaseRect(const QModelIndex& index) const;
     QRectF currentSelectedIndicatorRect() const;
     void paintSelectedIndicator(QPainter& painter) const;
-    // Hidden backgrounds expose the parent surface, so their animation frames
-    // need full viewport recomposition; opaque views keep the smaller motion band.
-    // zh_CN: 隐藏背景时需要整块重组父级表面；不透明视图仍只重绘动画经过的窄带。
+    // Recompose full viewport when background is hidden so translucent parent surfaces don't retain trails;
+    // otherwise repaint only the motion band.
     QRect indicatorMotionDirtyRect() const;
     void syncCheckStatesWithSelection(const QItemSelection& selected, const QItemSelection& deselected);
     bool shouldSyncCheckStateWithSelection(const QModelIndex& index) const;
@@ -427,7 +415,10 @@ private:
     bool m_pendingCollapseFinalize = false; // deferred collapse: actually collapse on finish
 
 public:
-    /** Query chevron rotation progress for delegate painting. 0=right, 1=down. */
+    /**
+     * @brief Returns chevron rotation progress for delegate painting (0 = collapsed, 1 = expanded).
+     * zh_CN: 返回供代理绘制的展开箭头旋转进度（0 为收起，1 为展开）。
+     */
     qreal chevronRotation(const QModelIndex& index) const;
 };
 

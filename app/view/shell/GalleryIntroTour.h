@@ -23,16 +23,11 @@ class Label;
 namespace fluent::gallery {
 
 /**
- * @brief First-launch coach-mark tour: dims the app and walks a CoachMark card across a list of
- * targets. zh_CN: 首次启动的操作引导：压暗 app,让 CoachMark 卡片依次走过一串目标。
+ * @brief First-launch coach-mark tour that dims the app and guides users through target controls.
  *
- * Dim = an OverlayScrim child of the app window which also blocks clicks (modal); window move and resize
- * chrome is disabled via Window::setChromeInteractive. The card is a same-window CoachMark raised above
- * the scrim, with a tail pointing at each target. Previous / Next / Finish drive it; close skips. The
- * owner persists "seen" and only calls start() on first launch.
- * zh_CN: 压暗 = app 窗口的 OverlayScrim 子级,并拦截点击(模态);标题栏拖动经 Window::setChromeInteractive
- * 禁用。卡片是同窗口 CoachMark,置于遮罩之上,尾巴指向每个目标。Previous/Next/Finish 推进,关闭跳过。
- * 是否「已看过」由调用方持久化,仅首启调用 start()。
+ * Uses a modal same-window OverlayScrim with a spotlight cutout and a CoachMark card above it,
+ * disabling window resize/move chrome while active.
+ * zh_CN: 首次启动的操作引导：在同窗口内通过 OverlayScrim 遮罩挖空高亮目标，并在上方以 CoachMark 卡片分步引导。
  */
 class GalleryIntroTour : public QObject {
     Q_OBJECT

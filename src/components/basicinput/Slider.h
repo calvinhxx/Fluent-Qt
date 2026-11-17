@@ -21,13 +21,8 @@ class ToolTip;
 namespace fluent::basicinput {
 
 /**
- * @brief Fluent slider with custom track, handle, and animated feedback metrics.
- * zh_CN: 自定义轨道、滑块和动画反馈参数的 Fluent 滑块。
- *
- * Slider builds on QSlider semantics while exposing handle size, track height,
- * hover ratio, and press ratio for polished visual-state transitions.
- * zh_CN: Slider 保留 QSlider 语义，并暴露滑块尺寸、轨道高度、hover 比例和 press 比例，
- * 用于更细致的视觉状态过渡。
+ * @brief Fluent slider with custom track, thumb, and drag value tooltip.
+ * zh_CN: 自定义轨道、滑块及拖动数值提示的 Fluent 滑块。
  */
 class Slider : public QSlider, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -41,7 +36,6 @@ class Slider : public QSlider, public FluentElement, public QMLPlus {
      * zh_CN: 滑块轨道高度，单位为像素。
      */
     Q_PROPERTY(int trackHeight READ trackHeight WRITE setTrackHeight)
-    // Animated properties. zh_CN: 动画属性。
     /**
      * @brief Hover animation ratio for slider visuals.
      * zh_CN: 滑块视觉使用的悬停动画比例。
@@ -114,14 +108,13 @@ private:
     void updateToolTipPos();
     void hideToolTip();
 
-    int m_handleSize = 20;                 // WinUI 3 Standard Thumb (5 * BaseUnit)
-    int m_trackHeight = ::Spacing::XSmall; // Defaults to 4px. zh_CN: 默认 4px。
-    int m_visualMargin = 2;                // Margin so antialiasing is never clipped. zh_CN: 避免抗锯齿被裁切的边距。
-    int m_defaultLength = 160;             // Default length. zh_CN: 默认长度。
+    int m_handleSize = 20; // WinUI 3 Standard Thumb (5 * BaseUnit)
+    int m_trackHeight = ::Spacing::XSmall;
+    int m_visualMargin = 2; // Extra margin so antialiasing is never clipped.
+    int m_defaultLength = 160;
     bool m_isPressed = false;
     bool m_keyboardFocusVisible = false;
 
-    // Animation state. zh_CN: 动画状态。
     qreal m_hoverRatio = 0.0;
     qreal m_pressRatio = 0.0;
     QPropertyAnimation* m_hoverAnim = nullptr;

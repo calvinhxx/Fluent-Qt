@@ -17,18 +17,15 @@ class ParticleLayer;
 class SpatialView;
 
 /**
- * @brief Provides Spatial factories and cleanup through the optional plugin layer.
- * zh_CN: 通过可选插件层提供 Spatial 工厂与停用清理。
- *
- * Register this caller-owned plugin with PluginManager and activate fluentqt.spatial.
- * Activation prepares native styles without a GPU context or a hardware verdict.
- * Deactivation suspends tracked views in flat/raster mode and releases particle
- * delegation, preserving caller-owned widgets and models. Reactivation restores
- * render modes but does not turn depth back on. All calls use the GUI thread.
- * zh_CN: 将调用方持有的插件注册到 PluginManager，再激活 fluentqt.spatial。
- * 激活只准备原生样式，不创建 GPU 上下文或判定硬件可用性。停用时，受追踪视图回到
- * 平面/栅格模式并释放粒子代理，不销毁调用方控件或模型；再次激活恢复渲染模式，
- * 不自动重启立体模式。所有调用均须在 GUI 线程执行。
+ * @brief Plugin adapter providing SpatialView and ParticleLayer factories with deactivation cleanup.
+ * Register with PluginManager and activate "fluentqt.spatial" on the GUI thread. Activation
+ * initializes native styling without creating a GPU context. Deactivation switches tracked views
+ * to flat raster mode and releases particle GPU layers while keeping widgets intact; reactivation
+ * restores render modes without re-enabling spatial depth automatically.
+ * zh_CN: 提供 SpatialView 与 ParticleLayer 工厂及停用清理的插件适配器。
+ * 在 GUI 线程向 PluginManager 注册并激活 fluentqt.spatial。激活仅初始化原生样式，不创建 GPU 上下文；
+ * 停用时将关联视图切回平面光栅模式并释放粒子 GPU 代理，同时保留外部控件；重新激活会恢复先前的
+ * 渲染模式，但不会自动重新开启 3D 透视。
  */
 class SpatialPlugin : public plugins::WidgetPlugin {
     Q_OBJECT
@@ -42,14 +39,11 @@ public:
     QWidget* createWidget(const QString& key, QWidget* parent, QString* error) override;
     bool isActive() const;
 
-    /** @brief Tracks a borrowed view, including application-defined subclasses.
-     * zh_CN: 追踪借用视图，也支持应用定义的子类；不改变父对象或所有权。 */
+    /** @brief Attaches an existing SpatialView (including subclasses) without reparenting or taking ownership. zh_CN: 关联已有的 SpatialView（含自定义子类），不改变父对象或所有权。 */
     bool attachView(SpatialView* view);
-    /** @brief Creates a caller-owned particle adapter only while active.
-     * zh_CN: 仅在激活时创建调用方持有的粒子适配器；不接管源控件。 */
+    /** @brief Creates a ParticleLayer for backdrop while active (without taking ownership of backdrop); returns nullptr when inactive. zh_CN: 激活时为指定粒子背景创建 ParticleLayer（不接管背景所有权）；未激活时返回 nullptr。 */
     ParticleLayer* createParticleLayer(particles::ParticleBackdrop* backdrop, QObject* parent = nullptr);
-    /** @brief Prepares a hidden Fluent window while active, without creating a GPU context.
-     * zh_CN: 激活时准备隐藏的 Fluent 窗口，不创建 GPU 上下文。 */
+    /** @brief Configures a hidden Fluent window for future GPU composition while active without creating a context. zh_CN: 激活时为隐藏的 Fluent 窗口预配置 GPU 合成属性（不创建上下文）。 */
     bool prepareWindow(windowing::Window* window);
     bool prepareWindow(windowing::Window* window, QSurface::SurfaceType surfaceType);
 

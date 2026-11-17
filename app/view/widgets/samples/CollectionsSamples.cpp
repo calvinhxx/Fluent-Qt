@@ -102,14 +102,8 @@ struct FlowPhotoInfo {
 };
 
 /**
- * @brief A resizable pane that paints a diagonal gradient with a centered caption.
- * zh_CN: 可缩放的窗格，绘制对角渐变并居中显示标题。
- *
- * Used by SplitView / StackView so their panes read as the same colored "pictures" the
- * FlipView gallery uses, but stretch crisply as the pane resizes (a stretched QPixmap would
- * blur the caption).
- * zh_CN: 供 SplitView / StackView 使用，让窗格呈现与 FlipView 一致的彩色"图片"风格，并随窗格
- * 缩放保持清晰（直接拉伸 QPixmap 会让标题发虚）。
+ * @brief Resizable pane painting a crisp vector gradient and centered caption for SplitView / StackView demos.
+ * zh_CN: 可缩放窗格：用矢量绘制对角渐变与居中文字，供 SplitView / StackView 示例在调整大小时保持清晰。
  */
 class GradientPane : public QWidget {
 public:

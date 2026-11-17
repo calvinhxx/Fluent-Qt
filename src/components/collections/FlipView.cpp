@@ -14,31 +14,24 @@
 
 namespace fluent::collections {
 
-// ── WinUI 3 FlipView metrics. zh_CN: WinUI 3 FlipView 尺寸常量 ──────────────
+// WinUI 3 FlipView metrics
 namespace {
-constexpr int kNavBtnW_H = 16;   // Nav button width, horizontal mode. zh_CN: 水平模式导航按钮宽度。
-constexpr int kNavBtnH_H = 28;   // Nav button height, horizontal mode. zh_CN: 水平模式导航按钮高度。
-constexpr int kNavBtnW_V = 28;   // Nav button width, vertical mode. zh_CN: 垂直模式导航按钮宽度。
-constexpr int kNavBtnH_V = 16;   // Nav button height, vertical mode. zh_CN: 垂直模式导航按钮高度。
-constexpr int kNavBtnMargin = 2; // Nav button distance from the edge. zh_CN: 导航按钮到边缘距离。
-constexpr int kNavBtnRadius = 3; // Button corner radius. zh_CN: 按钮圆角。
+constexpr int kNavBtnW_H = 16;
+constexpr int kNavBtnH_H = 28;
+constexpr int kNavBtnW_V = 28;
+constexpr int kNavBtnH_V = 16;
+constexpr int kNavBtnMargin = 2;
+constexpr int kNavBtnRadius = 3;
 constexpr int kIndicatorDotSize = 6;
 constexpr int kIndicatorSpacing = 8;
 constexpr int kIndicatorMargin = 12;
-constexpr int kArrowFontSize = 10;    // Chevron icon size
-constexpr int kGestureThreshold = 50; // Accumulated trackpad pixel/angle threshold. zh_CN: trackpad 累积像素/角度阈值。
-// NoScrollPhase cluster detection: gaps above this start a new gesture cluster.
-// Windows precision trackpads emit every ~8-16ms with >100ms between gestures;
-// RDP forwards at ~20-30ms and can spike to 60-100ms under network jitter.
-// 120ms covers a single gesture's tail without mistaking RDP jitter for a new cluster.
-// zh_CN: NoScrollPhase 事件 cluster 检测：事件间隔大于此值视为新手势。
-// Windows 精密触控板事件间隔 ~8-16ms，手势间隔 >100ms；RDP 转发约 20-30ms，
-// 网络抖动下可达 60-100ms。120ms 阈值覆盖单次手势尾巴，避免 RDP 抖动误判为新 cluster。
+constexpr int kArrowFontSize = 10;
+constexpr int kGestureThreshold = 50; // Accumulated trackpad pixel/angle threshold
+// Gaps > 120 ms start a new NoScrollPhase gesture cluster; covers ~20-100 ms RDP wheel jitter.
 constexpr int kClusterGapMs = 120;
 } // namespace
 
-// ── Overlay: paints nav buttons and the indicator above child pages. zh_CN: 覆盖层：在子页面之上绘制导航按钮和指示器 ──
-
+// Overlay painting nav buttons and page indicators above child pages
 class FlipViewOverlay : public QWidget {
 public:
     explicit FlipViewOverlay(FlipView* parent) : QWidget(parent), m_fv(parent)
@@ -57,16 +50,8 @@ protected:
         const auto& c = m_fv->themeColorsRef();
         qreal r = radius.control;
 
-        // Corner mask: fill the outer corners with the surrounding surface color (antialiased).
-        // The app installs NO global dark QPalette (it themes via paint), so an ancestor's
-        // palette Window is Qt's default light-white in dark theme → white corners. Instead walk
-        // up to the nearest ancestor that advertises its real painted background via the
-        // "fluentSurfaceColor" dynamic property; this also skips plain layout containers (whose
-        // palette QStyleSheetStyle may reset) and lands on the actual surface the FlipView sits on.
-        // zh_CN: 圆角遮罩：用周围表面色填充外角（抗锯齿）。本应用不装全局暗色 QPalette（靠绘制上主题），
-        // 故祖先 palette Window 在 Dark 下是默认浅白 → 白角。改为向上查找最近一个通过 "fluentSurfaceColor"
-        // 动态属性公布真实绘制背景的祖先；这样也能跳过普通布局容器（其 palette 可能被 QStyleSheetStyle 重置），
-        // 落到 FlipView 真正所在的表面。
+        // Mask rounded corners using the nearest ancestor's fluentSurfaceColor, skipping layout containers
+        // and ignoring QPalette::Window (which stays light in dark theme without a global dark palette).
         QPainterPath outer;
         outer.addRect(QRectF(rect()));
         QPainterPath inner;
@@ -84,12 +69,10 @@ protected:
         p.setPen(Qt::NoPen);
         p.fillPath(outer - inner, parentBg);
 
-        // Rounded border. zh_CN: 圆角边框。
         p.setPen(QPen(m_fv->isEnabled() ? c.strokeDefault : c.strokeDivider, 1.0));
         p.setBrush(Qt::NoBrush);
         p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), r, r);
 
-        // Navigation buttons. zh_CN: 导航按钮。
         if (m_fv->isEnabled() && m_fv->m_showNavButtons && m_fv->m_isHovered && m_fv->m_pages.size() > 1) {
             if (m_fv->m_currentIndex > 0)
                 m_fv->drawNavButton(p, m_fv->prevButtonRect(), false, m_fv->m_prevBtnHovered, m_fv->m_prevBtnPressed);
@@ -97,7 +80,6 @@ protected:
                 m_fv->drawNavButton(p, m_fv->nextButtonRect(), true, m_fv->m_nextBtnHovered, m_fv->m_nextBtnPressed);
         }
 
-        // Page indicator. zh_CN: 页面指示器。
         if (m_fv->m_showPageIndicator && m_fv->m_pages.size() > 1)
             m_fv->drawPageIndicator(p);
     }
@@ -518,29 +500,20 @@ void FlipView::paintEvent(QPaintEvent*)
     const auto& c = themeColorsRef();
     auto radius = themeRadius();
 
-    // ── Background. zh_CN: 背景 ──
     QPainterPath bgPath;
     bgPath.addRoundedRect(QRectF(rect()), radius.control, radius.control);
     p.setClipPath(bgPath);
     p.fillRect(rect(), c.bgSolid);
 
     // Nav buttons and the indicator are painted by FlipViewOverlay above child pages.
-    // zh_CN: 导航按钮和指示器由 FlipViewOverlay 在子页面之上绘制。
 }
 
 void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext, bool hovered, bool pressed)
 {
     const auto& c = themeColorsRef();
 
-    // Background: an in-app acrylic approximation over an OPAQUE surface base.
-    // The control* tokens carry a theme-baked alpha (in dark they are translucent WHITE,
-    // meant to layer over a dark surface); forcing setAlpha(230) on them turned the button
-    // into near-solid white in dark theme. Base the fill on the theme's opaque surface tokens
-    // instead — white-ish in light, dark in dark — then keep the ~90% acrylic translucency.
-    // zh_CN: 背景 — 在不透明表面色之上做 AcrylicInApp 近似。
-    // control* token 自带主题 alpha（Dark 下是半透明白，本应叠在深色表面上）；对其强制 setAlpha(230)
-    // 会让按钮在 Dark 主题下变成近乎纯白。改以主题的不透明表面 token 作底色（Light 偏白、Dark 偏暗），
-    // 再保留约 90% 的 acrylic 半透明度。
+    // Base acrylic fill on opaque surface tokens (bgLayer/bgSolid) rather than control* tokens,
+    // whose baked-in white alpha in dark theme would turn buttons bright white at alpha 230.
     QColor bgColor;
     if (pressed) {
         bgColor = c.bgSolid;
@@ -557,14 +530,8 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext, boo
     p.setBrush(bgColor);
     p.drawPath(btnPath);
 
-    // WinUI FlipViewButtonBorderThemeThickness=0: buttons have no outline.
-    // zh_CN: WinUI FlipViewButtonBorderThemeThickness=0，按钮无描边。
-
-    // Arrow glyph. zh_CN: 箭头。
+    // WinUI FlipViewButtonBorderThemeThickness=0 (no outline) and ScalePressed=0.875.
     QColor arrowColor = (pressed || hovered) ? c.textSecondary : c.strokeStrong;
-
-    // FlipViewButtonScalePressed=0.875: the arrow shrinks while pressed.
-    // zh_CN: FlipViewButtonScalePressed=0.875，按压时箭头缩小。
     const int arrowSize = pressed ? static_cast<int>(kArrowFontSize * 0.875) : kArrowFontSize;
     p.setPen(arrowColor);
 
@@ -581,9 +548,7 @@ void FlipView::drawPageIndicator(QPainter& p)
     if (indRect.isNull())
         return;
 
-    // Fluent neutral pip colors. zh_CN: Fluent 中性分页指示点颜色。
     QColor selectedColor, unselectedColor;
-    // Fluent neutral pips. zh_CN: Fluent 中性分页点。
     selectedColor = isEnabled() ? c.textPrimary : c.textDisabled;
     unselectedColor = isEnabled() ? c.textTertiary : c.strokeDivider;
 
@@ -603,23 +568,16 @@ void FlipView::drawPageIndicator(QPainter& p)
     }
 }
 
-// ── Event handling. zh_CN: 事件处理 ──────────────────────────────────────────
-
 void FlipView::updateMask()
 {
-    // setMask is avoided: QRegion clips per-pixel without antialiasing.
-    // Rounded clipping is done via paintEvent clip plus the overlay mask.
-    // zh_CN: 不使用 setMask（QRegion 像素级裁剪无抗锯齿）；
-    // 圆角裁剪由 paintEvent clip + overlay 遮罩实现。
+    // Rounded clipping uses paintEvent + FlipViewOverlay instead of jagged QRegion setMask().
     clearMask();
 }
 
 void FlipView::updateVisuals()
 {
     update();
-    // Opaque child pages can suppress the parent's paint event. The chrome
-    // owns a separate surface and must receive its own invalidation.
-    // zh_CN: 不透明页面可能遮住父控件绘制，导航覆盖层必须独立刷新。
+    // Update the overlay separately because opaque child pages can suppress parent repaints.
     if (m_overlay)
         m_overlay->update();
 }
@@ -737,12 +695,8 @@ void FlipView::wheelEvent(QWheelEvent* event)
 
     const auto phase = event->phase();
 
-    // ── Phase-based: trackpad gestures (Begin → Update → Momentum → End). zh_CN: 触控板手势 ──
-    // Native macOS and Windows precision trackpads (WM_POINTER) provide the full phase chain.
-    // zh_CN: macOS 原生 / Windows 精密触控板 (WM_POINTER) 提供完整 phase 链。
+    // Phase-based trackpad gestures (native macOS / Windows WM_POINTER)
     if (phase == Qt::ScrollBegin) {
-        // New gesture start: reset all state (phase + NoScrollPhase).
-        // zh_CN: 新手势起点：重置所有状态（phase + NoScrollPhase）。
         m_gestureAccum = 0;
         m_gestureConsumed = false;
         m_pendingFlipDir = 0;
@@ -752,12 +706,7 @@ void FlipView::wheelEvent(QWheelEvent* event)
         return;
     }
     if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-        // Bridge phase → NoScrollPhase debounce: after a Windows precision-trackpad
-        // gesture ends, inertia may keep arriving as NoScrollPhase (WM_MOUSEWHEEL).
-        // Start a cooldown so those inertia events are debounced correctly.
-        // zh_CN: phase → NoScrollPhase 防抖桥接：Windows 精密触控板手势结束后，
-        // 惯性滚动可能以 NoScrollPhase (WM_MOUSEWHEEL) 形式到达；
-        // 启动 cooldown 使这些惯性事件被正确拦截。
+        // Start cooldown so trailing NoScrollPhase WM_MOUSEWHEEL inertia on Windows is ignored.
         m_wheelCooldown.start();
         event->accept();
         return;
@@ -767,13 +716,7 @@ void FlipView::wheelEvent(QWheelEvent* event)
             event->accept();
             return;
         }
-        // Always accumulate, even mid-animation. If the threshold is hit while the
-        // animation still plays, store the direction in m_pendingFlipDir and flip
-        // when it finishes. Fixes fast consecutive Windows swipes whose ScrollUpdates
-        // all land during the previous animation and used to be dropped by the guard.
-        // zh_CN: 始终累积——即使动画进行中。阈值达成时若动画未结束，将方向存入
-        // m_pendingFlipDir，动画结束后自动执行；修复 Windows 快速连续滑动时
-        // ScrollUpdate 全部落在上一次动画期间而被守卫丢弃的问题。
+        // Accumulate even mid-animation and queue at most one pending flip for fast consecutive swipes.
         int delta = !event->pixelDelta().isNull()
             ? (m_orientation == Qt::Horizontal ? event->pixelDelta().x() : event->pixelDelta().y())
             : (m_orientation == Qt::Horizontal
@@ -782,8 +725,7 @@ void FlipView::wheelEvent(QWheelEvent* event)
         m_gestureAccum += delta;
         if (qAbs(m_gestureAccum) >= kGestureThreshold) {
             m_gestureConsumed = true;
-            m_npConsumed =
-                true; // Bridge: stop post-gesture NoScrollPhase inertia from flipping again. zh_CN: 桥接：防止手势结束后 NoScrollPhase 惯性事件再翻页。
+            m_npConsumed = true; // Suppress post-gesture NoScrollPhase inertia.
             m_wheelCooldown.start();
             if (m_slideAnimation->state() == QAbstractAnimation::Running) {
                 m_pendingFlipDir = (m_gestureAccum > 0) ? -1 : 1;
@@ -795,48 +737,22 @@ void FlipView::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    // ── NoScrollPhase: mouse wheel / Windows trackpad WM_MOUSEWHEEL / RDP ──
-    // Most Windows precision-trackpad two-finger scrolls arrive as WM_MOUSEWHEEL,
-    // i.e. all NoScrollPhase. Mac-over-RDP trackpads also map to WM_MOUSEWHEEL
-    // (angleDelta=±120, high frequency). Everything shares the cluster path: the
-    // first event flips once |angleDelta| ≥ kGestureThreshold, later events in the
-    // same cluster are consumed so high-rate RDP streams cannot chain-flip to the end.
-    // zh_CN: NoScrollPhase：鼠标滚轮 / Windows 触控板 WM_MOUSEWHEEL / RDP。
-    // Windows 大部分精密触控板两指滚动 → WM_MOUSEWHEEL，全部 NoScrollPhase；
-    // Mac RDP → Windows 时触控板同样映射为 WM_MOUSEWHEEL（angleDelta=±120，高频）。
-    // 统一走 cluster 累积路径：阈值达成时首个事件立即翻页，同 cluster 后续事件被
-    // consumed 拦截，避免 RDP 高频事件链式翻页到底。
+    // NoScrollPhase (mouse wheel, WM_MOUSEWHEEL precision touchpad, RDP): group into time-gap clusters
+    // so one gesture flips once and high-rate streams don't chain-flip.
     const bool animating = m_slideAnimation->state() == QAbstractAnimation::Running;
 
     int delta =
         (m_orientation == Qt::Horizontal) ? event->angleDelta().x() + event->angleDelta().y() : event->angleDelta().y();
 
-    // ── Cluster accumulation ──
-    // Event gaps mark cluster boundaries (gap > kClusterGapMs = new gesture).
-    // Each cluster accumulates angleDelta; passing the threshold flips (or pends),
-    // then the rest is consumed. During the animation cooldown events only update
-    // the pending state and never start a new flip.
-    // zh_CN: cluster 累积——用事件间隔检测边界（间隔 > kClusterGapMs 即新手势）；
-    // 每个 cluster 累积 angleDelta，过阈值后翻页/挂起，再统一 consumed；
-    // 动画期间（cooldown）事件只更新 pending，不触发新翻页。
     const qint64 sinceLast = m_wheelCooldown.isValid() ? m_wheelCooldown.elapsed() : 10000;
     m_wheelCooldown.start();
 
-    // Gap above the threshold → a new cluster (new gesture). zh_CN: 间隔超过阈值 → 新 cluster（新手势）。
     if (sinceLast > kClusterGapMs) {
         m_npConsumed = false;
         m_npAccum = 0;
     }
 
-    // While animating: only mark consumed so leftover events cannot flip after the
-    // animation, and do not set m_pendingFlipDir. NoScrollPhase cannot distinguish a
-    // new gesture from the same gesture delayed by RDP (network lag can exceed
-    // kClusterGapMs and fake a new cluster); setting pending here would chain-flip.
-    // The pending path is reserved for phase-based input with explicit ScrollBegin.
-    // zh_CN: 动画播放中只标记 consumed，防止残余事件在动画结束后再翻页，且不设置
-    // m_pendingFlipDir。NoScrollPhase 无法区分“新手势”与“同一手势被 RDP 延迟”
-    // （网络延迟可造成 >kClusterGapMs 间隙被误判为新 cluster），设 pending 会链式翻页；
-    // pending 机制仅保留给有明确 ScrollBegin 边界的 phase-based 路径。
+    // Never queue m_pendingFlipDir here: RDP jitter > kClusterGapMs looks like a new cluster and would chain-flip.
     if (animating) {
         if (!m_npConsumed) {
             m_npAccum += delta;
@@ -860,7 +776,6 @@ void FlipView::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    // Threshold reached → this cluster flips exactly once. zh_CN: 阈值达到 → 本 cluster 翻一次页。
     m_npConsumed = true;
     int dir = (m_npAccum > 0) ? -1 : 1;
     if (dir < 0)

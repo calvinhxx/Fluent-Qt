@@ -29,8 +29,6 @@
 
 namespace fluent::textfields {
 
-// ── Helpers. zh_CN: 辅助函数 ───────────────────────────────────────────────────
-
 constexpr char kHeightAnimationObjectName[] = "fluentTextEditHeightAnimation";
 
 class TextEditHeightAnimation final : public QVariantAnimation {
@@ -83,13 +81,8 @@ static int renderedLineHeight(QTextEdit* editor)
     if (!editor)
         return 1;
 
-    // Qt 5/X11 can report a 17 px font line while QTextLayout and the caret
-    // actually paint an 18 px box. Use the live box only for control sizing;
-    // block formatting remains font-based so a late platform layout change
-    // never appends an invisible command to the user's Undo stack.
-    // zh_CN: Qt 5/X11 可能报告 17 px 字体行距，但 QTextLayout 与光标实际
-    // 绘制 18 px。真实盒仅用于控件尺寸计算；block 格式仍基于字体度量，避免
-    // 平台延迟布局变化向用户撤销栈追加不可见命令。
+    // Qt 5/X11 can report fontLineSpacing 1 px smaller than QTextLayout paints; use live layout height
+    // for widget sizing while keeping block formats font-based so late relayouts never push Undo entries.
     int height = metricLineHeight(editor->font());
     QTextDocument* document = editor->document();
     if (!document)
@@ -148,20 +141,8 @@ static bool formatMetricEquals(qreal lhs, qreal rhs)
     return qAbs(lhs - rhs) < 0.01;
 }
 
-// ── Inner editor. zh_CN: 内部编辑器 ────────────────────────────────────────────
-//
-// QTextEdit is used (not QPlainTextEdit) because QTextDocumentLayout natively
-// honors QTextBlockFormat line spacing. Each text line and the caret center
-// vertically inside the lineHeight slot via:
-//   - viewport top/bottom margins = requested insets + remaining centered slack
-//   - LineDistanceHeight = lineHeight - fontLh          … inter-line spacing
-// Qt then handles caret placement, selection, and hit testing without a
-// custom paintEvent.
-// zh_CN: 使用 QTextEdit（而非 QPlainTextEdit），因为 QTextDocumentLayout 原生
-// 支持 QTextBlockFormat 行距。借助上述两条公式，每行
-// 文本与光标在 lineHeight 槽内垂直居中；光标定位、选区高亮、点击映射均由 Qt
-// 自动处理，无需自定义 paintEvent。
-
+// Use QTextEdit (not QPlainTextEdit) so QTextDocumentLayout honors QTextBlockFormat line spacing.
+// Viewport margins handle outer padding + centering slack, and LineDistanceHeight handles inter-line gaps.
 class InnerTextEdit : public QTextEdit {
 public:
     explicit InnerTextEdit(TextEdit* owner, QWidget* parent = nullptr) : QTextEdit(parent), m_owner(owner)
@@ -182,13 +163,7 @@ protected:
         if (!event)
             return;
 
-        // Keep QTextEdit's standard editing actions and their enabled state,
-        // but host them in FluentMenu so the popup does not inherit this
-        // editor's transparent Base/Window palette. Native QMenu renders that
-        // inherited palette differently across Windows 10 and Windows 11.
-        // zh_CN: 保留 QTextEdit 标准编辑动作及其启用状态，但改由 FluentMenu
-        // 承载，避免原生 QMenu 继承编辑器透明的 Base/Window 调色板；Win10
-        // 与 Win11 对该透明调色板的回退绘制并不一致。
+        // Host QTextEdit's actions in FluentMenu so native QMenu does not inherit the transparent palette inconsistently on Win10/11.
         auto* standardMenu = createStandardContextMenu(event->pos());
         if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(this, standardMenu, event->globalPos(),
                 QStringLiteral("FluentTextEdit.ContextMenu"))) {
@@ -210,10 +185,7 @@ protected:
     void paintEvent(QPaintEvent* e) override
     {
         QTextEdit::paintEvent(e);
-        // Paint the placeholder on the same viewport and font metrics as real
-        // text so empty and populated states keep identical alignment.
-        // zh_CN: placeholder 与真实文本共用 viewport 和字体度量，自绘以保证
-        // 空态与有内容状态对齐一致。
+        // Paint placeholder directly on the viewport so alignment matches real text metrics.
         if (!m_owner || !document()->isEmpty() || m_hasPreedit)
             return;
         const QString ph = m_owner->placeholderText();
@@ -232,10 +204,7 @@ protected:
     {
         const bool hasPreedit = event && !event->preeditString().isEmpty();
         const bool preeditStateChanged = m_hasPreedit != hasPreedit;
-        // Update the state before QTextEdit emits textChanged/documentSizeChanged
-        // so the owner can keep composition geometry stable until commit.
-        // zh_CN: 在 QTextEdit 发出 textChanged/documentSizeChanged 前更新状态，
-        // 让外层在正式提交前保持组字期间的几何稳定。
+        // Update preedit state before QTextEdit emits change signals so height remains stable during IME composition.
         m_hasPreedit = hasPreedit;
         QTextEdit::inputMethodEvent(event);
         if (!preeditStateChanged)
@@ -286,8 +255,6 @@ private:
     bool m_hasPreedit = false;
 };
 
-// ── Construction. zh_CN: 构造 ───────────────────────────────────────────────────
-
 TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
 {
     setAttribute(Qt::WA_TranslucentBackground);
@@ -315,22 +282,11 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
         heightAnimation->targetHeight = 0;
     });
 
-    // Remove the document's default padding; viewport margins and block line
-    // spacing own the geometry.
-    // zh_CN: 移除文档默认四周留白，由 viewport margin 与 block 行距统一控制。
+    // Clear default document margin so viewport margins and block spacing control layout.
     m_editor->document()->setDocumentMargin(0);
 
-    // New blocks inherit the current QTextBlockFormat, so ordinary typing
-    // makes applyBlockCenterFormat() a no-op. A direct QTextEdit/AX value
-    // replacement can reset those formats, though; re-check them here so the
-    // real editing surface keeps the same line geometry as setPlainText().
-    // The helper compares formats before merging, which preserves the user's
-    // normal Undo stack instead of appending an invisible command per key.
-    // zh_CN: 新 block 会继承当前 QTextBlockFormat，普通输入时
-    // applyBlockCenterFormat() 不会写入任何格式。但直接通过 QTextEdit/辅助
-    // 功能替换值可能重置格式，因此在真实编辑入口重新校验，保证它与
-    // setPlainText() 的行几何一致；helper 仅在格式确有变化时 merge，避免每次
-    // 按键都向 Undo 栈加入不可见命令。
+    // Re-check block formatting after edits in case direct/accessibility replacements reset it;
+    // applyBlockCenterFormat() skips unchanged blocks to keep the Undo stack clean.
     connect(m_editor, &QTextEdit::textChanged, this, [this]() {
         if (m_updatingFormat)
             return;
@@ -357,7 +313,6 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
     m_editor->installEventFilter(this);
     m_editor->viewport()->installEventFilter(this);
 
-    // Custom fluent scroll bar. zh_CN: 自定义 Fluent 滚动条。
     m_vScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Vertical, this);
     m_vScrollBar->hide();
 
@@ -390,12 +345,10 @@ TextEdit::TextEdit(QWidget* parent) : QWidget(parent)
             innerVBar->setValue(v);
     });
 
-    // Initial theme, line format, then height (order matters). zh_CN: 初始主题 + 行格式 + 高度（顺序重要）。
+    // Initial theme, line format, then height (order matters).
     onThemeUpdated();
     updateHeightForContent();
 }
-
-// ── Text API. zh_CN: 文本 API ───────────────────────────────────────────────────
 
 void TextEdit::setAutoResizeEnabled(bool enabled)
 {
@@ -582,8 +535,6 @@ void TextEdit::setFocus(Qt::FocusReason reason)
         m_editor->setFocus(reason);
 }
 
-// ── Events. zh_CN: 事件 ─────────────────────────────────────────────────────────
-
 void TextEdit::paintEvent(QPaintEvent* event)
 {
     QPainter p(this);
@@ -610,12 +561,8 @@ void TextEdit::updateEditorGeometry()
         QRect r = rect();
         int sbw = (m_vScrollBar && m_scrollEnabled) ? m_vScrollBar->thickness() : 0;
         m_editor->setGeometry(r.adjusted(0, 0, -sbw, 0));
-        // A fallback glyph can make the caret taller than the old viewport.
-        // Qt scrolls its bottom into view before our queued height settles;
-        // restore the whole caret once it fits, without following an ordinary
-        // user-scrolled caret during later resizes.
-        // zh_CN: 回退字形可能让光标高于旧视口，Qt 会在异步高度收敛前滚动到
-        // 光标底部。视口增高后恢复完整光标，但不改变普通手动滚动的偏移。
+        // A tall fallback glyph can cause Qt to scroll to the caret bottom before height settles;
+        // re-reveal the whole caret once the viewport grows enough, without disturbing scrolled views.
         if (hadOversizedVisibleCaret && m_editor->cursorRect().height() <= m_editor->viewport()->height()) {
             m_editor->ensureCursorVisible();
         }
@@ -698,8 +645,6 @@ bool TextEdit::eventFilter(QObject* obj, QEvent* event)
     }
     return QWidget::eventFilter(obj, event);
 }
-
-// ── Property setters. zh_CN: 属性 setter ────────────────────────────────────────
 
 void TextEdit::setContentMargins(const QMargins& margins)
 {
@@ -816,23 +761,15 @@ void TextEdit::onThemeUpdated()
     requestSynchronousHeightSettlement(this);
     updateHeightForContent();
 
-    // A parent Fluent surface may update its style sheet later in the same
-    // theme-notification pass. Qt then repolishes child widgets and can restore
-    // the platform selection palette. Reapply only the color palette after the
-    // notification stack unwinds; geometry stays untouched.
-    // zh_CN: 同一轮主题通知中，父级 Fluent 容器可能稍后更新样式表，Qt 会重新
-    // polish 子控件并恢复平台默认选区色。通知栈结束后仅重应用调色板，不改几何。
+    // A parent surface may update its QSS later in the same theme pass and repolish children;
+    // reapply only our color palette after the pass finishes.
     QTimer::singleShot(0, this, [this]() {
         applyEditorPalette();
         if (m_editor && m_editor->viewport())
             m_editor->viewport()->update();
     });
 
-    // QTextDocument may finish a palette/font relayout after this callback.
-    // Preserve a logical boundary anchor instead of retaining a stale pixel
-    // offset that can expose a clipped line after a Light/Dark transition.
-    // zh_CN: QTextDocument 可能在本回调后才完成调色板/字体重排。主题切换时
-    // 保留顶部或尾部的逻辑锚点，避免沿用旧像素偏移而露出半行。
+    // QTextDocument may finish relayout after this callback; anchor top/bottom logically to avoid clipped half-lines.
     const auto restoreScrollAnchor = [this, previousValue, wasAtTop, wasAtBottom]() {
         if (!m_editor)
             return;
@@ -853,8 +790,6 @@ void TextEdit::onThemeUpdated()
     if (hadScrollableRange)
         QTimer::singleShot(0, this, restoreScrollAnchor);
 }
-
-// ── Core internals. zh_CN: 核心私有方法 ─────────────────────────────────────────
 
 void TextEdit::applyEditorPalette()
 {
@@ -885,11 +820,7 @@ void TextEdit::applyThemeStyle()
     if (m_editor->font() != roleFont)
         m_editor->setFont(roleFont);
 
-    // Geometry-affecting QSS stays theme-independent. Text and selection
-    // colors come from QPalette, so a Light/Dark transition does not force
-    // QTextDocument to rebuild otherwise unchanged line geometry.
-    // zh_CN: 影响几何的 QSS 与主题无关；文本和选区颜色完全由 QPalette
-    // 提供，避免 Light/Dark 切换重建未变化的 QTextDocument 行布局。
+    // Keep QSS theme-independent (colors live in QPalette) so theme switches don't rebuild unchanged line geometry.
     const QString editorQss = QStringLiteral("QTextEdit { background: transparent; border: none; }");
     if (m_editor->styleSheet() != editorQss)
         m_editor->setStyleSheet(editorQss);
@@ -920,13 +851,8 @@ void TextEdit::applyBlockCenterFormat()
     const QFont f = m_editor->font();
     const int botPad = calcBotPad(f, m_lineHeight);
 
-    // 1. Keep outer insets out of the document. LineDistanceHeight contributes
-    // spacing after the final visual line as well as between lines; cancel that
-    // trailing distance at the root frame so the maximum scroll position lands
-    // on a complete first tail line. Viewport margins own both outer edges.
-    // zh_CN: 外围 inset 不进入文档。LineDistanceHeight 除行间距外还会在末行后
-    // 留出距离；在 root frame 抵消这段尾距，使最大滚动位置落在完整行边界。
-    // 上下外围间距仍统一交给 viewport margin。
+    // Cancel LineDistanceHeight's trailing space after the final line on the root frame
+    // so viewport margins own both outer edges and max scroll aligns on a full line.
     QTextFrame* rootFrame = m_editor->document()->rootFrame();
     QTextFrameFormat rff = rootFrame->frameFormat();
     const qreal trailingLineDistance = -static_cast<qreal>(botPad);
@@ -941,20 +867,12 @@ void TextEdit::applyBlockCenterFormat()
         rootFrame->setFrameFormat(rff);
     }
 
-    // 2. LineDistanceHeight: each visual line = fontLh + botPad = lineHeight.
-    //    bottomMargin is avoided; combined with LineDistanceHeight it would
-    //    double the line spacing.
-    // zh_CN: LineDistanceHeight — 每个视觉行高 = fontLh + botPad = lineHeight；
-    // 不使用 bottomMargin，否则与 LineDistanceHeight 重叠导致行间距翻倍。
+    // Use LineDistanceHeight (not bottomMargin, which would double the spacing).
     QTextBlockFormat fmt;
     fmt.setLineHeight(botPad, QTextBlockFormat::LineDistanceHeight);
     fmt.setBottomMargin(0);
 
-    // QTextCursor formatting participates in QTextDocument's undo stack even
-    // when the merged values are identical. Avoid a no-op merge so theme and
-    // palette refreshes never consume the user's next Undo command.
-    // zh_CN: QTextCursor 的格式操作即使数值未变化也会进入撤销栈；先判断现有
-    // block 格式，避免主题/调色板刷新吞掉用户下一次 Undo。
+    // Skip unchanged blocks so QTextCursor::mergeBlockFormat() does not push Undo entries on theme updates.
     bool blockFormatChanged = false;
     for (QTextBlock block = m_editor->document()->begin(); block.isValid(); block = block.next()) {
         const QTextBlockFormat current = block.blockFormat();
@@ -973,11 +891,7 @@ void TextEdit::applyBlockCenterFormat()
         cursor.mergeBlockFormat(fmt);
     }
 
-    // 3. Viewport margins own the requested outer insets and distribute any
-    // line-slot slack that remains after satisfying them. The text viewport
-    // therefore contains whole visual lines at both scroll boundaries.
-    // zh_CN: viewport margin 承担外部 inset，并分配满足 inset 后剩余的行槽
-    // 余量，因此滚动顶部和尾部都只显示完整视觉行。
+    // Viewport margins own outer padding plus centering slack so scroll edges align to full visual lines.
     const QMargins viewportMargins = calcContentViewportMargins(f, m_lineHeight, m_contentMargins);
     static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(viewportMargins.left(), viewportMargins.top(),
         viewportMargins.right(), viewportMargins.bottom());
@@ -1010,13 +924,9 @@ void TextEdit::updateHeightForContent()
     }
     m_updatingHeight = true;
 
-    // Asking the document layout for its size flushes any pending width-driven
-    // wrap recalculation before individual QTextLayout line counts are read.
-    // zh_CN: 读取各 QTextLayout 行数前先查询文档尺寸，刷新宽度变化引起的
-    // 待处理换行布局。
+    // Querying documentSize() flushes pending wrap layout before reading block line counts.
     m_editor->document()->documentLayout()->documentSize();
 
-    // Count all visual lines, including wrap-generated ones. zh_CN: 统计所有可视行数（包括自动换行产生的行）。
     int visualLines = 0;
     QTextBlock block = m_editor->document()->begin();
     while (block.isValid()) {
@@ -1031,21 +941,13 @@ void TextEdit::updateHeightForContent()
     const int maximumLines = qMax(minimumLines, m_maxVisibleLines);
     const int clamped = qBound(minimumLines, visualLines, maximumLines);
 
-    // The normal Fluent margin fits inside the line slot and therefore keeps a
-    // one-line editor equal to other 32 px controls. Larger caller-provided
-    // vertical insets add only the overflow required to keep both edges real.
-    // zh_CN: 默认 Fluent 内边距包含在行槽中，因此单行编辑器仍与 32px 控件等高；
-    // 调用方设置更大的上下内边距时，仅补足超出行槽余量的高度。
+    // Default insets fit inside the line slot (keeping 1-line height at 32 px); add only the overflow.
     const int marginOverflow = verticalMarginOverflow(m_editor->font(), m_lineHeight, m_contentMargins);
     const int targetHeight = clamped * renderedLinePitch(m_editor, m_lineHeight) + marginOverflow;
 
-    // The scroll bar only appears once content exceeds maxVisibleLines.
-    // zh_CN: 滚动条仅在内容实际超过 maxVisibleLines 时显示。
     m_scrollEnabled = (visualLines > maximumLines);
     if (m_vScrollBar)
         m_vScrollBar->setVisible(m_scrollEnabled);
-    // Reset the inner scroll position when not needed to avoid content drift.
-    // zh_CN: 无需滚动时重置内部滚动位置，避免内容偏移。
     if (!m_scrollEnabled && m_editor)
         m_editor->verticalScrollBar()->setValue(0);
 
@@ -1057,11 +959,7 @@ void TextEdit::updateHeightForContent()
         heightAnimation->settleSynchronouslyNextUpdate = false;
     }
 
-    // Preserve an active user transition across its own same-target document
-    // relayout. Explicit text and metric setters still stop and settle
-    // synchronously, even when their target matches the transition.
-    // zh_CN: 动画自身触发同目标文档重排时继续当前用户过渡；显式文本与度量
-    // setter 即使目标相同，仍会停止动画并同步收敛。
+    // Keep an active transition running on same-target relayouts unless a setter requested synchronous settlement.
     if (!settleSynchronously && heightAnimation && heightAnimation->state() == QAbstractAnimation::Running
         && heightAnimation->targetHeight == targetHeight) {
         m_updatingHeight = false;

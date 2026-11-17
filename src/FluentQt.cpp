@@ -53,11 +53,8 @@ void configureSimplifiedChineseFallback(const QString& family)
     for (const QString& bundledFamily : bundledFamilies)
         QFont::insertSubstitution(bundledFamily, family);
 
-    // Qt's WebAssembly platform has no host CJK fonts to discover. Registering
-    // the optional face by script keeps semantic typography roles unchanged
-    // while Qt resolves only missing Han glyphs through this application font.
-    // zh_CN: Qt WebAssembly 无法发现宿主机 CJK 字体；按 script 注册可选字体，
-    // 可保持语义字体角色不变，仅让缺失的汉字 glyph 使用 application font。
+    // WebAssembly has no host CJK fonts; registering this face for Script_Han lets Qt
+    // fall back for missing Han glyphs without changing semantic typography roles.
     fluentAddApplicationFallbackFontFamily(QChar::Script_Han, family);
 }
 
@@ -183,10 +180,8 @@ bool initializeResources()
         return false;
     }
 
-    // The function-local static is reached only after a GUI application exists.
-    // A premature call therefore cannot permanently cache a failed font load.
-    // zh_CN: 仅在 GUI application 已存在时才触达局部静态初始化；过早调用
-    // 不会永久缓存一次失败的字体加载结果。
+    // Reach this local static only after QGuiApplication exists so an early call
+    // cannot permanently cache a failed font load.
     static const bool initialized = [] {
         const bool loaded = loadBundledFonts();
         if (!loaded) {

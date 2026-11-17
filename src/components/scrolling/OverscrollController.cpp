@@ -16,16 +16,10 @@
 namespace fluent::scrolling {
 
 namespace {
-// Rubber-band travel cap, cluster gap, the delay before a settled mouse-wheel overscroll
-// bounces back, and the discrete boundary-bounce overshoot range. zh_CN: 橡皮筋位移上限、成簇
-// 间隔、静止鼠标滚轮回弹前的延迟，以及离散边界回弹的过冲范围。
 constexpr qreal kMaxOverscrollPx = 100.0;
 constexpr int kClusterGapMs = 120;
 constexpr int kNoPhaseBoundaryBounceDelayMs = 16;
-// Some backends deliver pixel/phase updates without a terminal ScrollEnd.
-// Settle after a short quiet period while still honoring an explicit end event.
-// zh_CN: 部分后端只发送 pixel/phase 更新而没有最终 ScrollEnd；在短暂无输入后
-// 自动回弹，同时继续优先响应明确的结束事件。
+// Some backends emit pixel/phase deltas without a terminal ScrollEnd; bounce back after a quiet gap.
 constexpr int kGestureBounceFallbackMs = 120;
 constexpr qreal kDiscreteBoundaryOverscrollMinPx = 12.0;
 constexpr qreal kDiscreteBoundaryOverscrollMaxPx = 48.0;
@@ -121,8 +115,7 @@ void OverscrollController::resetNoPhaseBoundaryBounce()
 void OverscrollController::startBounceBack()
 {
     m_bounceTimer->stop();
-    // Momentum/end notifications belong to the same release; do not restart its return.
-    // zh_CN: 惯性与结束通知属于同一次松手，不应反复重启回弹。
+    // Momentum and end events belong to the same release; don't restart an in-flight bounce.
     if (m_bounceAnim->state() == QAbstractAnimation::Running)
         return;
     if (qFuzzyIsNull(m_overscroll)) {
@@ -138,9 +131,8 @@ void OverscrollController::startBounceBack()
 
 void OverscrollController::handleWheel(QWheelEvent* event)
 {
-    // A thumb drag, keyboard scroll or explicit scrollTo replaces elastic wheel travel.
-    // Observe the active axis lazily because hosts can change their flow after construction.
-    // zh_CN: 拖动滑块、键盘或 scrollTo 接管时清除弹性偏移；宿主可切换轴，按当前轴订阅。
+    // Thumb drags, keyboard scrolls, and scrollTo() override elastic wheel travel; watch the active bar lazily
+    // since hosts can switch flow orientation after construction.
     QScrollBar* activeBar = m_hooks.scrollBar ? m_hooks.scrollBar() : nullptr;
     if (m_observedScrollBar != activeBar) {
         QObject::disconnect(m_scrollValueConnection);
@@ -163,13 +155,10 @@ void OverscrollController::handleWheel(QWheelEvent* event)
     const bool h = horizontal();
     const QPoint gestureDelta = hasPixelDelta ? event->pixelDelta() : event->angleDelta();
     if (!h && qAbs(gestureDelta.x()) > qAbs(gestureDelta.y())) {
-        // Vertical elasticity must not swallow horizontal panning. Honor pixel travel
-        // directly, including events without angle ticks; leave discrete stepping to Qt.
-        // zh_CN: 纵向弹性不能吞掉横向滚动；像素输入直接更新范围，离散步进保留 Qt 处理。
+        // Don't swallow horizontal panning with vertical elasticity; handle pixel deltas directly and leave ticks to Qt.
         auto* bar = m_hooks.horizontalScrollBar ? m_hooks.horizontalScrollBar() : nullptr;
         if (!bar || bar->maximum() <= bar->minimum()) {
-            // An unused axis has not taken over the gesture; keep vertical recovery intact.
-            // zh_CN: 无滚动范围的轴没有接管手势，保留纵向回弹。
+            // Leave vertical bounce state intact when the horizontal axis has no scrollable range.
             event->ignore();
             return;
         }
@@ -186,8 +175,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         return;
     }
 
-    // For horizontal flow, pick the dominant axis (trackpad users often swipe vertically even
-    // on a horizontal list). zh_CN: 横向流动时取主轴（即便横向列表，触控板也常纵向滑）。
+    // In horizontal flow, trackpad users often swipe vertically; pick the dominant axis.
     const int delta = h
         ? (qAbs(event->angleDelta().y()) >= qAbs(event->angleDelta().x())
                   ? event->angleDelta().y()
@@ -234,9 +222,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
             m_bounceTimer->start(kNoPhaseBoundaryBounceDelayMs);
     };
 
-    // ── NoPhaseDiscrete (mouse wheel / Mac RDP): scroll content first; only tails that already
-    // push past the boundary are consumed as a bounce. zh_CN: 鼠标滚轮/RDP：先滚内容，只有已越界
-    // 的尾部才作为回弹被吞。
+    // NoPhaseDiscrete (mouse wheel / RDP): scroll content first, only bouncing on boundary tails.
     if (kind == WheelKind::NoPhaseDiscrete) {
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
         const int dir = scrollSign(scrollPx);
@@ -287,8 +273,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
                 event->ignore();
                 return;
             }
-            // Overscroll disabled (e.g. a navigation pane): stop cleanly, no bounce.
-            // zh_CN: 关闭回弹（如导航窗格）：干脆停住，不回弹。
+            // Overscroll disabled (e.g. a navigation pane): stop at the edge without bouncing.
             if (!m_overscrollEnabled) {
                 notifyChanged();
                 event->accept();
@@ -311,7 +296,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         return;
     }
 
-    // ── 1. Already overscrolled: rubber-band (trackpad), or consume a stale residual. ────────
+    // 1. Already overscrolled: rubber-band (trackpad) or consume stale residuals.
     if (!qFuzzyIsNull(m_overscroll)) {
         if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
             startBounceBack();
@@ -320,9 +305,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         }
         const bool reversing = scrollSign(scrollPx) != 0 && scrollSign(scrollPx) != scrollSign(m_overscroll);
         if (kind == WheelKind::NoPhasePixel && reversing) {
-            // Unphased input cannot identify a new finger contact. A direction change is
-            // intentional recovery, just as for a mouse wheel, rather than a stale tail.
-            // zh_CN: 无阶段输入无法标识新触摸；反向输入与鼠标滚轮一样应立即恢复滚动。
+            // Unphased input cannot tell apart a new touch; treat reverse input as immediate scroll recovery.
             cancel();
             if (m_hooks.normalScroll)
                 m_hooks.normalScroll(scrollPx);
@@ -331,8 +314,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
             return;
         }
         if (m_bounceAnim->state() == QAbstractAnimation::Running) {
-            // Same-direction unphased residuals cannot prolong an active return.
-            // zh_CN: 无阶段的同向残量不能延长正在进行的回弹。
+            // Same-direction unphased residuals must not extend an active bounce-back.
             if (kind != WheelKind::PhaseBased) {
                 event->accept();
                 return;
@@ -342,9 +324,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         m_bounceTimer->stop();
 
         if (reversing) {
-            // Releasing elastic travel is not resisted. Preserve movement left over after
-            // crossing the edge, so a large reverse gesture also advances the content.
-            // zh_CN: 回收弹性位移不加阻尼，越过边界的剩余输入继续推动内容。
+            // Release elastic offset without resistance and pass any leftover travel to content scroll.
             const qreal remaining = m_overscroll + scrollPx;
             if (scrollSign(remaining) != scrollSign(m_overscroll)) {
                 cancel();
@@ -373,7 +353,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         return;
     }
 
-    // ── 2. At the boundary: enter overscroll, stop cleanly, or chain to a parent. ────────────
+    // 2. At boundary: enter overscroll, stop at edge, or chain to parent.
     QScrollBar* sb = m_hooks.scrollBar ? m_hooks.scrollBar() : nullptr;
     if (!sb || sb->maximum() <= sb->minimum()) {
         notifyChanged();
@@ -407,7 +387,7 @@ void OverscrollController::handleWheel(QWheelEvent* event)
         return;
     }
 
-    // ── 3. Normal scroll. ───────────────────────────────────────────────────────────────────
+    // 3. Normal scroll.
     if (m_hooks.normalScroll)
         m_hooks.normalScroll(scrollPx);
     event->accept();

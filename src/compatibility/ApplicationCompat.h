@@ -8,11 +8,15 @@
 #include <QEvent>
 #include <utility>
 
+/**
+ * @brief OS color scheme reported by Qt style hints when supported (Qt 6.5+).
+ * zh_CN: Qt 样式提示上报的系统深浅色主题（不支持时返回 Unknown）。
+ */
 enum class FluentSystemColorScheme { Unknown, Light, Dark };
 
 /**
- * @brief Applies the supported Qt-version-specific High-DPI startup settings.
- * zh_CN: 应用当前 Qt 版本所需的 High-DPI 启动设置。
+ * @brief Applies Qt-version-specific High-DPI startup attributes before QApplication creation.
+ * zh_CN: 在创建 QApplication 前应用当前 Qt 版本所需的 High-DPI 启动配置。
  */
 inline void fluentPrepareHighDpiApplicationAttributes()
 {
@@ -24,8 +28,8 @@ inline void fluentPrepareHighDpiApplicationAttributes()
 }
 
 /**
- * @brief Reports whether device-independent High-DPI scaling is active by contract.
- * zh_CN: 返回设备无关 High-DPI 缩放是否已按契约启用。
+ * @brief Reports whether device-independent High-DPI scaling is active.
+ * zh_CN: 返回设备无关的 High-DPI 缩放是否已启用。
  */
 inline bool fluentHighDpiScalingIsEnabled()
 {
@@ -101,13 +105,8 @@ inline bool fluentIsDevicePixelRatioChangeEvent(const QEvent* event)
 }
 
 /**
- * @brief Returns true when a widget should refresh display-scale-dependent caches.
- * zh_CN: 判断控件是否应刷新依赖显示缩放比例的缓存。
- *
- * ScreenChangeInternal is available on the full Qt 5.15+/6.2+ support range;
- * Qt 6.6 additionally exposes a dedicated DevicePixelRatioChange event.
- * zh_CN: 全部支持的 Qt 5.15+/6.2+ 均可使用 ScreenChangeInternal；Qt 6.6+
- * 还会提供独立的 DevicePixelRatioChange 事件。
+ * @brief Returns true when an event requires refreshing display-scale-dependent caches (ScreenChangeInternal on all versions, plus DevicePixelRatioChange on Qt 6.6+).
+ * zh_CN: 判断事件是否需要刷新缩放相关缓存（所有版本检查 ScreenChangeInternal，Qt 6.6+ 额外检查 DevicePixelRatioChange）。
  */
 inline bool fluentIsDisplayScaleChangeEvent(const QEvent* event)
 {

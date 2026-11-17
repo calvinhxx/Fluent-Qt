@@ -26,21 +26,19 @@ class CalendarView;
 class DateTimeRangePickerPopup;
 
 /**
- * @brief Compact range entry with a calendar flyout and independently nullable endpoints.
- * zh_CN: 带范围日历弹层、起止端点可独立留空的紧凑范围输入。
+ * @brief Compact date/time range picker with a calendar flyout and independently clearable endpoints.
+ * zh_CN: 紧凑型日期时间范围选择器，带范围日历浮层，起止端点可独立留空。
  *
- * Invalid QDateTime values represent unbounded endpoints. Values use minute
- * precision and retain their Qt time specification. Date-only mode stores
- * midnight for both endpoints; applications own inclusive/exclusive query rules.
- * Reversed endpoints remain visible and make isRangeValid() false.
- * Default captions follow the effective widget locale, with built-in Simplified
- * and Traditional Chinese text and an English fallback. Other languages use
- * application Qt translations; application-authored text is preserved.
- * zh_CN: 无效 QDateTime 表示无界端点；值精确到分钟并保留 Qt 时间规格。
- * 仅日期模式下两端均保存午夜，查询边界是否包含由应用决定。
- * 起止顺序反转时保留输入，isRangeValid() 返回 false。
- * 默认文案跟随控件区域设置，内置简体、繁体中文并回退到英文；
- * 其他语言使用应用 Qt 翻译，应用自行设置的文案保持不变。
+ * Invalid QDateTime values leave an endpoint unbounded. Values use minute
+ * precision and keep their Qt::TimeSpec; date-only mode stores midnight for
+ * both endpoints (inclusive/exclusive filtering is up to the caller). Reversed
+ * endpoints stay visible and set rangeValid to false. Built-in captions support
+ * Simplified/Traditional Chinese and English (preferring Qt translations),
+ * while custom captions are preserved.
+ * zh_CN: 无效的 QDateTime 表示不限制该端；值精确到分钟并保留 Qt 时间规格。
+ * 仅日期模式下两端均保存 00:00，查询边界是否包含由应用决定；起止倒置时保留输入，
+ * isRangeValid() 返回 false。默认文案内置简繁中文并优先使用 Qt 翻译（其余回退英文），
+ * 手动设置的文案不会被覆盖。
  */
 class DateTimeRangePicker : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -91,22 +89,21 @@ public:
     bool isAutoApplyPresetsEnabled() const { return m_autoApplyPresetsEnabled; }
     basicinput::Button* entryButton() const { return m_entryButton; }
     /**
-     * @brief Returns the picker-owned range calendar for navigation and week settings.
-     * zh_CN: 返回控件拥有的范围日历，供月份导航和每周起始日配置使用。
+     * @brief Returns the internal range calendar for navigation and week settings.
+     * zh_CN: 返回内部的范围日历视图，用于月份切换和周起始日配置。
      */
     CalendarView* calendarView() const;
 
     /**
-     * @brief Returns picker-owned inputs for formatting and accessibility setup.
-     * zh_CN: 返回控件拥有的子输入，供格式和无障碍配置使用。
+     * @brief Returns the internal date and time pickers for formatting and accessibility setup.
+     * zh_CN: 返回内部的子日期/时间选择器，用于自定义格式或无障碍属性。
      *
-     * Date inputs open compact anchored calendars; time inputs edit in place.
-     * zh_CN: 日期输入打开紧凑的锚定日历浮层，时间输入在原位编辑。
-     * Returned widgets remain owned by this component. Date bounds and minute
-     * increments configured on the inputs also constrain the stored endpoints.
-     * The end input additionally accepts 23:59 to preserve whole-day ranges.
-     * zh_CN: 返回的子控件仍由本组件拥有；子输入的日期边界和分钟步长也约束端点值。
-     * 结束输入额外接受 23:59，以保留整天范围。
+     * Date inputs open compact anchored calendars, while time inputs edit in
+     * place. These child widgets remain owned by DateTimeRangePicker; their date
+     * bounds and minute increments also constrain stored endpoints (the end
+     * input additionally accepts 23:59 for whole-day ranges).
+     * zh_CN: 日期输入框弹出紧凑锚定日历，时间输入框支持原地编辑；返回的子控件仍归
+     * 本组件管理，其日期边界和分钟步长同样约束端点值（结束时间额外接受 23:59 以表示整天范围）。
      */
     CalendarDatePicker* startDatePicker() const { return m_startDatePicker; }
     CalendarDatePicker* endDatePicker() const { return m_endDatePicker; }
@@ -153,11 +150,11 @@ public slots:
      * @brief Applies a built-in preset relative to local today or a supplied reference.
      * zh_CN: 按本地今天或指定参考时刻应用内置预设。
      *
-     * Today/Yesterday use complete calendar dates; PastWeek contains seven dates.
-     * Month/year presets start one day after the corresponding calendar subtraction.
-     * Time-enabled endpoints use 00:00 and 23:59. Applications own query inclusion.
-     * zh_CN: 今天/昨天覆盖整日，过去一周包含七个日期；月/年预设从日历减法后的下一天开始。
-     * 启用时间时端点为 00:00 和 23:59，查询是否包含边界由应用决定。
+     * Today/Yesterday cover complete calendar days, and PastWeek covers seven days.
+     * Month and year presets start the day after subtracting the corresponding calendar
+     * interval. When time is enabled, endpoints use 00:00 and 23:59.
+     * zh_CN: 今天/昨天覆盖整日，过去一周包含七天；月/年预设从按日历向前推算后的次日开始。
+     * 启用时间时端点分别为 00:00 和 23:59，查询边界是否包含由业务决定。
      */
     void applyPreset(Preset preset);
     void applyPreset(Preset preset, const QDateTime& reference);
@@ -177,8 +174,8 @@ signals:
     void presetsVisibleChanged(bool visible);
     void autoApplyPresetsEnabledChanged(bool enabled);
     /**
-     * @brief Requests a shortcut; disable auto application to supply business ranges.
-     * zh_CN: 请求快捷范围；关闭自动应用后可由业务代码提供范围。
+     * @brief Emitted when a preset is clicked; disable autoApplyPresetsEnabled to handle presets externally.
+     * zh_CN: 点击快捷预设时发出；关闭 autoApplyPresetsEnabled 后可在外部自定义计算范围。
      */
     void presetRequested(Preset preset);
 

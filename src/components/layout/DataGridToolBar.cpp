@@ -294,8 +294,7 @@ void DataGridToolBar::clearFilters()
         return;
     const QString previousSearch = searchText();
     QPointer<DataGridToolBar> guard(this);
-    // Facet callbacks can change the collection while it is being cleared.
-    // zh_CN: 筛选项回调可修改集合，用弱引用快照遍历。
+    // Filter callbacks can mutate m_filters while clearing; iterate over a QPointer snapshot.
     const auto controls = m_filters.values();
     m_resetting = true;
     for (const auto& control : controls) {
@@ -309,8 +308,7 @@ void DataGridToolBar::clearFilters()
         return;
     m_resetting = false;
     updateClearButton();
-    // Finish native editor mutation before a public callback can destroy it.
-    // zh_CN: 原生编辑器完成修改后再通知，允许公开回调销毁工具栏。
+    // Finish mutating the search LineEdit before signals allow callers to destroy this toolbar.
     const QString currentSearch = searchText();
     if (previousSearch != currentSearch)
         emit searchTextChanged(currentSearch);
@@ -398,8 +396,7 @@ void DataGridToolBar::rebuildColumnsMenu()
                 });
             }
         }
-        // Retain action identity across openings, including accessibility nodes.
-        // zh_CN: 重复打开时保留动作和无障碍节点的身份。
+        // Reuse existing column actions so accessibility nodes keep stable identities across openings.
         menu->setTitle(grid->model()->headerData(c, Qt::Horizontal).toString());
         if (m_columnsMenu->actions().indexOf(menu->menuAction()) != v) {
             m_columnsMenu->removeAction(menu->menuAction());

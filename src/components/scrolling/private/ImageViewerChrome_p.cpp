@@ -43,8 +43,7 @@ struct ChromeColors {
 
 ChromeColors chromeColors(const FluentElement::Colors& colors)
 {
-    // In-app acrylic approximation over an opaque surface token, as FlipView's buttons do.
-    // zh_CN: 与 FlipView 按钮一致，在不透明表面 token 上近似 in-app acrylic。
+    // In-app translucent surface fill matching FlipView controls.
     if (FluentElement::currentTheme() == FluentElement::HighContrast)
         return {colors.bgSolid, colors.strokeStrong, false};
     QColor fill = colors.bgLayer;
@@ -56,8 +55,7 @@ void paintChromeSurface(QPainter& painter, const QRectF& surface, qreal radius, 
 {
     painter.setRenderHint(QPainter::Antialiasing);
     if (colors.shadow) {
-        // Layered soft shadow standing in for the Flyout elevation.
-        // zh_CN: 用多层柔和阴影近似 Flyout 层级。
+        // Layered soft shadow approximating Flyout elevation.
         const bool dark = FluentElement::currentTheme() == FluentElement::Dark;
         for (int layer = kShadowMargin; layer >= 1; --layer) {
             QColor shadow(0, 0, 0, (dark ? 18 : 8) * (kShadowMargin - layer + 1) / kShadowMargin);
@@ -140,8 +138,7 @@ ImageViewerZoomBar::ImageViewerZoomBar(std::function<void(Command)> handler, QWi
     connect(m_fade, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         applyOpacity(value.toReal());
     });
-    // A zero-length transition may not report an unchanged end value.
-    // zh_CN: 零时长过渡在终值未变化时可能不会发出 valueChanged。
+    // Zero-duration transitions may skip valueChanged when the end value matches.
     connect(m_fade, &QVariantAnimation::finished, this, [this]() { applyOpacity(m_fade->endValue().toReal()); });
     applyOpacity(0.0);
     hide();
@@ -227,8 +224,7 @@ void ImageViewerZoomBar::onThemeUpdated()
 
 void ImageViewerZoomBar::applyOpacity(qreal opacity)
 {
-    // The effect renders off-screen only while fading.
-    // zh_CN: 只有淡入淡出期间才通过离屏效果绘制。
+    // Enable QGraphicsOpacityEffect off-screen rendering only while fading.
     m_opacity = std::clamp(opacity, 0.0, 1.0);
     m_effect->setOpacity(m_opacity);
     m_effect->setEnabled(m_opacity < 1.0);
@@ -254,8 +250,7 @@ ImageViewerZoomIndicator::ImageViewerZoomIndicator(QWidget* parent) : QWidget(pa
     connect(m_fade, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         applyOpacity(value.toReal());
     });
-    // A zero-length transition may not report an unchanged end value.
-    // zh_CN: 零时长过渡在终值未变化时可能不会发出 valueChanged。
+    // Zero-duration transitions may skip valueChanged when the end value matches.
     connect(m_fade, &QVariantAnimation::finished, this, [this]() { applyOpacity(m_fade->endValue().toReal()); });
     m_holdTimer = new QTimer(this);
     m_holdTimer->setSingleShot(true);
@@ -304,8 +299,7 @@ void ImageViewerZoomIndicator::fadeTo(qreal opacity)
 
 void ImageViewerZoomIndicator::applyOpacity(qreal opacity)
 {
-    // Hide only once a fade-out ends; a fade-in may report its start value first.
-    // zh_CN: 只在淡出结束时隐藏；淡入可能先报告起始值。
+    // Hide only on fade-out completion, since fade-in can start from zero.
     m_opacity = std::clamp(opacity, 0.0, 1.0);
     if (m_opacity <= 0.0 && m_targetOpacity <= 0.0)
         hide();

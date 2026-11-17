@@ -32,14 +32,13 @@ class Label;
 namespace fluent::layout {
 
 /**
- * @brief Fluent disclosure surface with an animated, caller-supplied body.
- * zh_CN: 带动画展开效果并承载调用方内容的 Fluent 折叠表面。
+ * @brief Collapsible Fluent card with an animated content area.
+ * zh_CN: 带展开/收起动画的 Fluent 折叠面板。
  *
- * Expander owns its header chrome but leaves body composition to the caller.
- * Borrowed content is detached when released, Reparented content returns to its
- * original parent, and Owned content follows the Expander lifetime.
- * zh_CN: Expander 管理头部外观，但正文内容由调用方组合。Borrowed 内容释放后
- * 会解除父子关系，Reparented 内容恢复到原父控件，Owned 内容跟随 Expander 生命周期。
+ * Content lifetime follows WidgetOwnership: Borrowed detaches the widget, Reparented restores its previous parent,
+ * and Owned destroys it with the Expander.
+ * zh_CN: 正文控件的生命周期由 WidgetOwnership 控制：Borrowed 仅解除父子关系，Reparented 恢复原父对象，
+ * Owned 随 Expander 一起销毁。
  */
 class Expander : public Card {
     Q_OBJECT

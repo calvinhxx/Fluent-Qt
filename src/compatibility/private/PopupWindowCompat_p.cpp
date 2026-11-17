@@ -72,8 +72,8 @@ void PopupWindowHost::restore()
     const auto openingParent = m_openingParent;
     const bool attached = m_attached;
     *this = {};
-    // A caller's deliberate reassignment supersedes this invocation's binding.
-    // zh_CN: 调用方主动修改父级后，保留其新值。
+    // Keep any transient parent explicitly reassigned by external code.
+    // zh_CN: 若外部代码已主动修改 transientParent，则保留新值。
     if (window && window->transientParent() != previousParent
         && window->transientParent() == (attached ? host : openingParent))
         window->setTransientParent(previousParent);

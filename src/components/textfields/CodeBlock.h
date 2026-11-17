@@ -13,13 +13,13 @@ class CodeScroll;
 } // namespace detail
 
 /**
- * @brief Read-only, selectable code with syntax colors, folding and bounded scrolling.
- * zh_CN: 支持语法配色、精确复制、折叠和限高滚动的只读代码块。
+ * @brief Read-only, selectable code block with syntax highlighting, folding, and bounded scrolling.
+ * zh_CN: 支持语法高亮、原始复制、折叠与限高滚动的只读代码块。
  *
- * C++, Python and QML are highlighted; other language identifiers use plain text.
- * Copying retains the original whitespace and line endings. The inherited
- * Expander controls folding. The block starts expanded.
- * zh_CN: 高亮 C++、Python 和 QML，其余语言按纯文本显示；复制保留原始空白和换行。
+ * Highlights C++, Python, and QML (other languages render as plain text), keeps
+ * original whitespace and line endings when copied, and starts expanded.
+ * zh_CN: 支持 C++、Python 和 QML 语法高亮（其余语言按纯文本显示）；复制时保留原始空白与换行；
+ * 默认展开，继承自 Expander 以支持折叠。
  */
 class CodeBlock : public layout::Expander {
     Q_OBJECT
@@ -44,8 +44,8 @@ public:
     void onThemeUpdated() override;
 
 public slots:
-    /** @brief Copies the exact source and reports host clipboard completion.
-     * zh_CN: 复制原始代码，并在宿主剪贴板操作完成后报告结果。 */
+    /** @brief Copies the raw source text to the clipboard and emits copyFinished().
+     * zh_CN: 将原始源码复制到剪贴板，并在完成后发出 copyFinished()。 */
     void copy();
 
 signals:

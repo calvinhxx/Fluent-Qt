@@ -13,16 +13,16 @@ class Field;
 namespace fluent {
 
 /**
- * @brief Coordinates borrowed Fields without owning values, validators, or requests.
- * zh_CN: 协调借用的 Field，不接管字段值、校验器或请求。
+ * @brief Coordinates Field controls without owning their values, validators, or requests.
+ * zh_CN: 协调一组 Field 控件的状态与校验流程，不接管字段值、校验器或提交请求的所有权。
  *
- * Connect validationRequested to application validation and return its token to
- * completeValidation. Editing, reset, removal and replacement invalidate old
- * tokens. Call markFieldChanged for every value change, including programmatic
- * changes. All methods and completions run on this object's GUI thread.
- * zh_CN: 应用响应 validationRequested，并携带 token 完成校验。编辑、重置、移除和
- * 替换会使旧 token 作废；包括程序修改在内的每次值变化都应调用 markFieldChanged。
- * 所有方法及完成回调均在此对象所属的 GUI 线程执行。
+ * Connect validationRequested to application validation and pass its token back to
+ * completeValidation(). Editing, reset, removal, and replacement invalidate older
+ * tokens. Call markFieldChanged() on every value change, including programmatic
+ * updates. All methods and callbacks run on this object's GUI thread.
+ * zh_CN: 应用响应 validationRequested 后携带对应 token 完成校验。编辑、重置、移除和
+ * 替换字段都会使旧 token 作废；任何值变更（包括代码修改）都应调用 markFieldChanged()。
+ * 所有方法及回调均须在此对象所属的 GUI 线程执行。
  */
 class FormController : public QObject {
     Q_OBJECT
@@ -39,8 +39,8 @@ public:
     ~FormController() override;
 
     /**
-     * @brief Registers a unique, borrowed Field; neither it nor its editor is reparented.
-     * zh_CN: 注册具有唯一标识的借用 Field，不改变它及其编辑器的父对象。
+     * @brief Registers a Field under a unique key without taking ownership or reparenting it or its editor.
+     * zh_CN: 以唯一键名注册 Field，不接管所有权，也不改变它或编辑器的父对象。
      */
     bool addField(const QString& key, layout::Field* field);
     bool removeField(const QString& key);
@@ -59,37 +59,37 @@ public:
 
     /**
      * @brief Marks an edit and invalidates in-flight validation and submission tokens.
-     * zh_CN: 标记一次编辑，并使进行中的校验和提交 token 作废。
+     * zh_CN: 标记字段已编辑，并使进行中的校验和提交 token 作废。
      */
     void markFieldChanged(const QString& key);
     void setFieldTouched(const QString& key, bool touched = true);
-    /** @brief Marks current values clean without writing editors. zh_CN: 将当前值标记为未修改，不写入编辑器。 */
+    /** @brief Marks current fields clean without modifying editors. zh_CN: 将当前字段标记为未修改，不改动编辑器内容。 */
     void markClean();
-    /** @brief Clears coordination state, not editor values. zh_CN: 清除协调状态，不修改编辑器值。 */
+    /** @brief Clears coordination state without modifying editor values. zh_CN: 重置协调状态，不改动编辑器内容。 */
     void reset();
 
     /**
-     * @brief Requests validation; no connected validator leaves the request pending.
+     * @brief Requests validation; leaves the request pending until completeValidation() is called.
      * zh_CN: 请求校验；未连接校验器时请求保持待完成状态。
      */
     quint64 validateField(const QString& key);
     void validate();
     /**
-     * @brief Accepts only the current token; an empty success message restores helper text.
-     * zh_CN: 仅接受当前 token；成功文案为空时恢复帮助文字。
+     * @brief Completes the matching pending validation; an empty success message clears validation feedback.
+     * zh_CN: 仅当 token 匹配当前挂起请求时生效；校验通过且 message 为空时恢复提示文案。
      */
     bool completeValidation(const QString& key, quint64 token, bool valid, const QString& message = QString());
     /**
-     * @brief Validates all fields, then emits submitRequested once; duplicate submits are rejected.
-     * zh_CN: 校验所有字段，通过后仅发送一次 submitRequested；拒绝重复提交。
+     * @brief Validates all fields, then emits submitRequested once; rejects duplicate calls while submitting.
+     * zh_CN: 校验全部字段，全部通过后仅发出一次 submitRequested；提交进行中拒绝重复调用。
      */
     bool submit();
     /**
-     * @brief Completes the current submission; success marks values clean, failure keeps edits.
-     * zh_CN: 完成当前提交；成功标记为未修改，失败保留编辑状态。
+     * @brief Completes the current submission; success marks fields clean, failure keeps edits.
+     * zh_CN: 完成当前提交；成功时清除已修改标记，失败时保留编辑状态。
      */
     bool completeSubmit(quint64 token, bool success, const QString& message = QString());
-    /** @brief Focuses the first registered invalid editor. zh_CN: 聚焦首个注册顺序中的无效编辑器。 */
+    /** @brief Focuses the first invalid editor in registration order. zh_CN: 将焦点移至按注册顺序找到的第一个校验失败的编辑器。 */
     bool focusFirstError();
 
 signals:

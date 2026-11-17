@@ -75,8 +75,8 @@
             "zh": "交互状态"
           },
           "description": {
-            "en": "Buttons repaint resting, hover, pressed and disabled states directly. Button has no animationEnabled switch. The focus ring is off by default; setFocusVisual(true) allows it to appear while the button has focus.",
-            "zh": "按钮直接重绘默认、悬停、按下和禁用状态，没有 animationEnabled 开关。焦点环默认关闭，setFocusVisual(true) 允许按钮在获得焦点时绘制焦点环。"
+            "en": "Button renders rest, hover, pressed, and disabled states directly. Call setFocusVisual(true) to show the focus ring when focused via keyboard.",
+            "zh": "按钮自动响应默认、悬停、按下和禁用样式。焦点框默认隐藏，调用 setFocusVisual(true) 可在聚焦时显示。"
           }
         }
       ]

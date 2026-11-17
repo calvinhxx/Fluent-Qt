@@ -15,7 +15,7 @@ struct ReadoutRow {
     bool selected = false;
 };
 
-// One passive, reusable surface per chart; never one widget per data point.
+// Shared passive readout popup per chart instead of per-point widgets.
 class ChartReadout final : public dialogs_flyouts::Popup {
 public:
     explicit ChartReadout(QWidget* chart);

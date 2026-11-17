@@ -87,11 +87,8 @@ Popup::Popup(QWidget* parent) : QWidget(parent)
     m_opacityEffect->setOpacity(0.0);
     setGraphicsEffect(m_opacityEffect);
 
-    // Must hide explicitly: if the Popup was never hidden when the parent
-    // window shows, Qt would surface it automatically (opacity=0 looks
-    // invisible but still swallows mouse events, breaking button clicks).
-    // zh_CN: 必须显式 hide：父窗口 show() 时未被 hide 的 Popup 会被 Qt 自动
-    // 显现（opacity=0 视觉不可见，但仍拦截鼠标事件，导致按钮点击失效）。
+    // Must hide explicitly: if left unhidden when the parent window shows, Qt reveals it
+    // at opacity=0 and it intercepts mouse events underneath.
     hide();
 
     onThemeUpdated();
@@ -127,10 +124,7 @@ void Popup::setPopupProgress(double p)
         return;
     m_popupProgress = p;
     if (p >= 1.0 - 1e-6) {
-        // Detach the identity opacity effect once settled so QWidget::render()
-        // composites open child popups cleanly without offscreen pixmap redirection.
-        // zh_CN: 展开完成（opacity=1）时移除空闲透明度特效，避免 Qt 在
-        // QWidget::render() 离屏合成中丢失已打开的子弹层内容。
+        // Detach the idle opacity effect once settled so QWidget::render() composites cleanly.
         if (m_opacityEffect && graphicsEffect() == m_opacityEffect) {
             m_opacityEffect = nullptr;
             setGraphicsEffect(nullptr);
@@ -258,12 +252,7 @@ void Popup::setExitAnimationEnabled(bool e)
         return;
     }
 
-    // The granular exit switch has the same immediate-settle contract as the
-    // general animation switch, but only while an exit is active. Reaching the
-    // end keeps finalizeClosed() and its focus/scrim/closed cleanup on the
-    // animation's normal finished path.
-    // zh_CN: 细粒度退出开关仅在退出动画运行时即时收敛，并继续通过正常
-    // finished 路径执行 finalizeClosed() 的焦点、遮罩与 closed 清理。
+    // Local opt-out overrides the global policy and settles an active exit through its finished() path.
     m_anim->setCurrentTime(m_anim->duration());
 }
 
@@ -300,8 +289,6 @@ QWidget* Popup::originalParentTopLevel() const
     return ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget());
 }
 
-// ── setPosition ──────────────────────────────────────────────────────────────
-
 void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos)
 {
     if (!relativeTo)
@@ -314,14 +301,11 @@ void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos)
         queuePositionSync();
 }
 
-// ── Position (centered by default; subclasses may override). zh_CN: 位置计算 ──
-
 QPoint Popup::computePosition() const
 {
     QWidget* top = originalParentTopLevel();
     if (!top)
         return pos();
-    // Default: center inside the topLevelWidget. zh_CN: 默认在 topLevelWidget 中居中。
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
     return QPoint(surface.left() + (surface.width() - width()) / 2, surface.top() + (surface.height() - height()) / 2);
 }
@@ -404,8 +388,6 @@ void Popup::syncPositionToAnchor()
     m_overlayCoordinator->raiseStack();
 }
 
-// ── open / close ─────────────────────────────────────────────────────────────
-
 void Popup::open()
 {
     if (m_openInProgress)
@@ -462,15 +444,12 @@ void Popup::open()
     if (layout())
         layout()->activate();
 
-    // Layout drives the size. zh_CN: layout 驱动尺寸。
     if (layout()) {
         QSize hint = layout()->totalSizeHint();
         if (hint.isValid() && !hint.isEmpty())
             resize(hint);
     }
 
-    // Placement: honor setPosition() when provided, else center.
-    // zh_CN: 定位——setPosition() 设置过则用目标位置，否则居中。
     move(resolvedPosition());
 
     show();
@@ -480,9 +459,7 @@ void Popup::open()
 
     updateScrimState();
     m_overlayCoordinator->setInputActive(true);
-    // Derived command surfaces observe anchor presses before shared dismissal
-    // clears their open state and restores focus.
-    // zh_CN: 命令浮层先处理锚点按下，再由共享逻辑关闭及恢复焦点。
+    // Let derived command popups observe anchor presses before shared dismissal closes them.
     if (qApp)
         qApp->installEventFilter(this);
 
@@ -701,25 +678,16 @@ void Popup::keyPressEvent(QKeyEvent* event)
     QWidget::keyPressEvent(event);
 }
 
-// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
-
 void Popup::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Opacity-only animation; QGraphicsOpacityEffect covers background and
-    // children together.
-    // zh_CN: 仅做 opacity 动画（QGraphicsOpacityEffect 统一作用于背景与子控件）。
-
     const QRect contentRect = ::fluent::overlay::visibleCardRect(rect());
 
-    // Shared layered card shadow.
-    // zh_CN: 共享的分层卡片阴影。
     const int r = themeRadius().overlay;
     ::fluent::overlay::paintLayeredShadow(painter, contentRect, r, themeShadow(Elevation::High));
 
-    // Background and border. zh_CN: 背景 + 边框。
     const auto& colors = themeColorsRef();
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;

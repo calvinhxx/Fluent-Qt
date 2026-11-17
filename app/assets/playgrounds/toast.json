@@ -109,8 +109,8 @@
     200
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "Shows a brief same-window notification without interrupting the current task.",
+    "zh": "不打断当前操作的轻量浮动通知，可附带一个快捷操作按钮。"
   },
   "presets": [
     {

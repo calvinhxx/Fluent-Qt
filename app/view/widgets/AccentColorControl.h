@@ -11,19 +11,12 @@ namespace fluent::gallery {
 
 /**
  * @brief Trailing Settings control for picking the Fluent accent color.
- * zh_CN: 用于挑选 Fluent 强调色的「设置」尾部控件。
  *
- * Renders a compact accent swatch button. Clicking it opens a flyout offering a
- * grid of curated preset accents, a full custom ColorPicker, a "reset to preset"
- * action, and a shortcut to the user-editable themes folder. Selecting any
- * accent routes through GallerySettings, which persists the choice into the
- *Fluent theme override and repaints atomically — so the JSON file is no longer
- * the only way to customize colors. zh_CN:
- * 绘制一个紧凑的强调色色块按钮。点击后弹出浮层,提供精选预设强调色网格、完整自定义
- * ColorPicker、
- *「恢复预设」操作,以及通往用户可编辑主题文件夹的快捷入口。任何选择都经由
- * GallerySettings 持久化进 Fluent 主题覆盖并原子重绘——使 JSON
- * 文件不再是定制颜色的唯一途径。
+ * Displays a compact swatch button whose flyout offers curated preset accents,
+ * a custom ColorPicker, preset reset, and a shortcut to the user themes folder.
+ * Selected accents persist via GallerySettings and update the theme atomically.
+ * zh_CN: Settings 页用于挑选 Fluent 强调色的尾部控件：点击色块弹出浮层，
+ * 提供预设色板、自定义 ColorPicker、恢复默认与打开主题目录，选择后经 GallerySettings 持久化并原子刷新主题。
  */
 class AccentColorControl : public QWidget, public fluent::FluentElement {
 public:

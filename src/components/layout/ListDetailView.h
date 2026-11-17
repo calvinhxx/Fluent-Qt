@@ -12,16 +12,13 @@ namespace fluent::layout {
 class Divider;
 
 /**
- * @brief Two persistent content panes that collapse to one at a width threshold.
- * zh_CN: 两个持久内容区，在宽度不足时只显示当前一栏。
+ * @brief Two persistent panes that switch to single-pane mode below a width threshold.
+ * zh_CN: 双栏布局容器，窗口宽度低于阈值时切换为单栏显示。
  *
- * Populate listPane() and detailPane() with ordinary child widgets/layouts.
- * The view owns these containers; do not delete or reparent them. Selection,
- * models, documents, and back-button presentation remain application-owned.
- * Switching panes never reparents, rebuilds, or serializes their contents.
- * zh_CN: 在 listPane() 和 detailPane() 内添加子控件与布局。容器由本组件持有，
- * 不应删除或更改父对象；选中项、模型、文档与返回按钮由应用负责。切换时不重建、
- * 不移动内容的父对象，也不序列化内容状态。
+ * Add child widgets directly to listPane() and detailPane() (owned by this view; do not delete or reparent).
+ * Switching panes keeps both widgets intact without reparenting or rebuilding contents.
+ * zh_CN: 请直接在 listPane() 和 detailPane() 内添加子控件与布局（两个容器由本视图管理生命周期，请勿删除或重设父对象）；
+ * 模式切换仅控制显隐，不会重建或重设子控件父对象。
  */
 class ListDetailView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -38,11 +35,11 @@ public:
 
     explicit ListDetailView(QWidget* parent = nullptr);
 
-    /** @brief Returns the permanent, view-owned list content container.
-     * zh_CN: 返回本组件持有的持久列表内容容器。 */
+    /** @brief Returns the view-owned list pane container.
+     * zh_CN: 返回列表栏容器（由本控件管理生命周期）。 */
     QWidget* listPane() const { return m_listPane; }
-    /** @brief Returns the permanent, view-owned detail content container.
-     * zh_CN: 返回本组件持有的持久详情内容容器。 */
+    /** @brief Returns the view-owned detail pane container.
+     * zh_CN: 返回详情栏容器（由本控件管理生命周期）。 */
     QWidget* detailPane() const { return m_detailPane; }
 
     bool isCompact() const { return m_compact; }

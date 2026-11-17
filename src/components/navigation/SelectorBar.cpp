@@ -581,8 +581,7 @@ void SelectorBar::focusInEvent(QFocusEvent* event)
     else if (event->reason() == Qt::MouseFocusReason)
         m_keyboardFocusVisible = false;
     if (m_overflowBehavior == OverflowBehavior::MoreButton) {
-        // Pointer focus must keep the selected layout under the pointer, not reveal an old keyboard target.
-        // zh_CN: 指针获得焦点时保留指针下的选中布局，不让旧键盘目标挤走正在点击的条目。
+        // Keep the clicked item under the pointer instead of jumping back to an older keyboard-focus target.
         if (event->reason() == Qt::MouseFocusReason)
             m_focusedIndex = m_selectedIndex;
         invalidateLayout(false);
@@ -599,8 +598,7 @@ void SelectorBar::focusOutEvent(QFocusEvent* event)
 {
     QWidget::focusOutEvent(event);
     clearPressedHit();
-    // MoreButton overflow pins the focused item only while focus is inside.
-    // zh_CN: MoreButton 溢出仅在拥有焦点时固定聚焦条目。
+    // Only pin the keyboard-focused item in MoreButton mode while the bar retains focus.
     if (m_overflowBehavior == OverflowBehavior::MoreButton && m_focusedIndex != m_selectedIndex)
         invalidateLayout(false);
     update();
@@ -755,8 +753,7 @@ void SelectorBar::updateLayout()
         x += recordWidth;
     }
 
-    // Only items with an actual hit region are visible, including at forced tiny widths.
-    // zh_CN: 只有实际获得命中区域的条目才算可见，即使宿主强制使用极小宽度也不遗漏溢出项。
+    // Report only items that received an actual hit region (even at forced tiny widths).
     m_visibleIndexes.clear();
     for (const ItemRecord& record : std::as_const(m_itemRecords))
         m_visibleIndexes.append(record.itemIndex);
@@ -770,8 +767,7 @@ void SelectorBar::updateLayout()
             m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
             currentMetrics.overflowButtonWidth, currentMetrics.itemVisualHeight);
     } else if (overflow) {
-        // More follows the last visible item, so it stays next to the items it extends.
-        // zh_CN: “更多”紧随最后一个可见条目，与其扩展的条目保持相邻。
+        // Place More directly after the last visible item.
         m_overflowMoreRect = QRect(qMin(x, m_rowRect.right() + 1 - currentMetrics.overflowButtonWidth),
             m_rowRect.top() + (m_rowRect.height() - currentMetrics.itemVisualHeight) / 2,
             currentMetrics.overflowButtonWidth, currentMetrics.itemVisualHeight);
@@ -858,11 +854,8 @@ QVector<int> SelectorBar::computePinnedVisibleIndexes(const QVector<int>& candid
 {
     if (availableWidth <= 0)
         return {};
-    // The More button lists every hidden item, so there is no window to page: keep reading order
-    // from the first item and reserve room for the selected and keyboard-focused items, which
-    // replace trailing items instead of scrolling the leading ones away.
-    // zh_CN: More 按钮会列出全部隐藏条目，无需翻页窗口：从首项起保持阅读顺序，并为选中与键盘聚焦条目
-    // 预留空间；它们替换末尾条目，而不是把前导条目滚出视野。
+    // In MoreButton mode keep leading items in reading order and reserve space for the selected
+    // and focused items by dropping trailing items instead of paging.
     QVector<int> pinned;
     const auto pin = [this, &pinned](int index) {
         if (isValidIndex(index) && m_items.at(index).visible && !pinned.contains(index))
@@ -877,8 +870,7 @@ QVector<int> SelectorBar::computePinnedVisibleIndexes(const QVector<int>& candid
     for (int index : std::as_const(pinned))
         reserved += widths.value(index, minimumWidth);
 
-    // Keep one usable item instead of allocating two records that cannot both be painted.
-    // zh_CN: 空间不足时保留一个可用条目，避免把无法绘制的第二项误报为可见。
+    // Keep one usable item when both pinned items won't fit.
     if (reserved > availableWidth) {
         const int priority = hasFocus() && pinned.contains(m_focusedIndex) ? m_focusedIndex : m_selectedIndex;
         return {priority};
@@ -1175,8 +1167,7 @@ void SelectorBar::activateItem(int index)
         return;
     QPointer<SelectorBar> guard(this);
     emit itemInvoked(index, m_items.at(index));
-    // An itemInvoked() handler may select, mutate, or delete the bar.
-    // zh_CN: itemInvoked() 处理器可能选中、修改或删除选择栏。
+    // itemInvoked() slots may mutate or destroy the bar.
     if (!guard || !isSelectableIndex(index) || m_selectedIndex == index)
         return;
     emit itemActivated(index, m_items.at(index));

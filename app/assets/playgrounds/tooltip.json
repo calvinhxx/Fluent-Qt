@@ -61,7 +61,7 @@
   ],
   "description": {
     "en": "ToolTips attach to a target widget. Click Archive in the preview to hide or show the tooltip bubble.",
-    "zh": "ToolTip 用于附着在目标控件旁。在上方预览区点击“Archive”按钮，可切换气泡显示与隐藏以体验过渡动画。"
+    "zh": "提示气泡会附着在目标控件旁，点击预览中的“Archive”按钮可切换显示与隐藏。"
   },
   "surface": "host",
   "presets": [

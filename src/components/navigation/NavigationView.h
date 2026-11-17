@@ -22,13 +22,9 @@ namespace fluent::navigation {
 class StackContentHost;
 
 /**
- * @brief Lightweight navigation shell with pane display modes and content hosting.
- * zh_CN: 支持窗格显示模式和内容承载的轻量导航外壳。
- *
- * NavigationView owns pane geometry, top/side layout transitions, compact widths,
- * and responsive thresholds while leaving item lists and pages to callers.
- * zh_CN: NavigationView 管理窗格几何、顶部/侧边布局过渡、紧凑宽度和响应式阈值，
- * item 列表与页面内容由调用方提供。
+ * @brief Adaptive navigation shell with pane display modes and a content host.
+ * Manages pane geometry, top/side layout transitions, compact widths, and responsive breakpoints while callers supply the navigation pane widgets and pages.
+ * zh_CN: 自适应导航外壳控件，管理窗格几何布局、顶部/侧边切换过渡、紧凑宽度及响应式断点，导航项控件与页面内容由调用方提供。
  */
 class NavigationView : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -119,18 +115,18 @@ public:
     QWidget* headerChromeWidget() const { return m_headerChrome.widget.data(); }
     void setHeaderChromeWidget(QWidget* widget);
     /**
-     * @brief Sets header chrome with an explicit release policy.
-     * zh_CN: 使用显式释放策略设置头部 chrome。
+     * @brief Sets the header chrome widget with an explicit ownership policy.
+     * zh_CN: 设置头部窗格控件并指定所有权策略。
      */
     bool setHeaderChromeWidget(QWidget* widget, WidgetOwnership ownership);
     /**
-     * @brief Transfers the header chrome to the caller without applying its policy.
-     * zh_CN: 不执行策略，将头部 chrome 转交给调用方。
+     * @brief Detaches and returns the header chrome widget without applying its ownership cleanup.
+     * zh_CN: 卸下并返回头部窗格控件，不执行其释放或还原策略。
      */
     QWidget* takeHeaderChromeWidget();
     /**
-     * @brief Removes the header chrome and applies its configured policy.
-     * zh_CN: 移除头部 chrome 并执行已配置策略。
+     * @brief Removes the header chrome widget and applies its configured ownership policy.
+     * zh_CN: 移除头部窗格控件并按其所有权策略清理或还原。
      */
     bool releaseHeaderChromeWidget();
     WidgetOwnership headerChromeWidgetOwnership() const { return m_headerChrome.ownership; }
@@ -138,18 +134,18 @@ public:
     QWidget* mainChromeWidget() const { return m_mainChrome.widget.data(); }
     void setMainChromeWidget(QWidget* widget);
     /**
-     * @brief Sets main chrome with an explicit release policy.
-     * zh_CN: 使用显式释放策略设置主体 chrome。
+     * @brief Sets the main chrome widget with an explicit ownership policy.
+     * zh_CN: 设置主体窗格控件并指定所有权策略。
      */
     bool setMainChromeWidget(QWidget* widget, WidgetOwnership ownership);
     /**
-     * @brief Transfers the main chrome to the caller without applying its policy.
-     * zh_CN: 不执行策略，将主体 chrome 转交给调用方。
+     * @brief Detaches and returns the main chrome widget without applying its ownership cleanup.
+     * zh_CN: 卸下并返回主体窗格控件，不执行其释放或还原策略。
      */
     QWidget* takeMainChromeWidget();
     /**
-     * @brief Removes the main chrome and applies its configured policy.
-     * zh_CN: 移除主体 chrome 并执行已配置策略。
+     * @brief Removes the main chrome widget and applies its configured ownership policy.
+     * zh_CN: 移除主体窗格控件并按其所有权策略清理或还原。
      */
     bool releaseMainChromeWidget();
     WidgetOwnership mainChromeWidgetOwnership() const { return m_mainChrome.ownership; }
@@ -157,18 +153,18 @@ public:
     QWidget* footerChromeWidget() const { return m_footerChrome.widget.data(); }
     void setFooterChromeWidget(QWidget* widget);
     /**
-     * @brief Sets footer chrome with an explicit release policy.
-     * zh_CN: 使用显式释放策略设置底部 chrome。
+     * @brief Sets the footer chrome widget with an explicit ownership policy.
+     * zh_CN: 设置底部窗格控件并指定所有权策略。
      */
     bool setFooterChromeWidget(QWidget* widget, WidgetOwnership ownership);
     /**
-     * @brief Transfers the footer chrome to the caller without applying its policy.
-     * zh_CN: 不执行策略，将底部 chrome 转交给调用方。
+     * @brief Detaches and returns the footer chrome widget without applying its ownership cleanup.
+     * zh_CN: 卸下并返回底部窗格控件，不执行其释放或还原策略。
      */
     QWidget* takeFooterChromeWidget();
     /**
-     * @brief Removes the footer chrome and applies its configured policy.
-     * zh_CN: 移除底部 chrome 并执行已配置策略。
+     * @brief Removes the footer chrome widget and applies its configured ownership policy.
+     * zh_CN: 移除底部窗格控件并按其所有权策略清理或还原。
      */
     bool releaseFooterChromeWidget();
     WidgetOwnership footerChromeWidgetOwnership() const { return m_footerChrome.ownership; }
@@ -256,19 +252,12 @@ private:
     void buildTopLayout(LayoutState& state, const QRect& bounds);
     void applyChildGeometries();
     void applyChildGeometries(const LayoutState& state);
-    // True when the pane is shown as a light-dismiss flyout over the content (the compact/minimal
-    // modes with the pane overlapping the current content rectangle), rather than inline-pushing it.
-    // zh_CN: 当窗格以轻关闭浮层覆盖当前内容矩形（紧凑/最小模式）而非内联推开内容时为真。
+    // True when the pane overlays content as a light-dismiss flyout (compact/minimal) rather than pushing it.
     bool isPaneFlyoutVisible(const LayoutState& state) const;
-    // Positions/paints the floating pane backing (surface + shadow + light-dismiss) for the flyout
-    // modes, reusing the SAME pane widgets as the inline rail — the DrawerView capability folded in.
-    // zh_CN: 为浮层模式定位/绘制浮动窗格底（表面+阴影+轻关闭），复用与内联栏相同的窗格控件——即把 DrawerView 能力收进来。
+    // Positions and paints the shared floating card behind inline pane widgets during overlay mode.
     void updatePaneFlyout(const LayoutState& state);
     void setPaneFlyoutEscFilter(bool installed);
-    // Hints the chrome (pane) widgets to drop their own background while floating in the overlay
-    // flyout, so the overlay's single elevated card shows through them seam-free (a generic, pane-type
-    // agnostic dynamic-property hint). zh_CN: 提示 chrome（窗格）控件在浮层抽屉中浮起时放弃自身背景，让浮层
-    // 单张抬升卡片无缝透出（通用、与窗格类型无关的动态属性提示）。
+    // Hints pane widgets to drop their own background while floating on the overlay card.
     void setChromeWidgetsFloating(bool floating);
     bool canHostChromeWidget(ChromeSlot slot, QWidget* widget) const;
     bool assignChromeWidget(ChromeSlot slot, QWidget* widget, WidgetOwnership ownership, bool applyPreviousOwnership);
@@ -285,10 +274,7 @@ private:
 
     mutable LayoutState m_layout;
     mutable bool m_layoutDirty = true;
-    // True only while handling a resize: responsive mode changes then snap instead of animating,
-    // so a live drag can't kick off (and immediately interrupt) a layout transition — the source
-    // of the janky, half-transitioned nav on Windows. zh_CN: 仅在处理 resize 期间为真：此时响应式
-    // 模式切换直接吸附而非播放动画，避免拖拽中途触发又立刻打断布局过渡——Windows 上导航栏卡顿、半过渡的根因。
+    // Snap responsive mode changes during live resize so continuous dragging cannot restart transitions every frame.
     bool m_inResize = false;
     DisplayMode m_displayMode = DisplayMode::Auto;
     DisplayMode m_lastEffectiveDisplayMode = DisplayMode::Left;
@@ -308,12 +294,9 @@ private:
     ChromeRecord m_mainChrome;
     ChromeRecord m_footerChrome;
     StackContentHost* m_contentHost = nullptr;
-    // Thin top overlay that carves the content's rounded top-left corner (revealing the pane
-    // backdrop) and strokes the frame border. zh_CN: 薄覆盖层，挖出内容左上圆角（露出窗格背景）并描边框。
+    // Click-through overlay that carves the content's rounded top-left corner and strokes its border.
     QWidget* m_contentFrameOverlay = nullptr;
-    // Floating backing painted behind the pane when it opens as a light-dismiss flyout
-    // (compact / minimal). One per NavigationView; reuses the inline pane widgets on top of it.
-    // zh_CN: 窗格以轻关闭浮层（紧凑/最小）打开时绘制在其后的浮动底；每个 NavigationView 一个，浮层之上复用内联窗格控件。
+    // Elevated card backing behind inline pane widgets when opened as a light-dismiss flyout.
     QWidget* m_paneFlyoutOverlay = nullptr;
     bool m_paneFlyoutEscFilterInstalled = false;
 };

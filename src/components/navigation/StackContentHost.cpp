@@ -18,15 +18,10 @@ namespace fluent::navigation {
 
 namespace {
 
-// Records the theme generation a page subtree was last refreshed for, so a page hidden during a theme
-// change can be re-themed exactly once when it is next shown. zh_CN: 记录页子树上次刷新对应的主题代次，
-// 使切换主题期间隐藏的页在下次显示时恰好重刷一次。
+// Last theme generation applied to a page subtree so hidden pages re-theme once when next shown.
 constexpr char kThemedGenerationProperty[] = "fluentThemedGeneration";
 
-// Themes root and every FluentElement descendant. Used to bring a stale (off-screen during the switch)
-// page subtree up to the current theme synchronously, before it is shown — so its update()s coalesce
-// into the page's first paint. zh_CN: 刷新 root 及其所有 FluentElement 后代。用于在显示前同步把过期（切换时
-// 在屏外）的页子树更新到当前主题，使其 update() 合并进该页首次绘制。
+// Synchronously refresh a stale hidden page subtree right before showing it so update()s coalesce into its first paint.
 void refreshFluentTree(QWidget* root)
 {
     if (!root)
@@ -83,11 +78,8 @@ void StackContentHost::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
 
-    // A nested host without its own surface inherits the parent's paint. Clearing the shared
-    // backing store here would erase that surface too (including a locally themed preview).
-    // Top-level hosts and explicit material overlays still replace outgoing page pixels.
-    // zh_CN: 未指定表面的嵌套宿主继承父级绘制，擦除共享缓冲会同时抹掉父级（含局部主题）底色；
-    // 顶层宿主和显式材质覆盖层仍需替换离开页面的像素。
+    // A nested host without its own fill must not clear the shared backing store (which erases parent paint);
+    // top-level hosts and explicit overlays still clear outgoing page pixels under translucent backdrops.
     const bool transparentBackdrop = window() && window()->testAttribute(Qt::WA_TranslucentBackground)
         && windowing::windowBackdropRequiresTransparentClear(window());
     const bool hasSurface = m_surfaceFill.isValid() && m_surfaceFill.alpha() > 0;
@@ -98,8 +90,7 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     }
 
     if (!hasSurface) {
-        // Material backdrops belong to the parent; regular windows retain the legacy layer.
-        // zh_CN: 材质背景由父级提供；普通窗口保留原有的默认内容层。
+        // Material backdrops are painted by the parent window; regular windows fall back to bgLayer.
         if (transparentBackdrop || windowing::windowBackdropUsesPaintedMaterial(window()))
             return;
         painter.fillRect(rect(), themeColorsRef().bgLayer);
@@ -351,10 +342,7 @@ void StackContentHost::setTransitionEffect(TransitionEffect effect)
 
 void StackContentHost::onThemeUpdated()
 {
-    // The background is painted in paintEvent (QSS-proof). A QPalette::Window +
-    // autoFillBackground fill is dropped under an ancestor style sheet, so don't rely on it.
-    // zh_CN: 背景在 paintEvent 中绘制（不受样式表影响）。祖先样式表下 QPalette::Window + autoFill
-    // 会被丢弃，故不依赖它。
+    // Paint background directly in paintEvent(); QPalette::Window + autoFillBackground is ignored under ancestor QSS.
     setAutoFillBackground(false);
     update();
 }
@@ -396,9 +384,7 @@ StackContentHost::PageRecord StackContentHost::makePage(QWidget* widget, WidgetO
     if (QWidget* stackWidget = page.stackWidget.data()) {
         stackWidget->setGeometry(rect());
         stackWidget->hide();
-        // A freshly built page already reflects the current theme, so stamp it current — the on-show
-        // staleness check then only refreshes it if the theme changes while it is hidden. zh_CN: 新建页
-        // 已是当前主题,先标记为当前——显示时的过期检查便只在该页隐藏期间主题变化时才刷新它。
+        // Stamp newly inserted pages with the current theme generation so on-show refresh only runs if theme changes while hidden.
         stackWidget->setProperty(kThemedGenerationProperty, FluentElement::themeGeneration());
     }
     return page;
@@ -573,11 +559,7 @@ void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
         previousWidget->hide();
 
     if (currentWidget) {
-        // If the theme changed while this page was hidden, the global manager only themed visible
-        // elements — refresh this subtree now, before it paints, so a prewarmed page never flashes a
-        // stale theme on navigation. The cost is one page's worth of widgets, only when stale.
-        // zh_CN: 若该页隐藏期间主题变了,全局管理器只刷新了可见元素——在它绘制前刷新本子树,使预热页导航时
-        // 绝不会闪过期主题。开销仅为一页的控件量,且仅在过期时发生。
+        // Refresh stale hidden subtrees before showing so prewarmed pages never flash the old theme.
         const int generation = FluentElement::themeGeneration();
         if (currentWidget->property(kThemedGenerationProperty).toInt() != generation) {
             refreshFluentTree(currentWidget);
@@ -591,11 +573,7 @@ void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
             currentWidget->show();
         currentWidget->raise();
     }
-    // QStackedLayout::StackOne hides the outgoing widget. Touch only the
-    // outgoing/current pair and queue one coalesced backing-store refresh, so
-    // switching remains O(1) as the resident page count grows.
-    // zh_CN: StackOne 会自动隐藏旧页；这里只处理旧页/当前页并合并一次刷新，
-    // 使常驻页面数量增加后切换仍保持 O(1)。
+    // QStackedLayout::StackOne already hides the outgoing page; one coalesced update keeps switching O(1).
     update();
 }
 

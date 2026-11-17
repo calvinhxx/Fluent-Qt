@@ -162,8 +162,6 @@ void FluentMenuBar::paintEvent(QPaintEvent*)
                 fill = colors.subtleSecondary;
         }
 
-        // §2 invalid-QColor guard: only paint a valid, non-transparent fill. zh_CN: §2 无效 QColor 防护:
-        // 仅在色值有效且非透明时绘制填充。
         if (fill.isValid() && fill.alpha() > 0) {
             painter.setPen(Qt::NoPen);
             painter.setBrush(fill);
@@ -344,10 +342,7 @@ void FluentMenuBar::keyPressEvent(QKeyEvent* event)
         if (key.isEmpty()
             && ((event->key() >= Qt::Key_A && event->key() <= Qt::Key_Z)
                 || (event->key() >= Qt::Key_0 && event->key() <= Qt::Key_9))) {
-            // Windows synthetic/system-key delivery can retain the Latin key
-            // code while omitting text(). Keep mnemonic routing deterministic.
-            // zh_CN: Windows 的合成/系统按键事件可能保留拉丁键码却省略
-            // text()；使用键码回退，确保助记键路由一致。
+            // Windows system-key events can omit text() while keeping the Latin key code.
             key = QString(QChar(static_cast<ushort>(event->key()))).toUpper();
         }
         if (!key.isEmpty()) {
@@ -408,10 +403,7 @@ bool FluentMenuBar::eventFilter(QObject* watched, QEvent* event)
         for (QAction* action : actions()) {
             if (!action || action->menu() != watched)
                 continue;
-            // QMenuBar can route native mnemonics directly to its QMenu.
-            // Mirror that popup lifecycle into FluentMenuBar state as well.
-            // zh_CN: QMenuBar 可能把原生助记键直接路由到 QMenu；同时将该
-            // popup 生命周期同步到 FluentMenuBar 状态。
+            // QMenuBar may route native mnemonics directly to the QMenu; mirror its open state here.
             m_openAction = action;
             setFocusedAction(action);
             setHoveredAction(action);
@@ -513,8 +505,7 @@ void FluentMenuBar::syncOverflow()
         m_overflowMenu->setObjectName(QStringLiteral("FluentMenuBar.OverflowMenu"));
         m_overflowButton->setMenu(m_overflowMenu);
     }
-    // Borrow the original actions: enabled/checked states, submenus and callbacks stay shared.
-    // zh_CN: 借用原动作，保持启用、选中、子菜单和回调一致，不改变所有权。
+    // Reuse the original actions directly so enabled/checked state, submenus, and slots stay synchronized.
     if (m_overflowMenu->actions() != m_overflowActions) {
         const QPointer<FluentMenuBar> guard(this);
         m_overflowMenu->hide();
@@ -647,8 +638,7 @@ void FluentMenuBar::closeOpenMenu()
     m_hoveredAction = nullptr;
     m_pressedAction = nullptr;
     update();
-    // aboutToHide may delete the bar, so finish local state before notifying the menu.
-    // zh_CN: aboutToHide 可销毁菜单栏，先收尾自身状态，再隐藏菜单。
+    // aboutToHide may destroy the bar, so clear local state before hiding the menu.
     if (menu)
         menu->hide();
 }

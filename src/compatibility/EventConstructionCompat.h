@@ -53,17 +53,12 @@ inline const char* fluentWheelEventPhaseSkipReason()
     return "Wheel phase events are available on every supported Qt version";
 }
 
-// Test helper for constructing enter events.
-// zh_CN: 构造 enter 事件的测试辅助宏。
-// Qt 6 has QEnterEvent(localPos, scenePos, globalPos); Qt 5 falls back to QEvent::Enter.
+// Test helper for constructing enter events (QEnterEvent on Qt 6, QEvent::Enter on Qt 5).
+// zh_CN: 构造 enter 事件的测试辅助宏（Qt 6 使用独立局部/场景/全局位置，Qt 5 为普通 Enter 事件）。
 //
 // Usage:
 //   FLUENT_MAKE_ENTER_EVENT(ev, 5, 5);
 //   QApplication::sendEvent(widget, &ev);
-/**
- * @brief Constructs an enter event with distinct local, scene and global positions.
- * zh_CN: 使用独立的本地、场景及全局位置构造 enter 事件；Qt 5 保持普通 Enter 事件。
- */
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #define FLUENT_MAKE_ENTER_EVENT_AT(name, local, scene, global)                                                         \
     QEnterEvent name                                                                                                   \
@@ -119,10 +114,8 @@ inline const char* fluentWheelEventPhaseSkipReason()
     QHoverEvent name((typeValue), QPointF(localPosValue), QPointF(oldLocalPosValue))
 #endif
 
-// Test helper for constructing native gesture events.
-// zh_CN: 构造 native gesture 事件的测试辅助宏。
-// Qt 6.2+ exposes the constructor shape used by ScrollView tests. Qt 5 builds
-// keep a no-op construction macro so test files do not need version branches.
+// Test helper for constructing native gesture events (Qt 6.2+; Qt 5 yields a dummy QEvent::None).
+// zh_CN: 构造原生手势事件的测试辅助宏（Qt 6.2+ 可直接构造，Qt 5 回退为空事件以便测试文件无需分支）。
 #if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 #define FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR 1
 #define FLUENT_MAKE_NATIVE_GESTURE_EVENT(name, target, gestureType, localX, localY, gestureValue)                      \
@@ -136,6 +129,10 @@ inline const char* fluentWheelEventPhaseSkipReason()
     QEvent name(QEvent::None)
 #endif
 
+/**
+ * @brief Reports whether QNativeGestureEvent can be constructed directly in tests (Qt 6.2+).
+ * zh_CN: 返回测试代码是否支持直接构造 QNativeGestureEvent（需 Qt 6.2+）。
+ */
 constexpr bool fluentCanConstructNativeGestureEvent()
 {
     return FLUENT_HAS_NATIVE_GESTURE_EVENT_CONSTRUCTOR != 0;

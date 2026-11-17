@@ -16,12 +16,8 @@ namespace fluent::basicinput {
 class Slider;
 
 /**
- * @brief Fluent color picker for RGB, HSV, hex, and optional alpha editing.
- * zh_CN: 支持 RGB、HSV、Hex 和可选 Alpha 编辑的 Fluent 颜色选择器。
- *
- * ColorPicker keeps QColor as the public value while synchronizing spectrum,
- * sliders, preview, and text fields behind one component API.
- * zh_CN: ColorPicker 以 QColor 作为公开值，并在组件内部同步色谱、滑块、预览和文本输入。
+ * @brief Fluent color picker with spectrum, hue bar, RGB/HSV/Hex inputs, and optional alpha channel.
+ * zh_CN: 支持色盘、色相条、RGB/HSV/Hex 输入及可选透明通道的 Fluent 颜色选择器。
  */
 class ColorPicker : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -49,10 +45,12 @@ public:
     bool alphaEnabled() const { return m_alphaEnabled; }
     void setAlphaEnabled(bool enabled);
 
-    // HSV state exposed to the internal child widgets. zh_CN: 提供给内部子控件访问的 HSV 信息。
-    qreal hue() const { return m_h; }        // 0.0 - 1.0
-    qreal saturation() const { return m_s; } // 0.0 - 1.0
-    qreal value() const { return m_v; }      // 0.0 - 1.0
+    /** @brief Normalized HSV hue in [0.0, 1.0] for internal picker widgets. zh_CN: 供内部子控件读取的归一化色相（[0.0, 1.0]）。 */
+    qreal hue() const { return m_h; }
+    /** @brief Normalized HSV saturation in [0.0, 1.0]. zh_CN: 归一化饱和度（[0.0, 1.0]）。 */
+    qreal saturation() const { return m_s; }
+    /** @brief Normalized HSV brightness value in [0.0, 1.0]. zh_CN: 归一化明度（[0.0, 1.0]）。 */
+    qreal value() const { return m_v; }
 
     void onThemeUpdated() override;
 
@@ -64,12 +62,15 @@ private slots:
     void handleChannelEdited();
     void handleHexEdited();
 
-public: // For the internal child widgets. zh_CN: 供内部子控件调用。
-    // HSV updates from the hue bar / spectrum. zh_CN: 从色相条/色谱更新 HSV。
-    void setHueFromBar(qreal h);              // 0.0 - 1.0
-    void setSVFromSpectrum(qreal s, qreal v); // 0.0 - 1.0
-    void setValueFromSlider(int percent);     // 0-100 → m_v
-    void setAlphaFromSlider(int alpha);       // 0-255
+public:
+    /** @brief Updates HSV hue from the internal hue bar ([0.0, 1.0]). zh_CN: 内部色相条回调，更新色相（[0.0, 1.0]）。 */
+    void setHueFromBar(qreal h);
+    /** @brief Updates saturation and brightness from the spectrum ([0.0, 1.0]). zh_CN: 更新饱和度与明度。 */
+    void setSVFromSpectrum(qreal s, qreal v);
+    /** @brief Updates HSV brightness from the internal value slider (0-100). zh_CN: 内部明度滑块回调（0-100）。 */
+    void setValueFromSlider(int percent);
+    /** @brief Updates alpha channel from the internal alpha slider (0-255). zh_CN: 内部透明度滑块回调（0-255）。 */
+    void setAlphaFromSlider(int alpha);
 
 private:
     void initUi();
@@ -80,18 +81,18 @@ private:
     QColor m_color;
     bool m_alphaEnabled = true;
 
-    // HSV components, kept in sync with m_color. zh_CN: HSV 分量（与 m_color 同步）。
+    // HSV components kept in sync with m_color.
     qreal m_h = 0.0;
     qreal m_s = 0.0;
     qreal m_v = 1.0;
 
     QWidget* m_spectrum = nullptr;
     QWidget* m_hueBar = nullptr;
-    QWidget* m_previewPane = nullptr;         // Live preview pane (checkerboard + alpha). zh_CN: 右侧实时颜色预览。
-    Slider* m_valueSlider = nullptr;          // Value (V) 0-100. zh_CN: 明度。
-    Slider* m_alphaSlider = nullptr;          // Alpha 0-255
-    QWidget* m_alphaRowWidget = nullptr;      // Alpha slider row container. zh_CN: Alpha Slider 行容器。
-    QWidget* m_alphaInputRowWidget = nullptr; // Alpha input row container. zh_CN: Alpha 输入行容器。
+    QWidget* m_previewPane = nullptr;
+    Slider* m_valueSlider = nullptr;
+    Slider* m_alphaSlider = nullptr;
+    QWidget* m_alphaRowWidget = nullptr;
+    QWidget* m_alphaInputRowWidget = nullptr;
 
     LineEdit* m_rEdit = nullptr;
     LineEdit* m_gEdit = nullptr;

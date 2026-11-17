@@ -25,8 +25,8 @@ namespace fluent::textfields {
 class Label : public QLabel, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Full, non-elided label text exposed through the derived meta-object.
-     * zh_CN: 通过派生类元对象暴露的完整、未省略标签文本。
+     * @brief Full, non-elided label text.
+     * zh_CN: 完整（未经省略截断）的标签文本。
      */
     Q_PROPERTY(QString text READ text WRITE setText)
     /**
@@ -60,17 +60,12 @@ public:
     bool isTextElided() const { return m_isTextElided; }
 
     /**
-     * @brief How the label resolves its text color on theme changes.
-     * zh_CN: 标签在主题切换时如何解析文本颜色。
+     * @brief Text color source used on theme updates.
      *
-     * Default keeps the legacy palette-based coloring (QPalette::WindowText = textPrimary), which is
-     * correct as long as no ancestor has a style sheet. Any explicit role colors the text through the
-     * label's OWN style sheet instead, so an ancestor style sheet (which installs QStyleSheetStyle and
-     * makes Qt ignore the child palette) can't drop it — the fix for value/status labels that sit on a
-     * styled preview surface and rendered near-black in dark theme.
-     * zh_CN: Default 保持原有基于 palette 的上色(QPalette::WindowText = textPrimary),仅当没有祖先样式表时正确。
-     * 指定任一角色则改用标签自身的样式表上色,使祖先样式表(会安装 QStyleSheetStyle 并让 Qt 忽略子 palette)无法丢弃它
-     * ——修复那些坐在带样式表的预览面上、深色主题里渲染成近黑的取值/状态标签。
+     * Default uses QPalette::WindowText. Any explicit role sets the label's own
+     * style sheet so an ancestor style sheet cannot override the color.
+     * zh_CN: 主题更新时文本颜色的设置方式：Default 使用 QPalette::WindowText，指定明确角色时
+     * 改用自身样式表设置颜色，避免被祖先样式表覆盖。
      */
     enum class TextColorRole { Default, Primary, Secondary, Tertiary, Disabled, OnAccent, Accent, Critical };
 

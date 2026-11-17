@@ -161,9 +161,8 @@ void TitleBar::onThemeUpdated()
 
 bool TitleBar::event(QEvent* event)
 {
-    // Publish the activation state as part of the title-bar contract. The Window caption buttons
-    // and caller-owned chrome can then dim in lockstep while layout and hit testing stay intact.
-    // zh_CN: 将激活状态作为标题栏契约发布，使窗口按钮和调用方 chrome 同步变暗，且不影响布局与命中区域。
+    // Sync activation state so caption buttons and title-bar controls dim together without changing layout or hit testing.
+    // zh_CN: 同步激活状态，使窗口控制按钮与标题栏控件同步置灰，且不影响布局和命中区域。
     if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate) {
         const bool active = compatibility::detail::effectiveWindowActivation(event->type() == QEvent::WindowActivate);
         if (m_windowActive != active) {
@@ -177,14 +176,9 @@ bool TitleBar::event(QEvent* event)
 
 void TitleBar::paintEvent(QPaintEvent*)
 {
-    // windowChromeBackdropFill() owns the backdrop decision (shared with the nav pane). An invalid color
-    // means a real OS-composited backdrop is in play and we must erase to transparent so it shows
-    // through. We must clear (not paint nothing): under a translucent top-level the backing store is
-    // not auto-cleared on macOS, so animating/repositioning chrome (back-button reveal, title
-    // reflow) would ghost over stale pixels. A valid color is the solid fallback backdrop.
-    // zh_CN: windowChromeBackdropFill() 统一背景决策（与导航栏共用）。无效色表示有真实系统合成背景，须擦成透明透出之。
-    // 必须清除（而非不绘制）：半透明顶层下 macOS 后备缓冲不会自动清除，否则动画/重排的 chrome（返回按钮展开、
-    // 标题重排）会叠在残影上重影。有效色则是纯色回退背景。
+    // Invalid color means a real OS backdrop is active: clear to transparent with Source mode because
+    // macOS does not auto-clear translucent backing stores between frames (otherwise animations ghost).
+    // zh_CN: 无效色表示由系统合成背景，须用 Source 模式擦除透明（macOS 半透明缓冲不自动清帧，否则动画留残影）。
     QPainter painter(this);
     const bool opaqueClientSurface = compatibility::detail::runtimePlatformCapabilities().opaqueClientTitleBarSurface;
     // The top-level Window already painted the software material. Leaving this
@@ -302,11 +296,9 @@ bool TitleBar::isDragExcludedWidget(const QWidget* widget) const
 {
     if (!widget || widget == this)
         return false;
-    // A disabled control is still client area (not a caption drag region) — matching WinUI,
-    // and so a control re-enabled after the hit-test was published stays clickable without a
-    // resize. Only visibility and mouse-transparency remove a control from the exclusions.
-    // zh_CN: 禁用控件仍属于客户区（而非标题拖拽区）——对齐 WinUI，并使命中测试发布后再被启用的控件
-    // 无需 resize 即可点击。仅「不可见」或「鼠标穿透」才将控件移出排除区。
+    // Disabled controls remain client area rather than caption drag zones (matches WinUI and keeps
+    // re-enabled controls clickable without re-publishing hit-test regions).
+    // zh_CN: 禁用控件仍属于客户区而非拖拽区（对齐 WinUI，避免重新启用后还要刷新命中区域）。
     if (!widget->isVisibleTo(const_cast<TitleBar*>(this)))
         return false;
     if (widget->testAttribute(Qt::WA_TransparentForMouseEvents))

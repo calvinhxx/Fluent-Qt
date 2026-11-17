@@ -143,13 +143,13 @@ QString accelerationUnavailableReason()
     return spatial::SpatialRuntime::preflightFailure();
 }
 
-// Suppress backing-store painting and invalidate the GPU cache. During a GPU render pass,
-// drawSource sends the widget tree directly to the OpenGL painter, without a CPU snapshot.
-// zh_CN: 拦截后备存储绘制并使 GPU 缓存失效；实际绘制时直接输出到 OpenGL，避免整页 CPU 位图。
+// Intercept Qt's backing-store paint to track dirty regions and invalidate the GPU cache;
+// during a capture pass, drawSource() renders directly into the OpenGL painter instead of copying to CPU.
+// zh_CN: 拦截 Qt 常规绘制以收集脏区并刷新 GPU 缓存；实际捕获时直接渲染到 OpenGL，避免整页 CPU 抓图。
 class SurfaceCapture final : public QGraphicsEffect {
 public:
-    // Receives the changed region in the captured widget's coordinates; empty means all of it.
-    // zh_CN: 收到被捕获控件坐标中的变化区域；空区域表示整块变化。
+    // Dirty region in the captured widget's coordinates; an empty region invalidates the whole panel.
+    // zh_CN: 传入被捕获控件坐标系内的脏区；空区域表示整块失效。
     std::function<void(const QRegion&)> invalidated;
     QPointer<QWidget> target;
     bool rendering = false, composing = false;
@@ -358,8 +358,8 @@ public:
         });
     }
     std::function<void()> requestBackingStorePass;
-    // Same backing-store pass policy as the OpenGL surface.
-    // zh_CN: 与 OpenGL 表面相同的后备存储绘制策略。
+    // Reuse the OpenGL surface strategy: schedule redraws inside an active backing-store pass.
+    // zh_CN: 复用与 OpenGL 表面相同的调度策略，尽量在当前窗口绘制周期内完成刷新。
     void requestFrameInPass(bool inPaintPass)
     {
         if (property("presenting").toBool() && (inPaintPass || requestBackingStorePass)
@@ -367,8 +367,8 @@ public:
             if (!m_paintPending && !inPaintPass)
                 requestBackingStorePass();
             m_paintPending = true;
-            // Arm once per pending frame; continuous requests must not postpone it.
-            // zh_CN: 每个待绘帧只启动一次，连续请求不能推迟回退。
+            // Arm once per pending frame so repeated invalidations do not delay the fallback timer.
+            // zh_CN: 每帧只启动一次备用定时器，避免连续请求不断推迟触发。
             if (!m_fallback.isActive())
                 m_fallback.start();
             return;
@@ -431,9 +431,9 @@ void requestCanvasFrame(QWidget* canvas, bool withInput = false, bool inPaintPas
 
 using spatial_render::PanelSampler;
 
-// Create the shared GL surface only after opting into 3D. Keep it hidden between
-// later toggles to avoid repeatedly replacing the native window's backing store.
-// zh_CN: 首次启用 3D 才创建共享 GL 表面；后续关闭时隐藏，避免反复重建原生窗口后备存储。
+// Create the shared GL surface only after opting into 3D, and hide it when
+// disabled to avoid recreating the native window's backing store on toggles.
+// zh_CN: 首次启用 3D 时再创建共享 GL 表面；后续关闭时仅隐藏，避免反复重建原生窗口表面。
 class GpuSurface final : public QOpenGLWidget {
 public:
     GpuSurface(ShellScene* scene, QWidget* parent, spatial::SpatialSession* session)
@@ -458,8 +458,8 @@ public:
         m_fallback.setSingleShot(true);
         m_fallback.setInterval(50);
         connect(&m_fallback, &QTimer::timeout, this, [this] {
-            // No backing-store pass reached this surface; queue it normally.
-            // zh_CN: 没有后备存储绘制经过本表面，改用常规排队更新。
+            // No backing-store pass reached this surface; fall back to normal update().
+            // zh_CN: 未触发窗口重绘回调时，改用常规 update() 刷新。
             if (m_paintPending)
                 update();
         });
@@ -467,8 +467,8 @@ public:
         m_refine.setSingleShot(true);
         m_refine.setInterval(spatial_render::kRefineDelayMs);
         connect(&m_refine, &QTimer::timeout, this, [this] {
-            // Repaint rows drawn at native density during continuous updates.
-            // zh_CN: 连续更新停止后，按缓存密度重画原生密度期间绘制的行。
+            // Repaint rows that were rendered at low density once continuous interaction settles.
+            // zh_CN: 连续更新停止后，将此前以低密度快速绘制的行按目标缓存密度补绘。
             bool refined = false;
             for (auto* cache : {&m_navigation, &m_content}) {
                 if (cache->degraded.isEmpty() || !(cache->dpr > 0))
@@ -488,9 +488,8 @@ public:
             }
         });
         m_interactive = !measuring || qEnvironmentVariable("FLUENT_QT_SPATIAL_INTERACTIVE") != QLatin1String("0");
-        // Time the window composition that presents a content frame, including its buffer
-        // swap. Forwarded displays can spend far longer there than in paintGL().
-        // zh_CN: 计量呈现内容帧的窗口合成（含缓冲交换）；转发显示环境在此处的耗时可能远超 paintGL()。
+        // Measure total composition latency including buffer swap; remote/forwarded displays can stall far longer here than in paintGL().
+        // zh_CN: 统计从开始合成到交换缓冲的总耗时；远程转发显示环境在合成阶段的耗时可能远超 paintGL()。
         connect(this, &QOpenGLWidget::aboutToCompose, this, [this] {
             if (m_judgePresentation)
                 m_presentationClock.start();
@@ -627,22 +626,21 @@ public:
     qreal cacheDensityMsPerRow() const { return m_cacheDensityCost.msPerRow; }
     qreal presentationMs() const { return m_slowPresentations.lastMs; }
     int slowPresentations() const { return m_slowPresentations.streak; }
-    // Reports, once per surface, that even native-density updates stay too slow.
-    // zh_CN: 原生密度更新仍持续过慢时通知一次。
+    // Reports once per surface when even native-density updates stay too slow.
+    // zh_CN: 原生密度更新持续过慢时通知一次。
     std::function<void()> slowRendering;
-    // Reports, once per surface, that presenting content frames stays too slow.
-    // zh_CN: 内容帧呈现持续过慢时通知一次。
+    // Reports once per surface when frame presentation (buffer swap/compose) stays too slow.
+    // zh_CN: 窗口合成与上屏提交持续过慢时通知一次。
     std::function<void()> slowPresentation;
 
     // Raster-dirties a pixel beneath this surface so a backing-store pass reaches it.
     std::function<void()> requestBackingStorePass;
 
-    // While presenting, paint inside a backing-store pass instead of queuing this texture
-    // widget: Qt repaints everything beneath a queued texture widget whenever another
-    // widget is dirty in the same pass, which would retire both panel textures. A pass
-    // already in progress (inPaintPass) reaches this surface after the panels beneath it.
-    // zh_CN: 呈现时在后备存储绘制中完成本表面绘制，而不是排队纹理控件；排队时只要同一次绘制
-    // 还有其他脏控件，Qt 就会重绘其下方全部区域并作废两块面板纹理。进行中的绘制会在面板之后经过本表面。
+    // While 3D is active, paint inside the window's backing-store pass rather than queuing
+    // QOpenGLWidget::update(); otherwise Qt repaints all underlying widgets on any dirty rect
+    // and invalidates both panel textures.
+    // zh_CN: 3D 显示期间趁 Qt 窗口绘制流程同步刷新，而不直接调 update() 排队；
+    // 否则同帧有其他控件变脏时 Qt 会重绘下方所有控件并导致两块面板纹理失效。
     void requestFrame(bool withInput, bool inPaintPass = false)
     {
         if (m_inputFrameRequested)
@@ -654,8 +652,8 @@ public:
             if (!m_paintPending && !inPaintPass)
                 requestBackingStorePass();
             m_paintPending = true;
-            // Arm once per pending frame; continuous requests must not postpone it.
-            // zh_CN: 每个待绘帧只启动一次，连续请求不能推迟回退。
+            // Arm once per pending frame so repeated requests do not postpone the fallback timer.
+            // zh_CN: 每帧只启动一次备用定时器，避免连续请求不断推迟触发。
             if (!m_fallback.isActive())
                 m_fallback.start();
             return;
@@ -820,9 +818,9 @@ protected:
             return;
         }
         bindSurfaceTarget();
-        // Do not touch the displayed FBO until frame preparation succeeds or a
-        // first-frame fallback is ready. QPainter can leave scissor/color masks.
-        // zh_CN: 准备完成或首帧回退可用后才清屏，同时清除 QPainter 遗留的裁剪和颜色掩码。
+        // Clear the displayed FBO only after frame preparation or first-frame fallback succeeds,
+        // resetting any scissor or color masks left by QPainter.
+        // zh_CN: 准备完成或首帧备用画面就绪后再清屏，同时清除 QPainter 遗留的裁剪和颜色掩码。
         gl->glDisable(GL_SCISSOR_TEST);
         gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         gl->glClearColor(0, 0, 0, 0);
@@ -1193,8 +1191,8 @@ private:
     {
         if (!(m_frameUpdateMs > 0))
             return;
-        // Judge the composition that presents these rows; a first or resized frame warms up.
-        // zh_CN: 评估呈现这些行的窗口合成；首帧或尺寸变化后的首帧用于预热，不计入。
+        // Measure composition latency for these rows; skip the warmup frame after start or resize.
+        // zh_CN: 统计本次更新对应的窗口合成耗时；首帧或刚缩放后处于预热阶段，不计入慢帧。
         m_judgePresentation = m_hasPresentedFrame;
         const bool report = m_slowFrames.record(m_frameUpdateMs, m_frameInteractive);
         m_frameUpdateMs = 0;
@@ -1643,11 +1641,10 @@ struct GallerySpatialController::Private {
         hovered = target;
         hoverPath = next;
         const QPointer<QObject> guard(owner);
-        // Qt normally enters the widget's ancestor chain. The projection layer
-        // suppresses native hover, so it must preserve that same containment:
-        // leave from child to parent, enter from parent to child, keep common parents.
-        // zh_CN: 投影层拦截原生悬停后，须补齐 Qt 的祖先链语义：由内向外离开，
-        // 由外向内进入；在兄弟控件间移动时保留共同父控件的悬停状态。
+        // Because native hover is suppressed, synthesize Qt's ancestor chain:
+        // leave child-to-parent, enter parent-to-child, keeping shared ancestors hovered.
+        // zh_CN: 拦截原生悬停后需模拟 Qt 的祖先链顺序：由内向外派发 Leave，
+        // 由外向内派发 Enter，在兄弟控件间移动时保留共同父控件的悬停状态。
         for (int i = 0; i < leaving; ++i) {
             if (previous[i]) {
                 QEvent leave(QEvent::Leave);
@@ -1863,7 +1860,7 @@ void GallerySpatialController::ensureRenderer()
     // GL resources before that surface is exposed leaves them in an offscreen
     // WebGL context that cannot share textures with the final backing store.
     // zh_CN: 浏览器会将 Gallery 放入桌面表面；须等该表面显示后再创建 GL 资源，
-    // 避免资源留在无法与最终后备存储共享纹理的离屏 WebGL 上下文中。
+    // 避免资源留在无法与最终窗口表面共享纹理的离屏 WebGL 上下文中。
     auto* top = d->window->window();
     if (!d->window->isVisible() || !top->windowHandle() || !top->windowHandle()->isExposed())
         return;
@@ -1956,12 +1953,10 @@ void GallerySpatialController::ensureRenderer()
                         status_info::Toast::Warning);
             };
             surface->slowPresentation = [this] {
-                // The renderer works, but every presented change stalls the window. Return to
-                // 2D as after a cache limit; turning 3D on again is honored for this surface.
-                // zh_CN: 渲染器可用，但每次呈现变化都会阻塞窗口。与缓存受限时一样回到 2D；
-                // 之后再次开启 3D 时，本表面不再自动关闭。
-                // Rendering-contract tests keep 3D on hosts whose presentation is slow.
-                // zh_CN: 渲染契约测试在呈现缓慢的主机上仍保持 3D。
+                // Buffer swaps stall the window even though rendering succeeds. Fall back to 2D like
+                // a cache limit so re-enabling 3D later still works; tests can opt out via the property.
+                // zh_CN: 渲染器可用但每次上屏提交都会卡顿，按超限处理切回 2D；用户手动重开时不再拦截，
+                // 若测试显式设置了保留标志则继续维持 3D。
                 if (!d->window || !GallerySettings::instance().spatialModeEnabled()
                     || qApp->property("fluentqtGalleryKeepSlowPresentation").toBool())
                     return;
@@ -1980,9 +1975,8 @@ void GallerySpatialController::ensureRenderer()
     }
     d->setFiltering(true);
     d->canvas->setGeometry(QRect(d->navigation->mapTo(d->window, QPoint()), d->navigation->size()));
-    // Showing the native child can initialize and paint it synchronously.
-    // Prepare the existing material snapshot before that first GL frame.
-    // zh_CN: 原生子窗口显示可能同步初始化并绘制；先准备现有材质快照供首帧使用。
+    // Showing the native child can initialize and paint synchronously, so capture the backdrop first.
+    // zh_CN: 显示原生子窗口可能会同步触发首帧初始化与绘制，先截取窗口背景供首帧使用。
     d->prepareBackdrop();
     QElapsedTimer showClock;
     const bool measuring = qEnvironmentVariableIntValue("FLUENT_QT_SPATIAL_BENCHMARK");
@@ -2130,7 +2124,7 @@ void GallerySpatialController::startPresentation()
     // zh_CN: 正文宿主是导航视图的后代，Qt 通过外层特效报告所有变化；按区域分配，避免两块纹理同时作废。
     d->capture->invalidated = [this](const QRegion& dirty) {
         // The pixel dirtied only to bring a backing-store pass to the surface is not content.
-        // zh_CN: 仅为让后备存储绘制经过表面而标脏的像素不是内容变化。
+        // zh_CN: 仅为触发窗口重绘经过本表面而标脏的像素不是内容变化。
         const bool synthetic = std::exchange(d->syntheticPassPending, false) && !dirty.isEmpty()
             && kSyntheticPassRect.contains(dirty.boundingRect());
         if (!synthetic) {
@@ -2482,9 +2476,9 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
         return false;
     const bool mouse = event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress
         || event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseButtonDblClick;
-    // Nested Qt hover events can overwrite a native mouse event's shared global
-    // point. Its receiver-local position stays intact; snapshot it before routing.
-    // zh_CN: Qt 嵌套悬停事件可能改写原生鼠标的共享全局点，先由未变的接收者局部坐标取快照。
+    // Nested Qt hover events can overwrite the shared globalPos of a native mouse event;
+    // compute it from the untouched receiver-local coordinate before forwarding.
+    // zh_CN: Qt 嵌套悬停事件可能改写原生鼠标事件的共享全局坐标，先通过未变的局部坐标保存全局位置。
     const QPoint mouseGlobal = mouse
         ? (event->spontaneous() ? widget->mapToGlobal(fluentMousePos(static_cast<QMouseEvent*>(event)))
                                 : fluentMouseGlobalPos(static_cast<QMouseEvent*>(event)))
@@ -2549,9 +2543,9 @@ bool GallerySpatialController::eventFilter(QObject* watched, QEvent* event)
     if (widget == d->window && (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::Hide)
         && transitionRunning())
         cancelTransition();
-    // Popups remain native surfaces. Position their anchor on the presented panel while
-    // leaving popup input and keyboard/IME handling to Qt.
-    // zh_CN: 弹出层仍是原生控件，锚点映射到显示面板；弹窗输入与键盘/输入法仍交给 Qt。
+    // Popups remain native surfaces; map only their anchor onto the projected panel
+    // while leaving popup input and IME handling to Qt.
+    // zh_CN: 弹出层仍是原生控件，仅将锚点映射到投影后的面板；弹窗输入与输入法仍交给 Qt。
     if (qobject_cast<QMenu*>(widget) && event->type() == QEvent::Show) {
         if (d->nativePopupAnchors.contains(widget))
             d->nativePopupAnchors[widget].source = nullptr;

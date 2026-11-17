@@ -824,7 +824,6 @@ void TimePicker::paintEvent(QPaintEvent*)
     const detail::PickerFieldColors fieldColors = detail::resolvePickerFieldColors(fluentStyle(), colors, isEnabled(),
         underMouse(), isDown());
 
-    // Fluent treatment. zh_CN: Fluent 样式。
     painter.setPen(Qt::NoPen);
     painter.setBrush(fieldColors.background);
     painter.drawRoundedRect(QRectF(surface), radius.control, radius.control);

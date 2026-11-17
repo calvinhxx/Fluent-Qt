@@ -280,8 +280,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A button displaying a title and a secondary description line.",
+      "zh": "在按钮中显示主标题和一行副标题说明。"
     }
   },
   {
@@ -649,8 +649,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A button that reveals a menu of related commands when invoked.",
+      "zh": "点击后展开一组相关命令。"
     }
   },
   {
@@ -872,8 +872,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A button styled like a hyperlink that opens a URL when clicked.",
+      "zh": "超链接样式的按钮，点击后打开目标网址。"
     }
   },
   {
@@ -1186,8 +1186,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A button that raises its click event repeatedly while it stays pressed.",
+      "zh": "按住期间连续触发点击。"
     }
   },
   {
@@ -1459,8 +1459,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A two-part button: a primary action plus a chevron that opens a menu.",
+      "zh": "左侧直接执行默认操作，右侧箭头展开更多菜单。"
     }
   },
   {
@@ -1758,8 +1758,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A button that switches between checked and unchecked states.",
+      "zh": "点击后保持选中或取消状态。"
     }
   },
   {
@@ -2031,8 +2031,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A split button whose primary half toggles on and off.",
+      "zh": "左侧切换选中状态，右侧展开相关菜单。"
     }
   },
   {
@@ -2163,8 +2163,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Select or clear options. A mixed state shows that only some items are selected.",
+      "zh": "选择一个或多个选项；半选状态表示只选中了一部分。"
     }
   },
   {
@@ -2251,8 +2251,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Select one option from a mutually exclusive group.",
+      "zh": "在一组互斥选项中选择一项。"
     }
   },
   {
@@ -2310,8 +2310,8 @@
       320
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A color picker with spectrum, RGB, hex, and alpha controls.",
+      "zh": "选择颜色，支持编辑 RGB、Hex 与透明度。"
     }
   },
   {
@@ -2488,8 +2488,8 @@
       36
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A drop-down list for selecting one item from a set of options.",
+      "zh": "从下拉列表中选择一项。"
     }
   },
   {
@@ -2584,8 +2584,8 @@
       200
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Accept local file drops and emit a browse signal to open a file picker.",
+      "zh": "支持拖放本地文件，或点击按钮调起文件选择。"
     }
   },
   {
@@ -2778,8 +2778,8 @@
       480
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A searchable drop-down list for selecting multiple items.",
+      "zh": "支持搜索和勾选多项的下拉列表。"
     },
     "surface": "host",
     "hostSize": [
@@ -2910,8 +2910,8 @@
       36
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Search a tree model and select one or more items.",
+      "zh": "在树形层级中搜索并选择条目。"
     }
   },
   {
@@ -3126,8 +3126,8 @@
       40
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Drag two thumbs along a track to select a lower and upper bound.",
+      "zh": "通过两个滑块分别选择下限与上限数值。"
     },
     "verticalPreviewSize": [
       48,
@@ -3338,8 +3338,8 @@
       40
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Drag the thumb to pick a value within a range.",
+      "zh": "拖动滑块在范围内选择数值。"
     },
     "verticalPreviewSize": [
       48,
@@ -3504,8 +3504,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Lets people view, set, or clear star ratings.",
+      "zh": "展示、设置或清除星级评分。"
     }
   },
   {
@@ -3604,8 +3604,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A switch that flips between on and off states.",
+      "zh": "打开或关闭一项设置。"
     },
     "stateTextPair": {
       "state": "isOn",
@@ -3773,8 +3773,8 @@
       36
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A single-line text box with Fluent styling and a clear button.",
+      "zh": "Fluent 样式单行文本框，支持清空按钮与后缀图标/文本。"
     }
   },
   {
@@ -4005,8 +4005,8 @@
       72
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A search input with local or asynchronous suggestions, loading, pagination and retry.",
+      "zh": "输入关键词时弹出候选列表的搜索框。"
     }
   },
   {
@@ -4193,8 +4193,8 @@
       110
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Choose several values as compact tags with asynchronous suggestions and native text input.",
+      "zh": "将多个选项展示为可编辑、可删除的标签胶囊。"
     }
   },
   {
@@ -4315,8 +4315,8 @@
       }
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Read-only code with syntax colors, exact copying, folding and bounded scrolling.",
+      "zh": "只读语法高亮代码展示组件，支持折叠与一键复制。"
     }
   },
   {
@@ -4413,8 +4413,8 @@
       56
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Static text rendered with Fluent typography roles and elision.",
+      "zh": "应用 Fluent 字体层级的文本标签。"
     },
     "sizeMode": "fixed"
   },
@@ -4613,8 +4613,8 @@
       72
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A numeric input with spin buttons and inline expression support.",
+      "zh": "支持步进调节、表达式计算与拖拽调值的数值框。"
     }
   },
   {
@@ -4733,8 +4733,8 @@
       72
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A text box that conceals input with an optional reveal button.",
+      "zh": "支持按需明文查看的密码输入框。"
     }
   },
   {
@@ -4913,8 +4913,8 @@
       180
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A multi-line text surface for longer-form input.",
+      "zh": "支持按行数自动增高与滚动的多行文本框。"
     },
     "sizeMode": "contentHeight"
   },
@@ -5030,8 +5030,8 @@
       88
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A theme-aware widget for bundled Fluent icons or glyphs from an application-provided font family.",
+      "zh": "显示内置 Fluent 图标或应用自定义字体中的字形。"
     }
   },
   {
@@ -5196,8 +5196,8 @@
       48
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A drop-down calendar for picking a single date.",
+      "zh": "点击弹出月历面板以选择单个日期。"
     }
   },
   {
@@ -5276,8 +5276,8 @@
       368
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A calendar surface for browsing months and selecting dates.",
+      "zh": "按月/年浏览并选择日期。"
     }
   },
   {
@@ -5427,8 +5427,8 @@
       48
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A spinning-field picker for choosing a day, month, and year.",
+      "zh": "以滚轮列分别选择年、月、日。"
     }
   },
   {
@@ -5576,8 +5576,8 @@
       48
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A compact range entry with a calendar popup, minute precision, quick presets, and independently optional bounds.",
+      "zh": "选择起止日期区间（可选包含时间）。"
     }
   },
   {
@@ -5672,8 +5672,8 @@
       48
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A spinning-field picker for choosing a time of day.",
+      "zh": "以滚轮列分别选择小时和分钟。"
     }
   },
   {
@@ -5807,8 +5807,8 @@
       96
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Displays a user photo, generated initials, and optional presence status.",
+      "zh": "用照片、首字母或状态角标表示用户或联系人。"
     }
   },
   {
@@ -5914,7 +5914,7 @@
         "type": "enum",
         "label": {
           "en": "Status",
-          "zh": "语义状态"
+          "zh": "状态"
         },
         "category": "appearance"
       },
@@ -5975,8 +5975,8 @@
       48
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A small badge that shows counts, icons, or attention dots.",
+      "zh": "用数字、图标或小圆点表示提醒数量或状态。"
     }
   },
   {
@@ -6093,8 +6093,8 @@
       48
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "An inline bar for status messages with severity and optional actions.",
+      "zh": "在页面内嵌展示提示、成功、警告或错误消息。"
     }
   },
   {
@@ -6232,8 +6232,8 @@
       32
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Shows determinate or indeterminate progress along a line.",
+      "zh": "条形展示任务完成比例或不确定加载态。"
     }
   },
   {
@@ -6406,8 +6406,8 @@
       88
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Shows determinate progress or an indeterminate loading spinner.",
+      "zh": "环形展示已知百分比进度或不确定加载动画。"
     },
     "sizeMode": "content"
   },
@@ -6438,7 +6438,7 @@
         "type": "enum",
         "label": {
           "en": "Presentation",
-          "zh": "呈现模式"
+          "zh": "显示样式"
         },
         "category": "basic"
       },
@@ -6457,7 +6457,7 @@
         "effectWhen": "presentation == 'Branded'",
         "effectHint": {
           "en": "Displayed in Branded presentation; Simple centers the loading ring without brand headings.",
-          "zh": "仅在品牌模式下显示；简洁模式只显示图标与居中加载环。"
+          "zh": "仅在 Branded 样式下显示；Simple 样式只显示居中加载环。"
         },
         "effectFixture": {
           "presentation": "Branded"
@@ -6558,8 +6558,8 @@
       272
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Cover a content area during startup, report progress, and dismiss when ready.",
+      "zh": "应用启动期间覆盖主区域，显示图标与加载进度。"
     }
   },
   {
@@ -6673,8 +6673,8 @@
       56
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Shows a skeleton placeholder while content is loading.",
+      "zh": "内容尚未就绪时显示的骨架屏闪烁动画。"
     }
   },
   {
@@ -6791,8 +6791,8 @@
       200
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Shows a brief same-window notification without interrupting the current task.",
+      "zh": "不打断当前操作的轻量浮动通知，可附带一个快捷操作按钮。"
     }
   },
   {
@@ -6858,7 +6858,7 @@
     ],
     "description": {
       "en": "ToolTips attach to a target widget. Click Archive in the preview to hide or show the tooltip bubble.",
-      "zh": "ToolTip 用于附着在目标控件旁。在上方预览区点击“Archive”按钮，可切换气泡显示与隐藏以体验过渡动画。"
+      "zh": "提示气泡会附着在目标控件旁，点击预览中的“Archive”按钮可切换显示与隐藏。"
     },
     "surface": "host"
   },
@@ -6928,8 +6928,8 @@
       180
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Coordinates a vertical group of expandable sections with single or multiple expansion.",
+      "zh": "一组可展开的分区，可以设为一次只展开一个。"
     }
   },
   {
@@ -6955,7 +6955,7 @@
         "type": "enum",
         "label": {
           "en": "Appearance",
-          "zh": "表面层级"
+          "zh": "背景样式"
         },
         "category": "appearance"
       },
@@ -6987,8 +6987,8 @@
       96
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A rounded, token-backed surface for grouping related content.",
+      "zh": "圆角背景面板，用来把相关内容放在一起。"
     }
   },
   {
@@ -7087,8 +7087,8 @@
       140
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A DPI-aligned horizontal or vertical separator with optional insets.",
+      "zh": "水平或垂直的分隔线。"
     }
   },
   {
@@ -7153,7 +7153,7 @@
         "type": "enum",
         "label": {
           "en": "Appearance",
-          "zh": "表面层级"
+          "zh": "背景样式"
         },
         "category": "appearance"
       },
@@ -7185,8 +7185,8 @@
       112
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A disclosure surface that reveals caller-supplied content with an optional animation.",
+      "zh": "点击标题展开或收起内容。"
     }
   },
   {
@@ -7376,8 +7376,8 @@
       108
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Adds a label, required marker, helper text, and validation feedback to any input control.",
+      "zh": "为输入控件加上标签、必填标记、说明和校验提示。"
     }
   },
   {
@@ -7443,8 +7443,8 @@
       76
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Provides search, facet filters, and DataGrid column visibility, ordering, and pinning controls.",
+      "zh": "提供搜索、多维筛选，以及 DataGrid 列的显隐、排序和固定控制。"
     }
   },
   {
@@ -7564,8 +7564,8 @@
       236
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Generate Fluent property editors from explicit definitions, with groups, search, reset and validation.",
+      "zh": "根据属性定义自动生成分组编辑表单。"
     }
   },
   {
@@ -7670,8 +7670,8 @@
       180
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Shows a list and detail side by side, or one pane at a time in a narrow space. The same content widgets stay alive across layout changes.",
+      "zh": "宽屏时并排显示列表与详情，窄屏时自动切为单栏切换。"
     },
     "sizeMode": "fixed"
   },
@@ -7811,8 +7811,8 @@
       148
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Shows the trail to the current location and lets people go back up the hierarchy.",
+      "zh": "展示当前页面层级路径，点击节点可快速跳转。"
     }
   },
   {
@@ -7977,8 +7977,8 @@
       272
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "An adaptive left pane plus content area for top-level navigation.",
+      "zh": "提供左侧（或顶部）导航面板与右侧内容区的页面框架。"
     }
   },
   {
@@ -8056,8 +8056,8 @@
       196
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Header-based navigation between peer views with an animated indicator.",
+      "zh": "用于在同级页面间切换的标签式导航栏。"
     }
   },
   {
@@ -8146,8 +8146,8 @@
       196
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A row of selectable items for switching between views.",
+      "zh": "用横向选项卡切换当前视图或筛选分类。"
     }
   },
   {
@@ -8213,8 +8213,8 @@
       224
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Presents application-controlled steps with completion, error and availability states.",
+      "zh": "展示多步骤任务的步骤序号、完成进度与异常状态。"
     }
   },
   {
@@ -8366,8 +8366,8 @@
       196
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A tab bar with selection, closing, and drag reordering; pages are hosted by your app.",
+      "zh": "支持新增、关闭和拖拽重排的标签栏，页面内容由应用托管。"
     }
   },
   {
@@ -8450,8 +8450,8 @@
       200
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A scrollbar with labels that make long content easier to navigate.",
+      "zh": "带书签标记与悬停提示的滚动条，便于在长内容中快速定位。"
     }
   },
   {
@@ -8600,8 +8600,8 @@
       180
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Lets people zoom around the pointer and pan a single image, with fit and actual-size views.",
+      "zh": "支持以指针为中心缩放与拖拽平移的图片视图。"
     }
   },
   {
@@ -8732,8 +8732,8 @@
       180
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "Dot-style pagination for moving through a small set of pages.",
+      "zh": "用分页圆点展示总页数并切换页面。"
     }
   },
   {
@@ -8832,8 +8832,8 @@
       160
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A Fluent-styled scrollbar with hover expansion.",
+      "zh": "Fluent 样式滚动条，静默时收缩为细条，悬停时自动加宽。"
     },
     "sizeMode": "crossAxis"
   },
@@ -8967,8 +8967,8 @@
       150
     ],
     "description": {
-      "en": "Edit an independent example. Sample items and content are included in the generated code.",
-      "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+      "en": "A scrollable viewport with Fluent scrollbars and optional zoom.",
+      "zh": "支持平滑滚动与缩放的内容容器。"
     },
     "hoverTarget": "scrollbar"
   },
@@ -14562,7 +14562,7 @@
         "effect": "context",
         "effectHint": {
           "en": "Applies only when the anchor offset would otherwise place the flyout outside the host bounds.",
-          "zh": "仅当偏移后的浮出面板会超出宿主边界时生效。"
+          "zh": "仅在偏移后超出窗口范围时可见。"
         }
       },
       {
@@ -14793,7 +14793,7 @@
         "effect": "behavior",
         "effectHint": {
           "en": "Controls whether clicking outside closes the teaching tip without changing its appearance.",
-          "zh": "控制点击外部区域时是否自动关闭教学提示，本身不改变外观。"
+          "zh": "控制点击外部区域时是否自动关闭提示（不改变外观）。"
         }
       },
       {

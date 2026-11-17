@@ -38,14 +38,8 @@ void drawPhotoCaption(QPainter* painter,
     const QFont& baseFont);
 
 /**
- * @brief GridView photo-card delegate (mirrors gridview_test::FluentGridItemDelegate).
- * zh_CN: GridView 图片卡片代理（对齐 gridview_test::FluentGridItemDelegate）。
- *
- * Paints the cover image, caption scrim and an accent selection border, and — when the
- * grid is in a Multiple/Extended selection mode — a top-right check overlay, the WinUI 3
- * multi-select affordance the TestGridView UT demonstrates.
- * zh_CN: 绘制封面图、标题渐隐条与强调色选中边框；当网格处于多选/扩展选择模式时，于右上角绘制
- * 选中勾选浮层——即 TestGridView UT 演示的 WinUI 3 多选样式。
+ * @brief GridView photo-card delegate painting cover art, caption scrim, accent border, and multi-select check overlay.
+ * zh_CN: GridView 图片卡片代理：绘制封面图、标题遮罩、强调色选中边框及多选模式勾选浮层。
  */
 class GridPhotoDelegate : public QStyledItemDelegate {
     Q_OBJECT
@@ -63,14 +57,8 @@ private:
 };
 
 /**
- * @brief ListView row delegate (mirrors listview_test::FluentListItemDelegate).
- * zh_CN: ListView 行代理（对齐 listview_test::FluentListItemDelegate）。
- *
- * Draws the rounded selection / hover background with enough left padding to clear the
- * container's accent indicator pill, then the row icon and text. The ListView container
- * stays a pure container — the row look lives here, in the delegate layer.
- * zh_CN: 绘制圆角选中 / 悬停背景，并在左侧留出容器强调指示条的空间，再绘制行图标与文字。
- * ListView 保持为纯容器——条目观感放在代理层。
+ * @brief ListView row delegate drawing the rounded row fill, icon, and text while reserving space for the indicator pill.
+ * zh_CN: ListView 行代理：绘制圆角行背景、图标与文字，并为容器左侧强调指示条预留间距。
  */
 class ListRowDelegate : public QStyledItemDelegate {
     Q_OBJECT
@@ -86,14 +74,8 @@ private:
 };
 
 /**
- * @brief TreeView row delegate (mirrors treeview_test::FluentTreeItemDelegate).
- * zh_CN: TreeView 行代理（对齐 treeview_test::FluentTreeItemDelegate）。
- *
- * Rounded row background, animated accent indicator (single-select), rotating chevron,
- * optional tri-state checkbox (multi-select) and a per-row icon glyph. Clicks on the
- * chevron toggle expansion; clicks on the checkbox cascade down and roll up the tri-state.
- * zh_CN: 圆角行背景、强调指示条动画（单选）、旋转 chevron、可选三态复选框（多选）以及行图标字形。
- * 点击 chevron 展开/折叠；点击复选框向下级联并向上汇总三态。
+ * @brief TreeView row delegate with rounded selection fill, rotating chevron, glyph icon, and optional tri-state checkbox.
+ * zh_CN: TreeView 行代理：支持圆角选中背景、旋转展开箭头、图标字形及可选三态复选框（含父子级联勾选）。
  */
 class TreeRowDelegate : public QStyledItemDelegate {
     Q_OBJECT

@@ -279,10 +279,7 @@ void CoachMark::setFadeOpacity(double opacity)
 {
     const double clamped = qBound(0.0, opacity, 1.0);
     if (clamped >= 1.0 - 1e-6) {
-        // Detach the identity opacity effect once settled so QWidget::render()
-        // composites open coach marks cleanly without offscreen pixmap redirection.
-        // zh_CN: 展开完成（opacity=1）时移除空闲透明度特效，避免 Qt 在
-        // QWidget::render() 离屏合成中丢失已打开的引导浮层内容。
+        // Detach the idle opacity effect once settled so QWidget::render() composites cleanly.
         if (m_opacityEffect && graphicsEffect() == m_opacityEffect) {
             m_opacityEffect = nullptr;
             setGraphicsEffect(nullptr);

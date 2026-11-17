@@ -26,11 +26,9 @@ inline QString cssColor(const QColor& color)
  * @brief Whether a widget shares a composited transparent window backdrop.
  * zh_CN: 控件是否共享系统合成的透明窗口背景。
  *
- * Keep the Gallery's backing-store paint decision behind the typed UILib
- * backdrop contract. The attribute guard preserves the existing safety rule:
- * a transparent clear is valid only when the top-level surface is translucent.
- * zh_CN: 将 Gallery 的后备缓冲绘制判断收敛到 UILib 的强类型背景契约；属性守卫保留现有安全规则：
- * 仅当顶层表面确实为半透明时，才能擦除为透明。
+ * Clears to transparent only when the top-level window is translucent and uses
+ * a compositor-backed backdrop.
+ * zh_CN: 仅当顶层窗口启用了半透明且由系统合成器提供背景时，才允许擦除为透明。
  */
 inline bool usesCompositedWindowBackdrop(const QWidget* widget)
 {
@@ -41,7 +39,7 @@ inline bool usesCompositedWindowBackdrop(const QWidget* widget)
 
 /**
  * @brief Whether the top-level window supplies an app-painted backdrop material.
- * zh_CN: 顶层窗口是否由 UILib 提供应用侧绘制的背景材质。
+ * zh_CN: 顶层窗口是否使用应用侧绘制的背景材质。
  */
 inline bool usesPaintedWindowBackdrop(const QWidget* widget)
 {
@@ -49,8 +47,8 @@ inline bool usesPaintedWindowBackdrop(const QWidget* widget)
 }
 
 /**
- * @brief Whether the window currently represents Mica or Acrylic material.
- * zh_CN: 窗口当前是否呈现 Mica 或 Acrylic 材质。
+ * @brief Whether the window currently uses Mica or Acrylic backdrop material.
+ * zh_CN: 窗口当前是否启用了 Mica 或 Acrylic 背景材质。
  */
 inline bool usesWindowMaterialBackdrop(const QWidget* widget)
 {

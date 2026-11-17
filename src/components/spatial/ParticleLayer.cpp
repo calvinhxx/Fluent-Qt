@@ -43,9 +43,7 @@ private:
 
 int actualPaintSamples(QOpenGLContext* context)
 {
-    // Qt may round the requested MSAA count upwards. Probe the identical
-    // format before allocating full-size targets, and retain the result only
-    // for this context's lifetime.
+    // Probe the exact MSAA format once per context since drivers may round sample counts upward.
     constexpr auto key = "_fluentqt_particleLayerPaintSamples";
     const QVariant cached = context->property(key);
     if (cached.isValid())
@@ -63,8 +61,7 @@ int actualPaintSamples(QOpenGLContext* context)
 } // namespace
 
 struct ParticleLayer::Private {
-    // During QWidget destruction a typed QPointer may still reference the
-    // object after its ParticleBackdrop pimpl has gone. Re-check dynamic type.
+    // Store as QObject QPointer and qobject_cast so teardown after ParticleBackdrop pimpl destruction stays safe.
     QPointer<QObject> backdrop;
     QPointer<QOpenGLContext> context;
     QMetaObject::Connection contextDestroyed;
@@ -96,8 +93,7 @@ ParticleLayer::ParticleLayer(particles::ParticleBackdrop* backdrop, QObject* par
 
 ParticleLayer::~ParticleLayer()
 {
-    // QObject destruction is the lifetime notification. Do not emit a regular
-    // state signal from a partially destructed object to reentrant callers.
+    // Suppress activeChanged() during destruction to avoid notifying reentrant listeners.
     d->active = false;
     release();
 }
@@ -129,8 +125,7 @@ quint64 ParticleLayer::estimatedBytes(const QSize& logicalSize, qreal devicePixe
     const int samples = actualPaintSamples(context);
     if (samples < 2)
         return 0;
-    // Conservatively allow separate depth/stencil storage, as the Gallery
-    // aggregate policy does, plus the resolved RGBA texture.
+    // Conservative estimate matching Gallery's policy: MSAA color + depth/stencil plus resolved RGBA texture.
     return quint64(pixels.width()) * quint64(pixels.height()) * quint64(samples * 12 + 4);
 }
 

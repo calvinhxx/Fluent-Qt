@@ -136,19 +136,13 @@ private:
 protected:
     void paintEvent(QPaintEvent* event) override
     {
-        // QLabel keeps native selection, keyboard and accessibility behavior.
-        // Reuse the measurement document for clipped drawing: QLabel's rich-text
-        // painter otherwise traverses the entire source, even outside the viewport.
-        // zh_CN: 保留 Label 的原生选择、键盘和无障碍；复用测量文档按可见区域绘制，
-        // 避免 QLabel 在滚动和展开时遍历屏外的整份源码。
+        // Keep QLabel's selection/accessibility, but draw only the clipped viewport rect on our layout document.
         auto& document = layoutForWidth(width());
         QPainter painter(this);
         QAbstractTextDocumentLayout::PaintContext context;
         context.clip = event->rect();
         context.palette = palette();
-        // Qt still owns hit testing, keyboard navigation and selection ranges.
-        // Paint that selection on the same clipped document in every focus state.
-        // zh_CN: Qt 继续负责命中、键盘导航和选区；所有焦点状态用同一文档裁剪绘制选区。
+        // Qt owns selection ranges; draw the selection highlight on the clipped document for every focus state.
         if (hasSelectedText()) {
             QAbstractTextDocumentLayout::Selection selection;
             selection.cursor = QTextCursor(&document);

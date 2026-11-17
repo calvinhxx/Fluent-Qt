@@ -125,14 +125,10 @@ public:
     void setAnimationEnabled(bool enabled);
 
     /**
-     * @brief Optional caller-owned action presented inside the toast.
-     * zh_CN: 在 Toast 内呈现的可选调用方所有动作。
+     * @brief Optional action button shown inside the toast (without taking QAction ownership).
      *
-     * The toast borrows the action without reparenting it. Invoking the
-     * action from the toast dismisses the current presentation with
-     * `ActionInvoked`.
-     * zh_CN: Toast 仅借用该动作而不改变其父对象；从 Toast 触发动作后，本次展示将以
-     * `ActionInvoked` 原因关闭。
+     * Triggering the action from the toast dismisses it with `ActionInvoked`.
+     * zh_CN: 显示在 Toast 内的可选操作按钮（不接管 QAction 所有权）；点击触发后以 `ActionInvoked` 原因关闭。
      */
     QAction* action() const { return m_action.data(); }
     void setAction(QAction* action);
@@ -183,14 +179,14 @@ public:
     static void setMaximumVisible(int count);
 
     /**
-     * @brief Presents this toast in the anchor's top-level window.
-     * zh_CN: 在锚点所属顶层窗口中呈现当前 Toast。
+     * @brief Shows this toast inside the anchor's top-level window.
+     * zh_CN: 在锚点所属顶层窗口中显示当前 Toast。
      */
     bool present(QWidget* anchor);
 
     /**
-     * @brief Dismisses the toast and ends its current display lifetime.
-     * zh_CN: 关闭 Toast 并结束本次展示生命周期。
+     * @brief Dismisses and hides the toast.
+     * zh_CN: 关闭并隐藏当前 Toast。
      */
     void dismiss();
 

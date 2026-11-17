@@ -14,16 +14,14 @@ namespace fluent::plugins {
  *
  * Implement Q_INTERFACES(fluent::plugins::WidgetPluginInterface) on a Plugin
  * subclass. Every successful factory call returns a new widget with the requested
- * parent; a null parent transfers ownership directly to the caller. The manager
- * does not retain or delete delivered widgets. A plugin requiring live resources
- * must have its surfaces closed before deactivation, or detach them safely in its
- * cleanup hook. Factories run on the GUI thread only.
- * A failing or throwing factory releases partial work it has not returned.
- * zh_CN: 在 Plugin 子类声明 Q_INTERFACES。每次成功调用都返回指定父对象的新控件；
- * 父对象为空时所有权直接交给调用方。管理器不保留或销毁已交付的控件。
- * 若控件依赖插件的活动资源，应在停用前关闭控件，或在清理回调中安全解除关联。
- * 工厂仅在 GUI 线程执行。
- * 工厂失败或抛异常时，应自行清理尚未返回的部分产物。
+ * parent (null transfers ownership directly to the caller); the manager does not
+ * retain or delete delivered widgets. Close surfaces that depend on live plugin
+ * resources before deactivation, or detach them in cleanup. Factories run on the
+ * GUI thread only and release any partial work on failure or exception.
+ * zh_CN: 在 Plugin 子类声明 Q_INTERFACES。每次成功调用都返回指定父对象的新控件
+ *（父对象为空时所有权直接交给调用方），管理器不保留或销毁已交付控件。若控件依赖
+ * 插件的活动资源，应在停用前关闭控件或在清理回调中解除关联。工厂仅在 GUI 线程执行，
+ * 失败或抛异常时须自行清理尚未返回的部分产物。
  */
 class WidgetPluginInterface {
 public:

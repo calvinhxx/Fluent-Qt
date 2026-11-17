@@ -104,7 +104,7 @@
       "effect": "behavior",
       "effectHint": {
         "en": "Controls whether clicking outside closes the teaching tip without changing its appearance.",
-        "zh": "控制点击外部区域时是否自动关闭教学提示，本身不改变外观。"
+        "zh": "控制点击外部区域时是否自动关闭提示（不改变外观）。"
       }
     },
     {

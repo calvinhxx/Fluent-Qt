@@ -8,10 +8,10 @@ namespace fluent::qmlbridge {
 class QmlView;
 
 /**
- * @brief Exposes the host's Fluent tokens to QML as the read-only fluentTheme object.
- * zh_CN: 通过只读 fluentTheme 对象向 QML 提供宿主的 Fluent token。
- * QML content opts into these tokens; existing Quick controls are not restyled automatically.
- * zh_CN: QML 内容自行绑定这些 token；不会自动重设现有 Quick 控件的样式。
+ * @brief Exposes host Fluent design tokens to QML as the read-only fluentTheme context object.
+ * QML content binds to these tokens explicitly; standard Qt Quick controls are not restyled automatically.
+ * zh_CN: 通过只读的 fluentTheme 上下文对象向 QML 提供宿主的 Fluent 设计 token。
+ * 仅作用于显式绑定这些属性的 QML 内容，不会自动更改标准 Qt Quick 控件的样式。
  */
 class QmlTheme : public QObject {
     Q_OBJECT
@@ -32,8 +32,7 @@ class QmlTheme : public QObject {
 public:
     QColor background() const;
     QColor surface() const;
-    /** @brief Returns the alternate Fluent layer color for inset surfaces.
-     * zh_CN: 返回用于内嵌表面的 Fluent 交替层颜色。 */
+    /** @brief Alternate Fluent surface color for inset areas. zh_CN: 用于内嵌区域的交替表面颜色。 */
     QColor surfaceAlt() const;
     QColor text() const;
     QColor secondaryText() const;
@@ -48,6 +47,7 @@ public:
     int transitionDuration() const;
 
 signals:
+    /** @brief Emitted when any host theme token or motion setting changes. zh_CN: 任一宿主主题 token 或动效设置变化时触发。 */
     void changed();
 
 private:

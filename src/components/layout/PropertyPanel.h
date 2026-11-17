@@ -20,12 +20,11 @@ class Field;
 class PropertyPanelPrivate;
 
 /**
- * @brief Explicit metadata for one generated editor; business values remain application-owned.
- * zh_CN: 一个自动生成编辑器的显式描述；业务值仍由应用持有。
- * Choice values are strings in choices. Numbers are finite and use minimum/maximum/step.
- * A valid defaultValue enables reset. An invalid QVariant means no default.
- * zh_CN: 枚举值使用 choices 中的字符串；数值有限，按范围和步长编辑。
- * 有效 defaultValue 启用重置；无效 QVariant 表示没有默认值。
+ * @brief Schema describing a generated editor row in PropertyPanel (data values stay managed by the application).
+ * Choice values are strings from choices; Number values are finite and bounded by minimum, maximum, and step.
+ * A valid defaultValue enables the reset button.
+ * zh_CN: PropertyPanel 单个属性字段的描述定义（业务数据仍由应用自行管理）。
+ * Choice 类型从 choices 取值，Number 类型按 minimum/maximum/step 约束范围，提供有效的 defaultValue 时会显示重置按钮。
  */
 class PropertyDefinition {
     Q_GADGET
@@ -46,13 +45,11 @@ public:
 };
 
 /**
- * @brief A bounded property form composed of Fluent editors, search, groups and reset actions.
- * zh_CN: 由 Fluent 编辑器组成的有限属性表单，支持搜索、分组和重置。
- * Owns generated widgets, not the application's object or persistence. At most 128
- * definitions are accepted. valueEdited requests application updates; setValue refreshes
- * an editor without emitting valueEdited. Replacing definitions resets form tracking.
- * zh_CN: 持有生成的控件，不持有业务对象或持久化逻辑，最多接受 128 个字段。
- * valueEdited 请求应用更新；setValue 更新编辑器而不发出 valueEdited，替换描述会清除表单跟踪状态。
+ * @brief Property form generated from up to 128 PropertyDefinition items, with search, groups, and reset.
+ * Owns generated editor widgets while business state stays external: user edits emit valueEdited(), and setValue()
+ * refreshes an editor without emitting valueEdited(). Replacing definitions resets change tracking.
+ * zh_CN: 根据属性定义（最多 128 项）生成编辑表单，支持搜索过滤、分组和重置默认值。
+ * 面板仅管理内部生成的控件，不持有业务数据；用户修改触发 valueEdited()，调用 setValue() 刷新界面不会触发该信号，替换定义会重置变更状态。
  */
 class PropertyPanel : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -75,8 +72,8 @@ public:
     Q_ENUM(SearchVisibility)
     explicit PropertyPanel(QWidget* parent = nullptr);
     ~PropertyPanel() override;
-    /** @brief Atomically replaces definitions; invalid or duplicate keys leave the form unchanged.
-     * zh_CN: 原子替换字段描述；无效描述或重复键不会改变原表单。 */
+    /** @brief Atomically replaces definitions; invalid or duplicate keys leave the panel unchanged.
+     * zh_CN: 整体替换属性定义；若包含无效项或重复键则保持原面板不变。 */
     bool setProperties(const QVector<PropertyDefinition>& properties);
     QVector<PropertyDefinition> properties() const;
     QStringList propertyKeys() const;
@@ -99,8 +96,8 @@ public:
     void setSearchText(const QString& text);
     bool isReadOnly() const;
     void setReadOnly(bool readOnly);
-    /** @brief Borrows the generated editor/Field; pointers expire when definitions are replaced.
-     * zh_CN: 借用生成的编辑器或 Field；替换描述后指针失效。 */
+    /** @brief Returns the generated editor for key (owned by the panel; invalid after setProperties()).
+     * zh_CN: 获取指定键对应的编辑控件（由面板管理，调用 setProperties() 后失效）。 */
     QWidget* editor(const QString& key) const;
     Field* field(const QString& key) const;
     fluent::FormController* formController() const;

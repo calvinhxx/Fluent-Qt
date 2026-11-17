@@ -33,13 +33,11 @@ class OverscrollController;
 namespace fluent::collections {
 
 /**
- * @brief Fluent list collection view with header, footer, sections, and indicator motion.
- * zh_CN: 支持头尾部、分组和指示器动效的 Fluent 列表集合视图。
- *
- * ListView keeps model and delegate ownership with callers while adding reusable
- * Fluent chrome for selection, placeholder content, drag reordering, and scroll bars.
- * zh_CN: ListView 将 model/delegate 所有权保留给调用方，同时补充选中态、占位内容、
- * 拖拽重排和滚动条等可复用 Fluent 外观。
+ * @brief Fluent list view with header/footer slots, section grouping, and animated selection indicator.
+ * Uses external models and delegates without taking ownership, providing Fluent selection styling,
+ * placeholder text, drag reordering, and overlay scrollbars.
+ * zh_CN: 支持头尾部区域、分组标题和选中指示器动效的 Fluent 列表视图。
+ * 关联外部模型与代理（不接管所有权），内置 Fluent 选中样式、占位提示、拖拽重排及覆盖式滚动条。
  */
 class ListView : public QListView, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -60,17 +58,19 @@ public:
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
-    /** @brief Optional model role for trailing secondary text; -1 hides it.
-     * zh_CN: 可选的行尾辅助文字角色；-1 表示不显示。 */
+    /**
+     * @brief Optional model role for trailing secondary text; -1 hides it.
+     * zh_CN: 可选的行尾辅助文本角色；-1 表示不显示。
+     */
     Q_PROPERTY(int trailingTextRole READ trailingTextRole WRITE setTrailingTextRole NOTIFY trailingTextRoleChanged)
     /**
-     * @brief Whether the item-view viewport is currently hovered.
-     * zh_CN: item-view viewport 当前是否处于悬停状态。
+     * @brief Whether the viewport is currently hovered.
+     * zh_CN: 视口当前是否处于悬停状态。
      */
     Q_PROPERTY(bool viewportHovered READ viewportHovered NOTIFY viewportHoveredChanged)
     /**
-     * @brief List flow direction used by the underlying item view.
-     * zh_CN: 底层 item view 使用的列表流向。
+     * @brief Item layout direction (TopToBottom or LeftToRight).
+     * zh_CN: 列表排布方向（纵向 TopToBottom 或横向 LeftToRight）。
      */
     Q_PROPERTY(Flow flow READ flow WRITE setFlow NOTIFY flowChanged)
     /**
@@ -133,8 +133,8 @@ public:
      */
     Q_PROPERTY(QString footerText READ footerText WRITE setFooterText NOTIFY footerTextChanged)
     /**
-     * @brief Text shown when the model has no rows to present.
-     * zh_CN: model 没有可展示行时显示的占位文本。
+     * @brief Text shown when the model has no items.
+     * zh_CN: 模型为空时显示的占位文本。
      */
     Q_PROPERTY(QString placeholderText READ placeholderText WRITE setPlaceholderText NOTIFY placeholderTextChanged)
     /**
@@ -151,8 +151,8 @@ public:
         WRITE setScrollChainingEnabled
         NOTIFY scrollChainingEnabledChanged)
     /**
-     * @brief Whether section headers are enabled for grouped rows.
-     * zh_CN: 是否为分组行启用 section header。
+     * @brief Whether adjacent items are grouped under section headers via the section key callback.
+     * zh_CN: 是否按分组键回调将相邻条目归组并绘制分组标题。
      */
     Q_PROPERTY(bool sectionEnabled READ sectionEnabled WRITE setSectionEnabled NOTIFY sectionEnabledChanged)
 
@@ -162,21 +162,20 @@ public:
     void setModel(QAbstractItemModel* model) override;
     void setSelectionModel(QItemSelectionModel* selectionModel) override;
 
-    // --- Flow ---
-    using Flow = QListView::Flow; // TopToBottom or LeftToRight
+    using Flow = QListView::Flow;
     Flow flow() const;
     void setFlow(Flow flow);
 
-    // --- Selection ---
     SelectionMode selectionMode() const { return m_selectionMode; }
     void setSelectionMode(SelectionMode mode);
 
-    // --- Appearance ---
     Typography::FontRole fontRole() const { return m_fontRole; }
     void setFontRole(Typography::FontRole role);
     int trailingTextRole() const { return m_trailingTextRole; }
-    /** @brief Sets the role used by the default delegate; custom delegates remain caller-owned.
-     * zh_CN: 设置默认 delegate 使用的角色，自定义 delegate 仍由调用方负责。 */
+    /**
+     * @brief Sets the role used by the default delegate for trailing text; custom delegates handle their own layout.
+     * zh_CN: 设置默认代理使用的行尾文本角色；自定义代理需自行绘制。
+     */
     void setTrailingTextRole(int role);
 
     bool borderVisible() const { return m_borderVisible; }
@@ -187,14 +186,12 @@ public:
     bool isBackgroundVisible() const { return backgroundVisible(); }
     void setBackgroundVisible(bool visible);
 
-    // --- Header / Footer (custom widget API) ---
     QWidget* header() const { return m_header; }
     void setHeader(QWidget* widget);
 
     QWidget* footer() const { return m_footer; }
     void setFooter(QWidget* widget);
 
-    // --- Header / Footer (convenience text API) ---
     QString headerText() const { return m_headerText; }
     void setHeaderText(const QString& text);
 
@@ -207,48 +204,59 @@ public:
     bool viewportHovered() const { return m_viewportHovered; }
     bool isViewportHovered() const { return viewportHovered(); }
 
-    // --- Drag reorder ---
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
     bool isScrollChainingEnabled() const;
     void setScrollChainingEnabled(bool enabled);
 
-    // --- Section ---
     using SectionKeyFunc = std::function<QString(int row)>;
     bool sectionEnabled() const { return m_sectionEnabled; }
     bool isSectionEnabled() const { return sectionEnabled(); }
     void setSectionEnabled(bool enabled);
-    /** 设置分组 key 回调。相邻行返回相同 key 的归为一组，key 作为 section header 绘制。 */
+    /**
+     * @brief Sets the callback returning a section key per row; adjacent rows with the same key share a section header.
+     * zh_CN: 设置分组键回调；相邻行返回相同键时归为同一组，并以该键作为分组标题绘制。
+     */
     void setSectionKeyFunction(SectionKeyFunc func);
 
-    // --- Selection API ---
     int selectedIndex() const;
     QList<int> selectedRows() const;
     void setSelectedIndex(int index);
 
-    // --- Selected indicator motion API ---
     qreal selectedIndicatorProgress() const { return m_selectedIndicatorProgress; }
     IndicatorMotionDirection selectedIndicatorMotionDirection() const { return m_selectedIndicatorMotionDirection; }
-    /** 控制 selected indicator 过渡动画；关闭后选择变更直接落到目标几何，便于确定性测试。 */
+    /**
+     * @brief Whether the selection indicator animates between rows; disabling snaps immediately to the target rect.
+     * zh_CN: 是否启用选中指示器过渡动画；关闭后切换选中项会立即落到目标位置，便于自动化测试。
+     */
     bool selectedIndicatorAnimationEnabled() const { return m_selectedIndicatorAnimationEnabled; }
     bool isSelectedIndicatorAnimationEnabled() const { return selectedIndicatorAnimationEnabled(); }
     void setSelectedIndicatorAnimationEnabled(bool enabled);
     /**
-     * @brief Returns whether the selected-item indicator is painted.
-     * zh_CN: 返回是否绘制选中项指示器。
+     * @brief Whether the selected-item indicator is painted.
+     * zh_CN: 是否绘制选中项指示器。
      */
     bool selectionIndicatorVisible() const { return m_selectionIndicatorVisible; }
     /**
-     * @brief Shows or hides the indicator without changing selection semantics.
-     * zh_CN: 显示或隐藏指示器，但不改变选择语义。
+     * @brief Shows or hides the selection indicator without affecting selection behavior.
+     * zh_CN: 控制是否绘制选中指示器，不影响实际选中逻辑。
      */
     void setSelectionIndicatorVisible(bool visible);
-    /** 返回当前绘制用的 selected indicator viewport 几何；无可见选中项时为空。 */
+    /**
+     * @brief Returns the current selection indicator rectangle in viewport coordinates, or empty if none is visible.
+     * zh_CN: 返回当前选中指示器在视口坐标系中的矩形区域；无可见选中项时返回空矩形。
+     */
     QRectF selectedIndicatorRect() const;
-    /** 返回指定归一化进度下的 selected indicator viewport 几何，供自动化测试验证过渡轨迹。 */
+    /**
+     * @brief Returns the selection indicator rectangle at a normalized animation progress in [0, 1].
+     * zh_CN: 返回指定归一化动画进度 [0, 1] 下的选中指示器矩形区域。
+     */
     QRectF selectedIndicatorRect(qreal progress) const;
-    /** 返回指定行的 selected indicator viewport 几何；多选模式用于验证每个选中项自己的 reveal 指示器。 */
+    /**
+     * @brief Returns the selection indicator rectangle for a specific row (used in multi-selection mode).
+     * zh_CN: 返回指定行的选中指示器矩形区域（用于多选模式下的独立指示器）。
+     */
     QRectF selectedIndicatorRectForRow(int row) const;
     QRectF selectedIndicatorRectForRow(int row, qreal progress) const;
 
@@ -256,13 +264,10 @@ public:
     ::fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const;
 
     /**
-     * @brief Suppresses the built-in scroll bars and refreshes the fluent ones.
-     * zh_CN: 隐藏内置滚动条并刷新 Fluent 滚动条。
-     *
-     * Platform styles may re-show the native bars (e.g. inside QComboBox
-     * popups), so this must run again after show.
-     * zh_CN: 平台/样式可能重新显示系统滚动条（如 QComboBox 弹层场景），
-     * 需在 show 后再次压制。
+     * @brief Hides native scrollbars and refreshes the Fluent overlay scrollbars.
+     * Platform styles can re-show native bars (such as inside QComboBox popups), so call again after show if needed.
+     * zh_CN: 隐藏系统原生滚动条并刷新 Fluent 覆盖式滚动条。
+     * 部分平台样式可能在显示后（如 QComboBox 弹层中）重新显示原生滚动条，必要时需在 show 后再次调用。
      */
     void refreshFluentScrollChrome();
 
@@ -287,8 +292,8 @@ signals:
     void selectedIndicatorAnimationEnabledChanged();
     void selectionIndicatorVisibleChanged();
     /**
-     * @brief Emits the row once for the same pointer action as inherited clicked().
-     * zh_CN: 与继承的 clicked() 对应，在同一次指针点击中发送一次行号。
+     * @brief Convenience signal emitting the clicked row index alongside QAbstractItemView::clicked().
+     * zh_CN: 与 QAbstractItemView::clicked() 对应的便捷信号，直接传递被点击的行号。
      */
     void itemClicked(int index);
     void itemReordered(int fromRow, int toRow);

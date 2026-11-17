@@ -43,16 +43,13 @@
 namespace fluent::collections {
 
 namespace {
-// Pixels scrolled per mouse-wheel notch (delta 120); the cross-platform wheel/overscroll state
-// machine now lives in fluent::scrolling::OverscrollController.
-// zh_CN: 每个滚轮刻度（delta 120）滚动的像素数；跨平台滚轮/回弹状态机现位于 OverscrollController。
+// Pixels per 120-delta wheel notch (overscroll state lives in OverscrollController).
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
 constexpr int kScrollBarEdgeInset = ::Spacing::XSmall / 2;
 
 QColor surroundingSurfaceColor(const QWidget* widget, const QColor& fallback)
 {
-    // Plain layout containers do not paint their inherited system palette.
-    // zh_CN: 普通布局容器不会绘制其继承的系统调色板，继续寻找实际背景。
+    // Skip plain layout containers that do not paint their inherited palette.
     for (const QWidget* parent = widget->parentWidget(); parent; parent = parent->parentWidget()) {
         const QColor surface = parent->property("fluentSurfaceColor").value<QColor>();
         if (surface.isValid() && surface.alpha() > 0)
@@ -71,12 +68,7 @@ qreal lerp(qreal from, qreal to, qreal progress)
     return from + (to - from) * progress;
 }
 
-// Color a child QLabel through its OWN style sheet rather than its palette. A palette WindowText color
-// is silently dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the
-// subtree and ignores child palettes) — e.g. the gallery sample card, where the header/footer text then
-// renders near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
-// palette。任何祖先设置样式表时(安装 QStyleSheetStyle 并忽略子 palette),palette 的 WindowText 会被丢弃
-// ——如画廊示例卡,header/footer 文案在深色主题里变近黑。样式表颜色始终生效。
+// Style child QLabels via their own stylesheet so ancestor QStyleSheetStyle rules won't override QPalette::WindowText.
 QString cssRgba(const QColor& c)
 {
     return QStringLiteral("rgba(%1, %2, %3, %4)").arg(c.red()).arg(c.green()).arg(c.blue()).arg(c.alpha());
@@ -94,10 +86,7 @@ qreal indicatorTrailingProgress(qreal progress)
 
 } // namespace
 
-// Default text/icon rows must remain usable without an application-supplied
-// delegate. Custom delegates still own richer business item composition.
-// zh_CN: 默认文本/图标行在应用未提供 delegate 时也必须可用；更复杂的业务条目
-// 仍由调用方自定义 delegate 负责。
+// Fallback delegate for plain text/icon models when no custom delegate is set.
 class DefaultListItemDelegate final : public QStyledItemDelegate {
 public:
     explicit DefaultListItemDelegate(ListView* listView) : QStyledItemDelegate(listView), m_listView(listView) {}
@@ -125,9 +114,7 @@ public:
             painter->drawPath(path);
         }
 
-        // 14 px from the row edge leaves a stable gap after the 3 px indicator
-        // at background.left() + 4 px. zh_CN: 内容从行边缘内缩 14 px，使文字
-        // 与位于 background.left()+4 px 的 3 px 指示条保持稳定间距。
+        // 14 px left inset keeps text clear of the 3 px selection indicator at background.left() + 4 px.
         qreal cursorX = background.left() + 14.0;
         QSize iconExtent = option.decorationSize;
         if (!iconExtent.isValid() || iconExtent.isEmpty())
@@ -167,8 +154,7 @@ public:
 
         QFont font = option.font;
         if (selected) {
-            // An explicit Regular face would otherwise override the selected weight.
-            // zh_CN: 清除精确 Regular 字体名，避免它覆盖选中行的字重。
+            // Clear any explicit Regular style name so DemiBold weight takes effect.
             font.setStyleName(QString());
             font.setWeight(QFont::DemiBold);
         }
@@ -273,16 +259,9 @@ public:
             const int hPad = ::Spacing::Padding::ListItemHorizontal;
             const int textH = titleFm.height();
 
-            // Fill the section-header area to clear any hover artifacts — but only when the container
-            // paints its own surface. With the surface hidden (e.g. the gallery flat previews, where
-            // the list sits directly on the sample panel) the viewport is transparent and the rows let
-            // the parent panel show through; a bgLayer fill would read as a darker nested block. The
-            // viewport's backing store has no alpha, so CompositionMode_Clear would write solid black —
-            // instead we paint nothing and let the section title sit on the already-composited parent
-            // panel like the rows do. zh_CN: 填充分组头区域以清除 hover 残影——但仅在容器绘制自身表面时。
-            // 表面隐藏时(如画廊扁平预览,列表直接坐在示例面板上),viewport 透明、行让父面板透出;填 bgLayer
-            // 会变成更暗的嵌套块,而 viewport backing store 无 alpha,CompositionMode_Clear 会写成纯黑——
-            // 故此时不绘制任何底色,让分组标题像普通行一样坐在已合成的父面板上。
+            // Fill header background only when the list paints its own surface; when transparent,
+            // the viewport backing store lacks alpha (CompositionMode_Clear would paint black),
+            // so let the parent surface show through.
             QRect headerArea(option.rect.left(), option.rect.top(), option.rect.width(), headerH);
             painter->save();
             painter->setRenderHint(QPainter::Antialiasing);
@@ -339,13 +318,8 @@ ListView::ListView(QWidget* parent) : QListView(parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
-    setSpacing(
-        2); // 2px around each item, also spacing first/last from the border. zh_CN: item 四周留 2px，兼顾首尾与边框的间隙。
+    setSpacing(2); // Outer spacing per item, keeping first/last rows clear of the border.
 
-    // Keep the no-configuration path Fluent and reserve room for the selection
-    // indicator. Applications can replace this delegate for richer rows.
-    // zh_CN: 无需额外配置即可获得 Fluent 行样式并为选择指示条留位；应用仍可
-    // 替换 delegate 以实现更丰富的条目。
     QListView::setItemDelegate(new DefaultListItemDelegate(this));
 
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
@@ -355,10 +329,6 @@ ListView::ListView(QWidget* parent) : QListView(parent)
 
     connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) { emit itemClicked(idx.row()); });
 
-    // Header/footer start empty; setHeader()/setHeaderText() create them on demand.
-    // zh_CN: Header/footer 初始为空 —— 由 setHeader() / setHeaderText() 按需创建。
-
-    // --- Fluent scroll bars ---
     m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(Qt::Vertical, this, verticalScrollBar(),
         QStringLiteral("fluentListViewScrollBar"));
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &ListView::syncFluentScrollBar);
@@ -412,18 +382,11 @@ ListView::ListView(QWidget* parent) : QListView(parent)
 
 ListView::~ListView()
 {
-    // Stop animations before destruction so no pending tick fires on a half-destroyed object.
-    // The overscroll controller owns its own bounce anim/timer and stops them as a child.
-    // zh_CN: 析构前停止动画，避免半销毁对象上仍有回调；overscroll 控制器作为子对象自行停止其回弹动画/定时器。
+    // Stop animations and detach external model/delegate before ~QListView so PySide6/Shiboken teardown doesn't race.
     if (m_selectedIndicatorAnimation)
         m_selectedIndicatorAnimation->stop();
     clearMultiSelectedIndicatorState();
 
-    // Detach caller-owned Python model/delegate objects before QListView's
-    // destructor runs. This makes Shiboken's retained-reference release order
-    // independent from Qt's internal signal-disconnection order.
-    // zh_CN: 在 QListView 基类析构前解除外部 Python model/delegate，避免
-    // Shiboken 引用释放顺序与 Qt 内部断开 signal 的顺序互相依赖。
     disconnectSelectedIndicatorModel();
     QListView::setItemDelegate(nullptr);
     QListView::setModel(nullptr);
@@ -488,13 +451,11 @@ void ListView::setFlow(Flow f)
 {
     if (QListView::flow() == f)
         return;
-    // The scroll axis is changing; drop any active overscroll on the old axis.
-    // zh_CN: 滚动轴即将改变，清掉旧轴上的 overscroll。
+    // Drop any active overscroll before switching scroll axes.
     if (m_overscroll)
         m_overscroll->cancel();
     QListView::setFlow(f);
-    // Horizontal flow: scrollbar values must be in pixels so wheelEvent pixelDelta maps correctly.
-    // Default ScrollPerItem makes scrollbar unit = item index, causing huge jumps.
+    // Horizontal flow needs ScrollPerPixel so wheel pixelDelta maps 1:1 instead of jumping whole items.
     if (f == LeftToRight) {
         setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     }
@@ -550,7 +511,6 @@ void ListView::setHeader(QWidget* widget)
     if (m_header == widget)
         return;
 
-    // Tear down the old header. zh_CN: 清理旧 header。
     if (m_header) {
         m_header->hide();
         if (m_ownsHeader) {
@@ -576,7 +536,6 @@ void ListView::setFooter(QWidget* widget)
     if (m_footer == widget)
         return;
 
-    // Tear down the old footer. zh_CN: 清理旧 footer。
     if (m_footer) {
         m_footer->hide();
         if (m_ownsFooter) {
@@ -604,13 +563,10 @@ void ListView::setHeaderText(const QString& text)
     m_headerText = text;
 
     if (text.isEmpty()) {
-        // Clearing the convenience text removes the internal label.
-        // zh_CN: 清空便捷文本 → 移除内部 label。
         if (m_ownsHeader) {
             setHeader(nullptr);
         }
     } else {
-        // Reuse the existing label or create one. zh_CN: 复用已有 label 或新建。
         auto* lbl = m_ownsHeader ? qobject_cast<QLabel*>(m_header) : nullptr;
         if (!lbl) {
             lbl = new QLabel(this);
@@ -620,7 +576,7 @@ void ListView::setHeaderText(const QString& text)
             m_ownsHeader = true;
         }
         lbl->setText(text);
-        applyThemeStyle(); // Fonts must be set for an accurate sizeHint. zh_CN: 确保字体已设置，sizeHint 准确。
+        applyThemeStyle(); // Ensure font is applied before computing sizeHint.
     }
     emit headerTextChanged();
 }
@@ -762,9 +718,7 @@ void ListView::setSelectedIndex(int index)
     if (isVisible()) {
         setCurrentIndex(idx);
     } else {
-        // Skip scrollTo before showing; the viewport is not laid out yet and
-        // would scroll wrongly.
-        // zh_CN: 未显示前不触发 scrollTo，避免 viewport 未布局时产生错误滚动。
+        // Skip scrollTo before showing; the viewport is not laid out yet.
         selectionModel()->setCurrentIndex(idx,
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Current | QItemSelectionModel::Rows);
     }
@@ -1005,25 +959,19 @@ void ListView::paintEvent(QPaintEvent* event)
 {
     const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
-    // --- 1. Container background. zh_CN: 绘制容器背景。---
+    // Clear stale pixels on real OS backdrops unless the caller preserves an opaque parent surface.
     if (m_backgroundVisible) {
         QPainter p(viewport());
         p.setRenderHint(QPainter::Antialiasing);
         p.fillRect(viewport()->rect(), c.bgLayer);
         p.end();
     } else if (detail::shouldClearCompositedViewport(this)) {
-        // Match TreeView: composited Mica viewports do not auto-clear, so transparent
-        // rows would otherwise stack over stale glyphs. The preserve flag keeps an
-        // intentionally painted parent layer intact.
-        // zh_CN: 与 TreeView 一致。合成式 Mica 的 viewport 后备缓冲不会自动擦除，
-        // 透明行会叠在旧字形上；preserve 标记用于保留有意绘制的父级表面。
         QPainter p(viewport());
         p.setCompositionMode(QPainter::CompositionMode_Source);
         p.fillRect(viewport()->rect(), Qt::transparent);
         p.end();
     }
 
-    // --- 2. Empty placeholder. zh_CN: 空列表占位符。---
     const bool isEmpty = !model() || model()->rowCount() == 0;
     if (isEmpty && !m_placeholderText.isEmpty()) {
         QPainter ph(viewport());
@@ -1034,15 +982,10 @@ void ListView::paintEvent(QPaintEvent* event)
         ph.end();
     }
 
-    // --- 3. Items via QListView's default painting. While dragging, the
-    // visualRect override temporarily returns displaced rects. ---
-    // zh_CN: 绘制列表项（QListView 默认绘制）；拖拽时通过 visualRect override
-    // 临时返回偏移后的矩形。
+    // During drag, visualRect() temporarily shifts displaced rows.
     m_paintingWithOffsets = !m_dragOffsets.isEmpty();
     QListView::paintEvent(event);
     m_paintingWithOffsets = false;
-
-    // --- 3.5 Section headers are now handled by SectionProxyDelegate ---
 
     if (m_pressedRow >= 0 && m_pressedHoverRow >= 0) {
         QPainter hp(viewport());
@@ -1051,7 +994,6 @@ void ListView::paintEvent(QPaintEvent* event)
         hp.end();
     }
 
-    // --- 3.6 Selection indicator overlay. zh_CN: 选中指示器覆盖层。---
     if (!m_isDragging) {
         QPainter ip(viewport());
         ip.setRenderHint(QPainter::Antialiasing);
@@ -1059,7 +1001,6 @@ void ListView::paintEvent(QPaintEvent* event)
         ip.end();
     }
 
-    // --- 3.7 Drop indicator line. zh_CN: 绘制拖拽指示线。---
     if (m_isDragging && m_dropTargetRow >= 0 && model()) {
         m_paintingWithOffsets = !m_dragOffsets.isEmpty();
         QPainter dp(viewport());
@@ -1097,8 +1038,7 @@ void ListView::paintEvent(QPaintEvent* event)
         fp.end();
     }
 
-    // --- 4. Corner mask: cover the four corners with the parent background
-    // (antialiased, replaces setMask). zh_CN: 圆角遮罩——用父背景色覆盖四角。---
+    // Cover outer rounded corners with surrounding background (antialiased replacement for setMask).
     if (m_borderVisible || m_backgroundVisible) {
         QPainter cp(viewport());
         cp.setRenderHint(QPainter::Antialiasing);
@@ -1150,8 +1090,7 @@ void ListView::showEvent(QShowEvent* event)
     syncFluentHScrollBar();
     layoutHeader();
     layoutFooter();
-    // Re-anchor only initially or after a selection change while hidden.
-    // zh_CN: 仅首次显示或隐藏期间选中项变化时定位，普通显隐保留浏览位置。
+    // Re-anchor only on first show or if selection changed while hidden so normal re-shows preserve scroll position.
     if (m_revealSelectionOnShow && currentIndex().isValid()) {
         scrollTo(currentIndex(), QAbstractItemView::EnsureVisible);
     }
@@ -1329,10 +1268,7 @@ void ListView::mouseReleaseEvent(QMouseEvent* event)
         if (clickOnPressedItem) {
             applyPointerSelection(released, event);
             QPointer<ListView> guard(this);
-            // Preserve QListView's inherited click contract. The constructor's
-            // clicked -> itemClicked bridge keeps the convenience signal in sync.
-            // zh_CN: 保留 QListView 继承的点击契约；构造函数中的转接会同步发送
-            // itemClicked 便捷信号。
+            // Emit clicked() manually because mousePressEvent bypassed QListView::mousePressEvent.
             emit clicked(released);
             if (!guard)
                 return;
@@ -1366,18 +1302,8 @@ void ListView::leaveEvent(QEvent* event)
     QListView::leaveEvent(event);
 }
 
-// ── Overscroll bounce ─────────────────────────────────────────────────────────
-//
-// Cross-platform wheel input handling — see openspec listview-cross-platform-input/design.md.
-// Events are classified into three paths:
-//
-//   PhaseBased       phase != NoScrollPhase                   macOS native trackpad
-//   NoPhasePixel     phase == NoScrollPhase, pixelDelta != 0  some Win precision touchpad drivers
-//   NoPhaseDiscrete  phase == NoScrollPhase, pixelDelta == 0  mouse wheel / Mac RDP→Windows / Qt5
-//
-// PhaseBased / NoPhasePixel keep the original behavior (smooth pixel scrolling + boundary
-// overscroll). NoPhaseDiscrete uses pixel scrolling first, then starts a bounded one-shot
-// boundary bounce while consuming same-direction tails to prevent RDP flap.
+// Wheel and bounce handling live in fluent::scrolling::OverscrollController
+// (phase-based trackpad, NoScrollPhase pixel touchpad, and discrete wheel/RDP paths).
 
 void ListView::wheelEvent(QWheelEvent* event)
 {
@@ -1424,9 +1350,7 @@ void ListView::scrollContentsBy(int dx, int dy)
 
 int ListView::verticalOffset() const
 {
-    // The controller tracks one overscroll value for the active scroll axis; apply it to the
-    // matching offset. m_overscroll may be null during base construction. zh_CN: 控制器只跟踪当前
-    // 滚动轴的一个 overscroll 值，按轴应用到对应偏移；构造期间 m_overscroll 可能尚未创建。
+    // Apply active-axis overscroll; m_overscroll may be null while QListView queries offsets during construction.
     const qreal overscroll = (m_overscroll && flow() != LeftToRight) ? m_overscroll->value() : 0.0;
     return QListView::verticalOffset() - qRound(overscroll);
 }
@@ -1894,8 +1818,6 @@ void ListView::paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect
     painter.drawPath(path);
 }
 
-// paintSectionHeaders() removed — section headers are now painted by SectionProxyDelegate
-
 void ListView::setViewportHovered(bool hovered)
 {
     if (m_viewportHovered == hovered)
@@ -1972,8 +1894,7 @@ void ListView::applyThemeStyle(bool refreshFonts)
         viewport()->setPalette(vpal);
     }
 
-    // Header label theme (only for internally-created labels). Color via the label's own style sheet
-    // so an ancestor style sheet (e.g. the gallery sample card) can't clobber it to near-black.
+    // Style via the label's own stylesheet so ancestor QStyleSheetStyle rules won't override QPalette::WindowText.
     if (m_ownsHeader) {
         if (auto* lbl = qobject_cast<QLabel*>(m_header)) {
             if (refreshFonts)
@@ -2034,16 +1955,7 @@ void ListView::updateViewportMargins()
     setViewportMargins(0, top, 0, bottom);
 }
 
-/**
- * @brief Re-syncs the fluent vertical bar: suppress, mirror, then place.
- * zh_CN: 重新同步 Fluent 纵向滚动条：压制原生条、镜像模型、再摆放。
- *
- * Platform styles may re-show the native bars after show/resize, so this
- * runs repeatedly. The shared steps live in OverlayScrollChrome; only the
- * header-aware anchor math stays here.
- * zh_CN: 平台/样式可能在 show/resize 后重新显示原生条，因此需反复调用。
- * 共享步骤收敛在 OverlayScrollChrome，这里只保留感知 header 的锚点计算。
- */
+// Re-suppress native bars after show/resize in case platform styles (e.g. QComboBox popups) restore them.
 void ListView::syncFluentScrollBar()
 {
     ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());

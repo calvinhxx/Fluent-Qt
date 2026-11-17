@@ -222,8 +222,7 @@ private:
         void drawTextItem(const QPointF& position, const QTextItem& item) override
         {
             forward([&] {
-                // Transformed, patterned or opaque-background text keeps Qt's semantics.
-                // The compatibility case is ordinary translated widget text.
+                // Transformed, patterned, or opaque-background text falls back to Qt's default path.
                 const QPainter* sourcePainter = QPaintEngine::painter();
                 if (painter.worldTransform().type() > QTransform::TxTranslate
                     || painter.pen().brush().style() != Qt::SolidPattern
@@ -248,8 +247,7 @@ private:
                 const qreal guardHeight = qMax(metrics.descent(), item.descent()) * dpr + 2;
                 // Rounding the guard up must leave at least one payload pixel.
                 if (guardWidth > 511 || guardHeight > 127) {
-                    // Oversized fonts retain the delegate's semantics without
-                    // allocating a tile larger than the cache plan reserves.
+                    // Oversized fonts fall back directly rather than exceeding the scratch tile budget.
                     painter.paintEngine()->syncState();
                     painter.paintEngine()->drawTextItem(position, item);
                     return;

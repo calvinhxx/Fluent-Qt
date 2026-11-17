@@ -79,9 +79,7 @@ DrawerView::DrawerView(QWidget* parent) : QWidget(parent), m_originalParent(pare
     setAttribute(Qt::WA_Hover);
     setMouseTracking(true);
 
-    // DrawerAlphaEffect forces offscreen QPixmap rendering so that
-    // WA_TranslucentBackground + CompositionMode_Source in paintEvent
-    // produces real alpha=0 at rounded corners, even on macOS child widgets.
+    // Force offscreen alpha compositing so rounded corners stay transparent on macOS child widgets.
     setGraphicsEffect(new DrawerAlphaEffect(this));
     setFocusPolicy(Qt::StrongFocus);
     resize(sizeHint());
@@ -505,14 +503,8 @@ bool DrawerView::eventFilter(QObject* watched, QEvent* event)
     if (!eventBelongsToDrawerTopLevel(watched))
         return false;
 
-    // A same-window drawer is reparented to the top-level while open, but its
-    // logical owner remains m_originalParent.  Cached Gallery pages hide that
-    // owner without destroying the DrawerView; accepting application-wide edge
-    // gestures afterwards lets an inactive sample open over unrelated pages.
-    // Treat a hidden logical host as deactivated and settle any in-flight drag.
-    // zh_CN: 同窗口抽屉打开时会挂到顶层窗口，但逻辑宿主仍是 m_originalParent。
-    // Gallery 缓存页面只会隐藏宿主而不销毁 DrawerView；若仍接收全局边缘手势，
-    // 非活动示例就会覆盖到其它页面。宿主隐藏时立即停用并收敛进行中的拖拽。
+    // Open drawers are reparented to the top-level window while m_originalParent stays the logical host;
+    // deactivate when that host hides (e.g. cached Gallery tabs) so edge drags don't leak across pages.
     if (eventHidesInteractionHost(watched, event) || !isInteractionHostVisible()) {
         deactivateForHiddenHost();
         return false;
@@ -676,11 +668,7 @@ void DrawerView::deactivateForHiddenHost()
     if (m_hostDeactivationInProgress || (!isVisible() && !m_isOpen && !m_drag.active))
         return;
 
-    // finalizeClosed() hides this widget, which itself produces another Hide
-    // event while the logical host is already hidden.  Guard that nested event
-    // so parent-window teardown cannot close the same overlay recursively.
-    // zh_CN: finalizeClosed() 会隐藏抽屉并再次产生 Hide 事件；此时逻辑宿主
-    // 已不可见。用重入保护避免父窗口销毁期间递归关闭同一覆盖层。
+    // finalizeClosed() hides this widget and triggers another Hide event; guard against recursive teardown.
     m_hostDeactivationInProgress = true;
     stopAnimation();
     cancelDrag();
@@ -995,11 +983,7 @@ bool DrawerView::isPointInEdgeDragArea(const QPoint& globalPos) const
     if (!area.contains(local))
         return false;
 
-    // A frameless window owns the pixels nearest its visible edge for native
-    // move/resize. Drawer gestures start immediately inside that reservation,
-    // otherwise one press can resize the window and open a drawer at once.
-    // zh_CN: 无边框窗口最靠近可见边缘的像素优先用于原生缩放；抽屉手势从该区域
-    // 内侧开始，避免一次按下同时触发窗口缩放和抽屉展开。
+    // Start drawer edge-drag inside the frameless window's native resize border so one press can't trigger both.
     const int resizeBorder = qMin(m_dragMargin, ::fluent::overlay::windowResizeBorderWidth(top));
 
     switch (m_edge) {

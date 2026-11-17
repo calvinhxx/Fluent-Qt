@@ -248,15 +248,8 @@ bool showTextEditingContextMenu(QWidget* parent,
         return false;
 
     auto* menu = new TextEditingContextMenu(parent, objectName);
-    // Keep Qt's standard menu alive because some platform actions dispatch
-    // through its internal action chain, but never let that implementation
-    // menu become a visible child of the Fluent popup. In Qt WASM, merely
-    // reparenting the hidden QMenu is otherwise enough for it to be mapped
-    // together with its new parent, painting a second copy of every label and
-    // shortcut over the Fluent rows.
-    // zh_CN: 保留 Qt 原生菜单以维持部分平台 action 的内部触发链，但禁止这个
-    // 实现菜单随 Fluent popup 一起显示。Qt WASM 会把仅重新挂载的隐藏 QMenu
-    // 映射为可见子菜单，导致标签和快捷键重复叠绘。
+    // Keep Qt's standard menu alive for internal action chains (e.g. Undo/Redo),
+    // but prevent it from ever mapping as a visible child in Qt WASM.
     standardMenu->setParent(menu);
     standardMenu->setAttribute(Qt::WA_DontShowOnScreen, true);
     standardMenu->hide();

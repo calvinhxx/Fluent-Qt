@@ -17,8 +17,7 @@ CheckBox::CheckBox(const QString& text, QWidget* parent) : QCheckBox(text, paren
     setAttribute(Qt::WA_LayoutUsesWidgetRect);
     setAttribute(Qt::WA_Hover);
     setCursor(Qt::ArrowCursor);
-    // The Fluent paint path owns the keyboard focus cue on every platform.
-    // zh_CN: 各平台的键盘焦点提示统一由 Fluent 绘制，避免叠加原生焦点环。
+    // Paint focus ring in Fluent style instead of native focus rings.
     ::compatibility::detail::disableNativeFocusRing(this);
 
     auto fs = themeFont(Typography::FontRole::Body);
@@ -102,8 +101,7 @@ QSize CheckBox::sizeHint() const
     const auto& spacing = themeSpacing();
     QFontMetrics fm(font());
 
-    // Configurable metrics. zh_CN: 使用可配置的属性。
-    int w = m_boxSize + m_boxMargin * 2; // Left margin + box + right margin. zh_CN: 左 margin + 方框 + 右 margin。
+    int w = m_boxSize + m_boxMargin * 2;
     if (!text().isEmpty()) {
         w += m_textGap + fm.horizontalAdvance(text());
     }
@@ -131,15 +129,13 @@ void CheckBox::paintEvent(QPaintEvent*)
     bool enabled = isEnabled();
     Qt::CheckState state = checkState();
 
-    // 1. Hover background, clamped to the actual content area. zh_CN: 整体悬停背景限制在实际内容区域。
     if (enabled && isHover && m_hoverBackgroundEnabled) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.subtleSecondary);
-        // Slight inset so the fill never touches the edge. zh_CN: 稍微缩进，避免背景贴边。
+        // Inset 1px so hover background stays inside widget bounds.
         painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), radius.control, radius.control);
     }
 
-    // 2. Paint the checkbox box. zh_CN: 绘制复选框方框。
     int boxY = (height() - m_boxSize) / 2;
     const QRect logicalBoxRect(m_boxMargin, boxY, m_boxSize, m_boxSize);
     const QRectF boxRect = QStyle::visualRect(layoutDirection(), rect(), logicalBoxRect);
@@ -147,7 +143,6 @@ void CheckBox::paintEvent(QPaintEvent*)
     QColor boxBg, boxBorder, iconColor;
     const qreal boxRadius = radius.control;
 
-    // Fluent treatment. zh_CN: Fluent 样式。
     if (!enabled) {
         boxBg = colors.controlDisabled;
         boxBorder = colors.strokeDivider;
@@ -159,20 +154,16 @@ void CheckBox::paintEvent(QPaintEvent*)
             boxBorder.setAlphaF(boxBorder.alphaF() * 0.65);
         iconColor = Qt::transparent;
     } else {
-        // Checked or indeterminate: accent fill without a separate border.
-        // zh_CN: Checked 或 Indeterminate——使用 Accent 颜色且无独立边框。
         boxBg = isPressed ? colors.accentTertiary : (isHover ? colors.accentSecondary : colors.accentDefault);
         boxBorder = Qt::transparent;
         iconColor = colors.textOnAccent;
     }
     const QRectF boxDrawRect = boxRect;
 
-    // Paint the box fill. zh_CN: 绘制方框底色。
     painter.setPen(Qt::NoPen);
     painter.setBrush(boxBg);
     painter.drawRoundedRect(boxDrawRect, boxRadius, boxRadius);
 
-    // Paint the box outline (unchecked only). zh_CN: 绘制方框描边（仅未选中时）。
     if (boxBorder != Qt::transparent) {
         const qreal borderWidth = 1.0;
         const qreal inset = borderWidth / 2.0;
@@ -181,16 +172,13 @@ void CheckBox::paintEvent(QPaintEvent*)
         painter.drawRoundedRect(boxDrawRect.adjusted(inset, inset, -inset, -inset), boxRadius, boxRadius);
     }
 
-    // 3. Paint the inner glyph (icon font). zh_CN: 绘制内部图标。
     if (state != Qt::Unchecked) {
         painter.save();
 
-        // WinUI uses the native 12 px check/subtract drawing inside its 20 px box.
-        // zh_CN: WinUI 在 20 px 方框内使用原生 12 px 对勾/横线字形。
+        // WinUI uses 12px check/hyphen glyphs inside the 20px box.
         const int fontSize = Typography::IconSize::Compact;
         painter.setPen(iconColor);
 
-        // Animated reveal. zh_CN: 动画效果。
         painter.setOpacity(m_checkProgress);
         if (state == Qt::Checked) {
             painter.translate(boxRect.center());
@@ -204,13 +192,10 @@ void CheckBox::paintEvent(QPaintEvent*)
         painter.restore();
     }
 
-    // 4. Paint the text. zh_CN: 绘制文本。
     if (!text().isEmpty()) {
         painter.setFont(font());
         painter.setPen(enabled ? colors.textPrimary : colors.textDisabled);
 
-        // Text starts after the left margin, box, and text gap.
-        // zh_CN: 文本起始位置 = 左侧边距 + 方框 + 文字间距。
         const QRect logicalTextRect = rect().adjusted(m_boxMargin + m_boxSize + m_textGap, 0, -m_boxMargin, 0);
         const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
         painter.drawText(textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),

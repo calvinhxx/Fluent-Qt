@@ -52,9 +52,9 @@ GalleryComponentReference galleryComponentReference(const QString& routeId);
  * @brief Resolves the bundled control-icon resource for a control title.
  * zh_CN: 按控件标题解析打包的控件图标资源。
  *
- * Images live under `:/app/assets/control_images/<category-id>/<Title>.png`; an empty
+ * Images live under `:/app/assets/control_images/<category-id>/<Title>.svg`; an empty
  * result tells callers to render the component's catalog glyph instead.
- * zh_CN: 图片位于 `:/app/assets/control_images/<分类 id>/<标题>.png`；返回空字符串时，
+ * zh_CN: 图片位于 `:/app/assets/control_images/<分类 id>/<标题>.svg`；返回空字符串时，
  * 调用方应改为绘制组件目录中的字形。
  */
 QString galleryControlImageResource(const QString& controlTitle);

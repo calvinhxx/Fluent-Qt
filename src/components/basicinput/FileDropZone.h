@@ -30,16 +30,12 @@ namespace fluent::basicinput {
 class Button;
 
 /**
- * @brief File entry surface with local-URL drop and application-owned browsing.
- * zh_CN: 支持本地 URL 拖放、由应用负责文件选择的文件入口。
- *
- * The component emits URLs without opening, inspecting, validating, or uploading
- * files. The application owns its picker, validation rules, and file model.
- * A mixed local/remote URL drag is rejected as a whole. Keyboard users activate
- * the embedded browse button with Space or Return; it is the only tab stop.
- * zh_CN: 控件仅发送 URL，不打开、检查、校验或上传文件。文件选择器、校验规则和
- * 文件模型由应用持有。本地与远程 URL 混合拖入时整批拒绝。内置选择按钮是唯一
- * Tab 停靠点，支持空格或回车激活。
+ * @brief Drag-and-drop area for local file URLs with an application-handled browse button.
+ * Emits dropped local file URLs without inspecting or uploading files; mixed local/remote drags are rejected.
+ * The embedded browse button is the sole tab stop and activates on Space or Return.
+ * zh_CN: 支持本地文件拖放与外部浏览触发的文件入口控件。
+ * 仅透传本地文件 URL（混入远程 URL 时整批拒绝），不打开、校验或上传文件；文件对话框与存储由应用自行管理。
+ * 内置选择按钮是唯一 Tab 焦点停靠点，支持空格或回车触发。
  */
 class FileDropZone : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -59,7 +55,7 @@ public:
     QString description() const { return m_description; }
     void setDescription(const QString& description);
 
-    /** @brief Optional application-owned limits or format hint. zh_CN: 可选的应用限制或格式提示。 */
+    /** @brief Optional format or size limit hint text. zh_CN: 可选的格式或大小限制提示文案。 */
     QString hintText() const { return m_hintText; }
     void setHintText(const QString& text);
 
@@ -67,11 +63,9 @@ public:
     void setBrowseText(const QString& text);
 
     /**
-     * @brief Validation feedback that replaces the description until cleared.
-     * zh_CN: 在清空前替换说明文本的校验反馈。
-     *
-     * A new drop does not implicitly clear application-owned feedback.
-     * zh_CN: 新的拖放不会隐式清除应用设置的反馈。
+     * @brief Validation error text that temporarily replaces description until cleared.
+     * Subsequent drops do not clear it automatically.
+     * zh_CN: 校验错误提示（清空前会替换说明文本；新的拖放不会自动清除该提示）。
      */
     QString errorMessage() const { return m_errorMessage; }
     void setErrorMessage(const QString& message);

@@ -40,8 +40,8 @@ namespace fluent::textfields {
 class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Content margins whose horizontal values include Qt's internal text inset.
-     * zh_CN: 内容边距；水平值已包含 Qt 内部文字留白，零值不会重复增加原生边距。
+     * @brief Content margins around the text (horizontal values include Qt's internal text inset).
+     * zh_CN: 文本周围的内容边距（水平值已包含 Qt 内部留白，设为 0 不会额外叠加边距）。
      */
     Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
     /**
@@ -139,21 +139,21 @@ public:
     void setFrameVisible(bool visible);
 
     QString trailingText() const;
-    /** @brief Displays a plain-text suffix without changing the editable value; replaces hosted content.
-     * zh_CN: 显示纯文字尾缀，不改变可编辑值，并替换已承载的控件内容。 */
+    /** @brief Shows a plain-text suffix at the trailing edge, replacing any trailing widget.
+     * zh_CN: 在输入区尾部显示纯文本后缀，并移除已设置的尾部控件。 */
     void setTrailingText(const QString& text);
     QWidget* trailingWidget() const;
     WidgetOwnership trailingWidgetOwnership() const;
-    /** @brief Hosts one trailing widget using explicit ownership; rejects the host and its ancestors.
-     * zh_CN: 按显式所有权承载一个尾部控件；拒绝宿主自身及祖先控件。
-     * Take the widget before changing its ownership policy. Read-only fields preserve custom actions.
-     * zh_CN: 改变所有权策略前须先取出控件；只读字段保留自定义操作。 */
+    /** @brief Sets a custom trailing widget with explicit ownership; rejects this LineEdit and its ancestors.
+     *
+     * Call takeTrailingWidget() before changing ownership mode. Read-only fields keep custom actions.
+     * zh_CN: 在输入区尾部放置自定义控件并指定所有权（不能传入自身或祖先控件；更换所有权模式前需先取出，只读字段仍保留自定义操作）。 */
     bool setTrailingWidget(QWidget* widget, WidgetOwnership ownership);
-    /** @brief Detaches the custom trailing widget and transfers it to the caller.
-     * zh_CN: 脱离并将自定义尾部控件交回调用方。 */
+    /** @brief Detaches the custom trailing widget and transfers ownership back to the caller.
+     * zh_CN: 拆离并返回自定义尾部控件，所有权交还调用方。 */
     QWidget* takeTrailingWidget();
-    /** @brief Releases custom trailing content according to its recorded ownership policy.
-     * zh_CN: 按记录的所有权策略释放自定义尾部内容。 */
+    /** @brief Removes and cleans up custom trailing content according to its ownership mode.
+     * zh_CN: 按设定的所有权模式移除并清理自定义尾部内容。 */
     void releaseTrailingWidget();
     QString clearButtonAccessibleName() const;
     void setClearButtonAccessibleName(const QString& name);
@@ -185,11 +185,11 @@ protected:
     void leaveEvent(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
-    /** @brief Paints the input surface when frameVisible is enabled.
-     * zh_CN: frameVisible 启用时绘制输入表面，派生输入框可复用同一开关。 */
+    /** @brief Paints the input background and border when frameVisible is enabled.
+     * zh_CN: frameVisible 启用时绘制输入框背景与边框，派生输入框可复用此方法。 */
     virtual void paintFrame(QPainter& painter);
-    /** @brief Paints custom input bounds using inherited frame widths and theme tokens.
-     * zh_CN: 为自定义输入区域绘制边框，统一使用继承的线宽配置与主题令牌。 */
+    /** @brief Paints a custom input frame using this control's border widths and theme tokens.
+     * zh_CN: 为自定义输入区域绘制边框，统一使用继承的线宽配置与主题 token。 */
     void paintInputFrame(QPainter& painter,
         const QRectF& bounds,
         bool focused,

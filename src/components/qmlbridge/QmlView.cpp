@@ -194,8 +194,7 @@ bool QmlView::load(const QUrl& url, QString* error)
     if (!lifetime || !state->active || state->quick || state->busy)
         return false;
     state->busy = true;
-    // Let an embedding host suspend incompatible capture effects before Quick exists.
-    // zh_CN: 创建 Quick 前让嵌入宿主同步停用不兼容的捕获特效。
+    // Notify embedding hosts to suspend incompatible capture effects before creating QQuickWidget.
     setProperty(kDirectCompositionRequiredProperty, !state->textureEnabled);
     if (!lifetime)
         return false;
@@ -208,8 +207,7 @@ bool QmlView::load(const QUrl& url, QString* error)
     quick->hide();
     quick->setObjectName(QStringLiteral("qmlQuickWidget"));
     quick->setResizeMode(QQuickWidget::SizeRootObjectToView);
-    // Let the QML scene paint its background so rounded corners reveal the host.
-    // zh_CN: 由 QML 场景绘制背景，让圆角外的区域显示宿主背景。
+    // Transparent clear color lets rounded QML backgrounds reveal the host widget.
     quick->setClearColor(Qt::transparent);
     quick->setFocusPolicy(Qt::StrongFocus);
     quick->rootContext()->setContextProperty(QStringLiteral("fluentTheme"), state->theme);
@@ -249,9 +247,7 @@ bool QmlView::load(const QUrl& url, QString* error)
     state->busy = false;
     if (state->quick != scene)
         return false;
-    // A load callback may change the request while loading is busy. Apply it
-    // before publishing this scene or allowing the layout to expose Quick.
-    // zh_CN: 加载回调可能改变模式请求，在发布场景或布局显示 Quick 前应用最终请求。
+    // Re-apply texture/native mode in case a signal handler changed it synchronously during load.
     if (state->textureEnabled) {
         scene->hide();
         setFocusProxy(nullptr);
@@ -334,8 +330,7 @@ void QmlView::scheduleNativePresentation()
         || state->pendingNativePresentation == scene)
         return;
     state->pendingNativePresentation = scene;
-    // Let the host finish its layout before revealing this particular scene.
-    // zh_CN: 等宿主完成布局后再显示当前场景，过期加载不能重新显示旧 Quick 控件。
+    // Wait for the host layout pass before showing this specific QQuickWidget instance.
     QTimer::singleShot(0, this, [this, state, scene] {
         if (state->pendingNativePresentation == scene)
             state->pendingNativePresentation = nullptr;
@@ -380,8 +375,7 @@ void QmlView::unload()
         disconnect(quick, nullptr, this, nullptr);
         layout()->removeWidget(quick);
         quick->hide();
-        // A model signal can stop the plugin while its engine is executing QML.
-        // zh_CN: 模型信号可能在引擎执行 QML 时停用插件，延迟销毁避免破坏 JS 栈。
+        // Defer deletion so active QML/JS frames finish unwinding before the engine is destroyed.
         quick->deleteLater();
     }
     if (!lifetime)
@@ -414,8 +408,7 @@ bool QmlView::setTextureRenderingEnabled(bool enabled)
         return false;
     if (d->textureEnabled == enabled)
         return true;
-    // Software Quick has no shareable GPU target; retain its direct-widget path.
-    // zh_CN: 软件 Quick 没有可共享的 GPU 目标，保留直接控件路径。
+    // Software Quick has no shareable GPU texture; keep it on the direct widget path.
     if (enabled) {
         if (!::compatibility::detail::quickUsesOpenGL())
             return false;

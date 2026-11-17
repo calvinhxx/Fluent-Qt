@@ -192,9 +192,7 @@ public:
     explicit TreeSelectProxy(TreeSelect* owner) : QSortFilterProxyModel(owner), m_owner(owner)
     {
         setRecursiveFilteringEnabled(true);
-        // The owner batches presentation refreshes while keeping identity and
-        // selection synchronous. Do not re-filter for each changed source row.
-        // zh_CN: 身份与选择同步更新，展示刷新由宿主合并，避免逐行变化时重复筛选。
+        // Key and selection tracking stay synchronous; batch view refreshes instead of re-filtering per row.
         setDynamicSortFilter(false);
     }
     void refreshFilter() { invalidateFilter(); }
@@ -272,8 +270,7 @@ public:
         setObjectName(QStringLiteral("TreeSelectPopup"));
         setModal(false);
         setDim(false);
-        // Match suggestion/selection fields: release the next input immediately.
-        // zh_CN: 与建议/选择输入一致，关闭后立即让出命中区域，不残留渐隐列表。
+        // Close immediately without fade-out so subsequent clicks hit underlying widgets cleanly.
         setAnimationEnabled(false);
         setPlacement(Auto);
         setAnchorOffset(::Spacing::Gap::Normal);
@@ -300,9 +297,7 @@ public:
         const auto space = overlay::fieldPopupSpace(anchor, surface, anchorOffset());
         const int width = space.boundedWidth(m_owner->width());
         m_empty->setText(m_owner->emptyText());
-        // Hidden viewports can retain their old geometry until the first show.
-        // Use the declared margins, not that stale viewport rectangle.
-        // zh_CN: 隐藏列表的视口几何尚未更新，按已声明边距预留首帧空间。
+        // Hidden QTreeView viewports keep stale geometry until shown; rely on declared margins on first layout.
         tree->ensurePolished();
         const int desired = rows
             ? static_cast<TreeSelectTree*>(tree)->heightForRows(rows)
@@ -321,10 +316,7 @@ public:
             raise();
         } else if (open) {
             showAt(m_owner);
-            // QTreeView installs its final viewport margin during showEvent.
-            // Size again before the first paint, so that margin cannot create
-            // a scrollbar for an otherwise complete set of visible rows.
-            // zh_CN: 首次显示后、绘制前纳入树视口边距，避免凭空多出滚动范围。
+            // QTreeView updates viewport margins in showEvent; re-measure before paint to avoid spurious scrollbars.
             if (guard && m_owner && isOpen())
                 present(false);
             return;
@@ -637,8 +629,7 @@ void TreeSelect::observeModel()
         << connect(m_model, &QAbstractItemModel::columnsMoved, this, [this] { rebuildIndex(); })
         << connect(m_model, &QObject::destroyed, this, [this] {
                m_model = nullptr;
-               // The proxy's source-destruction handler clears its own source.
-               // zh_CN: 由 proxy 自己处理源模型销毁，不在 QObject 析构中重新解绑其信号。
+               // Let the proxy clean up its own sourceModel() connection during destruction.
                QPointer<TreeSelect> guard(this);
                rebuildIndex();
                if (guard)

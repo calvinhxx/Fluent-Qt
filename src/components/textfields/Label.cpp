@@ -140,7 +140,6 @@ void Label::onThemeUpdated()
     if (!m_customFont)
         applyTypographyFont();
 
-    // 2. Refresh the color. zh_CN: 更新颜色。
     applyTextColor();
     updateRenderedText();
 }
@@ -175,10 +174,7 @@ void Label::applyTextColor()
         if (callerStyle != styleSheet())
             QLabel::setStyleSheet(callerStyle);
 
-        // Legacy palette-based coloring. Correct when no ancestor has a style sheet; left untouched so
-        // components that set their own label palette (InfoBar status text, ToolTip, collection-view
-        // headers, …) keep working. zh_CN: 原有基于 palette 的上色。无祖先样式表时正确；保持不变，使自行设置标签
-        // palette 的组件（InfoBar 状态文本、ToolTip、集合视图表头等）继续工作。
+        // Keep palette-based coloring when no role is set so components styling Label via palette still work.
         const QColor enabledColor = resolveTextColor();
         const QColor disabledColor = themeColorsRef().textDisabled;
         QPalette p = palette();
@@ -187,10 +183,7 @@ void Label::applyTextColor()
         p.setColor(QPalette::Disabled, QPalette::WindowText, disabledColor);
         setPalette(p);
     } else {
-        // An explicit role colors through the label's OWN style sheet, so an ancestor style sheet
-        // (which installs QStyleSheetStyle and makes Qt ignore the child palette) can't drop it. This is
-        // what value/status labels on a styled preview surface need. zh_CN: 指定角色改用标签自身样式表上色,
-        // 使祖先样式表(安装 QStyleSheetStyle、让 Qt 忽略子 palette)无法丢弃它。带样式表预览面上的取值/状态标签即需此。
+        // Use the label's own style sheet so ancestor style sheets (which ignore child palettes) cannot override it.
         const QColor effectiveColor = isEnabled() ? resolveTextColor() : themeColorsRef().textDisabled;
         QLabel::setStyleSheet(withManagedColorStyle(styleSheet(), effectiveColor));
     }

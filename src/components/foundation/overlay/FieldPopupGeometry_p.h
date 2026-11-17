@@ -15,9 +15,7 @@ inline bool fieldPopupAnchorGeometryMayChange(QObject* watched, QEvent* event, Q
     return anchorGeometryMayChange(watched, event, anchor);
 }
 
-// Field dropdowns share leading-edge alignment and visible-card spacing.
-// General flyouts retain their independently chosen centered placements.
-// zh_CN: 输入类下拉框共用起始边对齐及可见卡片间距，通用 Flyout 保留自身位置语义。
+// Field dropdowns align to the field's leading edge; general Flyouts center on their anchor.
 struct FieldPopupSpace {
     QRect bounds;
     int below = 0;

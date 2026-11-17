@@ -2426,9 +2426,8 @@ private:
 void startWasmSmokeIfRequested(GalleryWindow* window)
 {
     const QString mode = smokeMode();
-    // The cover can be hidden while its connected transition still owns input.
-    // Test-only readiness observes the native lifetime, not retained AX DOM nodes.
-    // zh_CN: 遮罩隐藏后退场仍可能持有输入；测试以原生对象销毁为准，不依赖残留语义节点。
+    // The cover may hide while its transition still owns input; observe the widget lifetime rather than stale AX DOM nodes.
+    // zh_CN: 遮罩隐藏后退场动效仍可能持有输入；以原生对象生命周期为准，不依赖残留的辅助功能节点。
     if (window && !mode.isEmpty())
         new WasmInteractionReadinessProbe(window);
     if (window && mode == QStringLiteral("component-regressions")) {

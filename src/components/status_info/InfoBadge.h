@@ -18,13 +18,12 @@ class QShowEvent;
 namespace fluent::status_info {
 
 /**
- * @brief Compact Fluent badge for value, icon, status, or attention signals.
- * zh_CN: 用于数值、图标、状态或提醒信号的紧凑 Fluent 徽标。
+ * @brief Compact Fluent badge for counts, icons, status dots, or alerts.
+ * zh_CN: 紧凑 Fluent 徽标，用于显示数字计数、图标、状态点或提醒。
  *
- * InfoBadge supports numeric value, icon glyph, status color, custom background,
- * opacity, and beacon-style display modes behind one paint contract.
- * zh_CN: InfoBadge 在同一绘制契约下支持数值、图标字符、状态色、自定义背景、
- * 透明度和 beacon 显示模式。
+ * Supports numeric values, icon glyphs, dot indicators, status colors, custom
+ * background/text colors, and badge opacity.
+ * zh_CN: 支持数值、图标字符、提示点模式、状态配色、自定义颜色与不透明度配置。
  */
 class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -44,8 +43,8 @@ class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(InfoBadgeDisplayMode displayMode READ displayMode WRITE setDisplayMode NOTIFY displayModeChanged)
     /**
-     * @brief Semantic status used to choose visual treatment.
-     * zh_CN: 用于选择视觉表现的语义状态。
+     * @brief Status level determining the badge color.
+     * zh_CN: 决定徽标配色的状态级别。
      */
     Q_PROPERTY(InfoBadgeStatus status READ status WRITE setStatus NOTIFY statusChanged)
     /**
@@ -72,13 +71,13 @@ class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(Typography::FontRole valueFontRole READ valueFontRole WRITE setValueFontRole NOTIFY valueFontRoleChanged)
     /**
-     * @brief Diameter of beacon-style badge visuals.
-     * zh_CN: 提示点样式徽标的直径。
+     * @brief Diameter of dot-mode badges.
+     * zh_CN: 点状徽标的直径。
      */
     Q_PROPERTY(int beaconDiameter READ beaconDiameter WRITE setBeaconDiameter NOTIFY beaconDiameterChanged)
     /**
-     * @brief Height of pill-style badge visuals.
-     * zh_CN: 胶囊样式徽标的高度。
+     * @brief Height of icon or value badges.
+     * zh_CN: 图标或数值模式徽标的高度。
      */
     Q_PROPERTY(int badgeHeight READ badgeHeight WRITE setBadgeHeight NOTIFY badgeHeightChanged)
     /**

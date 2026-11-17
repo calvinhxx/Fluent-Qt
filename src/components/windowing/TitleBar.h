@@ -10,18 +10,14 @@
 namespace fluent::windowing {
 
 /**
- * @brief Custom title bar container with reserved system button regions.
- * zh_CN: 保留系统按钮区域的自定义标题栏容器。
- *
- * TitleBar hosts caller-provided title content while respecting leading and
- * trailing platform-reserved space and a configurable title-bar height.
- * zh_CN: TitleBar 承载调用方标题内容，同时尊重平台前后预留区域和可配置标题栏高度。
+ * @brief Custom title bar container with leading and trailing regions reserved for system window controls.
+ * zh_CN: 为系统窗口按钮预留两侧空间的自定义标题栏容器，用于承载自定义标题内容。
  */
 class TitleBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Caller-owned widget hosted as component content.
-     * zh_CN: 作为组件内容承载的调用方控件。
+     * @brief Hosted title-bar content widget (ownership remains with the caller).
+     * zh_CN: 标题栏内容区承载的控件（不接管所有权）。
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
     /**
@@ -74,13 +70,8 @@ public:
     QVector<QRect> dragExclusionRects() const;
 
     /**
-     * @brief Re-publishes the drag-exclusion (native hit-test) regions to the window.
-     * zh_CN: 重新向窗口发布拖拽排除（原生命中测试）区域。
-     *
-     * The owner calls this after moving or enabling/disabling title-bar controls
-     * without resizing the bar, so the native chrome keeps them click-through.
-     * zh_CN: 当宿主在不改变标题栏尺寸的情况下移动或启用/禁用标题栏控件后调用，
-     * 使原生 chrome 保持这些控件可点击。
+     * @brief Re-publishes non-draggable child control rects to the window hit-test region.
+     * zh_CN: 当标题栏内控件移动或更改启用状态且未触发尺寸变化时调用，以刷新窗口可点击区域。
      */
     void refreshChromeExclusions();
 

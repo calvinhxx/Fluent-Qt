@@ -18,8 +18,8 @@ namespace fluent::menus_toolbars::detail {
 
 class CommandPresenter;
 
-// Bridge a borrowed QMenu cascade to a command surface without copying actions
-// or replacing QMenu's navigation, trigger, and nested-menu behavior.
+// Bridges a QMenu cascade to a command surface without copying actions or
+// overriding QMenu navigation and submenu behavior.
 class CommandMenuController final : public QObject {
 public:
     explicit CommandMenuController(QWidget* owner);

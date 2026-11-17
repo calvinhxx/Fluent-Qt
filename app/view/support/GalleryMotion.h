@@ -7,11 +7,10 @@ class QVariantAnimation;
 
 namespace fluent::gallery::motion {
 
-// Starts a finite Gallery-owned transition through FluentQt's public motion
-// policy. Running transitions are also reconciled when the global preference
-// changes, so the Gallery demonstrates the same contract expected of clients.
-// zh_CN: 通过 FluentQt 公共动效策略启动 Gallery 自有的有限过渡；全局偏好
-// 改变时也会收敛运行中的过渡，以示范客户端应遵循的同一契约。
+/**
+ * @brief Starts a finite Gallery transition governed by FluentQt::MotionPolicy, updating running animations when policy changes.
+ * zh_CN: 按 FluentQt::MotionPolicy 启动 Gallery 有限时长的过渡动画，并在策略变更时同步收敛运行中的动画。
+ */
 void startFiniteTransition(QVariantAnimation* animation,
     int fullDurationMs,
     bool localAnimationEnabled = true,

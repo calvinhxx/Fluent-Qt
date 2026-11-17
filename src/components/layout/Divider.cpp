@@ -139,14 +139,8 @@ void Divider::paintEvent(QPaintEvent* event)
         lineRect = QRectF((width() - m_thickness) / 2.0, m_leadingInset, m_thickness, available);
     }
 
-    // A translucent hairline painted directly onto a composited OS backdrop can
-    // accumulate alpha in Qt's shared backing store. Replace those pixels instead.
-    // Components that paint an opaque/elevated surface publish
-    // `fluentSurfaceColor`, so dividers nested in Card or Popup continue to use
-    // normal SourceOver composition.
-    // zh_CN: 直接位于系统合成背景上的半透明细线可能在 Qt 共享后备缓冲中重复叠加
-    // alpha；此时改为替换像素。Card、Popup 等自绘表面通过 fluentSurfaceColor
-    // 声明自身背景，嵌套其中的 Divider 仍使用正常的 SourceOver。
+    // Translucent hairlines directly over a composited OS backdrop can accumulate alpha in Qt's shared
+    // backing store, so clear and replace unless nested inside an opaque parent container (fluentSurfaceColor).
     if (requiresBackdropReplacement(this)) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);

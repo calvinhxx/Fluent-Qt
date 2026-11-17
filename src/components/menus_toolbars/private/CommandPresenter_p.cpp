@@ -104,11 +104,8 @@ CommandPresenter::CommandPresenter(QAction* action, Mode mode, ActivationHandler
 {
     setFluentStyle(basicinput::Button::Subtle);
     setFocusVisual(false);
-    // Private presenters stay out of the Tab chain, but must accept explicit
-    // composite-navigation and pointer focus. Qt::NoFocus can redirect an
-    // explicit setFocus() back to the editor on some platform plugins.
-    // zh_CN: 私有 presenter 不进入 Tab 链，但必须接收组合导航和指针焦点；
-    // 部分平台插件会把对 Qt::NoFocus 控件的显式 setFocus() 重定向回编辑器。
+    // Stay out of the Tab chain while still accepting programmatic and pointer focus;
+    // Qt::NoFocus causes some platform plugins to bounce setFocus() back to the editor.
     setFocusPolicy(Qt::ClickFocus);
     setMinimumHeight(::Spacing::ControlHeight::Large);
     setAutoDefault(false);

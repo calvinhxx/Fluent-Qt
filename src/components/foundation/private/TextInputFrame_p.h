@@ -18,9 +18,7 @@ struct TextInputFrameState {
     int focusedWidth = 2;
 };
 
-// Share field colors and physical-pixel stroke alignment; each editor owns its
-// bounds, interaction state, text and header layout.
-// zh_CN: 统一字段颜色和物理像素描边对齐；边界、交互状态、文本与标题仍由各编辑器负责。
+// Shared Fluent text-field frame and pixel-aligned stroke painter; callers own bounds, state, and text layout.
 inline void paintTextInputFrame(QPainter& painter,
     const QRectF& bounds,
     const FluentElement::Colors& colors,

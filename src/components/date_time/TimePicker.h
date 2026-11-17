@@ -14,19 +14,18 @@ namespace fluent::date_time {
 class TimePickerFlyout;
 
 /**
- * @brief Button-like time picker with nullable selected-time semantics.
- * zh_CN: 支持可空选中时间语义的按钮式时间选择器。
+ * @brief Button-style time picker that supports clearing the selection.
+ * zh_CN: 按钮式时间选择器，支持清空已选时间。
  *
- * TimePicker formats time into a compact button surface and exposes minute step,
- * clock mode, selected value, and dropdown state for time-entry workflows.
- * zh_CN: TimePicker 将时间格式化到紧凑按钮表面，并暴露分钟步长、时钟模式、
- * 选中值和下拉状态，用于时间输入流程。
+ * Displays formatted time on a compact button and supports minute increments,
+ * 12/24-hour clock mode, and a wheel flyout.
+ * zh_CN: 在紧凑按钮上格式化显示时间，支持配置分钟步长、12/24 小时制以及下拉滚轮面板。
  */
 class TimePicker : public fluent::basicinput::Button {
     Q_OBJECT
     /**
-     * @brief Selected time when present, otherwise the fallback time used to initialize the picker.
-     * zh_CN: 有选中值时返回选中时间，否则返回用于初始化选择器的后备时间。
+     * @brief Selected time if valid; otherwise the default time used to initialize the wheel.
+     * zh_CN: 已选时间；未选择时返回用于初始化滚轮面板的默认时间。
      */
     Q_PROPERTY(QTime time READ time WRITE setTime NOTIFY timeChanged)
     /**
@@ -53,7 +52,7 @@ class TimePicker : public fluent::basicinput::Button {
         NOTIFY clockIdentifierChanged)
     /**
      * @brief Whether the picker dropdown is open.
-     * zh_CN: picker 下拉面板是否打开。
+     * zh_CN: 下拉滚轮面板是否打开。
      */
     Q_PROPERTY(bool dropDownOpen READ isDropDownOpen NOTIFY dropDownOpenChanged)
     /**
@@ -62,16 +61,16 @@ class TimePicker : public fluent::basicinput::Button {
      */
     Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
     /**
-     * @brief Accessible name supplied by the application for the confirm button.
-     * zh_CN: 由应用为确认按钮提供的无障碍名称。
+     * @brief Custom accessible name for the confirm button.
+     * zh_CN: 确认按钮的自定义无障碍名称。
      */
     Q_PROPERTY(QString confirmButtonAccessibleName
         READ confirmButtonAccessibleName
         WRITE setConfirmButtonAccessibleName
         NOTIFY confirmButtonAccessibleNameChanged)
     /**
-     * @brief Accessible name supplied by the application for the cancel button.
-     * zh_CN: 由应用为取消按钮提供的无障碍名称。
+     * @brief Custom accessible name for the cancel button.
+     * zh_CN: 取消按钮的自定义无障碍名称。
      */
     Q_PROPERTY(QString cancelButtonAccessibleName
         READ cancelButtonAccessibleName
@@ -106,8 +105,8 @@ public:
     QSize minimumSizeHint() const override;
 
 public slots:
-    /** @brief Updates the fallback/pending time without committing or replacing a selection; ignores invalid times.
-     * zh_CN: 更新后备或待确认时间，不提交或替换已选时间；无效时间被忽略。 */
+    /** @brief Sets the default/pending time without changing selectedTime; ignores invalid times.
+     * zh_CN: 设置未选中时的默认显示时间，不会修改 selectedTime；忽略无效时间。 */
     void setTime(const QTime& time);
     /** @brief Commits a selected time; an invalid time clears the selection.
      * zh_CN: 提交选中时间；无效时间清空选择。 */
@@ -117,8 +116,8 @@ public slots:
     void setClockIdentifier(ClockIdentifier identifier);
     void setLocale(const QLocale& locale);
     /**
-     * @brief Sets application-owned placeholder text for one time field.
-     * zh_CN: 为一个时间字段设置由应用拥有的占位文本。
+     * @brief Sets custom placeholder text for one time field.
+     * zh_CN: 为指定时间字段设置自定义占位文本。
      */
     void setPlaceholderText(TimeField field, const QString& text);
     void setConfirmButtonAccessibleName(const QString& name);

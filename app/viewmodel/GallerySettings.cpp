@@ -110,9 +110,8 @@ GallerySettings::GallerySettings(QObject* parent) : QObject(parent)
             applyHostThemeMode(hostThemeMode(theme));
         });
     }
-    // Install Fluent token overrides before any widget paints so the first
-    // frame already uses the complete supported visual contract.
-    // zh_CN: 在任何控件绘制前安装 Fluent token 覆盖，确保首帧即为完整受支持视觉契约。
+    // Install user theme overrides before any widget paints so the first frame uses final tokens.
+    // zh_CN: 在任何控件绘制前应用用户主题覆盖，保证首帧即使用最终设计 token。
     GalleryUserTheme::apply();
     if (qApp)
         qApp->installEventFilter(this);
@@ -280,8 +279,8 @@ void GallerySettings::setAccentColor(const QColor& accent)
 {
     if (!accent.isValid())
         return;
-    // Persist the override, then install it through one ThemeRegistry snapshot
-    // commit. zh_CN: 持久化 Fluent 强调色覆盖，再通过一次 ThemeRegistry 快照提交完成安装与重绘。
+    // Persist the override, then update ThemeRegistry in one batch.
+    // zh_CN: 保存自定义强调色，并通过 ThemeRegistry 统一切换并重绘。
     GalleryUserTheme::setAccent(accent);
     GalleryUserTheme::apply();
     emit accentColorChanged(accentColor());
@@ -418,8 +417,7 @@ void GallerySettings::load()
     const int theme = qBound(0, settings.value(QString::fromLatin1(kThemeModeKey), 0).toInt(), 3);
     const int motion = qBound(0, settings.value(QString::fromLatin1(kMotionModeKey), 0).toInt(), 2);
     const int navigation = qBound(0, settings.value(QString::fromLatin1(kNavigationStyleKey), 0).toInt(), 4);
-    // Default 1 = Mica, matching m_windowEffect's in-class initializer (the current shipping look).
-    // zh_CN: 默认 1 = Mica，与 m_windowEffect 的类内初值一致（当前出厂观感）。
+    // Default 1 = Mica, matching m_windowEffect's initial value.
     const int windowEffect = qBound(0, settings.value(QString::fromLatin1(kWindowEffectKey), 1).toInt(), 2);
     const int closeBehavior = qBound(0, settings.value(QString::fromLatin1(kCloseBehaviorKey), 1).toInt(), 2);
     m_themeMode = static_cast<ThemeMode>(theme);

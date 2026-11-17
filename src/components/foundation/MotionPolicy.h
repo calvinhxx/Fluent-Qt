@@ -29,8 +29,8 @@ public:
     Q_ENUM(Mode)
 
     /**
-     * @brief Motion lifetime used when resolving whether animation should run.
-     * zh_CN: 解析动画是否应运行时使用的动效生命周期。
+     * @brief Animation category used when deciding whether motion should run.
+     * zh_CN: 决定动画是否运行的动画类型（过渡或持续动画）。
      */
     enum class Kind { Transition = 0, Continuous = 1 };
     Q_ENUM(Kind)
@@ -52,8 +52,8 @@ public:
     bool shouldAnimate(bool localAnimationEnabled = true, Kind kind = Kind::Transition) const;
 
     /**
-     * @brief Resolves a full-motion duration without changing the Full default.
-     * zh_CN: 解析完整动效时长，且不改变 Full 模式的默认值。
+     * @brief Resolves the effective transition duration (in ms) under the active policy.
+     * zh_CN: 根据当前动效策略计算实际过渡时长（毫秒）；Full 模式原样返回，Reduced 缩短，Disabled 返回 0。
      */
     int resolvedDuration(int fullDurationMs, bool localAnimationEnabled = true) const;
 

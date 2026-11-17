@@ -18,13 +18,11 @@ class QResizeEvent;
 namespace fluent::collections {
 
 /**
- * @brief Stacked page host with push/pop navigation semantics.
- * zh_CN: 具备 push/pop 导航语义的堆叠页面宿主。
- *
- * StackView extends QStackedWidget with a navigation stack and Fluent transition
- * control while preserving QWidget page ownership and compatibility.
- * zh_CN: StackView 在 QStackedWidget 基础上增加导航栈和 Fluent 过渡控制，
- * 同时保留 QWidget 页面所有权与兼容性。
+ * @brief Stacked page container with push/pop navigation and animated transitions.
+ * Extends QStackedWidget with a navigation stack, transition animations, and explicit
+ * page ownership policies.
+ * zh_CN: 支持压栈/出栈导航和转场动画的堆叠页面容器。
+ * 在 QStackedWidget 基础上提供导航栈、过渡动画及显式页面所有权策略。
  */
 class StackView : public QStackedWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -139,9 +137,8 @@ public:
     bool clear();
 
     /**
-     * @brief Adds a page to StackView navigation tracking without taking
-     * ownership by default.
-     * zh_CN: 将页面加入 StackView 导航跟踪，默认不接管其所有权。
+     * @brief Registers an existing child widget in the navigation stack without taking ownership by default.
+     * zh_CN: 将页面纳入 StackView 导航栈管理，默认不接管其所有权。
      */
     bool adoptWidget(QWidget* item, WidgetOwnership ownership = WidgetOwnership::Borrowed);
 

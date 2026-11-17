@@ -194,8 +194,8 @@
     72
   ],
   "description": {
-    "en": "Edit an independent example. Sample items and content are included in the generated code.",
-    "zh": "调整独立示例；生成代码包含所需的示例数据和内容。"
+    "en": "A numeric input with spin buttons and inline expression support.",
+    "zh": "支持步进调节、表达式计算与拖拽调值的数值框。"
   },
   "presets": [
     {

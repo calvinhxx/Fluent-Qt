@@ -48,9 +48,8 @@ int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
     return TitleBarMetrics::leadingOffset(bar->systemReservedLeadingWidth());
 }
 
-// WinUI-style click feedback: the glyph quickly dips to ~0.86 scale and springs back, reading as
-// a press without moving the button or disturbing the layout. zh_CN: 仿 WinUI 点击反馈：字形快速缩小再弹回，
-// 呈现按下感，不移动按钮、不影响布局。
+// Press animation dips the glyph scale briefly without moving the button layout.
+// zh_CN: 按下时微缩字形图标以提供触感反馈，不改变按钮位置或布局。
 void startButtonPress(fluent::basicinput::Button* button)
 {
     if (!button || !button->isEnabled())
@@ -244,11 +243,9 @@ void GalleryTitleBarController::buildSearchBox(fluent::windowing::TitleBar* bar)
     auto* searchBox = new fluent::textfields::AutoSuggestBox(bar);
     m_searchBox = searchBox;
     searchBox->setObjectName(QStringLiteral("GalleryTitleBar.SearchBox"));
-    // Click-to-focus only: keep the search box OUT of the tab/auto-focus chain so it never becomes
-    // the focus fallback when an unrelated widget (e.g. a Settings combo) loses focus during a theme
-    // or layout refresh — which made focus jump up to the search box on every settings change.
-    // Clicking it still focuses it for typing. zh_CN: 仅点击聚焦：把搜索框移出 Tab/自动聚焦链，使其不会在无关控件
-    //（如设置页下拉框）于主题/布局刷新中丢焦点时成为回退目标——这正是每次改设置焦点都跳到搜索框的原因。点击它仍可聚焦输入。
+    // Click-focus only: keep the search box out of the Tab/auto-focus chain so unrelated widget
+    // teardown or theme refreshes (e.g. Settings controls) never bounce focus onto it.
+    // zh_CN: 仅支持点击聚焦：移出 Tab/自动聚焦链，防止其他控件在主题或布局刷新丢焦点时将焦点跳回搜索框。
     searchBox->setFocusPolicy(Qt::ClickFocus);
     searchBox->setPlaceholderText(QStringLiteral("Search components and examples..."));
     searchBox->setInputHeight(TitleBarMetrics::SearchHeight);
@@ -293,7 +290,8 @@ void GalleryTitleBarController::buildSearchBox(fluent::windowing::TitleBar* bar)
             &GallerySearchService::cancelRequest);
         connect(m_search.data(), &GallerySearchService::resultsReady, this,
             [this](quint64 requestId, int offset, const QVector<search::Entry>& page, bool hasMore) {
-                // Check the token before touching the borrowed model. zh_CN: 修改借用模型前先检查 token。
+                // Verify the request token is still active before updating the shared model.
+                // zh_CN: 更新搜索模型前先确认请求 token 仍有效。
                 if (!m_searchBox || !m_searchBox->isSuggestionRequestCurrent(requestId))
                     return;
                 const QPointer<GalleryTitleBarController> guard(this);

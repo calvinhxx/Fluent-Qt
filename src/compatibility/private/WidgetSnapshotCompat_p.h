@@ -15,9 +15,8 @@ namespace compatibility::detail {
 using LowDprSnapshotRenderer = QPixmap (*)(QWidget*, const QRect&);
 void setLowDprSnapshotRenderer(LowDprSnapshotRenderer renderer);
 
-// Draw inside a widget-local visible clip, including the root effect's outer bounds.
-// Preserve graphics effects without changing visibility, geometry or effect state.
-// zh_CN: 在控件局部可见区域内绘制，包含根特效的外扩边界；保留图形效果，不改可见性、几何或效果状态。
+// Draw widget contents and active graphics-effect bounds inside visibleRect without altering state.
+// zh_CN: 在控件局部 visibleRect 内绘制内容与根特效扩展边界，不修改控件可见性或特效状态。
 void renderWidgetSnapshot(QPainter& painter, QWidget* widget, const QPoint& origin, const QRect& visibleRect);
 
 } // namespace compatibility::detail

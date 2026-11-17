@@ -23,15 +23,11 @@ class FontIcon;
 namespace fluent::layout {
 
 /**
- * @brief Composition shell that labels an existing editor and presents helper
- *        or validation text without owning the editor value.
- * zh_CN: 为已有编辑器提供标签、帮助/校验展示的组合外壳，不接管编辑器的值。
+ * @brief Form field wrapper adding a label, required mark, helper text, and validation status to an editor.
+ * zh_CN: 表单字段容器，为输入控件提供标签、必填标记、辅助说明和校验状态展示。
  *
- * Field hosts a caller-supplied editor with `WidgetOwnership`. It does not
- * replace LineEdit, PasswordBox, NumberBox, ComboBox, or TextEdit, and it
- * never writes the editor's text or value as part of validation presentation.
- * zh_CN: Field 用 `WidgetOwnership` 承载调用方提供的编辑器。它不替代各类输入控件，
- * 也不会在展示校验状态时改写编辑器的文本或值。
+ * Hosts an externally provided editor according to WidgetOwnership without reading or modifying its value.
+ * zh_CN: 按 WidgetOwnership 承载外部传入的输入控件，不读取或修改控件内部的值。
  */
 class Field : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -55,12 +51,8 @@ public:
     enum class LabelPosition { Top, Leading };
     Q_ENUM(LabelPosition)
     /**
-     * @brief Presentation of the current validation message.
-     * zh_CN: 当前校验文案的展示状态。
-     *
-     * Field only paints this state. Callers own actual validation and editor
-     * values.
-     * zh_CN: Field 只负责展示该状态，真正的校验与编辑器值仍由调用方拥有。
+     * @brief Visual state of the validation message (display-only; validation logic stays in the application).
+     * zh_CN: 校验消息的展示状态（仅负责外观展示，具体校验逻辑由应用处理）。
      */
     enum class ValidationState { None, Error, Warning, Success, Validating };
     Q_ENUM(ValidationState)

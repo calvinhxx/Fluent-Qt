@@ -15,18 +15,11 @@ namespace fluent::menus_toolbars {
 class CommandPalettePrivate;
 
 /**
- * @brief Searchable same-window presentation of borrowed application actions.
- * zh_CN: 在所属窗口内搜索并执行借用的应用命令。
- *
- * Register the same leaf QAction used by menus and toolbars. Names, shortcuts,
- * enabled and checked states remain QAction-owned. Separators, menu branches
- * and QWidgetAction are not searchable commands. Register their leaf actions
- * explicitly. Search matches all whitespace-separated words against the label,
- * group and keywords, ignoring case. Query text is retained across openings.
- * zh_CN: 注册菜单和工具栏使用的同一叶子 QAction；名称、快捷键、启用与勾选状态
- * 仍由 QAction 管理。分隔符、菜单分支及 QWidgetAction 不是可搜索命令，应显式
- * 注册叶子动作。搜索词按空白分隔，全部匹配名称、分组及关键词，不区分大小写；
- * 再次打开时保留查询文字。
+ * @brief Searchable same-window command palette for invoking application actions.
+ * Register the same leaf QAction instances used by menus and toolbars without taking ownership; text, shortcuts, enabled, and checked states stay synchronized with QAction.
+ * Separators, submenu branches, and QWidgetAction are not searchable commands unless their leaf actions are registered explicitly. Search matches all whitespace-separated terms (case-insensitive) against label, group, and keywords, and retains the query across openings.
+ * zh_CN: 同一窗口内的可搜索命令面板，用于快速检索并触发应用动作（不接管 QAction 所有权）。
+ * 可直接复用菜单或工具栏中的叶动作，文本、快捷键、启用与勾选状态均与 QAction 同步；分隔符、子菜单节点及 QWidgetAction 不参与搜索，需显式注册其叶动作。搜索要求空白分隔的词全部匹配名称、分组或关键词（忽略大小写），重新打开时保留上次输入。
  */
 class CommandPalette final : public dialogs_flyouts::Popup {
     Q_OBJECT
@@ -41,16 +34,16 @@ public:
     ~CommandPalette() override;
 
     /**
-     * @brief Registers a borrowed leaf action, or updates its search metadata.
-     * zh_CN: 注册借用的叶子动作，已注册时更新其搜索信息。
+     * @brief Registers a leaf action or updates its group and keywords without taking ownership.
+     * zh_CN: 注册叶动作（不接管所有权）；若已注册则更新其分组与搜索关键词。
      */
     bool addCommand(QAction* action, const QString& group = QString(), const QStringList& keywords = QStringList());
-    /** @brief Removes a command without deleting or reparenting its action.
-     *  zh_CN: 移除命令，不删除动作或改变其父对象。
+    /** @brief Unregisters a command without deleting or reparenting its QAction.
+     *  zh_CN: 移除命令注册，不删除或更改 QAction 的父对象。
      */
     bool removeCommand(QAction* action);
-    /** @brief Removes all registrations without deleting their actions.
-     *  zh_CN: 清空注册，不删除动作。
+    /** @brief Unregisters all commands without deleting the QAction objects.
+     *  zh_CN: 清空所有已注册命令，不删除对应的 QAction。
      */
     void clearCommands();
     QList<QAction*> commands() const;
@@ -71,14 +64,9 @@ public:
 
 public slots:
     /**
-     * @brief Closes and restores focus before executing the current enabled leaf.
-     * zh_CN: 关闭面板并恢复焦点后，执行当前可用的叶子命令。
-     *
-     * Returns false while closed or when no enabled result is selected. A close
-     * handler may remove, disable or destroy the action; it is revalidated before
-     * dispatch. QAction::triggered remains the execution notification.
-     * zh_CN: 面板关闭或没有选中可用结果时返回 false；关闭处理器可移除、禁用或
-     * 删除动作，因此执行前会再次检查。执行通知沿用 QAction::triggered。
+     * @brief Closes the palette, restores focus, and triggers the current enabled action.
+     * Returns false when closed or no enabled match is selected; revalidates the action after closing in case a close handler disables, removes, or destroys it.
+     * zh_CN: 关闭面板并恢复焦点后触发当前选中的可用动作；面板关闭或无可用选中项时返回 false，触发前会再次校验动作，防止关闭回调已将其禁用、移除或销毁。
      */
     bool triggerCurrent();
 
