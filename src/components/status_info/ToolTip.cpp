@@ -226,7 +226,7 @@ void ToolTip::onThemeUpdated()
     const auto& c = themeColorsRef();
     m_bgColor = c.bgLayer; // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
-    m_textColor = c.textPrimary;
+    m_textColor = isEnabled() ? c.textPrimary : c.textDisabled;
     // Color via the label's OWN style sheet rather than its palette: a ToolTip can sit under an ancestor
     // style sheet (the gallery sample card installs QStyleSheetStyle over its subtree and ignores child
     // palettes), which would drop a palette WindowText color and render the text near-black in dark
@@ -273,6 +273,13 @@ bool ToolTip::eventFilter(QObject* watched, QEvent* event)
     return QWidget::eventFilter(watched, event);
 }
 
+void ToolTip::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::EnabledChange)
+        onThemeUpdated();
+}
+
 void ToolTip::paintEvent(QPaintEvent*)
 {
     QPainter p(this);
@@ -281,10 +288,10 @@ void ToolTip::paintEvent(QPaintEvent*)
     const auto& r = themeRadius();
     const QRect bubble = fluent::overlay::visibleCardRect(rect(), kShadowMargin);
 
-    // 1. Soft drop shadow, drawn with the shared overlay painter so it matches flyouts/menus;
-    //    Medium elevation keeps it subtle, as Figma's tooltip shadow is light.
-    // zh_CN: 柔和投影，复用浮层共享绘制器，与 flyout/menu 一致；用 Medium 层级保持轻盈，贴合 Figma 工具提示的浅阴影。
-    fluent::overlay::paintLayeredShadow(p, bubble, r.control, themeShadow(Elevation::Medium));
+    // 1. Soft drop shadow, drawn with the shared overlay painter so it matches menus/flyouts;
+    //    using subtle intensity keeps the tooltip crisp and avoids heavy dark halos.
+    // zh_CN: 柔和投影，复用浮层共享绘制器并与菜单保持同一轻量强度，避免提示气泡周围出现过重的暗色阴影。
+    fluent::overlay::paintLayeredShadow(p, bubble, r.control, themeShadow(Elevation::Medium), 0.18);
 
     // 2. Background and border. The Figma "Tooltip" uses the 4px control radius,
     //    not the 8px overlay radius used by dialogs/flyouts.

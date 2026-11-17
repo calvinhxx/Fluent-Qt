@@ -24,10 +24,8 @@ protected:
 
 TEST_F(AvatarTest, Contract_DefaultsAndGeneratedInitials)
 {
-    static_assert(std::is_base_of<QWidget, Avatar>::value,
-                  "Avatar remains a QWidget");
-    static_assert(std::is_base_of<fluent::FluentElement, Avatar>::value,
-                  "Avatar participates in Fluent theming");
+    static_assert(std::is_base_of<QWidget, Avatar>::value, "Avatar remains a QWidget");
+    static_assert(std::is_base_of<fluent::FluentElement, Avatar>::value, "Avatar participates in Fluent theming");
 
     Avatar avatar;
     EXPECT_TRUE(avatar.name().isEmpty());
@@ -74,8 +72,7 @@ TEST_F(AvatarTest, Contract_InitialsPreserveUnicodeGraphemeClusters)
 
     avatar.setInitials(QString());
     avatar.setName(QStringLiteral("\U0001F600 Alpha"));
-    EXPECT_EQ(avatar.effectiveInitials(),
-              QStringLiteral("\U0001F600A"));
+    EXPECT_EQ(avatar.effectiveInitials(), QStringLiteral("\U0001F600A"));
 }
 
 TEST_F(AvatarTest, Contract_SizeShapeAndPresenceUseInfoBadge)
@@ -88,17 +85,13 @@ TEST_F(AvatarTest, Contract_SizeShapeAndPresenceUseInfoBadge)
     avatar.setAvatarSize(Avatar::AvatarSize::ExtraLarge);
     avatar.setAvatarSize(Avatar::AvatarSize::ExtraLarge);
     EXPECT_EQ(sizeSpy.count(), 1);
-    EXPECT_EQ(
-        sizeSpy.at(0).at(0).value<Avatar::AvatarSize>(),
-        Avatar::AvatarSize::ExtraLarge);
+    EXPECT_EQ(sizeSpy.at(0).at(0).value<Avatar::AvatarSize>(), Avatar::AvatarSize::ExtraLarge);
     EXPECT_EQ(avatar.size(), QSize(56, 56));
 
     avatar.setShape(Avatar::AvatarShape::Square);
     avatar.setShape(Avatar::AvatarShape::Square);
     EXPECT_EQ(shapeSpy.count(), 1);
-    EXPECT_EQ(
-        shapeSpy.at(0).at(0).value<Avatar::AvatarShape>(),
-        Avatar::AvatarShape::Square);
+    EXPECT_EQ(shapeSpy.at(0).at(0).value<Avatar::AvatarShape>(), Avatar::AvatarShape::Square);
 
     ASSERT_NE(avatar.presenceBadge(), nullptr);
     EXPECT_FALSE(avatar.presenceBadge()->isVisibleTo(&avatar));
@@ -106,18 +99,13 @@ TEST_F(AvatarTest, Contract_SizeShapeAndPresenceUseInfoBadge)
     avatar.show();
     QApplication::processEvents();
     EXPECT_EQ(presenceSpy.count(), 1);
-    EXPECT_EQ(
-        presenceSpy.at(0).at(0).value<Avatar::PresenceStatus>(),
-        Avatar::PresenceStatus::Available);
+    EXPECT_EQ(presenceSpy.at(0).at(0).value<Avatar::PresenceStatus>(), Avatar::PresenceStatus::Available);
     EXPECT_TRUE(avatar.presenceBadge()->isVisibleTo(&avatar));
-    EXPECT_EQ(avatar.presenceBadge()->status(),
-              InfoBadge::InfoBadgeStatus::Success);
+    EXPECT_EQ(avatar.presenceBadge()->status(), InfoBadge::InfoBadgeStatus::Success);
 
     avatar.setPresence(Avatar::PresenceStatus::Offline);
-    EXPECT_EQ(avatar.presenceBadge()->status(),
-              InfoBadge::InfoBadgeStatus::Attention);
-    EXPECT_TRUE(
-        avatar.presenceBadge()->customBackgroundColor().isValid());
+    EXPECT_EQ(avatar.presenceBadge()->status(), InfoBadge::InfoBadgeStatus::Attention);
+    EXPECT_TRUE(avatar.presenceBadge()->customBackgroundColor().isValid());
 }
 
 TEST_F(AvatarTest, Contract_HighDpiPixmapIsRetainedAndRenders)
@@ -170,13 +158,9 @@ TEST_F(AvatarTest, Contract_HighDpiCoverCropKeepsCenterBand)
     exactCover.fill(Qt::transparent);
     {
         QPainter painter(&exactCover);
-        fluentDrawCoverPixmapInLogicalRect(
-            painter, QRectF(0, 0, 60, 60), pixmap);
+        fluentDrawCoverPixmapInLogicalRect(painter, QRectF(0, 0, 60, 60), pixmap);
     }
-    for (const QPoint sample : {
-             QPoint(0, 30),
-             QPoint(30, 30),
-             QPoint(59, 30)}) {
+    for (const QPoint sample : {QPoint(0, 30), QPoint(30, 30), QPoint(59, 30)}) {
         const QColor color = exactCover.pixelColor(sample);
         EXPECT_GT(color.green(), color.red() + 40);
         EXPECT_GT(color.green(), color.blue() + 40);
@@ -198,4 +182,18 @@ TEST_F(AvatarTest, Contract_HighDpiCoverCropKeepsCenterBand)
     EXPECT_GT(centerColor.alpha(), 200);
     EXPECT_GT(centerColor.green(), centerColor.red() + 40);
     EXPECT_GT(centerColor.green(), centerColor.blue() + 40);
+}
+
+TEST_F(AvatarTest, EffectiveColorsResolveFollowThemeDefaults)
+{
+    Avatar avatar(QStringLiteral("Ada Lovelace"));
+    const QColor fill = avatar.effectiveBackgroundColor();
+    const QColor ink = avatar.effectiveForegroundColor();
+    EXPECT_TRUE(fill.isValid());
+    EXPECT_TRUE(ink.isValid());
+
+    avatar.setBackgroundColor(QColor(QStringLiteral("#112233")));
+    EXPECT_EQ(avatar.effectiveBackgroundColor(), QColor(QStringLiteral("#112233")));
+    avatar.setForegroundColor(QColor(QStringLiteral("#EEEEEE")));
+    EXPECT_EQ(avatar.effectiveForegroundColor(), QColor(QStringLiteral("#EEEEEE")));
 }

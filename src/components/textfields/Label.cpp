@@ -179,15 +179,20 @@ void Label::applyTextColor()
         // components that set their own label palette (InfoBar status text, ToolTip, collection-view
         // headers, …) keep working. zh_CN: 原有基于 palette 的上色。无祖先样式表时正确；保持不变，使自行设置标签
         // palette 的组件（InfoBar 状态文本、ToolTip、集合视图表头等）继续工作。
+        const QColor enabledColor = resolveTextColor();
+        const QColor disabledColor = themeColorsRef().textDisabled;
         QPalette p = palette();
-        p.setColor(QPalette::WindowText, resolveTextColor());
+        p.setColor(QPalette::Active, QPalette::WindowText, enabledColor);
+        p.setColor(QPalette::Inactive, QPalette::WindowText, enabledColor);
+        p.setColor(QPalette::Disabled, QPalette::WindowText, disabledColor);
         setPalette(p);
     } else {
         // An explicit role colors through the label's OWN style sheet, so an ancestor style sheet
         // (which installs QStyleSheetStyle and makes Qt ignore the child palette) can't drop it. This is
         // what value/status labels on a styled preview surface need. zh_CN: 指定角色改用标签自身样式表上色,
         // 使祖先样式表(安装 QStyleSheetStyle、让 Qt 忽略子 palette)无法丢弃它。带样式表预览面上的取值/状态标签即需此。
-        QLabel::setStyleSheet(withManagedColorStyle(styleSheet(), resolveTextColor()));
+        const QColor effectiveColor = isEnabled() ? resolveTextColor() : themeColorsRef().textDisabled;
+        QLabel::setStyleSheet(withManagedColorStyle(styleSheet(), effectiveColor));
     }
 }
 
@@ -220,6 +225,9 @@ void Label::changeEvent(QEvent* event)
     QLabel::changeEvent(event);
     if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange) {
         updateRenderedText();
+    } else if (event->type() == QEvent::EnabledChange) {
+        applyTextColor();
+        update();
     }
 }
 

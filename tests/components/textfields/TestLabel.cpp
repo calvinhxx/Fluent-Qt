@@ -493,3 +493,20 @@ TEST_F(LabelTest, VisualCheck)
 
     qApp->exec();
 }
+
+TEST_F(LabelTest, DisabledStateUpdatesPaletteAndRoleStyle)
+{
+    Label defaultLabel(QStringLiteral("Default label"));
+    EXPECT_FALSE(defaultLabel.styleSheet().contains(QStringLiteral("color:")));
+    EXPECT_EQ(defaultLabel.palette().color(QPalette::Disabled, QPalette::WindowText),
+        defaultLabel.themeColors().textDisabled);
+    defaultLabel.setEnabled(false);
+    EXPECT_FALSE(defaultLabel.styleSheet().contains(QStringLiteral("color:")));
+    EXPECT_EQ(defaultLabel.palette().color(QPalette::WindowText), defaultLabel.themeColors().textDisabled);
+
+    Label primaryLabel(QStringLiteral("Explicit primary"));
+    primaryLabel.setTextColorRole(Label::TextColorRole::Primary);
+    const QString enabledStyle = primaryLabel.styleSheet();
+    primaryLabel.setEnabled(false);
+    EXPECT_NE(primaryLabel.styleSheet(), enabledStyle);
+}

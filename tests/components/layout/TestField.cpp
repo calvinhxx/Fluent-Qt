@@ -502,3 +502,24 @@ TEST_F(FieldTest, VisualCheck_FieldComposition)
     window.show();
     qApp->exec();
 }
+
+TEST_F(FieldTest, Contract_DisabledUpdatesRequiredAndStatusStyles)
+{
+    Field field;
+    field.setLabelText(QStringLiteral("Email"));
+    field.setRequired(true);
+    field.setValidationState(Field::ValidationState::Error);
+    field.setValidationMessage(QStringLiteral("Invalid"));
+
+    auto* requiredMark = field.findChild<Label*>(QStringLiteral("fluentFieldRequired"));
+    auto* statusLabel = field.findChild<Label*>(QStringLiteral("fluentFieldStatus"));
+    ASSERT_NE(requiredMark, nullptr);
+    ASSERT_NE(statusLabel, nullptr);
+
+    const QString enabledRequired = requiredMark->styleSheet();
+    const QString enabledStatus = statusLabel->styleSheet();
+
+    field.setEnabled(false);
+    EXPECT_NE(requiredMark->styleSheet(), enabledRequired);
+    EXPECT_NE(statusLabel->styleSheet(), enabledStatus);
+}

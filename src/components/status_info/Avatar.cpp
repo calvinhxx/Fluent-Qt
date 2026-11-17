@@ -290,6 +290,11 @@ QColor Avatar::effectiveBackgroundColor() const
     return color;
 }
 
+QColor Avatar::effectiveForegroundColor() const
+{
+    return effectiveForegroundColor(effectiveBackgroundColor());
+}
+
 QColor Avatar::effectiveForegroundColor(const QColor& background) const
 {
     if (!isEnabled())
