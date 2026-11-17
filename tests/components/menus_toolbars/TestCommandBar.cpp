@@ -31,6 +31,7 @@
 #include "components/foundation/overlay/OverlayPresentation.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 #include "components/menus_toolbars/CommandBar.h"
+#include "components/menus_toolbars/private/CommandPresenter_p.h"
 #include "components/menus_toolbars/CommandBarFlyout.h"
 
 using fluent::menus_toolbars::CommandBar;
@@ -944,4 +945,34 @@ TEST(CommandBarTest, Contract_LightAndDarkThemesPaintInlineSurface)
     }
     fluent::ThemeRegistry::instance().resetToDefaults();
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+}
+
+TEST(CommandPresenterTest, OverflowIconCentersAtActualPaintResolution)
+{
+    using fluent::menus_toolbars::detail::CommandPresenter;
+    QPixmap source(48, 48);
+    source.fill(Qt::magenta);
+    QAction action(QIcon(source), QStringLiteral("Resize"), nullptr);
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        CommandPresenter presenter(&action, CommandPresenter::Mode::Overflow, {}, nullptr);
+        presenter.setLayoutDirection(direction);
+        presenter.resize(240, 44);
+        for (qreal dpr : {1.0, 1.25, 1.5, 2.0, 3.0}) {
+            SCOPED_TRACE(dpr);
+            QImage image(QSize(qRound(240 * dpr), qRound(44 * dpr)), QImage::Format_ARGB32_Premultiplied);
+            image.setDevicePixelRatio(dpr);
+            image.fill(Qt::transparent);
+            presenter.render(&image);
+            QRect ink;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    if (image.pixelColor(x, y) == QColor(Qt::magenta))
+                        ink |= QRect(x, y, 1, 1);
+                }
+            }
+            ASSERT_FALSE(ink.isEmpty());
+            EXPECT_NEAR(QRectF(ink).center().y() / dpr, 22.0, 0.5 / dpr);
+            EXPECT_NEAR(ink.height() / dpr, 16.0, 1.0 / dpr);
+        }
+    }
 }

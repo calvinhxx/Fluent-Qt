@@ -23,6 +23,7 @@ namespace fluent::navigation {
 
 namespace {
 constexpr int kDefaultWidth = 640;
+constexpr int kTextElideSafetyMargin = 2;
 } // namespace
 
 PivotItem::PivotItem(const QString& itemHeader) : header(itemHeader) {}
@@ -524,7 +525,11 @@ QFont Pivot::iconFont(int pixelSize) const
 
 Pivot::Metrics Pivot::metrics() const
 {
-    return Metrics();
+    Metrics current;
+    const int fontHeight = QFontMetrics(itemFont()).height();
+    current.headerVisualHeight = qMax(current.headerVisualHeight, fontHeight + 10);
+    current.headerRowHeight = qMax(current.headerRowHeight, current.headerVisualHeight + 8);
+    return current;
 }
 
 void Pivot::invalidateLayout(bool updateGeometryHint)
@@ -656,7 +661,12 @@ int Pivot::naturalHeaderWidth(int index, const QFontMetrics& fontMetrics) const
     if (!isValidIndex(index))
         return 0;
     const Metrics currentMetrics = metrics();
-    int width = currentMetrics.horizontalPadding * 2 + fontMetrics.horizontalAdvance(m_items.at(index).header);
+    const QString& header = m_items.at(index).header;
+    int width = currentMetrics.horizontalPadding * 2;
+    if (!header.isEmpty()) {
+        width += qMax(fontMetrics.horizontalAdvance(header), fontMetrics.boundingRect(header).width())
+            + kTextElideSafetyMargin;
+    }
     if (!m_items.at(index).iconGlyph.isEmpty())
         width += currentMetrics.iconSize + currentMetrics.iconGap;
     return qBound(currentMetrics.minHeaderWidth, width, currentMetrics.maxHeaderWidth);
@@ -944,8 +954,13 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
     }
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
+    const QString& rawHeader = m_items.at(record.itemIndex).header;
+    const QFontMetrics fontMetrics = painter.fontMetrics();
+    const QString text = record.textRect.width() >= fontMetrics.horizontalAdvance(rawHeader)
+        ? rawHeader
+        : fontMetrics.elidedText(rawHeader, Qt::ElideRight, qMax(0, record.textRect.width()));
     painter.drawText(record.textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
-        m_items.at(record.itemIndex).header);
+        text);
     if (record.itemIndex == m_selectedIndex && record.enabled && record.indicatorRect.isValid()) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.accentDefault);

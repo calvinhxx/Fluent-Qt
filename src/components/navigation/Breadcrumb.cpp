@@ -453,6 +453,10 @@ bool Breadcrumb::isValidIndex(int index) const
 Breadcrumb::Metrics Breadcrumb::metrics() const
 {
     Metrics current;
+    const bool isDefaultStandard = m_breadcrumbSize == BreadcrumbSize::Standard
+        && m_standardFontRole == Typography::FontRole::Body;
+    const bool isDefaultLarge = m_breadcrumbSize == BreadcrumbSize::Large
+        && m_largeFontRole == Typography::FontRole::Title;
     if (m_breadcrumbSize == BreadcrumbSize::Large) {
         current.rowHeight = kLargeRowHeight;
         current.textHeight = Typography::LineHeight::Title;
@@ -471,6 +475,13 @@ Breadcrumb::Metrics Breadcrumb::metrics() const
         current.chevronPixelSize = 12;
         current.overflowPixelSize = 16;
         current.cornerRadius = CornerRadius::Control;
+    }
+    if (!isDefaultStandard && !isDefaultLarge) {
+        const int fontHeight = QFontMetrics(contentFont()).height();
+        if (fontHeight > current.textHeight) {
+            current.textHeight = fontHeight;
+            current.rowHeight = qMax(current.rowHeight, fontHeight + 4);
+        }
     }
     return current;
 }

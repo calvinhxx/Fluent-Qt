@@ -1,5 +1,7 @@
 #include "compatibility/private/WidgetPlatformCompat_p.h"
 #include "MenuBar.h"
+#include "Menu.h"
+#include "components/basicinput/DropDownButton.h"
 #include "components/foundation/overlay/OverlayPresentation_p.h"
 
 #include <QAction>
@@ -12,7 +14,9 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QPointer>
 #include <QResizeEvent>
+#include <QStyle>
 
 namespace fluent::menus_toolbars {
 
@@ -75,7 +79,16 @@ FluentMenuBar::FluentMenuBar(QWidget* parent) : QMenuBar(parent)
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
     ::compatibility::detail::useWidgetMenuBar(this);
+    m_overflowButton = new basicinput::DropDownButton(this);
+    m_overflowButton->setObjectName(QStringLiteral("FluentMenuBar.MoreButton"));
+    m_overflowButton->setAccessibleName(tr("More menus"));
+    m_overflowButton->setToolTip(tr("More menus"));
+    m_overflowButton->setFluentStyle(basicinput::Button::Subtle);
+    m_overflowButton->setFocusVisual(true);
+    m_overflowButton->setChevronGlyph(Typography::Icons::More);
+    m_overflowButton->hide();
     onThemeUpdated();
+    ::compatibility::detail::hideMenuBarExtensionButton(this);
 }
 
 void FluentMenuBar::setFontStyle(Typography::FontRole role)
@@ -104,8 +117,13 @@ void FluentMenuBar::setBackgroundVisible(bool visible)
 
 void FluentMenuBar::onThemeUpdated()
 {
+    const QPointer<FluentMenuBar> guard(this);
     setFont(themeFont(m_fontStyle).toQFont());
+    ::compatibility::detail::hideMenuBarExtensionButton(this);
     invalidateLayout();
+    syncOverflow();
+    if (!guard)
+        return;
     updateGeometry();
     update();
 }
@@ -160,27 +178,55 @@ void FluentMenuBar::paintEvent(QPaintEvent*)
     }
 }
 
+bool FluentMenuBar::event(QEvent* event)
+{
+    const QPointer<FluentMenuBar> guard(this);
+    const bool handled = QMenuBar::event(event);
+    if (!guard)
+        return handled;
+    if (event
+        && (event->type() == QEvent::LayoutRequest || event->type() == QEvent::Show || event->type() == QEvent::Resize
+            || event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange
+            || event->type() == QEvent::LayoutDirectionChange || event->type() == QEvent::ActionAdded
+            || event->type() == QEvent::ActionRemoved || event->type() == QEvent::ActionChanged
+            || event->type() == QEvent::ContentsRectChange)) {
+        ::compatibility::detail::hideMenuBarExtensionButton(this);
+        invalidateLayout();
+        syncOverflow();
+    }
+    return handled;
+}
+
 void FluentMenuBar::resizeEvent(QResizeEvent* event)
 {
     QMenuBar::resizeEvent(event);
+    ::compatibility::detail::hideMenuBarExtensionButton(this);
     invalidateLayout();
+    syncOverflow();
 }
 
 void FluentMenuBar::actionEvent(QActionEvent* event)
 {
+    const QPointer<FluentMenuBar> guard(this);
     if (event->type() == QEvent::ActionAdded && event->action()) {
         QAction* added = event->action();
         if (added->menu())
             added->menu()->installEventFilter(this);
-        connect(added, &QAction::changed, this, [this, added]() {
+        QObject::disconnect(m_actionChangedConnections.take(added));
+        m_actionChangedConnections.insert(added, connect(added, &QAction::changed, this, [this, added]() {
+            const QPointer<FluentMenuBar> lifetime(this);
             if (added->menu())
                 added->menu()->installEventFilter(this);
             invalidateLayout();
+            syncOverflow();
+            if (!lifetime)
+                return;
             updateGeometry();
             update();
-        });
+        }));
     } else if (event->type() == QEvent::ActionRemoved && event->action()) {
         QAction* removed = event->action();
+        QObject::disconnect(m_actionChangedConnections.take(removed));
         if (removed->menu())
             removed->menu()->removeEventFilter(this);
         m_actionRects.remove(removed);
@@ -195,7 +241,13 @@ void FluentMenuBar::actionEvent(QActionEvent* event)
     }
 
     QMenuBar::actionEvent(event);
+    if (!guard)
+        return;
+    ::compatibility::detail::hideMenuBarExtensionButton(this);
     invalidateLayout();
+    syncOverflow();
+    if (!guard)
+        return;
     updateGeometry();
     update();
 }
@@ -314,11 +366,11 @@ void FluentMenuBar::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Left:
-        setFocusedAction(nextEnabledAction(m_focusedAction, -1));
+        setFocusedAction(nextEnabledAction(m_focusedAction, layoutDirection() == Qt::RightToLeft ? 1 : -1));
         event->accept();
         return;
     case Qt::Key_Right:
-        setFocusedAction(nextEnabledAction(m_focusedAction, 1));
+        setFocusedAction(nextEnabledAction(m_focusedAction, layoutDirection() == Qt::RightToLeft ? -1 : 1));
         event->accept();
         return;
     case Qt::Key_Home:
@@ -380,23 +432,17 @@ bool FluentMenuBar::eventFilter(QObject* watched, QEvent* event)
 QSize FluentMenuBar::sizeHint() const
 {
     ensureLayout();
-    const Metrics currentMetrics = metrics();
-    int widthValue = 0;
-    for (QAction* action : actions()) {
-        if (!action || !action->isVisible())
-            continue;
-        widthValue = qMax(widthValue, m_actionRects.value(action).right() + 1);
-    }
-    return QSize(widthValue, currentMetrics.rowHeight);
+    return QSize(m_naturalWidth, metrics().rowHeight);
 }
 
 FluentMenuBar::Metrics FluentMenuBar::metrics() const
 {
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
+    const int itemExtent = qMax(spacing.controlHeight.standard, QFontMetrics(font()).height() + spacing.xSmall);
     Metrics result;
-    result.rowHeight = spacing.controlHeight.standard;
-    result.itemHeight = spacing.controlHeight.standard;
+    result.rowHeight = itemExtent;
+    result.itemHeight = itemExtent;
     result.horizontalPadding = spacing.small;
     result.itemSpacing = spacing.gap.tight;
     result.cornerRadius = radius.control;
@@ -414,10 +460,13 @@ void FluentMenuBar::ensureLayout() const
         return;
 
     m_actionRects.clear();
+    m_overflowActions.clear();
+    m_overflowRect = QRect();
 
     const Metrics currentMetrics = metrics();
     const QFontMetrics fontMetrics(font());
-    int x = contentsRect().left();
+    const QRect content = contentsRect();
+    int x = content.left();
     const int y = contentsRect().top() + (qMax(currentMetrics.rowHeight, height()) - currentMetrics.itemHeight) / 2;
 
     for (QAction* action : actions()) {
@@ -429,8 +478,57 @@ void FluentMenuBar::ensureLayout() const
         m_actionRects.insert(action, QRect(x, y, itemWidth, currentMetrics.itemHeight));
         x += itemWidth + currentMetrics.itemSpacing;
     }
-
+    m_naturalWidth = qMax(0, x - currentMetrics.itemSpacing - content.left());
+    const bool overflow = m_naturalWidth > content.width();
+    const int overflowWidth = overflow ? qMin(currentMetrics.itemHeight, qMax(0, content.width())) : 0;
+    const int availableRight = content.right() + 1 - overflowWidth;
+    if (overflow)
+        m_overflowRect = QStyle::visualRect(layoutDirection(), content,
+            QRect(availableRight, y, overflowWidth, currentMetrics.itemHeight));
+    for (QAction* action : actions()) {
+        if (!m_actionRects.contains(action))
+            continue;
+        const QRect natural = m_actionRects.value(action);
+        if (overflow && natural.right() + 1 > availableRight) {
+            m_overflowActions.append(action);
+            m_actionRects.remove(action);
+        } else {
+            m_actionRects[action] = QStyle::visualRect(layoutDirection(), content, natural);
+        }
+    }
     m_layoutDirty = false;
+}
+
+void FluentMenuBar::syncOverflow()
+{
+    if (!m_overflowButton)
+        return;
+    ensureLayout();
+    if (!m_overflowMenu && m_overflowActions.isEmpty()) {
+        m_overflowButton->hide();
+        return;
+    }
+    if (!m_overflowMenu) {
+        m_overflowMenu = new FluentMenu(tr("More menus"), this);
+        m_overflowMenu->setObjectName(QStringLiteral("FluentMenuBar.OverflowMenu"));
+        m_overflowButton->setMenu(m_overflowMenu);
+    }
+    // Borrow the original actions: enabled/checked states, submenus and callbacks stay shared.
+    // zh_CN: 借用原动作，保持启用、选中、子菜单和回调一致，不改变所有权。
+    if (m_overflowMenu->actions() != m_overflowActions) {
+        const QPointer<FluentMenuBar> guard(this);
+        m_overflowMenu->hide();
+        if (!guard)
+            return;
+        for (QAction* action : m_overflowMenu->actions())
+            m_overflowMenu->removeAction(action);
+        for (QAction* action : m_overflowActions)
+            m_overflowMenu->addAction(action);
+    }
+    m_overflowMenu->setLayoutDirection(layoutDirection());
+    m_overflowButton->setGeometry(m_overflowRect);
+    m_overflowButton->setVisible(!m_overflowActions.isEmpty());
+    m_overflowButton->raise();
 }
 
 QAction* FluentMenuBar::actionAt(const QPoint& position, bool enabledOnly) const
@@ -510,8 +608,11 @@ void FluentMenuBar::activateAction(QAction* action)
         return;
     }
 
+    const QPointer<FluentMenuBar> guard(this);
+    const QPointer<QAction> actionGuard(action);
     closeOpenMenu();
-    action->trigger();
+    if (guard && actionGuard)
+        actionGuard->trigger();
 }
 
 void FluentMenuBar::openMenuForAction(QAction* action)
@@ -519,11 +620,15 @@ void FluentMenuBar::openMenuForAction(QAction* action)
     if (!action || !action->menu() || !action->isVisible() || !action->isEnabled())
         return;
 
+    const QPointer<FluentMenuBar> guard(this);
+    const QPointer<QAction> actionGuard(action);
     if (m_openAction && m_openAction != action && m_openAction->menu())
         m_openAction->menu()->hide();
+    if (!guard || !actionGuard || !actionGuard->menu())
+        return;
 
     ensureLayout();
-    const QRect itemRect = m_actionRects.value(action);
+    const QRect itemRect = m_actionRects.value(action, m_overflowRect);
     if (itemRect.isEmpty())
         return;
 
@@ -537,12 +642,15 @@ void FluentMenuBar::openMenuForAction(QAction* action)
 
 void FluentMenuBar::closeOpenMenu()
 {
-    if (m_openAction && m_openAction->menu())
-        m_openAction->menu()->hide();
+    const QPointer<QMenu> menu = m_openAction ? m_openAction->menu() : nullptr;
     m_openAction = nullptr;
     m_hoveredAction = nullptr;
     m_pressedAction = nullptr;
     update();
+    // aboutToHide may delete the bar, so finish local state before notifying the menu.
+    // zh_CN: aboutToHide 可销毁菜单栏，先收尾自身状态，再隐藏菜单。
+    if (menu)
+        menu->hide();
 }
 
 } // namespace fluent::menus_toolbars

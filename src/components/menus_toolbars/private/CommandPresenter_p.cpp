@@ -1,5 +1,6 @@
 #include "compatibility/PaintCompat.h"
 #include "CommandPresenter_p.h"
+#include "MenuSurface_p.h"
 
 #include <QAction>
 #include <QCoreApplication>
@@ -261,8 +262,7 @@ void CommandPresenter::paintEvent(QPaintEvent* event)
             : (layoutDirection() == Qt::RightToLeft
                       ? Typography::Icons::ChevronLeftMed
                       : Typography::Icons::ChevronRightMed);
-        Typography::Icons::paintGlyph(painter, visualRect(layoutDirection(), rect(), logical), glyph, 12,
-            Qt::AlignCenter);
+        paintMenuGlyph(painter, visualRect(layoutDirection(), rect(), logical), glyph, 12);
     }
 }
 
@@ -319,10 +319,10 @@ void CommandPresenter::paintOverflowContent()
     if (hasMenu())
         logicalTrailing -= 16 + ::Spacing::Gap::Normal;
 
-    const QRect checkLogical(logicalLeading, content.center().y() - 8, 16, 16);
+    const QRect checkLogical(logicalLeading, content.y() + (content.height() - 16) / 2, 16, 16);
     logicalLeading += 16 + ::Spacing::Gap::Tight;
 
-    const QRect iconLogical(logicalLeading, content.center().y() - 8, 16, 16);
+    const QRect iconLogical(logicalLeading, content.y() + (content.height() - 16) / 2, 16, 16);
     logicalLeading += 16 + ::Spacing::Gap::Normal;
 
     const int shortcutWidth = m_shortcutText.isEmpty() ? 0 : painter.fontMetrics().horizontalAdvance(m_shortcutText);
@@ -336,8 +336,7 @@ void CommandPresenter::paintOverflowContent()
 
     if (command->isCheckable() && command->isChecked()) {
         painter.setPen(textColor);
-        Typography::Icons::paintGlyph(painter, visualRect(layoutDirection(), bounds, checkLogical),
-            Typography::Icons::CheckMark, 12, Qt::AlignCenter);
+        paintMenuGlyph(painter, visualRect(layoutDirection(), bounds, checkLogical), Typography::Icons::CheckMark, 12);
     }
 
     if (!m_displayIcon.isNull()) {
@@ -349,8 +348,8 @@ void CommandPresenter::paintOverflowContent()
         if (!pixmap.isNull()) {
             const QRect target = visualRect(layoutDirection(), bounds, iconLogical);
             const QSize logicalSize = fluentPixmapLogicalSize(pixmap);
-            const QPoint topLeft(target.center().x() - logicalSize.width() / 2,
-                target.center().y() - logicalSize.height() / 2);
+            const QPointF topLeft(target.x() + (target.width() - logicalSize.width()) / 2.0,
+                target.y() + (target.height() - logicalSize.height()) / 2.0);
             fluentDrawPixmapAt(painter, topLeft, pixmap);
         }
     }
@@ -358,13 +357,18 @@ void CommandPresenter::paintOverflowContent()
     const QRect textVisual = visualRect(layoutDirection(), bounds, textLogical);
     const QString elided = painter.fontMetrics().elidedText(m_displayText, Qt::ElideRight, textVisual.width());
     painter.setPen(textColor);
-    painter.drawText(textVisual,
-        QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter) | Qt::TextSingleLine, elided);
+    const qreal baseline = menuTextBaseline(painter, QRectF(content));
+    const qreal textX = layoutDirection() == Qt::RightToLeft
+        ? textVisual.right() + 1 - QFontMetricsF(painter.font()).horizontalAdvance(elided)
+        : textVisual.left();
+    painter.drawText(QPointF(textX, baseline), elided);
 
     if (!shortcutLogical.isEmpty()) {
         painter.setPen(shortcutColor);
-        painter.drawText(visualRect(layoutDirection(), bounds, shortcutLogical), Qt::AlignCenter | Qt::TextSingleLine,
-            m_shortcutText);
+        const QRect shortcutVisual = visualRect(layoutDirection(), bounds, shortcutLogical);
+        const qreal shortcutX = shortcutVisual.x()
+            + (shortcutVisual.width() - QFontMetricsF(painter.font()).horizontalAdvance(m_shortcutText)) / 2.0;
+        painter.drawText(QPointF(shortcutX, baseline), m_shortcutText);
     }
 }
 

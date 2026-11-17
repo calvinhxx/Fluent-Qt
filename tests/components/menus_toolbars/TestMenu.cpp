@@ -359,6 +359,7 @@ TEST_F(MenuTest, Contract_CheckedGlyphSharesIconColumnWithoutMovingLabel)
             const QRect glyphPixels = differenceBounds(blank, checked);
             ASSERT_FALSE(glyphPixels.isEmpty());
             EXPECT_NEAR(QRectF(glyphPixels).center().x() / dpr, QRectF(iconPixels).center().x() / dpr, 1.0);
+            EXPECT_NEAR(QRectF(glyphPixels).center().y() / dpr, QRectF(iconPixels).center().y() / dpr, 1.0);
             // Only the leading slot changes: the label, row surface and menu size stay fixed.
             EXPECT_TRUE(iconPixels.adjusted(-1, -1, 1, 1).contains(glyphPixels));
         }
@@ -641,5 +642,196 @@ TEST_F(MenuTest, ParentEnterAtSubmenuOverlapPreservesCascade)
         EXPECT_EQ(menu.activeAction(), sibling);
         EXPECT_TRUE(menu.isVisible());
         menu.hide();
+    }
+}
+
+TEST_F(MenuTest, DisabledMenuDimsEnabledActions)
+{
+    fluent::menus_toolbars::FluentMenu menu(QStringLiteral("Actions"));
+    menu.addAction(QStringLiteral("Cut"));
+    menu.addAction(QStringLiteral("Copy"));
+    menu.ensurePolished();
+    menu.resize(menu.sizeHint());
+
+    auto renderMenu = [&menu]() {
+        QImage img(menu.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(Qt::transparent);
+        menu.render(&img);
+        return img;
+    };
+
+    const QImage enabledImg = renderMenu();
+    menu.setEnabled(false);
+    const QImage disabledImg = renderMenu();
+    EXPECT_NE(enabledImg, disabledImg);
+}
+
+TEST_F(MenuTest, FontStyleShrinkRestoresCompactMinimumWidth)
+{
+    QWidget host;
+    FluentMenu menu(QStringLiteral("Edit"), &host);
+    menu.addAction(QStringLiteral("Undo"));
+    menu.addAction(QStringLiteral("Copy selection"));
+    menu.addAction(QStringLiteral("Paste"));
+
+    const int bodyMinWidth = menu.minimumWidth();
+    const QSize bodyHint = menu.sizeHint();
+
+    menu.setFontStyle(::Typography::FontRole::Display);
+    QApplication::processEvents();
+    EXPECT_GT(menu.sizeHint().width(), bodyHint.width());
+    EXPECT_GT(menu.minimumWidth(), bodyMinWidth);
+
+    menu.setFontStyle(::Typography::FontRole::Body);
+    QApplication::processEvents();
+    EXPECT_EQ(menu.minimumWidth(), bodyMinWidth);
+    EXPECT_EQ(menu.sizeHint().width(), bodyHint.width());
+}
+
+TEST_F(MenuTest, EmbeddedWidgetModeStaysVisibleOnItemClickAndEnter)
+{
+    QWidget host;
+    host.resize(320, 280);
+    FluentMenu menu(QStringLiteral("Actions"), &host);
+    menu.setWindowFlag(Qt::Window, false);
+    QAction* copyAction = menu.addAction(QStringLiteral("Copy"));
+    menu.addAction(QStringLiteral("Paste"));
+
+    QSignalSpy triggeredSpy(copyAction, &QAction::triggered);
+    menu.move(16, 16);
+    menu.show();
+    host.show();
+    QApplication::processEvents();
+    ASSERT_TRUE(menu.isVisible());
+
+    const QPoint itemCenter = menu.actionGeometry(copyAction).center();
+    QTest::mouseClick(&menu, Qt::LeftButton, Qt::NoModifier, itemCenter);
+    QApplication::processEvents();
+    EXPECT_EQ(triggeredSpy.count(), 1);
+    EXPECT_TRUE(menu.isVisible());
+
+    menu.setActiveAction(copyAction);
+    QTest::keyClick(&menu, Qt::Key_Return);
+    QApplication::processEvents();
+    EXPECT_EQ(triggeredSpy.count(), 2);
+    EXPECT_TRUE(menu.isVisible());
+
+    QTest::keyClick(&menu, Qt::Key_Escape);
+    QApplication::processEvents();
+    EXPECT_TRUE(menu.isVisible());
+}
+
+TEST_F(MenuTest, EmbeddedActivationCanDestroyMenuOrOwner)
+{
+    for (const int key : QList<int>{Qt::Key_Return, Qt::Key_Enter, Qt::Key_Space, 0}) {
+        for (const bool deleteOwner : {false, true}) {
+            QPointer<QWidget> host = new QWidget;
+            QPointer<FluentMenu> menu = new FluentMenu(QStringLiteral("Actions"), host);
+            menu->setWindowFlag(Qt::Window, false);
+            auto* action = menu->addAction(QStringLiteral("Close"));
+            host->resize(320, 280);
+            host->show();
+            menu->show();
+            QApplication::processEvents();
+            menu->setActiveAction(action);
+            int triggered = 0;
+            QObject::connect(action, &QAction::triggered, [&] {
+                ++triggered;
+                if (deleteOwner)
+                    delete host.data();
+                else
+                    delete menu.data();
+            });
+            if (key) {
+                QKeyEvent event(QEvent::KeyPress, key, Qt::NoModifier);
+                QApplication::sendEvent(menu, &event);
+            } else {
+                const QPoint pos = menu->actionGeometry(action).center();
+                FLUENT_MAKE_MOUSE_EVENT(event, QEvent::MouseButtonRelease, menu.data(), pos, Qt::LeftButton,
+                    Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(menu, &event);
+            }
+            EXPECT_EQ(triggered, 1);
+            EXPECT_TRUE(menu.isNull());
+            delete host.data();
+        }
+    }
+}
+
+TEST_F(MenuTest, RemovedBorrowedActionDoesNotClosePreviousMenu)
+{
+    FluentMenu previous(QStringLiteral("Previous"));
+    QAction action(QStringLiteral("Shared"), nullptr);
+    for (int i = 0; i < 3; ++i) {
+        previous.addAction(&action);
+        previous.removeAction(&action);
+    }
+    previous.addAction(QStringLiteral("Remain"));
+    previous.show();
+    QApplication::processEvents();
+    action.trigger();
+    EXPECT_TRUE(previous.isVisible());
+    previous.hide();
+}
+
+TEST_F(MenuTest, TriggerHideCallbackCanScheduleOwnerDeletion)
+{
+    QPointer<QWidget> host = new QWidget;
+    auto* menu = new FluentMenu(QStringLiteral("Actions"), host);
+    auto* action = menu->addAction(QStringLiteral("Close"));
+    menu->show();
+    QApplication::processEvents();
+    // Qt continues its own hideEvent after aboutToHide, so defer deleting that receiver.
+    QObject::connect(menu, &QMenu::aboutToHide, host, &QObject::deleteLater);
+    action->trigger();
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    EXPECT_TRUE(host.isNull());
+}
+
+TEST_F(MenuTest, LabelsAndShortcutsKeepOneBaselineNextToCenteredIcons)
+{
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    FluentMenu menu(QStringLiteral("Actions"));
+    auto* action = menu.addAction(solidMenuIcon(), QStringLiteral("COPY"));
+    action->setShortcut(QKeySequence(QStringLiteral("Ctrl+P")));
+    menu.ensurePolished();
+    menu.resize(menu.sizeHint());
+    for (qreal dpr : {1.0, 1.25, 1.5, 2.0, 3.0}) {
+        SCOPED_TRACE(dpr);
+        const QImage painted = renderMenu(menu, dpr);
+        const QRect icon = colorBounds(painted, Qt::magenta);
+        ASSERT_FALSE(icon.isEmpty());
+        QRect text;
+        const QRect row = menu.actionGeometry(action);
+        const int left = qCeil(
+            (menu.contentsMargins().left() + Spacing::Padding::ControlHorizontal + Spacing::ControlHeight::Small)
+            * dpr);
+        const int right = left + qCeil(QFontMetrics(menu.font()).horizontalAdvance(QStringLiteral("COPY")) * dpr);
+        for (int y = qCeil(row.top() * dpr); y < qFloor((row.y() + row.height()) * dpr); ++y) {
+            for (int x = left; x < right; ++x) {
+                const QColor pixel = painted.pixelColor(x, y);
+                if (pixel.alpha() > 200 && pixel.lightness() < 100)
+                    text |= QRect(x, y, 1, 1);
+            }
+        }
+        ASSERT_FALSE(text.isEmpty());
+        EXPECT_NEAR(QRectF(text).center().y() / dpr, QRectF(icon).center().y() / dpr, 1.0);
+        // Compare the shortcut's final Latin capital independently of the
+        // platform-specific Ctrl/Cmd symbol and its fallback font.
+        // zh_CN: 单独比较快捷键末尾拉丁大写字母，避开 Ctrl/Cmd 符号的字体回退差异。
+        const QRect shortcut = menu.itemShortcutGeometry(action);
+        const int shortcutRight = qFloor((shortcut.right() + 1 - 6) * dpr);
+        const int shortcutLeft = shortcutRight
+            - qCeil(QFontMetrics(menu.font()).horizontalAdvance(QStringLiteral("P")) * dpr);
+        QRect shortcutCapital;
+        for (int y = qCeil(row.top() * dpr); y < qFloor((row.y() + row.height()) * dpr); ++y) {
+            for (int x = shortcutLeft; x < shortcutRight; ++x) {
+                const QColor pixel = painted.pixelColor(x, y);
+                if (pixel.alpha() > 200 && pixel.lightness() < 140)
+                    shortcutCapital |= QRect(x, y, 1, 1);
+            }
+        }
+        ASSERT_FALSE(shortcutCapital.isEmpty());
+        EXPECT_NEAR(QRectF(text).center().y() / dpr, QRectF(shortcutCapital).center().y() / dpr, 1.0);
     }
 }

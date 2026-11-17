@@ -713,6 +713,25 @@ TEST_F(SelectorBarTest, SelectionCanDriveExternalStackContentHostAndState)
     EXPECT_FALSE(selector->findChild<StackContentHost*>());
 }
 
+TEST_F(SelectorBarTest, NaturalItemWidthReservesElisionMarginAndScalesWithFontRole)
+{
+    SelectorBar selector;
+    selector.addItem(SelectorBarItem(QStringLiteral("Inbox"), Typography::Icons::Mail));
+    selector.addItem(SelectorBarItem(QStringLiteral("Calendar"), Typography::Icons::Calendar));
+    selector.resize(520, selector.sizeHint().height());
+    showAndProcess(selector);
+
+    const QFontMetrics bodyMetrics(selector.themeFont(Typography::FontRole::Body).toQFont());
+    const int minInboxWidth = 12 * 2 + 16 + 8 + bodyMetrics.horizontalAdvance(QStringLiteral("Inbox")) + 2;
+    EXPECT_GE(selector.itemGeometry(0).width(), minInboxWidth);
+    EXPECT_EQ(selector.sizeHint().height(), 44);
+
+    selector.setItemFontRole(Typography::FontRole::Title);
+    QApplication::processEvents();
+    EXPECT_GT(selector.sizeHint().height(), 44);
+    EXPECT_GE(selector.itemGeometry(0).height(), bodyMetrics.height());
+}
+
 TEST_F(SelectorBarTest, VisualCheck)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {

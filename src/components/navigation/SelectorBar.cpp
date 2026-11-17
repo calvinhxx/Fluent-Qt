@@ -25,6 +25,7 @@ namespace fluent::navigation {
 
 namespace {
 constexpr int kDefaultWidth = 520;
+constexpr int kTextElideSafetyMargin = 2;
 
 QRect collapsedIndicatorRect(const QRect& rect)
 {
@@ -646,7 +647,11 @@ QFont SelectorBar::iconFont(int pixelSize) const
 
 SelectorBar::Metrics SelectorBar::metrics() const
 {
-    return Metrics();
+    Metrics current;
+    const int fontHeight = QFontMetrics(itemFont()).height();
+    current.itemVisualHeight = qMax(current.itemVisualHeight, fontHeight + 10);
+    current.rowHeight = qMax(current.rowHeight, current.itemVisualHeight + 8);
+    return current;
 }
 
 void SelectorBar::invalidateLayout(bool updateGeometryHint)
@@ -798,7 +803,12 @@ int SelectorBar::naturalItemWidth(int index, const QFontMetrics& fontMetrics) co
     if (!isValidIndex(index) || !m_items.at(index).visible)
         return 0;
     const Metrics currentMetrics = metrics();
-    int width = currentMetrics.horizontalPadding * 2 + fontMetrics.horizontalAdvance(m_items.at(index).text);
+    const QString& text = m_items.at(index).text;
+    int width = currentMetrics.horizontalPadding * 2;
+    if (!text.isEmpty()) {
+        width += qMax(fontMetrics.horizontalAdvance(text), fontMetrics.boundingRect(text).width())
+            + kTextElideSafetyMargin;
+    }
     if (!m_items.at(index).iconGlyph.isEmpty())
         width += currentMetrics.iconSize + currentMetrics.iconGap;
     return qBound(currentMetrics.minItemWidth, width, currentMetrics.maxItemWidth);
@@ -1215,8 +1225,11 @@ void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
 
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
-    const QString text = painter.fontMetrics().elidedText(m_items.at(record.itemIndex).text, Qt::ElideRight,
-        record.textRect.width());
+    const QString& rawText = m_items.at(record.itemIndex).text;
+    const QFontMetrics fontMetrics = painter.fontMetrics();
+    const QString text = record.textRect.width() >= fontMetrics.horizontalAdvance(rawText)
+        ? rawText
+        : fontMetrics.elidedText(rawText, Qt::ElideRight, qMax(0, record.textRect.width()));
     painter.drawText(record.textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignVCenter | Qt::AlignLeft),
         text);
 
