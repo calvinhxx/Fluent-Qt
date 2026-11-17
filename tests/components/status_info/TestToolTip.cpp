@@ -49,7 +49,7 @@ protected:
 
         container = new ToolTipTestWindow();
         container->resize(600,
-                          600); // Should differ from scrollarea size to show scrolling if needed
+            600); // Should differ from scrollarea size to show scrolling if needed
 
         layout = new AnchorLayout(container);
         container->setLayout(layout);
@@ -72,10 +72,7 @@ protected:
 // Helper for "Move & Show" behavior in test
 class ToolTipBehavior : public QObject {
 public:
-    ToolTipBehavior(QWidget* target, ToolTip* tip) : m_target(target), m_tip(tip)
-    {
-        target->installEventFilter(this);
-    }
+    ToolTipBehavior(QWidget* target, ToolTip* tip) : m_target(target), m_tip(tip) { target->installEventFilter(this); }
 
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override
@@ -133,14 +130,13 @@ TEST_F(ToolTipTest, AttachedToolTipUsesFluentBubbleAboveTarget)
 
     scrollArea->show();
     QApplication::processEvents();
-    QHelpEvent help(QEvent::ToolTip, target->rect().center(),
-                    target->mapToGlobal(target->rect().center()));
+    QHelpEvent help(QEvent::ToolTip, target->rect().center(), target->mapToGlobal(target->rect().center()));
     QApplication::sendEvent(target, &help);
     QApplication::processEvents();
 
     ASSERT_TRUE(tip->isVisible());
-    const QRect bubble = tip->geometry().adjusted(tip->shadowMargin(), tip->shadowMargin(),
-                                                  -tip->shadowMargin(), -tip->shadowMargin());
+    const QRect bubble = tip->geometry().adjusted(tip->shadowMargin(), tip->shadowMargin(), -tip->shadowMargin(),
+        -tip->shadowMargin());
     const QRect targetGlobal(target->mapToGlobal(QPoint(0, 0)), target->size());
     EXPECT_NEAR(bubble.center().x(), targetGlobal.center().x(), 1);
     EXPECT_LT(bubble.bottom(), targetGlobal.top());
@@ -285,8 +281,7 @@ TEST_F(ToolTipTest, VisualGallery)
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
-    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") &&
-        qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
+    if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP() << "Skipping visual test in offscreen mode";
     }
 
@@ -343,4 +338,16 @@ TEST_F(ToolTipTest, VisualGallery)
     scrollArea->show();
 
     QApplication::exec();
+}
+
+TEST_F(ToolTipTest, DisabledStateAppliesDisabledTextColor)
+{
+    ToolTip tip;
+    tip.setText(QStringLiteral("Tooltip copy"));
+    auto* label = tip.findChild<Label*>();
+    ASSERT_NE(label, nullptr);
+
+    const QString enabledStyle = label->styleSheet();
+    tip.setEnabled(false);
+    EXPECT_NE(label->styleSheet(), enabledStyle);
 }

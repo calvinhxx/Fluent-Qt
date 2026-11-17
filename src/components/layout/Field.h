@@ -98,6 +98,9 @@ public:
 
     void onThemeUpdated() override;
 
+protected:
+    void changeEvent(QEvent* event) override;
+
 signals:
     void labelTextChanged(const QString& text);
     void labelPositionChanged(LabelPosition position);

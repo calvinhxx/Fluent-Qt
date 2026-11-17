@@ -966,3 +966,25 @@ TEST(ToastTest, Contract_WidgetWidthLimitConstrainsTheCardAndWrappedAction)
     EXPECT_LE(card->width(), 228);
     EXPECT_TRUE(card->rect().contains(QRect(button->mapTo(card, QPoint()), button->size())));
 }
+
+TEST(ToastTest, Contract_DisabledUpdatesMessageAndIconColor)
+{
+    QWidget host;
+    host.resize(400, 300);
+    Toast toast(&host);
+    toast.setTitle(QStringLiteral("Notice"));
+    toast.setMessage(QStringLiteral("Connection updated"));
+
+    auto* messageLabel = toast.findChild<fluent::textfields::Label*>(QStringLiteral("fluentToastMessage"));
+    auto* statusIcon = toast.findChild<fluent::FontIcon*>();
+    ASSERT_NE(messageLabel, nullptr);
+    ASSERT_NE(statusIcon, nullptr);
+
+    const QString enabledMessageStyle = messageLabel->styleSheet();
+    const QColor enabledIconColor = statusIcon->color();
+
+    toast.setEnabled(false);
+    EXPECT_NE(messageLabel->styleSheet(), enabledMessageStyle);
+    EXPECT_NE(statusIcon->color(), enabledIconColor);
+    EXPECT_EQ(statusIcon->color(), toast.themeColors().textDisabled);
+}

@@ -299,6 +299,13 @@ void Field::onThemeUpdated()
     update();
 }
 
+void Field::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::EnabledChange)
+        applyStatusColor();
+}
+
 void Field::releaseEditorInternal(bool deleteOwned, bool restoreParent)
 {
     QWidget* editor = m_editor.data();
@@ -371,13 +378,16 @@ void Field::updateHelperAndStatus()
 
 void Field::applyStatusColor()
 {
-    m_requiredMark->setStyleSheet(colorCss(themeColors().systemCritical));
+    const Colors& colors = themeColorsRef();
+    const bool enabled = isEnabled();
+    m_requiredMark->setStyleSheet(colorCss(enabled ? colors.systemCritical : colors.textDisabled));
     const bool showIcon = !m_validationMessage.isEmpty() && m_validationState != ValidationState::None
         && m_validationState != ValidationState::Validating;
+    const QColor effectiveStatusColor = enabled ? statusColor() : colors.textDisabled;
     m_statusIcon->setGlyph(showIcon ? statusGlyph() : QString());
-    m_statusIcon->setColor(statusColor());
+    m_statusIcon->setColor(effectiveStatusColor);
     m_statusIcon->setVisible(showIcon);
-    m_status->setStyleSheet(colorCss(statusColor()));
+    m_status->setStyleSheet(colorCss(effectiveStatusColor));
 }
 
 void Field::updateAccessible()

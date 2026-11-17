@@ -87,6 +87,7 @@ signals:
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:

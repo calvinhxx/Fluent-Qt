@@ -302,8 +302,18 @@ QSize Shimmer::sizeHint() const
     case ShimmerTemplate::AvatarTextRow:
         return QSize(240, 56);
     case ShimmerTemplate::TextBlock:
-    case ShimmerTemplate::Custom:
         return QSize(240, 72);
+    case ShimmerTemplate::Custom: {
+        if (m_customElements.isEmpty())
+            return QSize(240, 72);
+        QRectF bounds = m_customElements.constFirst().rect;
+        for (int i = 1; i < m_customElements.size(); ++i)
+            bounds = bounds.united(m_customElements.at(i).rect);
+        const int padX = qMax(0, int(std::floor(bounds.left())));
+        const int padY = qMax(0, int(std::floor(bounds.top())));
+        return QSize(qMax(240, int(std::ceil(bounds.right())) + padX),
+            qMax(48, int(std::ceil(bounds.bottom())) + padY));
+    }
     }
     return QSize(240, 72);
 }

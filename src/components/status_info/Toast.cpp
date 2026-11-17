@@ -674,6 +674,8 @@ void Toast::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
     if (event->type() == QEvent::LayoutDirectionChange && m_cardLayout)
         refreshStackGeometry();
+    if (event->type() == QEvent::EnabledChange)
+        applyPalette();
 }
 
 void Toast::paintEvent(QPaintEvent* event)
@@ -1166,7 +1168,8 @@ void Toast::applyPalette()
     m_borderColor = contrast ? colors.strokeCard : QColor(Qt::transparent);
     m_surfaceCache = QPixmap();
     if (m_statusBadge) {
-        const QJsonObject tint{{"bgLayer", colorSpec(severityBackground())}};
+        const QColor badgeFill = isEnabled() ? severityBackground() : colors.controlDisabled;
+        const QJsonObject tint{{"bgLayer", colorSpec(badgeFill)}};
         m_statusBadge->setThemeOverrides({{"light", tint}, {"dark", tint}, {"contrast", tint},
             {"radius", QJsonObject{{"control", toast_tokens::statusRadius}}}});
     }
@@ -1184,7 +1187,7 @@ void Toast::applyPalette()
     }
     if (m_icon) {
         m_icon->setGlyph(severityGlyph());
-        m_icon->setColor(severityForeground());
+        m_icon->setColor(isEnabled() ? severityForeground() : colors.textDisabled);
     }
     update();
 }

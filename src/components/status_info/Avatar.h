@@ -93,6 +93,18 @@ public:
      */
     QString effectiveInitials() const;
 
+    /**
+     * @brief Returns the active background color after theme and name fallback resolution.
+     * zh_CN: 返回经主题与姓名回退解析后的实际背景色。
+     */
+    QColor effectiveBackgroundColor() const;
+
+    /**
+     * @brief Returns the active foreground ink color used for initials or placeholder glyph.
+     * zh_CN: 返回首字母或占位图标使用的实际前景色。
+     */
+    QColor effectiveForegroundColor() const;
+
     InfoBadge* presenceBadge() const { return m_presenceBadge; }
 
     QSize sizeHint() const override;
@@ -116,7 +128,6 @@ protected:
 
 private:
     int avatarExtent() const;
-    QColor effectiveBackgroundColor() const;
     QColor effectiveForegroundColor(const QColor& background) const;
     QColor surroundingSurfaceColor() const;
     void updatePresenceBadge();
