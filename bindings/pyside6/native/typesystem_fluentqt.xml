@@ -588,6 +588,8 @@ if (!paletteGuard) {
                                  remove="all"/>
                 <modify-function signature="shouldDismissOnOutsidePress(const QPoint&amp;)const"
                                  remove="all"/>
+                <modify-function signature="onHostGeometryChanged()"
+                                 remove="all"/>
             </object-type>
             <object-type name="Flyout">
                 <enum-type name="Placement"/>
@@ -1052,6 +1054,7 @@ if (!paletteGuard) {
                 <modify-function signature="actionEvent(QActionEvent*)" remove="all"/>
                 <modify-function signature="eventFilter(QObject*,QEvent*)" remove="all"/>
                 <modify-function signature="resizeEvent(QResizeEvent*)" remove="all"/>
+                <modify-function signature="onHostGeometryChanged()" remove="all"/>
                 <modify-function signature="addCommand(QAction*,const QString&amp;,const QStringList&amp;)">
                     <inject-code class="target" position="beginning">
                         <insert-template name="command_palette_references_before"/>

@@ -93,6 +93,7 @@ protected:
     void actionEvent(QActionEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void onHostGeometryChanged() override;
 
 private:
     Q_DISABLE_COPY(CommandPalette)

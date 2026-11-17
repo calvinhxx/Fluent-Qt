@@ -233,6 +233,10 @@ protected:
     /// zh_CN: 返回驱动自动定位的锚点控件；没有锚点时返回空。
     virtual QWidget* automaticPositionAnchor() const { return nullptr; }
 
+    /// Subclasses may update their size before host-geometry repositioning.
+    /// zh_CN: 子类可在宿主几何变化重定位前同步自身尺寸。
+    virtual void onHostGeometryChanged() {}
+
     /**
      * @brief Allows subclasses to exclude trigger regions from outside-press dismissal.
      * zh_CN: 子类可将触发区域排除在外部按下自动关闭之外。

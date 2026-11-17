@@ -526,6 +526,29 @@ TEST_F(PopupTest, Contract_ModalDimClosePolicyAreOrthogonal)
     p.close();
 }
 
+TEST_F(PopupTest, Contract_ScrimStaysUnderOverlayWhenOpenedBeforeHostShown)
+{
+    QWidget hiddenHost;
+    hiddenHost.resize(400, 260);
+    Popup p(&hiddenHost);
+    p.setAnimationEnabled(false);
+    p.resize(220, 120);
+    p.open();
+    p.setModal(true);
+    p.setDim(true);
+    auto* scrim = hiddenHost.findChild<fluent::overlay::OverlayScrim*>(QStringLiteral("PopupScrim"),
+        Qt::FindDirectChildrenOnly);
+    ASSERT_NE(scrim, nullptr);
+    const auto children = hiddenHost.children();
+    EXPECT_LT(children.indexOf(scrim), children.indexOf(&p));
+    hiddenHost.show();
+    processEvents();
+    EXPECT_TRUE(p.isVisible());
+    EXPECT_TRUE(scrim->isVisible());
+    EXPECT_LT(hiddenHost.children().indexOf(scrim), hiddenHost.children().indexOf(&p));
+    p.close();
+}
+
 TEST_F(PopupTest, Contract_ThemeChangeDoesNotMutateOpenState)
 {
     Popup p(window);
@@ -1553,4 +1576,42 @@ TEST_F(PopupTest, Contract_BlurredBackdropExcludesPopupAndRefreshesWithoutFocusC
     // No cached image is painted in High Contrast; the underlying stripe stays sharp.
     EXPECT_LE(sample(QPoint(32, 50)).red(), 5);
     popup.close();
+}
+
+TEST_F(PopupTest, SettledPopupDetachesOpacityEffectForHostRenderAndRecreatesOnFade)
+{
+    Popup popup(window);
+    auto* badge = new fluent::basicinput::Button(QStringLiteral("Badge"), &popup);
+    badge->setFluentStyle(fluent::basicinput::Button::Accent);
+    badge->setGeometry(24, 24, 140, 36);
+
+    QImage emptyHost(window->size(), QImage::Format_ARGB32_Premultiplied);
+    emptyHost.fill(Qt::transparent);
+    {
+        QPainter painter(&emptyHost);
+        window->render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    }
+
+    popup.setAnimationEnabled(false);
+    popup.open();
+    processEvents();
+    ASSERT_TRUE(popup.isOpen());
+    EXPECT_DOUBLE_EQ(popup.popupProgress(), 1.0);
+    EXPECT_EQ(popup.graphicsEffect(), nullptr);
+
+    QImage renderedOpen(window->size(), QImage::Format_ARGB32_Premultiplied);
+    renderedOpen.fill(Qt::transparent);
+    {
+        QPainter painter(&renderedOpen);
+        window->render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    }
+    EXPECT_NE(renderedOpen, emptyHost);
+
+    popup.setAnimationEnabled(true);
+    popup.close();
+    QCoreApplication::processEvents();
+    if (popup.popupProgress() < 1.0 - 1e-6)
+        EXPECT_NE(popup.graphicsEffect(), nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !popup.isVisible() && !popup.isOpen(); }, 1500));
+    processEvents();
 }

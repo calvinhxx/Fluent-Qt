@@ -43,7 +43,9 @@ inline void raiseOverlayStack(QWidget* scrim, QWidget* overlay)
 {
     if (scrim)
         scrim->raise();
-    if (overlay && overlay->isVisible())
+    // Raise unhidden overlays even before their host is shown so scrims stay underneath.
+    // zh_CN: 宿主尚未显示时也提升未隐藏的浮层，避免显示后遮罩压在浮层之上。
+    if (overlay && !overlay->isHidden())
         overlay->raise();
 }
 

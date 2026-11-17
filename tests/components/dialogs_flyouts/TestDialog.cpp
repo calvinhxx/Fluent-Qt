@@ -821,3 +821,19 @@ TEST_F(DialogTest, VisualCheck)
     window->show();
     qApp->exec();
 }
+
+TEST_F(DialogTest, OffscreenHostCreatesSmokeScrimWhenDimEnabled)
+{
+    QWidget host;
+    host.setAttribute(Qt::WA_DontShowOnScreen);
+    host.resize(360, 240);
+
+    Dialog dialog(&host);
+    dialog.setDim(true);
+    dialog.setAnimationEnabled(false);
+    dialog.open();
+
+    EXPECT_FALSE(host.isVisible());
+    EXPECT_NE(host.findChild<OverlayScrim*>(QStringLiteral("DialogSmokeScrim")), nullptr);
+    dialog.close();
+}

@@ -39,9 +39,8 @@ TEST(FoundationContractsTest, Contract_PublicPresentationDefaultsAndInvalidTrans
     presentation::clearTransform(&root);
     EXPECT_EQ(presentation::mapToGlobal(&child, point), native);
     for (const QTransform& invalid :
-         {QTransform::fromScale(0, 1),
-          QTransform(1, 0, 0, 0, 1, 0, std::numeric_limits<qreal>::infinity(), 0, 1),
-          QTransform(1, 0, 0, 0, 1, 0, std::numeric_limits<qreal>::quiet_NaN(), 0, 1)}) {
+        {QTransform::fromScale(0, 1), QTransform(1, 0, 0, 0, 1, 0, std::numeric_limits<qreal>::infinity(), 0, 1),
+            QTransform(1, 0, 0, 0, 1, 0, std::numeric_limits<qreal>::quiet_NaN(), 0, 1)}) {
         presentation::setTransform(&root, QTransform::fromTranslate(23, 29));
         presentation::setTransform(&root, invalid);
         EXPECT_FALSE(presentation::hasTransform(&child));
@@ -102,21 +101,18 @@ TEST(FoundationContractsTest, Contract_OverlayPresentationPreserves2DAndNativeWi
     child.setGeometry(12, 21, 107, 39);
     EXPECT_EQ(presentedPointInTopLevel(&child, QPoint(17, 8)), child.mapTo(&window, QPoint(17, 8)));
     EXPECT_EQ(presentedRectInTopLevel(&child), QRect(child.mapTo(&window, QPoint()), child.size()));
-    EXPECT_EQ(localPointFromPresentedGlobal(&child, child.mapToGlobal(QPoint(17, 8))),
-              QPoint(17, 8));
+    EXPECT_EQ(localPointFromPresentedGlobal(&child, child.mapToGlobal(QPoint(17, 8))), QPoint(17, 8));
 
     QTransform transform;
     transform.translate(41, 19);
     transform.scale(.9, 1.1);
     root.setProperty(presentationTransformPropertyName(), transform);
-    const QPoint expected =
-        transform.map(QPointF(child.pos() + QPoint(17, 8))).toPoint() + root.pos();
+    const QPoint expected = transform.map(QPointF(child.pos() + QPoint(17, 8))).toPoint() + root.pos();
     EXPECT_EQ(presentedPointInTopLevel(&child, QPoint(17, 8)), expected);
     EXPECT_EQ(presentedRectInTopLevel(&child),
-              transform.mapRect(QRectF(child.geometry())).translated(root.pos()).toAlignedRect());
-    EXPECT_LE((localPointFromPresentedGlobal(&child, window.mapToGlobal(expected)) - QPoint(17, 8))
-                  .manhattanLength(),
-              1);
+        transform.mapRect(QRectF(child.geometry())).translated(root.pos()).toAlignedRect());
+    EXPECT_LE((localPointFromPresentedGlobal(&child, window.mapToGlobal(expected)) - QPoint(17, 8)).manhattanLength(),
+        1);
 
     QWidget native(&child, Qt::Tool);
     QWidget nativeChild(&native);
@@ -126,8 +122,7 @@ TEST(FoundationContractsTest, Contract_OverlayPresentationPreserves2DAndNativeWi
     QWidget otherWindow;
     EXPECT_EQ(presentationRoot(&otherWindow), nullptr);
     child.setProperty(presentationTransformPropertyName(), QTransform::fromTranslate(4, 5));
-    EXPECT_EQ(presentedPointInTopLevel(&child, QPoint(17, 8)),
-              child.mapTo(&window, QPoint(21, 13)));
+    EXPECT_EQ(presentedPointInTopLevel(&child, QPoint(17, 8)), child.mapTo(&window, QPoint(21, 13)));
     child.setProperty(presentationTransformPropertyName(), QVariant());
     root.setProperty(presentationTransformPropertyName(), QVariant());
     EXPECT_EQ(presentedRectInTopLevel(&child), QRect(child.mapTo(&window, QPoint()), child.size()));
@@ -170,17 +165,13 @@ TEST(FoundationContractsTest, Contract_EmbeddedAnchorsComposeSceneAndHostPresent
     const QTransform hostTransform = QTransform().translate(21, 29).scale(.94, .97);
     presentation::setTransform(&outer, hostTransform);
     const QPoint point(33, 11);
-    const QPointF inViewport =
-        proxy->deviceTransform(view.viewportTransform()).map(QPointF(child.pos() + point));
+    const QPointF inViewport = proxy->deviceTransform(view.viewportTransform()).map(QPointF(child.pos() + point));
     const QPoint expected =
-        (hostTransform.map(inViewport + view.viewport()->mapTo(&outer, QPoint())) + outer.pos())
-            .toPoint();
+        (hostTransform.map(inViewport + view.viewport()->mapTo(&outer, QPoint())) + outer.pos()).toPoint();
     EXPECT_EQ(presentedTopLevel(&child), &window);
     EXPECT_TRUE(presentation::hasTransform(&child));
     EXPECT_EQ(presentedPointInTopLevel(&child, point), expected);
-    EXPECT_LE((localPointFromPresentedGlobal(&child, window.mapToGlobal(expected)) - point)
-                  .manhattanLength(),
-              2);
+    EXPECT_LE((localPointFromPresentedGlobal(&child, window.mapToGlobal(expected)) - point).manhattanLength(), 2);
     EXPECT_TRUE(isAnchorVisibleInTopLevel(&child));
     QEvent moved(QEvent::Move);
     QDynamicPropertyChangeEvent transformed(presentationTransformPropertyName());
@@ -235,22 +226,18 @@ TEST(FoundationContractsTest, Contract_EmbeddedPopupsUseNativeContainmentAndOwne
     dialog.setAnimationEnabled(false);
     dialog.open();
     EXPECT_EQ(dialog.parentWidget(), &window);
-    EXPECT_EQ(dialog.pos(), QPoint((window.width() - dialog.width()) / 2,
-                                   (window.height() - dialog.height()) / 2));
+    EXPECT_EQ(dialog.pos(), QPoint((window.width() - dialog.width()) / 2, (window.height() - dialog.height()) / 2));
     dialog.close();
 
-    auto* tooltip =
-        status_info::ToolTip::attach(anchor, "Embedded target", status_info::ToolTip::Below);
+    auto* tooltip = status_info::ToolTip::attach(anchor, "Embedded target", status_info::ToolTip::Below);
     tooltip->setAnimationEnabled(false);
     QHelpEvent help(QEvent::ToolTip, anchor->rect().center(),
-                    overlay::presentedPointToGlobal(anchor, anchor->rect().center()));
+        overlay::presentedPointToGlobal(anchor, anchor->rect().center()));
     QApplication::sendEvent(anchor, &help);
     EXPECT_TRUE(tooltip->isVisible());
     EXPECT_EQ(tooltip->graphicsProxyWidget(), nullptr);
-    const QRect target =
-        overlay::presentedRectInTopLevel(anchor).translated(window.mapToGlobal(QPoint()));
-    EXPECT_EQ(overlay::visibleCardGeometry(tooltip->geometry(), tooltip->shadowMargin()).top(),
-              target.bottom() + 5);
+    const QRect target = overlay::presentedRectInTopLevel(anchor).translated(window.mapToGlobal(QPoint()));
+    EXPECT_EQ(overlay::visibleCardGeometry(tooltip->geometry(), tooltip->shadowMargin()).top(), target.bottom() + 5);
     tooltip->hide();
 
     QMenu menu(anchor);
@@ -276,16 +263,14 @@ TEST(FoundationContractsTest, Contract_ProjectedAnchorsChoosePlacementBeforeCont
         anchor.addItem(QString::number(row));
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
-    root.setProperty(overlay::presentationTransformPropertyName(),
-                     QTransform::fromTranslate(25, 340));
+    root.setProperty(overlay::presentationTransformPropertyName(), QTransform::fromTranslate(25, 340));
     const QRect projected = overlay::presentedRectInTopLevel(&anchor);
     dialogs_flyouts::Flyout flyout(&anchor);
     flyout.setAnimationEnabled(false);
     flyout.setPlacement(dialogs_flyouts::Flyout::Auto);
     flyout.resize(232, 180);
     flyout.showAt(&anchor);
-    EXPECT_EQ(overlay::visibleCardGeometry(flyout.geometry()).bottom(),
-              projected.top() - flyout.anchorOffset() - 1);
+    EXPECT_EQ(overlay::visibleCardGeometry(flyout.geometry()).bottom(), projected.top() - flyout.anchorOffset() - 1);
     flyout.close();
 
     dialogs_flyouts::TeachingTip tip(&anchor);
@@ -293,28 +278,25 @@ TEST(FoundationContractsTest, Contract_ProjectedAnchorsChoosePlacementBeforeCont
     tip.setTailVisible(false);
     tip.setCardSize(QSize(200, 148));
     tip.showAt(&anchor);
-    EXPECT_EQ(overlay::visibleCardGeometry(tip.geometry()).bottom(),
-              projected.top() - tip.placementMargin() - 1);
+    EXPECT_EQ(overlay::visibleCardGeometry(tip.geometry()).bottom(), projected.top() - tip.placementMargin() - 1);
     tip.close();
 
     anchor.showPopup();
     auto* comboPopup = window.findChild<QWidget*>("ComboBoxPopup");
     ASSERT_NE(comboPopup, nullptr);
     EXPECT_EQ(overlay::visibleCardGeometry(comboPopup->geometry()).bottom(),
-              projected.top() - anchor.popupOffset() - 1);
+        projected.top() - anchor.popupOffset() - 1);
     anchor.hidePopup();
 
     root.setProperty(overlay::presentationTransformPropertyName(), QVariant());
     flyout.showAt(&anchor);
     const QRect logical(anchor.mapTo(&window, QPoint()), anchor.size());
-    EXPECT_EQ(overlay::visibleCardGeometry(flyout.geometry()).top(),
-              logical.bottom() + flyout.anchorOffset());
-    root.setProperty(overlay::presentationTransformPropertyName(),
-                     QTransform::fromTranslate(25, 340));
+    EXPECT_EQ(overlay::visibleCardGeometry(flyout.geometry()).top(), logical.bottom() + flyout.anchorOffset());
+    root.setProperty(overlay::presentationTransformPropertyName(), QTransform::fromTranslate(25, 340));
     ASSERT_TRUE(QTest::qWaitFor(
         [&] {
-            return overlay::visibleCardGeometry(flyout.geometry()).bottom() ==
-                   projected.top() - flyout.anchorOffset() - 1;
+            return overlay::visibleCardGeometry(flyout.geometry()).bottom()
+                == projected.top() - flyout.anchorOffset() - 1;
         },
         1000));
     flyout.close();
@@ -331,24 +313,18 @@ TEST(FoundationContractsTest, Contract_ProjectionAnchorsTooltipsButDoesNotMoveOw
     anchor.setGeometry(220, 140, 160, 32);
     window.show();
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
-    root.setProperty(overlay::presentationTransformPropertyName(),
-                     QTransform::fromTranslate(25, 140));
-    auto* tooltip =
-        status_info::ToolTip::attach(&anchor, "Projected target", status_info::ToolTip::Below);
+    root.setProperty(overlay::presentationTransformPropertyName(), QTransform::fromTranslate(25, 140));
+    auto* tooltip = status_info::ToolTip::attach(&anchor, "Projected target", status_info::ToolTip::Below);
     tooltip->setAnimationEnabled(false);
-    QHelpEvent help(QEvent::ToolTip, anchor.rect().center(),
-                    anchor.mapToGlobal(anchor.rect().center()));
+    QHelpEvent help(QEvent::ToolTip, anchor.rect().center(), anchor.mapToGlobal(anchor.rect().center()));
     QApplication::sendEvent(&anchor, &help);
     ASSERT_TRUE(tooltip->isVisible());
     const auto aligned = [&] {
-        const QRect target =
-            overlay::presentedRectInTopLevel(&anchor).translated(window.mapToGlobal(QPoint()));
-        return overlay::visibleCardGeometry(tooltip->geometry(), tooltip->shadowMargin()).top() ==
-               target.bottom() + 5;
+        const QRect target = overlay::presentedRectInTopLevel(&anchor).translated(window.mapToGlobal(QPoint()));
+        return overlay::visibleCardGeometry(tooltip->geometry(), tooltip->shadowMargin()).top() == target.bottom() + 5;
     };
     EXPECT_TRUE(aligned());
-    root.setProperty(overlay::presentationTransformPropertyName(),
-                     QTransform::fromTranslate(35, 180));
+    root.setProperty(overlay::presentationTransformPropertyName(), QTransform::fromTranslate(35, 180));
     ASSERT_TRUE(QTest::qWaitFor(aligned, 1000));
     tooltip->hide();
 
@@ -358,16 +334,15 @@ TEST(FoundationContractsTest, Contract_ProjectionAnchorsTooltipsButDoesNotMoveOw
     dialog.open();
     EXPECT_EQ(dialog.parentWidget(), &window);
     EXPECT_FALSE(dialog.isWindow());
-    EXPECT_EQ(dialog.pos(), QPoint((window.width() - dialog.width()) / 2,
-                                   (window.height() - dialog.height()) / 2));
+    EXPECT_EQ(dialog.pos(), QPoint((window.width() - dialog.width()) / 2, (window.height() - dialog.height()) / 2));
     dialog.close();
     dialogs_flyouts::ContentDialog contentDialog(&anchor);
     contentDialog.setAnimationEnabled(false);
     contentDialog.open();
     EXPECT_EQ(contentDialog.parentWidget(), &window);
     EXPECT_FALSE(contentDialog.isWindow());
-    EXPECT_EQ(contentDialog.pos(), QPoint((window.width() - contentDialog.width()) / 2,
-                                          (window.height() - contentDialog.height()) / 2));
+    EXPECT_EQ(contentDialog.pos(),
+        QPoint((window.width() - contentDialog.width()) / 2, (window.height() - contentDialog.height()) / 2));
     contentDialog.close();
     collections::DrawerView drawer(&anchor);
     drawer.setAnimationEnabled(false);
@@ -400,8 +375,7 @@ TEST(FoundationContractsTest, Contract_OversizedOverlayCardUsesStableAvailableOr
     const QRect bounds(10, 20, 100, 80);
     const QSize oversizedCard(300, 200);
 
-    const QPoint clamped =
-        fluent::overlay::clampCardTopLeft(QPoint(70, 60), oversizedCard, bounds, 8);
+    const QPoint clamped = fluent::overlay::clampCardTopLeft(QPoint(70, 60), oversizedCard, bounds, 8);
 
     EXPECT_EQ(clamped, QPoint(18, 28));
 }
@@ -417,6 +391,27 @@ TEST(FoundationContractsTest, Contract_ElevationNoneHasNoVisibleShadow)
         EXPECT_EQ(shadow.spreadRadius, 0);
         EXPECT_DOUBLE_EQ(shadow.opacity, 0.0);
     }
+}
+
+TEST(FoundationContractsTest, Contract_OffscreenDontShowOnScreenHostAnchorVisibility)
+{
+    QWidget host;
+    host.setAttribute(Qt::WA_DontShowOnScreen);
+    QWidget child(&host);
+    child.resize(64, 32);
+
+    EXPECT_FALSE(host.isVisible());
+    EXPECT_TRUE(fluent::overlay::isAnchorVisibleInTopLevel(&child));
+
+    child.hide();
+    EXPECT_FALSE(fluent::overlay::isAnchorVisibleInTopLevel(&child));
+    child.show();
+    EXPECT_TRUE(fluent::overlay::isAnchorVisibleInTopLevel(&child));
+
+    host.show();
+    EXPECT_TRUE(fluent::overlay::isAnchorVisibleInTopLevel(&child));
+    host.hide();
+    EXPECT_FALSE(fluent::overlay::isAnchorVisibleInTopLevel(&child));
 }
 
 } // namespace
