@@ -897,21 +897,18 @@ void DatePicker::paintEvent(QPaintEvent*)
     if (surface.isEmpty())
         return;
 
-    const bool active = isEnabled() && (underMouse() || isDown());
-    const QRectF sr(surface);
+    const detail::PickerFieldColors fieldColors = detail::resolvePickerFieldColors(fluentStyle(), colors, isEnabled(),
+        underMouse(), isDown());
 
     // Fluent treatment. zh_CN: Fluent 样式。
-    QColor bg = colors.controlDefault;
-    if (!isEnabled())
-        bg = colors.controlDisabled;
-    else if (isDown())
-        bg = colors.subtleTertiary;
-    else if (underMouse())
-        bg = colors.subtleSecondary;
-
     painter.setPen(Qt::NoPen);
-    painter.setBrush(bg);
+    painter.setBrush(fieldColors.background);
     painter.drawRoundedRect(QRectF(surface), radius.control, radius.control);
+    if (fieldColors.border != Qt::transparent) {
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(fieldColors.border, 1.0));
+        painter.drawRoundedRect(QRectF(surface).adjusted(0.5, 0.5, -0.5, -0.5), radius.control, radius.control);
+    }
 
     const auto segments = fieldSegments();
     painter.setFont(font());
@@ -919,13 +916,11 @@ void DatePicker::paintEvent(QPaintEvent*)
         const auto& segment = segments.at(i);
 
         if (i > 0) {
-            painter.setPen(colors.strokeDivider);
+            painter.setPen(fieldColors.divider);
             painter.drawLine(segment.rect.left(), surface.top() + 1, segment.rect.left(), surface.bottom() - 1);
         }
 
-        QColor segmentTextColor =
-            isEnabled() ? (active ? colors.textPrimary : colors.textSecondary) : colors.textDisabled;
-        painter.setPen(segmentTextColor);
+        painter.setPen(fieldColors.text);
         const QString text = fieldDisplayText(segment.field);
         QRect textRect = segment.rect.adjusted(kSegmentHPadding, 0, -kSegmentHPadding, 0);
         const Qt::Alignment alignment = Qt::AlignVCenter | fieldTextAlignment(segment.field);

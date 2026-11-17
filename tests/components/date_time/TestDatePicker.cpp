@@ -106,14 +106,10 @@ protected:
     static void SetUpTestSuite()
     {
         qRegisterMetaType<QDate>("QDate");
-        qRegisterMetaType<fluent::date_time::DatePicker::DateField>(
-            "fluent::date_time::DatePicker::DateField");
-        qRegisterMetaType<fluent::date_time::DatePicker::MonthFormat>(
-            "fluent::date_time::DatePicker::MonthFormat");
-        qRegisterMetaType<fluent::date_time::DatePicker::DayFormat>(
-            "fluent::date_time::DatePicker::DayFormat");
-        qRegisterMetaType<fluent::date_time::DatePicker::YearFormat>(
-            "fluent::date_time::DatePicker::YearFormat");
+        qRegisterMetaType<fluent::date_time::DatePicker::DateField>("fluent::date_time::DatePicker::DateField");
+        qRegisterMetaType<fluent::date_time::DatePicker::MonthFormat>("fluent::date_time::DatePicker::MonthFormat");
+        qRegisterMetaType<fluent::date_time::DatePicker::DayFormat>("fluent::date_time::DatePicker::DayFormat");
+        qRegisterMetaType<fluent::date_time::DatePicker::YearFormat>("fluent::date_time::DatePicker::YearFormat");
     }
 
     void SetUp() override
@@ -164,14 +160,13 @@ TEST_F(DatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&picker), nullptr);
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Body);
     EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
-              tests::support::normalizedFontFamilies(
-                  picker.themeFont(Typography::FontRole::Body).toQFont()));
+        tests::support::normalizedFontFamilies(picker.themeFont(Typography::FontRole::Body).toQFont()));
 
     picker.setLocale(QLocale(QLocale::Chinese, QLocale::China));
     picker.setSelectedDate(QDate(2026, 7, 21));
     picker.setMonthFormat(DatePicker::MonthFormat::FullMonthName);
     EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Month),
-              QLocale(QLocale::Chinese, QLocale::China).monthName(7, QLocale::LongFormat));
+        QLocale(QLocale::Chinese, QLocale::China).monthName(7, QLocale::LongFormat));
 }
 
 TEST_F(DatePickerTest, InheritedFontRoleResolvesThemeTypography)
@@ -182,8 +177,7 @@ TEST_F(DatePickerTest, InheritedFontRoleResolvesThemeTypography)
 
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Caption);
     EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
-              tests::support::normalizedFontFamilies(
-                  picker.themeFont(Typography::FontRole::Caption).toQFont()));
+        tests::support::normalizedFontFamilies(picker.themeFont(Typography::FontRole::Caption).toQFont()));
 }
 
 TEST_F(DatePickerTest, SelectedDateClearAndFormattingDriveSegments)
@@ -254,13 +248,13 @@ TEST_F(DatePickerTest, ApplicationOwnedTextUpdatesEntryAndFlyoutActions)
     ASSERT_NE(buttonFor(popup, QStringLiteral("DatePickerConfirmButton")), nullptr);
     ASSERT_NE(buttonFor(popup, QStringLiteral("DatePickerCancelButton")), nullptr);
     EXPECT_EQ(buttonFor(popup, QStringLiteral("DatePickerConfirmButton"))->accessibleName(),
-              QStringLiteral("Apply date"));
+        QStringLiteral("Apply date"));
     EXPECT_EQ(buttonFor(popup, QStringLiteral("DatePickerCancelButton"))->accessibleName(),
-              QStringLiteral("Dismiss date picker"));
+        QStringLiteral("Dismiss date picker"));
 
     picker->setConfirmButtonAccessibleName(QStringLiteral("Save date"));
     EXPECT_EQ(buttonFor(popup, QStringLiteral("DatePickerConfirmButton"))->accessibleName(),
-              QStringLiteral("Save date"));
+        QStringLiteral("Save date"));
 }
 
 TEST_F(DatePickerTest, LocaleTracksTheInheritedQWidgetProperty)
@@ -277,8 +271,7 @@ TEST_F(DatePickerTest, LocaleTracksTheInheritedQWidgetProperty)
     base->setLocale(targetLocale);
 
     EXPECT_EQ(picker.locale(), targetLocale);
-    EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Month),
-              targetLocale.monthName(7, QLocale::LongFormat));
+    EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Month), targetLocale.monthName(7, QLocale::LongFormat));
     EXPECT_EQ(localeSpy.count(), 1);
 }
 
@@ -480,8 +473,7 @@ TEST_F(DatePickerTest, FontChangeUpdatesEntryAndOpenFlyout)
     EXPECT_GT(popup->height(), defaultPopupSize.height());
     EXPECT_GT(monthColumn->height(), defaultColumnHeight);
     EXPECT_EQ(monthColumn->font().pixelSize(), 30);
-    EXPECT_EQ(monthColumn->property("selectedRowHeight").toInt(),
-              QFontMetrics(largeFont).height() + 12);
+    EXPECT_EQ(monthColumn->property("selectedRowHeight").toInt(), QFontMetrics(largeFont).height() + 12);
 }
 
 TEST_F(DatePickerTest, ThemeFontRefreshPreservesPendingFlyoutDate)
@@ -514,10 +506,9 @@ TEST_F(DatePickerTest, ThemeFontRefreshPreservesPendingFlyoutDate)
     EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 21));
     EXPECT_EQ(QApplication::focusWidget(), focusedBeforeTheme);
     EXPECT_EQ(tests::support::normalizedFontFamilies(picker->font()),
-              tests::support::normalizedFontFamilies(
-                  picker->themeFont(Typography::FontRole::Body).toQFont()));
+        tests::support::normalizedFontFamilies(picker->themeFont(Typography::FontRole::Body).toQFont()));
     EXPECT_EQ(tests::support::normalizedFontFamilies(dayColumn->font()),
-              tests::support::normalizedFontFamilies(picker->font()));
+        tests::support::normalizedFontFamilies(picker->font()));
     EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
     EXPECT_GT(popup->height(), defaultPopupSize.height());
     EXPECT_GT(dayColumn->height(), defaultColumnHeight);
@@ -585,8 +576,7 @@ TEST_F(DatePickerTest, FlyoutAlignsSelectedRowWithClosedField)
 
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
     ASSERT_GT(selectedRowCenterY, 0);
-    const QPoint selectedRowCenter =
-        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter = panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
     const QPoint panelTopLeft = panel->mapTo(window, QPoint(0, 0));
     const QPoint fieldTopLeft = picker->mapTo(window, QPoint(0, 0));
@@ -609,8 +599,7 @@ TEST_F(DatePickerTest, FlyoutClampsAtTopEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter =
-        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter = panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -623,8 +612,7 @@ TEST_F(DatePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     DatePicker* picker = new DatePicker(window);
     picker->setSelectedDate(QDate(2026, 8, 25));
     const QSize pickerSize = picker->sizeHint();
-    picker->setGeometry(220, window->height() - pickerSize.height(), pickerSize.width(),
-                        pickerSize.height());
+    picker->setGeometry(220, window->height() - pickerSize.height(), pickerSize.width(), pickerSize.height());
 
     Flyout* popup = openPopupFor(picker, window);
     ASSERT_NE(popup, nullptr);
@@ -634,8 +622,7 @@ TEST_F(DatePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter =
-        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter = panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -694,8 +681,7 @@ TEST_F(DatePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
 #endif
     EXPECT_TRUE(dayColumn->property("selectedRowHasBackground").toBool());
 
-    FLUENT_MAKE_ENTER_EVENT(enterEvent, dayColumn->rect().center().x(),
-                            dayColumn->rect().center().y());
+    FLUENT_MAKE_ENTER_EVENT(enterEvent, dayColumn->rect().center().x(), dayColumn->rect().center().y());
     QApplication::sendEvent(dayColumn, &enterEvent);
     QTest::qWait(180);
     processEvents();
@@ -1060,8 +1046,7 @@ TEST_F(DatePickerTest, VisualCheck)
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &Button::clicked, themeButton, [themeButton]() {
         const bool dark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Dark;
-        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light
-                                             : fluent::FluentElement::Dark);
+        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light : fluent::FluentElement::Dark);
         themeButton->setText(dark ? QStringLiteral("Dark") : QStringLiteral("Light"));
     });
 
@@ -1086,4 +1071,29 @@ TEST_F(DatePickerTest, VisualCheck)
         return;
     }
     qApp->exec();
+}
+
+TEST_F(DatePickerTest, FluentStylesRenderDistinctly)
+{
+    DatePicker picker;
+    picker.setSelectedDate(QDate(2026, 7, 21));
+    picker.resize(picker.sizeHint());
+
+    auto renderPicker = [&picker]() {
+        QImage img(picker.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(Qt::transparent);
+        picker.render(&img);
+        return img;
+    };
+
+    picker.setFluentStyle(Button::Standard);
+    const QImage standardImg = renderPicker();
+    picker.setFluentStyle(Button::Accent);
+    const QImage accentImg = renderPicker();
+    picker.setFluentStyle(Button::Subtle);
+    const QImage subtleImg = renderPicker();
+
+    EXPECT_NE(standardImg, accentImg);
+    EXPECT_NE(standardImg, subtleImg);
+    EXPECT_NE(accentImg, subtleImg);
 }

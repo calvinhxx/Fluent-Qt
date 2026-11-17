@@ -2427,6 +2427,32 @@ class FluentQtBindingTest(unittest.TestCase):
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         QCoreApplication.processEvents()
 
+    def test_time_picker_fallback_does_not_commit_or_replace_selection(self):
+        picker = fluentqt.TimePicker()
+        picker.setMinuteIncrement(5)
+        picker.setTime(QTime(8, 0))
+        changes, selections = [], []
+        picker.timeChanged.connect(changes.append)
+        picker.selectedTimeChanged.connect(selections.append)
+        picker.setTime(QTime(8, 7))
+        picker.setTime(QTime(8, 6))
+        self.assertEqual(picker.time(), QTime(8, 5))
+        self.assertFalse(picker.selectedTime().isValid())
+        self.assertEqual(changes, [QTime(8, 5)])
+        self.assertEqual(selections, [])
+        picker.setSelectedTime(QTime(9, 30))
+        changes.clear()
+        selections.clear()
+        picker.setTime(QTime(15, 45))
+        picker.setTime(QTime())
+        self.assertEqual(picker.time(), QTime(9, 30))
+        self.assertEqual(picker.selectedTime(), QTime(9, 30))
+        self.assertEqual(changes, [])
+        self.assertEqual(selections, [])
+        picker.clearSelectedTime()
+        self.assertEqual(picker.time(), QTime(15, 45))
+        self.assertFalse(picker.selectedTime().isValid())
+
     def test_time_picker_properties_enums_signals_and_popup(self):
         host = QWidget()
         host.resize(720, 520)
