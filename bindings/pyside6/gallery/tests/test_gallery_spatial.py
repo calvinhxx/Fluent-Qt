@@ -1085,6 +1085,179 @@ class GallerySpatialTest(unittest.TestCase):
             delete(receiver)
 
     @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_flip_view_receives_projected_parent_hover(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires full native Gallery presentation")
+        window = GalleryWindow(startup_visuals=False)
+        window.resize(1185, 850)
+        try:
+            window.show()
+            window.activateWindow()
+            self.assertTrue(QTest.qWaitForWindowActive(window))
+            window.navigate("flip-view", animated=False)
+            _qwait(300)
+            view = window.findChildren(fluentqt.FlipView)[0]
+            controller = window._spatial_controller
+            handle = window.windowHandle()
+            QTest.mouseMove(handle, QPoint(window.width() // 2, 25))
+            _qwait(100)
+            def point(local):
+                return handle.mapFromGlobal(window.mapToGlobal(controller.projected_position(view, local)))
+            for spatial in (True, False, True):
+                with self.subTest(spatial=spatial):
+                    self.settings.set_spatial_mode_enabled(spatial)
+                    for _ in range(100):
+                        if not spatial or (controller.canvas and controller.canvas.property("presenting")):
+                            break
+                        _qwait(50)
+                    controller.settle()
+                    view.setCurrentIndex(1)
+                    _qwait(300)
+                    QTest.mouseMove(handle, QPoint(window.width() // 2, 25))
+                    _qwait(80)
+                    idle = view.grab().toImage()
+                    QTest.mouseMove(handle, point(view.rect().center()))
+                    _qwait(250)
+                    hover = view.grab().toImage()
+                    dpr = hover.devicePixelRatio()
+                    area = QRect(round((view.width() - 18) * dpr), round((view.height() / 2 - 14) * dpr),
+                                 round(16 * dpr), round(28 * dpr))
+                    self.assertNotEqual(idle.copy(area), hover.copy(area))
+                    QTest.mouseClick(handle, Qt.LeftButton, Qt.NoModifier,
+                                     point(QPoint(view.width() - 10, view.height() // 2)))
+                    self.assertEqual(view.currentIndex(), 2)
+                    _qwait(250)
+                    QTest.mouseClick(handle, Qt.LeftButton, Qt.NoModifier,
+                                     point(QPoint(10, view.height() // 2)))
+                    self.assertEqual(view.currentIndex(), 1)
+        finally:
+            self.settings.set_spatial_mode_enabled(False)
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_native_parent_hover_and_mouse_metadata(self):
+        if QApplication.platformName() in ("offscreen", "minimal", "vnc"):
+            self.skipTest("requires full native Gallery QWindow input")
+
+        class Probe(QWidget):
+            def __init__(self, parent):
+                super().__init__(parent)
+                self.events = []
+                self.timestamp = 0
+                self.accept_press = False
+                self.setAttribute(Qt.WA_Hover)
+                self.setMouseTracking(True)
+
+            def event(self, event):
+                if hasattr(self, "events"):
+                    self.events.append(event.type())
+                    if event.type() == QEvent.MouseButtonPress:
+                        self.timestamp = event.timestamp()
+                        if self.accept_press:
+                            event.accept()
+                            return True
+                return super().event(event)
+
+        window = GalleryWindow(startup_visuals=False)
+        window.resize(1185, 850)
+        try:
+            window.show()
+            window.activateWindow()
+            self.assertTrue(QTest.qWaitForWindowActive(window))
+            window.navigate("button", animated=False)
+            _qwait(500)
+            preview = window.findChild(QWidget, "gallerySamplePreviewWidget")
+            self.assertIsNotNone(preview)
+            parent = Probe(preview.parentWidget())
+            parent.setGeometry(8, 8, 320, 32)
+            parent.accept_press = True
+            first, second = Probe(parent), Probe(parent)
+            first.setGeometry(8, 2, 110, 28)
+            second.setGeometry(160, 2, 110, 28)
+            for widget in (parent, first, second):
+                widget.show()
+            parent.raise_()
+            scroll = parent.parentWidget()
+            while scroll and not isinstance(scroll, fluentqt.ScrollView):
+                scroll = scroll.parentWidget()
+            self.assertIsNotNone(scroll)
+            controller = window._spatial_controller
+            handle = window.windowHandle()
+            for spatial in (False, True, False, True):
+                with self.subTest(spatial=spatial):
+                    self.settings.set_spatial_mode_enabled(spatial)
+                    _qwait(300)
+                    controller.settle()
+                    scroll.ensureWidgetVisible(parent, 0, 30)
+                    _qwait(150)
+                    QTest.mouseMove(handle, QPoint(window.width() // 2, 24))
+                    parent.events.clear()
+                    first.events.clear()
+                    QTest.mouseMove(handle, controller.projected_position(first, first.rect().center()))
+                    self.assertEqual(parent.events.count(QEvent.Enter), 1)
+                    self.assertEqual(first.events.count(QEvent.HoverEnter), 1)
+                    self.assertTrue(first.underMouse())
+                    QTest.mouseClick(handle, Qt.LeftButton, Qt.ShiftModifier,
+                                     controller.projected_position(first, first.rect().center()))
+                    self.assertEqual(first.events.count(QEvent.MouseButtonPress), 1)
+                    self.assertEqual(parent.events.count(QEvent.MouseButtonPress), 1)
+                    self.assertGreater(first.timestamp, 0)
+                    self.assertEqual(first.timestamp, parent.timestamp)
+                    QTest.mouseMove(handle, controller.projected_position(second, second.rect().center()))
+                    self.assertEqual(first.events.count(QEvent.HoverLeave), 1)
+                    self.assertEqual(parent.events.count(QEvent.Leave), 0)
+                    QTest.mouseMove(handle, QPoint(window.width() // 2, 24))
+                    self.assertEqual(parent.events.count(QEvent.Leave), 1)
+                    first.accept_press = True
+                    QTest.mousePress(handle, Qt.LeftButton, Qt.NoModifier,
+                                     controller.projected_position(first, first.rect().center()))
+                    QTest.mouseMove(handle, QPoint(window.width() // 2, 24))
+                    self.assertTrue(first.underMouse())
+                    QTest.mouseRelease(handle, Qt.LeftButton, Qt.NoModifier, QPoint(window.width() // 2, 24))
+                    self.assertFalse(first.underMouse())
+                    first.accept_press = False
+        finally:
+            self.settings.set_spatial_mode_enabled(False)
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
+    def test_projected_hover_preserves_ancestors_between_siblings(self):
+        from fluentqt_gallery.spatial_controller import GallerySpatialController
+        window = QWidget()
+        nav = QWidget(window)
+        container = QWidget(nav)
+        first, second = QWidget(container), QWidget(container)
+        controller = QObject()
+        controller.window, controller.navigation = window, nav
+        controller.hovered, controller.hover_path = None, []
+        events = []
+
+        class Recorder(QObject):
+            def eventFilter(self, watched, event):
+                if event.type() in (QEvent.Enter, QEvent.Leave):
+                    events.append((watched.objectName(), event.type()))
+                return False
+
+        recorder = Recorder()
+        for widget, name in ((nav, "nav"), (container, "container"), (first, "first"), (second, "second")):
+            widget.setObjectName(name)
+            widget.installEventFilter(recorder)
+        try:
+            GallerySpatialController.hover(controller, first, QPoint(2, 2))
+            self.assertEqual(events, [("nav", QEvent.Enter), ("container", QEvent.Enter), ("first", QEvent.Enter)])
+            events.clear()
+            GallerySpatialController.hover(controller, second, QPoint(2, 2))
+            self.assertEqual(events, [("first", QEvent.Leave), ("second", QEvent.Enter)])
+            events.clear()
+            delete(second)
+            GallerySpatialController.hover(controller, None, QPoint())
+            self.assertEqual(events, [("container", QEvent.Leave), ("nav", QEvent.Leave)])
+            self.assertEqual(controller.hover_path, [])
+        finally:
+            delete(controller)
+            delete(window)
+
+    @unittest.skipUnless(SPATIAL_AVAILABLE, "optional Spatial binding")
     def test_projected_hover_leave_resets_forwarding_after_receiver_destruction(self):
         from fluentqt_gallery.spatial_controller import GallerySpatialController
 
@@ -1102,6 +1275,8 @@ class GallerySpatialTest(unittest.TestCase):
                 controller.canvas = QWidget(window)
                 controller.capture = QGraphicsOpacityEffect(window)
                 controller.hovered = previous
+                controller.hover_path = [previous, nav]
+                controller.hover = lambda target, source: GallerySpatialController.hover(controller, target, source)
                 controller.forwarding = False
                 controller.renderer_ready = True
                 controller.panels = []

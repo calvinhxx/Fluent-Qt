@@ -971,7 +971,7 @@ TEST_F(GallerySpatialTest, SupportBadgesReceiveHoverAtTheirProjectedPositions)
                 QDir().mkpath(directory);
                 QTest::qWait(100);
                 const auto stem = QStringLiteral("%1-%2").arg(name).arg(int(theme));
-                window.screen()->grabWindow(window.winId()).save(directory + "/" + stem + ".png");
+                spatialFrame(window.findChild<QWidget*>("gallerySpatialSurface")).save(directory + "/" + stem + ".png");
                 tooltip->grab().save(directory + "/" + stem + "-tooltip.png");
             }
             tooltip->hide();
@@ -5996,4 +5996,540 @@ TEST(GalleryTextureHostTest, NativeRhi_ProjectsCachedTexturesAndRefreshesChanged
     host.requestFrame();
     ASSERT_TRUE(QTest::qWaitFor([&] { return host.captures == captures + 2; }, 2000));
     EXPECT_EQ(errors.count(), 0);
+}
+
+TEST_F(GallerySpatialTest, NativeFlipViewHoverReachesContainerAndNavigationWorks)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires the full native Gallery input and composition path";
+    auto& settings = GallerySettings::instance();
+    const int previousZoom = settings.interfaceZoomPercent();
+    const auto restoreZoom = qScopeGuard([&] { settings.setInterfaceZoomPercent(previousZoom); });
+    settings.setHomeParticlesEnabled(false);
+    GalleryWindow window;
+    window.resize(1185, 850);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("flip-view")));
+    collections::FlipView* view = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        if (!window.currentContentPage())
+            return false;
+        const auto views = window.currentContentPage()->findChildren<collections::FlipView*>();
+        if (!views.isEmpty())
+            view = views.first();
+        return view && view->isVisible();
+    }));
+    auto* controller = window.findChild<GallerySpatialController*>();
+    ASSERT_NE(controller, nullptr);
+    auto* handle = window.windowHandle();
+    const auto point = [&](const QPoint& local) {
+        return handle->mapFromGlobal(window.mapToGlobal(controller->projectedPosition(view, local)));
+    };
+    QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+    QTest::qWait(80);
+    for (int zoom : {75, 100}) {
+        SCOPED_TRACE(zoom);
+        settings.setInterfaceZoomPercent(zoom);
+        QTest::qWait(250);
+        for (bool spatial : {true, false, true}) {
+            SCOPED_TRACE(spatial);
+            settings.setSpatialModeEnabled(spatial);
+            controller->cancelTransition();
+            QTest::qWait(300);
+            if (spatial) {
+                auto* canvas = window.findChild<QWidget*>(QStringLiteral("gallerySpatialSurface"));
+                ASSERT_NE(canvas, nullptr);
+                ASSERT_TRUE(QTest::qWaitFor([&] { return canvas->property("presenting").toBool(); }, 5000));
+            }
+            view->setCurrentIndex(1);
+            QTest::qWait(250);
+            QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+            QTest::qWait(80);
+            const auto idle = view->grab().toImage();
+            QTest::mouseMove(handle, point(view->rect().center()));
+            QTest::qWait(250);
+            const auto hover = view->grab().toImage();
+            const qreal dpr = hover.devicePixelRatio();
+            const QRect arrow(qRound((view->width() - 18) * dpr), qRound((view->height() / 2 - 14) * dpr),
+                qRound(16 * dpr), qRound(28 * dpr));
+            EXPECT_NE(idle.copy(arrow), hover.copy(arrow))
+                << "Hovering the image must reveal the parent FlipView arrow";
+            // Inspect the Gallery compositor itself, even when another application
+            // covers the window. A desktop capture could count unrelated pixels.
+            // zh_CN: 检查 Gallery 自身合成画面，避免窗口被遮挡时误把其他应用像素当作证据。
+            auto* canvas = window.findChild<QWidget*>(QStringLiteral("gallerySpatialSurface"));
+            const QImage native = spatial ? spatialFrame(canvas) : window.grab().toImage();
+            ASSERT_FALSE(native.isNull());
+            QWidget* captured = spatial ? canvas : &window;
+            const qreal nativeDpr = qreal(native.width()) / captured->width();
+            QPolygon insideArrow;
+            const QRect area(view->width() - 16, view->height() / 2 - 12, 12, 24);
+            for (const auto& corner : {area.topLeft(), area.topRight(), area.bottomRight(), area.bottomLeft()}) {
+                const QPoint projected = captured->mapFrom(&window, controller->projectedPosition(view, corner));
+                insideArrow << QPoint(qRound(projected.x() * nativeDpr), qRound(projected.y() * nativeDpr));
+            }
+            int lightPixels = 0;
+            const QRect bounds = insideArrow.boundingRect().intersected(native.rect());
+            for (int y = bounds.top(); y <= bounds.bottom(); ++y) {
+                for (int x = bounds.left(); x <= bounds.right(); ++x) {
+                    const QColor color = native.pixelColor(x, y);
+                    if (insideArrow.containsPoint(QPoint(x, y), Qt::OddEvenFill) && color.red() > 200
+                        && color.green() > 200 && color.blue() > 200)
+                        ++lightPixels;
+                }
+            }
+            EXPECT_GT(lightPixels, 60) << "The arrow must be visible in the actual Gallery compositor";
+            if (const auto dir = qEnvironmentVariable("FLUENT_QT_SPATIAL_EVIDENCE"); !dir.isEmpty()) {
+                QDir().mkpath(dir);
+                view->grab().save(dir + QStringLiteral("/flip-hover-%1-%2.png").arg(zoom).arg(spatial));
+                native.save(dir + QStringLiteral("/gallery-hover-%1-%2.png").arg(zoom).arg(spatial));
+            }
+            QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier,
+                point(QPoint(view->width() - 10, view->height() / 2)));
+            EXPECT_EQ(view->currentIndex(), 2);
+            QTest::qWait(250);
+            QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier, point(QPoint(10, view->height() / 2)));
+            EXPECT_EQ(view->currentIndex(), 1);
+        }
+    }
+}
+
+namespace {
+// These probes live inside an original sample in a complete GalleryWindow.
+// Input always enters through QWindow; direct QWidget dispatch would bypass the router.
+class GalleryInputProbe final : public QWidget {
+public:
+    explicit GalleryInputProbe(QWidget* parent) : QWidget(parent)
+    {
+        setMouseTracking(true);
+        setAttribute(Qt::WA_Hover);
+    }
+    int enters = 0, leaves = 0, hoverEnters = 0, hoverLeaves = 0, presses = 0;
+    ulong timestamp = 0;
+    bool acceptPress = false;
+    std::function<void()> onEnter;
+    bool event(QEvent* event) override
+    {
+        switch (event->type()) {
+        case QEvent::Enter:
+            ++enters;
+            if (onEnter) {
+                auto callback = onEnter;
+                callback();
+                return true;
+            }
+            break;
+        case QEvent::Leave:
+            ++leaves;
+            break;
+        case QEvent::HoverEnter:
+            ++hoverEnters;
+            break;
+        case QEvent::HoverLeave:
+            ++hoverLeaves;
+            break;
+        case QEvent::MouseButtonPress:
+            ++presses;
+            timestamp = static_cast<QMouseEvent*>(event)->timestamp();
+            if (acceptPress) {
+                event->accept();
+                return true;
+            }
+            break;
+        default:
+            break;
+        }
+        return QWidget::event(event);
+    }
+};
+} // namespace
+
+TEST_F(GallerySpatialTest, NativeInputPreservesParentHoverAndMouseMetadata)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires full native Gallery QWindow input";
+    GallerySettings::instance().setHomeParticlesEnabled(false);
+    GalleryWindow window;
+    window.resize(1185, 850);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    ASSERT_TRUE(window.selectRoute("button"));
+    GalleryComponentPage* page = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
+            return page && page->routeId() == "button" && !page->hasPendingSamples();
+        },
+        5000));
+    ASSERT_FALSE(page->sampleCards().isEmpty());
+    auto* preview = page->sampleCards().first()->previewWidget();
+    auto* parent = new GalleryInputProbe(preview->parentWidget());
+    parent->setGeometry(8, 8, 320, 32);
+    parent->acceptPress = true;
+    auto* first = new GalleryInputProbe(parent);
+    first->setGeometry(8, 2, 110, 28);
+    auto* second = new GalleryInputProbe(parent);
+    second->setGeometry(160, 2, 110, 28);
+    parent->show();
+    parent->raise();
+    first->show();
+    second->show();
+    auto* scroll = page->findChild<QScrollArea*>();
+    ASSERT_NE(scroll, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            scroll->ensureWidgetVisible(parent, 0, 30);
+            return scroll->viewport()->rect().contains(
+                QRect(parent->mapTo(scroll->viewport(), QPoint()), parent->size()));
+        },
+        3000));
+    auto* controller = window.findChild<GallerySpatialController*>();
+    ASSERT_NE(controller, nullptr);
+    auto* handle = window.windowHandle();
+    const auto point = [&](QWidget* widget) { return controller->projectedPosition(widget, widget->rect().center()); };
+    QPair<bool, bool> nativeDragHover;
+    for (bool spatial : {false, true, false, true}) {
+        SCOPED_TRACE(spatial);
+        GallerySettings::instance().setSpatialModeEnabled(spatial);
+        controller->cancelTransition();
+        QTest::qWait(200);
+        QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+        QTest::qWait(20);
+        const int parentEnter = parent->enters;
+        const int parentLeave = parent->leaves;
+        const int hoverEnter = first->hoverEnters;
+        const int hoverLeave = first->hoverLeaves;
+        QTest::mouseMove(handle, point(first));
+        QTest::qWait(20);
+        EXPECT_EQ(parent->enters, parentEnter + 1);
+        EXPECT_EQ(first->hoverEnters, hoverEnter + 1);
+        EXPECT_TRUE(first->underMouse());
+        const int firstPress = first->presses;
+        const int parentPress = parent->presses;
+        QTest::mouseClick(handle, Qt::LeftButton, Qt::ShiftModifier, point(first));
+        EXPECT_EQ(first->presses, firstPress + 1);
+        EXPECT_EQ(parent->presses, parentPress + 1);
+        EXPECT_GT(first->timestamp, 0u);
+        EXPECT_EQ(first->timestamp, parent->timestamp);
+        QTest::mouseMove(handle, point(second));
+        QTest::qWait(20);
+        EXPECT_EQ(parent->enters, parentEnter + 1);
+        EXPECT_EQ(parent->leaves, parentLeave);
+        EXPECT_EQ(first->hoverLeaves, hoverLeave + 1);
+        EXPECT_FALSE(first->underMouse());
+        QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+        QTest::qWait(20);
+        EXPECT_EQ(parent->leaves, parentLeave + 1);
+        first->acceptPress = true;
+        QTest::mousePress(handle, Qt::LeftButton, Qt::NoModifier, point(first));
+        QTest::mouseMove(handle, point(second));
+        const auto dragHover = qMakePair(first->underMouse(), second->underMouse());
+        if (!spatial)
+            nativeDragHover = dragHover;
+        else
+            EXPECT_EQ(dragHover, nativeDragHover);
+        QTest::mouseRelease(handle, Qt::LeftButton, Qt::NoModifier, point(second));
+        EXPECT_FALSE(first->underMouse());
+        EXPECT_TRUE(second->underMouse());
+        first->acceptPress = false;
+        QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+    }
+    // A hovered leaf may be reparented without changing its identity.
+    QTest::mouseMove(handle, point(first));
+    const int secondEnters = second->enters;
+    first->setParent(second);
+    first->setGeometry(second->rect());
+    first->show();
+    QTest::mouseMove(handle, point(first));
+    EXPECT_GT(second->enters, secondEnters);
+    QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+    QPointer<GalleryInputProbe> receiver(first);
+    first->onEnter = [first] { delete first; };
+    QTest::mouseMove(handle, point(first));
+    EXPECT_TRUE(receiver.isNull());
+    // The controller must remain usable after a callback removes the hit target.
+    const int presses = parent->presses;
+    QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier, point(second));
+    EXPECT_EQ(parent->presses, presses + 1);
+}
+
+TEST_F(GallerySpatialTest, NativeOriginalSamplesKeepClicksFocusSelectionAndDrag)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires full native Gallery QWindow input";
+    auto& settings = GallerySettings::instance();
+    settings.setHomeParticlesEnabled(false);
+    GalleryWindow window;
+    window.resize(1185, 850);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    auto* controller = window.findChild<GallerySpatialController*>();
+    auto* handle = window.windowHandle();
+    const auto point = [&](QWidget* w, QPoint local) { return controller->projectedPosition(w, local); };
+    const QStringList routes{"button", "compound-button", "toggle-button", "checkbox", "radio-button", "repeat-button",
+        "toggle-switch", "line-edit", "password-box", "number-box", "slider", "list-view", "grid-view", "flow-view",
+        "tree-view", "data-grid", "file-list-view"};
+    const int oldZoom = settings.interfaceZoomPercent();
+    const auto restore = qScopeGuard([&] { settings.setInterfaceZoomPercent(oldZoom); });
+    for (int zoom : {75, 100}) {
+        settings.setInterfaceZoomPercent(zoom);
+        for (const auto& route : routes) {
+            SCOPED_TRACE(route.toStdString());
+            SCOPED_TRACE(zoom);
+            ASSERT_TRUE(window.selectRoute(route));
+            GalleryComponentPage* page = nullptr;
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] {
+                    page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
+                    return page && page->routeId() == route && !page->hasPendingSamples();
+                },
+                5000));
+            auto* preview = page->sampleCards().first()->previewWidget();
+            auto* scroll = page->findChild<QScrollArea*>();
+            ASSERT_NE(preview, nullptr);
+            ASSERT_NE(scroll, nullptr);
+            auto* button = qobject_cast<QAbstractButton*>(preview);
+            if (!button)
+                button = preview->findChild<QAbstractButton*>();
+            auto* edit = qobject_cast<QLineEdit*>(preview);
+            if (!edit)
+                edit = preview->findChild<QLineEdit*>();
+            auto* slider = qobject_cast<basicinput::Slider*>(preview);
+            if (!slider)
+                slider = preview->findChild<basicinput::Slider*>();
+            auto* items = qobject_cast<QAbstractItemView*>(preview);
+            if (!items)
+                items = preview->findChild<QAbstractItemView*>();
+            auto* toggle = qobject_cast<basicinput::ToggleSwitch*>(preview);
+            if (!toggle)
+                toggle = preview->findChild<basicinput::ToggleSwitch*>();
+            QWidget* target = toggle ? static_cast<QWidget*>(toggle)
+                : edit               ? static_cast<QWidget*>(edit)
+                : slider             ? static_cast<QWidget*>(slider)
+                : items
+                ? items->viewport()
+                : static_cast<QWidget*>(button);
+            ASSERT_NE(target, nullptr);
+            for (bool spatial : {false, true}) {
+                SCOPED_TRACE(spatial);
+                settings.setSpatialModeEnabled(spatial);
+                controller->cancelTransition();
+                ASSERT_TRUE(QTest::qWaitFor(
+                    [&] {
+                        scroll->ensureWidgetVisible(target, 0, 30);
+                        const QPoint center = target->mapTo(scroll->viewport(), target->rect().center());
+                        return scroll->viewport()->rect().adjusted(0, 10, 0, -10).contains(center);
+                    },
+                    3000));
+                QTest::qWait(150);
+                QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+                if (toggle) {
+                    const bool old = toggle->isOn();
+                    QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier,
+                        point(toggle, QPoint(16, toggle->height() / 2)));
+                    EXPECT_NE(toggle->isOn(), old);
+                    toggle->setEnabled(false);
+                    QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier,
+                        point(toggle, QPoint(16, toggle->height() / 2)));
+                    EXPECT_NE(toggle->isOn(), old);
+                    toggle->setEnabled(true);
+                } else if (edit) {
+                    const QString text = edit->text();
+                    const bool readonly = edit->isReadOnly();
+                    edit->setReadOnly(false);
+                    edit->clear();
+                    QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier, point(edit, edit->rect().center()));
+                    EXPECT_TRUE(edit->hasFocus());
+                    for (auto key : {Qt::Key_1, Qt::Key_2, Qt::Key_3})
+                        QTest::keyClick(handle, key);
+                    EXPECT_EQ(edit->text(), QStringLiteral("123"));
+                    edit->setReadOnly(true);
+                    QTest::keyClick(handle, Qt::Key_4);
+                    EXPECT_EQ(edit->text(), QStringLiteral("123"));
+                    edit->setReadOnly(readonly);
+                    edit->setText(text);
+                } else if (slider) {
+                    const int old = slider->value();
+                    slider->setValue(slider->minimum());
+                    const QPoint from = point(slider, QPoint(14, slider->height() / 2));
+                    const QPoint to = point(slider, QPoint(slider->width() - 15, slider->height() / 2));
+                    QTest::mousePress(handle, Qt::LeftButton, Qt::NoModifier, from);
+                    QTest::mouseMove(handle, to, 20);
+                    QTest::mouseRelease(handle, Qt::LeftButton, Qt::NoModifier, to);
+                    EXPECT_GT(slider->value(), slider->minimum());
+                    slider->setValue(old);
+                } else if (items) {
+                    ASSERT_NE(items->model(), nullptr);
+                    const auto index = items->model()->index(1, 0);
+                    ASSERT_TRUE(index.isValid());
+                    items->scrollTo(index);
+                    QTest::qWait(30);
+                    const QPoint local = items->visualRect(index).center();
+                    ASSERT_TRUE(items->viewport()->rect().contains(local));
+                    QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier, point(items->viewport(), local));
+                    EXPECT_EQ(items->currentIndex(), index);
+                    EXPECT_TRUE(items->selectionModel()->isSelected(index));
+                } else {
+                    QSignalSpy clicks(button, &QAbstractButton::clicked);
+                    const bool checked = button->isChecked();
+                    const auto center = qobject_cast<basicinput::RadioButton*>(button)
+                        ? QPoint(10, button->height() / 2)
+                        : button->rect().center();
+                    QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier, point(button, center));
+                    EXPECT_EQ(clicks.count(), 1);
+                    if (button->isCheckable() && !button->autoExclusive())
+                        EXPECT_NE(button->isChecked(), checked);
+                    button->setEnabled(false);
+                    QTest::mouseClick(handle, Qt::LeftButton, Qt::NoModifier, point(button, center));
+                    EXPECT_EQ(clicks.count(), 1);
+                    button->setEnabled(true);
+                    QTest::mousePress(handle, Qt::LeftButton, Qt::NoModifier, point(button, center));
+                    QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+                    QTest::mouseRelease(handle, Qt::LeftButton, Qt::NoModifier, QPoint(window.width() / 2, 24));
+                    EXPECT_EQ(clicks.count(), 1);
+                    EXPECT_FALSE(button->isDown());
+                    EXPECT_FALSE(button->underMouse());
+                }
+            }
+        }
+    }
+}
+
+TEST_F(GallerySpatialTest, NativeCatalogSamplesDeliverHoverThroughOriginalParents)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires full native Gallery QWindow input";
+    auto& settings = GallerySettings::instance();
+    settings.setHomeParticlesEnabled(false);
+    GalleryWindow window;
+    window.resize(1185, 850);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    auto* controller = window.findChild<GallerySpatialController*>();
+    auto* handle = window.windowHandle();
+    int routes = 0, samples = 0, positions = 0;
+    for (const auto& category : galleryComponentCatalog()) {
+        if (category.plugin)
+            continue;
+        for (const auto& entry : category.components) {
+            SCOPED_TRACE(entry.id.toStdString());
+            ASSERT_TRUE(window.selectRoute(entry.id));
+            GalleryComponentPage* page = nullptr;
+            ASSERT_TRUE(QTest::qWaitFor(
+                [&] {
+                    page = qobject_cast<GalleryComponentPage*>(window.currentContentPage());
+                    return page && page->routeId() == entry.id && !page->hasPendingSamples();
+                },
+                5000));
+            ++routes;
+            auto* scroll = page->findChild<QScrollArea*>();
+            ASSERT_NE(scroll, nullptr);
+            for (auto* card : page->sampleCards()) {
+                SCOPED_TRACE(card->sampleId().toStdString());
+                auto* preview = card->previewWidget();
+                ASSERT_NE(preview, nullptr);
+                ++samples;
+                for (bool spatial : {false, true}) {
+                    SCOPED_TRACE(spatial);
+                    settings.setSpatialModeEnabled(spatial);
+                    controller->cancelTransition();
+                    scroll->ensureWidgetVisible(preview, 0, 0);
+                    QTest::qWait(40);
+                    // Probe visible points only, including nested labels and viewports.
+                    // Large samples are clipped by the real documentation scroll viewport.
+                    const QRect visible = preview->rect().intersected(
+                        QRect(preview->mapFrom(scroll->viewport(), QPoint()), scroll->viewport()->size()));
+                    ASSERT_FALSE(visible.isEmpty());
+                    for (const QPoint local : {visible.center(), QPoint(visible.left() + 8, visible.center().y()),
+                             QPoint(visible.right() - 8, visible.center().y())}) {
+                        QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+                        QTest::mouseMove(handle, controller->projectedPosition(preview, local));
+                        auto* leaf = preview->childAt(local);
+                        if (!leaf)
+                            leaf = preview;
+                        for (auto* parent = leaf; parent; parent = parent->parentWidget()) {
+                            EXPECT_TRUE(parent->underMouse()) << parent->metaObject()->className();
+                            if (parent == preview)
+                                break;
+                        }
+                        QTest::mouseMove(handle, QPoint(window.width() / 2, 24));
+                        for (auto* parent = leaf; parent; parent = parent->parentWidget()) {
+                            EXPECT_FALSE(parent->underMouse()) << parent->metaObject()->className();
+                            if (parent == preview)
+                                break;
+                        }
+                        ++positions;
+                    }
+                }
+            }
+            std::cout << "INPUT_AUDIT " << entry.id.toStdString() << " samples=" << page->sampleCount() << std::endl;
+        }
+    }
+    std::cout
+        << "INPUT_AUDIT_TOTAL routes=" << routes << " samples=" << samples << " positions=" << positions << std::endl;
+    EXPECT_GT(routes, 90);
+    EXPECT_GT(samples, 180);
+}
+
+TEST_F(GallerySpatialTest, NativeOriginalMenuOpensThreeLevelsAndActivatesOnce)
+{
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Requires original Gallery sample and native popup windows";
+    GalleryWindow window;
+    window.resize(1185, 850);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !window.findChild<GallerySplashScreen*>(); }, 15000));
+    ASSERT_TRUE(window.selectRoute("menu"));
+    basicinput::DropDownButton* button = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            button = window.findChild<basicinput::DropDownButton*>("Gallery.Menu.ViewOptions");
+            return button && button->isVisible();
+        },
+        5000));
+    auto* menu = window.findChild<QMenu*>("Gallery.Menu.Cascading");
+    auto* sort = window.findChild<QMenu*>("Gallery.Menu.Sort");
+    auto* order = window.findChild<QMenu*>("Gallery.Menu.Order");
+    ASSERT_NE(menu, nullptr);
+    ASSERT_NE(sort, nullptr);
+    ASSERT_NE(order, nullptr);
+    auto* scroll = window.currentContentPage()->findChild<QScrollArea*>();
+    auto* controller = window.findChild<GallerySpatialController*>();
+    QAction* descending = order->actions().last();
+    QSignalSpy activated(descending, &QAction::triggered);
+    for (bool spatial : {false, true, false}) {
+        SCOPED_TRACE(spatial);
+        GallerySettings::instance().setSpatialModeEnabled(spatial);
+        controller->cancelTransition();
+        scroll->ensureWidgetVisible(button, 0, 80);
+        QTest::qWait(200);
+        QTest::mouseClick(window.windowHandle(), Qt::LeftButton, Qt::NoModifier,
+            controller->projectedPosition(button, button->rect().center()));
+        ASSERT_TRUE(QTest::qWaitFor([&] { return menu->isVisible() && menu->windowHandle(); }, 2000));
+        QTest::mouseMove(menu->windowHandle(), menu->actionGeometry(sort->menuAction()).center());
+        ASSERT_TRUE(QTest::qWaitFor([&] { return sort->isVisible() && sort->windowHandle(); }, 2000));
+        QTest::mouseMove(sort->windowHandle(), sort->actionGeometry(order->menuAction()).center());
+        ASSERT_TRUE(QTest::qWaitFor([&] { return order->isVisible() && order->windowHandle(); }, 2000));
+        const int before = activated.count();
+        QTest::mouseClick(order->windowHandle(), Qt::LeftButton, Qt::NoModifier,
+            order->actionGeometry(descending).center());
+        EXPECT_EQ(activated.count(), before + 1);
+        EXPECT_TRUE(descending->isChecked());
+        EXPECT_FALSE(order->actions().first()->isChecked());
+        EXPECT_FALSE(menu->isVisible());
+        EXPECT_FALSE(sort->isVisible());
+        EXPECT_FALSE(order->isVisible());
+    }
 }

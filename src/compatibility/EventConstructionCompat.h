@@ -7,6 +7,41 @@
 #include <QPointingDevice>
 #endif
 
+/**
+ * @brief Translates a mouse event while retaining its input identity and timestamp.
+ * zh_CN: 换算鼠标事件坐标，同时保留输入设备、来源、按键、修饰键和时间戳。
+ */
+class FluentTranslatedMouseEvent final : public QMouseEvent {
+public:
+    FluentTranslatedMouseEvent(const QMouseEvent* event,
+        const QPointF& local,
+        const QPointF& window,
+        const QPointF& global)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        : QMouseEvent(event->type(),
+              local,
+              window,
+              global,
+              event->button(),
+              event->buttons(),
+              event->modifiers(),
+              event->source(),
+              event->pointingDevice())
+#else
+        : QMouseEvent(event->type(),
+              local,
+              window,
+              global,
+              event->button(),
+              event->buttons(),
+              event->modifiers(),
+              event->source())
+#endif
+    {
+        setTimestamp(event->timestamp());
+    }
+};
+
 constexpr bool fluentWheelEventSupportsPhase()
 {
     // Qt 5.15 already provides the pixel/angle-delta constructor with ScrollPhase.
@@ -71,6 +106,17 @@ inline const char* fluentWheelEventPhaseSkipReason()
 #define FLUENT_MAKE_MOUSE_EVENT(name, typeValue, target, localPosValue, buttonValue, buttonsValue, modifiersValue)     \
     QMouseEvent name((typeValue), (localPosValue), (target)->mapToGlobal(localPosValue), (buttonValue),                \
         (buttonsValue), (modifiersValue))
+#endif
+
+// Test helper for constructing hover events across Qt 5 / Qt 6.
+// zh_CN: 跨 Qt 5 / Qt 6 构造 hover 事件的测试辅助宏。
+#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+#define FLUENT_MAKE_HOVER_EVENT(name, typeValue, target, localPosValue, oldLocalPosValue)                              \
+    const QPointF name##GlobalPos((target)->mapToGlobal(QPointF(localPosValue).toPoint()));                            \
+    QHoverEvent name((typeValue), QPointF(localPosValue), name##GlobalPos, QPointF(oldLocalPosValue))
+#else
+#define FLUENT_MAKE_HOVER_EVENT(name, typeValue, target, localPosValue, oldLocalPosValue)                              \
+    QHoverEvent name((typeValue), QPointF(localPosValue), QPointF(oldLocalPosValue))
 #endif
 
 // Test helper for constructing native gesture events.
