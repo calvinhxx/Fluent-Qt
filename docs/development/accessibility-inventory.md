@@ -718,6 +718,10 @@ active and disabled icons, and fractional/integer paint scales. Switching to a
 checkmark preserves the label position and row surface. Menu checkmarks and
 submenu chevrons center their visible glyphs; CommandBar overflow and
 CommandBarFlyout secondary rows center icons using extent-based coordinates.
+Menu labels and shortcut text share a capital-height baseline, aligned through
+the painter's device transform so redirected fractional-scale rendering retains
+the same alignment. `MenuTest.LabelsAndShortcutsKeepOneBaselineNextToCenteredIcons`
+checks the rendered text and icon bounds from 100% through 300% scale.
 The Gallery Menu sample includes a keyboard-operable third level at
 Sort by → Order with mutually exclusive choices.
 

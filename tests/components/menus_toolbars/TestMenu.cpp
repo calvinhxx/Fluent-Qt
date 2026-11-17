@@ -796,6 +796,7 @@ TEST_F(MenuTest, LabelsAndShortcutsKeepOneBaselineNextToCenteredIcons)
     action->setShortcut(QKeySequence(QStringLiteral("Ctrl+P")));
     menu.ensurePolished();
     menu.resize(menu.sizeHint());
+    SCOPED_TRACE(menu.font().toString().toStdString());
     for (qreal dpr : {1.0, 1.25, 1.5, 2.0, 3.0}) {
         SCOPED_TRACE(dpr);
         const QImage painted = renderMenu(menu, dpr);
