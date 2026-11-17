@@ -105,8 +105,7 @@ protected:
     static void SetUpTestSuite()
     {
         qRegisterMetaType<QTime>("QTime");
-        qRegisterMetaType<fluent::date_time::TimePicker::TimeField>(
-            "fluent::date_time::TimePicker::TimeField");
+        qRegisterMetaType<fluent::date_time::TimePicker::TimeField>("fluent::date_time::TimePicker::TimeField");
         qRegisterMetaType<fluent::date_time::TimePicker::ClockIdentifier>(
             "fluent::date_time::TimePicker::ClockIdentifier");
     }
@@ -156,8 +155,7 @@ TEST_F(TimePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&picker), nullptr);
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Body);
     EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
-              tests::support::normalizedFontFamilies(
-                  picker.themeFont(Typography::FontRole::Body).toQFont()));
+        tests::support::normalizedFontFamilies(picker.themeFont(Typography::FontRole::Body).toQFont()));
 }
 
 TEST_F(TimePickerTest, InheritedFontRoleResolvesThemeTypography)
@@ -168,8 +166,7 @@ TEST_F(TimePickerTest, InheritedFontRoleResolvesThemeTypography)
 
     EXPECT_EQ(picker.fontRole(), Typography::FontRole::Caption);
     EXPECT_EQ(tests::support::normalizedFontFamilies(picker.font()),
-              tests::support::normalizedFontFamilies(
-                  picker.themeFont(Typography::FontRole::Caption).toQFont()));
+        tests::support::normalizedFontFamilies(picker.themeFont(Typography::FontRole::Caption).toQFont()));
 }
 
 TEST_F(TimePickerTest, SelectedTimeClearAndFormattingDriveSegments)
@@ -232,13 +229,13 @@ TEST_F(TimePickerTest, ApplicationOwnedTextUpdatesEntryAndFlyoutActions)
     ASSERT_NE(buttonFor(popup, QStringLiteral("TimePickerConfirmButton")), nullptr);
     ASSERT_NE(buttonFor(popup, QStringLiteral("TimePickerCancelButton")), nullptr);
     EXPECT_EQ(buttonFor(popup, QStringLiteral("TimePickerConfirmButton"))->accessibleName(),
-              QStringLiteral("Apply time"));
+        QStringLiteral("Apply time"));
     EXPECT_EQ(buttonFor(popup, QStringLiteral("TimePickerCancelButton"))->accessibleName(),
-              QStringLiteral("Dismiss time picker"));
+        QStringLiteral("Dismiss time picker"));
 
     picker->setCancelButtonAccessibleName(QStringLiteral("Cancel time"));
     EXPECT_EQ(buttonFor(popup, QStringLiteral("TimePickerCancelButton"))->accessibleName(),
-              QStringLiteral("Cancel time"));
+        QStringLiteral("Cancel time"));
 }
 
 TEST_F(TimePickerTest, LocaleTracksTheInheritedQWidgetProperty)
@@ -481,8 +478,7 @@ TEST_F(TimePickerTest, FontChangeUpdatesEntryAndOpenFlyout)
     EXPECT_GT(popup->height(), defaultPopupSize.height());
     EXPECT_GT(hourColumn->height(), defaultColumnHeight);
     EXPECT_EQ(hourColumn->font().pixelSize(), 30);
-    EXPECT_EQ(hourColumn->property("selectedRowHeight").toInt(),
-              QFontMetrics(largeFont).height() + 12);
+    EXPECT_EQ(hourColumn->property("selectedRowHeight").toInt(), QFontMetrics(largeFont).height() + 12);
 }
 
 TEST_F(TimePickerTest, ThemeFontRefreshPreservesPendingFlyoutTime)
@@ -515,10 +511,9 @@ TEST_F(TimePickerTest, ThemeFontRefreshPreservesPendingFlyoutTime)
     EXPECT_EQ(picker->selectedTime(), QTime(9, 30));
     EXPECT_EQ(QApplication::focusWidget(), focusedBeforeTheme);
     EXPECT_EQ(tests::support::normalizedFontFamilies(picker->font()),
-              tests::support::normalizedFontFamilies(
-                  picker->themeFont(Typography::FontRole::Body).toQFont()));
+        tests::support::normalizedFontFamilies(picker->themeFont(Typography::FontRole::Body).toQFont()));
     EXPECT_EQ(tests::support::normalizedFontFamilies(minuteColumn->font()),
-              tests::support::normalizedFontFamilies(picker->font()));
+        tests::support::normalizedFontFamilies(picker->font()));
     EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
     EXPECT_GT(popup->height(), defaultPopupSize.height());
     EXPECT_GT(minuteColumn->height(), defaultColumnHeight);
@@ -586,8 +581,7 @@ TEST_F(TimePickerTest, FlyoutAlignsSelectedRowWithClosedField)
 
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
     ASSERT_GT(selectedRowCenterY, 0);
-    const QPoint selectedRowCenter =
-        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter = panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
     const QPoint panelTopLeft = panel->mapTo(window, QPoint(0, 0));
     const QPoint fieldTopLeft = picker->mapTo(window, QPoint(0, 0));
@@ -610,8 +604,7 @@ TEST_F(TimePickerTest, FlyoutClampsAtTopEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter =
-        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter = panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -624,8 +617,7 @@ TEST_F(TimePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     TimePicker* picker = new TimePicker(window);
     picker->setSelectedTime(QTime(9, 30));
     const QSize pickerSize = picker->sizeHint();
-    picker->setGeometry(220, window->height() - pickerSize.height(), pickerSize.width(),
-                        pickerSize.height());
+    picker->setGeometry(220, window->height() - pickerSize.height(), pickerSize.width(), pickerSize.height());
 
     Flyout* popup = openPopupFor(picker, window);
     ASSERT_NE(popup, nullptr);
@@ -635,8 +627,7 @@ TEST_F(TimePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter =
-        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter = panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -667,8 +658,7 @@ TEST_F(TimePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
 #endif
     EXPECT_TRUE(minuteColumn->property("selectedRowHasBackground").toBool());
 
-    FLUENT_MAKE_ENTER_EVENT(enterEvent, minuteColumn->rect().center().x(),
-                            minuteColumn->rect().center().y());
+    FLUENT_MAKE_ENTER_EVENT(enterEvent, minuteColumn->rect().center().x(), minuteColumn->rect().center().y());
     QApplication::sendEvent(minuteColumn, &enterEvent);
     QTest::qWait(180);
     processEvents();
@@ -918,8 +908,7 @@ TEST_F(TimePickerTest, VisualCheck)
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &Button::clicked, themeButton, [themeButton]() {
         const bool dark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Dark;
-        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light
-                                             : fluent::FluentElement::Dark);
+        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light : fluent::FluentElement::Dark);
         themeButton->setText(dark ? QStringLiteral("Dark") : QStringLiteral("Light"));
     });
 
@@ -944,4 +933,63 @@ TEST_F(TimePickerTest, VisualCheck)
         return;
     }
     qApp->exec();
+}
+
+TEST_F(TimePickerTest, SetTimeUpdatesFallbackWithoutCommittingOrReplacingSelection)
+{
+    TimePicker picker;
+    picker.setMinuteIncrement(5);
+    picker.setTime(QTime(8, 0));
+    QSignalSpy timeSpy(&picker, &TimePicker::timeChanged);
+    QSignalSpy selectedSpy(&picker, &TimePicker::selectedTimeChanged);
+
+    picker.setTime(QTime(8, 7));
+    EXPECT_EQ(picker.time(), QTime(8, 5));
+    EXPECT_FALSE(picker.selectedTime().isValid());
+    EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Hour),
+        picker.placeholderText(TimePicker::TimeField::Hour));
+    EXPECT_EQ(timeSpy.count(), 1);
+    EXPECT_EQ(selectedSpy.count(), 0);
+    picker.setTime(QTime(8, 6));
+    picker.setTime(QTime());
+    EXPECT_EQ(timeSpy.count(), 1);
+    EXPECT_EQ(selectedSpy.count(), 0);
+
+    picker.setSelectedTime(QTime(9, 30));
+    timeSpy.clear();
+    selectedSpy.clear();
+    picker.setTime(QTime(15, 45));
+    picker.setTime(QTime());
+    EXPECT_EQ(picker.selectedTime(), QTime(9, 30));
+    EXPECT_EQ(picker.time(), QTime(9, 30));
+    EXPECT_EQ(timeSpy.count(), 0);
+    EXPECT_EQ(selectedSpy.count(), 0);
+    picker.clearSelectedTime();
+    EXPECT_FALSE(picker.selectedTime().isValid());
+    EXPECT_EQ(picker.time(), QTime(15, 45));
+    EXPECT_EQ(selectedSpy.count(), 1);
+}
+
+TEST_F(TimePickerTest, StylesRenderDistinctly)
+{
+    TimePicker picker;
+    picker.setSelectedTime(QTime(15, 45));
+    picker.resize(picker.sizeHint());
+    auto renderPicker = [&picker]() {
+        QImage img(picker.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(Qt::transparent);
+        picker.render(&img);
+        return img;
+    };
+
+    picker.setFluentStyle(Button::Standard);
+    const QImage standardImg = renderPicker();
+    picker.setFluentStyle(Button::Accent);
+    const QImage accentImg = renderPicker();
+    picker.setFluentStyle(Button::Subtle);
+    const QImage subtleImg = renderPicker();
+
+    EXPECT_NE(standardImg, accentImg);
+    EXPECT_NE(standardImg, subtleImg);
+    EXPECT_NE(accentImg, subtleImg);
 }

@@ -842,6 +842,9 @@ void CalendarView::paintHeader(QPainter& painter)
 
 void CalendarView::paintTitleButtonBackground(QPainter& painter)
 {
+    if (!isEnabled())
+        return;
+
     const auto& colors = themeColorsRef();
     QColor bg = Qt::transparent;
     if (m_titlePressed)
@@ -870,7 +873,7 @@ void CalendarView::paintTitleForLevel(QPainter& painter,
     const qreal inset = m_compact ? 8.0 : 12.0;
     const QRectF titleRect = QRectF(titleButtonRect()).adjusted(inset, yOffset, -inset, yOffset);
     painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
-    painter.setPen(withOpacity(colors.textPrimary, opacity));
+    painter.setPen(withOpacity(isEnabled() ? colors.textPrimary : colors.textDisabled, opacity));
     painter.drawText(titleRect, Qt::AlignVCenter | Qt::AlignLeft, titleTextForLevel(level, visibleMonth));
 }
 
@@ -878,10 +881,12 @@ void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, co
 {
     const auto& colors = themeColorsRef();
     QColor bg = Qt::transparent;
-    if (m_pressedButton == buttonRect)
-        bg = colors.subtleTertiary;
-    else if (m_hoveredButton == buttonRect)
-        bg = colors.subtleSecondary;
+    if (isEnabled()) {
+        if (m_pressedButton == buttonRect)
+            bg = colors.subtleTertiary;
+        else if (m_hoveredButton == buttonRect)
+            bg = colors.subtleSecondary;
+    }
 
     if (bg.alpha() > 0) {
         painter.setPen(Qt::NoPen);
@@ -889,7 +894,7 @@ void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, co
         painter.drawRoundedRect(buttonRect.adjusted(4, 4, -4, -4), themeRadius().control, themeRadius().control);
     }
 
-    painter.setPen(colors.textPrimary);
+    painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
     Typography::Icons::paintGlyph(painter, QRectF(buttonRect), glyph, 10, Qt::AlignCenter);
 }
 
@@ -897,7 +902,7 @@ void CalendarView::paintWeekdays(QPainter& painter)
 {
     const auto& colors = themeColorsRef();
     painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
-    painter.setPen(colors.textPrimary);
+    painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
     const int y = headerHeight();
     for (int c = 0; c < 7; ++c) {
         const int day = ((static_cast<int>(m_firstDayOfWeek) - 1 + c) % 7) + 1;
@@ -1028,7 +1033,7 @@ void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal y
         const QRectF cell = QRectF(cellRect(row, column)).translated(0.0, yOffset).adjusted(2.0, 2.0, -2.0, -2.0);
         const QRectF indicatorRect = dateIndicatorRectForCell(cell);
         const bool inMonth = date.month() == month.month() && date.year() == month.year();
-        const bool selectable = isDateSelectable(date);
+        const bool selectable = isEnabled() && isDateSelectable(date);
         const bool selected = date.isValid()
             && (m_rangeHighlightEnabled
                     ? date == m_highlightedStartDate || date == m_highlightedEndDate
@@ -1078,16 +1083,28 @@ void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal y
             painter.setBrush(Qt::NoBrush);
             painter.setPen(QPen(colors.accentDefault, 1.5));
             painter.drawEllipse(indicatorRect.adjusted(1.0, 1.0, -1.0, -1.0));
+        } else if (current && selected && selectable) {
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(colors.accentDefault, 1.5));
+            painter.drawEllipse(indicatorRect.adjusted(0.5, 0.5, -0.5, -0.5));
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(colors.accentDefault);
+            painter.drawEllipse(indicatorRect.adjusted(3.0, 3.0, -3.0, -3.0));
+            textColor = colors.textOnAccent;
         } else if (current) {
             painter.setPen(Qt::NoPen);
             painter.setBrush(colors.accentDefault);
             painter.drawEllipse(indicatorRect);
             textColor = colors.textOnAccent;
-        } else if (selected) {
+        } else if (selected && selectable) {
             painter.setBrush(Qt::NoBrush);
             painter.setPen(QPen(colors.accentDefault, 1.5));
             painter.drawEllipse(indicatorRect.adjusted(1.0, 1.0, -1.0, -1.0));
             textColor = colors.textAccentPrimary;
+        } else if (selected && !isEnabled()) {
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(colors.strokeDivider, 1.5));
+            painter.drawEllipse(indicatorRect.adjusted(1.0, 1.0, -1.0, -1.0));
         }
 
         painter.setPen(textColor);
@@ -1111,7 +1128,7 @@ void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMont
         const QRectF indicator = contentIndicatorRectForCell(cell);
         const QDate monthDate = m_scrollOrigin.isValid() ? contentDateForCell(i) : QDate(visibleMonth.year(), i + 1, 1);
         const int month = monthDate.month();
-        const bool selectable = isMonthSelectable(monthDate.year(), month);
+        const bool selectable = isEnabled() && isMonthSelectable(monthDate.year(), month);
         const bool hovered = selectable && m_hoveredMonth == monthDate;
         const bool pressed = selectable && m_pressedMonth == monthDate;
         const bool selected = selectable && m_selectedDate.isValid() && m_selectedDate.year() == monthDate.year()
@@ -1143,7 +1160,7 @@ void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth
         const QRectF cell = QRectF(contentCellRect(row, column)).adjusted(8.0, 8.0, -8.0, -8.0);
         const QRectF indicator = contentIndicatorRectForCell(cell);
         const int year = m_scrollOrigin.isValid() ? contentDateForCell(i).year() : startYear + i;
-        const bool selectable = isYearSelectable(year);
+        const bool selectable = isEnabled() && isYearSelectable(year);
         const bool hovered = selectable && m_hoveredYear == year;
         const bool pressed = selectable && m_pressedYear == year;
         const bool selected = selectable && m_selectedDate.isValid() && m_selectedDate.year() == year;
@@ -1168,7 +1185,14 @@ void CalendarView::paintContentCellChrome(QPainter& painter,
 {
     const auto& colors = themeColorsRef();
 
-    if (current) {
+    if (current && selected) {
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(colors.accentDefault, 1.5));
+        painter.drawEllipse(indicator.adjusted(0.5, 0.5, -0.5, -0.5));
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(colors.accentDefault);
+        painter.drawEllipse(indicator.adjusted(3.0, 3.0, -3.0, -3.0));
+    } else if (current) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.accentDefault);
         painter.drawEllipse(indicator);

@@ -25,8 +25,8 @@ class TimePickerFlyout;
 class TimePicker : public fluent::basicinput::Button {
     Q_OBJECT
     /**
-     * @brief Current time value displayed by the picker.
-     * zh_CN: picker 当前显示的时间值。
+     * @brief Selected time when present, otherwise the fallback time used to initialize the picker.
+     * zh_CN: 有选中值时返回选中时间，否则返回用于初始化选择器的后备时间。
      */
     Q_PROPERTY(QTime time READ time WRITE setTime NOTIFY timeChanged)
     /**
@@ -106,7 +106,11 @@ public:
     QSize minimumSizeHint() const override;
 
 public slots:
+    /** @brief Updates the fallback/pending time without committing or replacing a selection; ignores invalid times.
+     * zh_CN: 更新后备或待确认时间，不提交或替换已选时间；无效时间被忽略。 */
     void setTime(const QTime& time);
+    /** @brief Commits a selected time; an invalid time clears the selection.
+     * zh_CN: 提交选中时间；无效时间清空选择。 */
     void setSelectedTime(const QTime& time);
     void clearSelectedTime();
     void setMinuteIncrement(int increment);
