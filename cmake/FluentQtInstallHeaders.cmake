@@ -30,6 +30,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/compatibility/EventConstructionCompat.h
     src/compatibility/FontCompat.h
     src/compatibility/InputEventCompat.h
+    src/compatibility/MetaPropertyCompat.h
     src/compatibility/ObjectCompat.h
     src/compatibility/PaintCompat.h
     src/compatibility/QtFeatures.h

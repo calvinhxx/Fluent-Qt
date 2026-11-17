@@ -537,7 +537,8 @@ PlaygroundControl createPlaygroundControl(const QString& route, QWidget* parent)
         densityDef.label = QStringLiteral("Density");
         densityDef.group = QStringLiteral("Layout");
         densityDef.type = fluent::layout::PropertyDefinition::Choice;
-        densityDef.choices = {QStringLiteral("Compact"), QStringLiteral("Standard"), QStringLiteral("Comfortable")};
+        densityDef.choices = QStringList{QStringLiteral("Compact"), QStringLiteral("Standard"),
+            QStringLiteral("Comfortable")};
         densityDef.defaultValue = QStringLiteral("Standard");
         fluent::layout::PropertyDefinition spacingDef;
         spacingDef.key = QStringLiteral("spacing");

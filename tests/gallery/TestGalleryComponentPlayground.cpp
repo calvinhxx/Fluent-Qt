@@ -61,6 +61,26 @@ QJsonObject playgroundField(const QJsonObject& state, const QString& id)
 }
 } // namespace
 
+TEST(GalleryComponentPlaygroundIsolationTest, CollectionSelectionUsesFluentEnumForInheritedProperties)
+{
+    for (const auto* route : {"list-view", "file-list-view", "grid-view", "flow-view", "tree-view", "data-grid"}) {
+        SCOPED_TRACE(route);
+        QWidget host;
+        auto* playground = fluent::gallery::GalleryComponentPlayground::create(route, &host);
+        ASSERT_NE(playground, nullptr);
+        const auto field = playgroundField(playground->snapshot(), "selectionMode");
+        const QJsonArray expected{"None", "Single", "Multiple", "Extended"};
+        EXPECT_EQ(field.value("options"), expected);
+        EXPECT_EQ(field.value("cppPrefix"), "fluent::collections::SelectionMode::");
+        EXPECT_EQ(field.value("pythonPrefix"), "fluentqt.SelectionMode.");
+        for (const auto& mode : expected) {
+            ASSERT_TRUE(playground->apply({{"operation", "set"}, {"values", QJsonObject{{"selectionMode", mode}}}}));
+            EXPECT_EQ(playground->snapshot().value("values").toObject().value("selectionMode").toString(),
+                mode.toString());
+        }
+    }
+}
+
 TEST(GalleryComponentPlaygroundIsolationTest, TreeSelectionEditorFollowsActualSelectionMode)
 {
     QWidget host;
@@ -850,7 +870,11 @@ TEST(GalleryComponentPlaygroundTest, RegisteredControlsKeepTheirOwnPropertiesAnd
                 variants = {QStringLiteral("Edited \"sample\"\\value").left(field.value("maximumLength").toInt(512))};
             for (const auto& value : variants) {
                 ASSERT_TRUE(playground->apply({{"operation", "reset"}}));
-                EXPECT_EQ(playground->snapshot().value("values"), initial.value("values"));
+                const auto restored = playground->snapshot().value("values");
+                EXPECT_EQ(restored, initial.value("values"))
+                    << "restored=" << QJsonDocument(restored.toObject()).toJson(QJsonDocument::Compact).toStdString()
+                    << " initial="
+                    << QJsonDocument(initial.value("values").toObject()).toJson(QJsonDocument::Compact).toStdString();
                 QString error;
                 if (field.contains("effectFixture"))
                     ASSERT_TRUE(
