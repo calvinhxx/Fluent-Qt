@@ -427,9 +427,17 @@ the capture ignores that pixel. When Qt's private widget headers are unavailable
 the shell keeps the queued `update()` path. A pass that never reaches the surface
 falls back to `update()` after 50 ms.
 
-Continuous updates with a reported extent that cover at least 30% of a surface,
-such as scrolling, dragging, an expanding section or a page transition, keep cache
-density while they fit an 8 ms texture budget per frame. The estimate multiplies
+Only a panel receiving wheel input or a pointer drag beyond Qt's drag threshold
+may temporarily reduce its sampling density. The two panels track that input
+independently; an input lease expires after 160 ms without another wheel/drag
+update and is cleared on release or when returning to 2D. Navigation clicks,
+hover, page construction, section expansion and programmatic animation retain
+cache density, even when they cause frequent large repaints. This keeps stationary
+text from changing weight or sharpness between a click and its settled frame.
+
+During that direct manipulation, continuous updates with a reported extent that
+cover at least 30% of the panel keep cache density while they fit an 8 ms texture
+budget per frame. The estimate multiplies
 their rows by the measured cache-density cost per row of earlier large updates and
 adds the texture work already spent in that frame. A texture's first paint is not
 sampled, because it also compiles shaders and fills glyph and image caches. Updates
@@ -440,7 +448,7 @@ so text at rest keeps its full detail. Bands that
 contain an enabled nested graphics effect always keep cache density, because Qt
 caches effect pixmaps in device pixels and would replay them at stale positions.
 Texture cost is judged per frame, with both surfaces counted together. When it
-stays slow, smaller continuous updates also use native density. If native-density
+stays slow, smaller updates during direct manipulation also use native density. If native-density
 frames still average more than 33 ms for 60 such frames in a row, the Gallery
 suggests turning off 3D once; frames without native-density updates do not end
 that streak. The `update()` fallback is armed once per pending frame, so

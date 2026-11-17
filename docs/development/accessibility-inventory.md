@@ -729,6 +729,11 @@ chain, retaining common parents when moving between child widgets. The native
 FlipView regression exercises the real window input path in 2D and projected
 presentation, including live zoom, and checks the Gallery compositor output for arrows
 and mouse activation. C++ and PySide6 Gallery use the same containment rules.
+Navigation clicks, hover and programmatic layout/animation repaints keep the same
+text sampling density throughout their intermediate frames. Only the panel with
+recent wheel input or an actual pointer drag can use adaptive density. A full
+Gallery regression samples unchanged navigation text during route clicks at
+75%/100% zoom; PySide6 also checks Light/Dark navigation and retained input behavior.
 The projection router also preserves opted-in Qt hover enter/leave events and
 mouse timestamps/device identity. Hover paths are recomputed after reparenting;
 a receiver removed by an input callback is not used again. Full-window native
