@@ -16,6 +16,10 @@ class QMouseEvent;
 class QPaintEvent;
 class QResizeEvent;
 
+namespace fluent::basicinput {
+class DropDownButton;
+}
+
 namespace fluent::menus_toolbars {
 
 class FluentMenu;
@@ -27,6 +31,8 @@ class FluentMenu;
  * FluentMenuBar keeps QMenuBar behavior while aligning menu-bar typography and
  * theme updates with the rest of the component library.
  * zh_CN: FluentMenuBar 保留 QMenuBar 行为，并让菜单栏排版和主题更新与组件库保持一致。
+ * Actions that do not fit remain available through the More menus button.
+ * zh_CN: 宽度不足的动作仍可从“更多菜单”按钮访问。
  */
 class FluentMenuBar : public QMenuBar, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -72,6 +78,7 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void actionEvent(QActionEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
@@ -95,6 +102,7 @@ private:
     Metrics metrics() const;
     void invalidateLayout();
     void ensureLayout() const;
+    void syncOverflow();
     QAction* actionAt(const QPoint& position, bool enabledOnly) const;
     QAction* firstEnabledAction() const;
     QAction* nextEnabledAction(QAction* from, int direction) const;
@@ -108,7 +116,13 @@ private:
     Typography::FontRole m_fontStyle = Typography::FontRole::Body;
     bool m_backgroundVisible = true;
     mutable QHash<QAction*, QRect> m_actionRects;
+    QHash<QAction*, QMetaObject::Connection> m_actionChangedConnections;
     mutable bool m_layoutDirty = true;
+    mutable int m_naturalWidth = 0;
+    mutable QRect m_overflowRect;
+    mutable QList<QAction*> m_overflowActions;
+    basicinput::DropDownButton* m_overflowButton = nullptr;
+    FluentMenu* m_overflowMenu = nullptr;
     QAction* m_hoveredAction = nullptr;
     QAction* m_pressedAction = nullptr;
     QAction* m_focusedAction = nullptr;

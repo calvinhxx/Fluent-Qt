@@ -16,6 +16,7 @@
 #include "components/foundation/private/MotionPolicy_p.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
+#include "design/CornerRadius.h"
 
 namespace fluent::navigation {
 namespace {
@@ -162,16 +163,37 @@ protected:
     }
     void paintEvent(QPaintEvent* event) override
     {
-        Button::paintEvent(event);
+        Q_UNUSED(event)
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
+        const auto& c = themeColorsRef();
+        const QRectF surfaceRect = QRectF(rect()).adjusted(1.0, 1.0, -1.0, -1.0);
+        // Active steps stay anchored by the accent badge and bold title rather than a full-tile
+        // Subtle checked fill, which clashes with the track connector.
+        // zh_CN: 当前步骤通过强调色徽章和加粗标题区分，不在静止态叠加铺满整格的灰色选中底块，
+        // 避免与步骤连接线冲突；仅在悬停或按下时提供轻量交互反馈。
+        if (isEnabled()) {
+            const QColor hoverBg = isDown() ? c.subtleTertiary : (underMouse() ? c.subtleSecondary : QColor());
+            if (hoverBg.isValid()) {
+                p.setPen(Qt::NoPen);
+                p.setBrush(hoverBg);
+                p.drawRoundedRect(surfaceRect, ::CornerRadius::Control, ::CornerRadius::Control);
+            }
+            if (hasFocus() && hasFocusVisual()) {
+                QColor focusColor = c.textSecondary;
+                focusColor.setAlpha(130);
+                p.setPen(QPen(focusColor, 1.0));
+                p.setBrush(Qt::NoBrush);
+                p.drawRoundedRect(surfaceRect.adjusted(0.5, 0.5, -0.5, -0.5), qMax(0, ::CornerRadius::Control - 1),
+                    qMax(0, ::CornerRadius::Control - 1));
+            }
+        }
         QRectF marker = markerRect();
         const qreal inset = (1.0 - activeWeight) * 2.0;
         marker.adjust(inset, inset, -inset, -inset);
         p.setPen(Qt::NoPen);
         p.setBrush(fill);
         p.drawEllipse(marker);
-        const auto& c = themeColorsRef();
         if (!isEnabled()) {
             p.setPen(QPen(c.strokeStrong, 1.0, Qt::DashLine));
             p.setBrush(Qt::NoBrush);

@@ -67,9 +67,11 @@ QWidget* createPage(const QString& title, QWidget* parent = nullptr)
     heading->anchors()->right = {page, Edge::Right, -18};
     addAnchored(layout, heading);
 
-    auto* summary = new Label(QStringLiteral("Page content hosted by StackContentHost and "
-                                             "driven by Pivot selection."),
-                              page);
+    auto* summary = new Label(
+        QStringLiteral(
+            "Page content hosted by StackContentHost and "
+            "driven by Pivot selection."),
+        page);
     summary->setFluentTypography(Typography::FontRole::Caption);
     summary->setTextElideMode(Qt::ElideRight);
     summary->anchors()->top = {heading, Edge::Bottom, 8};
@@ -93,8 +95,7 @@ protected:
     static void SetUpTestSuite()
     {
         qRegisterMetaType<fluent::navigation::PivotItem>("fluent::navigation::PivotItem");
-        qRegisterMetaType<fluent::navigation::Pivot::OverflowBehavior>(
-            "fluent::navigation::Pivot::OverflowBehavior");
+        qRegisterMetaType<fluent::navigation::Pivot::OverflowBehavior>("fluent::navigation::Pivot::OverflowBehavior");
         qRegisterMetaType<QVector<int>>("QVector<int>");
     }
 
@@ -175,8 +176,7 @@ TEST_F(PivotTest, ItemManagementPreservesOrderMetadataAndSignals)
     EXPECT_EQ(pivot.itemCount(), 1);
     EXPECT_EQ(pivot.selectedIndex(), 0);
 
-    PivotItem flagged(QStringLiteral("Flagged"), Typography::Icons::Flag, false, 42,
-                      QStringLiteral("Flagged mail"));
+    PivotItem flagged(QStringLiteral("Flagged"), Typography::Icons::Flag, false, 42, QStringLiteral("Flagged mail"));
     EXPECT_EQ(pivot.addItem(flagged), 1);
     EXPECT_FALSE(pivot.itemAt(1).enabled);
     EXPECT_EQ(pivot.itemAt(1).data.toInt(), 42);
@@ -281,8 +281,7 @@ TEST_F(PivotTest, SelectionCanDriveExternalStackContentHostPages)
     host->anchors()->left = {pivot, Edge::Left, 0};
     addAnchored(layout, host);
 
-    QObject::connect(pivot, &Pivot::currentChanged, host,
-                     [host](int index) { host->setCurrentIndex(index, 0, true); });
+    QObject::connect(pivot, &Pivot::currentChanged, host, [host](int index) { host->setCurrentIndex(index, 0, true); });
     host->setCurrentIndex(pivot->selectedIndex(), 0, false);
     showAndProcess(*window);
 
@@ -340,8 +339,7 @@ TEST_F(PivotTest, GeometryOverflowAndResizeRecomputeDeterministically)
     EXPECT_FALSE(pivot->overflowForwardGeometry().isEmpty());
 
     const QVector<int> before = pivot->visibleItemIndexes();
-    QTest::mouseClick(pivot, Qt::LeftButton, Qt::NoModifier,
-                      pivot->overflowForwardGeometry().center());
+    QTest::mouseClick(pivot, Qt::LeftButton, Qt::NoModifier, pivot->overflowForwardGeometry().center());
     QApplication::processEvents();
     EXPECT_NE(pivot->visibleItemIndexes(), before);
 
@@ -379,6 +377,24 @@ TEST_F(PivotTest, ThemeAndAccessibilityPreserveSelectionAndPageState)
     EXPECT_EQ(pivot.selectedIndex(), 0);
 }
 
+TEST_F(PivotTest, HeaderWidthAndHeightScaleWithFontRole)
+{
+    Pivot pivot;
+    pivot.addItem(PivotItem(QStringLiteral("Overview"), Typography::Icons::Home));
+    pivot.addItem(PivotItem(QStringLiteral("Unread"), Typography::Icons::Mail));
+    pivot.resize(520, pivot.sizeHint().height());
+    showAndProcess(pivot);
+
+    const QFontMetrics bodyMetrics(pivot.themeFont(Typography::FontRole::Body).toQFont());
+    const int minHeaderWidth = 16 * 2 + 16 + 8 + bodyMetrics.horizontalAdvance(QStringLiteral("Overview")) + 2;
+    EXPECT_GE(pivot.itemHeaderGeometry(0).width(), minHeaderWidth);
+    EXPECT_EQ(pivot.sizeHint().height(), 44);
+
+    pivot.setItemFontRole(Typography::FontRole::Title);
+    QApplication::processEvents();
+    EXPECT_GT(pivot.sizeHint().height(), 44);
+}
+
 TEST_F(PivotTest, VisualCheck)
 {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
@@ -414,8 +430,9 @@ TEST_F(PivotTest, VisualCheck)
     emailHost->anchors()->top = {emailPivot, Edge::Bottom, 0};
     emailHost->anchors()->left = {emailPivot, Edge::Left, 0};
     addAnchored(layout, emailHost);
-    QObject::connect(emailPivot, &Pivot::currentChanged, emailHost,
-                     [emailHost](int index) { emailHost->setCurrentIndex(index, 0, true); });
+    QObject::connect(emailPivot, &Pivot::currentChanged, emailHost, [emailHost](int index) {
+        emailHost->setCurrentIndex(index, 0, true);
+    });
     emailHost->setCurrentIndex(emailPivot->selectedIndex(), 0, false);
 
     auto* compactPivot = new Pivot(window);
@@ -447,13 +464,12 @@ TEST_F(PivotTest, VisualCheck)
     switchTheme->setFixedSize(140, 32);
     switchTheme->anchors()->top = {compactPivot, Edge::Bottom, 28};
     switchTheme->anchors()->left = {compactPivot, Edge::Left, 0};
-    QObject::connect(
-        switchTheme, &Button::clicked, window,
+    QObject::connect(switchTheme, &Button::clicked, window,
         [this, emailTitle, emailPivot, emailHost, compactPivot, overflowTitle, overflowPivot]() {
             const fluent::FluentElement::Theme next =
                 fluent::FluentElement::currentTheme() == fluent::FluentElement::Light
-                    ? fluent::FluentElement::Dark
-                    : fluent::FluentElement::Light;
+                ? fluent::FluentElement::Dark
+                : fluent::FluentElement::Light;
             fluent::FluentElement::setTheme(next);
             window->onThemeUpdated();
             emailTitle->onThemeUpdated();

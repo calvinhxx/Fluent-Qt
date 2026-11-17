@@ -223,6 +223,14 @@ void FluentMenu::setFontStyle(Typography::FontRole role)
 
 void FluentMenu::onThemeUpdated()
 {
+    // Release any previous auto minimum width before updating the font or menu
+    // stylesheet so QMenu recomputes its action geometry from the new font.
+    // zh_CN: 在更新字体与菜单样式前先释放上一次自动设置的最小宽度，使 QMenu 按新字体重算动作布局。
+    if (minimumWidth() == m_autoMinimumWidth && m_autoMinimumWidth > 0) {
+        setMinimumWidth(0);
+        m_autoMinimumWidth = 0;
+    }
+
     const auto& s = themeSpacing();
     const int vPadding = s.gap.tight;
 
@@ -236,10 +244,24 @@ void FluentMenu::onThemeUpdated()
     // 包含这些边距，确保窗口足够大。
     setContentsMargins(m_shadowSize, m_shadowSize + vPadding, m_shadowSize, m_shadowSize + vPadding);
     setItemLayoutMetrics(s.padding.listItemV, s.gap.normal + 1);
-    setMinimumWidth(sizeHint().width());
+    syncAutoMinimumWidth();
     updateSurfaceMask();
     updateGeometry();
     update();
+}
+
+void FluentMenu::syncAutoMinimumWidth()
+{
+    // Re-evaluate width without letting the previous auto floor ratchet wider
+    // across dynamic font-role changes while preserving explicit caller widths.
+    // zh_CN: 重新计算宽度时先释放先前自动设置的下限，避免字号切换后宽度只增不减，同时保留调用方显式设置的最小宽度。
+    if (minimumWidth() == m_autoMinimumWidth)
+        setMinimumWidth(0);
+    const int targetWidth = sizeHint().width();
+    if (minimumWidth() <= m_autoMinimumWidth) {
+        m_autoMinimumWidth = targetWidth;
+        setMinimumWidth(targetWidth);
+    }
 }
 
 void FluentMenu::setItemLayoutMetrics(int verticalPadding, int separatorHeight)
@@ -257,22 +279,37 @@ void FluentMenu::setItemLayoutMetrics(int verticalPadding, int separatorHeight)
 
 void FluentMenu::actionEvent(QActionEvent* event)
 {
+    const bool trackActionMetrics = event->type() == QEvent::ActionAdded || event->type() == QEvent::ActionRemoved
+        || event->type() == QEvent::ActionChanged;
+    if (trackActionMetrics && minimumWidth() == m_autoMinimumWidth && m_autoMinimumWidth > 0) {
+        setMinimumWidth(0);
+        m_autoMinimumWidth = 0;
+    }
     QMenu::actionEvent(event);
     if (event->type() == QEvent::ActionAdded && event->action() && !event->action()->isSeparator()) {
         QAction* action = event->action();
-        QObject::connect(action, &QAction::triggered, this, [this, action]() {
-            if (!action || action->isSeparator() || action->menu())
-                return;
-            for (QObject* obj = this; obj; obj = obj->parent()) {
-                if (auto* menu = qobject_cast<QMenu*>(obj))
-                    menu->hide();
-            }
-        });
+        QObject::disconnect(m_actionTriggerConnections.take(action));
+        m_actionTriggerConnections.insert(action,
+            QObject::connect(action, &QAction::triggered, this, [this, action = QPointer<QAction>(action)]() {
+                if (!action || action->isSeparator() || action->menu())
+                    return;
+                QPointer<FluentMenu> guard(this);
+                for (QPointer<QObject> obj = this; obj;) {
+                    const QPointer<QObject> parent = obj->parent();
+                    if (auto* menu = qobject_cast<QMenu*>(obj.data()); menu && menu->isWindow())
+                        menu->hide();
+                    if (!guard)
+                        return;
+                    obj = parent;
+                }
+            }));
+    } else if (event->type() == QEvent::ActionRemoved) {
+        QObject::disconnect(m_actionTriggerConnections.take(event->action()));
     }
 
     if (event->type() == QEvent::ActionAdded || event->type() == QEvent::ActionRemoved
         || event->type() == QEvent::ActionChanged) {
-        setMinimumWidth(sizeHint().width());
+        syncAutoMinimumWidth();
         updateGeometry();
         update();
     }
@@ -292,6 +329,25 @@ void FluentMenu::keyPressEvent(QKeyEvent* event)
             event->accept();
             action->trigger();
             return;
+        }
+    }
+
+    if (!isWindow() && event) {
+        if (event->key() == Qt::Key_Escape) {
+            setActiveAction(nullptr);
+            update();
+            event->accept();
+            return;
+        }
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_Space) {
+            QAction* active = activeAction();
+            if (active && !active->menu() && !active->isSeparator() && active->isEnabled()) {
+                event->accept();
+                // Triggering may synchronously destroy this menu or its owner.
+                // zh_CN: 动作可能同步销毁菜单或宿主，触发后不再访问自身。
+                active->trigger();
+                return;
+            }
         }
     }
 
@@ -331,6 +387,24 @@ void FluentMenu::mouseMoveEvent(QMouseEvent* event)
 
 void FluentMenu::mousePressEvent(QMouseEvent* event)
 {
+    if (!isWindow()) {
+        QAction* action = event ? actionAt(event->pos()) : nullptr;
+        if (!action || action->isSeparator() || !action->isEnabled()) {
+            setActiveAction(nullptr);
+            update();
+            if (event)
+                event->accept();
+            return;
+        }
+        if (!action->menu()) {
+            setActiveAction(action);
+            update();
+            if (event)
+                event->accept();
+            return;
+        }
+    }
+
     QPointer<FluentMenu> guard(this);
     QMenu::mousePressEvent(event);
     if (!guard)
@@ -345,6 +419,21 @@ void FluentMenu::mousePressEvent(QMouseEvent* event)
 void FluentMenu::mouseReleaseEvent(QMouseEvent* event)
 {
     QPointer<FluentMenu> guard(this);
+    if (!isWindow()) {
+        QAction* action = event ? actionAt(event->pos()) : nullptr;
+        if (!action || !action->menu()) {
+            if (event && event->button() == Qt::LeftButton && action && !action->isSeparator() && action->isEnabled()) {
+                setActiveAction(action);
+                action->trigger();
+            }
+            if (guard)
+                guard->update();
+            if (event)
+                event->accept();
+            return;
+        }
+    }
+
     QMenu::mouseReleaseEvent(event);
     if (!guard)
         return;
@@ -503,7 +592,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
             continue;
         }
 
-        bool isEnabled = action->isEnabled();
+        bool isEnabled = this->isEnabled() && action->isEnabled();
         bool isActive = (action == activeAction());
         const bool highlighted = isEnabled && isActive;
         const QColor bg = highlighted ? colors.subtleSecondary : QColor(Qt::transparent);
@@ -530,8 +619,8 @@ void FluentMenu::paintEvent(QPaintEvent* event)
                 iconSide, iconSide);
             if (action->isCheckable() && action->isChecked()) {
                 p.setPen(primaryText);
-                Typography::Icons::paintGlyph(p, QRectF(iconRect), Typography::Icons::CheckMark,
-                    Typography::IconSize::Compact, Qt::AlignCenter);
+                detail::paintMenuGlyph(p, QRectF(iconRect), Typography::Icons::CheckMark,
+                    Typography::IconSize::Compact);
             } else if (!action->icon().isNull()) {
                 const QIcon::Mode mode = !isEnabled ? QIcon::Disabled : (isActive ? QIcon::Active : QIcon::Normal);
                 const QIcon::State state = action->isChecked() ? QIcon::On : QIcon::Off;
@@ -544,7 +633,7 @@ void FluentMenu::paintEvent(QPaintEvent* event)
         const int shortcutReserve = shortcutColumn > 0 ? shortcutColumn + shortcutGap : 0;
         const int textRight = itemRect.right() - textPadding - trailingColumn - shortcutReserve;
         const int textLeft = itemRect.left() + textPadding + leadingColumn;
-        const int textBaseline = fluent::painting::verticallyCenteredTextBaseline(itemRect, fontMetrics);
+        const qreal textBaseline = detail::menuTextBaseline(p, QRectF(itemRect));
 
         p.setPen(primaryText);
         // Draw from a baseline instead of an exactly measured QRect. Some
@@ -555,21 +644,21 @@ void FluentMenu::paintEvent(QPaintEvent* event)
         // 字体后端会将抗锯齿边缘绘制到 Qt 报告边界之外，矩形绘制会裁掉末尾
         // “l” 或开头 “C”。
         if (textLeft <= textRight)
-            p.drawText(QPoint(textLeft, textBaseline), menuLabelText(action->text()));
+            p.drawText(QPointF(textLeft, textBaseline), menuLabelText(action->text()));
 
         if (!shortcutRect.isEmpty()) {
             p.setPen(secondaryText);
             constexpr int shortcutInkInset = 6;
             const int shortcutX = shortcutRect.right() - shortcutInkInset - fontMetrics.horizontalAdvance(shortcutText)
                 + 1;
-            p.drawText(QPoint(shortcutX, textBaseline), shortcutText);
+            p.drawText(QPointF(shortcutX, textBaseline), shortcutText);
         }
 
         if (action->menu()) {
             const QRect arrowRect = itemSubmenuIndicatorGeometry(action);
             p.setPen(secondaryText);
-            Typography::Icons::paintGlyph(p, QRectF(arrowRect), Typography::Icons::ChevronRightMed,
-                Typography::IconSize::Compact, Qt::AlignCenter);
+            detail::paintMenuGlyph(p, QRectF(arrowRect), Typography::Icons::ChevronRightMed,
+                Typography::IconSize::Compact);
         }
     }
     p.restore();

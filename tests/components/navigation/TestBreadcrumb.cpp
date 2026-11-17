@@ -39,9 +39,7 @@ public:
 
 class BreadcrumbContentPanel : public QWidget, public fluent::FluentElement, public fluent::QMLPlus {
 public:
-    explicit BreadcrumbContentPanel(QWidget* parent = nullptr)
-        : QWidget(parent)
-        , m_host(new StackContentHost(this))
+    explicit BreadcrumbContentPanel(QWidget* parent = nullptr) : QWidget(parent), m_host(new StackContentHost(this))
     {
         m_host->setObjectName(QStringLiteral("BreadcrumbVisualContentHost"));
         m_host->setTransitionAnimationEnabled(true);
@@ -88,7 +86,10 @@ void addAnchored(AnchorLayout* layout, QWidget* widget)
     layout->addWidget(widget);
 }
 
-QWidget* createBreadcrumbPage(const QString& title, const QString& detail, const QString& actionText, Button** actionButton = nullptr)
+QWidget* createBreadcrumbPage(const QString& title,
+    const QString& detail,
+    const QString& actionText,
+    Button** actionButton = nullptr)
 {
     using Edge = AnchorLayout::Edge;
 
@@ -131,16 +132,13 @@ class BreadcrumbTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        fluentRegisterMetaTypeNames<fluent::navigation::BreadcrumbItem>(
-            "fluent::navigation::BreadcrumbItem",
+        fluentRegisterMetaTypeNames<fluent::navigation::BreadcrumbItem>("fluent::navigation::BreadcrumbItem",
             "BreadcrumbItem");
         qRegisterMetaType<QVector<int>>("QVector<int>");
         fluentRegisterMetaTypeNames<fluent::navigation::Breadcrumb::BreadcrumbSize>(
-            "fluent::navigation::Breadcrumb::BreadcrumbSize",
-            "Breadcrumb::BreadcrumbSize");
+            "fluent::navigation::Breadcrumb::BreadcrumbSize", "Breadcrumb::BreadcrumbSize");
         fluentRegisterMetaTypeNames<fluent::navigation::Breadcrumb::OverflowMode>(
-            "fluent::navigation::Breadcrumb::OverflowMode",
-            "Breadcrumb::OverflowMode");
+            "fluent::navigation::Breadcrumb::OverflowMode", "Breadcrumb::OverflowMode");
     }
 
     void SetUp() override
@@ -256,7 +254,7 @@ TEST_F(BreadcrumbTest, LayoutHelpersExposeStandardAndLargeMetrics)
 
     EXPECT_EQ(breadcrumb.itemGeometry(0).height(), 20);
     EXPECT_EQ(breadcrumb.itemGeometry(0).width(),
-              QFontMetrics(breadcrumb.font()).horizontalAdvance(QStringLiteral("Home")) + 8);
+        QFontMetrics(breadcrumb.font()).horizontalAdvance(QStringLiteral("Home")) + 8);
     EXPECT_EQ(breadcrumb.separatorGeometry(0).width(), 16);
     EXPECT_TRUE(breadcrumb.itemGeometry(0).right() < breadcrumb.separatorGeometry(0).left());
     EXPECT_TRUE(breadcrumb.overflowGeometry().isEmpty());
@@ -268,7 +266,7 @@ TEST_F(BreadcrumbTest, LayoutHelpersExposeStandardAndLargeMetrics)
 
     EXPECT_EQ(breadcrumb.itemGeometry(0).height(), 40);
     EXPECT_EQ(breadcrumb.itemGeometry(0).width(),
-              QFontMetrics(breadcrumb.font()).horizontalAdvance(QStringLiteral("Home")) + 16);
+        QFontMetrics(breadcrumb.font()).horizontalAdvance(QStringLiteral("Home")) + 16);
     EXPECT_EQ(breadcrumb.separatorGeometry(0).width(), 24);
     EXPECT_TRUE(breadcrumb.itemGeometry(99).isEmpty());
     EXPECT_TRUE(breadcrumb.separatorGeometry(99).isEmpty());
@@ -277,13 +275,8 @@ TEST_F(BreadcrumbTest, LayoutHelpersExposeStandardAndLargeMetrics)
 TEST_F(BreadcrumbTest, OverflowModesExposeDeterministicHiddenIndexes)
 {
     Breadcrumb breadcrumb(window);
-    breadcrumb.setItems(QStringList{
-        QStringLiteral("Home"),
-        QStringLiteral("Projects"),
-        QStringLiteral("2026"),
-        QStringLiteral("May"),
-        QStringLiteral("Breadcrumb")
-    });
+    breadcrumb.setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("2026"),
+        QStringLiteral("May"), QStringLiteral("Breadcrumb")});
     breadcrumb.resize(80, 20);
 
     breadcrumb.setOverflowMode(Breadcrumb::OverflowMode::None);
@@ -338,7 +331,8 @@ TEST_F(BreadcrumbTest, PointerActivationSeparatorOverflowAndTruncation)
     EXPECT_EQ(breadcrumb.itemAt(1).text, QStringLiteral("Folder"));
     EXPECT_EQ(itemsSpy.count(), 1);
 
-    breadcrumb.setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("2026"), QStringLiteral("May"), QStringLiteral("Breadcrumb")});
+    breadcrumb.setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("2026"),
+        QStringLiteral("May"), QStringLiteral("Breadcrumb")});
     breadcrumb.setOverflowMode(Breadcrumb::OverflowMode::Beginning);
     breadcrumb.resize(80, 20);
     QApplication::processEvents();
@@ -380,8 +374,7 @@ TEST_F(BreadcrumbTest, KeyboardActivationSkipsDisabledItems)
 
     breadcrumb.setLayoutDirection(Qt::RightToLeft);
     QApplication::processEvents();
-    EXPECT_GT(breadcrumb.itemGeometry(0).center().x(),
-              breadcrumb.itemGeometry(2).center().x());
+    EXPECT_GT(breadcrumb.itemGeometry(0).center().x(), breadcrumb.itemGeometry(2).center().x());
     QTest::keyClick(&breadcrumb, Qt::Key_Home);
     QTest::keyClick(&breadcrumb, Qt::Key_Left);
     QTest::keyClick(&breadcrumb, Qt::Key_Space);
@@ -450,8 +443,10 @@ TEST_F(BreadcrumbTest, BreadcrumbActivationCanDriveStackContentHostPages)
     breadcrumb.setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("Breadcrumb")});
 
     QWidget* homePage = createBreadcrumbPage(QStringLiteral("Home"), QStringLiteral("Root content page"), QString());
-    QWidget* projectsPage = createBreadcrumbPage(QStringLiteral("Projects"), QStringLiteral("Project listing page"), QString());
-    QWidget* breadcrumbPage = createBreadcrumbPage(QStringLiteral("Breadcrumb"), QStringLiteral("Selected leaf page"), QString());
+    QWidget* projectsPage = createBreadcrumbPage(QStringLiteral("Projects"), QStringLiteral("Project listing page"),
+        QString());
+    QWidget* breadcrumbPage = createBreadcrumbPage(QStringLiteral("Breadcrumb"), QStringLiteral("Selected leaf page"),
+        QString());
     ASSERT_TRUE(host.insertPage(0, homePage));
     ASSERT_TRUE(host.insertPage(1, projectsPage));
     ASSERT_TRUE(host.insertPage(2, breadcrumbPage));
@@ -471,6 +466,24 @@ TEST_F(BreadcrumbTest, BreadcrumbActivationCanDriveStackContentHostPages)
     EXPECT_EQ(host.currentIndex(), 1);
     EXPECT_FALSE(breadcrumbPage->isVisible());
     EXPECT_TRUE(projectsPage->isVisible());
+}
+
+TEST_F(BreadcrumbTest, NonDefaultFontRoleExpandsRowHeightWithoutBreakingDefaults)
+{
+    Breadcrumb breadcrumb;
+    breadcrumb.appendItem(QStringLiteral("Home"));
+    EXPECT_EQ(breadcrumb.sizeHint().height(), 20);
+
+    breadcrumb.setStandardFontRole(Typography::FontRole::Title);
+    EXPECT_GT(breadcrumb.sizeHint().height(), 20);
+
+    breadcrumb.setStandardFontRole(Typography::FontRole::Body);
+    EXPECT_EQ(breadcrumb.sizeHint().height(), 20);
+
+    breadcrumb.setBreadcrumbSize(Breadcrumb::BreadcrumbSize::Large);
+    EXPECT_EQ(breadcrumb.sizeHint().height(), 40);
+    breadcrumb.setLargeFontRole(Typography::FontRole::Display);
+    EXPECT_GT(breadcrumb.sizeHint().height(), 40);
 }
 
 TEST_F(BreadcrumbTest, VisualCheck)
@@ -543,28 +556,36 @@ TEST_F(BreadcrumbTest, VisualCheck)
     Button* openFluent = nullptr;
     Button* openControls = nullptr;
     Button* openBreadcrumb = nullptr;
-    contentHost->insertPage(0, createBreadcrumbPage(QStringLiteral("Home"), QStringLiteral("Root landing page hosted by StackContentHost."), QStringLiteral("Open projects"), &openProjects));
-    contentHost->insertPage(1, createBreadcrumbPage(QStringLiteral("Projects"), QStringLiteral("Project folder with Fluent component workspaces."), QStringLiteral("Open Fluent"), &openFluent));
-    contentHost->insertPage(2, createBreadcrumbPage(QStringLiteral("Fluent"), QStringLiteral("Component family page. The breadcrumb above can jump back to any ancestor."), QStringLiteral("Open Controls"), &openControls));
-    contentHost->insertPage(3, createBreadcrumbPage(QStringLiteral("Controls"), QStringLiteral("Navigation components listed as pages inside the shared stack host."), QStringLiteral("Open Breadcrumb"), &openBreadcrumb));
-    contentHost->insertPage(4, createBreadcrumbPage(QStringLiteral("Breadcrumb"), QStringLiteral("Leaf page selected from the breadcrumb trail."), QString()));
+    contentHost->insertPage(0,
+        createBreadcrumbPage(QStringLiteral("Home"), QStringLiteral("Root landing page hosted by StackContentHost."),
+            QStringLiteral("Open projects"), &openProjects));
+    contentHost->insertPage(1,
+        createBreadcrumbPage(QStringLiteral("Projects"),
+            QStringLiteral("Project folder with Fluent component workspaces."), QStringLiteral("Open Fluent"),
+            &openFluent));
+    contentHost->insertPage(2,
+        createBreadcrumbPage(QStringLiteral("Fluent"),
+            QStringLiteral("Component family page. The breadcrumb above can jump back to any ancestor."),
+            QStringLiteral("Open Controls"), &openControls));
+    contentHost->insertPage(3,
+        createBreadcrumbPage(QStringLiteral("Controls"),
+            QStringLiteral("Navigation components listed as pages inside the shared stack host."),
+            QStringLiteral("Open Breadcrumb"), &openBreadcrumb));
+    contentHost->insertPage(4,
+        createBreadcrumbPage(QStringLiteral("Breadcrumb"),
+            QStringLiteral("Leaf page selected from the breadcrumb trail."), QString()));
 
-    const QStringList fullPath{
-        QStringLiteral("Home"),
-        QStringLiteral("Projects"),
-        QStringLiteral("Fluent"),
-        QStringLiteral("Controls"),
-        QStringLiteral("Breadcrumb")
-    };
+    const QStringList fullPath{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("Fluent"),
+        QStringLiteral("Controls"), QStringLiteral("Breadcrumb")};
 
     auto navigateTo = [navigation, contentHost, status, fullPath](int index, bool animated) {
         const int boundedIndex = qBound(0, index, fullPath.size() - 1);
         navigation->setItems(fullPath.mid(0, boundedIndex + 1));
         contentHost->setCurrentIndex(boundedIndex, 0, animated);
         status->setText(QStringLiteral("StackContentHost page %1 of %2: %3")
-                            .arg(boundedIndex + 1)
-                            .arg(fullPath.size())
-                            .arg(fullPath.at(boundedIndex)));
+                .arg(boundedIndex + 1)
+                .arg(fullPath.size())
+                .arg(fullPath.at(boundedIndex)));
     };
 
     navigateTo(0, false);
@@ -579,7 +600,8 @@ TEST_F(BreadcrumbTest, VisualCheck)
     QObject::connect(openBreadcrumb, &Button::clicked, [navigateTo]() { navigateTo(4, true); });
 
     auto* beginning = new Breadcrumb(visual);
-    beginning->setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("Fluent"), QStringLiteral("Controls"), QStringLiteral("Breadcrumb")});
+    beginning->setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("Fluent"),
+        QStringLiteral("Controls"), QStringLiteral("Breadcrumb")});
     beginning->setOverflowMode(Breadcrumb::OverflowMode::Beginning);
     beginning->setFixedHeight(20);
     beginning->anchors()->top = {contentPanel, Edge::Bottom, 28};
@@ -588,7 +610,8 @@ TEST_F(BreadcrumbTest, VisualCheck)
     addAnchored(visualLayout, beginning);
 
     auto* middle = new Breadcrumb(visual);
-    middle->setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("Fluent"), QStringLiteral("Controls"), QStringLiteral("Breadcrumb")});
+    middle->setItems(QStringList{QStringLiteral("Home"), QStringLiteral("Projects"), QStringLiteral("Fluent"),
+        QStringLiteral("Controls"), QStringLiteral("Breadcrumb")});
     middle->setOverflowMode(Breadcrumb::OverflowMode::Middle);
     middle->setFixedHeight(20);
     middle->anchors()->top = {beginning, Edge::Bottom, 26};
@@ -610,7 +633,8 @@ TEST_F(BreadcrumbTest, VisualCheck)
 
     auto* truncating = new Breadcrumb(visual);
     truncating->setAutoTruncateOnItemClick(true);
-    truncating->setItems(QStringList{QStringLiteral("This PC"), QStringLiteral("Local Disk"), QStringLiteral("Users"), QStringLiteral("Public"), QStringLiteral("Pictures")});
+    truncating->setItems(QStringList{QStringLiteral("This PC"), QStringLiteral("Local Disk"), QStringLiteral("Users"),
+        QStringLiteral("Public"), QStringLiteral("Pictures")});
     truncating->setFixedHeight(20);
     truncating->anchors()->top = {disabled, Edge::Bottom, 26};
     truncating->anchors()->left = {disabled, Edge::Left, 0};
@@ -623,18 +647,20 @@ TEST_F(BreadcrumbTest, VisualCheck)
     restoreButton->anchors()->right = {disabled, Edge::Right, 0};
     addAnchored(visualLayout, restoreButton);
 
-    QObject::connect(themeButton, &Button::clicked, [visual, themeButton, navigation, status, contentPanel, beginning, middle, disabled, truncating]() {
-        const bool useDark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Light;
-        fluent::FluentElement::setTheme(useDark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
-        visual->onThemeUpdated();
-        status->onThemeUpdated();
-        contentPanel->onThemeUpdated();
-        for (Breadcrumb* breadcrumb : {navigation, beginning, middle, disabled, truncating})
-            breadcrumb->onThemeUpdated();
-        themeButton->setText(useDark ? QStringLiteral("Light") : QStringLiteral("Dark"));
-    });
+    QObject::connect(themeButton, &Button::clicked,
+        [visual, themeButton, navigation, status, contentPanel, beginning, middle, disabled, truncating]() {
+            const bool useDark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Light;
+            fluent::FluentElement::setTheme(useDark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+            visual->onThemeUpdated();
+            status->onThemeUpdated();
+            contentPanel->onThemeUpdated();
+            for (Breadcrumb* breadcrumb : {navigation, beginning, middle, disabled, truncating})
+                breadcrumb->onThemeUpdated();
+            themeButton->setText(useDark ? QStringLiteral("Light") : QStringLiteral("Dark"));
+        });
     QObject::connect(restoreButton, &Button::clicked, [truncating]() {
-        truncating->setItems(QStringList{QStringLiteral("This PC"), QStringLiteral("Local Disk"), QStringLiteral("Users"), QStringLiteral("Public"), QStringLiteral("Pictures")});
+        truncating->setItems(QStringList{QStringLiteral("This PC"), QStringLiteral("Local Disk"),
+            QStringLiteral("Users"), QStringLiteral("Public"), QStringLiteral("Pictures")});
     });
 
     visual->show();

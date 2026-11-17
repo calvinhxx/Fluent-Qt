@@ -15,7 +15,9 @@
 #include <QVariantAnimation>
 
 #include "QtTestEnvironment.h"
+#include "compatibility/EventConstructionCompat.h"
 #include "components/basicinput/Button.h"
+#include "components/basicinput/DropDownButton.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -683,6 +685,147 @@ TEST_F(MenuBarTest, FluentMenuContentPatternsExposeDeterministicGeometry)
     EXPECT_FALSE(submenu->isVisible());
     EXPECT_FALSE(compressedMenu->isVisible());
     menu->hide();
+}
+
+TEST_F(MenuBarTest, FontStyleScalesRowAndItemHeightWithoutClipping)
+{
+    MenuBarSample sample = createSimpleMenuBar(window);
+    sample.bar->ensurePolished();
+    QApplication::processEvents();
+
+    const int bodyRowHeight = sample.bar->sizeHint().height();
+    const QRect bodyFileRect = sample.bar->fluentActionGeometry(sample.fileAction);
+    EXPECT_EQ(bodyRowHeight, ::Spacing::ControlHeight::Standard);
+    EXPECT_GE(bodyFileRect.height(), ::Spacing::ControlHeight::Standard);
+
+    sample.bar->setFontStyle(::Typography::FontRole::Title);
+    sample.bar->resize(sample.bar->sizeHint());
+    QApplication::processEvents();
+
+    const int titleFontHeight = QFontMetrics(sample.bar->font()).height();
+    const QRect titleFileRect = sample.bar->fluentActionGeometry(sample.fileAction);
+    EXPECT_GT(titleFileRect.height(), bodyFileRect.height());
+    EXPECT_GE(titleFileRect.height(), titleFontHeight);
+    EXPECT_GE(sample.bar->sizeHint().height(), titleFileRect.height());
+    if (auto* extButton = sample.bar->findChild<QWidget*>(QStringLiteral("qt_menubar_ext_button"),
+            Qt::FindDirectChildrenOnly)) {
+        EXPECT_FALSE(extButton->isVisible());
+    }
+
+    sample.bar->setFontStyle(::Typography::FontRole::Body);
+    sample.bar->resize(sample.bar->sizeHint());
+    QApplication::processEvents();
+    EXPECT_EQ(sample.bar->sizeHint().height(), bodyRowHeight);
+    EXPECT_EQ(sample.bar->fluentActionGeometry(sample.fileAction).height(), bodyFileRect.height());
+    if (auto* extButton = sample.bar->findChild<QWidget*>(QStringLiteral("qt_menubar_ext_button"),
+            Qt::FindDirectChildrenOnly)) {
+        EXPECT_FALSE(extButton->isVisible());
+    }
+}
+
+TEST_F(MenuBarTest, NarrowOverflowPreservesActionsOwnershipAndAccessInBothDirections)
+{
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        QWidget host;
+        FluentMenuBar bar(&host);
+        bar.setLayoutDirection(direction);
+        QList<QAction*> actions;
+        for (const QString& name : {QStringLiteral("File"), QStringLiteral("Edit"), QStringLiteral("View")}) {
+            auto* menu = new FluentMenu(name, &host);
+            menu->addAction(QStringLiteral("Command"));
+            actions.append(bar.addMenu(menu));
+        }
+        QAction help(QStringLiteral("Help"), &host);
+        help.setCheckable(true);
+        bar.addAction(&help);
+        actions.append(&help);
+        QAction hidden(QStringLiteral("Hidden"), &host);
+        hidden.setVisible(false);
+        bar.addAction(&hidden);
+        QHash<QAction*, QObject*> owners;
+        for (QAction* action : actions)
+            owners.insert(action, action->parent());
+        actions[1]->setEnabled(false);
+        bar.resize(110, bar.sizeHint().height());
+        showAndProcess(bar);
+        auto* more = bar.findChild<fluent::basicinput::DropDownButton*>(QStringLiteral("FluentMenuBar.MoreButton"));
+        auto* overflow = bar.findChild<FluentMenu*>(QStringLiteral("FluentMenuBar.OverflowMenu"));
+        ASSERT_NE(more, nullptr);
+        ASSERT_NE(overflow, nullptr);
+        ASSERT_TRUE(more->isVisible());
+        EXPECT_TRUE(bar.rect().contains(more->geometry()));
+        for (QAction* action : actions) {
+            const QRect visible = bar.fluentActionGeometry(action);
+            EXPECT_EQ(!visible.isEmpty(), !overflow->actions().contains(action));
+            if (!visible.isEmpty()) {
+                EXPECT_TRUE(bar.rect().contains(visible));
+                EXPECT_FALSE(visible.intersects(more->geometry()));
+            }
+            EXPECT_EQ(action->parent(), owners.value(action));
+        }
+        EXPECT_FALSE(overflow->actions().contains(&hidden));
+        EXPECT_FALSE(actions[1]->isEnabled());
+        QSignalSpy triggered(&help, &QAction::triggered);
+        QTest::mouseClick(more, Qt::LeftButton);
+        QApplication::processEvents();
+        ASSERT_TRUE(overflow->isVisible());
+        overflow->setActiveAction(&help);
+        QTest::keyClick(overflow, Qt::Key_Return);
+        EXPECT_EQ(triggered.count(), 1);
+        EXPECT_TRUE(help.isChecked());
+        overflow->hide();
+        QTest::mouseClick(more, Qt::LeftButton);
+        ASSERT_TRUE(overflow->isVisible());
+        overflow->setActiveAction(actions[2]);
+        QTest::keyClick(overflow, direction == Qt::LeftToRight ? Qt::Key_Right : Qt::Key_Left);
+        QMenu* submenu = actions[2]->menu();
+        ASSERT_TRUE(QTest::qWaitFor([&] { return submenu->isVisible(); }, 1000));
+        QAction* command = submenu->actions().first();
+        QSignalSpy nestedTriggered(command, &QAction::triggered);
+        submenu->setActiveAction(command);
+        QTest::keyClick(submenu, Qt::Key_Return);
+        EXPECT_EQ(nestedTriggered.count(), 1);
+        submenu->hide();
+        overflow->hide();
+        bar.resize(bar.sizeHint().width() + 16, bar.sizeHint().height());
+        QApplication::processEvents();
+        EXPECT_FALSE(more->isVisible());
+        EXPECT_TRUE(overflow->actions().isEmpty());
+        EXPECT_TRUE(help.isChecked());
+        for (QAction* action : actions)
+            EXPECT_TRUE(bar.rect().contains(bar.fluentActionGeometry(action)));
+        bar.setFocus();
+        QTest::keyClick(&bar, Qt::Key_Home);
+        EXPECT_EQ(bar.focusedAction(), actions.first());
+        QTest::keyClick(&bar, direction == Qt::LeftToRight ? Qt::Key_Right : Qt::Key_Left);
+        EXPECT_EQ(bar.focusedAction(), actions[2]); // Skip the disabled Edit action.
+        QTest::keyClick(&bar, direction == Qt::LeftToRight ? Qt::Key_Left : Qt::Key_Right);
+        EXPECT_EQ(bar.focusedAction(), actions.first());
+    }
+}
+
+TEST_F(MenuBarTest, ClosingOpenMenuCanDestroyBarBeforeNextAction)
+{
+    QPointer<QWidget> host = new QWidget;
+    QPointer<FluentMenuBar> bar = new FluentMenuBar(host);
+    FluentMenu borrowed(QStringLiteral("File"));
+    auto* menu = &borrowed;
+    menu->addAction(QStringLiteral("Open"));
+    QAction* first = bar->addMenu(menu);
+    auto* next = new QAction(QStringLiteral("Next"), host);
+    bar->addAction(next);
+    bar->resize(bar->sizeHint());
+    showAndProcess(*bar);
+    QTest::mouseClick(bar, Qt::LeftButton, Qt::NoModifier, bar->fluentActionGeometry(first).center());
+    ASSERT_TRUE(menu->isVisible());
+    QObject::connect(menu, &QMenu::aboutToHide, [&] { delete host.data(); });
+    const QPoint nextPoint = bar->fluentActionGeometry(next).center();
+    QTest::mousePress(bar, Qt::LeftButton, Qt::NoModifier, nextPoint);
+    FLUENT_MAKE_MOUSE_EVENT(release, QEvent::MouseButtonRelease, bar.data(), nextPoint, Qt::LeftButton, Qt::NoButton,
+        Qt::NoModifier);
+    QApplication::sendEvent(bar, &release);
+    EXPECT_TRUE(host.isNull());
+    EXPECT_TRUE(bar.isNull());
 }
 
 TEST_F(MenuBarTest, VisualCheck)

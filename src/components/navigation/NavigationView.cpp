@@ -1,4 +1,5 @@
 #include "compatibility/InputEventCompat.h"
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "NavigationView.h"
 
 #include <QApplication>
@@ -531,8 +532,10 @@ void NavigationView::paintEvent(QPaintEvent*)
     // is handled separately so the one continuous root material is not covered by a flat color.
     // zh_CN: windowChromeBackdropFill() 是与标题栏共用的单一背景决策：有效色为纯色回退；无效色表示有真实系统背景（画透明）。
     const bool paintedMaterial = windowing::windowBackdropUsesPaintedMaterial(window());
-    const QColor backdrop =
-        paintedMaterial ? QColor() : windowing::windowChromeBackdropFill(*this, window(), isActiveWindow());
+    const QColor backdrop = paintedMaterial
+        ? QColor()
+        : windowing::windowChromeBackdropFill(*this, window(),
+              compatibility::detail::effectiveWindowActivation(isActiveWindow()));
     if (paintedMaterial) {
         // The Window owns the continuous software material; do not cover this
         // chrome segment with a second, independently aligned fill.

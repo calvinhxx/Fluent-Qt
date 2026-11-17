@@ -26,8 +26,7 @@ protected:
     void populate(Stepper& view)
     {
         for (int i = 0; i < 4; ++i)
-            view.addItem(
-                StepperItem(QStringLiteral("Step %1").arg(i + 1), QStringLiteral("Description")));
+            view.addItem(StepperItem(QStringLiteral("Step %1").arg(i + 1), QStringLiteral("Description")));
         view.resize(560, 120);
     }
     Button* button(Stepper& view, int index)
@@ -45,8 +44,7 @@ TEST_F(StepperTest, Contract_ResizeAndDirectionChangesPreserveMarkerTransition)
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
     view.setCurrentIndex(1);
     QTest::qWait(20);
-    auto* motion =
-        button(view, 1)->findChild<QVariantAnimation*>(QStringLiteral("stepperMarkerTransition"));
+    auto* motion = button(view, 1)->findChild<QVariantAnimation*>(QStringLiteral("stepperMarkerTransition"));
     ASSERT_NE(motion, nullptr);
     const int elapsed = motion->currentTime();
     view.resize(240, 140);
@@ -274,8 +272,7 @@ TEST_F(StepperTest, Contract_AccessibilityPreservesNamesAndRequestBoundary)
     EXPECT_EQ(view.currentIndex(), 1);
     view.setItemEnabled(2, false);
     EXPECT_TRUE(root->child(2)->state().disabled);
-    EXPECT_FALSE(root->child(2)->actionInterface()->actionNames().contains(
-        QAccessibleActionInterface::pressAction()));
+    EXPECT_FALSE(root->child(2)->actionInterface()->actionNames().contains(QAccessibleActionInterface::pressAction()));
 }
 
 TEST_F(StepperTest, Contract_InterruptedMotionSettlesWhenPolicyChangesOrWidgetHides)
@@ -290,11 +287,11 @@ TEST_F(StepperTest, Contract_InterruptedMotionSettlesWhenPolicyChangesOrWidgetHi
     view.setCurrentIndex(2);
     QTest::qWait(20);
     view.setCurrentIndex(1);
-    auto animations =
-        view.findChildren<QVariantAnimation*>(QStringLiteral("stepperMarkerTransition"));
+    auto animations = view.findChildren<QVariantAnimation*>(QStringLiteral("stepperMarkerTransition"));
     ASSERT_EQ(animations.size(), 4);
-    EXPECT_TRUE(std::any_of(animations.cbegin(), animations.cend(),
-                            [](auto* a) { return a->state() == QAbstractAnimation::Running; }));
+    EXPECT_TRUE(std::any_of(animations.cbegin(), animations.cend(), [](auto* a) {
+        return a->state() == QAbstractAnimation::Running;
+    }));
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);
     for (auto* animation : animations)
         EXPECT_EQ(animation->state(), QAbstractAnimation::Stopped);
@@ -343,4 +340,25 @@ TEST_F(StepperTest, Contract_MarkerTransitionRendersAnIntermediateFrame)
     const auto final = button(view, 1)->grab().toImage();
     EXPECT_NE(before, intermediate);
     EXPECT_NE(intermediate, final);
+}
+
+TEST_F(StepperTest, Contract_ActiveStepKeepsCheckedStateWithoutRestBackgroundBox)
+{
+    Stepper view;
+    populate(view);
+    view.setCurrentIndex(1);
+    view.resize(480, 112);
+    view.show();
+    QTest::qWait(30);
+
+    auto* active = button(view, 1);
+    auto* pending = button(view, 2);
+    ASSERT_NE(active, nullptr);
+    ASSERT_NE(pending, nullptr);
+    EXPECT_TRUE(active->isChecked());
+    EXPECT_FALSE(pending->isChecked());
+
+    const QImage activeImage = active->grab().toImage();
+    const QImage pendingImage = pending->grab().toImage();
+    EXPECT_EQ(activeImage.pixel(3, 3), pendingImage.pixel(3, 3));
 }

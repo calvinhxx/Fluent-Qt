@@ -3,6 +3,7 @@
 
 #include "compatibility/InputEventCompat.h"
 #include <QMenu>
+#include <QHash>
 #include <QPointer>
 #include <QWidgetAction>
 #include "components/foundation/FluentElement.h"
@@ -100,6 +101,8 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
+    void syncAutoMinimumWidth();
+    QHash<QAction*, QMetaObject::Connection> m_actionTriggerConnections;
     void updateSurfaceMask();
     void normalizePopupLayering();
     void positionCascade();
@@ -112,6 +115,7 @@ private:
     int m_shadowSize = ::Spacing::Standard;
     bool m_translucentSurface = true;
     bool m_surfaceMaskApplied = false;
+    int m_autoMinimumWidth = 0;
     int m_itemVerticalPadding = ::Spacing::Padding::ListItemVertical;
     int m_separatorHeight = ::Spacing::Gap::Normal + 1;
 
