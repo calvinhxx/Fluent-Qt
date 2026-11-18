@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "component": "particle-backdrop",
+  "title": "ParticleBackdrop",
+  "className": "fluent::particles::ParticleBackdrop",
+  "previewSize": [
+    380,
+    220
+  ],
+  "sizeMode": "fixed",
+  "recipe": {
+    "cpp": {
+      "imports": "#include <FluentQt/Particles.h>",
+      "setup": "auto* control = new fluent::particles::ParticleBackdrop(%PARENT%);\ncontrol->setMinimumHeight(200);\n"
+    },
+    "python": {
+      "imports": "from fluentqt.particles import ParticleBackdrop",
+      "setup": "control = ParticleBackdrop(%PARENT%)\ncontrol.setMinimumHeight(200)\n"
+    }
+  },
+  "properties": [
+    {
+      "id": "effect",
+      "property": "effect",
+      "setter": "setEffect",
+      "category": "basic",
+      "type": "enum",
+      "label": {
+        "en": "Effect",
+        "zh": "粒子预设"
+      },
+      "default": "FlowingRibbons",
+      "pythonPrefix": "ParticleBackdrop.Effect."
+    },
+    {
+      "id": "backgroundMode",
+      "property": "backgroundMode",
+      "setter": "setBackgroundMode",
+      "category": "basic",
+      "type": "enum",
+      "label": {
+        "en": "Background mode",
+        "zh": "背景模式"
+      },
+      "default": "Solid",
+      "pythonPrefix": "ParticleBackdrop.BackgroundMode."
+    },
+    {
+      "id": "particleCount",
+      "property": "particleCount",
+      "setter": "setParticleCount",
+      "category": "basic",
+      "type": "number",
+      "label": {
+        "en": "Particle count",
+        "zh": "粒子数量"
+      },
+      "default": 240,
+      "minimum": 40,
+      "maximum": 480,
+      "step": 20,
+      "integer": true,
+      "control": "range"
+    },
+    {
+      "id": "speed",
+      "property": "speed",
+      "setter": "setSpeed",
+      "category": "basic",
+      "type": "number",
+      "label": {
+        "en": "Speed",
+        "zh": "动画速度"
+      },
+      "default": 1,
+      "minimum": 0,
+      "maximum": 3,
+      "step": 0.1,
+      "control": "range",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Scales live particle motion speed (0 pauses animation).",
+        "zh": "调整实时粒子动画速度倍率，设为 0 时暂停运动。"
+      }
+    },
+    {
+      "id": "maximumFrameRate",
+      "property": "maximumFrameRate",
+      "setter": "setMaximumFrameRate",
+      "category": "appearance",
+      "type": "number",
+      "label": {
+        "en": "Max frame rate",
+        "zh": "最高帧率"
+      },
+      "default": 30,
+      "minimum": 15,
+      "maximum": 60,
+      "step": 5,
+      "integer": true,
+      "control": "range",
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Caps active animation refresh rate (15–60 fps).",
+        "zh": "限制运行时的最高动画刷新率（15–60 fps）。"
+      }
+    },
+    {
+      "id": "animationEnabled",
+      "property": "animationEnabled",
+      "setter": "setAnimationEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Animation enabled",
+        "zh": "开启动画"
+      },
+      "default": true,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Starts or pauses continuous particle motion when visible.",
+        "zh": "在控件可见时开启或暂停连续粒子动画。"
+      }
+    },
+    {
+      "id": "interactive",
+      "property": "interactive",
+      "setter": "setInteractive",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Pointer interactive",
+        "zh": "鼠标交互"
+      },
+      "default": true,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Reacts to pointer hover ripples during live interaction.",
+        "zh": "在真实预览中悬停鼠标或点击时触发粒子扰动。"
+      }
+    },
+    {
+      "id": "pauseWhenInactive",
+      "property": "pauseWhenInactive",
+      "setter": "setPauseWhenInactive",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Pause when inactive",
+        "zh": "后台暂停"
+      },
+      "default": true,
+      "effect": "behavior",
+      "effectHint": {
+        "en": "Automatically pauses updates while the window is inactive.",
+        "zh": "应用切到后台时自动暂停粒子刷新。"
+      }
+    },
+    {
+      "id": "enabled",
+      "property": "enabled",
+      "setter": "setEnabled",
+      "category": "appearance",
+      "type": "boolean",
+      "label": {
+        "en": "Enabled",
+        "zh": "启用"
+      },
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "id": "default",
+      "label": {
+        "en": "Initial example",
+        "zh": "初始示例"
+      },
+      "values": {}
+    }
+  ]
+}

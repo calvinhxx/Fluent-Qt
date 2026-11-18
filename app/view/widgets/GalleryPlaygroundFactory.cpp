@@ -45,6 +45,19 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <limits>
+#if defined(FLUENT_QT_HAS_PARTICLES)
+#include <FluentQt/Particles.h>
+#endif
+#if defined(FLUENT_QT_HAS_QML_BRIDGE)
+#include <FluentQt/QmlBridge.h>
+#include <QTemporaryFile>
+#include <QUrl>
+#endif
+#if defined(FLUENT_QT_HAS_SPATIAL)
+#include <FluentQt/Spatial.h>
+#include <QPointF>
+#include <QVector3D>
+#endif
 
 namespace fluent::gallery {
 QStringList playgroundRoutes()
@@ -145,6 +158,18 @@ QStringList playgroundRoutes()
         QStringLiteral("coach-mark"),
         QStringLiteral("title-bar"),
         QStringLiteral("window"),
+#if defined(FLUENT_QT_HAS_PARTICLES)
+        QStringLiteral("particle-backdrop"),
+#endif
+#if defined(FLUENT_QT_HAS_SPATIAL)
+        QStringLiteral("spatial-view"),
+#endif
+#if defined(FLUENT_QT_HAS_SPATIAL)
+        QStringLiteral("spatial-item"),
+#endif
+#if defined(FLUENT_QT_HAS_QML_BRIDGE)
+        QStringLiteral("qml-view"),
+#endif
     };
 }
 
@@ -2243,6 +2268,67 @@ PlaygroundControl createPlaygroundControl(const QString& route, QWidget* parent)
         control->show();
         return {host, control};
     }
+#if defined(FLUENT_QT_HAS_PARTICLES)
+    if (route == QStringLiteral("particle-backdrop")) {
+        auto* control = new fluent::particles::ParticleBackdrop(parent);
+        control->setMinimumHeight(200);
+        return {control, control};
+    }
+#endif
+#if defined(FLUENT_QT_HAS_SPATIAL)
+    if (route == QStringLiteral("spatial-view")) {
+        auto* control = new fluent::spatial::SpatialView(parent);
+        auto* card = new fluent::layout::Card;
+        card->setFixedSize(240, 136);
+        card->setAppearance(fluent::layout::Card::LayerAlt);
+        auto* layout = new QVBoxLayout(card);
+        layout->addWidget(new fluent::textfields::Label(QStringLiteral("Perspective"), card));
+        layout->addWidget(new fluent::textfields::Label(QStringLiteral("Adjust the camera and zoom."), card));
+        layout->addWidget(new fluent::basicinput::Button(QStringLiteral("Inspect layer"), card), 0, Qt::AlignLeft);
+        auto* item = control->addWidget(card, fluent::WidgetOwnership::Owned);
+        item->setPosition(QVector3D(0, 0, 60));
+        item->setRotation(QVector3D(8, -18, 0));
+        return {control, control};
+    }
+#endif
+#if defined(FLUENT_QT_HAS_SPATIAL)
+    if (route == QStringLiteral("spatial-item")) {
+        auto* view = new fluent::spatial::SpatialView(parent);
+        auto* card = new fluent::layout::Card;
+        card->setFixedSize(240, 136);
+        auto* control = view->addWidget(card, fluent::WidgetOwnership::Owned);
+        card->setAppearance(fluent::layout::Card::LayerAlt);
+        auto* layout = new QVBoxLayout(card);
+        layout->addWidget(new fluent::textfields::Label(QStringLiteral("Item transform"), card));
+        layout->addWidget(new fluent::textfields::Label(QStringLiteral("Adjust position, rotation, and scale."), card));
+        layout->addWidget(new fluent::basicinput::Button(QStringLiteral("Active card"), card), 0, Qt::AlignLeft);
+        return {view, control};
+    }
+#endif
+#if defined(FLUENT_QT_HAS_QML_BRIDGE)
+    if (route == QStringLiteral("qml-view")) {
+        auto* panel = new QWidget(parent);
+        auto* layout = new QVBoxLayout(panel);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(8);
+        auto* input = new fluent::textfields::LineEdit(panel);
+        input->setObjectName(QStringLiteral("playgroundQmlInput"));
+        input->setText(QStringLiteral("A shared title"));
+        layout->addWidget(input);
+        auto* session = new fluent::qmlbridge::QmlSession(panel, panel);
+        session->activate();
+        auto* control = session->createView(panel);
+        control->setFixedHeight(120);
+        control->setContextObject(QStringLiteral("widgetInput"), input);
+        layout->addWidget(control);
+        auto* progress = new fluent::status_info::ProgressBar(panel);
+        progress->setRange(0, 100);
+        progress->setValue(40);
+        progress->hide();
+        control->setContextObject(QStringLiteral("widgetProgress"), progress);
+        return {panel, control};
+    }
+#endif
     return {};
 }
 } // namespace fluent::gallery

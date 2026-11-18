@@ -140,6 +140,18 @@ void closePlayground()
     // clang-format on
 }
 
+bool createLiveFixture()
+{
+    playgroundHost = new QWidget(previewWindow);
+    playgroundHost->setGeometry(previewWindow->rect());
+    playgroundHost->setProperty("fluentPlaygroundFillParent", true);
+    playgroundHost->show();
+    playground = GalleryComponentPlayground::createInteractive(selection.value("route").toString(), playgroundHost);
+    if (!playground)
+        closePlayground();
+    return playground != nullptr;
+}
+
 QList<QWidget*> pickableControls()
 {
     if (!sampleContent)
@@ -451,15 +463,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int fluentQtGalleryPlaygroundPick()
     if (operation != QStringLiteral("open") || request.value("selection").toString().isEmpty())
         return 0;
     if (interactiveRuntime) {
-        closePlayground();
-        playgroundHost = new QWidget(previewWindow);
-        playgroundHost->setGeometry(previewWindow->rect());
-        playgroundHost->setProperty("fluentPlaygroundFillParent", true);
-        playgroundHost->show();
-        playground = GalleryComponentPlayground::createInteractive(selection.value("route").toString(), playgroundHost);
-        if (!playground) {
+        if (!playground || !playgroundSelection.isEmpty()) {
             closePlayground();
-            return 0;
+            if (!createLiveFixture())
+                return 0;
         }
         QString error;
         if (!playground->initializeInteractive(request.value("initialValues").toObject(), &error)) {
@@ -632,6 +639,9 @@ QWidget* createComponentPreview()
             publishPlayground();
         });
         applyTheme(window, hostTheme());
+        // Let Qt select the Quick backing store before the browser window is shown.
+        if (selection.value("route") == QStringLiteral("qml-view"))
+            createLiveFixture();
         qApp->installEventFilter(new PlaygroundPaintObserver(window));
         return window;
     }

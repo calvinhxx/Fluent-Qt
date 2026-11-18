@@ -15088,5 +15088,684 @@
         "default": true
       }
     ]
+  },
+  {
+    "component": "particle-backdrop",
+    "compileGuard": "FLUENT_QT_HAS_PARTICLES",
+    "title": "ParticleBackdrop",
+    "className": "fluent::particles::ParticleBackdrop",
+    "previewSize": [
+      380,
+      220
+    ],
+    "sizeMode": "fixed",
+    "recipe": {
+      "cpp": {
+        "imports": "#include <FluentQt/Particles.h>",
+        "setup": "auto* control = new fluent::particles::ParticleBackdrop(%PARENT%);\ncontrol->setMinimumHeight(200);\n"
+      },
+      "python": {
+        "imports": "from fluentqt.particles import ParticleBackdrop",
+        "setup": "control = ParticleBackdrop(%PARENT%)\ncontrol.setMinimumHeight(200)\n"
+      }
+    },
+    "properties": [
+      {
+        "id": "effect",
+        "property": "effect",
+        "setter": "setEffect",
+        "category": "basic",
+        "type": "enum",
+        "label": {
+          "en": "Effect",
+          "zh": "粒子预设"
+        },
+        "default": "FlowingRibbons",
+        "pythonPrefix": "ParticleBackdrop.Effect."
+      },
+      {
+        "id": "backgroundMode",
+        "property": "backgroundMode",
+        "setter": "setBackgroundMode",
+        "category": "basic",
+        "type": "enum",
+        "label": {
+          "en": "Background mode",
+          "zh": "背景模式"
+        },
+        "default": "Solid",
+        "pythonPrefix": "ParticleBackdrop.BackgroundMode."
+      },
+      {
+        "id": "particleCount",
+        "property": "particleCount",
+        "setter": "setParticleCount",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Particle count",
+          "zh": "粒子数量"
+        },
+        "default": 240,
+        "minimum": 40,
+        "maximum": 480,
+        "step": 20,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "speed",
+        "property": "speed",
+        "setter": "setSpeed",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Speed",
+          "zh": "动画速度"
+        },
+        "default": 1,
+        "minimum": 0,
+        "maximum": 3,
+        "step": 0.1,
+        "control": "range",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Scales live particle motion speed (0 pauses animation).",
+          "zh": "调整实时粒子动画速度倍率，设为 0 时暂停运动。"
+        }
+      },
+      {
+        "id": "maximumFrameRate",
+        "property": "maximumFrameRate",
+        "setter": "setMaximumFrameRate",
+        "category": "appearance",
+        "type": "number",
+        "label": {
+          "en": "Max frame rate",
+          "zh": "最高帧率"
+        },
+        "default": 30,
+        "minimum": 15,
+        "maximum": 60,
+        "step": 5,
+        "integer": true,
+        "control": "range",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Caps active animation refresh rate (15–60 fps).",
+          "zh": "限制运行时的最高动画刷新率（15–60 fps）。"
+        }
+      },
+      {
+        "id": "animationEnabled",
+        "property": "animationEnabled",
+        "setter": "setAnimationEnabled",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Animation enabled",
+          "zh": "开启动画"
+        },
+        "default": true,
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Starts or pauses continuous particle motion when visible.",
+          "zh": "在控件可见时开启或暂停连续粒子动画。"
+        }
+      },
+      {
+        "id": "interactive",
+        "property": "interactive",
+        "setter": "setInteractive",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Pointer interactive",
+          "zh": "鼠标交互"
+        },
+        "default": true,
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Reacts to pointer hover ripples during live interaction.",
+          "zh": "在真实预览中悬停鼠标或点击时触发粒子扰动。"
+        }
+      },
+      {
+        "id": "pauseWhenInactive",
+        "property": "pauseWhenInactive",
+        "setter": "setPauseWhenInactive",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Pause when inactive",
+          "zh": "后台暂停"
+        },
+        "default": true,
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Automatically pauses updates while the window is inactive.",
+          "zh": "应用切到后台时自动暂停粒子刷新。"
+        }
+      },
+      {
+        "id": "enabled",
+        "property": "enabled",
+        "setter": "setEnabled",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Enabled",
+          "zh": "启用"
+        },
+        "default": true
+      }
+    ]
+  },
+  {
+    "component": "spatial-view",
+    "compileGuard": "FLUENT_QT_HAS_SPATIAL",
+    "title": "SpatialView",
+    "className": "fluent::spatial::SpatialView",
+    "previewSize": [
+      420,
+      260
+    ],
+    "sizeMode": "fixed",
+    "recipe": {
+      "cpp": {
+        "imports": "#include <FluentQt/BasicInput.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/Spatial.h>\n#include <FluentQt/TextFields.h>\n#include <QVBoxLayout>\n#include <QVector3D>\n#include <QPointF>",
+        "setup": "auto* control = new fluent::spatial::SpatialView(%PARENT%);\nauto* card = new fluent::layout::Card;\ncard->setFixedSize(240, 136);\ncard->setAppearance(fluent::layout::Card::LayerAlt);\nauto* layout = new QVBoxLayout(card);\nlayout->addWidget(new fluent::textfields::Label(QStringLiteral(\"Perspective\"), card));\nlayout->addWidget(new fluent::textfields::Label(QStringLiteral(\"Adjust the camera and zoom.\"), card));\nlayout->addWidget(new fluent::basicinput::Button(QStringLiteral(\"Inspect layer\"), card), 0, Qt::AlignLeft);\nauto* item = control->addWidget(card, fluent::WidgetOwnership::Owned);\nitem->setPosition(QVector3D(0, 0, 60));\nitem->setRotation(QVector3D(8, -18, 0));\n"
+      },
+      "python": {
+        "imports": "from fluentqt.spatial import SpatialView\nfrom PySide6.QtCore import QPointF, Qt\nimport fluentqt\nfrom PySide6.QtGui import QVector3D\nfrom PySide6.QtWidgets import QVBoxLayout",
+        "setup": "control = SpatialView(%PARENT%)\ncard = fluentqt.Card()\ncard.setFixedSize(240, 136)\ncard.setAppearance(fluentqt.Card.Appearance.LayerAlt)\nlayout = QVBoxLayout(card)\nlayout.addWidget(fluentqt.Label(\"Perspective\", card))\nlayout.addWidget(fluentqt.Label(\"Adjust the camera and zoom.\", card))\nlayout.addWidget(fluentqt.Button(\"Inspect layer\", card), 0, Qt.AlignmentFlag.AlignLeft)\nitem = control.addOwnedWidget(card)\nitem.setPosition(QVector3D(0, 0, 60))\nitem.setRotation(QVector3D(8, -18, 0))\n"
+      }
+    },
+    "properties": [
+      {
+        "id": "spatialEnabled",
+        "property": "spatialEnabled",
+        "setter": "setSpatialEnabled",
+        "category": "basic",
+        "type": "boolean",
+        "label": {
+          "en": "3D perspective",
+          "zh": "启用 3D 透视"
+        },
+        "default": true
+      },
+      {
+        "id": "cameraDistance",
+        "property": "cameraDistance",
+        "setter": "setCameraDistance",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Camera distance",
+          "zh": "相机视距"
+        },
+        "default": 1000,
+        "minimum": 400,
+        "maximum": 2400,
+        "step": 50,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "zoom",
+        "property": "zoom",
+        "setter": "setZoom",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Zoom",
+          "zh": "场景缩放"
+        },
+        "default": 1,
+        "minimum": 0.7,
+        "maximum": 1.3,
+        "step": 0.05,
+        "control": "range"
+      },
+      {
+        "id": "maximumTiltX",
+        "property": "maximumTilt",
+        "setter": "setMaximumTilt",
+        "pointFAxis": "x",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Max vertical tilt",
+          "zh": "最大垂直倾角"
+        },
+        "default": 10,
+        "minimum": 0,
+        "maximum": 30,
+        "step": 1,
+        "integer": true,
+        "control": "range",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Vertical tilt limit (°) applied as you move the pointer across the 3D stage.",
+          "zh": "鼠标在 3D 舞台上下移动时的最大俯仰倾角（度）。"
+        }
+      },
+      {
+        "id": "maximumTiltY",
+        "property": "maximumTilt",
+        "setter": "setMaximumTilt",
+        "pointFAxis": "y",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Max horizontal tilt",
+          "zh": "最大水平倾角"
+        },
+        "default": 16,
+        "minimum": 0,
+        "maximum": 30,
+        "step": 1,
+        "integer": true,
+        "control": "range",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Horizontal tilt limit (°) applied as you move the pointer across the 3D stage.",
+          "zh": "鼠标在 3D 舞台左右移动时的最大偏转倾角（度）。"
+        }
+      },
+      {
+        "id": "pointerTrackingEnabled",
+        "property": "pointerTrackingEnabled",
+        "setter": "setPointerTrackingEnabled",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Pointer tracking",
+          "zh": "鼠标视角跟随"
+        },
+        "default": true,
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Tilts the scene smoothly toward the cursor in 3D mode.",
+          "zh": "在 3D 模式下控制场景是否随鼠标位置倾斜。"
+        }
+      },
+      {
+        "id": "responseTime",
+        "property": "responseTime",
+        "setter": "setResponseTime",
+        "category": "appearance",
+        "type": "number",
+        "label": {
+          "en": "Response time (ms)",
+          "zh": "跟随阻尼 (ms)"
+        },
+        "default": 140,
+        "minimum": 0,
+        "maximum": 400,
+        "step": 20,
+        "integer": true,
+        "control": "range",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Smoothing duration for pointer-tracking tilt animation.",
+          "zh": "鼠标视角跟随倾斜的平滑过渡时间常数（毫秒）。"
+        }
+      },
+      {
+        "id": "maximumFrameRate",
+        "property": "maximumFrameRate",
+        "setter": "setMaximumFrameRate",
+        "category": "appearance",
+        "type": "number",
+        "label": {
+          "en": "Max frame rate",
+          "zh": "最高帧率"
+        },
+        "default": 60,
+        "minimum": 15,
+        "maximum": 120,
+        "step": 5,
+        "integer": true,
+        "control": "range",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Caps pointer-tilt animation frame rate (15–120 fps).",
+          "zh": "限制视角跟随动画的最高帧率（15–120 fps）。"
+        }
+      },
+      {
+        "id": "cacheEnabled",
+        "property": "cacheEnabled",
+        "setter": "setCacheEnabled",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Item cache",
+          "zh": "子控件缓存"
+        },
+        "default": true,
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Caches embedded card surfaces across static frames.",
+          "zh": "在画面静止时缓存子控件表面，减少重复绘制。"
+        }
+      },
+      {
+        "id": "renderMode",
+        "property": "renderMode",
+        "setter": "setRenderMode",
+        "category": "appearance",
+        "type": "enum",
+        "label": {
+          "en": "Render mode",
+          "zh": "绘制后端"
+        },
+        "default": "Auto",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Switches between Auto, CPU Raster, and OpenGL rendering when presented on screen.",
+          "zh": "在屏幕上显示时切换 Auto、CPU 光栅与 OpenGL 渲染后端。"
+        },
+        "pythonPrefix": "SpatialView.RenderMode."
+      },
+      {
+        "id": "enabled",
+        "property": "enabled",
+        "setter": "setEnabled",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Enabled",
+          "zh": "启用"
+        },
+        "default": true
+      }
+    ]
+  },
+  {
+    "component": "spatial-item",
+    "compileGuard": "FLUENT_QT_HAS_SPATIAL",
+    "title": "SpatialItem",
+    "className": "fluent::spatial::SpatialItem",
+    "surface": "view",
+    "previewSize": [
+      420,
+      260
+    ],
+    "sizeMode": "fixed",
+    "recipe": {
+      "cpp": {
+        "imports": "#include <FluentQt/BasicInput.h>\n#include <FluentQt/Layout.h>\n#include <FluentQt/Spatial.h>\n#include <FluentQt/TextFields.h>\n#include <QVBoxLayout>\n#include <QVector3D>",
+        "setup": "auto* view = new fluent::spatial::SpatialView(%PARENT%);\nauto* card = new fluent::layout::Card;\ncard->setFixedSize(240, 136);\nauto* control = view->addWidget(card, fluent::WidgetOwnership::Owned);\ncard->setAppearance(fluent::layout::Card::LayerAlt);\nauto* layout = new QVBoxLayout(card);\nlayout->addWidget(new fluent::textfields::Label(QStringLiteral(\"Item transform\"), card));\nlayout->addWidget(new fluent::textfields::Label(QStringLiteral(\"Adjust position, rotation, and scale.\"), card));\nlayout->addWidget(new fluent::basicinput::Button(QStringLiteral(\"Active card\"), card), 0, Qt::AlignLeft);\n"
+      },
+      "python": {
+        "imports": "import fluentqt\nfrom fluentqt.spatial import SpatialView\nfrom PySide6.QtGui import QVector3D\nfrom PySide6.QtWidgets import QVBoxLayout\nfrom PySide6.QtCore import Qt",
+        "setup": "view = SpatialView(%PARENT%)\ncard = fluentqt.Card()\ncard.setFixedSize(240, 136)\ncontrol = view.addOwnedWidget(card)\ncard.setAppearance(fluentqt.Card.Appearance.LayerAlt)\nlayout = QVBoxLayout(card)\nlayout.addWidget(fluentqt.Label(\"Item transform\", card))\nlayout.addWidget(fluentqt.Label(\"Adjust position, rotation, and scale.\", card))\nlayout.addWidget(fluentqt.Button(\"Active card\", card), 0, Qt.AlignmentFlag.AlignLeft)\n"
+      }
+    },
+    "properties": [
+      {
+        "id": "rotationX",
+        "property": "rotation",
+        "setter": "setRotation",
+        "vectorAxis": "x",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Rotation X (°)",
+          "zh": "绕 X 轴旋转 (°)"
+        },
+        "default": 6,
+        "minimum": -30,
+        "maximum": 30,
+        "step": 1,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "rotationY",
+        "property": "rotation",
+        "setter": "setRotation",
+        "vectorAxis": "y",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Rotation Y (°)",
+          "zh": "绕 Y 轴旋转 (°)"
+        },
+        "default": -18,
+        "minimum": -35,
+        "maximum": 35,
+        "step": 1,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "rotationZ",
+        "property": "rotation",
+        "setter": "setRotation",
+        "vectorAxis": "z",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Rotation Z (°)",
+          "zh": "绕 Z 轴旋转 (°)"
+        },
+        "default": 0,
+        "minimum": -25,
+        "maximum": 25,
+        "step": 1,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "positionX",
+        "property": "position",
+        "setter": "setPosition",
+        "vectorAxis": "x",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Offset X",
+          "zh": "X 轴位移"
+        },
+        "default": 0,
+        "minimum": -80,
+        "maximum": 80,
+        "step": 4,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "positionY",
+        "property": "position",
+        "setter": "setPosition",
+        "vectorAxis": "y",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Offset Y",
+          "zh": "Y 轴位移"
+        },
+        "default": 0,
+        "minimum": -50,
+        "maximum": 50,
+        "step": 4,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "positionZ",
+        "property": "position",
+        "setter": "setPosition",
+        "vectorAxis": "z",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Depth Z",
+          "zh": "Z 轴景深"
+        },
+        "default": 40,
+        "minimum": -80,
+        "maximum": 80,
+        "step": 4,
+        "integer": true,
+        "control": "range"
+      },
+      {
+        "id": "scale",
+        "property": "scale",
+        "setter": "setScale",
+        "category": "basic",
+        "type": "number",
+        "label": {
+          "en": "Scale",
+          "zh": "缩放倍率"
+        },
+        "default": 1,
+        "minimum": 0.7,
+        "maximum": 1.3,
+        "step": 0.05,
+        "control": "range"
+      },
+      {
+        "id": "surfaceIntensity",
+        "property": "surfaceIntensity",
+        "setter": "setSurfaceIntensity",
+        "category": "appearance",
+        "type": "number",
+        "label": {
+          "en": "Surface shadow",
+          "zh": "阴影与高光强度"
+        },
+        "default": 0.75,
+        "minimum": 0,
+        "maximum": 1,
+        "step": 0.05,
+        "control": "range"
+      },
+      {
+        "id": "hoverLift",
+        "property": "hoverLift",
+        "setter": "setHoverLift",
+        "category": "appearance",
+        "type": "number",
+        "label": {
+          "en": "Hover lift (px)",
+          "zh": "悬停抬升高度"
+        },
+        "default": 6,
+        "minimum": 0,
+        "maximum": 16,
+        "step": 1,
+        "integer": true,
+        "control": "range",
+        "effect": "behavior",
+        "effectHint": {
+          "en": "Upward hover lift (px) applied when the pointer moves over this card.",
+          "zh": "3D 模式下鼠标悬停在卡片上时的抬升像素高度。"
+        }
+      },
+      {
+        "id": "visible",
+        "property": "visible",
+        "setter": "setVisible",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Visible",
+          "zh": "可见"
+        },
+        "default": true
+      }
+    ]
+  },
+  {
+    "component": "qml-view",
+    "compileGuard": "FLUENT_QT_HAS_QML_BRIDGE",
+    "title": "QmlView",
+    "className": "fluent::qmlbridge::QmlView",
+    "surface": "panel",
+    "previewSize": [
+      400,
+      220
+    ],
+    "sizeMode": "fixed",
+    "recipe": {
+      "cpp": {
+        "imports": "#include <FluentQt/QmlBridge.h>\n#include <FluentQt/TextFields.h>\n#include <QUrl>\n#include <QVBoxLayout>\n#include <FluentQt/StatusInfo.h>\n#include <QTemporaryFile>",
+        "setup": "auto* panel = new QWidget(%PARENT%);\nauto* layout = new QVBoxLayout(panel);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(8);\nauto* input = new fluent::textfields::LineEdit(panel);\ninput->setObjectName(QStringLiteral(\"playgroundQmlInput\"));\ninput->setText(QStringLiteral(\"A shared title\"));\nlayout->addWidget(input);\nauto* session = new fluent::qmlbridge::QmlSession(panel, panel);\nsession->activate();\nauto* control = session->createView(panel);\ncontrol->setFixedHeight(120);\ncontrol->setContextObject(QStringLiteral(\"widgetInput\"), input);\nlayout->addWidget(control);\nauto* progress = new fluent::status_info::ProgressBar(panel);\nprogress->setRange(0, 100);\nprogress->setValue(40);\nprogress->hide();\ncontrol->setContextObject(QStringLiteral(\"widgetProgress\"), progress);\n"
+      },
+      "python": {
+        "imports": "import fluentqt\nfrom fluentqt.qmlbridge import QmlSession\nfrom PySide6.QtCore import QTemporaryFile, QUrl\nfrom PySide6.QtWidgets import QWidget, QVBoxLayout",
+        "setup": "panel = QWidget(%PARENT%)\nlayout = QVBoxLayout(panel)\nlayout.setContentsMargins(0, 0, 0, 0)\nlayout.setSpacing(8)\ninput = fluentqt.LineEdit(panel)\ninput.setObjectName(\"playgroundQmlInput\")\ninput.setText(\"A shared title\")\nlayout.addWidget(input)\nsession = QmlSession(panel, panel)\nsession.activate()\ncontrol = session.createView(panel)\ncontrol.setFixedHeight(120)\ncontrol.setContextObject(\"widgetInput\", input)\nlayout.addWidget(control)\nprogress = fluentqt.ProgressBar(panel)\nprogress.setRange(0, 100)\nprogress.setValue(40)\nprogress.hide()\ncontrol.setContextObject(\"widgetProgress\", progress)\n"
+      }
+    },
+    "properties": [
+      {
+        "id": "source",
+        "adapter": "qml-source",
+        "category": "basic",
+        "type": "enum",
+        "label": {
+          "en": "QML scene",
+          "zh": "加载的 QML 场景"
+        },
+        "default": "Context.qml",
+        "options": [
+          "Context.qml",
+          "Basic.qml",
+          "Theme.qml",
+          "Action.qml"
+        ],
+        "optionLabels": {
+          "Context.qml": {
+            "en": "Context.qml (Widgets text binding)",
+            "zh": "Context.qml（共享输入框文字）"
+          },
+          "Basic.qml": {
+            "en": "Basic.qml (Simple QML surface)",
+            "zh": "Basic.qml（基础 QML 页面）"
+          },
+          "Theme.qml": {
+            "en": "Theme.qml (fluentTheme tokens)",
+            "zh": "Theme.qml（同步 Fluent 主题）"
+          },
+          "Action.qml": {
+            "en": "Action.qml (QML updates Widgets)",
+            "zh": "Action.qml（QML 操作 Widgets）"
+          }
+        },
+        "effectHint": {
+          "en": "Loads the selected QML scene into QmlView.",
+          "zh": "在 QmlView 中加载所选的 QML 页面。"
+        }
+      },
+      {
+        "id": "contextTitle",
+        "adapter": "qml-title",
+        "category": "basic",
+        "type": "text",
+        "label": {
+          "en": "Shared input text",
+          "zh": "共享输入文字"
+        },
+        "default": "A shared title",
+        "maximumLength": 160
+      },
+      {
+        "id": "enabled",
+        "property": "enabled",
+        "setter": "setEnabled",
+        "category": "appearance",
+        "type": "boolean",
+        "label": {
+          "en": "Enabled",
+          "zh": "启用"
+        },
+        "default": true
+      }
+    ]
   }
 ]

@@ -94,5 +94,9 @@
     <file alias="coach-mark.json">assets/playgrounds/coach-mark.json</file>
     <file alias="title-bar.json">assets/playgrounds/title-bar.json</file>
     <file alias="window.json">assets/playgrounds/window.json</file>
+    <file alias="particle-backdrop.json">assets/playgrounds/particle-backdrop.json</file>
+    <file alias="spatial-view.json">assets/playgrounds/spatial-view.json</file>
+    <file alias="spatial-item.json">assets/playgrounds/spatial-item.json</file>
+    <file alias="qml-view.json">assets/playgrounds/qml-view.json</file>
   </qresource>
 </RCC>

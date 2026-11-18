@@ -17,6 +17,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 CPP = r'''
 #include <FluentQt/FluentQt.h>
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+#include <FluentQt/QmlBridge.h>
+#endif
+#include <QVector3D>
 #include <QApplication>
 #include <QCursor>
 #include <QDir>
@@ -76,7 +80,7 @@ static QList<QModelIndex> modelRows(const QAbstractItemModel* model, const QMode
 class Host : public QWidget {
 public:
     using QWidget::QWidget;
-    QWidget* create(int index) {
+    QWidget* create(int index, QObject*& target) {
         switch (index) {
 @CASES@
         default: return nullptr;
@@ -85,6 +89,9 @@ public:
 };
 int main(int argc, char** argv) {
     fluent::prepareHighDpiApplication();
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+    fluent::qmlbridge::QmlSession::prepareApplication();
+#endif
     QApplication app(argc, argv);
     fluent::initializeResources();
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
@@ -108,6 +115,7 @@ int main(int argc, char** argv) {
         const auto schema = state.value("schema").toObject();
         const bool isHostSurface = schema.value("surface").toString() == "host";
         std::unique_ptr<QWidget> outerHost;
+        QObject* target = nullptr;
         QWidget* button = nullptr;
         if (isHostSurface) {
             outerHost = std::make_unique<QWidget>(nullptr, Qt::Window | Qt::FramelessWindowHint);
@@ -117,11 +125,11 @@ int main(int argc, char** argv) {
             outerHost->setFixedSize(hostSize);
             auto* stage = new Host(outerHost.get());
             stage->setFixedSize(hostSize);
-            button = stage->create(index);
+            button = stage->create(index, target);
         } else {
-            button = host.create(index);
+            button = host.create(index, target);
         }
-        if (!button) return 3;
+        if (!button || !target) return 3;
         auto* fluentButton = qobject_cast<Button*>(button);
         if (schema.value("component") == QStringLiteral("image-viewer")) {
             const auto size = schema.value("previewSize").toArray();
@@ -136,6 +144,23 @@ int main(int argc, char** argv) {
             const auto id = field.value("id").toString();
             if (field.contains("adapter")) {
                 const auto adapter = field.value("adapter").toString();
+#ifdef FLUENT_QT_HAS_QML_BRIDGE
+                if (adapter == "qml-source") {
+                    auto* view = qobject_cast<fluent::qmlbridge::QmlView*>(target);
+                    if (!view) return 3;
+                    QFile file(view->source().toLocalFile());
+                    actual[id] = view->status() == fluent::qmlbridge::QmlView::Ready && file.open(QIODevice::ReadOnly)
+                        && QString::fromUtf8(file.readAll()) == cases[index].toObject().value("qmlSource").toString()
+                        ? expected.value(id) : QJsonValue(view->lastError());
+                    continue;
+                }
+                if (adapter == "qml-title") {
+                    auto* input = button->findChild<QLineEdit*>("playgroundQmlInput");
+                    if (!input) return 3;
+                    actual[id] = input->text();
+                    continue;
+                }
+#endif
                 if (adapter == "table-data") {
                     auto* view = qobject_cast<QAbstractItemView*>(button);
                     QJsonArray rows;
@@ -209,9 +234,9 @@ int main(int argc, char** argv) {
             } else if (id == "iconOffsetX") actual[id] = fluentButton->iconOffset().x();
             else if (id == "iconOffsetY") actual[id] = fluentButton->iconOffset().y();
             else {
-                const auto property = button->metaObject()->property(button->metaObject()->indexOfProperty(
+                const auto property = target->metaObject()->property(target->metaObject()->indexOfProperty(
                     field.value("property").toString().toLatin1().constData()));
-                QVariant value = property.read(button);
+                QVariant value = property.read(target);
                 if (!property.isValid()) {
                     if (auto* check = qobject_cast<QCheckBox*>(button); check && id == "checkState") value = int(check->checkState());
                     if (id == "items") {
@@ -249,6 +274,12 @@ int main(int argc, char** argv) {
                 const auto type = field.value("type").toString();
                 if (field.contains("sizeAxis")) {
                     actual[id] = field.value("sizeAxis") == "width" ? value.toSize().width() : value.toSize().height();
+                } else if (field.contains("pointFAxis")) {
+                    actual[id] = field.value("pointFAxis") == "x" ? value.toPointF().x() : value.toPointF().y();
+                } else if (field.contains("vectorAxis")) {
+                    const auto v = value.value<QVector3D>();
+                    const auto axis = field.value("vectorAxis");
+                    actual[id] = axis == "x" ? v.x() : (axis == "y" ? v.y() : v.z());
                 } else if (field.contains("pointAxis")) {
                     actual[id] = field.value("pointAxis") == "x" ? value.toPoint().x() : value.toPoint().y();
                 } else if (field.value("glyphEnum").toBool()) {
@@ -286,6 +317,9 @@ int main(int argc, char** argv) {
                 }
             }
         }
+        // Compare the initial particle frame after checking the requested playback settings.
+        if (schema.value("component") == QStringLiteral("particle-backdrop"))
+            target->setProperty("animationEnabled", false);
         QWidget* surfaceWidget = isHostSurface ? outerHost.get() : button;
         if (!isHostSurface) {
             const auto comp = schema.value("component").toString();
@@ -356,6 +390,7 @@ def main():
     parser.add_argument('--audit', type=Path, required=True, action='append')
     parser.add_argument('--build-dir', type=Path, required=True)
     parser.add_argument('--qt-prefix', type=Path, required=True)
+    parser.add_argument('--sdk', type=Path, help='Use an installed SDK instead of staging one from the build.')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--report-pixel-differences', action='store_true')
     args = parser.parse_args()
@@ -365,6 +400,17 @@ def main():
     for path in args.audit:
         audit = json.loads(path.read_text(encoding='utf-8'))
         cases.extend(dict(case, theme=audit.get('theme', 'light')) for case in audit['cases'])
+    modules = set()
+    for case in cases:
+        schema = case['state']['schema']
+        route = schema['component']
+        module = {'particle-backdrop': 'Particles', 'spatial-view': 'Spatial', 'spatial-item': 'Spatial',
+                  'qml-view': 'QmlBridge'}.get(route)
+        if module:
+            modules.add(module)
+        if route == 'qml-view':
+            name = case['state']['values']['source']
+            case['qmlSource'] = (ROOT / 'app/view/widgets/samples/qmlbridge' / name).read_text(encoding='utf-8')
     merged = output / 'input.json'
     merged.write_text(json.dumps({'cases': cases}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     bodies = []
@@ -374,24 +420,25 @@ def main():
         includes.update(line for line in lines if line.startswith('#include'))
         body = '\n'.join(line for line in lines if not line.startswith('#include'))
         variable = 'button' if case['state']['schema']['component'] == 'button' else 'control'
-        bodies.append(f'case {index}: {{\n{body}\nreturn {variable};\n}}')
+        surface = case['state']['schema'].get('surface')
+        widget = variable if surface in (None, 'control', 'host') else surface
+        bodies.append(f'case {index}: {{\n{body}\ntarget = {variable};\nreturn {widget};\n}}')
     (output / 'probe.cpp').write_text('\n'.join(sorted(includes)) + '\n' + CPP.replace('@CASES@', '\n'.join(bodies)), encoding='utf-8')
     cmake = '''cmake_minimum_required(VERSION 3.21)
 project(PlaygroundExports LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(FluentQt CONFIG REQUIRED @COMPONENTS@)
 add_executable(playground_exports probe.cpp)
-target_include_directories(playground_exports PRIVATE "@ROOT@/include" "@ROOT@/src")
-target_link_libraries(playground_exports PRIVATE "@BUILD@/libFluentQt.a" Qt6::Widgets)
-if(APPLE)
-    include("@ROOT@/cmake/FluentQtApplePlatformDependencies.cmake")
-    target_link_libraries(playground_exports PRIVATE FluentQt::ApplePlatformDependencies
-        "-framework AppKit" "-framework ImageIO" "-framework Metal" "-framework IOKit"
-        "-framework DiskArbitration" "-framework UniformTypeIdentifiers")
-endif()
-'''.replace('@ROOT@', str(ROOT)).replace('@BUILD@', str(args.build_dir.resolve()))
+target_link_libraries(playground_exports PRIVATE FluentQt::FluentQt @MODULES@)
+'''.replace('@COMPONENTS@', ('COMPONENTS ' + ' '.join(sorted(modules))) if modules else '').replace(
+        '@MODULES@', ' '.join('FluentQt::' + module for module in sorted(modules)))
+    sdk = args.sdk
+    if sdk is None:
+        sdk = output / 'sdk'
+        subprocess.run(['cmake', '--install', str(args.build_dir), '--component', 'Development',
+                        '--prefix', str(sdk)], check=True, stdout=subprocess.DEVNULL)
     (output / 'CMakeLists.txt').write_text(cmake, encoding='utf-8')
-    subprocess.run(['cmake', '-S', str(output), '-B', str(output / 'build'), '-DCMAKE_PREFIX_PATH=' + str(args.qt_prefix.resolve())], check=True)
+    subprocess.run(['cmake', '-S', str(output), '-B', str(output / 'build'), '-DCMAKE_PREFIX_PATH=' + f'{sdk.resolve()};{args.qt_prefix.resolve()}'], check=True)
     subprocess.run(['cmake', '--build', str(output / 'build'), '--parallel', '2'], check=True)
     subprocess.run([str(output / 'build/playground_exports'), str(merged), str(output)], check=True)
     cpp_values = json.loads((output / 'cpp-values.json').read_text(encoding='utf-8'))
@@ -408,6 +455,9 @@ endif()
             index=model.index(row,0,parent);rows.append(index);rows.extend(model_rows(model,index))
         return rows
     from fluentqt._qt_compat import delete_qobject
+    if 'QmlBridge' in modules:
+        from fluentqt.qmlbridge import QmlSession
+        QmlSession.prepareApplication()
     app = QApplication([])
     fluentqt.initialize_resources()
     fluentqt.set_theme(fluentqt.Theme.Light)
@@ -438,7 +488,8 @@ endif()
         else:
             namespace = {'self': host}
         exec(compile(case['state']['python'], case['case'], 'exec'), namespace)
-        button = namespace.get('button', namespace.get('control'))
+        target = namespace.get('button', namespace.get('control'))
+        button = namespace.get(schema.get('surface'), target) if not is_host_surface else target
         if schema['component'] == 'image-viewer':
             button.resize(QSize(*schema['previewSize']))
             button.show()
@@ -461,7 +512,12 @@ endif()
             else:
                 if field.get('adapter'):
                     adapter = field['adapter']
-                    if adapter == 'table-data':
+                    if adapter == 'qml-source':
+                        source = Path(target.source().toLocalFile()).read_text(encoding='utf-8')
+                        actual = expected[name] if target.rootObject() and source == case['qmlSource'] else target.lastError()
+                    elif adapter == 'qml-title':
+                        actual = namespace['input'].text()
+                    elif adapter == 'table-data':
                         actual=[[row.sibling(row.row(),col.get('modelColumn',c)).data(col.get('role',int(Qt.DisplayRole)))
                                  for c,col in enumerate(field['columns'])] for row in model_rows(button.model())]
                         actual=[[str(cell) if cell is not None else '' for cell in row] for row in actual]
@@ -505,11 +561,13 @@ endif()
                 elif field['property'] == 'selectionMode' and hasattr(button, 'selectionMode'):
                     actual = button.selectionMode()
                 else:
-                    actual = button.property(field['property'])
+                    actual = target.property(field['property'])
                 if field.get('itemList'):
                     actual = [item['text'] for item in actual]
                 if field.get('sizeAxis'):
                     actual=actual.width() if field['sizeAxis']=='width' else actual.height()
+                elif field.get('vectorAxis') or field.get('pointFAxis'):
+                    actual = getattr(actual, field.get('vectorAxis') or field['pointFAxis'])()
                 elif field.get('pointAxis'):
                     actual = actual.x() if field['pointAxis'] == 'x' else actual.y()
                 elif field.get('glyphEnum'):
@@ -537,6 +595,8 @@ endif()
                 if not equal:
                     property_failures.append({'case': case['case'], 'property': name,
                                               'actual': observed, 'expected': expected[name], 'language': language})
+        if schema['component'] == 'particle-backdrop':
+            target.setAnimationEnabled(False)
         surface_widget = outer_host if is_host_surface else button
         if not is_host_surface:
             if schema['component'] in ('menu', 'window'):
