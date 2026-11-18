@@ -46,6 +46,21 @@ class HomepageAssetTest(unittest.TestCase):
         self.assertEqual(site.prefix_resources(template, ''), template)
         self.assertEqual(site.prefix_resources(template, '../'), template.replace('="gallery/', '="../gallery/'))
 
+    def test_checkbox_showcase_uses_localized_artwork_and_accessible_text(self):
+        source = site.TEMPLATE_PATH.read_text(encoding='utf-8')
+        values = site.translations()
+        for locale in site.LOCALES:
+            with self.subTest(language=locale.key):
+                page = site.render_page(source, locale, values[locale.key], site.project_version())
+                image = re.search(r'<img class="playground-showcase-image"[^>]+>', page).group()
+                for theme, attribute in [('light', 'src'), ('light', 'data-theme-src-light'),
+                                         ('dark', 'data-theme-src-dark'), ('high-contrast', 'data-theme-src-contrast')]:
+                    url = site.versioned_asset_url(f'assets/playground/checkbox-{locale.key}-{theme}.webp')
+                    self.assertIn(f' {attribute}="{locale.resource_prefix}{url}"', image)
+                alt = re.search(r' alt="([^"]+)"', image).group(1)
+                self.assertIn('CheckBox', alt)
+                self.assertEqual(bool(re.search(r'[\u4e00-\u9fff]', alt)), locale.key == 'zh')
+                self.assertIn('href="api/checkbox/?playground=1"', page)
 
     def test_each_funding_link_has_a_tier_page_in_both_languages(self):
         funding = (site.ROOT / '.github/FUNDING.yml').read_text(encoding='utf-8')

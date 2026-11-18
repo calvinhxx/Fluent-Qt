@@ -323,10 +323,39 @@
         </div>
       </section>
 
+      <section class="playground-showcase-section" id="playground" aria-labelledby="playground-title">
+        <div class="page-shell playground-showcase-layout">
+          <div class="playground-showcase-copy" data-reveal>
+            <p class="section-index" data-i18n="playground.kicker">03 / CHECKBOX</p>
+            <h2 id="playground-title" data-i18n="playground.title">属性动态预览</h2>
+            <p class="playground-showcase-intro" data-i18n="playground.copy">在支持属性预览的组件页，可以调节真实 Qt 控件的属性，查看效果，并复制对应的 C++ 或 PySide6 代码。</p>
+
+            <div class="playground-showcase-links">
+              <a class="button button-primary" href="{{PLAYGROUND_URL}}" data-analytics-event="playground_showcase">
+                <span data-i18n="playground.tryAction">试用 CheckBox</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+              <a class="text-link" href="{{API_URL}}" data-analytics-event="docs_from_playground">
+                <span data-i18n="playground.docsAction">浏览文档</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <img class="playground-showcase-image" data-reveal data-reveal-delay="80"
+               src="assets/playground/checkbox-{{SITE_LANGUAGE}}-light.webp"
+               data-theme-src-light="assets/playground/checkbox-{{SITE_LANGUAGE}}-light.webp"
+               data-theme-src-dark="assets/playground/checkbox-{{SITE_LANGUAGE}}-dark.webp"
+               data-theme-src-contrast="assets/playground/checkbox-{{SITE_LANGUAGE}}-high-contrast.webp"
+               width="900" height="496" loading="lazy" decoding="async"
+               alt="CheckBox 属性面板显示已勾选的复选框和生成的 C++ 代码。" data-i18n-alt="playground.imageAlt">
+        </div>
+      </section>
+
       <section class="ai-build-section" id="ai-build" aria-labelledby="ai-build-title">
         <div class="page-shell ai-build-grid">
           <div class="ai-build-copy" data-reveal>
-            <p class="section-index">03 / GUI SKILL</p>
+            <p class="section-index">04 / GUI SKILL</p>
             <h2 id="ai-build-title" data-i18n="aiBuild.title">AI 辅助构建界面</h2>
 
             <ul class="ai-build-points" aria-label="Skill 特性" data-i18n-aria-label="a11y.aiBuildCapabilities">
@@ -399,7 +428,7 @@
       <section class="quick-start-section" id="quick-start" aria-labelledby="quick-start-title">
         <div class="page-shell quick-start-grid">
           <div class="quick-start-copy" data-reveal>
-            <p class="section-index">04 / QUICK START</p>
+            <p class="section-index">05 / QUICK START</p>
             <h2 id="quick-start-title"><span data-i18n="quickStart.title">快速接入</span></h2>
             <p data-i18n="quickStart.copy">将右侧 CMake 配置加入工程即可接入；同样支持 add_subdirectory 与 find_package。</p>
             <ul class="quick-start-checks">
@@ -454,7 +483,7 @@ target_link_libraries(
       <section class="spatial-section" id="spatial" aria-labelledby="spatial-title">
         <div class="page-shell spatial-layout">
           <div class="spatial-copy">
-            <p class="section-index" data-i18n="spatial.kicker">05 / SPATIAL · 可选 3D 扩展</p>
+            <p class="section-index" data-i18n="spatial.kicker">06 / SPATIAL · 可选 3D 扩展</p>
             <h2 id="spatial-title" data-i18n="spatial.title">Spatial 3D 透视视图</h2>
             <p class="spatial-intro" data-i18n="spatial.copy">把现有 QWidget 界面放进 SpatialView，为卡片加上 3D 透视、旋转与景深；普通 2D 应用无需开启。</p>
             <ul class="spatial-features">
@@ -496,7 +525,7 @@ target_link_libraries(
       <section class="qml-section" id="qml" aria-labelledby="qml-title">
         <div class="page-shell qml-layout">
           <div class="qml-copy">
-            <p class="section-index" data-i18n="qml.kicker">06 / QMLBRIDGE</p>
+            <p class="section-index" data-i18n="qml.kicker">07 / QMLBRIDGE</p>
             <h2 id="qml-title" data-i18n="qml.title">嵌入 QML 页面</h2>
             <p class="qml-intro" data-i18n="qml.copy">通过 QmlBridge 在 Qt Widgets 窗口中加载 QML 页面，直接共享业务数据与 Fluent 主题。</p>
             <div class="qml-links">
@@ -529,7 +558,7 @@ target_link_libraries(
       <section class="positioning-section" id="why" aria-labelledby="positioning-title">
         <div class="page-shell positioning-grid">
           <div class="positioning-lead" data-reveal>
-            <p class="section-index">07 / POSITIONING</p>
+            <p class="section-index">08 / POSITIONING</p>
             <h2 id="positioning-title">
               <span data-i18n="positioning.titleLine1">独立封装控件</span>
               <span data-i18n="positioning.titleLine2">不止是样式表</span>
@@ -566,7 +595,7 @@ target_link_libraries(
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
         <div class="page-shell download-grid">
           <div class="download-copy" data-reveal>
-            <p class="section-index">08 / DOWNLOAD</p>
+            <p class="section-index">09 / DOWNLOAD</p>
             <h2 id="downloads-title">
               <span data-i18n="downloads.title">下载 Gallery</span>
             </h2>
@@ -624,7 +653,7 @@ target_link_libraries(
       <section class="support-section" id="support" aria-labelledby="support-title" data-support>
         <div class="page-shell support-layout">
           <div class="support-copy">
-            <p class="section-index" data-i18n="support.kicker">09 / SPONSOR · 赛博投喂</p>
+            <p class="section-index" data-i18n="support.kicker">10 / SPONSOR · 赛博投喂</p>
             <h2 id="support-title" data-i18n="support.title">大佬，赏点 Token？</h2>
             <p class="support-intro" data-i18n="support.intro">开源用爱发电，奈何 AI 实在太费电。写 C++ 掉的是作者的头发，跑 Agent 烧的是真金白银的上下文。如果 Fluent-Qt 帮你的界面少踩了几个坑、省下了调样式的深夜，不妨投喂一点「赛博猫粮」——哪怕不够大模型塞牙缝，也能让维护者嘴角疯狂上扬。</p>
 

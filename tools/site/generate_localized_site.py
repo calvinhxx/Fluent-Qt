@@ -217,6 +217,7 @@ def prefix_resources(page: str, prefix: str) -> str:
         "href",
         "data-theme-src-light",
         "data-theme-src-dark",
+        "data-theme-src-contrast",
         "data-gallery-src",
         "data-showcase-src",
         "data-showcase-controller",
@@ -231,8 +232,8 @@ def prefix_resources(page: str, prefix: str) -> str:
         path = url.split("?", 1)[0]
         if path in {"styles.css", "site.js", "spatial-showcase.js"}:
             url = versioned_asset_url(path)
-        elif url.endswith(".png") and (
-            url.startswith("assets/gallery/") or url == "assets/app-icon.png"
+        elif url.startswith("assets/playground/") or (
+            url.endswith(".png") and (url.startswith("assets/gallery/") or url == "assets/app-icon.png")
         ):
             url = versioned_asset_url(url)
         return f'{match.group("head")}{prefix}{url}'
@@ -318,6 +319,7 @@ def render_page(
     # Resolve this locale-owned link after prefixing shared assets.
     page = page.replace("{{API_URL}}", documentation_entry(locale.key).removeprefix("zh-CN/"))
     page = page.replace('{{RELEASES_URL}}', 'api/releases/')
+    page = page.replace('{{PLAYGROUND_URL}}', 'api/checkbox/?playground=1')
     if re.search(r"{{[A-Z0-9_]+}}", page):
         fail(f"unresolved template token in {locale.output}")
     return page.rstrip() + "\n"
