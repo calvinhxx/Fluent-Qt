@@ -2,6 +2,87 @@
   "schema_version": 2,
   "versions": [
     {
+      "version": "1.12.0",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "b7982d9d9fe3ecefc520ecf814e18bb2af717ed8374c63dc668ec6303f9dadc4",
+      "groups": [
+        {
+          "scope": "uilib",
+          "summary": {
+            "en": "Stack button icons and labels, show tree column headers, and restore maximized windows on the intended monitor.",
+            "zh": "按钮支持上下排列图标与文字，树视图为列头预留空间，并修复了多显示器下最大化窗口的内容定位。"
+          },
+          "changes": [
+            {
+              "en": "Use `Button::IconAbove` or `Button::IconBelow` to place an icon above or below its label.",
+              "zh": "通过 `Button::IconAbove` 或 `Button::IconBelow` 将图标放在文字上方或下方。"
+            },
+            {
+              "en": "`TreeView` leaves room for visible column headers. Use `headerlessTopInset` to adjust the first-row gap when the caption and columns’ headers are hidden.",
+              "zh": "`TreeView` 会为可见列头预留空间。标题和列头都隐藏时，可用 `headerlessTopInset` 调整首行上方的间距。"
+            },
+            {
+              "en": "On Windows, restoring a maximized `Window` uses the destination monitor’s work area.",
+              "zh": "在 Windows 上恢复最大化的 `Window` 时，按目标显示器的工作区定位内容。"
+            }
+          ],
+          "migrations": [],
+          "related": [
+            "button",
+            "tree-view",
+            "window"
+          ],
+          "headers": [
+            "src/components/basicinput/Button.h",
+            "src/components/collections/TreeView.h"
+          ]
+        },
+        {
+          "scope": "gallery",
+          "summary": {
+            "en": "Read release notes offline and try the tree column-header example.",
+            "zh": "可离线阅读 Gallery 更新，也可在树视图示例中试用列头。"
+          },
+          "changes": [
+            {
+              "en": "Open What’s new in the title bar. At compact widths, use the megaphone icon to read the updates bundled with Gallery.",
+              "zh": "点击标题栏的 What’s new 查看随 Gallery 安装的更新记录。窄窗口下点击小喇叭图标即可打开。"
+            },
+            {
+              "en": "The `TreeView` example shows how model headers appear above the first row.",
+              "zh": "`TreeView` 示例展示了模型列头在首行上方的布局。"
+            }
+          ],
+          "migrations": [],
+          "related": [
+            "tree-view"
+          ],
+          "headers": [],
+          "headline": {
+            "en": "Read Gallery updates offline",
+            "zh": "离线查看 Gallery 更新"
+          }
+        },
+        {
+          "scope": "project",
+          "summary": {
+            "en": "Edit live Qt examples on 99 component documentation pages and copy the resulting C++ or PySide6 code.",
+            "zh": "99 个组件文档页提供 Qt 交互预览，可以调整属性并复制对应的 C++ 或 PySide6 代码。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [
+            "checkbox",
+            "particle-backdrop",
+            "spatial-view",
+            "qml-view"
+          ],
+          "headers": []
+        }
+      ]
+    },
+    {
       "version": "1.11.4",
       "status": "published",
       "published_at": "2026-11-10T16:48:32Z",
