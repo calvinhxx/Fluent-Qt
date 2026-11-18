@@ -30,6 +30,8 @@
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/#gallery">Try the live C++ Web Gallery</a></strong>
   ·
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1">Property preview</a></strong>
+  ·
   <a href="https://calvinhxx.github.io/Fluent-Qt/api/">Docs &amp; API</a>
   ·
   <a href="https://calvinhxx.github.io/Fluent-Qt/#top">Project website</a>
@@ -67,11 +69,15 @@ Use Gallery to browse controls, try interactions, and read C++ and Python exampl
 
 ### Component docs & Property preview
 
-The website includes a searchable [documentation & API portal](https://calvinhxx.github.io/Fluent-Qt/api/) alongside Gallery:
+The [online documentation](https://calvinhxx.github.io/Fluent-Qt/api/) includes setup guides, 99 component APIs, and [release notes](https://calvinhxx.github.io/Fluent-Qt/api/releases/). Open **Property preview** on any component page to adjust live Qt properties and copy the generated C++ or PySide6 code:
 
-- **Foundation & module guides**: quick setup, themes and colors, typography, icons, bindings/anchors/states, animation controls, models, form validation, child widget lifetime, Qt APIs, UI diagnostics, and Plugins / Particles / Spatial / QmlBridge.
-- **Component pages & Property preview**: Browse live WebAssembly examples, C++ and PySide6 snippets, and inherited Qt APIs. On supported pages, open **Property preview** to adjust a real Qt widget and copy the generated code.
-- **Release history**: searchable [release notes and migration guides](https://calvinhxx.github.io/Fluent-Qt/api/releases/) filtered by library (`UILib`) or Gallery scope.
+<p>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1">
+    <img src="site/assets/playground/checkbox-en-light.webp" width="760" alt="CheckBox property panel showing a checked box and its C++ code">
+  </a>
+</p>
+
+Quick try: [Button](https://calvinhxx.github.io/Fluent-Qt/api/button/?playground=1) · [CheckBox](https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1) · [ComboBox](https://calvinhxx.github.io/Fluent-Qt/api/combobox/?playground=1) · [DataGrid](https://calvinhxx.github.io/Fluent-Qt/api/data-grid/?playground=1) · [LineChart](https://calvinhxx.github.io/Fluent-Qt/api/line-chart/?playground=1) · [ParticleBackdrop](https://calvinhxx.github.io/Fluent-Qt/api/particle-backdrop/?playground=1) · [SpatialView](https://calvinhxx.github.io/Fluent-Qt/api/spatial-view/?playground=1) · [QmlView](https://calvinhxx.github.io/Fluent-Qt/api/qml-view/?playground=1)
 
 ### Python Gallery
 

@@ -336,7 +336,57 @@ def render_document(doc, documents, language):
 def render_guide(guide, documents, catalog, language):
     page = guide_path(guide['id'], language)
     context = {'id': guide['id'], 'catalog': catalog, 'component': {'category_id': guide['group']}}
+    available = {item['id']: item for item in documents}
     body, toc = [], []
+    if guide['id'] == 'foundation':
+        heading = '组件属性预览' if language == 'zh' else 'Component property preview'
+        copy = ('调整组件属性，然后复制对应的 C++ 或 PySide6 代码。'
+                if language == 'zh' else
+                'Adjust component properties and copy the corresponding C++ or PySide6 code.')
+        primary = '预览 CheckBox' if language == 'zh' else 'Preview CheckBox'
+        primary_url = relative_url(detail_path('checkbox', language) + '?playground=1', page)
+        other_previews = ('button', 'combobox', 'data-grid', 'line-chart', 'spatial-view', 'particle-backdrop', 'qml-view')
+        pills = ''.join(
+            f'<a class="guide-playground-pill" href="{escape(relative_url(detail_path(cid, language) + "?playground=1", page))}">{escape(available[cid]["component"]["title"])}</a>'
+            for cid in other_previews if cid in available
+        )
+        body.append(
+            f'<aside class="guide-playground-banner" aria-labelledby="guide-playground-title">'
+            f'<h2 id="guide-playground-title">{heading}</h2>'
+            f'<p>{copy}</p>'
+            f'<div class="guide-playground-actions">'
+            f'<a class="guide-playground-primary" href="{escape(primary_url)}">{primary}</a>'
+            f'<div class="guide-playground-pills">{pills}</div>'
+            f'</div></aside>'
+        )
+    elif guide['component_category']:
+        category_components = [c for c in catalog['components']
+                               if c['category_id'] == guide['component_category'] and c['id'] in available]
+        if category_components:
+            heading = '本模块的组件' if language == 'zh' else 'Components in this module'
+            copy = ('打开组件文档，或直接调整属性并复制代码。'
+                    if language == 'zh' else
+                    'Open the documentation or try a component and copy its code.')
+            cta_label = '属性动态预览' if language == 'zh' else 'Property preview'
+            rows = []
+            for comp in category_components:
+                doc = available[comp['id']]
+                name = comp['title'] + (' ' + doc['name']['zh'] if language == 'zh' else '')
+                doc_url = relative_url(detail_path(comp['id'], language), page)
+                pg_url = relative_url(detail_path(comp['id'], language) + '?playground=1', page)
+                rows.append(
+                    f'<div class="guide-module-item">'
+                    f'<a class="guide-module-doc" href="{escape(doc_url)}">{escape(name)}</a>'
+                    f'<a class="guide-playground-pill" href="{escape(pg_url)}">{cta_label}</a>'
+                    f'</div>'
+                )
+            body.append(
+                f'<aside class="guide-playground-banner guide-module-banner" aria-labelledby="guide-playground-title">'
+                f'<h2 id="guide-playground-title">{heading}</h2>'
+                f'<p>{copy}</p>'
+                f'<div class="guide-module-components">{"".join(rows)}</div>'
+                f'</aside>'
+            )
     for index, section in enumerate(guide['sections']):
         sid = 'section-' + str(index)
         title = section['title'][language]
