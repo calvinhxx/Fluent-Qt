@@ -72,6 +72,7 @@ from .foundation_pages import populate_foundation_topic_page
 from .interface_zoom import supports_interface_zoom
 from .interface_zoom_controller import GalleryInterfaceZoomController
 from .intro_tour import GalleryIntroTour, TourStep
+from .whats_new import ANNOUNCEMENT_ICON, GalleryWhatsNew
 from .metrics import TITLE_BAR_HEIGHT
 from .motion import start_finite_transition
 from .samples import PreviewResult, build_sample
@@ -2088,7 +2089,18 @@ class _GalleryTitleContent(QWidget):
         self._icon = icon
         self._title = title
         self._search = search
-        self._chrome_widgets = (back, menu, icon, title, search)
+        self._news = fluentqt.Button("What’s new", search_parent or self)
+        self._news.setObjectName("GalleryTitleBar.WhatsNew")
+        self._news.setAccessibleName(self._news.text())
+        self._news.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+        self._news.setTextColorRole(fluentqt.Button.TextColorRole.Accent)
+        self._news.setFluentSize(fluentqt.Button.ButtonSize.Small)
+        self._news.setIconGlyph(ANNOUNCEMENT_ICON, 16)
+        self._news.setFocusPolicy(Qt.StrongFocus)
+        fluentqt.ToolTip.attach(self._news, self._news.text())
+        self._news.clicked.connect(self._open_whats_new)
+        self._updates_dialog = None
+        self._chrome_widgets = (back, menu, icon, title, search, self._news)
         self._window_active = bool(
             self._bar is not None and self._bar.isWindowActive()
         )
@@ -2106,6 +2118,8 @@ class _GalleryTitleContent(QWidget):
             active_changed = getattr(self._bar, "windowActiveChanged", None)
             if active_changed is not None:
                 active_changed.connect(self._set_window_active)
+            self._bar.systemReservedLeadingWidthChanged.connect(self._update_geometry)
+            self._bar.systemReservedTrailingWidthChanged.connect(self._update_geometry)
         self.refresh_display_scale()
         self._apply_chrome_opacity()
 
@@ -2136,6 +2150,14 @@ class _GalleryTitleContent(QWidget):
             100,
             complete_disabled=lambda: button.setIconScale(1.0),
         )
+
+    def _open_whats_new(self):
+        if self._updates_dialog is not None and isValid(self._updates_dialog):
+            return
+        dialog = GalleryWhatsNew(self._news)
+        self._updates_dialog = dialog
+        dialog.finished.connect(dialog.deleteLater)
+        dialog.open()
 
     def _set_window_active(self, active: bool) -> None:
         self._window_active = bool(active)
@@ -2284,14 +2306,28 @@ class _GalleryTitleContent(QWidget):
         if not self._menu.isHidden():
             self._menu.setGeometry(x - content_origin_x, y_button, 24, 24)
             x += 32
+        bar_width = bar.width() if bar is not None else self.width()
+        compact = bar_width <= 640
+        action_width = 32 if compact else 109
+        end_margin = 12 if trailing else (10 if compact else 20)
+        action_x = bar_width - trailing - end_margin - action_width
+        right = action_x - 8
+        self._news.setFluentLayout(
+            fluentqt.Button.ButtonLayout.IconOnly if compact else fluentqt.Button.ButtonLayout.IconBefore
+        )
+        self._news.setGeometry(action_x, (self.height() - 32) // 2, action_width, 32)
+        self._icon.setVisible(not compact)
         self._icon.setGeometry(
             x - content_origin_x,
             max(0, (self.height() - 18) // 2),
             18,
             18,
         )
-        x += 26
-        if not self._minimal:
+        if not compact:
+            x += 26
+        show_title = not compact and not self._minimal and right - x - 152 >= 180
+        self._title.setVisible(show_title)
+        if show_title:
             self._title.setGeometry(
                 x - content_origin_x,
                 max(0, (self.height() - 24) // 2),
@@ -2300,23 +2336,21 @@ class _GalleryTitleContent(QWidget):
             )
             x += 152
 
-        bar_width = bar.width() if bar is not None else self.width()
-        right = max(x, bar_width - trailing - 8)
+        self._news.setVisible(action_x >= x)
         available = right - x
         show_search = available >= 180
         self._search.setVisible(show_search)
-        if not show_search:
-            return
-        width = max(180, min(360, available - 12))
-        centered = (bar_width - width) // 2
-        search_x = centered if x <= centered <= right - width else x
-        self._search.setGeometry(
-            search_x,
-            max(0, ((bar.height() if bar is not None else self.height()) - 28) // 2),
-            width,
-            28,
-        )
-        self._search.raise_()
+        if show_search:
+            width = max(180, min(360, available - 12))
+            centered = (bar_width - width) // 2
+            search_x = centered if x <= centered <= right - width else x
+            self._search.setGeometry(
+                search_x,
+                max(0, ((bar.height() if bar is not None else self.height()) - 28) // 2),
+                width,
+                28,
+            )
+            self._search.raise_()
         refresh_exclusions = getattr(bar, "refreshChromeExclusions", None)
         if callable(refresh_exclusions):
             refresh_exclusions()
@@ -2810,6 +2844,8 @@ class GalleryWindow(fluentqt.Window):
         settings.setMenuRole(QAction.MenuRole.PreferencesRole)
         settings.triggered.connect(lambda: self.navigate("settings"))
 
+        updates = commands.add_command(CommandGroup.Help, "galleryWhatsNewAction", "What’s new")
+        updates.triggered.connect(self._title_content._open_whats_new)
         shortcuts = commands.add_command(
             CommandGroup.Help,
             "galleryKeyboardShortcutsAction",

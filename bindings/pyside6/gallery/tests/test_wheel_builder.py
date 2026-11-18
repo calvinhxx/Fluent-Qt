@@ -39,6 +39,8 @@ class GalleryWheelBuilderTest(unittest.TestCase):
             "visual.py",
             "window.py",
             "assets/app-icon.png",
+            "whats_new.py",
+            "assets/release-history.json",
             "assets/icon_aliases.json",
             "assets/icon_catalog.json",
             "assets/control_images/Placeholder.svg",

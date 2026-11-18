@@ -68,6 +68,7 @@ set(FLUENTQT_PYSIDE6_GALLERY_FILES
     update_checker.py
     visual.py
     window.py
+    whats_new.py
     window_placement.py)
 
 file(MAKE_DIRECTORY "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}")
@@ -128,6 +129,12 @@ set(FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR
     "${PROJECT_SOURCE_DIR}/app/assets")
 set(FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR
     "${FLUENTQT_PYSIDE6_GALLERY_PACKAGE_DIR}/assets")
+set(_gallery_release_history "${PROJECT_SOURCE_DIR}/tools/site/release-history.json")
+configure_file("${_gallery_release_history}"
+    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/release-history.json" COPYONLY)
+install(FILES "${_gallery_release_history}" DESTINATION fluentqt_gallery/assets
+    COMPONENT FluentQtPySide6Gallery EXCLUDE_FROM_ALL)
+list(APPEND FLUENTQT_PYSIDE6_GALLERY_SOURCE_PATHS "${_gallery_release_history}")
 file(GLOB_RECURSE FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES
     CONFIGURE_DEPENDS
     "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/home_header_tiles/*.png")

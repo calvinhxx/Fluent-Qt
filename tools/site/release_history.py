@@ -166,6 +166,8 @@ def load_history(root=ROOT):
             raise ValueError(f'{label} has {change_count} change bullets (limit {MAX_CHANGES_PER_ENTRY})')
         for group in groups:
             location = f'{label} {group["scope"]}'
+            if 'headline' in group:
+                bilingual(group['headline'], f'{location} headline')
             if 'version' in item or 'summary' in group:
                 validate_prose_field(group.get('summary'), 'summary', f'{location} summary')
             if not any(group.get(key) for key in ('summary', 'changes', 'migrations')):

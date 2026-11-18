@@ -51,11 +51,11 @@
           "headers": [],
           "changes": [
             {
-              "en": "Desktop Gallery's Report a problem copies a diagnostic ZIP, including matching local crash reports, to the clipboard. Choose Open GitHub issue in the notification to open GitHub.",
+              "en": "Choose Report a problem beside Settings to copy a diagnostic ZIP, including any matching local crash reports. Choose Open GitHub issue in the notification, then paste the file.",
               "zh": "桌面版 Gallery 的“反馈问题”会将诊断包（含匹配的本地崩溃报告）复制到剪贴板。在提示中点击“Open GitHub issue”后才打开 GitHub。"
             },
             {
-              "en": "WebAssembly Gallery downloads the diagnostic ZIP for attachment to an issue.",
+              "en": "In the web Gallery, the ZIP downloads so you can attach it to your report.",
               "zh": "WebAssembly Gallery 下载诊断 ZIP，供用户附加到议题。"
             }
           ],
@@ -63,6 +63,10 @@
           "summary": {
             "en": "Report Gallery problems with a ZIP of recent diagnostics.",
             "zh": "通过诊断 ZIP 向 GitHub 反馈 Gallery 问题。"
+          },
+          "headline": {
+            "en": "Report a problem from Gallery",
+            "zh": "从 Gallery 反馈问题"
           }
         },
         {
@@ -132,8 +136,17 @@
           },
           "related": [],
           "headers": [],
-          "changes": [],
-          "migrations": []
+          "changes": [
+            {
+              "en": "Type `@` in the `TextEdit` member-completion example. Use the arrow keys to choose a name and insert it without leaving the editor.",
+              "zh": "在 `TextEdit` 的成员补全示例中输入 `@`，用方向键选择成员，即可在编辑器中插入姓名。"
+            }
+          ],
+          "migrations": [],
+          "headline": {
+            "en": "Try @mentions in TextEdit",
+            "zh": "在 TextEdit 中试用 @ 成员补全"
+          }
         }
       ]
     },
@@ -167,7 +180,11 @@
           ],
           "headers": [],
           "changes": [],
-          "migrations": []
+          "migrations": [],
+          "headline": {
+            "en": "Explore disabled checkbox states",
+            "zh": "查看复选框的禁用状态"
+          }
         }
       ]
     },
@@ -254,7 +271,11 @@
               "before": "Desktop Gallery with public Qt development headers only",
               "after": "# Debian / Ubuntu, matching the selected Qt version:\nsudo apt install qtbase5-private-dev\n# or:\nsudo apt install qt6-base-private-dev\n# Library-only alternative:\n-DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=OFF"
             }
-          ]
+          ],
+          "headline": {
+            "en": "Keep your preferred zoom level",
+            "zh": "记住界面缩放比例"
+          }
         }
       ]
     },
@@ -334,7 +355,11 @@
           "related": [],
           "headers": [],
           "changes": [],
-          "migrations": []
+          "migrations": [],
+          "headline": {
+            "en": "Smoother 3D navigation",
+            "zh": "更流畅的 3D 导航"
+          }
         }
       ]
     },

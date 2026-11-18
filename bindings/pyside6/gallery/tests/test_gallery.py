@@ -6950,6 +6950,66 @@ with (
             skeleton.deleteLater()
             QApplication.processEvents()
 
+    def test_whats_new_includes_only_installed_candidate_and_earlier_gallery_releases(self):
+        from fluentqt_gallery import whats_new
+
+        def release(version, status, scope):
+            return {
+                "version": version,
+                "status": status,
+                "published_at": "2026-11-10T00:00:00Z" if status == "published" else None,
+                "groups": [{"scope": scope, "summary": {"en": version}, "changes": []}],
+            }
+
+        versions = [
+            release("1.9.0", "published", "gallery"),
+            release("1.12.0", "published", "gallery"),
+            release("1.11.0", "candidate", "gallery"),
+            release("1.10.2", "published", "uilib"),
+            release("1.10.1", "candidate", "gallery"),
+            release("1.10.0", "published", "gallery"),
+        ]
+        previous = QCoreApplication.applicationVersion()
+        self.addCleanup(QCoreApplication.setApplicationVersion, previous)
+        QCoreApplication.setApplicationVersion("1.11.0")
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / "release-history.json"
+            path.write_text(json.dumps({"versions": versions}), encoding="utf-8")
+            with patch.object(whats_new, "asset_path", return_value=path):
+                entries = list(whats_new._entries())
+        self.assertEqual([row[1] for row in entries], ["1.11.0", "1.10.0", "1.9.0"])
+        self.assertFalse(entries[0][0].isValid())
+        self.assertTrue(entries[1][0].isValid())
+
+    def test_whats_new_opens_from_compact_title_bar_and_keeps_route(self):
+        from PySide6.QtWidgets import QScrollArea
+
+        window = GalleryWindow()
+        window.resize(460, 500)
+        window.show()
+        try:
+            window.navigate("settings")
+            entry = window._title_content._news
+            self.assertTrue(_wait_until(lambda: entry.isVisible() and window._search.isVisible()))
+            self.assertEqual(entry.fluentLayout(), fluentqt.Button.ButtonLayout.IconOnly)
+            self.assertLess(window._search.geometry().right(), entry.x())
+            bar = window.titleBar()
+            self.assertLess(entry.geometry().right(), bar.width() - bar.systemReservedTrailingWidth())
+            QTest.mouseClick(entry, Qt.LeftButton)
+            dialog = window._title_content._updates_dialog
+            self.assertTrue(_wait_until(lambda: dialog.isOpen()))
+            scroll = dialog.findChild(QScrollArea, "GalleryWhatsNew.History")
+            self.assertGreater(scroll.verticalScrollBar().maximum(), 0)
+            self.assertTrue(any(label.text() == "Report a problem from Gallery" for label in scroll.findChildren(QLabel)))
+            self.assertGreaterEqual(dialog.y() + dialog.shadowSize(), bar.mapTo(window, QPoint(0, bar.height())).y() + 12)
+            close = dialog.findChild(fluentqt.Button, "GalleryWhatsNew.Close")
+            QTest.mouseClick(close, Qt.LeftButton)
+            self.assertTrue(_wait_until(lambda: not shiboken6.isValid(dialog)))
+            self.assertEqual(window.current_route, "settings")
+        finally:
+            window.hide()
+            window.deleteLater()
+
     def test_title_bar_search_and_back_reveal_match_native_interaction(self):
         window = GalleryWindow()
         window.show()

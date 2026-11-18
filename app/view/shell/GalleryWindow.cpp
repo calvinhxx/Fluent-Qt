@@ -587,6 +587,9 @@ void GalleryWindow::installCommands()
     settings->setMenuRole(QAction::PreferencesRole);
     connect(settings, &QAction::triggered, this, [this]() { selectRoute(QStringLiteral("settings")); });
 
+    auto* updates = m_commands->addCommand(Group::Help, QStringLiteral("galleryWhatsNewAction"),
+        QStringLiteral("What’s new"));
+    connect(updates, &QAction::triggered, m_titleBar, &GalleryTitleBarController::showWhatsNew);
     QAction* shortcuts = m_commands->addCommand(Group::Help, QStringLiteral("galleryKeyboardShortcutsAction"),
         QStringLiteral("Keyboard Shortcuts"),
         {QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P), QKeySequence(Qt::CTRL | Qt::Key_Slash)});

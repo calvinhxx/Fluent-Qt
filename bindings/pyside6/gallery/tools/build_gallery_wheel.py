@@ -86,6 +86,8 @@ REQUIRED_PACKAGE_FILES = {
     "assets/qml_bridge/atomic/Theme.qml",
     "assets/qml_bridge/atomic/Context.qml",
     "assets/qml_bridge/atomic/Action.qml",
+    "whats_new.py",
+    "assets/release-history.json",
     "assets/icon_aliases.json",
     "assets/icon_catalog.json",
     "assets/control_images/Placeholder.svg",
