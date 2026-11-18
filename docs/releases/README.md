@@ -14,9 +14,8 @@ Use the version and component filters before an upgrade. Changes after the
 latest stable release appear separately under **Unreleased**, without an
 assigned release number. Former roadmap URLs redirect to the release history.
 
-API pages describe current source. They are not archived API snapshots for
-every historical binary; each release note and comparison remains available
-from its version entry.
+API pages always reflect the current codebase rather than archived docs for
+older releases; use each version note and GitHub compare link for release-by-release changes.
 
 | Series | Releases |
 |---|---|

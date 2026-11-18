@@ -38,7 +38,7 @@ def document_notice(document_id, source, page, language):
             params = {'change': document_id if by_id else source, 'scope': group['scope']}
             target = page_path('releases', language) + '?' + urlencode(params) + '#' + anchor
             if language == 'zh':
-                text = f'本页含未发布变更，尚未包含在稳定版 {data["latest"]} 中。'
+                text = f'本页包含尚未随稳定版 {data["latest"]} 发布的最新改动。'
                 label = '查看相关版本记录'
             else:
                 text = f'This page includes unreleased changes not available in stable {data["latest"]}.'
@@ -171,7 +171,7 @@ def generated_outputs(documents, catalog, render_shell):
         page = page_path('releases', language)
         context = {'id': 'releases', 'catalog': catalog, 'component': {'category_id': 'project'}}
         title = '版本记录与迁移' if zh else 'Releases and migrations'
-        description = '按组件库与 Gallery 分别查看更新和迁移要求。' if zh else 'Updates and migration requirements for UILib and Gallery, grouped by version.'
+        description = '按组件库（UILib）与 Gallery 分类查看各版本更新内容与升级说明。' if zh else 'Updates and migration requirements for UILib and Gallery, grouped by version.'
         body = history_body(data, language, page)
         toc = [('unreleased', '开发中' if zh else 'Unreleased')]
         toc += [('v' + v['version'], v['version']) for v in data['versions']]

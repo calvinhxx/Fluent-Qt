@@ -3836,6 +3836,12 @@ html[data-site-language="zh"] [data-lang-en] {
     padding-block: 76px;
   }
 
+  html[data-site-language="zh"] .spatial-copy h2 {
+    white-space: normal;
+    word-break: normal;
+    text-wrap: balance;
+  }
+
   .positioning-grid,
   .ai-build-grid,
   .section-heading,
