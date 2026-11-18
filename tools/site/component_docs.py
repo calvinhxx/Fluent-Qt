@@ -303,11 +303,15 @@ def render_document(doc, documents, language):
     minimum = doc.get('minimum_preview_height', 196)
     playground = (ROOT / 'app/assets/playgrounds' / (doc['id'] + '.json')).is_file()
     customize = '属性动态预览' if language == 'zh' else 'Property preview'
+
     preview_values = {**words, 'component_id': doc['id'], 'runtime_url': relative('gallery/', page) + '/',
         'playground_attribute': (' data-playground data-playground-layout="data"' if doc['component']['category_id'] in ('charts', 'collections') else ' data-playground') if playground else '',
         'playground_toggle': (f'<button type="button" class="playground-toggle" data-playground-toggle '
-            f'aria-label="{customize}" title="{customize}" aria-pressed="false" aria-expanded="false" '
-            'aria-controls="playground-popover" hidden></button>') if playground else '',
+                              f'aria-label="{customize}" aria-pressed="false" aria-expanded="false" '
+                              f'aria-controls="playground-popover" hidden><span class="playground-icon playground-icon-pick" '
+                              f'aria-hidden="true"></span><span>{customize}</span></button>') if playground else '',
+        'editor_error': '属性预览加载失败。请再次点击属性预览重试。' if language == 'zh' else
+                        'Property preview could not load. Select Property preview to retry.',
         'title': escape(title), 'preview_light': doc['previews'][0]['images']['light']['background'],
         'preview_dark': doc['previews'][0]['images']['dark']['background'],
         'preview_min': minimum, 'preview_height': min(720, max(minimum,

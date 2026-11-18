@@ -428,6 +428,9 @@ h3 {
 }
 .preview-toolbar .state-tabs { flex: 1; min-width: 0; border: 0; background: none; }
 .preview-toolbar .theme-options { flex: none; margin: 6px 12px 6px auto; }
+[data-playground-pending] {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+}
 .preview-stage { background: var(--preview-light, var(--preview)); }
 [data-component]:is([data-preview-theme="dark"], [data-preview-theme="high-contrast"]) .preview-stage { background: var(--preview-dark, var(--preview)); }
 .preview-panel {

@@ -176,12 +176,64 @@ def run_loading_states(browser, base_url, output, screenshots=False):
         context.close()
 
 
+def run_preview_entries(browser, base_url):
+    from playwright.sync_api import expect
+
+    page = browser.new_page(viewport={'width': 1280, 'height': 850})
+    errors, scripts = [], []
+    page.on('pageerror', lambda error: errors.append(str(error)))
+    page.on('request', lambda request: scripts.append(request.url)
+            if urlsplit(request.url).path.endswith('/playground.js') else None)
+    try:
+        page.goto(urljoin(base_url, 'api/qml-view/'))
+        expect(page.locator('[data-component]')).to_have_attribute('data-live-state', 'ready', timeout=60000)
+        assert not scripts, 'Reading an example must not load the editor'
+        trigger = page.locator('.document-heading [data-playground-toggle]')
+        popup = page.locator('.playground-popover')
+        page.route('**/playground.js*', lambda route: route.abort())
+        trigger.click()
+        expect(page.locator('[data-preview-error]')).to_be_visible()
+        expect(trigger).to_have_attribute('aria-busy', 'false')
+        page.unroute('**/playground.js*')
+        trigger.press('Enter')
+        expect(popup).to_have_attribute('data-preview-state', 'ready', timeout=60000)
+        title = page.locator('[data-property="contextTitle"] input')
+        title.fill('QML preview test')
+        title.press('Tab')
+        code = page.locator('.playground-code-text')
+        expect(code).to_contain_text('QML preview test')
+        page.locator('[data-property="source"] [role="combobox"]').click()
+        page.get_by_role('option', name='Action.qml', exact=False).click()
+        expect(code).to_contain_text('function advance()')
+        page.locator('.playground-reset').click()
+        expect(title).to_have_value('A shared title')
+        expect(code).to_contain_text('property string previewTitle')
+        page.keyboard.press('Escape')
+        expect(trigger).to_be_focused()
+        trigger.press('Enter')
+        expect(popup).to_have_attribute('data-preview-state', 'ready', timeout=60000)
+        assert len(scripts) == 2, scripts  # One failed request and one successful retry.
+
+        page.set_viewport_size({'width': 320, 'height': 400})
+        for route, suffix in (('checkbox', ''), ('checkbox', '?playground=1'), ('button', '?playground=1')):
+            page.goto(urljoin(base_url, f'zh-CN/api/{route}/{suffix}'))
+            if not suffix:
+                page.locator('[data-playground-toggle]').click()
+            expect(popup).to_have_attribute('data-preview-state', 'ready', timeout=60000)
+            page.locator('.playground-close').click()
+            expect(page.locator('[data-playground-toggle]')).to_be_focused()
+        assert not errors, errors
+    finally:
+        page.close()
+
+
 def run(browser, base_url, output, screenshots=False):
     spec = importlib.util.spec_from_file_location('playground_layout', Path(__file__).with_name('test_playground_layout_browser.py'))
     layout = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(layout)
     layout.run(browser, base_url, output / 'layout', screenshots)
     run_loading_states(browser, base_url, output / 'loading', screenshots)
+    run_preview_entries(browser, base_url)
     return load_audit().run(browser, base_url, output, screenshots, routes=['button'])
 
 

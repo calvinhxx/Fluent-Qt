@@ -6,23 +6,21 @@ window.FluentQtPlayground = {
     if (!root.hasAttribute('data-playground')) return null;
     const zh = document.documentElement.lang === 'zh-CN';
     const words = zh ? {
-      pick: '属性动态预览', cancel: '取消选择', hint: '选择要预览的组件 · Esc 取消', target: '预览', tip: '实时调整组件属性并预览生成代码', preview: '属性动态预览',
+      preview: '属性动态预览',
       close: '关闭预览', more: '更多属性', reset: '重置属性', copy: '复制代码', copied: '已复制',
       copying: '复制中…', failed: '复制失败，请重试。', loading: '正在加载预览…',
       unavailable: '预览暂时无法加载', retry: '重新尝试', invalid: '输入无效，未应用这次修改。',
       search: '查找属性或 API', follow: '跟随主题', empty: '没有匹配的属性', language: '代码语言',
-      guideClick: '点击开启属性动态预览',
       numeric: '请输入有效数字。', noTargets: '当前示例没有可选取的组件。',
-      options: {ChevronDown: '向下', ChevronUp: '向上', ChevronRight: '向右', Standard: '标准', Accent: '强调', Subtle: '轻量', Small: '小', StandardSize: '默认', Medium: '中', Large: '大', ExtraLarge: '特大', None: '无', Add: '加号', CheckMark: '对勾', Save: '保存', FavoriteStar: '星标', Settings: '设置', Search: '搜索', Mail: '邮件', Home: '主页', Document: '文档', Info: '信息', Warning: '警告', ErrorBadge12: '错误', TextOnly: '仅文字', IconBefore: '图标在前', IconAfter: '图标在后', IconOnly: '仅图标', IconAbove: '图标在上', IconBelow: '图标在下', Rest: '默认', Hover: '悬停', Pressed: '按下', Disabled: '禁用', Unchecked: '未选中', PartiallyChecked: '部分选中', Checked: '已选中', Horizontal: '水平', Vertical: '垂直', NoTicks: '无刻度', TicksAbove: '上方刻度', TicksBelow: '下方刻度', TicksLeft: '左侧刻度', TicksRight: '右侧刻度', TicksBothSides: '双侧刻度', Peek: '点击预览', Hidden: '隐藏', Visible: '始终显示', Left: '左侧', Right: '右侧', Leading: '首端', Trailing: '尾端', Single: '单选', Multiple: '多选', Extended: '扩展多选', Compact: '紧凑', Inline: '行内', Caption: '辅助说明', Body: '正文', BodyStrong: '正文加粗', BodyLarge: '大号正文', BodyLargeStrong: '大号正文加粗', Subtitle: '副标题', Title: '标题', TitleLarge: '大标题', Display: '展示标题', ElideLeft: '左侧省略', ElideRight: '右侧省略', ElideMiddle: '中间省略', ElideNone: '不省略', Auto: '自动', Automatic: '自动', Stacked: '上下堆叠', Circular: '圆形', Square: '方形', Available: '在线', Away: '离开', Busy: '忙碌', DoNotDisturb: '请勿打扰', Offline: '离线', Dot: '圆点', Icon: '图标', Value: '数值', Informational: '通知', Attention: '关注', Caution: '警告', Success: '成功', Critical: '严重', Error: '错误', Validating: '校验中', Running: '运行中', Paused: '已暂停', Branded: '品牌样式', Simple: '简洁样式', Custom: '自定义', ImageCard: '图文卡片', AvatarTextRow: '头像文本行', TextBlock: '文本块', Top: '顶部', TopStart: '左上角', TopEnd: '右上角', Bottom: '底部', BottomStart: '左下角', BottomEnd: '右下角', TopLeft: '上左', TopRight: '上右', BottomLeft: '下左', BottomRight: '下右', LeftTop: '左上', LeftBottom: '左下', RightTop: '右上', RightBottom: '右下', Full: '居中/全幅', Day: '日', Month: '月', Year: '年', Monday: '周一', Tuesday: '周二', Wednesday: '周三', Thursday: '周四', Friday: '周五', Saturday: '周六', Sunday: '周日', FullMonthName: '完整月份', AbbreviatedMonthName: '缩写月份', NumericMonth: '数字月份', TwoDigitMonth: '两位月份', DayInteger: '日期数字', TwoDigitDay: '两位日期', DayIntegerWithAbbreviatedWeekday: '日期与星期', FullYear: '完整年份', TwoDigitYear: '两位年份', TwelveHourClock: '12 小时制', TwentyFourHourClock: '24 小时制', Layer: '默认层', LayerAlt: '交替层', Canvas: '画布底色', Beginning: '开头省略', Middle: '中间省略', List: '列表', Detail: '详情', LeftCompact: '左侧紧凑', LeftMinimal: '左侧极简', ScrollButtons: '滚动按钮', MoreButton: '更多按钮', Equal: '等宽', SizeToContent: '自适应内容', OnHover: '悬停显示', Always: '始终显示', Manual: '手动', Contain: '适应内容', ScaleDown: '缩小适应', Zoom: '缩放', Pan: '平移', Collapsed: '折叠', VisibleOnPointerOver: '悬停显示', FastTransformation: '快速采样', SmoothTransformation: '平滑采样', Line: '折线图', Area: '面积图', Bar: '柱状图', HorizontalBar: '条形图', Pie: '饼图', Donut: '环形图', Scatter: '散点图', Sparkline: '迷你图', Alternate: '交替', SlideFade: '滑动淡入', ScaleFade: '缩放淡入', Immediate: '立即切换', Transient: '轻量模式', Solid: '纯色', Mica: '云母 (Mica)', Acrylic: '亚克力 (Acrylic)', Design: '设计', Engineering: '工程', Research: '研究'}
+      options: {ChevronDown: '向下', ChevronUp: '向上', ChevronRight: '向右', Standard: '标准', Accent: '强调', Subtle: '轻量', Small: '小', StandardSize: '默认', Medium: '中', Large: '大', ExtraLarge: '特大', None: '无', Add: '加号', CheckMark: '对勾', Save: '保存', FavoriteStar: '星标', Settings: '设置', Search: '搜索', Mail: '邮件', Home: '主页', Document: '文档', Info: '信息', Warning: '警告', ErrorBadge12: '错误', TextOnly: '仅文字', IconBefore: '图标在前', IconAfter: '图标在后', IconOnly: '仅图标', IconAbove: '图标在上', IconBelow: '图标在下', Rest: '默认', Hover: '悬停', Pressed: '按下', Disabled: '禁用', Unchecked: '未选中', PartiallyChecked: '部分选中', Checked: '已选中', Horizontal: '水平', Vertical: '垂直', NoTicks: '无刻度', TicksAbove: '上方刻度', TicksBelow: '下方刻度', TicksLeft: '左侧刻度', TicksRight: '右侧刻度', TicksBothSides: '双侧刻度', Peek: '点击预览', Hidden: '隐藏', Visible: '始终显示', Left: '左侧', Right: '右侧', Leading: '首端', Trailing: '尾端', Single: '单选', Multiple: '多选', Extended: '扩展多选', Compact: '紧凑', Inline: '行内', Caption: '辅助说明', Body: '正文', BodyStrong: '正文加粗', BodyLarge: '大号正文', BodyLargeStrong: '大号正文加粗', Subtitle: '副标题', Title: '标题', TitleLarge: '大标题', Display: '展示标题', ElideLeft: '左侧省略', ElideRight: '右侧省略', ElideMiddle: '中间省略', ElideNone: '不省略', Auto: '自动', Automatic: '自动', Stacked: '上下堆叠', Circular: '圆形', Square: '方形', Available: '在线', Away: '离开', Busy: '忙碌', DoNotDisturb: '请勿打扰', Offline: '离线', Dot: '圆点', Icon: '图标', Value: '数值', Informational: '通知', Attention: '关注', Caution: '警告', Success: '成功', Critical: '严重', Error: '错误', Validating: '校验中', Running: '运行中', Paused: '已暂停', Branded: '品牌样式', Simple: '简洁样式', Custom: '自定义', ImageCard: '图文卡片', AvatarTextRow: '头像文本行', TextBlock: '文本块', Top: '顶部', TopStart: '左上角', TopEnd: '右上角', Bottom: '底部', BottomStart: '左下角', BottomEnd: '右下角', TopLeft: '上左', TopRight: '上右', BottomLeft: '下左', BottomRight: '下右', LeftTop: '左上', LeftBottom: '左下', RightTop: '右上', RightBottom: '右下', Full: '居中/全幅', Day: '日', Month: '月', Year: '年', Monday: '周一', Tuesday: '周二', Wednesday: '周三', Thursday: '周四', Friday: '周五', Saturday: '周六', Sunday: '周日', FullMonthName: '完整月份', AbbreviatedMonthName: '缩写月份', NumericMonth: '数字月份', TwoDigitMonth: '两位月份', DayInteger: '日期数字', TwoDigitDay: '两位日期', DayIntegerWithAbbreviatedWeekday: '日期与星期', FullYear: '完整年份', TwoDigitYear: '两位年份', TwelveHourClock: '12 小时制', TwentyFourHourClock: '24 小时制', Layer: '默认层', LayerAlt: '交替层', Canvas: '画布底色', Beginning: '开头省略', Middle: '中间省略', List: '列表', Detail: '详情', LeftCompact: '左侧紧凑', LeftMinimal: '左侧极简', ScrollButtons: '滚动按钮', MoreButton: '更多按钮', Equal: '等宽', SizeToContent: '自适应内容', OnHover: '悬停显示', Always: '始终显示', Manual: '手动', Contain: '适应内容', ScaleDown: '缩小适应', Zoom: '缩放', Pan: '平移', Collapsed: '折叠', VisibleOnPointerOver: '悬停显示', FastTransformation: '快速采样', SmoothTransformation: '平滑采样', Line: '折线图', Area: '面积图', Bar: '柱状图', HorizontalBar: '条形图', Pie: '饼图', Donut: '环形图', Scatter: '散点图', Sparkline: '迷你图', Alternate: '交替', SlideFade: '滑动淡入', ScaleFade: '缩放淡入', Immediate: '立即切换', Transient: '轻量模式', Solid: '纯色', Transparent: '透明背景', FlowingRibbons: '流动光带', FloatingDots: '漂浮光点', Starfield: '星空穿梭', Raster: 'CPU 光栅', OpenGL: 'OpenGL 硬件', Mica: '云母 (Mica)', Acrylic: '亚克力 (Acrylic)', Design: '设计', Engineering: '工程', Research: '研究'}
     } : {
-      pick: 'Property preview', cancel: 'Cancel', hint: 'Select a component to preview · Esc to cancel', target: 'Preview', tip: 'Adjust component properties live and preview generated code', preview: 'Property preview',
+      preview: 'Property preview',
       close: 'Close preview', more: 'More properties', reset: 'Reset properties', copy: 'Copy code', copied: 'Copied',
       copying: 'Copying…', failed: 'Could not copy. Try again.', loading: 'Loading preview…',
       unavailable: 'Preview could not load', retry: 'Try again', invalid: 'Invalid input. This change was not applied.',
       search: 'Find a property or API', follow: 'Follow theme', empty: 'No matching properties', language: 'Code language',
-      guideClick: 'Click to open property preview',
       numeric: 'Enter a valid number.', noTargets: 'No editable components in this example.',
-      options: {ChevronDown: 'Down', ChevronUp: 'Up', ChevronRight: 'Right', Standard: 'Standard', Accent: 'Accent', Subtle: 'Subtle', Small: 'Small', StandardSize: 'Default', Medium: 'Medium', Large: 'Large', ExtraLarge: 'Extra large', None: 'None', Add: 'Add', CheckMark: 'CheckMark', Save: 'Save', FavoriteStar: 'Favorite star', Settings: 'Settings', Search: 'Search', Mail: 'Mail', Home: 'Home', Document: 'Document', Info: 'Info', Warning: 'Warning', ErrorBadge12: 'Error badge', TextOnly: 'Text only', IconBefore: 'Icon before text', IconAfter: 'Icon after text', IconOnly: 'Icon only', IconAbove: 'Icon above text', IconBelow: 'Icon below text', Rest: 'Rest', Hover: 'Hover', Pressed: 'Pressed', Disabled: 'Disabled', Unchecked: 'Unchecked', PartiallyChecked: 'Partially checked', Checked: 'Checked', Horizontal: 'Horizontal', Vertical: 'Vertical', NoTicks: 'No ticks', TicksAbove: 'Ticks above', TicksBelow: 'Ticks below', TicksLeft: 'Ticks left', TicksRight: 'Ticks right', TicksBothSides: 'Both sides', Peek: 'Peek', Hidden: 'Hidden', Visible: 'Visible', Left: 'Left', Right: 'Right', Leading: 'Leading', Trailing: 'Trailing', Single: 'Single', Multiple: 'Multiple', Extended: 'Extended', Compact: 'Compact', Inline: 'Inline', Caption: 'Caption', Body: 'Body', BodyStrong: 'Body strong', BodyLarge: 'Body large', BodyLargeStrong: 'Body large strong', Subtitle: 'Subtitle', Title: 'Title', TitleLarge: 'Title large', Display: 'Display', ElideLeft: 'Elide left', ElideRight: 'Elide right', ElideMiddle: 'Elide middle', ElideNone: 'No elide', Auto: 'Auto', Automatic: 'Automatic', Stacked: 'Stacked', Circular: 'Circular', Square: 'Square', Available: 'Available', Away: 'Away', Busy: 'Busy', DoNotDisturb: 'Do not disturb', Offline: 'Offline', Dot: 'Dot', Icon: 'Icon', Value: 'Value', Informational: 'Informational', Attention: 'Attention', Caution: 'Caution', Success: 'Success', Critical: 'Critical', Error: 'Error', Validating: 'Validating', Running: 'Running', Paused: 'Paused', Branded: 'Branded', Simple: 'Simple', Custom: 'Custom', ImageCard: 'Image card', AvatarTextRow: 'Avatar & text', TextBlock: 'Text block', Top: 'Top', TopStart: 'Top start', TopEnd: 'Top end', Bottom: 'Bottom', BottomStart: 'Bottom start', BottomEnd: 'Bottom end', TopLeft: 'Top left', TopRight: 'Top right', BottomLeft: 'Bottom left', BottomRight: 'Bottom right', LeftTop: 'Left top', LeftBottom: 'Left bottom', RightTop: 'Right top', RightBottom: 'Right bottom', Full: 'Full / Center', Day: 'Day', Month: 'Month', Year: 'Year', Monday: 'Monday', Tuesday: 'Tuesday', Wednesday: 'Wednesday', Thursday: 'Thursday', Friday: 'Friday', Saturday: 'Saturday', Sunday: 'Sunday', FullMonthName: 'Full month name', AbbreviatedMonthName: 'Abbreviated month', NumericMonth: 'Numeric month', TwoDigitMonth: 'Two-digit month', DayInteger: 'Day integer', TwoDigitDay: 'Two-digit day', DayIntegerWithAbbreviatedWeekday: 'Day & weekday', FullYear: 'Full year', TwoDigitYear: 'Two-digit year', TwelveHourClock: '12-hour clock', TwentyFourHourClock: '24-hour clock', Layer: 'Layer', LayerAlt: 'Layer alt', Canvas: 'Canvas', Beginning: 'Beginning', Middle: 'Middle', List: 'List', Detail: 'Detail', LeftCompact: 'Left compact', LeftMinimal: 'Left minimal', ScrollButtons: 'Scroll buttons', MoreButton: 'More button', Equal: 'Equal', SizeToContent: 'Size to content', OnHover: 'On hover', Always: 'Always', Manual: 'Manual', Contain: 'Contain', ScaleDown: 'Scale down', Zoom: 'Zoom', Pan: 'Pan', Collapsed: 'Collapsed', VisibleOnPointerOver: 'On hover', FastTransformation: 'Fast', SmoothTransformation: 'Smooth', Line: 'Line', Area: 'Area', Bar: 'Bar', HorizontalBar: 'Horizontal bar', Pie: 'Pie', Donut: 'Donut', Scatter: 'Scatter', Sparkline: 'Sparkline', Alternate: 'Alternate', SlideFade: 'Slide fade', ScaleFade: 'Scale fade', Immediate: 'Immediate', Transient: 'Transient', Solid: 'Solid', Mica: 'Mica', Acrylic: 'Acrylic'}
+      options: {ChevronDown: 'Down', ChevronUp: 'Up', ChevronRight: 'Right', Standard: 'Standard', Accent: 'Accent', Subtle: 'Subtle', Small: 'Small', StandardSize: 'Default', Medium: 'Medium', Large: 'Large', ExtraLarge: 'Extra large', None: 'None', Add: 'Add', CheckMark: 'CheckMark', Save: 'Save', FavoriteStar: 'Favorite star', Settings: 'Settings', Search: 'Search', Mail: 'Mail', Home: 'Home', Document: 'Document', Info: 'Info', Warning: 'Warning', ErrorBadge12: 'Error badge', TextOnly: 'Text only', IconBefore: 'Icon before text', IconAfter: 'Icon after text', IconOnly: 'Icon only', IconAbove: 'Icon above text', IconBelow: 'Icon below text', Rest: 'Rest', Hover: 'Hover', Pressed: 'Pressed', Disabled: 'Disabled', Unchecked: 'Unchecked', PartiallyChecked: 'Partially checked', Checked: 'Checked', Horizontal: 'Horizontal', Vertical: 'Vertical', NoTicks: 'No ticks', TicksAbove: 'Ticks above', TicksBelow: 'Ticks below', TicksLeft: 'Ticks left', TicksRight: 'Ticks right', TicksBothSides: 'Both sides', Peek: 'Peek', Hidden: 'Hidden', Visible: 'Visible', Left: 'Left', Right: 'Right', Leading: 'Leading', Trailing: 'Trailing', Single: 'Single', Multiple: 'Multiple', Extended: 'Extended', Compact: 'Compact', Inline: 'Inline', Caption: 'Caption', Body: 'Body', BodyStrong: 'Body strong', BodyLarge: 'Body large', BodyLargeStrong: 'Body large strong', Subtitle: 'Subtitle', Title: 'Title', TitleLarge: 'Title large', Display: 'Display', ElideLeft: 'Elide left', ElideRight: 'Elide right', ElideMiddle: 'Elide middle', ElideNone: 'No elide', Auto: 'Auto', Automatic: 'Automatic', Stacked: 'Stacked', Circular: 'Circular', Square: 'Square', Available: 'Available', Away: 'Away', Busy: 'Busy', DoNotDisturb: 'Do not disturb', Offline: 'Offline', Dot: 'Dot', Icon: 'Icon', Value: 'Value', Informational: 'Informational', Attention: 'Attention', Caution: 'Caution', Success: 'Success', Critical: 'Critical', Error: 'Error', Validating: 'Validating', Running: 'Running', Paused: 'Paused', Branded: 'Branded', Simple: 'Simple', Custom: 'Custom', ImageCard: 'Image card', AvatarTextRow: 'Avatar & text', TextBlock: 'Text block', Top: 'Top', TopStart: 'Top start', TopEnd: 'Top end', Bottom: 'Bottom', BottomStart: 'Bottom start', BottomEnd: 'Bottom end', TopLeft: 'Top left', TopRight: 'Top right', BottomLeft: 'Bottom left', BottomRight: 'Bottom right', LeftTop: 'Left top', LeftBottom: 'Left bottom', RightTop: 'Right top', RightBottom: 'Right bottom', Full: 'Full / Center', Day: 'Day', Month: 'Month', Year: 'Year', Monday: 'Monday', Tuesday: 'Tuesday', Wednesday: 'Wednesday', Thursday: 'Thursday', Friday: 'Friday', Saturday: 'Saturday', Sunday: 'Sunday', FullMonthName: 'Full month name', AbbreviatedMonthName: 'Abbreviated month', NumericMonth: 'Numeric month', TwoDigitMonth: 'Two-digit month', DayInteger: 'Day integer', TwoDigitDay: 'Two-digit day', DayIntegerWithAbbreviatedWeekday: 'Day & weekday', FullYear: 'Full year', TwoDigitYear: 'Two-digit year', TwelveHourClock: '12-hour clock', TwentyFourHourClock: '24-hour clock', Layer: 'Layer', LayerAlt: 'Layer alt', Canvas: 'Canvas', Beginning: 'Beginning', Middle: 'Middle', List: 'List', Detail: 'Detail', LeftCompact: 'Left compact', LeftMinimal: 'Left minimal', ScrollButtons: 'Scroll buttons', MoreButton: 'More button', Equal: 'Equal', SizeToContent: 'Size to content', OnHover: 'On hover', Always: 'Always', Manual: 'Manual', Contain: 'Contain', ScaleDown: 'Scale down', Zoom: 'Zoom', Pan: 'Pan', Collapsed: 'Collapsed', VisibleOnPointerOver: 'On hover', FastTransformation: 'Fast', SmoothTransformation: 'Smooth', Line: 'Line', Area: 'Area', Bar: 'Bar', HorizontalBar: 'Horizontal bar', Pie: 'Pie', Donut: 'Donut', Scatter: 'Scatter', Sparkline: 'Sparkline', Alternate: 'Alternate', SlideFade: 'Slide fade', ScaleFade: 'Scale fade', Immediate: 'Immediate', Transient: 'Transient', Solid: 'Solid', Transparent: 'Transparent', FlowingRibbons: 'Flowing ribbons', FloatingDots: 'Floating dots', Starfield: 'Starfield', Raster: 'CPU raster', OpenGL: 'OpenGL', Mica: 'Mica', Acrylic: 'Acrylic'}
     };
     const localized = value => value?.[zh ? 'zh' : 'en'] || value?.en || '';
     const dataLayout = root.dataset.playgroundLayout === 'data';
@@ -30,14 +28,12 @@ window.FluentQtPlayground = {
       const label = field.optionLabels?.[value] || field.valueLabels?.[String(value)];
       return (typeof label === 'string' ? label : localized(label)) || words.options[value] || String(value);
     };
-    const toggle = document.querySelector('[data-playground-toggle]')
-      || root.querySelector('[data-playground-toggle]');
+    const opener = transport.trigger;
     const display = root.querySelector('.preview-display');
     const rows = new Map();
-    let ready = false, picking = false, opened = false, schemaBuilt = false, generation = 0;
+    let ready = false, opened = false, schemaBuilt = false, generation = 0;
     let issued = 0, expected = 0, applied = 0, acceptedRevision = -1, timer, replyTimer, positionFrame, freshState;
     let pending = new Map(), targets = [], targetSize = null, current = null, language = 'cpp';
-    let autoPick = new URLSearchParams(location.search).get('playground') === '1';
     const propertyGroups = new Map();
     let separateStateText = null, separateTextValues = null, sharedTextValue = null, stateTextToggle = null;
     const backgroundState = new Map();
@@ -55,9 +51,6 @@ window.FluentQtPlayground = {
       const b = node('button', `playground-action ${cls}`); b.type = 'button'; b.title = label; b.setAttribute('aria-label', label);
       if (glyph) b.append(icon(glyph)); return b;
     };
-    const toggleLabel = node('span', '', words.pick);
-    toggle.append(icon('pick'), toggleLabel); toggle.hidden = false; toggle.disabled = true;
-    toggle.title = words.tip; toggle.setAttribute('aria-label', words.pick);
     const backdrop = node('div', 'playground-backdrop'); backdrop.hidden = true;
     backdrop.setAttribute('aria-hidden', 'true');
     const popup = node('section', 'playground-popover'); popup.id = 'playground-popover'; popup.hidden = true;
@@ -130,7 +123,7 @@ window.FluentQtPlayground = {
       const displayWidth = Math.max(280, Math.min(680, preview.displayWidth || preview.width));
       const containedSurface = current.schema.component === 'drawer-view' ? preview.surface : null;
       const layoutAnchor = containedSurface
-        || (current.schema.surface === 'host' && preview.surface ? preview.surface : null)
+        || (current.schema.surface && current.schema.surface !== 'control' && preview.surface ? preview.surface : null)
         || preview.target;
       const controlHeight = Math.max(84, (layoutAnchor?.y || 0) + (layoutAnchor?.height || 0) + 16);
       if (!initialPreviewHeight) initialPreviewHeight = !containedSurface && preview.hasOpenOverlay ? preview.height : controlHeight;
@@ -160,7 +153,7 @@ window.FluentQtPlayground = {
       layoutLive();
     }
     function beginLive(initial) {
-      liveInitial = initial.values;
+      liveInitial = initial?.values || {};
       liveSession = `playground-${generation}-${Date.now()}`;
       liveReady = false;
       acceptedRevision = -1;
@@ -169,7 +162,7 @@ window.FluentQtPlayground = {
         'host-theme': root.dataset.previewTheme || document.documentElement.dataset.theme,
         'host-session': liveSession, 'render-scale': 'native'}).forEach(([key, value]) => url.searchParams.set(key, value));
       liveFrame = node('iframe', 'playground-live-frame');
-      liveFrame.title = `${initial.schema.title || initial.schema.component} ${zh ? '交互预览' : 'interactive preview'}`;
+      liveFrame.title = `${initial?.schema.title || root.dataset.component} ${zh ? '交互预览' : 'interactive preview'}`;
       liveFrame.tabIndex = 0;
       liveFrame.style.width = '680px';
       liveFrame.style.visibility = 'hidden';
@@ -189,7 +182,7 @@ window.FluentQtPlayground = {
       stage.classList.add('playground-live');
       clearTimeout(replyTimer);
       replyTimer = setTimeout(() => unavailable(), 45000);
-      transport.send('component-playground-pick', {operation: 'close'}, ++issued, String(generation));
+      if (initial) transport.send('component-playground-pick', {operation: 'close'}, ++issued, String(generation));
     }
     window.addEventListener('message', event => {
       if (!opened || !liveFrame || event.source !== liveFrame.contentWindow || event.origin !== location.origin
@@ -571,7 +564,7 @@ window.FluentQtPlayground = {
       if (!source) return '';
       const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const wrapBreaks = s => esc(s).replace(/(-&gt;|\(|::|,\s*|\.)/g, '$1<wbr>');
-      const tokenRegex = /(\/\/[^\n]*|#[^\n]*)|("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')|\b(auto|const|constexpr|new|delete|return|for|if|else|this|using|namespace|explicit|class|struct|import|from|as|in|and|or|not|self|None|None_|True|False|true|false|nullptr)\b|\b(fluent|fluentqt|Button|CompoundButton|DropDownButton|HyperlinkButton|RepeatButton|SplitButton|ToggleButton|ToggleSplitButton|CheckBox|RadioButton|ColorPicker|ComboBox|FileDropZone|MultiSelectComboBox|TreeSelect|RangeSlider|Slider|RatingControl|ToggleSwitch|LineEdit|AutoSuggestBox|TagInput|CodeBlock|Label|NumberBox|PasswordBox|TextEdit|FontIcon|CalendarDatePicker|CalendarView|DatePicker|DateTimeRangePicker|TimePicker|Avatar|InfoBadge|InfoBar|ProgressBar|ProgressRing|SplashScreen|Shimmer|Toast|ToolTip|Accordion|Card|Divider|Expander|Field|DataGridToolBar|PropertyPanel|ListDetailView|PropertyDefinition|Breadcrumb|BreadcrumbItem|NavigationView|Pivot|PivotItem|SelectorBar|SelectorBarItem|Stepper|StepperItem|TabView|TabViewItem|AnnotatedScrollBar|AnnotatedScrollBarLabel|ImageViewer|PipsPager|ScrollBar|ScrollView|ChartView|ChartModel|LineChart|AreaChart|BarChart|HorizontalBarChart|PieChart|DonutChart|ScatterChart|Sparkline|DataGrid|DrawerView|FileListView|FlipView|FlowView|GridView|ListView|Timeline|Transfer|SplitView|SplitViewPaneOptions|StackView|TreeView|FluentMenu|FluentMenuBar|FluentMenuItem|CommandBar|CommandPalette|CommandBarFlyout|ContentDialog|Dialog|Flyout|Popup|TeachingTip|CoachMark|TitleBar|Window|FluentElement|Typography|FontRole|ButtonStyle|ButtonSize|ButtonLayout|PasswordRevealMode|QueryButtonPlacement|SelectionMode|SpinButtonPlacementMode|CalendarContentLevel|MonthFormat|DayFormat|YearFormat|ClockIdentifier|AvatarShape|AvatarSize|PresenceStatus|InfoBadgeDisplayMode|InfoBadgeStatus|InfoBarSeverity|ProgressRingSize|ProgressRingStatus|Presentation|ShimmerTemplate|Severity|Placement|PreferredPlacement|ExpansionMode|Appearance|LabelPosition|ValidationState|LayoutMode|SearchVisibility|Pane|BreadcrumbSize|OverflowMode|DisplayMode|OverflowBehavior|TabWidthMode|CloseButtonOverlayMode|FitMode|WheelAction|ControlsVisibility|PipsPagerButtonVisibility|ScrollMode|ScrollBarVisibility|ZoomMode|ChartType|DrawerEdge|StackViewTransitionType|NodeAlignment|ShowMode|BackdropEffect|WidgetOwnership|QMargins|QPoint|QPointF|QSize|QRect|QColor|QImage|QPair|QDate|QTime|QDateTime|QPixmap|QPainter|QAction|QWidget|QLabel|QVBoxLayout|QHBoxLayout|QStringLiteral|QStringList|QStringListModel|QString|QVariantList|QVariantMap|QList|QVector|QStandardItemModel|QStandardItem|QSlider|TickPosition|Orientation|DayOfWeek|CheckState|TextElideMode|TransformationMode|Qt)\b|\b(\d+(?:\.\d+)?)\b/g;
+      const tokenRegex = /(\/\/[^\n]*|#[^\n]*)|("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')|\b(auto|const|constexpr|new|delete|return|for|if|else|this|using|namespace|explicit|class|struct|import|from|as|in|and|or|not|self|None|None_|True|False|true|false|nullptr)\b|\b(fluent|fluentqt|Button|CompoundButton|DropDownButton|HyperlinkButton|RepeatButton|SplitButton|ToggleButton|ToggleSplitButton|CheckBox|RadioButton|ColorPicker|ComboBox|FileDropZone|MultiSelectComboBox|TreeSelect|RangeSlider|Slider|RatingControl|ToggleSwitch|LineEdit|AutoSuggestBox|TagInput|CodeBlock|Label|NumberBox|PasswordBox|TextEdit|FontIcon|CalendarDatePicker|CalendarView|DatePicker|DateTimeRangePicker|TimePicker|Avatar|InfoBadge|InfoBar|ProgressBar|ProgressRing|SplashScreen|Shimmer|Toast|ToolTip|Accordion|Card|Divider|Expander|Field|DataGridToolBar|PropertyPanel|ListDetailView|PropertyDefinition|Breadcrumb|BreadcrumbItem|NavigationView|Pivot|PivotItem|SelectorBar|SelectorBarItem|Stepper|StepperItem|TabView|TabViewItem|AnnotatedScrollBar|AnnotatedScrollBarLabel|ImageViewer|PipsPager|ScrollBar|ScrollView|ChartView|ChartModel|LineChart|AreaChart|BarChart|HorizontalBarChart|PieChart|DonutChart|ScatterChart|Sparkline|DataGrid|DrawerView|FileListView|FlipView|FlowView|GridView|ListView|Timeline|Transfer|SplitView|SplitViewPaneOptions|StackView|TreeView|FluentMenu|FluentMenuBar|FluentMenuItem|CommandBar|CommandPalette|CommandBarFlyout|ContentDialog|Dialog|Flyout|Popup|TeachingTip|CoachMark|TitleBar|Window|ParticleBackdrop|ParticlesSession|SpatialView|SpatialItem|SpatialSession|QmlView|QmlSession|FluentElement|Typography|FontRole|ButtonStyle|ButtonSize|ButtonLayout|PasswordRevealMode|QueryButtonPlacement|SelectionMode|SpinButtonPlacementMode|CalendarContentLevel|MonthFormat|DayFormat|YearFormat|ClockIdentifier|AvatarShape|AvatarSize|PresenceStatus|InfoBadgeDisplayMode|InfoBadgeStatus|InfoBarSeverity|ProgressRingSize|ProgressRingStatus|Presentation|ShimmerTemplate|Severity|Placement|PreferredPlacement|ExpansionMode|Appearance|LabelPosition|ValidationState|LayoutMode|SearchVisibility|Pane|BreadcrumbSize|OverflowMode|DisplayMode|OverflowBehavior|TabWidthMode|CloseButtonOverlayMode|FitMode|WheelAction|ControlsVisibility|PipsPagerButtonVisibility|ScrollMode|ScrollBarVisibility|ZoomMode|ChartType|DrawerEdge|StackViewTransitionType|NodeAlignment|ShowMode|BackdropEffect|Effect|BackgroundMode|RenderMode|WidgetOwnership|QMargins|QPoint|QPointF|QSize|QRect|QColor|QImage|QPair|QDate|QTime|QDateTime|QPixmap|QPainter|QAction|QWidget|QLabel|QVector3D|QUrl|QVBoxLayout|QHBoxLayout|QStringLiteral|QStringList|QStringListModel|QString|QVariantList|QVariantMap|QList|QVector|QStandardItemModel|QStandardItem|QSlider|TickPosition|Orientation|DayOfWeek|CheckState|TextElideMode|TransformationMode|Qt)\b|\b(\d+(?:\.\d+)?)\b/g;
       let out = '', last = 0, m;
       while ((m = tokenRegex.exec(source)) !== null) {
         if (m.index > last) out += wrapBreaks(source.slice(last, m.index));
@@ -1520,7 +1513,7 @@ window.FluentQtPlayground = {
         if (entry.rowState) { entry.rowState.composing = false; entry.rowState.dirty = false; entry.rowState.forceSync = true; }
       });
       separateStateText = null; separateTextValues = null; sharedTextValue = null;
-      clearPending(); opened = picking = false; current = null; acceptedRevision = -1; applied = 0; ++generation;
+      clearPending(); opened = false; current = null; acceptedRevision = -1; applied = 0; ++generation;
       restoreBackground();
       for (const dropdown of dropdowns) dropdown.close();
       userMoved = false; userResized = false;
@@ -1532,11 +1525,7 @@ window.FluentQtPlayground = {
       popup.hidden = true;
       backdrop.hidden = true;
       popup.setAttribute('aria-modal', 'false');
-      toggle.setAttribute('aria-pressed', 'false');
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.title = words.tip;
-      toggleLabel.textContent = words.pick;
-      toggle.setAttribute('aria-label', words.pick);
+      transport.updateTrigger(false);
       if (freshState) { const resolve = freshState; freshState = null; resolve(false); }
       liveFrame?.remove(); liveFrame = null; liveReady = false; liveInitial = null; liveSession = '';
       previewContent.style.height = ''; stage.classList.remove('playground-live', 'playground-overlay-open');
@@ -1545,14 +1534,14 @@ window.FluentQtPlayground = {
         send({operation: 'close'}, true);
         if (restoreFocus) {
           const reclaim = () => {
-            if (!opened && document.activeElement?.closest('.live-stage') && toggle.isConnected)
-              toggle.focus({preventScroll: true});
+            if (!opened && document.activeElement?.closest('.live-stage') && opener.isConnected)
+              opener.focus({preventScroll: true});
           };
           window.addEventListener('blur', reclaim, {once: true});
           setTimeout(() => { window.removeEventListener('blur', reclaim); reclaim(); }, 250);
         }
       }
-      if (wasActive && restoreFocus) toggle.focus({preventScroll: true});
+      if (wasActive && restoreFocus) opener.focus({preventScroll: true});
     }
     function openPreview(command) {
       if (!ready) return;
@@ -1561,8 +1550,7 @@ window.FluentQtPlayground = {
       backdrop.hidden = false;
       popup.hidden = false;
       popup.setAttribute('aria-modal', 'true');
-      toggle.setAttribute('aria-expanded', 'true');
-      toggle.setAttribute('aria-pressed', 'true');
+      transport.updateTrigger(true);
       current = null; acceptedRevision = -1;
       const firstCategory = schemaBuilt && categoryTabButtons.get('basic').hidden
         ? [...categoryTabButtons.keys()].find(id => !categoryTabButtons.get(id).hidden) : 'basic';
@@ -1572,6 +1560,8 @@ window.FluentQtPlayground = {
       themeChanged(); position(); close.focus({preventScroll: true});
       isolateBackground();
       backgroundObserver.observe(document.body, {childList: true});
+      // Generic controls are initialized from their own fixture. Only Button borrows source values.
+      if (root.dataset.component !== 'button') { beginLive(); return; }
       const target = command?.target !== undefined ? command.target : (root.dataset.component === 'button' ? 1 : (targets[0]?.id ?? 0));
       send({operation: 'open', target}, true);
     }
@@ -2253,8 +2243,14 @@ window.FluentQtPlayground = {
       popup.dataset.theme = matchMedia('(forced-colors: active)').matches ? 'high-contrast' : (root.dataset.previewTheme || document.documentElement.dataset.theme);
       liveFrame?.contentWindow?.postMessage({source: 'fluent-qt-site', type: 'theme', session: liveSession, theme: popup.dataset.theme}, location.origin);
     }
-    function setReady(value) { ready = value; toggle.disabled = !ready; if (!ready) dismiss(false, false); else if (autoPick) { autoPick = false; openPreview(); } }
-    toggle.addEventListener('click', () => opened ? dismiss() : openPreview());
+    function setReady(value) {
+      ready = value;
+      if (!ready && opened) dismiss(false, false);
+    }
+    function open(target) {
+      if (opened) { dismiss(); return; }
+      openPreview(target === undefined ? undefined : {target});
+    }
     backdrop.addEventListener('click', () => dismiss());
     close.addEventListener('click', () => dismiss()); retry.addEventListener('click', () => openPreview());
     more.addEventListener('click', () => {
@@ -2333,7 +2329,7 @@ window.FluentQtPlayground = {
       } else event.preventDefault();
     }, {passive: false});
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && (opened || picking)) { event.preventDefault(); dismiss(); }
+      if (event.key === 'Escape' && opened) { event.preventDefault(); dismiss(); }
       if (event.key !== 'Tab' || !opened) return;
       const controls = focusableControls();
       const first = controls[0], last = controls[controls.length - 1];
@@ -2345,7 +2341,7 @@ window.FluentQtPlayground = {
       }
     });
     document.addEventListener('pointerdown', event => {
-      if (opened && !popup.contains(event.target) && !toggle.contains(event.target) && !event.target.closest?.('.playground-dropdown-menu')) dismiss(false);
+      if (opened && !popup.contains(event.target) && !opener.contains(event.target) && !event.target.closest?.('.playground-dropdown-menu')) dismiss(false);
     });
     window.addEventListener('resize', schedulePosition);
     document.addEventListener('scroll', event => {
@@ -2356,8 +2352,7 @@ window.FluentQtPlayground = {
     observer.observe(root);
     new ResizeObserver(layoutLive).observe(controlsPane);
     window.addEventListener('pagehide', () => dismiss(false));
-    window.fluentQtPlaygroundOpen = (target = root.dataset.component === 'button' ? 1 : 0) => openPreview({target});
     window.fluentQtPlaygroundClose = () => dismiss();
-    return {receive, receiveTargets, setReady, themeChanged, open: (target = root.dataset.component === 'button' ? 1 : 0) => openPreview({target}), dismiss, contextChanged: () => dismiss(false), originalPointer: () => { if (opened) dismiss(false); }};
+    return {receive, receiveTargets, setReady, themeChanged, open, dismiss, contextChanged: () => dismiss(false), originalPointer: () => { if (opened) dismiss(false); }};
   }
 };
