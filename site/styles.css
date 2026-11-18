@@ -350,7 +350,7 @@ h3 {
 }
 
 .nav-links {
-  gap: 28px;
+  gap: 22px;
 }
 
 .nav-links a {
@@ -882,6 +882,18 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 .button-quiet:hover {
   border-color: color-mix(in srgb, var(--hero-ink) 40%, transparent);
   background: color-mix(in srgb, var(--white) 70%, transparent);
+}
+
+.hero-playground-action {
+  border-color: color-mix(in srgb, var(--hero-accent) 42%, transparent);
+  color: var(--hero-ink);
+  background: color-mix(in srgb, var(--hero-accent) 10%, var(--white));
+}
+
+.hero-playground-action:hover {
+  border-color: var(--hero-accent);
+  color: var(--hero-ink);
+  background: color-mix(in srgb, var(--hero-accent) 15%, var(--white));
 }
 
 .hero-product {
@@ -2414,8 +2426,6 @@ html[data-site-language="zh"] .playground-showcase-copy h2 {
   display: block;
   width: 100%;
   height: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
 }
 
 .download-section {
@@ -3395,7 +3405,7 @@ html[data-site-language="zh"] [data-lang-en] {
   .path-card { min-height: 250px; padding: 20px; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1240px) {
   html { scroll-padding-top: 86px; }
 
   .site-header { backdrop-filter: blur(16px); }
@@ -3439,7 +3449,9 @@ html[data-site-language="zh"] [data-lang-en] {
   }
 
   .site-header[data-menu-open="true"] .nav-cluster {
-    max-height: 520px;
+    max-height: calc(100dvh - 73px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding-block: 22px 26px;
     border-color: var(--line);
     opacity: 1;
@@ -3466,6 +3478,9 @@ html[data-site-language="zh"] [data-lang-en] {
   }
 
   .github-link span { display: inline; }
+}
+
+@media (max-width: 900px) {
 
   .positioning-grid,
   .ai-build-grid,
