@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cpp_ci_tag": "v1.11.4",
+  "cpp_ci_tag": "v1.12.0",
   "templates": {
     "cpp-existing-qt": {
       "description": "A bounded FluentQt panel that can be added to an existing Qt Widgets project.",
