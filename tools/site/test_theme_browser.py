@@ -363,12 +363,20 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                 page.wait_for_function("document.documentElement.dataset.theme === 'light'")
                 if page.locator("[data-theme-toggle]").is_disabled():
                     raise RuntimeError("Website theme control did not recover after forced-colors")
-                for width in (1280, 390):
+                for width in (1280, 390, 320):
                     page.set_viewport_size({"width": width, "height": 800})
                     page.goto(site_url + "#top")
                     page.wait_for_selector("html[data-i18n-ready]")
                     if page.evaluate("document.documentElement.scrollWidth > innerWidth"):
                         raise RuntimeError(f"Website overflows horizontally at {width}px")
+                    # The section clips overflow, so page width alone misses a cut-off title.
+                    if not page.locator("#spatial-title").evaluate("""title => {
+                        const text = document.createRange();
+                        text.selectNodeContents(title);
+                        const section = title.closest('section').getBoundingClientRect();
+                        return [...text.getClientRects()].every(r => r.left >= section.left && r.right <= section.right);
+                    }"""):
+                        raise RuntimeError(f"Spatial title is clipped in {language} at {width}px")
                     page.wait_for_function("""width =>
                         (getComputedStyle(document.querySelector('.hero-window')).transform === 'none') === (width < 900)
                     """, arg=width)
@@ -397,7 +405,7 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                 if runtime_requests:
                     raise RuntimeError(f"Static website eagerly requested WASM ({language}): {runtime_requests}")
                 results.append({"language": language, "themes": ["light", "dark", "high-contrast"],
-                                "forced_colors": "passed", "widths": [1280, 390], "runtime_requests": [],
+                                "forced_colors": "passed", "widths": [1280, 390, 320], "runtime_requests": [],
                                 "release_documents": "passed" if site_root is not None else "not_run",
                                 "directory_hierarchy": "passed" if site_root is not None else "not_run"})
             finally:
