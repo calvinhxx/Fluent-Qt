@@ -19,11 +19,7 @@ intensity `0.6`, and maximum pointer tilt `(3, 5)`. The
 uses this composition and configuration; the browser executable compiles the
 same C++ window construction.
 
-The Spatial variant checks activation and the nullable view factory before
-using the view. If either fails, it deactivates the session and keeps the same
-Card and Button centered in an ordinary QWidget layout. Window preparation is
-best-effort after activation; a false preparation result alone does not select
-the fallback. Successful activation does not establish GPU availability.
+The Spatial variant verifies both `session->activate()` and `createView()` before using the 3D view. If either step fails, it stops the session and falls back to placing the same Card and Button centered inside a standard `QWidget` layout. Calling `prepareWindow()` after activation is optional best-effort setup; a false result alone does not disable the view, while `activate()` itself does not test GPU availability.
 
 ## Read the code
 
@@ -84,15 +80,6 @@ Serve `build/wasm` over HTTP and use the matching entry:
 | Base 2D | `examples/hello_world/hello-world/index.html` | `app/hello-world/index.html` |
 | Spatial | `examples/hello_world/hello-world-spatial/index.html` | `app/hello-world-spatial/index.html` |
 
-The browser target links
-`FluentQt::WebAssembly`; its selected launcher calls `configureRuntime()` and
-`showWindow()` so the shared window is hosted in the same movable/resizable Qt
-desktop surface as the Gallery. Hello World does not use nested modal loops and
-therefore does not link `FluentQt::WasmAsyncify`. Shared window construction
-contains no WebAssembly conditionals.
+The browser build links `FluentQt::WebAssembly`, calling `configureRuntime()` and `showWindow()` so the window runs inside the same resizable browser surface as Gallery. Because Hello World has no nested modal event loops, it skips `FluentQt::WasmAsyncify`, and the shared window code needs no `#ifdef` WebAssembly branches.
 
-The Spatial minimal app is separate from the Gallery's `?showcase=spatial`
-embed, which includes interactive scene controls. Use the minimal entry when
-comparing the C++, Python, and browser Hello World layouts. Compare logical
-widget geometry and matching states; platform fonts, device pixel ratios, and
-the surrounding browser stage can change raw screenshot pixels.
+The standalone Spatial app differs from Gallery's `?showcase=spatial` embed, which adds live camera controls. Use this minimal app to compare C++, Python, and WebAssembly layouts by logical widget geometry and matching states rather than exact screenshots, since platform fonts, display scaling, and browser framing can change pixel output.
