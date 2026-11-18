@@ -125,7 +125,7 @@ WASM CI builds an external consumer from the installed SDK on every run. It can
 reuse the Gallery, examples and SDK when their complete build-input fingerprint
 matches a cached build. The fingerprint covers tracked project files, Qt and
 Emscripten versions, the pinned emsdk revision, build-tool versions and the runner
-image. Website files, website generators, release notes and other non-SDK
+image. Website-only files, website generators, release-note Markdown and other non-SDK
 documentation are excluded. Installed AI documentation, the bundled Skill,
 licenses, resources, presets and unknown new tracked paths remain inputs.
 
@@ -143,8 +143,8 @@ The new run stages its own input artifact and publishes it only after those
 checks pass. `build-info.json` keeps `commit` as the current validation/deployment
 commit, records the actual compiler source as `build_commit`, and includes
 `build_inputs_sha256`. Pages still requires the current run's website and tested
-WASM artifacts. Editing website release metadata can therefore reuse compilation
-without accepting a stale test result or hiding the binary's origin.
+WASM artifacts. Gallery embeds `tools/site/release-history.json` for offline
+reading. Editing that file changes the build fingerprint.
 
 Browser failures retain diagnostics for both groups, including chart-workbench
 screenshots. The log includes the failing Python call stack. Retrying an

@@ -540,7 +540,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         )
     for job, step_names in (
         (browser, ("Checkout", "Download browser input", "Verify browser input", "Set up Python",
-                   "Install Playwright", "Cache Chromium", "Install Chromium runtime", "Run browser smoke",
+                   "Install browser test dependencies", "Cache Chromium", "Install Chromium runtime", "Run browser smoke",
                    "Check wide viewport", "Upload browser smoke diagnostics", "Run Spatial software fallback smoke",
                    "Upload Spatial fallback evidence")),
         (publish, ("Download tested browser input", "Upload WebAssembly Pages payload")),
@@ -1913,6 +1913,7 @@ def validate_boundaries() -> list[str]:
         "wasm_singlethread",
         "aqtinstall==3.3.0",
         "playwright==1.58.0",
+        "Pillow==",
         "cmake --preset wasm",
         "cmake --build --preset wasm --parallel",
         "Verify installed FluentQt WebAssembly consumer",
