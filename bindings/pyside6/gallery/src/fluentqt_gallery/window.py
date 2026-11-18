@@ -2338,10 +2338,10 @@ class _GalleryTitleContent(QWidget):
 
         self._news.setVisible(action_x >= x)
         available = right - x
-        show_search = available >= 180
+        show_search = available >= (160 if compact else 180)
         self._search.setVisible(show_search)
         if show_search:
-            width = max(180, min(360, available - 12))
+            width = min(available, max(180, min(360, available - 12)))
             centered = (bar_width - width) // 2
             search_x = centered if x <= centered <= right - width else x
             self._search.setGeometry(
