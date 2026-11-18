@@ -21,6 +21,7 @@
 #include <QVBoxLayout>
 #include <QWindow>
 #include <QWindowStateChangeEvent>
+#include <vector>
 #ifdef FLUENT_QT_HAS_SPATIAL
 #include "components/spatial/SpatialRuntime.h"
 #include <QOpenGLFunctions>
@@ -553,6 +554,141 @@ TEST(WindowsWindowBackdropTest, HiddenPreparedWindowKeepsRequestedGeometryDuring
 #else
     GTEST_SKIP() << "Requires the Spatial target";
 #endif
+}
+
+TEST(WindowsWindowGeometryTest, MaximizedClientStaysInsideProposedMonitorRect)
+{
+    if (QGuiApplication::platformName() != QLatin1String("windows"))
+        GTEST_SKIP() << "Native client bounds require the Windows desktop platform";
+
+    Window window;
+    window.setBackdropEffect(BackdropEffect::Solid);
+    window.showMaximized();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+    ASSERT_TRUE(IsZoomed(hwnd));
+    RECT previous{};
+    ASSERT_TRUE(GetWindowRect(hwnd, &previous));
+    auto checkProposal = [&](const RECT& proposed, const RECT& expected) {
+        SCOPED_TRACE(::testing::Message()
+            << "proposal " << proposed.left << ',' << proposed.top << " to " << proposed.right << ','
+            << proposed.bottom);
+        WINDOWPOS position{hwnd, nullptr, proposed.left, proposed.top, proposed.right - proposed.left,
+            proposed.bottom - proposed.top, 0};
+        NCCALCSIZE_PARAMS parameters{{proposed, previous, previous}, &position};
+        SendMessageW(hwnd, WM_NCCALCSIZE, TRUE, reinterpret_cast<LPARAM>(&parameters));
+        EXPECT_TRUE(EqualRect(&parameters.rgrc[0], &expected))
+            << "client " << parameters.rgrc[0].left << ',' << parameters.rgrc[0].top << " to "
+            << parameters.rgrc[0].right << ',' << parameters.rgrc[0].bottom;
+    };
+
+    std::vector<HMONITOR> monitors;
+    ASSERT_TRUE(EnumDisplayMonitors(
+        nullptr, nullptr,
+        [](HMONITOR monitor, HDC, LPRECT, LPARAM data) -> BOOL {
+            reinterpret_cast<std::vector<HMONITOR>*>(data)->push_back(monitor);
+            return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&monitors)));
+    ASSERT_FALSE(monitors.empty());
+    for (const auto monitor : monitors) {
+        MONITORINFO info{};
+        info.cbSize = sizeof(info);
+        ASSERT_TRUE(GetMonitorInfoW(monitor, &info));
+        RECT partial = info.rcWork;
+        InflateRect(&partial, -12, -12);
+        checkProposal(partial, partial);
+        checkProposal(info.rcMonitor, info.rcWork);
+    }
+    // Windows can still report a maximized HWND while negotiating an iconic or restored rectangle.
+    // zh_CN: 协商最小化或还原矩形时，HWND 仍可能报告最大化。
+    const RECT iconic{-32000, -32000, -31840, -31972};
+    checkProposal(iconic, iconic);
+}
+
+TEST(WindowsWindowGeometryTest, NativeRestorePresentsMaximizedAndFullScreenContent)
+{
+    if (QGuiApplication::platformName() != QLatin1String("windows"))
+        GTEST_SKIP() << "Native restore requires the Windows desktop platform";
+
+    const auto verifyRestore = [](QScreen* screen, bool fullScreen) {
+        SCOPED_TRACE(screen->name().toStdString());
+        SCOPED_TRACE(fullScreen);
+        Window window;
+        window.setBackdropEffect(BackdropEffect::Solid);
+        auto* content = new QWidget;
+        content->setAutoFillBackground(true);
+        const QColor marker(32, 103, 168);
+        QPalette colors = content->palette();
+        colors.setColor(QPalette::Window, marker);
+        content->setPalette(colors);
+        window.setContentWidget(content);
+        const QRect workArea = screen->availableGeometry();
+        QRect initial(QPoint(), QSize(480, 320).boundedTo(workArea.size()));
+        initial.moveCenter(workArea.center());
+        window.setGeometry(initial);
+        window.show();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+        ASSERT_EQ(window.windowHandle()->screen(), screen);
+        if (fullScreen)
+            window.showFullScreen();
+        else
+            window.showMaximized();
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+        window.requestForegroundActivation();
+        const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+        // Read the desktop pixel on the requested monitor without triggering a paint.
+        // zh_CN: 在目标显示器上读取已呈现的桌面像素，不触发窗口补绘。
+        const auto hasContent = [&] {
+            RECT rect{};
+            if (!GetClientRect(hwnd, &rect) || rect.right < 2 || rect.bottom < 2)
+                return false;
+            POINT point{rect.right / 2, rect.bottom / 2};
+            if (!ClientToScreen(hwnd, &point))
+                return false;
+            const auto dc = GetDC(nullptr);
+            if (!dc)
+                return false;
+            const auto pixel = GetPixel(dc, point.x, point.y);
+            ReleaseDC(nullptr, dc);
+            return pixel == RGB(marker.red(), marker.green(), marker.blue());
+        };
+        ASSERT_TRUE(QTest::qWaitFor(hasContent, 3000));
+        const auto hasExpectedPlacement = [&] {
+            const QRect target = fullScreen ? screen->geometry() : screen->availableGeometry();
+            if (window.size() != target.size() || window.isMinimized()
+                || (fullScreen ? !window.isFullScreen() : !window.isMaximized()))
+                return false;
+            RECT client{};
+            POINT origin{};
+            MONITORINFO info{};
+            info.cbSize = sizeof(info);
+            if (!GetClientRect(hwnd, &client) || !ClientToScreen(hwnd, &origin)
+                || !GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL), &info))
+                return false;
+            OffsetRect(&client, origin.x, origin.y);
+            return EqualRect(&client, fullScreen ? &info.rcMonitor : &info.rcWork) != FALSE;
+        };
+        ASSERT_TRUE(QTest::qWaitFor(hasExpectedPlacement, 3000));
+        const QSize shownSize = window.size();
+        const QPointer<QWindow> handle = window.windowHandle();
+        SendMessageW(hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return IsIconic(hwnd) && window.isMinimized(); }, 2000));
+        ShowWindow(hwnd, SW_RESTORE);
+        ASSERT_TRUE(QTest::qWaitFor([&] { return !IsIconic(hwnd) && handle && handle->isExposed(); }, 3000));
+        EXPECT_EQ(window.windowHandle(), handle.data());
+        EXPECT_EQ(handle->screen(), screen);
+        EXPECT_EQ(reinterpret_cast<HWND>(window.internalWinId()), hwnd);
+        EXPECT_TRUE(QTest::qWaitFor(hasExpectedPlacement, 3000));
+        EXPECT_EQ(window.size(), shownSize);
+        EXPECT_TRUE(QTest::qWaitFor(hasContent, 3000));
+    };
+    const auto screens = QGuiApplication::screens();
+    ASSERT_FALSE(screens.isEmpty());
+    for (auto* screen : screens) {
+        verifyRestore(screen, false);
+        verifyRestore(screen, true);
+    }
 }
 
 TEST(WindowsWindowGeometryTest, FirstShowKeepsRequestedClientSizeAndLaterSystemSizes)
