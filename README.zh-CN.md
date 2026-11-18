@@ -30,6 +30,8 @@
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery">实时体验 C++ Web Gallery</a></strong>
   ·
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/checkbox/?playground=1">属性动态预览</a></strong>
+  ·
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/">组件与 API 文档</a>
   ·
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top">项目官网</a>
@@ -67,11 +69,15 @@ C++ 直接链接上述目标，Python 使用对应的 PySide6 模块，WebAssemb
 
 ### 组件文档与属性动态预览
 
-官网现已提供可全局搜索的中英文[组件与 API 文档中心](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/)：
+[官网文档](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/)包含基础指南、99 个组件 API 与[版本记录](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/releases/)。打开任意组件页的**属性动态预览**，即可在线调整控件属性并复制生成的 C++ / PySide6 代码：
 
-- **基础指南与扩展模块**：涵盖快速开始、主题与颜色、字体与字号、图标、属性绑定与锚点、动画控制、数据模型、表单校验、子控件生命周期、界面自检，以及 Plugins / Particles / Spatial / QmlBridge 接入说明。
-- **组件页与属性动态预览**：可查看 WebAssembly 交互示例、C++ 和 PySide6 代码，并搜索组件 API。在支持的页面打开 **属性动态预览**，即可调节真实 Qt 控件并复制生成的代码。
-- **更新日志与迁移指南**：在[版本记录页](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/releases/)按组件库（UILib）或 Gallery 筛选各版本更新与迁移说明。
+<p>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/checkbox/?playground=1">
+    <img src="site/assets/playground/checkbox-zh-light.webp" width="760" alt="CheckBox 属性面板，显示已选中的复选框和对应的 C++ 代码">
+  </a>
+</p>
+
+快速体验：[Button](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/button/?playground=1) · [CheckBox](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/checkbox/?playground=1) · [ComboBox](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/combobox/?playground=1) · [DataGrid](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/data-grid/?playground=1) · [LineChart](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/line-chart/?playground=1) · [ParticleBackdrop](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/particle-backdrop/?playground=1) · [SpatialView](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/spatial-view/?playground=1) · [QmlView](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/qml-view/?playground=1)
 
 ### Python Gallery
 

@@ -2014,6 +2014,145 @@ pre {
   font-weight: 500;
   z-index: 30;
 }
+.guide-playground-banner {
+  margin-top: 28px;
+  padding: 22px 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 68% 80% at 96% 10%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 65%),
+    var(--surface);
+  box-shadow: var(--subtle-shadow);
+}
+.guide-playground-banner h2 {
+  margin: 12px 0 8px;
+  font-size: 20px;
+  line-height: 1.35;
+}
+.guide-playground-banner > p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.68;
+}
+.guide-playground-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  margin-top: 18px;
+}
+.guide-playground-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: filter 140ms ease, transform 140ms ease;
+}
+.guide-playground-primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.guide-playground-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.guide-playground-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--canvas);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.guide-playground-pill:hover {
+  border-color: var(--accent);
+  background: var(--active);
+  color: var(--accent);
+}
+.guide-module-components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.guide-module-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--canvas);
+  max-width: 100%;
+}
+.guide-module-doc {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.guide-module-doc:hover {
+  color: var(--accent);
+}
+.guide-module-item .guide-playground-pill {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--canvas));
+  color: var(--accent);
+}
+.guide-module-item .guide-playground-pill:hover {
+  background: var(--accent);
+  color: #fff;
+}
+:root[data-theme="dark"] .guide-playground-primary,
+:root[data-theme="dark"] .guide-module-item .guide-playground-pill:hover {
+  color: #0b1219;
+}
+:root[data-theme="high-contrast"] .guide-playground-banner,
+:root[data-theme="high-contrast"] .guide-module-item,
+:root[data-theme="high-contrast"] .guide-playground-pill {
+  background: #000;
+  border-color: var(--line);
+  box-shadow: none;
+}
+:root[data-theme="high-contrast"] .guide-playground-primary {
+  background: var(--accent);
+  color: #000;
+}
+:root[data-theme="high-contrast"] .guide-module-item .guide-playground-pill {
+  background: #000;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+:root[data-theme="high-contrast"] .guide-module-item .guide-playground-pill:hover {
+  background: var(--accent);
+  color: #000;
+}
+@media (max-width: 640px) {
+  .guide-playground-banner { padding: 18px 16px; }
+  .guide-module-item { width: 100%; justify-content: space-between; }
+}
 .guide-section { margin-top: 36px; }
 .guide-section > p { max-width: 72ch; margin: 0 0 20px; color: var(--muted); font-size: 14.5px; line-height: 1.75; }
 .reference-links { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; padding: 0; margin: 14px 0 0; }
