@@ -64,6 +64,10 @@ file(COPY
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE)
+file(COPY "${FLUENT_QT_SOURCE_DIR}/tools/wasm/qt_accessibility_overlay.py"
+    DESTINATION "${_package_root}/tools/wasm")
+file(COPY "${FLUENT_QT_SOURCE_DIR}/cmake/wasm-accessibility/CMakeLists.txt"
+    DESTINATION "${_package_root}/cmake/wasm-accessibility")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/ai/query_ai_catalog.py"
     "${FLUENT_QT_SOURCE_DIR}/tools/ai/evaluate_ai_catalog.py"
@@ -101,6 +105,7 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSanitizers.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtTargetOptions.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtRuntime.cmake"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtWasmAccessibility.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/CreateSourcePackage.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/SourcePackageREADME.md"
     DESTINATION "${_package_root}/cmake")
