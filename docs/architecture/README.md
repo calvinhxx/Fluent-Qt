@@ -37,7 +37,7 @@ flowchart TD
 | [Files and feedback](files-and-feedback.md) | File entry, file model lifecycle, transfer presentation, or actionable Toast |
 | [CodeBlock](code-block.md) | Read-only syntax colors, exact copying, bounded scrolling and Gallery reuse |
 | [Form state](form-state.md) | Non-owning Fields, validation tokens, edit tracking, submission and error focus |
-| [Date and time range picker](date-time-range-picker.md) | Nullable start/end inputs, minute precision, date-only mode, and query cleanup |
+| [Date and time range picker](date-time-range-picker.md) | Nullable endpoints, minute precision, date-only mode, and inclusive or exclusive query bounds |
 | [Charts](charts.md) | Model lifetime, indexed projections, streaming, chart aggregation, or accessibility |
 | [Timeline and Stepper](sequence-controls.md) | App-owned sequences, step requests, layout, motion, and accessibility |
 | [Particles](particles.md) | Particle presets, scoped motion lifecycle, and CPU drawing |

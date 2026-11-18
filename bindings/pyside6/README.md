@@ -131,13 +131,12 @@ lifecycle run. That run does not establish native visual acceptance.
 The [example entry table](../../docs/architecture/plugins.md#minimal-extension-example)
 identifies the matching C++ executable and browser app.
 
-`PluginManager` does not take ownership of plugins or the host widget. If a
-plugin has no Qt parent, keep a Python reference to it while registered so
-garbage collection does not destroy and unregister it early. If it has a Qt
-parent, registration keeps that parent untouched, unregistering does not delete
-it, and destroying the parent automatically removes its registration. Widgets
-returned by a factory keep the parent you pass in and can outlive both the
-manager and the plugin.
+`PluginManager` borrows plugins and the optional host `QObject`. Keep a Python
+reference to any unparented plugin while it is registered. A plugin with a Qt
+parent keeps that parent. Unregistering leaves the plugin alive. If a registered
+plugin is destroyed, the manager removes its registration and stops its active
+dependents. Widgets returned by a factory keep the parent you pass in and can
+outlive both the manager and the plugin.
 
 Optional modules are compiled during source builds; published wheel coverage is
 governed by the [wheel matrix](wheel-matrix.json). In the browser, WebAssembly
