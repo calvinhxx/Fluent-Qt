@@ -994,16 +994,24 @@ TEST_F(GalleryShellFrameworkTest, WhatsNewLeavesRoomForCaptionControlsAndSearch)
     auto* search = bar.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(entry, nullptr);
     ASSERT_NE(search, nullptr);
-    for (const auto& insets : {QPoint(0, 138), QPoint(72, 0)}) {
-        bar.setSystemReservedLeadingWidth(insets.x());
-        bar.setSystemReservedTrailingWidth(insets.y());
-        controller.updateLayout();
-        EXPECT_TRUE(search->isVisible());
-        EXPECT_GE(search->width(), 180);
-        EXPECT_GE(search->x(), insets.x());
-        EXPECT_LT(search->geometry().right(), entry->x());
-        EXPECT_EQ(bar.width() - entry->geometry().right() - 1 - insets.y(), insets.y() ? 12 : 10);
-        EXPECT_EQ(entry->fluentLayout(), Button::IconOnly);
+    auto* back = bar.findChild<Button*>(QStringLiteral("GalleryTitleBar.BackButton"));
+    ASSERT_NE(back, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return back->width() == 24; }));
+
+    // A 460-pixel window with 16-pixel frame margins has a 428-pixel title bar.
+    for (const int barWidth : {460, 428}) {
+        bar.resize(barWidth, 42);
+        for (const auto& insets : {QPoint(0, 138), QPoint(72, 0)}) {
+            bar.setSystemReservedLeadingWidth(insets.x());
+            bar.setSystemReservedTrailingWidth(insets.y());
+            controller.updateLayout();
+            EXPECT_TRUE(search->isVisible());
+            EXPECT_GE(search->width(), barWidth == 460 ? 180 : 160);
+            EXPECT_GE(search->x(), insets.x());
+            EXPECT_LT(search->geometry().right(), entry->x());
+            EXPECT_EQ(bar.width() - entry->geometry().right() - 1 - insets.y(), insets.y() ? 12 : 10);
+            EXPECT_EQ(entry->fluentLayout(), Button::IconOnly);
+        }
     }
 }
 

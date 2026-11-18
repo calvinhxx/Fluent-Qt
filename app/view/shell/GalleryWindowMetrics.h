@@ -54,6 +54,7 @@ struct TitleBar {
     static constexpr int TitleHeight = 24;
     static constexpr int SearchMaxWidth = 360;
     static constexpr int SearchMinWidth = 180;
+    static constexpr int CompactSearchMinWidth = 160;
     static constexpr int SearchHeight = 28;
     static constexpr int SearchEdgeGap = 12;
     static constexpr int ToolTipGap = 4;
@@ -95,11 +96,14 @@ struct TitleBar {
 
     static int searchAvailableWidth(int leftBound, int rightBound) { return rightBound - leftBound; }
 
-    static bool canShowSearch(int availableWidth) { return availableWidth >= SearchMinWidth; }
+    static bool canShowSearch(int availableWidth, bool compact = false)
+    {
+        return availableWidth >= (compact ? CompactSearchMinWidth : SearchMinWidth);
+    }
 
     static int searchWidth(int availableWidth)
     {
-        return qBound(SearchMinWidth, availableWidth - SearchEdgeGap, SearchMaxWidth);
+        return qMin(availableWidth, qBound(SearchMinWidth, availableWidth - SearchEdgeGap, SearchMaxWidth));
     }
 
     static int searchX(int barWidth, int width, int leftBound, int rightBound)

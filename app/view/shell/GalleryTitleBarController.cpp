@@ -460,7 +460,7 @@ void GalleryTitleBarController::updateLayout()
     m_whatsNew->setVisible(m_chromeVisible && actionX >= leftBound);
     const int avail = TitleBarMetrics::searchAvailableWidth(leftBound, rightBound);
 
-    const bool showSearch = m_chromeVisible && TitleBarMetrics::canShowSearch(avail);
+    const bool showSearch = m_chromeVisible && TitleBarMetrics::canShowSearch(avail, compact);
     m_searchBox->setVisible(showSearch);
     if (showSearch) {
         const int searchW = TitleBarMetrics::searchWidth(avail);
