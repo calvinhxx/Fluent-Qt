@@ -73,14 +73,15 @@ code and assets out of the reusable UI library wheel.
 
 ## Compatibility
 
-Each platform has one CPython stable-ABI (`abi3`) wheel for CPython 3.11–3.13
-with matched Qt, PySide6, and Shiboken6 6.9.3 runtimes.
+Each supported platform and architecture has a CPython stable-ABI (`abi3`)
+wheel for the matched Qt, PySide6, and Shiboken6 6.9.3 runtimes. The wheels
+support CPython 3.11–3.13, except on Linux ARM64 where the minimum is 3.12.
 
 | Platform | Architectures |
 | --- | --- |
 | Windows | x64, ARM64 |
 | macOS 12+ | x64, ARM64 |
-| Linux | x64; ARM64 for CPython 3.12–3.13 |
+| Linux | x64, ARM64 |
 
 The source binding keeps Qt/PySide/Shiboken 6.2.4 as its minimum compatibility
 baseline. All Qt for Python components and the C++ Qt SDK must use the same

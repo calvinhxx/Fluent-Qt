@@ -354,14 +354,14 @@ def check_python_version(
         return CheckResult(
             "python_runtime",
             "pass",
-            f"Python {display} is covered by published FluentQt wheels.",
+            f"Python {display} is in the interpreter version range used by FluentQt wheels.",
         )
     if short == SOURCE_PYTHON_MINIMUM:
         return CheckResult(
             "python_runtime",
             "warn",
             f"Python {display} is source-build only.",
-            hint="Use Python 3.11–3.13 for a published wheel.",
+            hint="Choose a Python version with a wheel for your platform and architecture.",
         )
     return CheckResult(
         "python_runtime",

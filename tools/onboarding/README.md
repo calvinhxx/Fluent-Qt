@@ -45,8 +45,9 @@ ordered checks with repair hints. Exit code `0` means no blocking finding;
 warnings do not block. Exit code `1` means at least one required capability is
 missing.
 
-The Python profile treats CPython 3.11–3.13 as published-wheel environments.
-Python 3.10 is reported as source-build only.
+The Python profile checks the interpreter version and installed packages.
+Release wheels cover CPython 3.11–3.13 on supported platforms, with a 3.12
+minimum on Linux ARM64. CPython 3.10 is supported for source builds.
 
 ## Project creator
 
