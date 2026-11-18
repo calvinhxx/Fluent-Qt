@@ -982,6 +982,102 @@ TEST_F(GalleryShellFrameworkTest, ApplicationIconRetainsResolutionForRetinaDockS
     }
 }
 
+TEST_F(GalleryShellFrameworkTest, WhatsNewLeavesRoomForCaptionControlsAndSearch)
+{
+    fluent::windowing::TitleBar bar;
+    fluent::gallery::GalleryTitleBarController controller(&bar, {}, {}, &bar);
+    controller.setMenuEnabled(true);
+    controller.setBackAvailable(true);
+    bar.resize(460, 42);
+    bar.show();
+    auto* entry = bar.findChild<Button*>(QStringLiteral("GalleryTitleBar.WhatsNew"));
+    auto* search = bar.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
+    ASSERT_NE(entry, nullptr);
+    ASSERT_NE(search, nullptr);
+    for (const auto& insets : {QPoint(0, 138), QPoint(72, 0)}) {
+        bar.setSystemReservedLeadingWidth(insets.x());
+        bar.setSystemReservedTrailingWidth(insets.y());
+        controller.updateLayout();
+        EXPECT_TRUE(search->isVisible());
+        EXPECT_GE(search->width(), 180);
+        EXPECT_GE(search->x(), insets.x());
+        EXPECT_LT(search->geometry().right(), entry->x());
+        EXPECT_EQ(bar.width() - entry->geometry().right() - 1 - insets.y(), insets.y() ? 12 : 10);
+        EXPECT_EQ(entry->fluentLayout(), Button::IconOnly);
+    }
+}
+
+TEST_F(GalleryShellFrameworkTest, WhatsNewReadsOfflineHistoryAndFitsAResizedWindow)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    GallerySettingsRestorer restore(GallerySettings::instance());
+    GallerySettings::instance().setIntroCompleted(true);
+    ASSERT_TRUE(showInteractiveGallery(window));
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
+    auto* bar = window.titleBar();
+    auto* entry = bar->findChild<Button*>(QStringLiteral("GalleryTitleBar.WhatsNew"));
+    auto* search = bar->findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
+    ASSERT_NE(entry, nullptr);
+    ASSERT_NE(search, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return entry->isVisible() && search->isVisible(); }));
+    EXPECT_EQ(entry->fluentLayout(), Button::IconBefore);
+    EXPECT_LT(search->geometry().right(), entry->x());
+    EXPECT_LT(entry->geometry().right(), bar->width() - bar->systemReservedTrailingWidth());
+    QTest::mouseClick(entry, Qt::LeftButton);
+    QPointer<fluent::dialogs_flyouts::Dialog> dialog = window.findChild<fluent::dialogs_flyouts::Dialog*>(
+        QStringLiteral("GalleryWhatsNew"));
+    ASSERT_TRUE(dialog);
+    ASSERT_TRUE(dialog->isOpen());
+    auto* close = dialog->findChild<Button*>(QStringLiteral("GalleryWhatsNew.Close"));
+    auto* scroll = dialog->findChild<QScrollArea*>(QStringLiteral("GalleryWhatsNew.History"));
+    ASSERT_NE(close, nullptr);
+    ASSERT_NE(scroll, nullptr);
+    QStringList text;
+    for (auto* label : scroll->findChildren<QLabel*>())
+        text << label->text();
+    EXPECT_TRUE(text.contains(QStringLiteral("v1.11.4")));
+    EXPECT_TRUE(text.contains(QStringLiteral("Report a problem from Gallery")));
+    EXPECT_FALSE(text.join(QLatin1Char(' ')).contains(QStringLiteral("Snap Layouts")));
+    auto snapshot = [&](const QString& variant) {
+        if (tests::support::shouldCaptureVisualSnapshot()) {
+            const QSize minimum = window.minimumSize();
+            const QSize maximum = window.maximumSize();
+            tests::support::VisualSnapshotOptions options;
+            options.windowSize = window.size();
+            options.variant = variant;
+            EXPECT_TRUE(tests::support::captureVisualSnapshot(&window, options));
+            window.setMinimumSize(minimum);
+            window.setMaximumSize(maximum);
+        }
+    };
+    ASSERT_TRUE(QTest::qWaitFor([&] { return dialog->animationProgress() >= 1.0; }));
+    snapshot(QStringLiteral("desktop"));
+    window.resize(460, 500);
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        return entry->fluentLayout() == Button::IconOnly && dialog->width() <= window.width()
+            && dialog->y() + dialog->shadowSize() >= bar->mapTo(&window, QPoint(0, bar->height())).y() + 12;
+    }));
+    EXPECT_TRUE(search->isVisible());
+    EXPECT_LT(search->geometry().right(), entry->x());
+    EXPECT_TRUE(bar->dragExclusionRects().contains(entry->geometry()));
+    EXPECT_LT(entry->geometry().right(), bar->width() - bar->systemReservedTrailingWidth());
+    EXPECT_GT(scroll->verticalScrollBar()->maximum(), 0);
+    snapshot(QStringLiteral("compact"));
+    scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
+    EXPECT_TRUE(close->isVisible());
+    QTest::keyClick(close, Qt::Key_Escape);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return dialog.isNull(); }));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("settings"));
+    QTest::mouseClick(entry, Qt::LeftButton);
+    auto* reopened = window.findChild<QScrollArea*>(QStringLiteral("GalleryWhatsNew.History"));
+    ASSERT_NE(reopened, nullptr);
+    EXPECT_EQ(reopened->verticalScrollBar()->value(), 0);
+    auto* closeAgain = window.findChild<Button*>(QStringLiteral("GalleryWhatsNew.Close"));
+    ASSERT_NE(closeAgain, nullptr);
+    QTest::mouseClick(closeAgain, Qt::LeftButton);
+}
+
 TEST_F(GalleryShellFrameworkTest, TitleBarAppIconRefreshesAfterDisplayScaleChange)
 {
     GalleryWindow window;

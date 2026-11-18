@@ -24,6 +24,7 @@
 #include "AppIcon.h"
 #include "GallerySearchService.h"
 #include "GalleryWindowMetrics.h"
+#include "GalleryWhatsNew.h"
 #include "view/support/GalleryMotion.h"
 
 namespace fluent::gallery {
@@ -217,6 +218,19 @@ void GalleryTitleBarController::build()
     titleAnchors.verticalCenter = {bar, Edge::VCenter, 0};
     layout->addAnchoredWidget(title, titleAnchors);
 
+    using Button = fluent::basicinput::Button;
+    m_whatsNew = new Button(QStringLiteral("What’s new"), bar);
+    m_whatsNew->setObjectName(QStringLiteral("GalleryTitleBar.WhatsNew"));
+    m_whatsNew->setAccessibleName(m_whatsNew->text());
+    m_whatsNew->setFluentStyle(Button::Subtle);
+    m_whatsNew->setTextColorRole(Button::TextColorRole::Accent);
+    m_whatsNew->setFluentSize(Button::Small);
+    m_whatsNew->setIconGlyph(GalleryWhatsNew::announcementGlyph(), 16);
+    m_whatsNew->setFocusPolicy(Qt::StrongFocus);
+    fluent::status_info::ToolTip::attach(m_whatsNew, m_whatsNew->text());
+    connect(m_whatsNew, &Button::clicked, this, &GalleryTitleBarController::showWhatsNew);
+    connect(bar, &fluent::windowing::TitleBar::systemReservedLeadingWidthChanged, this, [this] { updateLayout(); });
+    connect(bar, &fluent::windowing::TitleBar::systemReservedTrailingWidthChanged, this, [this] { updateLayout(); });
     buildSearchBox(bar);
 
     // The search box is intentionally left out of the AnchorLayout: it needs a max width,
@@ -236,6 +250,16 @@ void GalleryTitleBarController::build()
     applyBackButtonReveal(0.0);
     updateLayout();
     applyChromeOpacity();
+}
+
+void GalleryTitleBarController::showWhatsNew()
+{
+    if (!m_whatsNew || m_updatesDialog)
+        return;
+    auto* dialog = new GalleryWhatsNew(m_whatsNew);
+    m_updatesDialog = dialog;
+    connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
+    dialog->open();
 }
 
 void GalleryTitleBarController::buildSearchBox(fluent::windowing::TitleBar* bar)
@@ -404,8 +428,21 @@ void GalleryTitleBarController::updateLayout()
 
     // In the minimal (hidden-pane) layout the app title+icon give way to the search box; otherwise
     // they show. Nothing shows while the splash owns the title bar. zh_CN: 最小布局下标题+图标让位给搜索框。
-    const bool showAppIcon = m_chromeVisible;
-    const bool showTitle = m_chromeVisible && !minimalNav;
+    const int trailing = bar->systemReservedTrailingWidth();
+    const bool compact = bar->width() <= Breakpoints::Small;
+    const int endMargin = trailing > 0 ? 12 : (compact ? 10 : 20);
+    const int end = bar->width() - trailing - endMargin;
+    const int actionWidth = compact ? 32 : 109;
+    const int actionX = end - actionWidth;
+    const int rightBound = actionX - TitleBarMetrics::ItemGap;
+    m_whatsNew->setFluentLayout(
+        compact ? fluent::basicinput::Button::IconOnly : fluent::basicinput::Button::IconBefore);
+    m_whatsNew->setGeometry(actionX, (bar->height() - 32) / 2, actionWidth, 32);
+    const bool showAppIcon = m_chromeVisible && !compact;
+    const bool showTitle = showAppIcon && !minimalNav
+        && TitleBarMetrics::canShowSearch(rightBound
+            - TitleBarMetrics::searchLeftBound(bar->systemReservedLeadingWidth(), true, true, m_backReveal,
+                m_menuAvailable));
     if (auto* menu = menuButton())
         menu->setVisible(m_chromeVisible && m_menuAvailable);
     if (m_title)
@@ -420,7 +457,7 @@ void GalleryTitleBarController::updateLayout()
 
     const int leftBound = TitleBarMetrics::searchLeftBound(bar->systemReservedLeadingWidth(), showAppIcon, showTitle,
         m_backReveal, m_menuAvailable);
-    const int rightBound = TitleBarMetrics::searchRightBound(bar->width(), bar->systemReservedTrailingWidth());
+    m_whatsNew->setVisible(m_chromeVisible && actionX >= leftBound);
     const int avail = TitleBarMetrics::searchAvailableWidth(leftBound, rightBound);
 
     const bool showSearch = m_chromeVisible && TitleBarMetrics::canShowSearch(avail);

@@ -77,6 +77,7 @@ public:
     /// Search box widget the first-launch intro tour anchors a coach mark to.
     /// zh_CN: 首次启动引导用来锚定提示的搜索框控件。
     QWidget* searchBox() const;
+    void showWhatsNew();
     /// Destination geometry for the connected startup transition. zh_CN: 启动连续转场的目标图标。
     QWidget* appIconWidget() const;
     /// Holds the icon pixels until startup arrives; preserves layout. zh_CN: 保留布局，暂缓显示目标图标。
@@ -106,6 +107,8 @@ private:
 
     QPointer<QObject> m_backButton;
     QPointer<QObject> m_menuButton;
+    QPointer<fluent::basicinput::Button> m_whatsNew;
+    QPointer<QWidget> m_updatesDialog;
     QPointer<QLabel> m_appIcon;
     QPointer<fluent::textfields::Label> m_title;
     QPointer<fluent::textfields::AutoSuggestBox> m_searchBox;
