@@ -10,10 +10,9 @@
 
 ## Environment doctor
 
-`fluentqt_doctor.py` performs a local, read-only preflight before a consumer
-project is changed. It makes no network requests. The C++ profile configures a
-small Qt Widgets project in a temporary directory and removes that directory
-when the probe completes.
+`fluentqt_doctor.py` runs a read-only local check without modifying your project
+or making network calls. The C++ check configures a tiny temporary Qt Widgets
+build and cleans it up afterward.
 
 From a FluentQt checkout or source package:
 
