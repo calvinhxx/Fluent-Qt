@@ -169,18 +169,6 @@ def _architecture_manifest(
     return manifest, source_directories, list(template["test_directories"])
 
 
-def _template_definition(
-    *, language: str, starter: str, manifest_path: Path
-) -> tuple[str, dict]:
-    manifest = _read_json(manifest_path)
-    template_id = _starter_id(language, starter)
-    try:
-        definition = manifest["templates"][template_id]
-    except KeyError as error:
-        raise CreateError(f"Unknown starter: {template_id}") from error
-    return template_id, definition
-
-
 def _planned_files(
     *, template_root: Path, replacements: Mapping[str, str]
 ) -> list[tuple[Path, Path]]:
@@ -219,16 +207,19 @@ def create_project(
         identifier=app_id,
         accent=accent,
     )
-    template_id, definition = _template_definition(
-        language=language,
-        starter=starter,
-        manifest_path=starter_manifest,
-    )
+    manifest = _read_json(starter_manifest)
+    template_id = _starter_id(language, starter)
+    try:
+        definition = manifest["templates"][template_id]
+    except KeyError as error:
+        raise CreateError(f"Unknown starter: {template_id}") from error
     replacements = _replacement_values(
         application=display_name,
         identifier=app_id,
         accent=accent,
     )
+    if "cpp_ci_tag" in manifest:
+        replacements["@FLUENTQT_CI_TAG@"] = manifest["cpp_ci_tag"]
     template_root = starters_root / definition["directory"]
     files = _planned_files(template_root=template_root, replacements=replacements)
     module = replacements["@APP_MODULE@"]

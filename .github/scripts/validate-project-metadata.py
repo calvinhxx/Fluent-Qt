@@ -42,4 +42,10 @@ for relative_path in ("README.md", "README.zh-CN.md", "tools/site/index.template
             f"{expected_tag!r}; found {tags!r}"
         )
 
+starters = json.loads((ROOT / "tools/onboarding/starters/manifest.json").read_text(encoding="utf-8"))
+history = json.loads((ROOT / "tools/site/release-history.json").read_text(encoding="utf-8"))
+published_tag = f"v{history['unreleased']['after']}"
+if starters.get("cpp_ci_tag") != published_tag:
+    fail(f"C++ starter CI must check out the published tag {published_tag}")
+
 print(f"Project metadata is aligned at {project_version}.")

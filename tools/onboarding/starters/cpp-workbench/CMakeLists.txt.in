@@ -17,7 +17,7 @@ if(FLUENTQT_SOURCE_DIR)
     add_subdirectory("${FLUENTQT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_deps/fluentqt"
         EXCLUDE_FROM_ALL)
 else()
-    find_package(FluentQt 1.7.1 CONFIG REQUIRED)
+    find_package(FluentQt 1.7.2 CONFIG REQUIRED)
 endif()
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
