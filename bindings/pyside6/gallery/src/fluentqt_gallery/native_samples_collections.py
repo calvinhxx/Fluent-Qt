@@ -2358,6 +2358,45 @@ register_source_samples(
     "tree-view",
     ("TreeView",),
     {
+        "tree-view-column-headers": (
+            "group",
+            _script(
+                """
+                group = QWidget(globals().get("gallery_parent"))
+                layout = QVBoxLayout(group)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(0)
+                layout.setAlignment(Qt.AlignTop)
+                heading = fluentqt.Label("Files", group)
+                heading.setObjectName("externalTreeHeader")
+                layout.addWidget(heading)
+                tree = fluentqt.TreeView(group)
+                tree.setObjectName("treeColumnHeaders")
+                tree.setBackgroundVisible(False)
+                tree.setBorderVisible(False)
+                tree.setHeaderlessTopInset(0)
+                tree.setHeaderHidden(False)
+                tree.setAccessibleName("Files with column headers")
+                tree.setFixedHeight(220)
+                model = QStandardItemModel(tree)
+                model.setHorizontalHeaderLabels(["Name", "Size"])
+                folder = QStandardItem("Documents")
+                folder.appendRow([QStandardItem("Report.txt"), QStandardItem("12 KB")])
+                folder.appendRow([QStandardItem("Notes.txt"), QStandardItem("8 KB")])
+                model.appendRow([folder, QStandardItem("Folder")])
+                tree.setModel(model)
+                tree.header().setStretchLastSection(True)
+                tree.expandAll()
+                tree.resizeColumnToContents(0)
+                toggle = fluentqt.Button("Toggle column headers", group)
+                toggle.clicked.connect(lambda: tree.setHeaderHidden(not tree.isHeaderHidden()))
+                layout.addWidget(tree)
+                layout.addSpacing(8)
+                layout.addWidget(toggle, 0, Qt.AlignLeading)
+                """,
+                _MODEL_IMPORTS,
+            ),
+        ),
         "tree-view-basic": (
             "tree",
             _script(

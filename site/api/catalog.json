@@ -2522,7 +2522,7 @@
           "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestTreeView.cpp"
         }
       ],
-      "sample_count": 5,
+      "sample_count": 6,
       "documentation": {
         "name": {
           "en": "TreeView",

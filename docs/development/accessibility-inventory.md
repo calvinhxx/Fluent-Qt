@@ -66,7 +66,8 @@ scroll overlay start below it. With both headers hidden, applications can set
 `headerlessTopInset` to zero to place the first row flush against an external
 heading. The default inset is two logical pixels. Column-header hit areas,
 replacement headers and the last scrollable row have regressions in
-`TestTreeView.cpp`.
+`TestTreeView.cpp`. Gallery's `tree-view-column-headers` sample demonstrates
+both header arrangements in C++ and Python.
 
 | Classification | Meaning |
 | --- | --- |

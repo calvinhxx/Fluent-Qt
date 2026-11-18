@@ -1786,6 +1786,35 @@ TEST_F(GalleryContentPagesTest, ComponentStateMatrixVisualCheck)
     qApp->exec();
 }
 
+TEST_F(GalleryContentPagesTest, Contract_TreeColumnHeaderSampleTogglesWithoutCoveringRows)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"), QStringLiteral("tree-view-column-headers"), &sample));
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    preview->resize(500, 300);
+    preview->show();
+    QApplication::processEvents();
+    auto* tree = preview->findChild<fluent::collections::TreeView*>(QStringLiteral("treeColumnHeaders"));
+    auto* toggle = preview->findChild<fluent::basicinput::Button*>();
+    ASSERT_NE(tree, nullptr);
+    ASSERT_NE(toggle, nullptr);
+    EXPECT_FALSE(tree->isHeaderHidden());
+    EXPECT_EQ(tree->header()->geometry().bottom() + 1, tree->viewport()->y());
+    toggle->click();
+    QApplication::processEvents();
+    EXPECT_TRUE(tree->isHeaderHidden());
+    auto* heading = preview->findChild<fluent::textfields::Label*>(QStringLiteral("externalTreeHeader"));
+    ASSERT_NE(heading, nullptr);
+    EXPECT_EQ(heading->geometry().bottom() + 1, tree->viewport()->mapTo(preview.get(), QPoint()).y());
+    toggle->click();
+    QApplication::processEvents();
+    EXPECT_FALSE(tree->isHeaderHidden());
+    EXPECT_EQ(tree->header()->geometry().bottom() + 1, tree->viewport()->y());
+    const QModelIndex first = tree->model()->index(0, 0);
+    QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, tree->visualRect(first).center());
+    EXPECT_EQ(tree->currentIndex(), first);
+}
+
 // All controls lists every base component; plugins have their own landing page.
 TEST_F(GalleryContentPagesTest, AllControlsRouteListsEveryComponent)
 {

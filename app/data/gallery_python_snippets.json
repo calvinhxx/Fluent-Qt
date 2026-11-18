@@ -4,7 +4,7 @@
   "summary": {
     "component_count": 99,
     "foundation_topic_count": 1,
-    "sample_count": 302
+    "sample_count": 303
   },
   "samples": [
     {
@@ -585,6 +585,11 @@
       "route_id": "tree-view",
       "sample_id": "tree-view-basic",
       "source": "tree = fluentqt.TreeView()\ntree.setAccessibleName('Folders')\ntree.setItemDelegate(row_delegate)\ntree.setModel(model)\ntree.expandAll()\n"
+    },
+    {
+      "route_id": "tree-view",
+      "sample_id": "tree-view-column-headers",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem, QStandardItemModel\nfrom PySide6.QtWidgets import QVBoxLayout, QWidget\n\ngroup = QWidget()\nlayout = QVBoxLayout(group)\nlayout.setContentsMargins(0, 0, 0, 0)\nlayout.setSpacing(0)\nlayout.setAlignment(Qt.AlignTop)\nheading = fluentqt.Label('Files', group)\nlayout.addWidget(heading)\ntree = fluentqt.TreeView(group)\ntree.setBackgroundVisible(False)\ntree.setBorderVisible(False)\ntree.setHeaderlessTopInset(0)\ntree.setHeaderHidden(False)\ntree.setAccessibleName('Files with column headers')\ntree.setFixedHeight(220)\nmodel = QStandardItemModel(tree)\nmodel.setHorizontalHeaderLabels(['Name', 'Size'])\nfolder = QStandardItem('Documents')\nfolder.appendRow([QStandardItem('Report.txt'), QStandardItem('12 KB')])\nfolder.appendRow([QStandardItem('Notes.txt'), QStandardItem('8 KB')])\nmodel.appendRow([folder, QStandardItem('Folder')])\ntree.setModel(model)\ntree.header().setStretchLastSection(True)\ntree.expandAll()\ntree.resizeColumnToContents(0)\ntoggle = fluentqt.Button('Toggle column headers', group)\ntoggle.clicked.connect(lambda: tree.setHeaderHidden(not tree.isHeaderHidden()))\nlayout.addWidget(tree)\nlayout.addSpacing(8)\nlayout.addWidget(toggle, 0, Qt.AlignLeading)\n"
     },
     {
       "route_id": "tree-view",
