@@ -2,9 +2,7 @@
 
 > **Status:** Current guide (documentation home)
 
-FluentQt documentation is organized by task. Start with the Gallery when you
-want to evaluate the library, the website documentation for foundations and API
-reference, and the development tree when you are changing the project itself.
+FluentQt documentation is organized by task: use Gallery or the website's interactive **Property preview** to test controls, the website docs for foundations and searchable API reference, and the development tree when changing the library itself.
 
 ![FluentQt Gallery on Windows with Mica, showing navigation, component cards, and live samples](assets/readme/gallery-home.jpg)
 
@@ -12,7 +10,7 @@ reference, and the development tree when you are changing the project itself.
 
 | Goal | Start here | Continue with |
 |---|---|---|
-| Try controls and copy an example | [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/#gallery) | [Component documentation](https://calvinhxx.github.io/Fluent-Qt/api/button/) |
+| Try controls, tweak properties live, and copy code | [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/#gallery) | [Component documentation & Property preview](https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1) |
 | Learn themes, layout, models and extension lifetimes | [FluentQt foundations](https://calvinhxx.github.io/Fluent-Qt/api/foundation/) | Use the document directory to open a guide or API reference |
 | Add FluentQt to a C++ or PySide6 application | [Project README](../README.md) | [Onboarding tools](../tools/onboarding/README.md) |
 | Add a GUI with a coding agent | [AI-assisted development](ai/README.md) | [Integration workflow](ai/add-gui-to-project.md) |
@@ -24,10 +22,9 @@ reference, and the development tree when you are changing the project itself.
 ## Documentation tree
 
 Open the [complete table of contents](SUMMARY.md) for every guide, contract,
-record, and release note. Leaf pages include breadcrumbs and previous/next
-links generated from that tree. The contents also folds in PySide6, onboarding,
-and community-policy documents that stay beside the code or package they
-describe.
+record, and release note. Leaf pages include generated breadcrumbs and
+previous/next links. It also links to the PySide6, onboarding, and community
+guides kept alongside their code.
 
 ```text
 docs/

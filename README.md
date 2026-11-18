@@ -30,6 +30,8 @@
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/#gallery">Try the live C++ Web Gallery</a></strong>
   ·
+  <a href="https://calvinhxx.github.io/Fluent-Qt/api/">Docs &amp; API</a>
+  ·
   <a href="https://calvinhxx.github.io/Fluent-Qt/#top">Project website</a>
   ·
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">Questions &amp; community</a>
@@ -37,88 +39,54 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/#support">Support the project</a>
 </p>
 
-Fluent-Qt (FluentQt) is a cross-platform, Fluent-style C++ UI component library built on Qt Widgets. It provides native controls for input, navigation, collections, data grids, [charts](docs/architecture/charts.md), overlays, and windows. Written in C++17, it integrates into existing Qt projects through CMake and offers optional PySide6 bindings.
+Fluent-Qt (FluentQt) provides Fluent-style controls for Qt Widgets—inputs, navigation, collections, data grids, [charts](docs/architecture/charts.md), dialogs, popups, and windows. Written in C++17, it integrates into existing Qt projects via CMake and offers optional PySide6 bindings.
 
-The library supports Windows, macOS, Linux, and WebAssembly. It includes Light, Dark, and High Contrast themes, with options to reduce or disable motion. The optional [Spatial](docs/architecture/spatial-view.md) plugin adds 3D presentation to Widgets interfaces. [QmlBridge](docs/architecture/qml-bridge.md) provides QML support, loading QML pages that share application data and Fluent theme settings with Widgets.
+Applications run on Windows, macOS, Linux, and WebAssembly with Light, Dark, and High Contrast themes plus configurable animation modes. Optional modules add particle backgrounds ([Particles](docs/architecture/particles.md)), 3D perspective views ([Spatial](docs/architecture/spatial-view.md)), and embedded QML pages ([QmlBridge](docs/architecture/qml-bridge.md)).
 
 ## 🧩 Library modules
 
-### Core
+| Module | CMake target | Purpose |
+|---|---|---|
+| Core | `FluentQt::FluentQt` | All 2D controls, themes, typography, layout helpers, and charts. Ordinary 2D apps only need this target. |
+| [Plugins](docs/architecture/plugins.md) | `FluentQt::Plugins` | In-process plugin registration, dependency ordering, activation, and cleanup. |
+| [Particles](docs/architecture/particles.md) | `FluentQt::Particles` | CPU-rendered animated particle backgrounds (`ParticleBackdrop`, no OpenGL required) and `ParticlesSession` pause/resume. |
+| [Spatial](docs/architecture/spatial-view.md) | `FluentQt::Spatial` | Adds perspective to existing `QWidget` layouts. If session activation or view creation fails, the app provides a [2D layout](examples/hello_world/README.md). |
+| [QmlBridge](docs/architecture/qml-bridge.md) | `FluentQt::QmlBridge` | `QmlView` for embedding QML pages in Widgets while sharing app models and Fluent themes. |
 
-`FluentQt::FluentQt` provides native controls, themes, design tokens, and shared
-widget foundations. Ordinary 2D applications only need this target.
+C++ apps link these targets directly, Python apps use the matching PySide6 modules, and WebAssembly compiles the same C++ code for the browser. Try the extension samples in Gallery under **Plugins → Particles**, **Plugins → Spatial** (enable **Settings → 3D Gallery**), and **Plugins → QmlBridge → QmlView**, or see the [minimal QML example](examples/qml_bridge/).
 
-### Plugins
+## 🖼 Gallery & Online Docs
 
-The optional [Plugins](docs/architecture/plugins.md) module handles registration,
-dependencies, activation, and cleanup. C++ applications link `FluentQt::Plugins`;
-each plugin has its own target for any extra dependencies.
-
-C++ applications call the library directly. Python uses matching PySide6 bindings,
-and WebAssembly builds compile the same C++ code to run in the browser.
-
-#### Particles
-
-The [Particles](docs/architecture/particles.md) plugin provides `ParticleBackdrop`,
-an animated particle background. It draws on the CPU and does not need Spatial or
-OpenGL. `ParticlesSession` pauses and resumes the backgrounds it manages.
-
-Build with `FLUENT_QT_BUILD_PARTICLES=ON` and link `FluentQt::Particles`. The core
-library `FluentQt::FluentQt` does not include particle effects.
-
-Open Plugins → Particles in Gallery to see the examples.
-
-#### Spatial
-
-The [Spatial](docs/architecture/spatial-view.md) plugin adds 3D presentation to
-existing Qt Widgets interfaces. `SpatialSession` activates the plugin, creates views,
-and cleans up when the plugin stops.
-
-Linking `FluentQt::Spatial` also links `FluentQt::Plugins` and adds OpenGL
-dependencies. Spatial supports a native 2D fallback when 3D is unavailable.
-
-Open Plugins → Spatial in Gallery to see SpatialView and SpatialItem examples.
-Turn on 3D in Settings → 3D Gallery.
-
-#### QmlBridge
-
-[QmlBridge](docs/architecture/qml-bridge.md) is FluentQt's QML compatibility
-plugin. It loads QML pages in Widgets interfaces and shares application data
-and Fluent theme settings with the page.
-
-Enable `FLUENT_QT_BUILD_QML_BRIDGE=ON` and link `FluentQt::QmlBridge`. This
-optional module adds the Qt Qml, Quick, and QuickWidgets dependencies.
-
-Try Plugins → QmlBridge → QmlView in Gallery, or build the
-[minimal example](examples/qml_bridge/). Setup details are in the
-[integration guide](docs/architecture/qml-bridge.md).
-
-## 🖼 Gallery
-
-Use Gallery to browse controls, try interactions, and read example code.
+Use Gallery to browse controls, try interactions, and read C++ and Python example code.
 
 | Try it on | Entry point |
 |---|---|
-| Browser | [Live Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) · [Project website](https://calvinhxx.github.io/Fluent-Qt/#gallery) |
+| Browser (WebAssembly Gallery) | [Live Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) · [Project website](https://calvinhxx.github.io/Fluent-Qt/#gallery) |
+| Online docs & Property preview | [Component docs & API](https://calvinhxx.github.io/Fluent-Qt/api/) · [Try Property preview](https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1) |
 | Windows, macOS, Linux | [Download a Gallery package](https://github.com/calvinhxx/Fluent-Qt/releases/latest) |
 
-### Python compatibility Gallery
+### Component docs & Property preview
 
-The Python Gallery is available from
-[PyPI](https://pypi.org/project/FluentQt-Gallery/).
+The website includes a searchable [documentation & API portal](https://calvinhxx.github.io/Fluent-Qt/api/) alongside Gallery:
+
+- **Foundation & module guides**: quick setup, themes and colors, typography, icons, bindings/anchors/states, animation controls, models, form validation, child widget lifetime, Qt APIs, UI diagnostics, and Plugins / Particles / Spatial / QmlBridge.
+- **Component pages & Property preview**: Browse live WebAssembly examples, C++ and PySide6 snippets, and inherited Qt APIs. On supported pages, open **Property preview** to adjust a real Qt widget and copy the generated code.
+- **Release history**: searchable [release notes and migration guides](https://calvinhxx.github.io/Fluent-Qt/api/releases/) filtered by library (`UILib`) or Gallery scope.
+
+### Python Gallery
+
+Install the Python Gallery from [PyPI](https://pypi.org/project/FluentQt-Gallery/) (it pulls in the matching `FluentQt` version automatically):
 
 ```bash
 python -m pip install FluentQt-Gallery
 python -m fluentqt_gallery
 ```
 
-`FluentQt-Gallery` installs the matching `FluentQt` version automatically.
-
 ## 🤖 Build with AI
 
-Use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code, or Cursor to build a desktop app, add a GUI to a project, or fix an interface. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
+Use the [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) skill in Codex, Claude Code, or Cursor to create a desktop app, add a GUI to an existing project, or refine an interface. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
 
-When tuning a Gallery sample, use Live Scene to see each saved change, then check the result in the compiled C++ sample. [How it works](docs/development/gallery-preview-workflow.md)
+When tuning a Gallery sample, preview saved edits in Live Scene before verifying the compiled C++ sample. [How it works](docs/development/gallery-preview-workflow.md)
 
 ## 🚀 Quick Start
 
@@ -211,17 +179,15 @@ int main(int argc, char* argv[])
 
 See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
 
-### Optional Python compatibility
+### Python (PySide6)
 
-The PySide6 compatibility layer exposes Fluent-Qt's native C++ widgets to
-Python through Shiboken6.
+Install the PySide6 bindings from PyPI (via Shiboken6):
 
 ```bash
 python -m pip install FluentQt
 ```
 
-See the [Python guide](bindings/pyside6/README.md) for installation,
-examples, compatibility, and source builds.
+See the [Python guide](bindings/pyside6/README.md) for examples, compatibility, and source builds.
 
 ## 🛠 Build
 
@@ -251,21 +217,16 @@ See the [build workflow](docs/development/build-workflow.md) for configuration.
 
 ### Optional extensions
 
-Enable the Plugins infrastructure or a plugin module when configuring FluentQt,
-then link the corresponding target in your application.
+Enable the Plugins module or a specific extension when configuring FluentQt, then link its CMake target in your app:
 
 | Extension scope | Build option | CMake target | Integration example |
 |---|---|---|---|
-| Plugins infrastructure | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [Minimal plugin example](docs/architecture/plugins.md#minimal-extension-example) |
+| Plugins core | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [Minimal plugin example](docs/architecture/plugins.md#minimal-extension-example) |
 | Plugins → Particles | `-DFLUENT_QT_BUILD_PARTICLES=ON` | `FluentQt::Particles` | [Particles integration](docs/architecture/particles.md) |
 | Plugins → Spatial | `-DFLUENT_QT_BUILD_SPATIAL=ON` | `FluentQt::Spatial` (automatically includes Plugins) | [Spatial Hello World](examples/hello_world/README.md) |
 | Plugins → QmlBridge | `-DFLUENT_QT_BUILD_QML_BRIDGE=ON` | `FluentQt::QmlBridge` (automatically includes Plugins) | [QML host example](examples/qml_bridge/) |
 
-For source integration, set the option before `add_subdirectory()` or
-`FetchContent_MakeAvailable()`. See each module's guide for installed-package
-integration. Matched Python builds expose enabled modules through
-`fluentqt.plugins`, `fluentqt.spatial`, and `fluentqt.qmlbridge`. WebAssembly uses
-the shared C++ implementation.
+When building from source, set these options before `add_subdirectory()` or `FetchContent_MakeAvailable()`. Matching Python builds expose enabled modules as `fluentqt.plugins`, `fluentqt.spatial`, and `fluentqt.qmlbridge`, and WebAssembly compiles the shared C++ implementation.
 
 ### Build Gallery locally
 
@@ -316,26 +277,25 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 
 ## 📚 Documentation
 
-Start with the [documentation map](docs/README.md), or choose a path:
+Start with the [documentation map](docs/README.md), or jump straight to what you need:
 
 | Goal | Entry point |
 |---|---|
-| Evaluate controls | [Component documentation](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/#gallery) |
-| Build an application | [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) |
-| Contribute to FluentQt | [Development tree](docs/development/README.md) · [Architecture](docs/architecture/README.md) · [Fluent design](docs/design-languages/README.md) |
+| Browse controls & API | [Component docs & API](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/#gallery) |
+| Build an app | [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) |
+| Contribute to FluentQt | [Development guides](docs/development/README.md) · [Architecture](docs/architecture/README.md) · [Fluent design](docs/design-languages/README.md) |
 | Package or release | [Packaging](docs/development/packaging-workflow.md) · [Release governance](docs/development/release-governance.md) · [Release notes](docs/releases/README.md) |
-| Get help or report a problem | [Community](docs/community/README.md) · [Support](SUPPORT.md) · [Security](SECURITY.md) |
+| Get help or report bugs | [Community](docs/community/README.md) · [Support](SUPPORT.md) · [Security](SECURITY.md) |
 
-See [Contributing](CONTRIBUTING.md) and the
-[Code of Conduct](CODE_OF_CONDUCT.md) before opening a change.
+Before opening a pull request, read [Contributing](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## 🔗 References
 
-| Entry | Purpose |
+| Source | Purpose |
 |---|---|
 | [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows visual reference |
-| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Component behavior and sample page reference |
+| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Control behavior and sample page reference |
 
 ## License
 
-Fluent-Qt's own source code is released under the [MIT License](LICENSE). Bundled assets and packaged runtime dependencies retain their upstream terms; versions, provenance, source-availability rules, and license locations are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Product names, logos, and external design references are addressed in [TRADEMARKS.md](TRADEMARKS.md).
+Fluent-Qt's own source code is released under the [MIT License](LICENSE). Bundled assets and packaged runtime dependencies retain their upstream licenses; versions, provenance, source availability, and license details are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Trademarks and third-party design references are covered in [TRADEMARKS.md](TRADEMARKS.md).
