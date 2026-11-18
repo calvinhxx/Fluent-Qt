@@ -65,6 +65,7 @@ const translations = {
     "hero.tagline": "Qt Widgets 的 Fluent UI 组件库",
     "hero.detail": "提供输入、导航、表格与图表等常用控件，内置深浅主题与流畅动画，轻松构建跨平台桌面界面。",
     "hero.tryGallery": "在线打开 Gallery",
+    "hero.playground": "属性动态预览",
     "hero.download": "下载 Gallery",
     "hero.quickStart": "查看接入说明",
     "hero.pythonLabel": "Python / PySide6",
@@ -267,6 +268,7 @@ const translations = {
     "hero.tagline": "A Fluent UI component library for Qt Widgets",
     "hero.detail": "Cross-platform controls for input, navigation, tables, and charts, with built-in themes and smooth animations.",
     "hero.tryGallery": "Open the online Gallery",
+    "hero.playground": "Property preview",
     "hero.download": "Download Gallery",
     "hero.quickStart": "Setup guide",
     "hero.pythonLabel": "Python / PySide6",
@@ -816,7 +818,7 @@ function setupNavigation() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") setMenuOpen(false);
   });
-  window.matchMedia("(min-width: 901px)").addEventListener?.("change", (event) => {
+  window.matchMedia("(min-width: 1241px)").addEventListener?.("change", (event) => {
     if (event.matches) setMenuOpen(false);
   });
 

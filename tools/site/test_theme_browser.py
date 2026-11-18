@@ -322,6 +322,18 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     raise RuntimeError("Could not load the website theme contract")
                 page.wait_for_selector("html[data-i18n-ready]", timeout=10_000)
 
+                for width in (960, 1024, 1280):
+                    page.set_viewport_size({"width": width, "height": 800})
+                    menu = page.locator(".menu-button")
+                    if menu.is_visible():
+                        menu.click()
+                    github = page.locator(".github-link")
+                    bounds = github.bounding_box()
+                    if not bounds or bounds["x"] + bounds["width"] > width:
+                        raise RuntimeError(f"Navigation exceeds {width}px in {language}")
+                    if menu.is_visible():
+                        menu.click()
+
                 def active_theme() -> str:
                     return page.evaluate("document.documentElement.dataset.theme")
 
@@ -331,6 +343,26 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                 toggle = page.locator("[data-theme-toggle]")
                 if active_theme() != "light":
                     raise RuntimeError("Website did not start in the emulated light theme")
+                preview = page.locator('.hero-playground-action')
+                preview.hover()
+                ratio = preview.evaluate("""async button => {
+                    await Promise.all(button.getAnimations().map(animation => animation.finished));
+                    const ctx = document.createElement('canvas').getContext('2d');
+                    function luminance(color) {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(0, 0, 1, 1);
+                        const [r, g, b] = [...ctx.getImageData(0, 0, 1, 1).data].map(byte => {
+                            const channel = byte / 255;
+                            return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+                        });
+                        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    }
+                    const style = getComputedStyle(button);
+                    const fg = luminance(style.color), bg = luminance(style.backgroundColor);
+                    return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+                }""")
+                if ratio < 4.5:
+                    raise RuntimeError(f"Property preview hover contrast is {ratio:.2f} in {language}")
                 toggle.click()
                 if active_theme() != "dark" or stored_theme() != "dark":
                     raise RuntimeError("Website light-to-dark theme transition failed")
