@@ -453,7 +453,7 @@ The runner publishes `data-fluent-qt-smoke="pass|fail"` and a detail field on
 the document root. CI drives that contract through Playwright:
 
 ```bash
-python -m pip install "playwright==1.58.0"
+python -m pip install "playwright==1.58.0" "Pillow==12.1.1"
 python -m playwright install chromium
 python .github/scripts/run-wasm-browser-smoke.py \
   --root build/wasm \

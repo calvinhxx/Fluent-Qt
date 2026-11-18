@@ -32,7 +32,7 @@ class WasmBuildCacheTest(unittest.TestCase):
                      '.agents/skills/build-fluentqt-gui/SKILL.md', 'docs/ai/catalog.json',
                      'llms.txt', '.github/workflows/ci-wasm.yml', '.github/scripts/wasm_build_cache.py',
                      'README.md', 'docs/releases/v1.11.4.md', 'site/api/component.js',
-                     'tools/site/release-history.json'):
+                     'tools/site/release-history.json', 'tools/site/release_pages.py'):
             self.write(path, 'original')
         self.git('add', '.')
         self.inputs = cache.fingerprint(self.root, self.toolchain)
@@ -61,12 +61,13 @@ class WasmBuildCacheTest(unittest.TestCase):
 
     def test_website_and_release_prose_do_not_change_build_identity(self):
         for path in ('README.md', 'docs/releases/v1.11.4.md', 'site/api/component.js',
-                     'tools/site/release-history.json'):
+                     'tools/site/release_pages.py'):
             with self.subTest(path=path):
                 self.write(path, 'updated publication state or website prose')
                 self.assertEqual(cache.fingerprint(self.root, self.toolchain), self.inputs)
 
     def test_complete_runtime_sdk_and_toolchain_inputs_invalidate(self):
+        self.assertIn('tools/site/release-history.json', self.inputs['inputs']['files'])
         for path in self.inputs['inputs']['files']:
             with self.subTest(path=path):
                 self.write(path, 'changed')

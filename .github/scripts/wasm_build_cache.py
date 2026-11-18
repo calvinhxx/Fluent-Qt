@@ -38,6 +38,9 @@ def digest(path: Path) -> str:
 
 
 def build_input(path: str) -> bool:
+    # Gallery embeds the website's release history in gallery_resources.qrc.
+    if path == "tools/site/release-history.json":
+        return True
     return not (path in WEB_ONLY_FILES or path.startswith(WEB_ONLY_PREFIXES)
                 or (path.startswith("docs/") and not path.startswith("docs/ai/")))
 
