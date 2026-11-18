@@ -239,11 +239,10 @@ scrolling do not trigger it. Keep at most three pulses alive, cap the canvas at
 Desktop drawing is capped at 60 fps. Avoid pairwise particle links or per-dot
 blur filters: their cost grows quickly with density.
 
-Quick Start is the fourth content section after the hero, following GUI Skill
-and preceding the optional Spatial introduction. Get Started remains first.
-The original homepage content stays in place; the former Controls section is
-replaced by the single Components navigation entry into the document directory.
-Keep component-document cleanup scoped to those pages.
+The homepage links to the CheckBox property panel from **Property preview**.
+The **Documentation** link opens the searchable document directory in the
+current language.
+
 The Spatial section embeds the real C++ `spatial-view-scene` Gallery
 sample through `gallery/?embed=site&showcase=spatial&render-scale=native`, not CSS
 imitations or a second full Gallery shell. The browser launcher calls the same
@@ -254,8 +253,8 @@ The QmlBridge section follows Spatial and describes the optional plugin's QML
 support. Keep C++ and QML excerpts separate; link to the integration guide and
 complete example for setup.
 
-Keep Chinese headings intact at desktop and narrow widths. Use short headings
-where needed; body copy wraps normally.
+Chinese headings must fit the viewport. Allow longer titles such as Spatial
+to wrap on narrow screens.
 
 The showcase starts when visible. Its controller pauses the Qt content when
 offscreen or in a hidden tab; Stop unloads the iframe. Ready/error messages must
@@ -379,18 +378,15 @@ resizing. Check the saved file for cursor indicators and transient overlays. The
 for these marketing images. Restore any capture-only changes to local Gallery
 preferences afterward.
 
-Review `home`, `button`, and `collections` in both themes for the website. Also
-refresh the stored `slider` and `toggle-switch` material so the Gallery asset set
-stays on the same platform. Save the reviewed frames under the existing names in
-`site/assets/gallery/`: `*-real.png` is Light and `*-dark.png` is Dark. Keep the
-home JPEG at `docs/assets/readme/gallery-home.jpg` synchronized with the Light
-home capture; publication copies it to `site/assets/gallery-home.jpg`. Preserve
-the captured pixels when converting formats; do not retouch native controls.
+Capture Home in both themes for the homepage. Save the frames as
+`site/assets/gallery/gallery-home-real.png` and `gallery-home-dark.png`.
+Keep `docs/assets/readme/gallery-home.jpg` in sync with the Light capture.
+Publication copies it to `site/assets/gallery-home.jpg`.
 
 The current set was recaptured on 2026-09-29 from a local Release build of Gallery
 1.9.1 (rendering sources now recorded in `143bdbfa`) with Qt 6.9.3, at
-1440×900 with 3D and Mica enabled. All ten Light/Dark PNGs and the Home-derived
-artwork use these new captures; none reuse the earlier soft 3D frames.
+1440×900 with 3D and Mica enabled. The retired component showcase images
+remain available in the [v1.11.4 site assets](https://github.com/calvinhxx/Fluent-Qt/tree/v1.11.4/site/assets).
 Home retains its live particle background. The PNGs preserve the native capture
 pixels; do not resize or stretch source material. A 4K display is not required.
 Use Home for the hero, README, loading poster, and sharing card, not a Spatial
