@@ -60,6 +60,14 @@ live zoom to 80% followed by clicking Settings in both 2D and 3D. Native screen
 captures cover the composited focus-ring boundary, which is absent from GL
 texture captures. These checks do not constitute screen-reader certification.
 
+TreeView keeps its native QHeaderView available through `setHeaderHidden(false)`.
+The optional `headerText` caption precedes the column header. The rows and
+scroll overlay start below it. With both headers hidden, applications can set
+`headerlessTopInset` to zero to place the first row flush against an external
+heading. The default inset is two logical pixels. Column-header hit areas,
+replacement headers and the last scrollable row have regressions in
+`TestTreeView.cpp`.
+
 | Classification | Meaning |
 | --- | --- |
 | Native | The Qt base class supplies the appropriate role, state, actions, and logical children. |

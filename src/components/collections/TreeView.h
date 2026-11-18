@@ -116,10 +116,20 @@ public:
      */
     Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
     /**
-     * @brief Convenience text displayed in the header area.
-     * zh_CN: 显示在头部区域的便捷标题文本。
+     * @brief Optional caption above the column header and rows.
+     * Column headers are hidden by default; use setHeaderHidden(false) to show model header data.
+     * zh_CN: 列头与条目上方的可选标题。列头默认隐藏，可用 setHeaderHidden(false) 显示模型表头数据。
      */
     Q_PROPERTY(QString headerText READ headerText WRITE setHeaderText NOTIFY headerTextChanged)
+    /**
+     * @brief Space above the first row when both the caption and column headers are hidden.
+     * Defaults to 2 logical pixels. Set to 0 to meet an external header edge.
+     * zh_CN: 未显示标题和列头时首行上方的间距，默认 2 个逻辑像素。设为 0 可紧贴外置表头。
+     */
+    Q_PROPERTY(int headerlessTopInset
+        READ headerlessTopInset
+        WRITE setHeaderlessTopInset
+        NOTIFY headerlessTopInsetChanged)
     /**
      * @brief Text shown when the model has no items.
      * zh_CN: 模型为空时显示的占位文本。
@@ -172,6 +182,8 @@ public:
 
     QString headerText() const { return m_headerText; }
     void setHeaderText(const QString& text);
+    int headerlessTopInset() const { return m_headerlessTopInset; }
+    void setHeaderlessTopInset(int inset);
 
     QString placeholderText() const { return m_placeholderText; }
     void setPlaceholderText(const QString& text);
@@ -267,6 +279,7 @@ signals:
     void borderVisibleChanged();
     void backgroundVisibleChanged();
     void headerTextChanged();
+    void headerlessTopInsetChanged();
     void placeholderTextChanged();
     /**
      * @brief Convenience signal mirroring QAbstractItemView::pressed().
@@ -363,6 +376,7 @@ private:
     bool m_borderVisible = true;
     bool m_backgroundVisible = true;
     QString m_headerText;
+    int m_headerlessTopInset = 2;
     QString m_placeholderText;
     QLabel* m_headerLabel = nullptr;
 

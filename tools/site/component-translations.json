@@ -281,8 +281,8 @@
     "name": "树形视图",
     "description": "浏览、展开和选择树形层级数据。",
     "example": "文件夹层级",
-    "usage": "用 setModel() 绑定树形模型。内置默认条目即支持点击箭头或方向键展开/收起及选中高亮，也可通过自定义 delegate 定制图标与行样式。",
-    "usage_en": "Bind hierarchical data with setModel(). Built-in rows provide expand/collapse arrows, keyboard navigation, and selection state; attach a custom delegate for icons and richer rows."
+    "usage": "用 setModel() 绑定树形模型。内置默认条目支持展开/收起、键盘导航与选中高亮，也可通过自定义 delegate 定制行样式。列头默认隐藏；用 setHeaderHidden(false) 显示模型的水平表头数据，用 header() 配置列宽与表头行为。setHeaderText() 是列头上方的独立标题。使用外置表头时，隐藏列头并保持标题为空，将外层布局间距设为 0，再调用 setHeaderlessTopInset(0) 去掉首行上方默认的 2 个逻辑像素。",
+    "usage_en": "Bind hierarchical data with setModel(). Built-in rows provide expand/collapse, keyboard navigation, and selection state; attach a custom delegate for richer rows. Column headers are hidden by default. Call setHeaderHidden(false) to show the model's horizontal header data, and use header() to configure column sizing and header behavior. setHeaderText() adds a separate caption above the columns. For an external header, hide the column headers, leave the caption empty, and set the enclosing layout spacing to zero. Call setHeaderlessTopInset(0) to remove the default two logical pixels above the first row."
   },
   "calendar-date-picker": {
     "name": "日历日期选择器",

@@ -6,6 +6,7 @@
 #include <QImage>
 #include <QItemSelectionModel>
 #include <QLabel>
+#include <QHeaderView>
 #include <QMetaType>
 #include <QPaintEvent>
 #include <QPainter>
@@ -1179,6 +1180,151 @@ TEST_F(TreeViewTest, HeaderHiddenByDefault)
 {
     TreeView* tv = new TreeView(window);
     EXPECT_TRUE(tv->isHeaderHidden());
+}
+
+TEST_F(TreeViewTest, Contract_ColumnHeaderRemainsAboveRowsAfterLayoutChanges)
+{
+    TreeView tree;
+    QStandardItemModel model;
+    model.setHorizontalHeaderLabels({QStringLiteral("Name"), QStringLiteral("Size")});
+    model.appendRow({new QStandardItem(QStringLiteral("First")), new QStandardItem(QStringLiteral("10 KB"))});
+    model.appendRow({new QStandardItem(QStringLiteral("Second")), new QStandardItem(QStringLiteral("20 KB"))});
+    tree.setModel(&model);
+    tree.setHeaderHidden(false);
+    tree.resize(420, 240);
+    showOffscreen(&tree);
+    QSignalSpy headerClick(tree.header(), &QHeaderView::sectionClicked);
+    tree.header()->setSectionsClickable(true);
+
+    for (const auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        tree.setLayoutDirection(direction);
+        for (const auto& caption : {QString(), QStringLiteral("Files")}) {
+            tree.setHeaderText(caption);
+            for (const QSize size : {QSize(420, 240), QSize(530, 310)}) {
+                tree.resize(size);
+                processEvents();
+                const QRect headerRect = tree.header()->geometry();
+                const QRect viewRect = tree.viewport()->geometry();
+                EXPECT_FALSE(tree.isHeaderHidden());
+                EXPECT_GE(headerRect.top(), 0);
+                EXPECT_GT(headerRect.height(), 0);
+                EXPECT_EQ(headerRect.bottom() + 1, viewRect.top());
+                EXPECT_EQ(headerRect.left(), viewRect.left());
+                EXPECT_EQ(headerRect.width(), viewRect.width());
+                if (!caption.isEmpty()) {
+                    auto* title = tree.findChild<QLabel*>(QStringLiteral("fluentTreeViewHeader"));
+                    ASSERT_NE(title, nullptr);
+                    EXPECT_EQ(title->geometry().bottom() + 1, headerRect.top());
+                }
+                QTest::mouseClick(tree.viewport(), Qt::LeftButton, Qt::NoModifier,
+                    tree.visualRect(model.index(0, 0)).center());
+                EXPECT_EQ(tree.currentIndex(), model.index(0, 0));
+                const int x = tree.header()->sectionViewportPosition(1) + tree.header()->sectionSize(1) / 2;
+                QTest::mouseClick(tree.header()->viewport(), Qt::LeftButton, Qt::NoModifier,
+                    QPoint(x, tree.header()->height() / 2));
+                ASSERT_FALSE(headerClick.isEmpty());
+                EXPECT_EQ(headerClick.takeLast().at(0).toInt(), 1);
+            }
+        }
+    }
+    tree.setHeaderText(QString());
+    tree.setHeaderHidden(true);
+    processEvents();
+    EXPECT_EQ(tree.viewport()->y(), 2);
+    tree.setHeaderHidden(false);
+    processEvents();
+    EXPECT_EQ(tree.header()->y(), 0);
+    EXPECT_EQ(tree.viewport()->y(), tree.header()->height());
+}
+
+TEST_F(TreeViewTest, Contract_HeaderSpacePreservesScrollRangeAndLastRow)
+{
+    TreeView tree;
+    QStandardItemModel model;
+    model.setHorizontalHeaderLabels({QStringLiteral("Name")});
+    for (int row = 0; row < 40; ++row)
+        model.appendRow(new QStandardItem(QStringLiteral("Row %1").arg(row)));
+    tree.setModel(&model);
+    tree.resize(400, 240);
+    showOffscreen(&tree);
+    for (bool hidden : {true, false}) {
+        tree.setHeaderHidden(hidden);
+        for (const auto& caption : {QString(), QStringLiteral("Files")}) {
+            SCOPED_TRACE(::testing::Message() << "hidden=" << hidden << " caption=" << caption.toStdString());
+            tree.setHeaderText(caption);
+            processEvents();
+            tree.scrollToBottom();
+            processEvents();
+            EXPECT_EQ(tree.verticalScrollBar()->pageStep(), tree.viewport()->height());
+            const QRect last = tree.visualRect(model.index(39, 0));
+            EXPECT_GE(last.top(), 0);
+            EXPECT_LE(last.bottom(), tree.viewport()->rect().bottom());
+            if (!hidden) {
+                auto* scrollBar = tree.verticalFluentScrollBar();
+                ASSERT_NE(scrollBar, nullptr);
+                EXPECT_FALSE(scrollBar->geometry().intersects(tree.header()->geometry()));
+            }
+        }
+    }
+}
+
+TEST_F(TreeViewTest, Contract_ExternalHeaderCanMeetFirstRowWithoutChangingRowHeight)
+{
+    TreeView tree;
+    QStandardItemModel model;
+    model.appendRow(new QStandardItem(QStringLiteral("First")));
+    tree.setModel(&model);
+    tree.resize(400, 240);
+    showOffscreen(&tree);
+    const auto first = model.index(0, 0);
+    const int height = tree.visualRect(first).height();
+    ASSERT_GT(height, 0);
+    ASSERT_EQ(tree.headerlessTopInset(), 2);
+    QSignalSpy insetChanged(&tree, &TreeView::headerlessTopInsetChanged);
+    tree.setHeaderlessTopInset(0);
+    tree.setHeaderlessTopInset(-1);
+    EXPECT_EQ(insetChanged.count(), 1);
+    EXPECT_EQ(tree.viewport()->mapTo(&tree, tree.visualRect(first).topLeft()).y(), 0);
+    EXPECT_EQ(tree.visualRect(first).height(), height);
+    tree.setHeaderHidden(false);
+    tree.setHeaderlessTopInset(10);
+    processEvents();
+    EXPECT_EQ(tree.header()->y(), 0);
+    EXPECT_EQ(tree.viewport()->y(), tree.header()->height());
+    tree.setHeaderHidden(true);
+    processEvents();
+    EXPECT_EQ(tree.viewport()->y(), 10);
+    EXPECT_EQ(tree.visualRect(first).height(), height);
+}
+
+TEST_F(TreeViewTest, Contract_ReplacedColumnHeaderKeepsCaptionAndHorizontalAlignment)
+{
+    TreeView tree;
+    QStandardItemModel model;
+    model.setHorizontalHeaderLabels({QStringLiteral("Name"), QStringLiteral("Size")});
+    model.appendRow({new QStandardItem(QStringLiteral("Report")), new QStandardItem(QStringLiteral("12 KB"))});
+    tree.setModel(&model);
+    tree.setHeaderText(QStringLiteral("Files"));
+    tree.setHeaderHidden(false);
+    tree.resize(400, 240);
+    showOffscreen(&tree);
+    auto* replacement = new QHeaderView(Qt::Horizontal, &tree);
+    tree.setHeader(replacement);
+    tree.setHeaderHidden(false);
+    replacement->setFixedHeight(45);
+    tree.setColumnWidth(0, 600);
+    tree.setColumnWidth(1, 200);
+    tree.setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    processEvents();
+    tree.horizontalScrollBar()->setValue(tree.horizontalScrollBar()->maximum());
+    processEvents();
+    auto* title = tree.findChild<QLabel*>(QStringLiteral("fluentTreeViewHeader"));
+    ASSERT_NE(title, nullptr);
+    EXPECT_EQ(tree.header(), replacement);
+    EXPECT_EQ(replacement->height(), 45);
+    EXPECT_EQ(replacement->y(), title->geometry().bottom() + 1);
+    EXPECT_EQ(replacement->geometry().bottom() + 1, tree.viewport()->y());
+    EXPECT_EQ(tree.visualRect(model.index(0, 1)).x(), replacement->sectionViewportPosition(1));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
