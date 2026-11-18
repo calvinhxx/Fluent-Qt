@@ -518,14 +518,17 @@ bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result)
         if (!params)
             return false;
 
-        if (IsZoomed(hwnd)) {
-            MONITORINFO monitorInfo;
-            if (!monitorInfoForWindow(hwnd, &monitorInfo))
-                return false;
-
-            // Use the monitor work area so maximized custom chrome avoids covering the taskbar.
-            // zh_CN: 最大化时使用显示器工作区范围，避免遮挡任务栏。
-            params->rgrc[0] = monitorInfo.rcWork;
+        if (IsZoomed(hwnd) && !IsIconic(hwnd)) {
+            // During restore the HWND can still refer to the previous monitor or maximized state.
+            // Only trim the proposed client to its destination work area; never enlarge or relocate it.
+            // zh_CN: 还原时 HWND 可能仍指向旧屏幕或旧最大化状态。只在目标屏的工作区内裁剪本次提议矩形。
+            RECT& proposed = params->rgrc[0];
+            const HMONITOR monitor = MonitorFromRect(&proposed, MONITOR_DEFAULTTONULL);
+            MONITORINFO info{};
+            info.cbSize = sizeof(info);
+            RECT client;
+            if (monitor && GetMonitorInfoW(monitor, &info) && IntersectRect(&client, &proposed, &info.rcWork))
+                proposed = client;
         }
     }
 
