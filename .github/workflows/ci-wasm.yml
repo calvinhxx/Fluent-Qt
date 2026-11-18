@@ -243,7 +243,8 @@ jobs:
     name: Chromium / ${{ matrix.group }} / ${{ inputs.mode }}
     needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Full Gallery checks also edit and render every component playground on this runner.
+    timeout-minutes: ${{ matrix.group == 'gallery' && inputs.mode == 'full' && 45 || 25 }}
     permissions:
       actions: read
       contents: read
