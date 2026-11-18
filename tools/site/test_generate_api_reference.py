@@ -307,9 +307,7 @@ class VisualDocumentationTest(unittest.TestCase):
         assets = component_docs.ROOT / "app/assets/playgrounds"
         specs = json.loads((assets / "components.json").read_text(encoding="utf-8"))
         routes = {spec['component'] for spec in specs} | {'button'}
-        optional = {'particle-backdrop', 'spatial-view', 'spatial-item', 'qml-view'}
-        expected = {doc['id'] for doc in self.catalog['components']
-                    if doc['id'] not in optional}
+        expected = {doc['id'] for doc in self.catalog['components']}
         self.assertEqual(routes, expected)
         self.assertEqual({p.stem for p in assets.glob('*.json')}, routes | {'components'})
         for spec in specs:

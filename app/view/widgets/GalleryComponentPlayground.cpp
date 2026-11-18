@@ -77,6 +77,13 @@
 #include "components/collections/SplitView.h"
 #include "components/collections/StackView.h"
 #include "components/status_info/Toast.h"
+#include "components/textfields/LineEdit.h"
+#if defined(FLUENT_QT_HAS_QML_BRIDGE)
+#include "components/qmlbridge/QmlView.h"
+#endif
+#include <QPointF>
+#include <QUrl>
+#include <QVector3D>
 #include <cmath>
 #include <functional>
 
@@ -207,6 +214,19 @@ QJsonValue adapterValue(const QJsonObject& field, QObject* target)
             qobject_cast<navigation::NavigationView*>(target)->mainChromeWidget());
         return view ? view->currentIndex().row() : -1;
     }
+#if defined(FLUENT_QT_HAS_QML_BRIDGE)
+    if (adapter == QStringLiteral("qml-source")) {
+        const auto* view = qobject_cast<const qmlbridge::QmlView*>(target);
+        return view ? view->source().fileName() : QString();
+    }
+    if (adapter == QStringLiteral("qml-title")) {
+        const auto* widget = qobject_cast<const QWidget*>(target);
+        const auto* parent = widget ? widget->parentWidget() : nullptr;
+        const auto* input =
+            parent ? parent->findChild<const textfields::LineEdit*>(QStringLiteral("playgroundQmlInput")) : nullptr;
+        return input ? input->text() : QString();
+    }
+#endif
     QJsonArray values;
     if (adapter == QStringLiteral("accordion")) {
         auto* accordion = qobject_cast<layout::Accordion*>(target);
@@ -268,6 +288,20 @@ void writeAdapterValue(const QJsonObject& field, QObject* target, const QJsonVal
             qobject_cast<navigation::NavigationView*>(target)->mainChromeWidget());
         if (view)
             view->setCurrentIndex(view->model()->index(value.toInt(), 0));
+#if defined(FLUENT_QT_HAS_QML_BRIDGE)
+    } else if (adapter == QStringLiteral("qml-source")) {
+        if (auto* view = qobject_cast<qmlbridge::QmlView*>(target)) {
+            const QString file = value.toString();
+            view->load(QUrl(QStringLiteral("qrc:/app/qml-bridge/") + file));
+        }
+    } else if (adapter == QStringLiteral("qml-title")) {
+        if (auto* widget = qobject_cast<QWidget*>(target)) {
+            if (auto* parent = widget->parentWidget()) {
+                if (auto* input = parent->findChild<textfields::LineEdit*>(QStringLiteral("playgroundQmlInput")))
+                    input->setText(value.toString());
+            }
+        }
+#endif
     } else if (adapter == QStringLiteral("accordion")) {
         auto* accordion = qobject_cast<layout::Accordion*>(target);
         const auto options = field.value("options").toArray();
@@ -448,8 +482,15 @@ QJsonObject resolvedFieldBounds(QJsonObject field, const QObject* target, const 
     auto raw = target->property(field.value("property").toString().toLatin1().constData());
     if (field.contains("sizeAxis"))
         raw = field.value("sizeAxis") == "width" ? raw.toSize().width() : raw.toSize().height();
-    if (field.contains("pointAxis"))
+    else if (field.contains("pointAxis"))
         raw = field.value("pointAxis") == "x" ? raw.toPoint().x() : raw.toPoint().y();
+    else if (field.contains("pointFAxis"))
+        raw = field.value("pointFAxis") == "x" ? raw.toPointF().x() : raw.toPointF().y();
+    else if (field.contains("vectorAxis")) {
+        const QVector3D vec = raw.value<QVector3D>();
+        const auto axis = field.value("vectorAxis").toString();
+        raw = axis == QStringLiteral("x") ? vec.x() : (axis == QStringLiteral("y") ? vec.y() : vec.z());
+    }
     if (raw.isValid() && std::isfinite(raw.toDouble())) {
         field["minimum"] = qMin(raw.toDouble(), field.value("minimum").toDouble());
         field["maximum"] = qMax(raw.toDouble(), field.value("maximum").toDouble());
@@ -1641,6 +1682,8 @@ bool GalleryComponentPlayground::accepts(const QString& route, const QWidget* so
     if (!playgroundRoutes().contains(route) || !file.open(QIODevice::ReadOnly))
         return false;
     const auto schema = QJsonDocument::fromJson(file.readAll()).object();
+    if (route == QStringLiteral("spatial-item"))
+        return source->inherits("fluent::spatial::SpatialView");
     const auto type = route == QStringLiteral("button")
         ? QByteArray("fluent::basicinput::Button")
         : schema.value("className").toString().toLatin1();
@@ -1690,6 +1733,13 @@ QJsonObject GalleryComponentPlayground::genericValues(const QObject* target) con
                 field.value("sizeAxis") == QStringLiteral("width") ? value.toSize().width() : value.toSize().height();
         } else if (field.contains("pointAxis")) {
             result[id] = field.value("pointAxis") == QStringLiteral("x") ? value.toPoint().x() : value.toPoint().y();
+        } else if (field.contains("pointFAxis")) {
+            const QPointF pt = value.toPointF();
+            result[id] = field.value("pointFAxis") == QStringLiteral("x") ? pt.x() : pt.y();
+        } else if (field.contains("vectorAxis")) {
+            const QVector3D vec = value.value<QVector3D>();
+            const auto axis = field.value("vectorAxis").toString();
+            result[id] = axis == QStringLiteral("x") ? vec.x() : (axis == QStringLiteral("y") ? vec.y() : vec.z());
         } else if (field.value("itemList").toBool()) {
             QJsonArray items;
             for (const auto& item : value.toList())
@@ -1855,6 +1905,23 @@ void GalleryComponentPlayground::writeGenericValues(const QJsonObject& values)
             else
                 point.setY(value.toInt());
             argument = point;
+        } else if (field.contains("pointFAxis")) {
+            QPointF point = prop.read(m_target).toPointF();
+            if (field.value("pointFAxis") == QStringLiteral("x"))
+                point.setX(value.toDouble());
+            else
+                point.setY(value.toDouble());
+            argument = point;
+        } else if (field.contains("vectorAxis")) {
+            QVector3D vec = prop.read(m_target).value<QVector3D>();
+            const auto axis = field.value("vectorAxis").toString();
+            if (axis == QStringLiteral("x"))
+                vec.setX(float(value.toDouble()));
+            else if (axis == QStringLiteral("y"))
+                vec.setY(float(value.toDouble()));
+            else
+                vec.setZ(float(value.toDouble()));
+            argument = QVariant::fromValue(vec);
         } else if (field.value("itemList").toBool()) {
             QVariantList items;
             for (const auto& item : value.toArray())
@@ -1987,6 +2054,30 @@ QString GalleryComponentPlayground::genericCode(const QJsonObject& current, bool
                 result += python
                     ? QStringLiteral("nav_list.setCurrentIndex(nav_model.index(%1, 0))\n").arg(value.toInt())
                     : QStringLiteral("navList->setCurrentIndex(navModel->index(%1, 0));\n").arg(value.toInt());
+            } else if (adapter == QStringLiteral("qml-source")) {
+                QFile scene(QStringLiteral(":/app/qml-bridge/") + value.toString());
+                if (scene.open(QIODevice::ReadOnly)) {
+                    const auto source = QString::fromUtf8(scene.readAll());
+                    result += python
+                        ? QStringLiteral(R"code(scene = """%1""".encode("utf-8")
+scene_file = QTemporaryFile(panel)
+if scene_file.open() and scene_file.write(scene) == len(scene):
+    scene_file.close()
+    control.load(QUrl.fromLocalFile(scene_file.fileName()))
+)code")
+                              .arg(source)
+                        : QStringLiteral(R"code(const QByteArray scene = R"qml(%1)qml";
+auto* sceneFile = new QTemporaryFile(panel);
+if (sceneFile->open() && sceneFile->write(scene) == scene.size()) {
+    sceneFile->close();
+    control->load(QUrl::fromLocalFile(sceneFile->fileName()));
+}
+)code")
+                              .arg(source);
+                }
+            } else if (adapter == QStringLiteral("qml-title")) {
+                result += (python ? QStringLiteral("input.") : QStringLiteral("input->")) + QStringLiteral("setText(")
+                    + quoted(value.toString(), python) + end;
             } else if (adapter == QStringLiteral("accordion")) {
                 const auto options = field.value("options").toArray();
                 for (int i = 0; i < options.size(); ++i) {
@@ -2110,6 +2201,47 @@ QString GalleryComponentPlayground::genericCode(const QJsonObject& current, bool
                     point.setY(number);
             }
             argument = QStringLiteral("QPoint(%1, %2)").arg(point.x()).arg(point.y());
+        } else if (field.contains("pointFAxis")) {
+            const QString property = field.value("property").toString();
+            if (emittedPoints.contains(property))
+                continue;
+            emittedPoints.insert(property);
+            QPointF point;
+            for (const auto& coordinateEntry : m_schema.value("properties").toArray()) {
+                const auto coordinate = coordinateEntry.toObject();
+                if (coordinate.value("property") != property)
+                    continue;
+                const double number = current.value(coordinate.value("id").toString()).toDouble();
+                if (coordinate.value("pointFAxis") == QStringLiteral("x"))
+                    point.setX(number);
+                else
+                    point.setY(number);
+            }
+            argument = QStringLiteral("QPointF(%1, %2)")
+                           .arg(QLocale::c().toString(point.x(), 'g', 12), QLocale::c().toString(point.y(), 'g', 12));
+        } else if (field.contains("vectorAxis")) {
+            const QString property = field.value("property").toString();
+            if (emittedPoints.contains(property))
+                continue;
+            emittedPoints.insert(property);
+            QVector3D vec;
+            for (const auto& coordinateEntry : m_schema.value("properties").toArray()) {
+                const auto coordinate = coordinateEntry.toObject();
+                if (coordinate.value("property") != property)
+                    continue;
+                const float number = float(current.value(coordinate.value("id").toString()).toDouble());
+                const auto axis = coordinate.value("vectorAxis").toString();
+                if (axis == QStringLiteral("x"))
+                    vec.setX(number);
+                else if (axis == QStringLiteral("y"))
+                    vec.setY(number);
+                else
+                    vec.setZ(number);
+            }
+            argument =
+                QStringLiteral("QVector3D(%1, %2, %3)")
+                    .arg(QLocale::c().toString(vec.x(), 'g', 12), QLocale::c().toString(vec.y(), 'g', 12),
+                        QLocale::c().toString(vec.z(), 'g', 12));
         } else if (type == QStringLiteral("string-list") || type == QStringLiteral("multi-enum")) {
             QStringList items;
             for (const auto& item : value.toArray()) {
