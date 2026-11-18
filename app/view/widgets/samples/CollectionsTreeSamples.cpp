@@ -1,6 +1,7 @@
 #include "CollectionsSampleSupport.h"
 
 #include <QColor>
+#include <QHeaderView>
 #include <QLayout>
 #include <QModelIndex>
 #include <QObject>
@@ -101,6 +102,77 @@ QVector<GallerySample> treeViewSamples()
                 tree->setSelectedItem(model->index(0, 0));
                 return tree;
             }),
+        makeSample(
+            QStringLiteral("tree-view-column-headers"), QStringLiteral("Column headers"),
+            QStringLiteral("Resize the Name column or toggle the column headers. When they are hidden, "
+                           "the first row sits directly below the external Files heading."),
+            QStringLiteral(R"cpp(auto* group = new QWidget(this);
+auto* layout = new QVBoxLayout(group);
+layout->setContentsMargins(0, 0, 0, 0);
+layout->setSpacing(0);
+layout->setAlignment(Qt::AlignTop);
+layout->addWidget(new Label("Files", group));
+auto* tree = new TreeView(group);
+tree->setBackgroundVisible(false);
+tree->setBorderVisible(false);
+tree->setHeaderlessTopInset(0);
+tree->setHeaderHidden(false);
+tree->setAccessibleName("Files with column headers");
+tree->setFixedHeight(220);
+auto* model = new QStandardItemModel(tree);
+model->setHorizontalHeaderLabels({"Name", "Size"});
+auto* folder = new QStandardItem("Documents");
+folder->appendRow({new QStandardItem("Report.txt"), new QStandardItem("12 KB")});
+folder->appendRow({new QStandardItem("Notes.txt"), new QStandardItem("8 KB")});
+model->appendRow({folder, new QStandardItem("Folder")});
+tree->setModel(model);
+tree->header()->setStretchLastSection(true);
+tree->expandAll();
+tree->resizeColumnToContents(0);
+auto* toggle = new Button("Toggle column headers", group);
+QObject::connect(toggle, &Button::clicked, tree, [tree] {
+    tree->setHeaderHidden(!tree->isHeaderHidden());
+});
+layout->addWidget(tree);
+layout->addSpacing(8);
+layout->addWidget(toggle, 0, Qt::AlignLeading);)cpp"),
+            [](QWidget* parent) {
+                auto* group = new QWidget(parent);
+                auto* layout = new QVBoxLayout(group);
+                layout->setContentsMargins(0, 0, 0, 0);
+                layout->setSpacing(0);
+                layout->setAlignment(Qt::AlignTop);
+                auto* heading = new fluent::textfields::Label(QStringLiteral("Files"), group);
+                heading->setObjectName(QStringLiteral("externalTreeHeader"));
+                layout->addWidget(heading);
+                auto* tree = flatPreviewSurface(new TreeView(group));
+                tree->setObjectName(QStringLiteral("treeColumnHeaders"));
+                tree->setHeaderlessTopInset(0);
+                tree->setHeaderHidden(false);
+                tree->setAccessibleName(QStringLiteral("Files with column headers"));
+                tree->setFixedHeight(220);
+                auto* model = new QStandardItemModel(tree);
+                model->setHorizontalHeaderLabels({QStringLiteral("Name"), QStringLiteral("Size")});
+                auto* folder = new QStandardItem(QStringLiteral("Documents"));
+                folder->appendRow(
+                    {new QStandardItem(QStringLiteral("Report.txt")), new QStandardItem(QStringLiteral("12 KB"))});
+                folder->appendRow(
+                    {new QStandardItem(QStringLiteral("Notes.txt")), new QStandardItem(QStringLiteral("8 KB"))});
+                model->appendRow({folder, new QStandardItem(QStringLiteral("Folder"))});
+                tree->setModel(model);
+                tree->header()->setStretchLastSection(true);
+                tree->expandAll();
+                tree->resizeColumnToContents(0);
+                auto* toggle = new Button(QStringLiteral("Toggle column headers"), group);
+                QObject::connect(toggle, &Button::clicked, tree, [tree] {
+                    tree->setHeaderHidden(!tree->isHeaderHidden());
+                });
+                layout->addWidget(tree);
+                layout->addSpacing(Spacing::Gap::Normal);
+                layout->addWidget(toggle, 0, Qt::AlignLeading);
+                return group;
+            },
+            true),
         makeSample(QStringLiteral("tree-view-checkboxes"), QStringLiteral("Checkable items"),
             QStringLiteral(
                 "The delegate's checkbox mode shows a tri-state box on every row: ticking a parent cascades to its children, and editing a child rolls the parent up to checked / unchecked / partial."),

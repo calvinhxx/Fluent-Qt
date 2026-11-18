@@ -3063,6 +3063,34 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             result.widget.deleteLater()
             QApplication.processEvents()
 
+    def test_tree_column_header_sample_keeps_rows_below_toggled_header(self):
+        result = build_sample("tree-view", "tree-view-column-headers")
+        root = result.widget
+        try:
+            root.resize(500, 300)
+            root.show()
+            QApplication.processEvents()
+            tree = root.findChild(fluentqt.TreeView, "treeColumnHeaders")
+            toggle = root.findChild(fluentqt.Button)
+            self.assertIsNotNone(tree)
+            self.assertIsNotNone(toggle)
+            self.assertFalse(tree.isHeaderHidden())
+            self.assertEqual(tree.header().geometry().bottom() + 1, tree.viewport().y())
+            toggle.click()
+            QApplication.processEvents()
+            self.assertTrue(tree.isHeaderHidden())
+            heading = root.findChild(fluentqt.Label, "externalTreeHeader")
+            self.assertIsNotNone(heading)
+            self.assertEqual(heading.geometry().bottom() + 1, tree.viewport().mapTo(root, QPoint()).y())
+            toggle.click()
+            QApplication.processEvents()
+            self.assertFalse(tree.isHeaderHidden())
+            self.assertEqual(tree.header().geometry().bottom() + 1, tree.viewport().y())
+        finally:
+            root.close()
+            root.deleteLater()
+            QApplication.processEvents()
+
     def test_tree_view_delegate_uses_native_indicator_motion_contract(self):
         result = build_sample("tree-view", "tree-view-basic")
         tree = result.widget
