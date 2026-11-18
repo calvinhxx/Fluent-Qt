@@ -4,10 +4,9 @@
 
 [Documentation home](../../docs/README.md) · [Contents](../../docs/SUMMARY.md)
 
-FluentQt exposes the native C++ widget library to Python through one Shiboken6
-extension. Use this page to choose the right entry point; detailed compatibility,
-packaging, and publication rules live in the linked documents instead of being
-repeated here.
+FluentQt wraps the C++ widget library for Python in one Shiboken6 extension. Use
+the table below to jump to installation, examples, or packaging rules without
+repeating details across pages.
 
 ## Choose a path
 
@@ -132,18 +131,17 @@ lifecycle run. That run does not establish native visual acceptance.
 The [example entry table](../../docs/architecture/plugins.md#minimal-extension-example)
 identifies the matching C++ executable and browser app.
 
-The manager borrows plugins and the host. Keep a Python reference to an
-unparented plugin while it is registered; dropping its last reference permits
-garbage collection, which unregisters it and stops surviving dependents. A Qt
-parent can own a Python plugin instead. Registration does not change that
-parent, unregistering does not delete the plugin, and destroying its actual Qt
-owner removes its registration. Factory widgets keep the parent requested by
-the application and can outlive both the manager and plugin.
+`PluginManager` does not take ownership of plugins or the host widget. If a
+plugin has no Qt parent, keep a Python reference to it while registered so
+garbage collection does not destroy and unregister it early. If it has a Qt
+parent, registration keeps that parent untouched, unregistering does not delete
+it, and destroying the parent automatically removes its registration. Widgets
+returned by a factory keep the parent you pass in and can outlive both the
+manager and the plugin.
 
-The optional module is a source-build capability; published wheel coverage
-remains governed by the [wheel matrix](wheel-matrix.json). Browser applications
-compile the shared C++ module for WebAssembly rather than running Python or
-loading native dynamic libraries.
+Optional modules are compiled during source builds; published wheel coverage is
+governed by the [wheel matrix](wheel-matrix.json). In the browser, WebAssembly
+compiles the shared C++ modules directly rather than running Python.
 
 ### Optional Spatial module
 
@@ -180,27 +178,23 @@ else:
 window.setContentWidget(content)
 ```
 
-Check activation and each nullable factory result before accessing it. The full
-Hello World example retains its Card and Button in an ordinary centered layout
-when activation or view creation fails. A false preparation result alone does
-not make a Spatial view unavailable on WebAssembly or offscreen hosts.
+Always check `activate()` and `createView()` before using the returned view. In
+Hello World, any failure cleanly falls back to centering the Card and Button in
+a plain 2D layout (`prepareWindow()` is optional best-effort setup).
 
-The session shares the C++ plugin lifecycle. Applications that already manage a
-larger extension graph can register `fluentqt.spatial.SpatialPlugin` through
-`fluentqt.plugins.PluginManager` instead. Activation creates no GPU context.
-Deactivation restores tracked views to flat Raster mode and releases particle
-delegation; returned objects, content widgets, and models keep their recorded ownership. Existing
-`SpatialView` subclasses can join the session with `attachView(view)`.
-Use `addOwnedWidget()` to transfer a widget to the view, `addBorrowedWidget()`
-to retain it, or `addReparentedWidget()` to restore its original parent on release.
+The session shares the C++ plugin lifecycle (you can also register
+`fluentqt.spatial.SpatialPlugin` manually with `fluentqt.plugins.PluginManager`).
+Activation creates no GPU context, and deactivation switches tracked views back
+to 2D Raster mode while leaving widgets and models with their configured cleanup
+mode (`addOwnedWidget()`, `addBorrowedWidget()`, `addReparentedWidget()`). Use
+`attachView(view)` to track an existing `SpatialView` subclass.
 
-`fluentqt.particles` exposes `ParticleBackdrop`, `ParticlesPlugin`, and
-`ParticlesSession`; import them from this module. It uses ordinary Widgets and
-needs no Spatial context. See the [Particles contract](../../docs/architecture/particles.md).
+`fluentqt.particles` provides `ParticleBackdrop`, `ParticlesPlugin`, and
+`ParticlesSession`. Backdrops work in ordinary Widgets layouts with CPU rendering
+and do not require Spatial. See the [Particles guide](../../docs/architecture/particles.md).
 
-`ParticleLayer` is a lower-level integration for an **existing** OpenGL
-compositor, not another widget or particle simulation. It borrows a visible
-`ParticleBackdrop`; that component still defaults to CPU rendering. For example:
+`ParticleLayer` is a lower-level adapter for driving an existing OpenGL
+compositor from a `ParticleBackdrop` (which otherwise draws on the CPU):
 
 ```python
 from fluentqt.spatial import SpatialSession
@@ -222,14 +216,11 @@ if layer is not None:
 session.deactivate()
 ```
 
-Only a successful `render()` delegates the source's painting and frame requests.
-Failed activation or a `None` adapter leaves the original ParticleBackdrop's
-CPU presentation available.
-The caller selects the hardware context and preserves foreground occlusion;
-`render()` fails safely on invalid contexts, hidden sources, or insufficient
-budget. `allocatedBytes()` includes actual driver MSAA storage. The Python
-Gallery's [particle compositor](gallery/src/fluentqt_gallery/particle_compositor.py)
-is the complete implementation for cached pages and foreground widgets.
+Only a successful `render()` delegates painting and frame requests to the
+compositor; otherwise `ParticleBackdrop` continues rendering on the CPU. Pass a
+valid active OpenGL context and preserve widget clipping when drawing. See the
+Python Gallery [particle compositor](gallery/src/fluentqt_gallery/particle_compositor.py)
+for a full example.
 
 This build adds Qt OpenGL/OpenGLWidgets to the same extension, sharing theme
 and motion state with the base controls. A 2D-only source build does not link
@@ -250,38 +241,35 @@ Its Qt QuickWidgets dependencies remain opt-in. Importing `fluentqt` does not
 import the Quick Python modules; explicit `fluentqt.qmlbridge` imports register
 the converters used by returned QML root objects.
 
-Call `QmlSession.prepareApplication()` once at application startup, before the
-first Quick surface, when sharing a window with Spatial or `QOpenGLWidget`.
-Then activate a session, create a view, register caller-owned context objects,
-and load an absolute `QUrl`. Python `activate()`, `deactivate()`, and `load()`
-return `bool`; read `QmlView.lastError()` and observe `errorOccurred` for load
-failures. Keep unparented model wrappers alive or give them a Qt owner.
+Call `QmlSession.prepareApplication()` once at startup before creating the
+first Qt Quick view when sharing a window with Spatial or `QOpenGLWidget`. Then
+activate a session, create a view, register context objects, and load an
+absolute `QUrl`. Check `QmlView.lastError()` or `errorOccurred` if `load()`
+returns `False`. Keep Python references to unparented model objects or assign
+them a Qt parent.
 
-The [shared-model example](examples/qml_bridge.py) uses the same
-[`Preview.qml`](../../examples/qml_bridge/qml/Preview.qml), layout, controls,
-and model values as C++ and WebAssembly:
+The [shared-model example](examples/qml_bridge.py) runs the same
+[`Preview.qml`](../../examples/qml_bridge/qml/Preview.qml) and model setup as C++
+and WebAssembly:
 
 ```bash
 PYTHONPATH=build/pyside6/python \
   .venv-pyside/bin/python bindings/pyside6/examples/qml_bridge.py --smoke-test
 ```
 
-Stopping the session clears the public scene immediately and releases its
-Quick widget and engine on the next event-loop turn. The view and model stay
-caller-owned, and reactivation requires an explicit reload. QML content binds
-to the read-only `fluentTheme` colors, typography, radii, and motion values.
-The Python Gallery exposes six focused cards under **Plugins → QmlBridge →
-QmlView** when this module is available: loading, Fluent theme tokens, context
-binding, QML actions, lifecycle, and load errors. Each card exports its own
-setup and QML asset; the standalone shared-model panel remains a separate
-application example. See the [Gallery card contract](../../docs/architecture/qml-bridge.md#gallery-example-cards).
+Deactivating the session clears the QML scene immediately and deletes the
+internal Quick widget and engine on the next event-loop tick, leaving your
+`QmlView` and models intact (reactivating requires calling `load()` again). QML
+code can bind to the read-only `fluentTheme` object for theme colors,
+typography, radii, and motion settings. Python Gallery provides six cards under
+**Plugins → QmlBridge → QmlView** covering loading, theme tokens, context
+objects, actions, lifecycle, and errors; see the [Gallery cards guide](../../docs/architecture/qml-bridge.md#gallery-example-cards).
 
-`QmlTextureLayer` and the lower-level `QmlView` texture API let a compatible
-OpenGL host compose the existing QML scene into its projected Widgets panel.
-Models, the engine, and local QML state retain their ownership. This path uses
-ordinary Qt Quick items; it has no Qt Quick 3D dependency or Direct3D/Metal
-texture import. See the [composition contract](../../docs/architecture/qml-bridge.md#composition-and-gallery-mode)
-for cache budgets, native fallback, and the Qt 5.15/6.2 DPR restriction.
+`QmlTextureLayer` and `QmlView` also support offscreen texture rendering when an
+OpenGL compositor renders projected Widgets panels, using standard Qt Quick items
+with no Qt Quick 3D dependency. See the
+[composition guide](../../docs/architecture/qml-bridge.md#composition-and-gallery-mode)
+for cache limits, 2D fallback, and Qt 5.15/6.2 scaling notes.
 
 ### Base examples
 
@@ -342,19 +330,17 @@ animate_spinner = policy.shouldAnimate(
 
 ## Public API and ownership
 
-Python uses the same native FluentQt implementation rather than a second widget
-library. The package exposes Python-shaped adapters where raw C++ mixins or
-runtime ownership overloads would produce unsafe Python semantics.
+Python uses the native FluentQt C++ implementation, adding explicit Python
+helpers only where C++ mixins or ownership overloads would be ambiguous:
 
-- Application models, selection models, and delegates remain caller-owned;
-  the facade retains their wrappers while installed.
-- Hosted widgets use explicit owned, borrowed, reparented, and take methods
-  where the C++ runtime overload would be ambiguous in Python.
-- Qt-owned children such as title bars and internal scroll bars are borrowed
-  and must not be deleted or reparented by callers.
-- `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout` expose supported
-  authoring capabilities without publishing implementation-only mixins or
-  mutable registries.
+- Models, selection models, and delegates stay managed by your app; keep a Python
+  reference if they have no Qt parent.
+- Container widgets provide explicit `Borrowed`, `Owned`, `Reparented`, and `take*`
+  methods (such as `setBorrowedEditor()` / `setOwnedContentWidget()`).
+- Internal Qt-owned children (such as title bars and scroll bars) must not be
+  deleted or reparented by user code.
+- `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout` provide safe
+  Python equivalents of C++ mixins without exposing internal registries.
 
 The [compatibility and coverage guide](ROADMAP.md) records intentional boundary
 decisions. Exact exports remain defined by `api-manifest.json`.

@@ -32,12 +32,10 @@ For a binding built with `FLUENT_QT_BUILD_SPATIAL=ON`, `spatial.py` follows the
 a 720 × 520 window, a centered 320 × 200 Card, and one accent Button. It
 activates `SpatialSession`, adds the card with `addOwnedWidget()`, and uses the
 same rotation `(6, -12, 0)`, surface intensity `0.6`, and pointer tilt `(3, 5)`.
-Clicking the button changes `Hello from FluentQt` to `Hello, you!`.
-It checks activation and `createView()` before using the result. Failed
-activation or a `None` view deactivates the session and retains the same Card
-and Button in a centered ordinary QWidget layout. `prepareWindow()` is
-best-effort after activation; its return value alone does not choose the
-fallback or establish GPU availability.
+Clicking the button changes `Hello from FluentQt` to `Hello, you!`. The sample
+checks `session.activate()` and `createView()` before using the 3D view; if
+either fails, it deactivates the session and centers the Card and Button in a
+plain 2D layout (`prepareWindow()` is optional best-effort setup).
 
 ```bash
 PYTHONPATH=build/pyside6/python \
