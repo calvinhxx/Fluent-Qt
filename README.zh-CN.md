@@ -30,6 +30,8 @@
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery">实时体验 C++ Web Gallery</a></strong>
   ·
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/">组件与 API 文档</a>
+  ·
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top">项目官网</a>
   ·
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">提问与交流</a>
@@ -37,71 +39,54 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#support">支持项目</a>
 </p>
 
-Fluent-Qt（FluentQt）是基于 Qt Widgets 的跨平台 Fluent 风格 C++ UI 组件库，提供输入、导航、集合、数据表格、[图表](docs/architecture/charts.md)、弹窗和窗口等原生控件。组件库采用 C++17 开发，可通过 CMake 接入现有 Qt 项目，并提供可选的 PySide6 绑定。
+Fluent-Qt（FluentQt）为 Qt Widgets 提供一套 Fluent 风格控件，涵盖输入、导航、列表与树、数据表格、[图表](docs/architecture/charts.md)、对话框、浮层和窗口。基于 C++17 开发，可通过 CMake 接入现有 Qt 工程，并提供可选的 PySide6 绑定。
 
-支持 Windows、macOS、Linux 和 WebAssembly，内置浅色、深色和高对比度主题，动效可减弱或关闭。可选的 [Spatial](docs/architecture/spatial-view.md) 插件为 Widgets 界面提供 3D 展示能力，[QmlBridge](docs/architecture/qml-bridge.md) 插件提供 QML 兼容支持，可加载 QML 页面并共用业务数据和 Fluent 主题。
+支持 Windows、macOS、Linux 和 WebAssembly，内置浅色、深色和高对比度主题，动画支持减弱或关闭。按需启用扩展模块即可使用粒子背景（[Particles](docs/architecture/particles.md)）、3D 透视视图（[Spatial](docs/architecture/spatial-view.md)）或嵌入 QML 页面（[QmlBridge](docs/architecture/qml-bridge.md)）。
 
 ## 🧩 模块概览
 
-### Core 基础库
+| 模块 | CMake 目标 | 说明 |
+|---|---|---|
+| Core 基础库 | `FluentQt::FluentQt` | 全部 2D 控件、主题配色、字号、布局与图表。普通 2D 应用只需链接此目标。 |
+| [Plugins](docs/architecture/plugins.md) | `FluentQt::Plugins` | 应用内插件注册、依赖排序、按序启停与清理。 |
+| [Particles](docs/architecture/particles.md) | `FluentQt::Particles` | CPU 绘制的粒子动态背景 `ParticleBackdrop`（无需 OpenGL），支持通过 `ParticlesSession` 统一暂停与恢复。 |
+| [Spatial](docs/architecture/spatial-view.md) | `FluentQt::Spatial` | 为现有 `QWidget` 布局添加透视效果。会话启动或视图创建失败时，由应用提供 [2D 布局](examples/hello_world/README.md)。 |
+| [QmlBridge](docs/architecture/qml-bridge.md) | `FluentQt::QmlBridge` | 通过 `QmlView` 在 Widgets 窗口中嵌入 QML 页面，并共享业务数据与 Fluent 主题。 |
 
-`FluentQt::FluentQt` 提供原生控件、主题、设计参数与公共控件基础能力。普通 2D 应用链接此 target 即可。
+C++ 直接链接上述目标，Python 使用对应的 PySide6 模块，WebAssembly 由同一套 C++ 代码编译并在浏览器中运行。可在 Gallery 的 **Plugins → Particles**、**Plugins → Spatial**（在 **Settings → 3D Gallery** 中开启 3D）和 **Plugins → QmlBridge → QmlView** 中体验示例，或参考 [QML 最小示例](examples/qml_bridge/)。
 
-### Plugins 插件
+## 🖼 Gallery 与官网文档
 
-可选的 [Plugins](docs/architecture/plugins.md) 模块负责插件注册、依赖管理、激活和清理。C++ 应用链接 `FluentQt::Plugins` 后即可使用，各插件通过自己的 target 引入额外依赖。
-
-C++ 直接调用库，Python 使用配套的 PySide6 绑定。WebAssembly 版本由同一份 C++ 代码编译，在浏览器中运行。
-
-#### Particles
-
-[Particles](docs/architecture/particles.md) 插件提供粒子动画背景 `ParticleBackdrop`，用 CPU 绘制，不依赖 Spatial 或 OpenGL。`ParticlesSession` 可以统一暂停和恢复它管理的背景。
-
-构建时打开 `FLUENT_QT_BUILD_PARTICLES=ON`，链接 `FluentQt::Particles`。核心库 `FluentQt::FluentQt` 不包含粒子特效。
-
-在 Gallery 的 Plugins → Particles 中查看示例。
-
-#### Spatial
-
-[Spatial](docs/architecture/spatial-view.md) 为现有 Qt Widgets 界面提供 3D 展示能力。`SpatialSession` 负责激活插件、创建视图和停用时的清理。
-
-链接 `FluentQt::Spatial` 时会自动引入 `FluentQt::Plugins` 和 OpenGL 依赖。3D 不可用时可回退到原生 2D。
-
-在 Gallery 的 Plugins → Spatial 中查看 SpatialView 和 SpatialItem 示例。3D 开关在 Settings → 3D Gallery。
-
-#### QmlBridge
-
-[QmlBridge](docs/architecture/qml-bridge.md) 是 FluentQt 的 QML 兼容插件，可在 Widgets 界面中加载 QML 页面，共用业务数据和 Fluent 主题。
-
-启用 `FLUENT_QT_BUILD_QML_BRIDGE=ON` 并链接 `FluentQt::QmlBridge`。Qt Qml、Quick 和 QuickWidgets 依赖随这个可选模块引入。
-
-在 Gallery 的 Plugins → QmlBridge → QmlView 中体验，或构建[最小示例](examples/qml_bridge/)。初始化与页面加载方法见[接入指南](docs/architecture/qml-bridge.md)。
-
-## 🖼 Gallery
-
-Gallery 用于浏览组件、体验交互和查看示例代码。
+使用 Gallery 浏览全部控件、体验交互效果，并对照查看 C++ 和 Python 示例代码。
 
 | 体验方式 | 入口 |
 |---|---|
-| 浏览器 | [在线 Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) · [项目官网](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) |
+| 浏览器（WebAssembly Gallery） | [在线 Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) · [项目官网](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) |
+| 官网文档与属性动态预览 | [组件与 API 文档](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/) · [在线试用属性预览](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/checkbox/?playground=1) |
 | Windows、macOS、Linux | [下载 Gallery 安装包](https://github.com/calvinhxx/Fluent-Qt/releases/latest) |
 
-### Python 兼容 Gallery
+### 组件文档与属性动态预览
 
-Python Gallery 通过 [PyPI](https://pypi.org/project/FluentQt-Gallery/) 分发。
+官网现已提供可全局搜索的中英文[组件与 API 文档中心](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/)：
+
+- **基础指南与扩展模块**：涵盖快速开始、主题与颜色、字体与字号、图标、属性绑定与锚点、动画控制、数据模型、表单校验、子控件生命周期、界面自检，以及 Plugins / Particles / Spatial / QmlBridge 接入说明。
+- **组件页与属性动态预览**：可查看 WebAssembly 交互示例、C++ 和 PySide6 代码，并搜索组件 API。在支持的页面打开 **属性动态预览**，即可调节真实 Qt 控件并复制生成的代码。
+- **更新日志与迁移指南**：在[版本记录页](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/releases/)按组件库（UILib）或 Gallery 筛选各版本更新与迁移说明。
+
+### Python Gallery
+
+从 [PyPI](https://pypi.org/project/FluentQt-Gallery/) 安装 Python 版 Gallery（会自动安装配套版本的 `FluentQt`）：
 
 ```bash
 python -m pip install FluentQt-Gallery
 python -m fluentqt_gallery
 ```
 
-`FluentQt-Gallery` 会自动安装对应版本的 `FluentQt`。
+## 🤖 AI 辅助开发
 
-## 🤖 使用 Agent 构建
+在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill，可以快速创建桌面应用、给现有工程加上界面，或优化现有界面布局。[查看示例](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)
 
-在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md)，创建桌面应用、给现有工程添加 GUI 或修复界面。[查看效果](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)
-
-调整 Gallery 示例时，可以先在 Live Scene 里边改边看，再用编译后的 C++ 示例确认最终效果。[查看用法](docs/development/gallery-preview-workflow.md)
+调整 Gallery 示例时，可以先在 Live Scene 中保存即预览，再用编译后的 C++ 程序确认实际渲染效果。[工作原理](docs/development/gallery-preview-workflow.md)
 
 ## 🚀 快速开始
 
@@ -192,15 +177,15 @@ int main(int argc, char* argv[])
 
 完整工程见 [`examples/hello_world`](examples/hello_world/)，IDE 中可直接运行 `fluentqt_hello_world` target。
 
-### 可选 Python 兼容
+### Python (PySide6)
 
-PySide6 兼容层通过 Shiboken6 将 Fluent-Qt 的原生 C++ 控件提供给 Python 使用。
+通过 PyPI 安装 PySide6 绑定（基于 Shiboken6 封装原生 C++ 控件）：
 
 ```bash
 python -m pip install FluentQt
 ```
 
-安装、示例、兼容信息和源码构建见 [Python 指南](bindings/pyside6/README.md)。
+安装方法、代码示例、兼容矩阵及源码编译说明见 [Python 指南](bindings/pyside6/README.md)。
 
 ## 🛠 构建
 
@@ -229,16 +214,16 @@ cmake --install build/fluentqt --config Release \
 
 ### 可选扩展
 
-配置 FluentQt 时启用 Plugins 公共基础设施或其下的插件模块，并在应用中链接对应 target。
+配置 FluentQt 时按需开启 Plugins 模块或具体插件，然后在应用中链接对应的 CMake 目标：
 
-| 扩展层级 | 构建选项 | CMake target | 接入示例 |
+| 扩展模块 | 构建选项 | CMake 目标 | 接入示例 |
 |---|---|---|---|
-| Plugins 公共基础设施 | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [最小插件示例](docs/architecture/plugins.md#minimal-extension-example) |
+| Plugins 插件管理 | `-DFLUENT_QT_BUILD_PLUGINS=ON` | `FluentQt::Plugins` | [最小插件示例](docs/architecture/plugins.md#minimal-extension-example) |
 | Plugins → Particles | `-DFLUENT_QT_BUILD_PARTICLES=ON` | `FluentQt::Particles` | [粒子接入](docs/architecture/particles.md) |
 | Plugins → Spatial | `-DFLUENT_QT_BUILD_SPATIAL=ON` | `FluentQt::Spatial`（自动包含 Plugins） | [Spatial Hello World](examples/hello_world/README.md) |
 | Plugins → QmlBridge | `-DFLUENT_QT_BUILD_QML_BRIDGE=ON` | `FluentQt::QmlBridge`（自动包含 Plugins） | [QML 宿主示例](examples/qml_bridge/) |
 
-源码集成时，在 `add_subdirectory()` 或 `FetchContent_MakeAvailable()` 前设置选项；安装包集成方式见对应模块指南。匹配的 Python 构建通过 `fluentqt.plugins`、`fluentqt.spatial` 和 `fluentqt.qmlbridge` 提供已启用模块，WebAssembly 复用 C++ 实现。
+源码集成时，请在 `add_subdirectory()` 或 `FetchContent_MakeAvailable()` 前开启这些选项。匹配的 Python 构建会导出 `fluentqt.plugins`、`fluentqt.spatial` 和 `fluentqt.qmlbridge`，WebAssembly 则直接编译同一份 C++ 实现。
 
 ### 本地构建 Gallery
 
@@ -286,32 +271,32 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 
 ## 📚 文档
 
-可以从[文档导航](docs/README.md)开始，也可以按目标直接进入：
+可以从[文档导航](docs/README.md)开始，或按使用目标直接进入：
 
 | 目标 | 入口 |
 |---|---|
-| 体验和查找控件 | [组件文档](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) |
-| 构建应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) |
-| 参与 FluentQt 开发 | [开发文档树](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计](docs/design-languages/README.md) |
-| 打包或发布 | [打包工作流](docs/development/packaging-workflow.md) · [发布治理](docs/development/release-governance.md) · [版本记录](docs/releases/README.md) |
-| 提问或报告问题 | [社区入口](docs/community/README.md) · [支持](SUPPORT.md) · [安全报告](SECURITY.md) |
-| 中文即时交流 | QQ 群 `1109997685` |
+| 查看控件与 API | [组件与 API 文档](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) |
+| 开发桌面应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) |
+| 参与项目开发 | [开发指南](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计规范](docs/design-languages/README.md) |
+| 打包与发布 | [打包流程](docs/development/packaging-workflow.md) · [发布规范](docs/development/release-governance.md) · [更新日志](docs/releases/README.md) |
+| 反馈问题或交流 | [社区入口](docs/community/README.md) · [支持说明](SUPPORT.md) · [安全报告](SECURITY.md) |
+| 中文交流群 | QQ 群 `1109997685` |
 
-QQ群用于中文即时交流、作品展示与贡献协作；需要持续追踪的问题请继续使用 GitHub Discussions 或 Issues。
+QQ 群适合日常答疑、效果交流与协作；需要长期跟踪的问题或建议请提交到 GitHub Discussions 或 Issues。
 
 <p align="center">
   <img src="docs/assets/community/qq-group-1109997685.png" width="280" alt="Fluent-Qt QQ 群入群二维码">
 </p>
 
-提交改动前请阅读[参与贡献](CONTRIBUTING.md)和[社区行为准则](CODE_OF_CONDUCT.md)。
+提交改动前请先阅读[参与贡献](CONTRIBUTING.md)与[社区行为准则](CODE_OF_CONDUCT.md)。
 
 ## 🔗 参考
 
 | 来源 | 用途 |
 |---|---|
 | [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows 视觉参考 |
-| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 组件行为和示例页面参考 |
+| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 组件交互与示例页面参考 |
 
 ## 许可证
 
-Fluent-Qt 项目自身的源代码使用 [MIT License](LICENSE) 发布。项目中捆绑的资源以及发布包中的运行时依赖继续适用各自的上游许可；具体版本、来源、对应源码提供规则和许可证位置见[第三方声明](THIRD_PARTY_NOTICES.md)。产品名称、徽标及外部设计参考的相关说明见[商标与外部引用声明](TRADEMARKS.md)。
+Fluent-Qt 源代码基于 [MIT License](LICENSE) 开源。内置字体、资源及安装包中包含的第三方依赖仍遵循各自上游许可证，详见[第三方声明](THIRD_PARTY_NOTICES.md)；产品名称、徽标与外部设计参考说明见[商标与外部引用声明](TRADEMARKS.md)。
