@@ -106,6 +106,8 @@ When preparing a release:
 4. When publication is confirmed, set `status` to `published` and record the
    actual GitHub `published_at` timestamp in UTC. Move delivered entries out of
    `unreleased`, update its `after` baseline, and retain pending changes there.
+   Set `cpp_ci_tag` in `tools/onboarding/starters/manifest.json` to the published
+   tag so newly generated C++ projects test against that release.
    Do not infer publication from the CMake version or assign a release number
    to development-only changes.
 5. Run `python3 tools/site/build_site.py --prepare` and

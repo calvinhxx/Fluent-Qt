@@ -131,7 +131,15 @@ class FluentQtCreateTest(unittest.TestCase):
                     if language == "cpp"
                     else target / "pyproject.toml"
                 )
-                self.assertIn("1.7.1", dependency_file.read_text(encoding="utf-8"))
+                self.assertIn("1.7.2", dependency_file.read_text(encoding="utf-8"))
+
+    def test_cpp_starter_ci_uses_the_manifest_tag(self):
+        tag = json.loads(MODULE.STARTER_MANIFEST.read_text(encoding="utf-8"))["cpp_ci_tag"]
+        for starter in ("existing-qt", "workbench"):
+            with self.subTest(starter=starter):
+                target, _ = self.create("cpp", starter)
+                workflow = (target / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+                self.assertIn(f"repository: calvinhxx/Fluent-Qt\n          ref: '{tag}'\n", workflow)
 
     def test_existing_target_is_never_overwritten(self):
         target = self.root / "existing"
