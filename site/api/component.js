@@ -170,6 +170,58 @@ function createInteractivePreview() {
   let frame, timer, session = 0, visible = false, state = 'idle';
   let outerFocus;
   let playground;
+  const trigger = document.querySelector('[data-playground-toggle]');
+  const editorError = root.querySelector('[data-preview-error]');
+  let loadingEditor;
+  let pendingOpen;
+
+  function updateTrigger(open = false) {
+    if (!trigger) return;
+    trigger.disabled = state === 'error';
+    trigger.setAttribute('aria-expanded', String(open));
+    trigger.setAttribute('aria-pressed', String(open));
+    trigger.setAttribute('aria-busy', String(Boolean(pendingOpen)));
+    trigger.toggleAttribute('data-playground-pending', Boolean(pendingOpen));
+  }
+  function openWhenReady() {
+    if (!pendingOpen || !playground || state !== 'ready') return;
+    const {target} = pendingOpen;
+    pendingOpen = null;
+    playground.open(target);
+  }
+  function requestOpen(target) {
+    if (state === 'error') return;
+    pendingOpen = {target};
+    editorError.hidden = true;
+    updateTrigger();
+    if (state === 'idle') begin();
+    if (playground) { openWhenReady(); return; }
+    if (loadingEditor) return;
+    const script = document.createElement('script');
+    loadingEditor = script;
+    script.src = document.querySelector('script[data-playground-script]').dataset.playgroundScript;
+    script.onload = () => {
+      playground = window.FluentQtPlayground.create(root, {
+        example: selected, trigger, updateTrigger,
+        send(type, command, requestId, selection) {
+          // Picking reads the original widget, including when a deep link starts offscreen.
+          const sampleOffscreen = type === 'component-playground-pick' && command.operation === 'open' && !visible;
+          if (sampleOffscreen) post('component-visibility', {active: true});
+          post(type, {example: selected(), selection, command, requestId});
+          if (sampleOffscreen) syncVisibility();
+        }
+      });
+      playground.setReady(state === 'ready');
+      openWhenReady();
+    };
+    script.onerror = () => {
+      script.remove();
+      loadingEditor = pendingOpen = null;
+      updateTrigger();
+      editorError.hidden = false;
+    };
+    document.head.append(script);
+  }
   const selected = () => {
     const tab = root.querySelector('.state-tabs [aria-selected="true"]');
     return { route: root.dataset.component, sample: tab.dataset.sample, state: tab.dataset.state };
@@ -189,7 +241,9 @@ function createInteractivePreview() {
     status.textContent = next === 'loading' ? root.dataset.loadingLabel
       : next === 'error' ? root.dataset.failedLabel : '';
     if (frame) frame.tabIndex = next === 'ready' ? 0 : -1;
-    playground?.setReady(next === 'ready', next === 'error');
+    if (next === 'error') pendingOpen = null;
+    playground?.setReady(next === 'ready');
+    if (next !== 'ready' || !playground) updateTrigger();
   }
   function release(next = 'idle') {
     ++session;
@@ -228,10 +282,10 @@ function createInteractivePreview() {
     timer = setTimeout(() => release('error'), 45000);
   }
   retry.addEventListener('click', begin);
-  playground = window.FluentQtPlayground?.create(root, {
-    example: selected,
-    send: (type, command, requestId, selection) => post(type, {example: selected(), selection, command, requestId})
-  });
+  if (trigger) {
+    trigger.hidden = false;
+    trigger.addEventListener('click', () => requestOpen());
+  }
   root.addEventListener('selectionchange', () => {
     playground?.contextChanged();
     if (frame) post('component-select', { selection: selected() });
@@ -256,6 +310,7 @@ function createInteractivePreview() {
       syncTheme();
       syncVisibility();
       post('component-motion', { reduced: reduced.matches });
+      openWhenReady();
       if (document.activeElement === frame && outerFocus?.isConnected && outerFocus !== document.body)
         outerFocus.focus({ preventScroll: true });
     } else if (event.data.state === 'error' || event.data.state === 'exit') release('error');
@@ -274,6 +329,11 @@ function createInteractivePreview() {
   window.addEventListener('pageshow', syncVisibility);
   render('idle');
   if (!observer) { visible = true; syncVisibility(); }
+  if (trigger) {
+    window.fluentQtPlaygroundOpen = requestOpen;
+    if (['1', 'true'].includes(new URLSearchParams(location.search).get('playground')))
+      requestOpen();
+  }
   return { syncTheme };
 }
 const interactivePreview = createInteractivePreview();
