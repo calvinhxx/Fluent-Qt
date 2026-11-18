@@ -8975,6 +8975,41 @@ class FluentQtBindingTest(unittest.TestCase):
             all(not Shiboken.ownedByPython(bar) for bar in scroll_bars)
         )
 
+    def test_tree_view_column_header_and_caption_do_not_overlap_rows(self):
+        view = fluentqt.TreeView()
+        self.addCleanup(view.close)
+        model = QStandardItemModel(view)
+        model.setHorizontalHeaderLabels(["Name", "Size"])
+        model.appendRow([QStandardItem("First"), QStandardItem("12 KB")])
+        view.setModel(model)
+        view.setHeaderHidden(False)
+        view.resize(400, 260)
+        view.show()
+        for caption in ("", "Files"):
+            view.setHeaderText(caption)
+            for width in (400, 520):
+                view.resize(width, 260)
+                QApplication.processEvents()
+                header = view.header().geometry()
+                viewport = view.viewport().geometry()
+                self.assertGreaterEqual(header.top(), 0)
+                self.assertEqual(header.bottom() + 1, viewport.top())
+                self.assertEqual(header.width(), viewport.width())
+                QTest.mouseClick(view.viewport(), Qt.LeftButton, Qt.NoModifier,
+                                 view.visualRect(model.index(0, 0)).center())
+                self.assertEqual(view.currentIndex(), model.index(0, 0))
+        view.setHeaderText("")
+        view.setHeaderHidden(True)
+        QApplication.processEvents()
+        self.assertEqual(view.viewport().y(), 2)
+        self.assertEqual(view.headerlessTopInset(), 2)
+        view.setHeaderlessTopInset(0)
+        self.assertEqual(view.viewport().y(), 0)
+        view.setHeaderHidden(False)
+        QApplication.processEvents()
+        self.assertEqual(view.header().y(), 0)
+        self.assertEqual(view.viewport().y(), view.header().height())
+
     def test_tree_view_hierarchical_updates_and_persistent_indexes(self):
         class PythonTreeModel(QStandardItemModel):
             def __init__(self):

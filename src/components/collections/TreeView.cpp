@@ -23,6 +23,7 @@
 #include <QWheelEvent>
 
 #include <QtMath>
+#include <QHeaderView>
 
 #include "components/collections/CollectionViewBackdrop_p.h"
 #include "components/collections/private/CollectionItemState_p.h"
@@ -473,6 +474,17 @@ void TreeView::setPlaceholderText(const QString& text)
     if (viewport())
         viewport()->update();
     emit placeholderTextChanged();
+}
+
+void TreeView::setHeaderlessTopInset(int inset)
+{
+    inset = qBound(0, inset, int(QWIDGETSIZE_MAX));
+    if (m_headerlessTopInset == inset)
+        return;
+    m_headerlessTopInset = inset;
+    updateViewportMargins();
+    syncFluentScrollBar();
+    emit headerlessTopInsetChanged();
 }
 
 // ── Tree API ──────────────────────────────────────────────────────────────────
@@ -1752,11 +1764,24 @@ void TreeView::layoutHeader()
 
 void TreeView::updateViewportMargins()
 {
-    int top = 2; // Top margin aligns first row spacing with ListView alongside the delegate inset.
-    if (m_headerLabel && !m_headerLabel->isHidden()) {
-        top = m_headerLabel->sizeHint().height() + ::Spacing::Gap::Normal;
+    auto* columnHeader = header();
+    const bool hasColumns = columnHeader && !columnHeader->isHidden();
+    const int columnHeight = hasColumns
+        ? qBound(columnHeader->minimumHeight(), columnHeader->sizeHint().height(), columnHeader->maximumHeight())
+        : 0;
+    const int titleHeight =
+        m_headerLabel && !m_headerLabel->isHidden() ? m_headerLabel->sizeHint().height() + ::Spacing::Gap::Normal : 0;
+    // Retain Qt's column-header space. The caption precedes it; a headerless tree
+    // keeps the established first-row inset without introducing a gap below columns.
+    // zh_CN: 保留 Qt 列头的高度，标题位于列头之前；无列头时保留原有首行间距。
+    auto margins = viewportMargins();
+    const int headerHeight = titleHeight + columnHeight;
+    margins.setTop((hasColumns || titleHeight > 0) ? headerHeight : m_headerlessTopInset);
+    setViewportMargins(margins);
+    if (hasColumns) {
+        const QRect viewRect = viewport()->geometry();
+        columnHeader->setGeometry(viewRect.x(), viewRect.y() - columnHeight, viewRect.width(), columnHeight);
     }
-    setViewportMargins(0, top, 0, 0);
 }
 
 void TreeView::syncFluentScrollBar()
@@ -1770,9 +1795,8 @@ void TreeView::syncFluentScrollBar()
     constexpr int kScrollBarRightInset = ::Spacing::XSmall / 2;
     constexpr int kScrollBarVerticalInset = ::Spacing::XSmall / 2;
     const QRect r = rect();
-    const int top = (m_headerLabel && !m_headerLabel->isHidden())
-        ? m_headerLabel->geometry().bottom() + 1 + kScrollBarVerticalInset
-        : r.top() + kScrollBarVerticalInset;
+    const bool hasHeader = (header() && !header()->isHidden()) || (m_headerLabel && !m_headerLabel->isHidden());
+    const int top = viewport()->geometry().top() + (hasHeader ? kScrollBarVerticalInset : 0);
     ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top, kScrollBarRightInset,
         kScrollBarVerticalInset - 1);
 }

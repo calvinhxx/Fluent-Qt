@@ -33,7 +33,7 @@ QT = {
     'QAbstractScrollArea': (('QFrame',), set()),
     'QAbstractItemView': (('QAbstractScrollArea',), set()),
     'QListView': (('QAbstractItemView',), set()),
-    'QTreeView': (('QAbstractItemView',), set()),
+    'QTreeView': (('QAbstractItemView',), {'header', 'setHeader', 'isHeaderHidden', 'setHeaderHidden', 'setColumnWidth'}),
     'QTableView': (('QAbstractItemView',), set()),
     'QScrollArea': (('QAbstractScrollArea',), set()),
     'QStackedWidget': (('QFrame',), set()),

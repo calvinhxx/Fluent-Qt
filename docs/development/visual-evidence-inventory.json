@@ -1871,6 +1871,18 @@
             "selection"
           ],
           "execution": "registered-only"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "TreeViewTest.Contract_ColumnHeaderRemainsAboveRowsAfterLayoutChanges",
+          "states": ["selection", "rtl"],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "TreeViewTest.Contract_HeaderSpacePreservesScrollRangeAndLastRow",
+          "states": ["scroll-end"],
+          "execution": "ci"
         }
       ],
       "manual_evidence": {
