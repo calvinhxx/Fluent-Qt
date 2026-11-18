@@ -853,6 +853,9 @@ jobs:
               plugin/QmlBridge/CMakeLists.txt \
               cmake/FluentQtPlugins.cmake \
               cmake/FluentQtRuntime.cmake \
+              cmake/FluentQtWasmAccessibility.cmake \
+              cmake/wasm-accessibility/CMakeLists.txt \
+              tools/wasm/qt_accessibility_overlay.py \
               cmake/FluentQtSpatial.cmake \
               cmake/FluentQtInterfaceZoom.cmake \
               cmake/FluentQtQmlBridge.cmake \

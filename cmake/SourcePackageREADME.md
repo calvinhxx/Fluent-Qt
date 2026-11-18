@@ -25,8 +25,15 @@ Requirements:
 - Optional Spatial: enable `FLUENT_QT_BUILD_SPATIAL=ON` and link `FluentQt::Spatial`; includes Plugins automatically; Qt 6 requires OpenGLWidgets, Qt 5 requires QOpenGLWidget support
 - Optional QmlBridge: enable `FLUENT_QT_BUILD_QML_BRIDGE=ON` and link `FluentQt::QmlBridge`; includes Plugins automatically and requires Qt Qml, Quick, and QuickWidgets
 
-WebAssembly consumers use the narrower browser baseline: Qt 6.9.3
-`wasm_singlethread` with Emscripten 3.1.70. Configure with
+WebAssembly consumers use Qt 6.9.3 `wasm_singlethread` with Emscripten
+3.1.70. Prepare the matching Qt accessibility sources before configuring:
+
+```bash
+export FLUENT_QT_WASM_SOURCE_CACHE="$PWD/build/qt-wasm-source-cache"
+python3 tools/wasm/qt_accessibility_overlay.py fetch --cache "$FLUENT_QT_WASM_SOURCE_CACHE"
+```
+
+Add `--offline` to verify a previously populated cache. Configure with
 `-DFLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT=ON` to export
 `FluentQt::WebAssembly` and `FluentQt::WasmAsyncify`. Every windowed browser
 application links the runtime target; add the Asyncify target only when the
