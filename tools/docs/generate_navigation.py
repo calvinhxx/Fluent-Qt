@@ -213,6 +213,27 @@ def render_summary(
     return "\n".join(lines) + "\n"
 
 
+def render_release_index(text: str, groups: list[dict[str, object]]) -> str:
+    """Build the version table from the same groups as the documentation contents."""
+    start = "<!-- docs-nav:release-table:start -->"
+    end = "<!-- docs-nav:release-table:end -->"
+    before, opening, rest = text.partition(start)
+    _, closing, after = rest.partition(end)
+    if not opening or not closing:
+        raise ValueError("Missing release table markers in docs/releases/README.md")
+    rows = ["| Series | Releases |", "|---|---|"]
+    for group in groups:
+        links = []
+        for relative in group["pages"]:
+            match = RELEASE_RE.fullmatch(relative)
+            if not match:
+                raise ValueError(f"Expected a release note in the release index: {relative}")
+            version = match.group("version")
+            links.append(f"[{version}]({relative_link('releases/README.md', relative)})")
+        rows.append(f"| {group['title']} | {' · '.join(links)} |")
+    return before + start + "\n" + "\n".join(rows) + "\n" + end + after
+
+
 def expected_outputs(project_root: Path) -> dict[Path, str]:
     manifest = load_manifest(project_root)
     docs_root = project_root / "docs"
@@ -220,6 +241,10 @@ def expected_outputs(project_root: Path) -> dict[Path, str]:
     outputs = {
         docs_root / manifest["summary"]: render_summary(manifest, titles),
     }
+    for section in manifest["sections"]:
+        if section["index"] == "releases/README.md":
+            path = docs_root / section["index"]
+            outputs[path] = render_release_index(path.read_text(encoding="utf-8"), section["groups"])
 
     for index, entry in enumerate(entries):
         previous = None

@@ -87,6 +87,8 @@ When preparing a release:
 
 1. Add the canonical release note and its English and Chinese summary. Mark a
    not-yet-published version as `candidate`, with no publication timestamp.
+   List the note in `docs/navigation.json` and run
+   `python3 tools/docs/generate_navigation.py` to refresh the contents and release index.
 2. Describe every breaking change with affected callers, before/after names or
    code, and the action needed to migrate. Add affected component/guide IDs or
    public header paths so the release search finds the change. A breaking-change

@@ -11,6 +11,7 @@ import unittest
 from unittest import mock
 
 from generate_navigation import generate as generate_navigation
+from generate_navigation import render_release_index
 from validate_documentation import (
     cjk_hard_wrap_lines,
     english_document_cjk_lines,
@@ -62,6 +63,17 @@ class DocumentationValidationTest(unittest.TestCase):
             f"# {title}\n\n> **Status:** Current guide\n\nBody.\n",
             encoding="utf-8",
         )
+
+    def test_release_index_refreshes_links_without_changing_surrounding_text(self):
+        start = "Intro\n\n<!-- docs-nav:release-table:start -->\n"
+        end = "\n<!-- docs-nav:release-table:end -->\n\nRelease policy.\n"
+        groups = [{"title": "1.10", "pages": ["releases/v1.10.1.md", "releases/v1.10.0.md"]}]
+        expected = start + (
+            "| Series | Releases |\n|---|---|\n"
+            "| 1.10 | [1.10.1](v1.10.1.md) · [1.10.0](v1.10.0.md) |"
+        ) + end
+        self.assertEqual(render_release_index(start + "old table" + end, groups), expected)
+        self.assertEqual(render_release_index(expected, groups), expected)
 
     def _validate(self, git_output: str | None = None) -> list[str]:
         required_indexes = (
