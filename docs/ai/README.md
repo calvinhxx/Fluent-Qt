@@ -4,10 +4,10 @@
 
 [Documentation home](../README.md) · [Contents](../SUMMARY.md)
 
-Use the [portable FluentQt Skill](../../.agents/skills/build-fluentqt-gui/SKILL.md)
-to create, integrate, redesign, or repair a C++ or PySide6 interface. State the
-application outcome; the Skill routes to the relevant implementation and
-validation workflow.
+Use the [build-fluentqt-gui Skill](../../.agents/skills/build-fluentqt-gui/SKILL.md)
+to create, integrate, redesign, or fix a C++ or PySide6 interface. Describe the
+app goal you want, and the Skill picks the right templates, components, and
+validation checks.
 
 ## Choose an entry point
 
@@ -20,19 +20,17 @@ validation workflow.
 
 ## Set up a consumer project
 
-From a FluentQt checkout or packaged Skill, run the read-only `doctor` first.
-Then use `create` when a new project directory is needed:
+Run the read-only `doctor` command first, then use `create` if you need a new project directory:
 
 ```bash
 python3 tools/onboarding/fluentqt doctor --profile cpp
 python3 tools/onboarding/fluentqt create my-app --language cpp --starter workbench
 ```
 
-Use `--profile python` and `--language pyside6` for PySide6. The `workbench`
-starter owns its application window; `existing-qt` returns a panel in a
-host-owned Qt application. See the [onboarding reference](../../tools/onboarding/README.md)
-for toolchain discovery, dry runs, JSON reports, and first-window trials.
-Reuse a working environment for ordinary changes.
+Use `--profile python` and `--language pyside6` for PySide6. `workbench` sets
+up a standalone app window, while `existing-qt` generates a panel you can drop
+into an existing Qt app. See the [onboarding tools guide](../../tools/onboarding/README.md)
+for prefix detection, dry runs, JSON output, and first-window smoke tests.
 
 ## Find a component
 

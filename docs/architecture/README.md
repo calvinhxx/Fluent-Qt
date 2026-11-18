@@ -32,14 +32,14 @@ flowchart TD
 | Contract | Use it when changing |
 |---|---|
 | [QMLPlus](qmlplus.md) | Managed/computed bindings, conditional states, binding restoration, motion, or stateful anchors |
-| [Plugins](plugins.md) | Optional extension registration, dependency-ordered activation, borrowed ownership, or widget factories |
-| [QmlBridge](qml-bridge.md) | Optional QmlSession lifecycle, application QML hosting, borrowed context models, theme tokens, and explicit Quick initialization |
-| [Files and feedback](files-and-feedback.md) | File entry, file model ownership, transfer presentation, or actionable Toast |
+| [Plugins](plugins.md) | Optional extension registration, dependency-ordered activation, non-owning plugin lifetime, or widget factories |
+| [QmlBridge](qml-bridge.md) | Optional QmlSession lifecycle, application QML hosting, app-owned context models, theme tokens, and Quick initialization |
+| [Files and feedback](files-and-feedback.md) | File entry, file model lifecycle, transfer presentation, or actionable Toast |
 | [CodeBlock](code-block.md) | Read-only syntax colors, exact copying, bounded scrolling and Gallery reuse |
-| [Form state](form-state.md) | Borrowed Fields, validation tokens, edit tracking, submission and error focus |
-| [Date and time range picker](date-time-range-picker.md) | Nullable start/end inputs, minute precision, date-only mode, and query-boundary ownership |
-| [Charts](charts.md) | Model ownership, indexed projections, streaming, chart aggregation, or accessibility |
-| [Timeline and Stepper](sequence-controls.md) | Caller-owned sequences, step requests, layout, motion, and accessibility |
+| [Form state](form-state.md) | Non-owning Fields, validation tokens, edit tracking, submission and error focus |
+| [Date and time range picker](date-time-range-picker.md) | Nullable start/end inputs, minute precision, date-only mode, and query cleanup |
+| [Charts](charts.md) | Model lifetime, indexed projections, streaming, chart aggregation, or accessibility |
+| [Timeline and Stepper](sequence-controls.md) | App-owned sequences, step requests, layout, motion, and accessibility |
 | [Particles](particles.md) | Particle presets, scoped motion lifecycle, and CPU drawing |
 | [Spatial](spatial-view.md) | SpatialSession lifecycle, composition with SpatialView and SpatialItem, parameters, ownership, and native 2D fallback |
 | [Overlay behavior](overlay-behavior.md) | Popup, Flyout, Dialog, TeachingTip, dropdown, drawer, or another same-window transient surface |

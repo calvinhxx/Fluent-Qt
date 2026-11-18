@@ -1,12 +1,9 @@
 # Visual baselines
 
-The root PNGs are checked-in legacy representative evidence for the 1.7
-Light/Dark/RTL visual gate. They predate digest-bound independent approval
-metadata and do not record the Qt or OS version, display, or reviewer. This is
-not a screenshot farm. Approved
-multi-state GUI verification bundles, when added, live under `gui/` and keep
-their image, capture report, sanitized provenance, and approval metadata
-together.
+The root PNGs are legacy snapshots for the 1.7 Light/Dark/RTL visual gate and
+do not include environment metadata or reviewer records. Approved multi-state GUI
+verification bundles go under `gui/`, grouping the image, report, source hashes,
+and approval metadata together.
 
 ## Contents
 
