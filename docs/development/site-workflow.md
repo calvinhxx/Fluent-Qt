@@ -53,6 +53,13 @@ content, so returning browsers do not combine new markup with a cached
 controller. A controller load failure shows a retry action instead of leaving
 the example waiting.
 
+The homepage shows screenshots of the CheckBox property panel. To refresh them
+after a panel change, serve the site with its matching Gallery WASM build and
+run `python3 tools/site/capture_playground_showcase.py` (requires Playwright,
+Chromium and Pillow). It selects the checked state in the live panel and saves
+both languages in Light, Dark and High Contrast. Use `--url` for a different
+preview server.
+
 The machine-readable API catalog is generated from the installed-header allowlist,
 installed public headers, and the generated AI catalog. `site/api/catalog.json`
 remains as a snapshot for quality tools. CI refreshes it and the AI catalog

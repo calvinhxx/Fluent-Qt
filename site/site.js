@@ -1,6 +1,6 @@
 const translations = {
   "zh": {
-    "support.kicker": "09 / SPONSOR · 赛博投喂",
+    "support.kicker": "10 / SPONSOR · 赛博投喂",
     "support.title": "大佬，赏点 Token？",
     "support.intro": "开源用爱发电，奈何 AI 实在太费电。写 C++ 掉的是作者的头发，跑 Agent 烧的是真金白银的上下文。如果 Fluent-Qt 帮你的界面少踩了几个坑、省下了调样式的深夜，不妨投喂一点「赛博猫粮」——哪怕不够大模型塞牙缝，也能让维护者嘴角疯狂上扬。",
     "support.kofi": "Ko-fi",
@@ -78,7 +78,7 @@ const translations = {
     "hero.previewHelp": "1440 × 900 原始像素；窄窗口可滚动查看，按 Esc 关闭。",
     "hero.previewRegion": "原尺寸 Gallery 截图",
     "hero.closePreview": "关闭",
-    "spatial.kicker": "05 / SPATIAL · 可选 3D 扩展",
+    "spatial.kicker": "06 / SPATIAL · 可选 3D 扩展",
     "spatial.title": "Spatial 3D 透视视图",
     "spatial.copy": "把现有 QWidget 界面放进 SpatialView，为卡片加上 3D 透视、旋转与景深；普通 2D 应用无需开启。",
     "spatial.widgetsTitle": "控件不必重写",
@@ -209,7 +209,13 @@ const translations = {
     "images.deepseekDesktop": "使用 build-fluentqt-gui 构建的 DeepSeek Desktop 原生桌面参考界面",
     "images.settings": "Fluent-Qt Gallery 设置页面，完整展示主题、风格和窗口选项",
     "motion.label": "粒子背景",
-    "qml.kicker": "06 / QMLBRIDGE",
+    "playground.kicker": "03 / CHECKBOX",
+    "playground.title": "属性动态预览",
+    "playground.copy": "在支持属性预览的组件页，可以调节真实 Qt 控件的属性，查看效果，并复制对应的 C++ 或 PySide6 代码。",
+    "playground.tryAction": "试用 CheckBox",
+    "playground.docsAction": "浏览文档",
+    "playground.imageAlt": "CheckBox 属性面板显示已勾选的复选框和生成的 C++ 代码。",
+    "qml.kicker": "07 / QMLBRIDGE",
     "qml.title": "嵌入 QML 页面",
     "qml.copy": "通过 QmlBridge 在 Qt Widgets 窗口中加载 QML 页面，直接共享业务数据与 Fluent 主题。",
     "qml.guide": "接入指南",
@@ -221,7 +227,7 @@ const translations = {
     "spatial.stopped": "示例已停止"
   },
   "en": {
-    "support.kicker": "09 / SPONSOR · TOKEN FUND",
+    "support.kicker": "10 / SPONSOR · TOKEN FUND",
     "support.title": "Spare a few tokens?",
     "support.intro": "Open source runs on love, caffeine, and an alarming amount of LLM context. Writing C++ costs the maintainer’s hairline; wrangling AI agents costs cold, hard tokens. If Fluent-Qt saved your UI from a late-night stylesheet meltdown, toss a few coins into the token furnace—every bit keeps the commits flowing.",
     "support.kofi": "Ko-fi",
@@ -299,7 +305,7 @@ const translations = {
     "hero.previewHelp": "Original 1440 × 900 pixels. Scroll in smaller windows; press Esc to close.",
     "hero.previewRegion": "Full-size Gallery capture",
     "hero.closePreview": "Close",
-    "spatial.kicker": "05 / SPATIAL · OPTIONAL 3D EXTENSION",
+    "spatial.kicker": "06 / SPATIAL · OPTIONAL 3D EXTENSION",
     "spatial.title": "Spatial 3D perspective views",
     "spatial.copy": "Place existing QWidget layouts inside SpatialView to add 3D perspective, rotation, and depth. Ordinary 2D apps do not need to enable it.",
     "spatial.widgetsTitle": "Keep your widgets",
@@ -430,7 +436,13 @@ const translations = {
     "images.deepseekDesktop": "Native DeepSeek Desktop reference UI built with build-fluentqt-gui",
     "images.settings": "Complete Gallery settings page showing theme, style, and window options",
     "motion.label": "Particle background",
-    "qml.kicker": "06 / QMLBRIDGE",
+    "playground.kicker": "03 / CHECKBOX",
+    "playground.title": "Property preview",
+    "playground.copy": "On supported component pages, adjust a real Qt widget, see the result, and copy the generated C++ or PySide6 code.",
+    "playground.tryAction": "Try CheckBox",
+    "playground.docsAction": "Browse the docs",
+    "playground.imageAlt": "CheckBox property panel showing a checked box and its generated C++ code.",
+    "qml.kicker": "07 / QMLBRIDGE",
     "qml.title": "Embed QML pages",
     "qml.copy": "Use QmlBridge to host QML pages inside Qt Widgets windows while sharing app models and the active Fluent theme.",
     "qml.guide": "Integration guide",
@@ -718,7 +730,9 @@ function updateThemeMedia(theme) {
   const suffix = theme === "light" ? "Light" : "Dark";
 
   document.querySelectorAll("[data-theme-src-light][data-theme-src-dark]").forEach((image) => {
-    const source = image.dataset[`themeSrc${suffix}`];
+    const source = theme === "high-contrast" && image.dataset.themeSrcContrast
+      ? image.dataset.themeSrcContrast
+      : image.dataset[`themeSrc${suffix}`];
     if (source && image.getAttribute("src") !== source) image.setAttribute("src", source);
   });
 

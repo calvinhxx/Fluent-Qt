@@ -2541,6 +2541,71 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
   line-height: 1.55;
 }
 
+/* Interactive Property Preview showcase section on the homepage. */
+.playground-showcase-section {
+  position: relative;
+  overflow: hidden;
+  padding-block: 112px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse 52% 58% at 14% 26%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 62%),
+    var(--white);
+}
+
+.playground-showcase-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  align-items: center;
+  gap: 52px;
+}
+
+.playground-showcase-copy {
+  min-width: 0;
+}
+
+.playground-showcase-copy h2 {
+  max-width: 520px;
+  font-size: clamp(36px, 3.8vw, 54px);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+html[data-site-language="zh"] .playground-showcase-copy h2 {
+  max-width: 520px;
+  font-size: clamp(30px, 3.05vw, 40px);
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.playground-showcase-intro {
+  margin-top: 22px;
+  color: var(--section-copy);
+  line-height: 1.78;
+}
+
+.playground-showcase-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  margin-top: 30px;
+}
+
+.playground-showcase-links .text-link {
+  margin-top: 0;
+}
+
+.playground-showcase-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
 .download-section {
   padding-block: 126px;
   background:
@@ -3665,8 +3730,8 @@ html[data-site-language="zh"] [data-lang-en] {
     margin: 44px 0 0;
   }
 
-  .spatial-layout, .qml-layout { grid-template-columns: minmax(0, 1fr); gap: 44px; }
-  .spatial-copy { max-width: 640px; }
+  .spatial-layout, .qml-layout, .playground-showcase-layout { grid-template-columns: minmax(0, 1fr); gap: 44px; }
+  .spatial-copy, .playground-showcase-copy { max-width: 640px; }
   .spatial-demo { width: 100%; max-width: 660px; margin-inline: auto; }
 
   .spec-strip { padding-bottom: 72px; }
@@ -3676,6 +3741,7 @@ html[data-site-language="zh"] [data-lang-en] {
   .component-section,
   .quick-start-section,
   .gallery-section,
+  .playground-showcase-section,
   .ai-build-section,
   .download-section {
     padding-block: 96px;
@@ -3831,9 +3897,25 @@ html[data-site-language="zh"] [data-lang-en] {
   .component-section,
   .quick-start-section,
   .gallery-section,
+  .playground-showcase-section,
   .ai-build-section,
   .download-section {
     padding-block: 76px;
+  }
+
+  .playground-showcase-copy h2 {
+    font-size: clamp(28px, 8.2vw, 36px);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  html[data-site-language="zh"] .playground-showcase-copy h2 {
+    font-size: clamp(24px, 7.2vw, 31px);
+  }
+
+  .playground-showcase-links {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   html[data-site-language="zh"] .spatial-copy h2 {
