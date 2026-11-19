@@ -831,6 +831,16 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 errors = self.workflow_errors_with_replacement('ci-wasm.yml', before, after)
                 self.assertTrue(any('exact-input build cache contract' in error for error in errors), errors)
 
+    def test_wasm_compiler_cache_only_restores_objects_and_keeps_prs_read_only(self):
+        for before, after, diagnostic in (
+            ("path: ${{ runner.temp }}/wasm-ccache", "path: build/wasm", "compiler cache"),
+            ("&& github.event_name != 'pull_request'", "|| github.event_name == 'pull_request'", "compiler cache"),
+            ("CCACHE_COMPILERCHECK=content", "CCACHE_COMPILERCHECK=none", "configure/build step"),
+        ):
+            with self.subTest(change=after):
+                errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
+                self.assertTrue(any(diagnostic in error for error in errors), errors)
+
     def test_wasm_cache_only_skips_compilation_not_consumer_or_browser_checks(self):
         for before, after, diagnostic in (
             ("        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}\n", "        if: false\n", 'configure/build'),
