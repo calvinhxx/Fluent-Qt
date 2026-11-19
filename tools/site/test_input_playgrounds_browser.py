@@ -19,10 +19,15 @@ def load_browser_contract():
     return module
 
 
+def registered_routes():
+    descriptors = ROOT / 'app/assets/playgrounds/components.json'
+    return [item['component'] for item in json.loads(descriptors.read_text(encoding='utf-8'))]
+
+
 def run(browser, base_url, output, screenshots=False, routes=None):
     audit = load_browser_contract().load_audit().run
     if routes is None:
-        routes = [item['component'] for item in json.loads((ROOT / 'app/assets/playgrounds/components.json').read_text(encoding='utf-8'))]
+        routes = registered_routes()
     return audit(browser, base_url, output, screenshots, routes=routes)
 
 

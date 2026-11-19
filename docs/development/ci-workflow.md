@@ -117,8 +117,8 @@ changes to its runtime, shell, or browser helpers still select that module.
 The mixed UI/runtime scripts `site/site.js` and `site/spatial-showcase.js` also
 keep the WASM lane because they own real iframe lifecycle and host messages.
 The component preview templates, `component_docs.py`, and `site/api/`'s
-`component.js`, `component.css`, and `playground.js` use the same lane. Its Gallery
-browser group checks the Button property editor against the built Qt payload,
+`component.js`, `component.css`, and `playground.js` use the same lane. Its full
+browser suite checks the Button property editor against the built Qt payload,
 including accepted values, code copying, stale replies, and recovery. Frontend
 changes can reuse a matching compiled payload; they still run the browser checks.
 
@@ -138,8 +138,8 @@ corrupt or mismatched entry triggers normal compilation. Cache transport errors
 also fall back to compilation; a save failure does not fail validated output.
 The first run after adopting or changing the cache format needs a normal build.
 
-This is a build cache, not reusable test approval. Both browser groups, wide
-viewport checks, Spatial fallback checks and the installed consumer still run.
+After a cache hit, the current run executes its browser groups, wide viewport,
+Spatial fallback and installed-consumer checks.
 The new run stages its own input artifact and publishes it only after those
 checks pass. `build-info.json` keeps `commit` as the current validation/deployment
 commit, records the actual compiler source as `build_commit`, and includes
@@ -147,17 +147,18 @@ commit, records the actual compiler source as `build_commit`, and includes
 WASM artifacts. Gallery embeds `tools/site/release-history.json` for offline
 reading. Editing that file changes the build fingerprint.
 
-Browser failures retain diagnostics for both groups, including chart-workbench
+Browser failures retain diagnostics for each group, including chart-workbench
 screenshots. The log includes the failing Python call stack. Retrying an
 intermittent failure must not require discarding successful checks or rebuilding
 their shared input.
 
-Full validation sends the same staged files to two Chromium runners. One tests
-the Gallery, examples, wide viewport and Spatial fallback. The other tests
-command menus, the command palette, forms and DataGrid, keeping their failure
-diagnostics together. Fast validation uses the Gallery runner alone. Pages
-receives the tested files after every selected group passes. Each browser
-contract logs its duration.
+Full validation sends the same staged files to five parallel Chromium jobs.
+Gallery owns route traversal, examples, wide viewport and Spatial fallback.
+Interaction owns command menus, the command palette, forms and DataGrid.
+Three playground jobs divide the registered component editors in catalog order
+using round-robin assignment. The first also checks Button, layout, loading and
+editor entry points. Fast validation uses the Gallery job alone. Pages receives
+the tested files after every selected group passes.
 
 Use CMake aggregate targets rather than duplicating lists in YAML:
 `fluent_qt_ci_fast_tests`, `fluent_qt_ci_full_tests`, and

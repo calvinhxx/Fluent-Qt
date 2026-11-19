@@ -345,7 +345,7 @@ It checks native canvas input, read-only/disabled behavior and both generated la
 `cases.json` with the configurations and source used by the test.
 Both browser scripts disable Chromium's default headless scrollbar hiding, so
 captures include the real scrollbars and their position can be reviewed.
-The shared `playground_interaction_audit.py` contract visits all 95 registered descriptors and checks each visible
+The shared `playground_interaction_audit.py` contract visits every registered descriptor and checks each visible
 editor, dependent fields, value readback, both generated languages, source
 isolation, and exact reset. Tag lists and selected items use bounded lists,
 and TextEdit has explicit adapters for its method-based content APIs.
@@ -440,8 +440,11 @@ The Gallery owns condition-driven browser checks selected by a query parameter:
 
 The default local command runs all checks for its tier. In full CI,
 `--group interaction` runs command menus, the command palette, forms and
-DataGrid on a separate runner. The `gallery` group runs the remaining checks
-and the 1920×1080 `--mode viewport` pass. The wide pass exercises only the
+DataGrid. The three groups `--group playground-1`, `playground-2` and
+`playground-3` split the component editors, keeping all checks for a component
+on the same runner. Each writes its own subdirectory under
+`component-playground-validation/`. The `gallery` group runs the remaining
+checks and the 1920×1080 `--mode viewport` pass. The wide pass exercises the
 size-dependent Gallery and base Hello World pages.
 
 Website theme cycling and persistence are covered by the

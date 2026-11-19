@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from textwrap import dedent
@@ -15,6 +16,7 @@ from ci_action_policy import (
     normalize_action_references,
     required_action_errors,
 )
+from wasm_component_playground import PLAYGROUND_GROUPS
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -550,9 +552,10 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     if ("    needs: build" not in job_level_lines(browser)
             or "    needs: [build, browser]" not in job_level_lines(publish)):
         errors.append("ci-wasm.yml must publish only after the build and every browser group pass")
-    matrix = """        group: ${{ fromJSON(inputs.mode == 'full' && '["gallery","interaction"]' || '["gallery"]') }}"""
+    full_groups = json.dumps(["gallery", "interaction", *PLAYGROUND_GROUPS], separators=(",", ":"))
+    matrix = """        group: ${{ fromJSON(inputs.mode == 'full' && '%s' || '["gallery"]') }}""" % full_groups
     if matrix not in uncommented_workflow_lines(browser):
-        errors.append("ci-wasm.yml full mode must run both browser groups and fast mode only Gallery")
+        errors.append("ci-wasm.yml full mode must run every browser group and fast mode only Gallery")
     for job, step, path in ((browser, "Download browser input", "build/wasm/app"),
                             (publish, "Download tested browser input", "build/wasm-pages")):
         if uncommented_workflow_lines(named_step_section(job, step))[1:] != [

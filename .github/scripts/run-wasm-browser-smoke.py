@@ -28,7 +28,7 @@ from wasm_tag_input import run_tag_input_contract
 from wasm_tree_select import run_tree_select_contract
 from wasm_chart_workbench import run_chart_workbench_contract
 from wasm_diagnostics import run_diagnostics_contract
-from wasm_component_playground import run_component_playground_contract
+from wasm_component_playground import PLAYGROUND_GROUPS, run_component_playground_contract
 
 
 DEFAULT_RENDER_PIXEL_BUDGET = 1_600_000
@@ -53,8 +53,8 @@ def parse_args() -> argparse.Namespace:
         help="viewport repeats the size-dependent Gallery and base Hello World pages.",
     )
     parser.add_argument(
-        "--group", choices=("all", "gallery", "interaction"), default="all",
-        help="Run the complete local suite or one CI group. Interaction requires full mode.",
+        "--group", choices=("all", "gallery", "interaction", *PLAYGROUND_GROUPS), default="all",
+        help="Run the complete local suite or one CI group. Only Gallery runs in fast mode.",
     )
     parser.add_argument(
         "--device-scale-factor",
@@ -662,8 +662,8 @@ def run_timed_contract(contract: Callable[..., object], *args: object) -> None:
 def run_fixed_viewport_contracts(
     mode: str, browser: object, base_url: str, root: Path, group: str = "all",
 ) -> None:
-    if group == "interaction" and mode != "full":
-        raise ValueError("The interaction browser group requires full mode")
+    if group not in ("all", "gallery") and mode != "full":
+        raise ValueError(f"The {group} browser group requires full mode")
     if mode == "viewport":
         return
     if mode == "full":
@@ -679,11 +679,13 @@ def run_fixed_viewport_contracts(
             ("gallery", run_tree_select_contract, "tree-select-validation"),
             ("gallery", run_chart_workbench_contract, "chart-workbench-validation"),
             ("gallery", run_diagnostics_contract, "diagnostics-validation"),
-            ("gallery", run_component_playground_contract, "component-playground-validation"),
         ):
             if group in ("all", owner):
                 run_timed_contract(contract, browser, base_url, root / artifact_dir)
-    if group == "interaction":
+        if group == "all" or group in PLAYGROUND_GROUPS:
+            run_timed_contract(run_component_playground_contract, browser, base_url,
+                               root / "component-playground-validation", group)
+    if group not in ("all", "gallery"):
         return
 
     run_timed_contract(
@@ -725,10 +727,10 @@ def run_smoke(
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
-            if group == "interaction":
+            if group not in ("all", "gallery"):
                 run_fixed_viewport_contracts(mode, browser, base_url, root, group)
                 browser.close()
-                print("WebAssembly interaction browser checks passed")
+                print(f"WebAssembly {group} browser checks passed")
                 return
             page = browser.new_page(
                 viewport={"width": viewport_width, "height": viewport_height},

@@ -841,9 +841,10 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 errors = self.workflow_errors_with_replacement('ci-wasm.yml', before, after)
                 self.assertTrue(any(diagnostic in error for error in errors), errors)
 
-    def test_wasm_pages_waits_for_both_full_groups_on_the_same_build_input(self):
+    def test_wasm_pages_waits_for_all_full_groups_on_the_same_build_input(self):
         for before, after, diagnostic in (
-            ('["gallery","interaction"]', '["gallery"]', "both browser groups"),
+            (',"interaction"', '', "every browser group"),
+            (',"playground-2"', '', "every browser group"),
             ("needs: [build, browser]", "needs: build", "every browser group"),
             ("fluentqt-wasm-input-${{ needs.build.outputs.payload_attempt }}",
              "fluentqt-wasm-input-${{ github.run_attempt }}", "same build attempt"),
@@ -856,7 +857,8 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
 
     def test_wasm_browser_steps_invoke_the_selected_tier_group_and_viewport(self):
         job = MODULE.job_section(MODULE.read_workflow("ci-wasm.yml"), "browser")
-        for mode, group in (("fast", "gallery"), ("full", "gallery"), ("full", "interaction")):
+        full_groups = ("gallery", "interaction", *MODULE.PLAYGROUND_GROUPS)
+        for mode, group in [("fast", "gallery")] + [("full", group) for group in full_groups]:
             for name in ("Run browser smoke", "Check wide viewport"):
                 step = MODULE.named_step_section(job, name)
                 wide = name == "Check wide viewport"

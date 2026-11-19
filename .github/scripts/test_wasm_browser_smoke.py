@@ -52,13 +52,35 @@ class BrowserTierTest(unittest.TestCase):
             MODULE.run_list_detail_contract, MODULE.run_auto_suggest_contract,
             MODULE.run_gallery_search_contract, MODULE.run_tag_input_contract,
             MODULE.run_tree_select_contract, MODULE.run_chart_workbench_contract,
-            MODULE.run_diagnostics_contract, MODULE.run_component_playground_contract, *self.contracts("fast"),
+            MODULE.run_diagnostics_contract, *self.contracts("fast"),
         ])
-        self.assertCountEqual(interaction + gallery, self.contracts("full"))
+        self.assertCountEqual(interaction + gallery + [MODULE.run_component_playground_contract],
+                              self.contracts("full"))
+        for group in MODULE.PLAYGROUND_GROUPS:
+            with mock.patch.object(MODULE, "run_timed_contract") as run:
+                browser = object()
+                MODULE.run_fixed_viewport_contracts("full", browser, "url", Path("output"), group)
+                run.assert_called_once_with(MODULE.run_component_playground_contract, browser, "url",
+                                            Path("output/component-playground-validation"), group)
         for mode in ("fast", "viewport"):
             self.assertEqual(self.contracts(mode, "gallery"), self.contracts(mode))
-            with self.assertRaisesRegex(ValueError, "requires full"):
-                self.contracts(mode, "interaction")
+            for group in ("interaction", *MODULE.PLAYGROUND_GROUPS):
+                with self.assertRaisesRegex(ValueError, "requires full"):
+                    self.contracts(mode, group)
+
+    def test_playground_shards_match_the_unsharded_suite_including_new_routes(self):
+        from wasm_component_playground import playground_selection
+        root = Path(__file__).resolve().parents[2]
+        descriptors = json.loads((root / "app/assets/playgrounds/components.json").read_text(encoding="utf-8"))
+        registered = [item["component"] for item in descriptors]
+        self.assertNotIn("button", registered)  # The shared editor suite owns Button.
+        self.assertEqual(len(set(registered)), len(registered))
+        for routes in (registered, [*registered, "future-component"]):
+            with self.subTest(count=len(routes)):
+                self.assertEqual(playground_selection(routes, "all"), (True, routes))
+                shards = [playground_selection(routes, group) for group in MODULE.PLAYGROUND_GROUPS]
+                self.assertEqual(sum(shared for shared, _ in shards), 1)
+                self.assertCountEqual([route for _, subset in shards for route in subset], routes)
 
 
 class MinimalExamplePresentationTest(unittest.TestCase):
