@@ -1,14 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <title>Stepper</title>
   <defs>
-    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#669ce5" />
-      <stop offset="1" stop-color="#457bc8" />
+    <linearGradient id="tile" x1="3" y1="3" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd90c" />
+      <stop offset="1" stop-color="#f4a800" />
     </linearGradient>
   </defs>
-  <rect x="3" y="3" width="66" height="66" rx="16" fill="url(#tile)" />
-  <path d="M24 32h24" stroke="#fff" stroke-width="2.5" />
-  <circle cx="19" cy="32" r="6" fill="#fff" />
-  <circle cx="36" cy="32" r="6" fill="#fff" />
-  <circle cx="53" cy="32" r="6" fill="url(#tile)" stroke="#fff" stroke-width="2.5" />
-  <path d="M15 47h8M32 47h8M49 47h8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" />
+  <rect x="2" y="14" width="68" height="44" rx="3" fill="url(#tile)" />
+  <path d="M16 32h20" stroke="#fff" stroke-width="3" />
+  <path d="M36 32h14" stroke="#bc7900" stroke-width="3" />
+  <circle cx="16" cy="32" r="6.5" fill="#bc7900" />
+  <path d="m12.5 32 2.5 2.5 4.5-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="36" cy="32" r="6.5" fill="#fff" />
+  <circle cx="56" cy="32" r="5.5" fill="none" stroke="#bc7900" stroke-width="3" />
+  <path d="M12 46h8m12 0h8m12 0h8" stroke="#bc7900" stroke-width="3" stroke-linecap="round" />
 </svg>
