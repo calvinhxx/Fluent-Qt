@@ -6,6 +6,8 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
+#include "components/layout/Divider.h"
+#include "components/windowing/WindowBackdrop.h"
 #include <QApplication>
 #include <QDebug>
 #include <QGraphicsOpacityEffect>
@@ -71,6 +73,30 @@ TEST_F(DialogTest, DefaultProperties)
     EXPECT_FALSE(dialog.isSmokeEnabled());
     EXPECT_EQ(dialog.shadowSize(), 16);
     EXPECT_DOUBLE_EQ(dialog.animationProgress(), 1.0);
+}
+
+TEST_F(DialogTest, DividersKeepTheDialogSurfaceOpaqueOnACompositedWindow)
+{
+    QWidget host;
+    host.setAttribute(Qt::WA_TranslucentBackground);
+    windowing::BackdropState backdrop;
+    backdrop.surfaceMode = windowing::BackdropSurfaceMode::CompositedTransparent;
+    windowing::publishWindowBackdropState(&host, backdrop);
+
+    Dialog dialog(&host);
+    layout::Divider divider(&dialog);
+    divider.resize(80, 1);
+    for (auto theme : {FluentElement::Light, FluentElement::Dark}) {
+        dialog.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        dialog.onThemeUpdated();
+        const QColor background = dialog.themeColorsRef().bgLayer;
+        QImage pixels(divider.size(), QImage::Format_ARGB32_Premultiplied);
+        pixels.fill(background);
+        divider.render(&pixels, QPoint(), QRegion(), QWidget::RenderFlags());
+        const QColor line = pixels.pixelColor(pixels.rect().center());
+        EXPECT_EQ(line.alpha(), 255);
+        EXPECT_NE(line, background);
+    }
 }
 
 TEST_F(DialogTest, Contract_OpenStateAndAliases)
