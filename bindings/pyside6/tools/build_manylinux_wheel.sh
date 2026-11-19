@@ -102,8 +102,13 @@ cmake -S "$repo_root" -B "$build_dir" \
     -DFLUENT_QT_PYSIDE6_AUDITWHEEL_VERSION="$FLUENTQT_AUDITWHEEL_VERSION" \
     -DBUILD_TESTING=ON
 cmake --build "$build_dir" \
-    --target fluentqt_pyside6_manylinux_wheel fluentqt_pyside6_gallery_wheel \
+    --target fluentqt_pyside6_manylinux_wheel \
     --parallel "${FLUENTQT_BUILD_PARALLEL:-4}"
+
+# The host writes the pure-Python archive with the same compressor used by
+# the other release platforms. Stage exactly the Gallery install component.
+cmake --install "$build_dir" --component FluentQtPySide6Gallery \
+    --prefix "$build_dir/gallery-stage"
 
 verify_args=(--generated-dir "$build_dir/bindings/pyside6/generated/_fluentqt")
 if [[ "${FLUENTQT_CHECK_BACKDROP_CONVERTER:-true}" == "true" ]]; then

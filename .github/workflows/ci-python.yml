@@ -1501,6 +1501,21 @@ jobs:
           mv "$report.tmp" "$report"
           python -m json.tool "$report"
 
+      - name: Package staged Linux Gallery wheel
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_dir="${{ matrix.manylinux_build_dir }}"
+          version="$(jq -er '.archive.metadata_version' "$build_dir/manylinux-audit.json")"
+          python bindings/pyside6/gallery/tools/build_gallery_wheel.py \
+            --package-dir "$build_dir/gallery-stage/fluentqt_gallery" \
+            --output-dir "${{ matrix.gallery_wheel_dir }}" \
+            --version "$version" \
+            --requires-python "${{ matrix.requires_python }}" \
+            --description-file bindings/pyside6/gallery/PYPI.md \
+            --license-file LICENSE --license-file THIRD_PARTY_NOTICES.md --license-file TRADEMARKS.md
+
       - name: Test wheel in a clean virtual environment
         shell: pwsh
         run: |
