@@ -4,7 +4,6 @@
 #include "components/dialogs_flyouts/Dialog.h"
 
 class QHBoxLayout;
-class QVBoxLayout;
 
 namespace fluent::gallery {
 
@@ -21,7 +20,6 @@ private:
     void fitWindow();
     QPointer<QWidget> m_host;
     QHBoxLayout* m_header = nullptr;
-    QVBoxLayout* m_entries = nullptr;
 };
 } // namespace fluent::gallery
 #endif

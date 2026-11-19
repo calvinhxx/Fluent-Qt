@@ -16,6 +16,7 @@
 #include <QImage>
 #include <QKeySequence>
 #include <QLabel>
+#include <QListView>
 #include <QLockFile>
 #include <QMenu>
 #include <QMenuBar>
@@ -1038,15 +1039,25 @@ TEST_F(GalleryShellFrameworkTest, WhatsNewReadsOfflineHistoryAndFitsAResizedWind
     ASSERT_TRUE(dialog);
     ASSERT_TRUE(dialog->isOpen());
     auto* close = dialog->findChild<Button*>(QStringLiteral("GalleryWhatsNew.Close"));
-    auto* scroll = dialog->findChild<QScrollArea*>(QStringLiteral("GalleryWhatsNew.History"));
+    auto* scroll = dialog->findChild<QListView*>(QStringLiteral("GalleryWhatsNew.History"));
     ASSERT_NE(close, nullptr);
     ASSERT_NE(scroll, nullptr);
+    const auto* model = scroll->model();
+    ASSERT_NE(model, nullptr);
+    ASSERT_GT(model->rowCount(), 1);
     QStringList text;
-    for (auto* label : scroll->findChildren<QLabel*>())
-        text << label->text();
-    EXPECT_TRUE(text.contains(QStringLiteral("v1.11.4")));
-    EXPECT_TRUE(text.contains(QStringLiteral("Report a problem from Gallery")));
-    EXPECT_FALSE(text.join(QLatin1Char(' ')).contains(QStringLiteral("Snap Layouts")));
+    for (int row = 0; row < model->rowCount(); ++row) {
+        const auto index = model->index(row, 0);
+        EXPECT_EQ(scroll->indexWidget(index), nullptr);
+        text << index.data(Qt::AccessibleTextRole).toString() << index.data(Qt::AccessibleDescriptionRole).toString();
+    }
+    const QString history = text.join(QLatin1Char('\n'));
+    EXPECT_TRUE(history.contains(QStringLiteral("v1.11.4")));
+    EXPECT_TRUE(history.contains(QStringLiteral("Report a problem from Gallery")));
+    EXPECT_FALSE(history.contains(QStringLiteral("Snap Layouts")));
+    const auto first = model->index(0, 0);
+    const int wideHeight = scroll->visualRect(first).height();
+    ASSERT_GT(wideHeight, 0);
     auto snapshot = [&](const QString& variant) {
         if (tests::support::shouldCaptureVisualSnapshot()) {
             const QSize minimum = window.minimumSize();
@@ -1071,14 +1082,17 @@ TEST_F(GalleryShellFrameworkTest, WhatsNewReadsOfflineHistoryAndFitsAResizedWind
     EXPECT_TRUE(bar->dragExclusionRects().contains(entry->geometry()));
     EXPECT_LT(entry->geometry().right(), bar->width() - bar->systemReservedTrailingWidth());
     EXPECT_GT(scroll->verticalScrollBar()->maximum(), 0);
+    EXPECT_TRUE(QTest::qWaitFor([&] { return scroll->visualRect(first).height() > wideHeight; }));
     snapshot(QStringLiteral("compact"));
     scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
+    const auto last = model->index(model->rowCount() - 1, 0);
+    EXPECT_LE(scroll->visualRect(last).bottom(), scroll->viewport()->rect().bottom());
     EXPECT_TRUE(close->isVisible());
     QTest::keyClick(close, Qt::Key_Escape);
     ASSERT_TRUE(QTest::qWaitFor([&] { return dialog.isNull(); }));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("settings"));
     QTest::mouseClick(entry, Qt::LeftButton);
-    auto* reopened = window.findChild<QScrollArea*>(QStringLiteral("GalleryWhatsNew.History"));
+    auto* reopened = window.findChild<QListView*>(QStringLiteral("GalleryWhatsNew.History"));
     ASSERT_NE(reopened, nullptr);
     EXPECT_EQ(reopened->verticalScrollBar()->value(), 0);
     auto* closeAgain = window.findChild<Button*>(QStringLiteral("GalleryWhatsNew.Close"));
