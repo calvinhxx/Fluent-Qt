@@ -528,11 +528,14 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Fingerprint WebAssembly build inputs",
         "      - name: Restore exact WebAssembly build",
         "      - name: Verify restored WebAssembly build",
+        "      - name: Prepare WebAssembly compiler cache",
+        "      - name: Restore WebAssembly compiler cache",
         "      - name: Configure and build WebAssembly targets",
         "      - name: Install WebAssembly development SDK",
         "      - name: Verify installed FluentQt WebAssembly consumer",
         "      - name: Package reusable WebAssembly build",
         "      - name: Save trusted WebAssembly build",
+        "      - name: Save WebAssembly compiler cache",
         "      - name: Stage browser payload",
         "      - name: Upload browser input",
     ]
@@ -658,6 +661,40 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         errors.append("ci-wasm.yml must explicitly verify and fetch pinned Qt sources before offline configure")
 
     cache_steps = {
+        "Prepare WebAssembly compiler cache": '''
+            id: wasm-objects
+            if: ${{ steps.wasm-reuse.outputs.usable != 'true' && inputs.object_cache != 'disabled' }}
+            shell: bash
+            run: |
+              if ! command -v ccache >/dev/null && ! sudo apt-get install -y --no-install-recommends ccache; then
+                echo "::warning::ccache unavailable. Continuing with a clean build."
+                exit 0
+              fi
+              export CCACHE_DIR="$RUNNER_TEMP/wasm-ccache"
+              if ! mkdir -p "$CCACHE_DIR" || ! ccache --zero-stats; then
+                echo "::warning::Could not initialize ccache. Continuing with a clean build."
+                exit 0
+              fi
+              echo "key=fluentqt-wasm-objects-v1-$RUNNER_OS-$RUNNER_ARCH-$ImageVersion-qt$QT_VERSION-$EMSDK_REPOSITORY_REVISION" >> "$GITHUB_OUTPUT"
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+        ''',
+        "Restore WebAssembly compiler cache": '''
+            id: restore-objects
+            if: ${{ steps.wasm-objects.outputs.enabled == 'true' }}
+            continue-on-error: true
+            uses: actions/cache/restore@<commit>
+            with:
+              path: ${{ runner.temp }}/wasm-ccache
+              key: ${{ steps.wasm-objects.outputs.key }}
+        ''',
+        "Save WebAssembly compiler cache": '''
+            if: ${{ steps.wasm-objects.outputs.enabled == 'true' && steps.restore-objects.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.ref_type == 'branch')) && github.event_name != 'pull_request' }}
+            continue-on-error: true
+            uses: actions/cache/save@<commit>
+            with:
+              path: ${{ runner.temp }}/wasm-ccache
+              key: ${{ steps.wasm-objects.outputs.key }}
+        ''',
         "Validate browser checks": '''
             run: |
               python .github/scripts/test_wasm_build_cache.py
@@ -738,9 +775,17 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "        shell: bash",
         "        run: |",
         '          source "$EMSDK_ROOT/emsdk_env.sh"',
-        "          em++ --version",
-        "          cmake --preset wasm",
-        "          cmake --build --preset wasm --parallel 4",
+        '          em++ --version',
+        '          if [[ "${{ steps.wasm-objects.outputs.enabled }}" == "true" ]]; then',
+        '            export EM_COMPILER_WRAPPER=ccache CCACHE_DIR="$RUNNER_TEMP/wasm-ccache"',
+        '            export CCACHE_MAXSIZE=512M CCACHE_COMPILERCHECK=content',
+        '            ccache --zero-stats',
+        '          fi',
+        '          cmake --preset wasm',
+        '          cmake --build --preset wasm --parallel 4',
+        '          if [[ -n "${EM_COMPILER_WRAPPER:-}" ]]; then',
+        '            ccache --show-stats',
+        '          fi',
     ]
     if uncommented_workflow_lines(configure_step) != expected_configure_step:
         errors.append(

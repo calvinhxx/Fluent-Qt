@@ -138,7 +138,14 @@ corrupt or mismatched entry triggers normal compilation. Cache transport errors
 also fall back to compilation; a save failure does not fail validated output.
 The first run after adopting or changing the cache format needs a normal build.
 
-After a cache hit, the current run executes its browser groups, wide viewport,
+On a full build-cache miss, Emscripten uses ccache for individual Clang
+compilations. Resources are generated and applications are linked in the fresh
+build tree. The object cache holds up to 512 MB and is scoped by runner image,
+architecture, Qt version and emsdk revision. Main and manually dispatched
+branches can populate one snapshot per key. Pull requests only restore it.
+A manual dispatch with `object_cache=disabled` runs the original compiler path.
+
+After a full build-cache hit, the current run executes its browser groups, wide viewport,
 Spatial fallback and installed-consumer checks.
 The new run stages its own input artifact and publishes it only after those
 checks pass. `build-info.json` keeps `commit` as the current validation/deployment

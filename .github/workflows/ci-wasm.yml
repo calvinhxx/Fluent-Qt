@@ -8,6 +8,11 @@ on:
         type: choice
         options: [full, fast]
         default: full
+      object_cache:
+        description: Use the Emscripten compiler cache on a full build-cache miss.
+        type: choice
+        options: [enabled, disabled]
+        default: enabled
       compare_chromium:
         description: Run the hosted setup and the preinstalled Chromium image on the same build.
         type: boolean
@@ -186,14 +191,48 @@ jobs:
           fi
           echo "usable=$usable" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare WebAssembly compiler cache
+        id: wasm-objects
+        if: ${{ steps.wasm-reuse.outputs.usable != 'true' && inputs.object_cache != 'disabled' }}
+        shell: bash
+        run: |
+          if ! command -v ccache >/dev/null && ! sudo apt-get install -y --no-install-recommends ccache; then
+            echo "::warning::ccache unavailable. Continuing with a clean build."
+            exit 0
+          fi
+          export CCACHE_DIR="$RUNNER_TEMP/wasm-ccache"
+          if ! mkdir -p "$CCACHE_DIR" || ! ccache --zero-stats; then
+            echo "::warning::Could not initialize ccache. Continuing with a clean build."
+            exit 0
+          fi
+          echo "key=fluentqt-wasm-objects-v1-$RUNNER_OS-$RUNNER_ARCH-$ImageVersion-qt$QT_VERSION-$EMSDK_REPOSITORY_REVISION" >> "$GITHUB_OUTPUT"
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Restore WebAssembly compiler cache
+        id: restore-objects
+        if: ${{ steps.wasm-objects.outputs.enabled == 'true' }}
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/wasm-ccache
+          key: ${{ steps.wasm-objects.outputs.key }}
+
       - name: Configure and build WebAssembly targets
         if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}
         shell: bash
         run: |
           source "$EMSDK_ROOT/emsdk_env.sh"
           em++ --version
+          if [[ "${{ steps.wasm-objects.outputs.enabled }}" == "true" ]]; then
+            export EM_COMPILER_WRAPPER=ccache CCACHE_DIR="$RUNNER_TEMP/wasm-ccache"
+            export CCACHE_MAXSIZE=512M CCACHE_COMPILERCHECK=content
+            ccache --zero-stats
+          fi
           cmake --preset wasm
           cmake --build --preset wasm --parallel 4
+          if [[ -n "${EM_COMPILER_WRAPPER:-}" ]]; then
+            ccache --show-stats
+          fi
 
       - name: Install WebAssembly development SDK
         if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}
@@ -235,6 +274,14 @@ jobs:
         with:
           path: build/wasm-reusable
           key: fluentqt-wasm-build-v1-${{ steps.wasm-inputs.outputs.digest }}
+
+      - name: Save WebAssembly compiler cache
+        if: ${{ steps.wasm-objects.outputs.enabled == 'true' && steps.restore-objects.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.ref_type == 'branch')) && github.event_name != 'pull_request' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/wasm-ccache
+          key: ${{ steps.wasm-objects.outputs.key }}
 
       - name: Stage browser payload
         shell: bash
