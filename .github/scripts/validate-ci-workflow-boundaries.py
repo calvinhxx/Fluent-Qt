@@ -675,7 +675,9 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
                 echo "::warning::Could not initialize ccache. Continuing with a clean build."
                 exit 0
               fi
-              echo "key=fluentqt-wasm-objects-v1-$RUNNER_OS-$RUNNER_ARCH-$ImageVersion-qt$QT_VERSION-$EMSDK_REPOSITORY_REVISION" >> "$GITHUB_OUTPUT"
+              prefix="fluentqt-wasm-objects-v2-$ImageOS-$RUNNER_ARCH-qt$QT_VERSION-$EMSDK_REPOSITORY_REVISION-"
+              echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+              echo "key=$prefix$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
               echo "enabled=true" >> "$GITHUB_OUTPUT"
         ''',
         "Restore WebAssembly compiler cache": '''
@@ -686,6 +688,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
             with:
               path: ${{ runner.temp }}/wasm-ccache
               key: ${{ steps.wasm-objects.outputs.key }}
+              restore-keys: ${{ steps.wasm-objects.outputs.prefix }}
         ''',
         "Save WebAssembly compiler cache": '''
             if: ${{ steps.wasm-objects.outputs.enabled == 'true' && steps.restore-objects.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.ref_type == 'branch')) && github.event_name != 'pull_request' }}

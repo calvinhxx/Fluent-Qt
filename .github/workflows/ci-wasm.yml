@@ -205,7 +205,9 @@ jobs:
             echo "::warning::Could not initialize ccache. Continuing with a clean build."
             exit 0
           fi
-          echo "key=fluentqt-wasm-objects-v1-$RUNNER_OS-$RUNNER_ARCH-$ImageVersion-qt$QT_VERSION-$EMSDK_REPOSITORY_REVISION" >> "$GITHUB_OUTPUT"
+          prefix="fluentqt-wasm-objects-v2-$ImageOS-$RUNNER_ARCH-qt$QT_VERSION-$EMSDK_REPOSITORY_REVISION-"
+          echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+          echo "key=$prefix$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
           echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - name: Restore WebAssembly compiler cache
@@ -216,6 +218,7 @@ jobs:
         with:
           path: ${{ runner.temp }}/wasm-ccache
           key: ${{ steps.wasm-objects.outputs.key }}
+          restore-keys: ${{ steps.wasm-objects.outputs.prefix }}
 
       - name: Configure and build WebAssembly targets
         if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}

@@ -140,9 +140,10 @@ The first run after adopting or changing the cache format needs a normal build.
 
 On a full build-cache miss, Emscripten uses ccache for individual Clang
 compilations. Resources are generated and applications are linked in the fresh
-build tree. The object cache holds up to 512 MB and is scoped by runner image,
-architecture, Qt version and emsdk revision. Main and manually dispatched
-branches can populate one snapshot per key. Pull requests only restore it.
+build tree. The object cache holds up to 512 MB and is scoped by Ubuntu release,
+architecture, Qt version and emsdk revision. Compatible runner image updates
+share objects; ccache checks Clang by content plus the compiler inputs. Main
+and manually dispatched branches can populate one weekly snapshot per key. Pull requests only restore it.
 A manual dispatch with `object_cache=disabled` runs the original compiler path.
 
 After a full build-cache hit, the current run executes its browser groups, wide viewport,
