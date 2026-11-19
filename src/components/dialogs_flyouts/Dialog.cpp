@@ -627,6 +627,9 @@ void Dialog::hideSmokeOverlay()
 
 void Dialog::onThemeUpdated()
 {
+    const QColor surfaceColor = themeColorsRef().bgLayer;
+    if (property("fluentSurfaceColor").value<QColor>() != surfaceColor)
+        setProperty("fluentSurfaceColor", surfaceColor);
     update();
     ::fluent::overlay::refreshFluentDescendants(this);
     if (auto* smokeOverlay = m_overlayCoordinator->scrim()) {
