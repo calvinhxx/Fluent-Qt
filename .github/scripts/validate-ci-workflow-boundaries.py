@@ -556,6 +556,17 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     matrix = """        group: ${{ fromJSON(inputs.mode == 'full' && '%s' || '["gallery"]') }}""" % full_groups
     if matrix not in uncommented_workflow_lines(browser):
         errors.append("ci-wasm.yml full mode must run every browser group and fast mode only Gallery")
+    runtime_matrix = """        runtime: ${{ fromJSON(inputs.compare_chromium && '["host","image"]' || '["host"]') }}"""
+    active_browser = "\n".join(uncommented_workflow_lines(browser)) + "\n"
+    container = re.search(r"^    container:\n((?:^      .+\n)*)", active_browser, re.MULTILINE)
+    pinned_image = r"mcr\.microsoft\.com/playwright/python@sha256:[0-9a-f]{64}"
+    expected_container = (
+        r"      image: \$\{\{ matrix\.runtime == 'image' && '" + pinned_image + r"' \|\| '' \}\}\n"
+        r"      options: --init --shm-size=1g\n"
+    )
+    if (runtime_matrix not in active_browser.splitlines() or not container
+            or not re.fullmatch(expected_container, container[1])):
+        errors.append("ci-wasm.yml must compare a pinned Chromium image only on request alongside the hosted baseline")
     for job, step, path in ((browser, "Download browser input", "build/wasm/app"),
                             (publish, "Download tested browser input", "build/wasm-pages")):
         if uncommented_workflow_lines(named_step_section(job, step))[1:] != [
@@ -768,7 +779,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "        if: ${{ always() }}",
         "        uses: actions/upload-artifact@<commit>",
         "        with:",
-        "          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}",
+        "          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}${{ matrix.runtime == 'image' && '-image' || '' }}",
         "          path: |",
         "            build/wasm/command-palette-validation",
         "            build/wasm/command-menu-validation",
@@ -810,7 +821,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "        if: ${{ always() && matrix.group == 'gallery' }}",
         "        uses: actions/upload-artifact@<commit>",
         "        with:",
-        "          name: fluentqt-wasm-spatial-software-fallback",
+        "          name: fluentqt-wasm-spatial-software-fallback${{ matrix.runtime == 'image' && '-image' || '' }}",
         "          path: build/spatial-validation/ci-software-fallback",
         "          overwrite: true",
         "          if-no-files-found: ignore",
@@ -1021,9 +1032,10 @@ def canonical_job_level_errors(job: str, context: str) -> list[str]:
         )
         return errors
     seen: set[str] = set()
+    allowed = ALLOWED_JOB_LEVEL_KEYS | ({"container"} if context == "ci-wasm.yml browser" else set())
     for line in job_level_lines(job):
         match = CANONICAL_JOB_LEVEL_ENTRY.fullmatch(line)
-        if not match or match.group("name") not in ALLOWED_JOB_LEVEL_KEYS:
+        if not match or match.group("name") not in allowed:
             errors.append(
                 f"{context} job must use an allowed plain job-level key: {line.strip()}"
             )
@@ -1376,6 +1388,7 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
         "          CPP_TEST_LABEL_REGEX: ${{ inputs.cpp_test_label_regex }}",
         "          CPP_TEST_TARGETS: ${{ inputs.cpp_test_targets }}",
         "          CANDIDATE_OWNS_WINDOWS_ARM64: ${{ inputs.candidate_owns_windows_arm64 }}",
+        "          CANDIDATE_OWNS_LINUX_DEBS: ${{ inputs.candidate_owns_linux_debs }}",
         "        shell: bash",
         "        run: |",
         "          set -euo pipefail",
@@ -1845,6 +1858,7 @@ def validate_boundaries() -> list[str]:
         "run_compatibility_validation: true",
         "run_macos_release_validation: ${{ needs.plan.outputs.release_candidate_expected != 'true' }}",
         "candidate_owns_windows_arm64: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}",
+        "candidate_owns_linux_debs: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}",
         'refs/tags/$tag^{tag}',
         'docs/releases/$tag.md',
         "release_max_parallel: 4",

@@ -1,6 +1,17 @@
 name: WebAssembly CI module
 
 on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Browser coverage for the paired experiment.
+        type: choice
+        options: [full, fast]
+        default: full
+      compare_chromium:
+        description: Run the hosted setup and the preinstalled Chromium image on the same build.
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       mode:
@@ -240,9 +251,13 @@ jobs:
           retention-days: 7
 
   browser:
-    name: Chromium / ${{ matrix.group }} / ${{ inputs.mode }}
+    name: Chromium / ${{ matrix.group }} / ${{ inputs.mode }}${{ matrix.runtime == 'image' && ' (image)' || '' }}
     needs: build
     runs-on: ubuntu-24.04
+    container:
+      # Playwright Python v1.58.0-noble, including its matching Chromium build.
+      image: ${{ matrix.runtime == 'image' && 'mcr.microsoft.com/playwright/python@sha256:678457c4c323b981d8b4befc57b95366bb1bb6aa30057b1269f6b171e8d9975a' || '' }}
+      options: --init --shm-size=1g
     timeout-minutes: ${{ inputs.mode == 'full' && matrix.group != 'interaction' && 45 || 25 }}
     permissions:
       actions: read
@@ -250,6 +265,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        runtime: ${{ fromJSON(inputs.compare_chromium && '["host","image"]' || '["host"]') }}
         group: ${{ fromJSON(inputs.mode == 'full' && '["gallery","interaction","playground-1","playground-2","playground-3"]' || '["gallery"]') }}
     steps:
       - name: Checkout
@@ -268,9 +284,18 @@ jobs:
       - name: Verify browser input
         env:
           MODE: ${{ inputs.mode }}
-        run: jq -e --arg sha "$GITHUB_SHA" --arg mode "$MODE" '.commit == $sha and .validation_mode == $mode' build/wasm/app/build-info.json
+        shell: python3 {0}
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          info = json.loads(Path("build/wasm/app/build-info.json").read_text())
+          if (info["commit"], info["validation_mode"]) != (os.environ["GITHUB_SHA"], os.environ["MODE"]):
+              raise SystemExit("Unexpected commit or browser validation mode")
 
       - name: Set up Python
+        if: ${{ matrix.runtime == 'host' }}
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
@@ -279,12 +304,14 @@ jobs:
         run: python -m pip install --disable-pip-version-check "playwright==1.58.0" "Pillow==12.1.1"
 
       - name: Cache Chromium
+        if: ${{ matrix.runtime == 'host' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/ms-playwright
           key: fluentqt-playwright-${{ runner.os }}-${{ runner.arch }}-1.58.0
 
       - name: Install Chromium runtime
+        if: ${{ matrix.runtime == 'host' }}
         shell: bash
         run: python -m playwright install --with-deps chromium
 
@@ -312,7 +339,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}
+          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}${{ matrix.runtime == 'image' && '-image' || '' }}
           path: |
             build/wasm/command-palette-validation
             build/wasm/command-menu-validation
@@ -345,7 +372,7 @@ jobs:
         if: ${{ always() && matrix.group == 'gallery' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: fluentqt-wasm-spatial-software-fallback
+          name: fluentqt-wasm-spatial-software-fallback${{ matrix.runtime == 'image' && '-image' || '' }}
           path: build/spatial-validation/ci-software-fallback
           overwrite: true
           if-no-files-found: ignore

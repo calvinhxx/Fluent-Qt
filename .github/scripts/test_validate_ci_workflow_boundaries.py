@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
@@ -854,6 +855,34 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             with self.subTest(before=before):
                 errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
                 self.assertTrue(any(diagnostic in error for error in errors), errors)
+
+    def test_chromium_comparison_preserves_the_hosted_baseline(self):
+        workflow = MODULE.read_workflow("ci-wasm.yml")
+        for before, after in (("|| '[\"host\"]'", "|| '[\"image\"]'"),
+                              ("--shm-size=1g", "--privileged"), ("@sha256:", ":latest-")):
+            with self.subTest(after=after):
+                self.assertIn(before, workflow)
+                errors = MODULE.wasm_supply_chain_errors(workflow.replace(before, after, 1))
+                self.assertTrue(any("pinned Chromium image" in error for error in errors), errors)
+        browser = MODULE.job_section(workflow, "browser")
+        for name in ("Set up Python", "Cache Chromium", "Install Chromium runtime"):
+            self.assertIn("        if: ${{ matrix.runtime == 'host' }}", MODULE.named_step_section(browser, name))
+        self.assertNotIn("        if:", MODULE.named_step_section(browser, "Install browser test dependencies"))
+
+    def test_wasm_browser_accepts_only_the_requested_commit_and_tier(self):
+        job = MODULE.job_section(MODULE.read_workflow("ci-wasm.yml"), "browser")
+        step = MODULE.named_step_section(job, "Verify browser input")
+        self.assertNotIn("        if:", step)
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        with tempfile.TemporaryDirectory() as work:
+            info = Path(work) / "build/wasm/app/build-info.json"
+            info.parent.mkdir(parents=True)
+            env = dict(os.environ, GITHUB_SHA="a" * 40, MODE="full")
+            for commit, mode, accepted in (("a" * 40, "full", True), ("b" * 40, "full", False),
+                                           ("a" * 40, "fast", False)):
+                info.write_text(json.dumps({"commit": commit, "validation_mode": mode}))
+                result = subprocess.run([sys.executable, "-c", script], cwd=work, env=env, capture_output=True)
+                self.assertEqual(result.returncode == 0, accepted)
 
     def test_wasm_browser_steps_invoke_the_selected_tier_group_and_viewport(self):
         job = MODULE.job_section(MODULE.read_workflow("ci-wasm.yml"), "browser")

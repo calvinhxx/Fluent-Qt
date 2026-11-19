@@ -367,8 +367,9 @@ Before creating a stable tag:
    successful `Release ready` check; do not substitute a tree-equivalent run
    from the release branch or disable `require_ci` for a standard release.
    For an untagged release-ready version, the simultaneous Release Candidate
-   owns the macOS ARM64 CPython 3.11 wheel and the Windows ARM64 installer.
-   Full CI still runs the Windows ARM64 native platform tests.
+   owns the macOS ARM64 CPython 3.11 wheel, the Windows ARM64 installer, and
+   the Linux x64 and ARM64 Qt 6.2 DEBs. Full CI runs the Linux C++ suites
+   and the Windows ARM64 native platform tests.
    If the change touches CMake, tests, Qt compatibility, platform behavior, or
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).

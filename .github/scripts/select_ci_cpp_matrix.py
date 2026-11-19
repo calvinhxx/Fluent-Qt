@@ -17,7 +17,7 @@ CATALOG = Path(__file__).resolve().parents[1] / "ci-cpp-matrix.json"
 
 def select_matrix(
     catalog: dict[str, Any], mode: str, scope: str, labels: str, targets: str,
-    candidate_owns_package: bool = False,
+    candidate_owns_package: bool = False, candidate_owns_linux_debs: bool = False,
 ) -> dict[str, list[dict[str, Any]]]:
     if mode not in ("fast", "full"):
         raise ValueError(f"Unknown C++ validation tier: {mode}")
@@ -35,6 +35,8 @@ def select_matrix(
             continue
         job = dict(scenario)
         del job["mode"]
+        if candidate_owns_linux_debs and job["id"] in ("linux-x64-qt62-full", "linux-arm64-qt62-full"):
+            job["package"] = False
         if scope != "none" and job["id"] == f"linux-x64-qt62-{mode}":
             build_targets = job["build_targets"].split()
             if scope == "all":
@@ -56,6 +58,7 @@ if __name__ == "__main__":
             os.environ["VALIDATION_MODE"], os.environ["CPP_TEST_SCOPE"],
             os.environ["CPP_TEST_LABEL_REGEX"], os.environ["CPP_TEST_TARGETS"],
             os.environ["CANDIDATE_OWNS_WINDOWS_ARM64"] == "true",
+            os.environ.get("CANDIDATE_OWNS_LINUX_DEBS") == "true",
         )
     except (KeyError, OSError, ValueError) as error:
         sys.exit(f"error: {error}")

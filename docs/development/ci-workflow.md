@@ -160,6 +160,14 @@ using round-robin assignment. The first also checks Button, layout, loading and
 editor entry points. Fast validation uses the Gallery job alone. Pages receives
 the tested files after every selected group passes.
 
+To compare Chromium environments, dispatch `ci-wasm.yml` directly with
+`mode=full` and `compare_chromium=true`. The build stages one artifact for
+both sets of five jobs. The `(image)` jobs use the digest-pinned Ubuntu 24.04
+Playwright Python image. Compare each pair's complete job duration, including
+container initialization and diagnostic uploads, and the last successful browser
+job in each set. Inspect queue delays separately. The usual CI and Pages callers
+continue to use the hosted setup alone.
+
 Use CMake aggregate targets rather than duplicating lists in YAML:
 `fluent_qt_ci_fast_tests`, `fluent_qt_ci_full_tests`, and
 `fluent_qt_ci_windows_platform_tests`. When registering a test, choose its
@@ -294,12 +302,14 @@ report explicitly leaves hardware 3D unvalidated; GPU rendering and input need
 a capable graphics environment and separate native review.
 
 On an untagged release push with curated notes, Release Candidate owns the
-Windows ARM64 installer and the macOS ARM64 stable-ABI wheel. The Windows
-candidate requires live interface zoom and verifies the staged ARM64 runtime
-before the native installation test. Main CI keeps the Windows ARM64 native
-component tests. Full PR, manual, scheduled and already-tagged main runs keep
-the independent installer build. Bundle-enabled Python runs build one stable-ABI wheel per
-platform with its oldest supported CPython, then install and smoke-test that
+Windows ARM64 installer, both Qt 6.2 Linux DEBs, and the macOS ARM64 stable-ABI
+wheel. Both Linux full jobs still build Gallery and run their complete C++ test
+selection. The Windows candidate requires live interface zoom and verifies the
+staged ARM64 runtime before the native installation test. Main CI keeps the
+Windows ARM64 native component tests. Full PR, manual, scheduled and
+already-tagged main runs keep the independent installer build and both CI DEB
+uploads. Bundle-enabled Python runs build one stable-ABI wheel per platform
+with its oldest supported CPython, then install and smoke-test that
 same wheel on every newer interpreter in the lane's `test_python_versions`.
 The critical Windows ARM64 lane is queued first. Consult the wheel matrix for
 supported ABIs and the
