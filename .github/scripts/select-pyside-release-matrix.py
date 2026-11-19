@@ -56,9 +56,14 @@ def select_release_matrix(catalog: dict[str, Any]) -> dict[str, list[dict[str, A
         if not isinstance(scenario, dict):
             raise ValueError("every scenario must be an object")
         if scenario.get("release") is True and scenario.get("fast") is False:
-            selected.append(
-                {**scenario, "auditwheel_version": auditwheel_version}
-            )
+            build_dir = scenario["manylinux_build_dir"] or scenario["build_dir"]
+            wheelhouse = "manylinux-wheelhouse" if scenario["manylinux_build_dir"] else "wheelhouse"
+            selected.append({
+                **scenario,
+                "auditwheel_version": auditwheel_version,
+                "release_wheel_dir": f"{build_dir}/{wheelhouse}",
+                "gallery_wheel_dir": f"{build_dir}/gallery-wheelhouse",
+            })
 
     critical = [
         scenario

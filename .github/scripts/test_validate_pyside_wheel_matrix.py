@@ -294,7 +294,7 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
             errors,
         )
 
-    def test_manylinux_lane_reserves_time_for_second_build(self):
+    def test_manylinux_lane_reserves_time_for_build_and_acceptance(self):
         catalog = copy.deepcopy(self.catalog)
         scenario = next(
             item
@@ -306,7 +306,7 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
         errors = VALIDATOR.validate_catalog(catalog)
 
         self.assertTrue(
-            any("both native and manylinux builds" in error for error in errors),
+            any("manylinux build and native wheel acceptance" in error for error in errors),
             errors,
         )
 

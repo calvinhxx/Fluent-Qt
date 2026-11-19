@@ -2116,7 +2116,7 @@ def validate_boundaries() -> list[str]:
         ".github/scripts/select-pyside-release-matrix.py",
         ".github/scripts/assemble-pyside-release-bundle.py",
         "Prioritized representative scenarios:",
-        "name: Test representative PySide6 bindings\n        if: ${{ matrix.extended_acceptance == true }}",
+        "name: Test representative PySide6 bindings\n        if: ${{ runner.os != 'Linux' && matrix.extended_acceptance == true }}",
         "fluentqt-pyside6-qt624-cp310-linux-x64",
         "fluentqt-pyside6-qt624-cp310-windows-x64",
         "fluentqt-pyside6-qt693-cp311-abi3-macos-arm64",

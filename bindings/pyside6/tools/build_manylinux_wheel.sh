@@ -44,6 +44,7 @@ restore_build_ownership() {
 trap restore_build_ownership EXIT
 
 python_root="/opt/python/${FLUENTQT_PYTHON_TAG}-${FLUENTQT_PYTHON_TAG}"
+export PATH="$python_root/bin:$PATH"
 python="$python_root/bin/python"
 if [[ ! -x "$python" ]]; then
     echo "The manylinux image does not provide $python" >&2
@@ -67,6 +68,7 @@ dnf install -y \
     libxslt \
     libxcb-devel \
     libxkbcommon-devel \
+    vulkan-headers \
     mesa-libGL-devel
 
 "$python" -m pip install \
@@ -89,6 +91,8 @@ cmake -S "$repo_root" -B "$build_dir" \
     -DPython_EXECUTABLE="$python" \
     -DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON="$FLUENTQT_REQUIRES_PYTHON" \
     -DFLUENT_QT_BUILD_SPATIAL=ON \
+    -DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON \
+    -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
     -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
     -DFLUENT_QT_BUILD_EXAMPLES=OFF \
     -DFLUENT_QT_BUILD_GALLERY=OFF \
@@ -98,8 +102,15 @@ cmake -S "$repo_root" -B "$build_dir" \
     -DFLUENT_QT_PYSIDE6_AUDITWHEEL_VERSION="$FLUENTQT_AUDITWHEEL_VERSION" \
     -DBUILD_TESTING=ON
 cmake --build "$build_dir" \
-    --target fluentqt_pyside6_manylinux_wheel \
+    --target fluentqt_pyside6_manylinux_wheel fluentqt_pyside6_gallery_wheel \
     --parallel "${FLUENTQT_BUILD_PARALLEL:-4}"
+
+verify_args=(--generated-dir "$build_dir/bindings/pyside6/generated/_fluentqt")
+if [[ "${FLUENTQT_CHECK_BACKDROP_CONVERTER:-true}" == "true" ]]; then
+    verify_args+=(--check-backdrop-converter)
+fi
+"$python" "$repo_root/bindings/pyside6/tools/verify_generated_contracts.py" "${verify_args[@]}"
+ctest --test-dir "$build_dir" -C Release -L '^pyside$' --output-on-failure --no-tests=error
 
 wheel_count="$(find "$build_dir/manylinux-wheelhouse" -maxdepth 1 -type f -name '*.whl' | wc -l)"
 if [[ "$wheel_count" -ne 1 ]]; then
