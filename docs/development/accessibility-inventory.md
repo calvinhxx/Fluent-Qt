@@ -623,6 +623,11 @@ Saved window geometry records the applied level. Focus and limit-state
 contracts are covered by the Gallery shell and Python Gallery
 tests; native screen-reader announcements still require human verification.
 
+The Gallery’s What’s new dialog exposes each release as a read-only list item.
+Its accessible name includes the date, version, and headline. Its description
+contains the release notes. The C++ and Python Gallery shell tests check these
+model roles and that the list uses a delegate to display the entries.
+
 `CommandPalette` composes the native accessible search editor and model-backed
 `ListView` rows inside a same-window `Popup`. Row names include the command group
 and shortcut; enabled and checked states follow the borrowed `QAction`.

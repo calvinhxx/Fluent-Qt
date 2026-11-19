@@ -6981,8 +6981,35 @@ with (
         self.assertFalse(entries[0][0].isValid())
         self.assertTrue(entries[1][0].isValid())
 
+    def test_whats_new_reflows_long_history_and_can_revisit_the_first_release(self):
+        from PySide6.QtCore import QDate
+        from fluentqt_gallery import whats_new
+
+        notes = ["A long paragraph with enough words to wrap across several lines. " * 8]
+        releases = [(QDate(2026, 11, 18), f"1.12.{i}", f"Release {i}", notes) for i in range(64)]
+        with patch.object(whats_new, "_entries", return_value=releases):
+            view = whats_new._HistoryView(None)
+        self.addCleanup(delete_qobject, view)
+        view.resize(558, 400)
+        view.show()
+        model = view.model()
+        self.assertEqual(model.rowCount(), len(releases))
+        first, last = model.index(0, 0), model.index(len(releases) - 1, 0)
+        self.assertTrue(_wait_until(lambda: view.visualRect(first).height() > 0))
+        wide_height = view.visualRect(first).height()
+        wide_range = view.verticalScrollBar().maximum()
+        view.resize(380, 400)
+        self.assertTrue(_wait_until(lambda: view.verticalScrollBar().maximum() > wide_range))
+        narrow_height = view.visualRect(first).height()
+        self.assertGreater(narrow_height, wide_height)
+        view.scrollToBottom()
+        self.assertTrue(_wait_until(lambda: view.viewport().rect().contains(view.visualRect(last).bottomLeft())))
+        view.scrollToTop()
+        self.assertEqual(view.indexAt(QPoint(4, 4)), first)
+        self.assertEqual(view.visualRect(first).height(), narrow_height)
+        self.assertEqual(first.data(Qt.AccessibleDescriptionRole), notes[0])
+
     def test_whats_new_opens_from_compact_title_bar_and_keeps_route(self):
-        from PySide6.QtWidgets import QScrollArea
 
         window = GalleryWindow()
         window.resize(460, 500)
@@ -6998,9 +7025,14 @@ with (
             QTest.mouseClick(entry, Qt.LeftButton)
             dialog = window._title_content._updates_dialog
             self.assertTrue(_wait_until(lambda: dialog.isOpen()))
-            scroll = dialog.findChild(QScrollArea, "GalleryWhatsNew.History")
+            scroll = dialog.findChild(fluentqt.ListView, "GalleryWhatsNew.History")
             self.assertGreater(scroll.verticalScrollBar().maximum(), 0)
-            self.assertTrue(any(label.text() == "Report a problem from Gallery" for label in scroll.findChildren(QLabel)))
+            model = scroll.model()
+            indices = [model.index(row, 0) for row in range(model.rowCount())]
+            self.assertIn("Report a problem from Gallery", [index.data() for index in indices])
+            self.assertTrue(all(scroll.indexWidget(index) is None for index in indices))
+            self.assertTrue(any("v1.11.4" in index.data(Qt.AccessibleTextRole) for index in indices))
+            self.assertTrue(any(index.data(Qt.AccessibleDescriptionRole) for index in indices))
             self.assertGreaterEqual(dialog.y() + dialog.shadowSize(), bar.mapTo(window, QPoint(0, bar.height())).y() + 12)
             close = dialog.findChild(fluentqt.Button, "GalleryWhatsNew.Close")
             QTest.mouseClick(close, Qt.LeftButton)
