@@ -73,8 +73,9 @@ Modules upload artifacts into the caller's run. The
 [Pages workflow](../../.github/workflows/pages.yml) consumes the payload from
 main CI; its manual entry prepares both the website and Gallery for recovery.
 
-Website generation runs on pull requests as well as `main`. The planning job
-and website job install the pinned source formatter before preparing the
+The required website job runs the build, asset, hero-particle and Spatial
+showcase tests on pull requests and `main`. Both the planning and website
+jobs install the pinned source formatter before preparing the
 playground factories and descriptors, so clean runners do not depend on a
 developer's local formatter environment. The Gallery language gate validates
 localized category labels as well as property and preset labels.

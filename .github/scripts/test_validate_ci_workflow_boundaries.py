@@ -290,6 +290,9 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         for command in (
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             'python tools/site/test_generate_api_reference.py',
+            'python tools/site/test_build_site.py',
+            'python tools/site/test_site_assets.py',
+            'node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs',
             'python tools/site/test_theme_browser_runner.py',
             'node --test tools/site/test_support.mjs',
         ):
@@ -1951,8 +1954,9 @@ class CiSourceContractsTest(unittest.TestCase):
                 self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow.replace(command, replacement, 1)))
         step = MODULE.named_step_section(MODULE.job_section(workflow, "plan"), "Validate CI orchestration contracts")
         for control in ("if: ${{ false }}", "continue-on-error: true"):
-            for position in ("        shell: bash\n", "          node --test"):
+            for position in ("        shell: bash\n", "          python3 tools/onboarding/test_fluentqt_doctor.py"):
                 with self.subTest(control=control, position=position):
+                    self.assertIn(position, step)
                     mutated = step.replace(position, "        " + control + "\n" + position, 1)
                     self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow.replace(step, mutated, 1)))
 

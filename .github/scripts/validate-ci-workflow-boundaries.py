@@ -1719,6 +1719,8 @@ def site_generation_errors(contents: str) -> list[str]:
         "Generate and validate website": [
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             "python tools/site/test_build_site.py",
+            "python tools/site/test_site_assets.py",
+            "node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs",
             "python tools/site/test_generate_api_reference.py",
             "python tools/site/test_theme_browser_runner.py",
             "node --test tools/site/test_support.mjs",
