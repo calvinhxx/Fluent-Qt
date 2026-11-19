@@ -431,8 +431,8 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
             errors.append(f"{context} timeout_minutes must be a positive integer")
         elif expects_manylinux_build and timeout_minutes < 50:
             errors.append(
-                f"{context} timeout_minutes must cover both native and "
-                "manylinux builds (at least 50 minutes)"
+                f"{context} timeout_minutes must cover the manylinux build and "
+                "native wheel acceptance (at least 50 minutes)"
             )
 
         if scenario["fast"] is True:

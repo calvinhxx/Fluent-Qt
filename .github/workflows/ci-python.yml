@@ -1290,6 +1290,7 @@ jobs:
           setup-python: false
 
       - name: Install matching PySide6 and Shiboken6
+        if: ${{ runner.os != 'Linux' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1300,11 +1301,7 @@ jobs:
             "shiboken6_generator==${{ matrix.shiboken_version }}"
 
       - name: Install Clang 19 builtin headers for Shiboken
-        if: >-
-          ${{
-            runner.os == 'Linux' ||
-            (runner.os == 'Windows' && matrix.arch == 'arm64')
-          }}
+        if: ${{ runner.os == 'Windows' && matrix.arch == 'arm64' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1324,8 +1321,8 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Using Clang 19 builtin headers from $clangRoot"
 
-      - name: Configure PySide6 bindings on Unix
-        if: ${{ runner.os != 'Windows' }}
+      - name: Configure PySide6 bindings on macOS
+        if: ${{ runner.os == 'macOS' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1383,6 +1380,7 @@ jobs:
           cmake @configureArgs
 
       - name: Build PySide6 bindings
+        if: ${{ runner.os != 'Linux' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1393,6 +1391,7 @@ jobs:
             --parallel "${{ matrix.build_parallel }}"
 
       - name: Verify generated binding contracts
+        if: ${{ runner.os != 'Linux' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1408,7 +1407,7 @@ jobs:
           python @verifyArgs
 
       - name: Test representative PySide6 bindings
-        if: ${{ matrix.extended_acceptance == true }}
+        if: ${{ runner.os != 'Linux' && matrix.extended_acceptance == true }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1425,6 +1424,7 @@ jobs:
             --no-tests=error
 
       - name: Build relocatable PySide6 wheels
+        if: ${{ runner.os != 'Linux' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1434,6 +1434,88 @@ jobs:
             --target fluentqt_pyside6_wheels `
             --parallel "${{ matrix.build_parallel }}"
 
+      - name: Build and audit publishable manylinux wheel
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        env:
+          FLUENTQT_MANYLINUX_POLICY: ${{ matrix.manylinux_policy }}
+          FLUENTQT_MANYLINUX_ARCH: ${{ matrix.binary_arch }}
+          FLUENTQT_MANYLINUX_BUILD_DIR: ${{ matrix.manylinux_build_dir }}
+          FLUENTQT_PYTHON_TAG: ${{ matrix.python_tag }}
+          FLUENTQT_REQUIRES_PYTHON: ${{ matrix.requires_python }}
+          FLUENTQT_PYSIDE_VERSION: ${{ matrix.pyside_version }}
+          FLUENTQT_SHIBOKEN_VERSION: ${{ matrix.shiboken_version }}
+          FLUENTQT_AUDITWHEEL_VERSION: ${{ matrix.auditwheel_version }}
+          FLUENTQT_CHECK_BACKDROP_CONVERTER: ${{ matrix.check_backdrop_converter }}
+          FLUENTQT_BUILD_PARALLEL: ${{ matrix.build_parallel }}
+        run: |
+          set -euo pipefail
+          qt_root="$(realpath "$QT_ROOT_DIR")"
+          host_uid="$(id -u)"
+          host_gid="$(id -g)"
+          docker pull "${{ matrix.manylinux_image }}"
+          manylinux_image="$(
+            docker image inspect \
+              --format '{{index .RepoDigests 0}}' \
+              "${{ matrix.manylinux_image }}"
+          )"
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/work" \
+            --volume "$qt_root:/opt/fluentqt-qt:ro" \
+            --volume /usr/share/fonts:/usr/share/fonts:ro \
+            --workdir /work \
+            --env FLUENTQT_MANYLINUX_POLICY \
+            --env FLUENTQT_MANYLINUX_ARCH \
+            --env FLUENTQT_MANYLINUX_BUILD_DIR \
+            --env FLUENTQT_PYTHON_TAG \
+            --env FLUENTQT_REQUIRES_PYTHON \
+            --env FLUENTQT_QT_ROOT=/opt/fluentqt-qt \
+            --env FLUENTQT_PYSIDE_VERSION \
+            --env FLUENTQT_SHIBOKEN_VERSION \
+            --env FLUENTQT_AUDITWHEEL_VERSION \
+            --env FLUENTQT_REQUIRE_SPATIAL \
+            --env FLUENTQT_CHECK_BACKDROP_CONVERTER \
+            --env FLUENTQT_BUILD_PARALLEL \
+            --env "FLUENTQT_HOST_UID=$host_uid" \
+            --env "FLUENTQT_HOST_GID=$host_gid" \
+            "$manylinux_image" \
+            bash /work/bindings/pyside6/tools/build_manylinux_wheel.sh
+
+          wheelhouse="${{ matrix.release_wheel_dir }}"
+          mapfile -t wheels < <(
+            find "$wheelhouse" -maxdepth 1 -type f -name '*.whl' -print
+          )
+          if (( ${#wheels[@]} != 1 )); then
+            echo "::error::Expected one publishable manylinux wheel."
+            exit 1
+          fi
+          expected_suffix="-${{ matrix.publish_wheel_suffix }}.whl"
+          if [[ "${wheels[0]}" != *"$expected_suffix" ]]; then
+            echo "::error::Unexpected publish wheel tag: ${wheels[0]}"
+            exit 1
+          fi
+          report="${{ matrix.manylinux_build_dir }}/manylinux-audit.json"
+          jq --arg image "$manylinux_image" \
+            '. + {build_image: $image}' \
+            "$report" > "$report.tmp"
+          mv "$report.tmp" "$report"
+          python -m json.tool "$report"
+
+      - name: Package staged Linux Gallery wheel
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_dir="${{ matrix.manylinux_build_dir }}"
+          version="$(jq -er '.archive.metadata_version' "$build_dir/manylinux-audit.json")"
+          python bindings/pyside6/gallery/tools/build_gallery_wheel.py \
+            --package-dir "$build_dir/gallery-stage/fluentqt_gallery" \
+            --output-dir "${{ matrix.gallery_wheel_dir }}" \
+            --version "$version" \
+            --requires-python "${{ matrix.requires_python }}" \
+            --description-file bindings/pyside6/gallery/PYPI.md \
+            --license-file LICENSE --license-file THIRD_PARTY_NOTICES.md --license-file TRADEMARKS.md
+
       - name: Test wheel in a clean virtual environment
         shell: pwsh
         run: |
@@ -1442,7 +1524,7 @@ jobs:
 
           $wheels = @(
             Get-ChildItem `
-              -Path "${{ matrix.build_dir }}/wheelhouse" `
+              -Path "${{ matrix.release_wheel_dir }}" `
               -Filter '*.whl' `
               -File
           )
@@ -1450,13 +1532,13 @@ jobs:
             throw "Expected one FluentQt wheel, found $($wheels.Count)."
           }
           $wheel = $wheels[0]
-          $expectedSuffix = "-${{ matrix.expected_wheel_suffix }}.whl"
+          $expectedSuffix = "-${{ matrix.publish_wheel_suffix }}.whl"
           if (!$wheel.Name.EndsWith($expectedSuffix)) {
             throw "Unexpected wheel tag: $($wheel.Name); expected *$expectedSuffix"
           }
           $galleryWheels = @(
             Get-ChildItem `
-              -Path "${{ matrix.build_dir }}/gallery-wheelhouse" `
+              -Path "${{ matrix.gallery_wheel_dir }}" `
               -Filter '*.whl' `
               -File
           )
@@ -1542,13 +1624,17 @@ jobs:
           dynamic_section="$(readelf -d "$module")"
           printf '%s\n' "$dynamic_section"
           grep -F '$ORIGIN/../PySide6' <<< "$dynamic_section"
-          if grep -F "$GITHUB_WORKSPACE" <<< "$dynamic_section"; then
+          if grep -F -e "$GITHUB_WORKSPACE" -e "/work/" -e "/opt/fluentqt-qt/" <<< "$dynamic_section"; then
             echo "::error::Installed wheel retained a build-tree RPATH."
             exit 1
           fi
 
           dependencies="$(env -u LD_LIBRARY_PATH ldd "$module")"
           printf '%s\n' "$dependencies"
+          if grep -F 'not found' <<< "$dependencies"; then
+            echo "::error::The manylinux wheel has an unresolved dependency."
+            exit 1
+          fi
           mapfile -t runtime_paths < <(
             awk \
               '$1 ~ /^(libQt6(Core|Gui|Widgets)\.so|libpyside6|libshiboken6)/ {print $3}' \
@@ -1568,126 +1654,6 @@ jobs:
                 ;;
             esac
           done
-
-      - name: Build and audit publishable manylinux wheel
-        if: ${{ runner.os == 'Linux' }}
-        shell: bash
-        env:
-          FLUENTQT_MANYLINUX_POLICY: ${{ matrix.manylinux_policy }}
-          FLUENTQT_MANYLINUX_ARCH: ${{ matrix.binary_arch }}
-          FLUENTQT_MANYLINUX_BUILD_DIR: ${{ matrix.manylinux_build_dir }}
-          FLUENTQT_PYTHON_TAG: ${{ matrix.python_tag }}
-          FLUENTQT_REQUIRES_PYTHON: ${{ matrix.requires_python }}
-          FLUENTQT_PYSIDE_VERSION: ${{ matrix.pyside_version }}
-          FLUENTQT_SHIBOKEN_VERSION: ${{ matrix.shiboken_version }}
-          FLUENTQT_AUDITWHEEL_VERSION: ${{ matrix.auditwheel_version }}
-          FLUENTQT_BUILD_PARALLEL: ${{ matrix.build_parallel }}
-        run: |
-          set -euo pipefail
-          qt_root="$(realpath "$QT_ROOT_DIR")"
-          host_uid="$(id -u)"
-          host_gid="$(id -g)"
-          docker pull "${{ matrix.manylinux_image }}"
-          manylinux_image="$(
-            docker image inspect \
-              --format '{{index .RepoDigests 0}}' \
-              "${{ matrix.manylinux_image }}"
-          )"
-          docker run --rm \
-            --volume "$GITHUB_WORKSPACE:/work" \
-            --volume "$qt_root:/opt/fluentqt-qt:ro" \
-            --workdir /work \
-            --env FLUENTQT_MANYLINUX_POLICY \
-            --env FLUENTQT_MANYLINUX_ARCH \
-            --env FLUENTQT_MANYLINUX_BUILD_DIR \
-            --env FLUENTQT_PYTHON_TAG \
-            --env FLUENTQT_REQUIRES_PYTHON \
-            --env FLUENTQT_QT_ROOT=/opt/fluentqt-qt \
-            --env FLUENTQT_PYSIDE_VERSION \
-            --env FLUENTQT_SHIBOKEN_VERSION \
-            --env FLUENTQT_AUDITWHEEL_VERSION \
-            --env FLUENTQT_BUILD_PARALLEL \
-            --env "FLUENTQT_HOST_UID=$host_uid" \
-            --env "FLUENTQT_HOST_GID=$host_gid" \
-            "$manylinux_image" \
-            bash /work/bindings/pyside6/tools/build_manylinux_wheel.sh
-
-          wheelhouse="${{ matrix.manylinux_build_dir }}/manylinux-wheelhouse"
-          mapfile -t wheels < <(
-            find "$wheelhouse" -maxdepth 1 -type f -name '*.whl' -print
-          )
-          if (( ${#wheels[@]} != 1 )); then
-            echo "::error::Expected one publishable manylinux wheel."
-            exit 1
-          fi
-          expected_suffix="-${{ matrix.publish_wheel_suffix }}.whl"
-          if [[ "${wheels[0]}" != *"$expected_suffix" ]]; then
-            echo "::error::Unexpected publish wheel tag: ${wheels[0]}"
-            exit 1
-          fi
-          report="${{ matrix.manylinux_build_dir }}/manylinux-audit.json"
-          jq --arg image "$manylinux_image" \
-            '. + {build_image: $image}' \
-            "$report" > "$report.tmp"
-          mv "$report.tmp" "$report"
-          python -m json.tool "$report"
-
-          clean_venv="${RUNNER_TEMP}/fluentqt-manylinux-wheel-smoke"
-          python -m venv "$clean_venv"
-          gallery_wheel="$(
-            find "${{ matrix.build_dir }}/gallery-wheelhouse" \
-              -maxdepth 1 -type f -name '*.whl' -print -quit
-          )"
-          if [[ -z "$gallery_wheel" ]]; then
-            echo "::error::The FluentQt Gallery wheel was not generated."
-            exit 1
-          fi
-          "$clean_venv/bin/python" -m pip install \
-            "${wheels[0]}" \
-            "$gallery_wheel"
-          wheel_version="$(
-            "$clean_venv/bin/python" -c \
-              'from importlib.metadata import version; print(version("FluentQt"))'
-          )"
-          env \
-            -u PYTHONPATH \
-            -u LD_LIBRARY_PATH \
-            -u QT_PLUGIN_PATH \
-            -u QT_QPA_PLATFORM_PLUGIN_PATH \
-            QT_QPA_PLATFORM=offscreen \
-            FLUENTQT_EXPECTED_VERSION="$wheel_version" \
-            "$clean_venv/bin/python" \
-            bindings/pyside6/tests/test_wheel_smoke.py
-          env \
-            -u PYTHONPATH \
-            -u LD_LIBRARY_PATH \
-            -u QT_PLUGIN_PATH \
-            -u QT_QPA_PLATFORM_PLUGIN_PATH \
-            QT_QPA_PLATFORM=offscreen \
-            FLUENTQT_EXPECTED_VERSION="$wheel_version" \
-            "$clean_venv/bin/python" \
-            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py --project-root .
-          "$clean_venv/bin/python" -m pip check
-          if [[ "${{ matrix.extended_acceptance }}" == "true" ]]; then
-            "$clean_venv/bin/python" -m pip install mypy==2.3.0
-            env -u PYTHONPATH \
-              "$clean_venv/bin/python" -m mypy \
-              --strict \
-              --no-incremental \
-              --no-error-summary \
-              bindings/pyside6/tests/test_typecheck_smoke.py
-          fi
-
-          module="$(
-            env -u PYTHONPATH "$clean_venv/bin/python" -c \
-              'import fluentqt._fluentqt as native; print(native.__file__)'
-          )"
-          dependencies="$(env -u LD_LIBRARY_PATH ldd "$module")"
-          printf '%s\n' "$dependencies"
-          if grep -F 'not found' <<< "$dependencies"; then
-            echo "::error::The manylinux wheel has an unresolved dependency."
-            exit 1
-          fi
 
       - name: Audit macOS wheel runtime paths and architecture
         if: ${{ runner.os == 'macOS' }}
@@ -1736,17 +1702,10 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          # Linux publishes the repaired manylinux wheel; other platforms
-          # publish the wheel the build interpreter already smoke-tested.
-          if ("${{ runner.os }}" -eq "Linux") {
-            $wheelDir = "${{ matrix.manylinux_build_dir }}/manylinux-wheelhouse"
-          } else {
-            $wheelDir = "${{ matrix.build_dir }}/wheelhouse"
-          }
           python .github/scripts/smoke-pyside-wheel-interpreters.py `
             --scenario "${{ matrix.id }}" `
-            --wheel-dir $wheelDir `
-            --gallery-wheel-dir "${{ matrix.build_dir }}/gallery-wheelhouse" `
+            --wheel-dir "${{ matrix.release_wheel_dir }}" `
+            --gallery-wheel-dir "${{ matrix.gallery_wheel_dir }}" `
             --interpreter "3.12=${{ steps.python312.outputs.python-path }}" `
             --interpreter "3.13=${{ steps.python313.outputs.python-path }}" `
             --work-dir (Join-Path $env:RUNNER_TEMP "fluentqt-stable-abi-smoke")
@@ -1812,8 +1771,8 @@ jobs:
         with:
           name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
           path: |
-            ${{ matrix.build_dir }}/wheelhouse/*.whl
-            ${{ matrix.build_dir }}/gallery-wheelhouse/*.whl
+            ${{ matrix.release_wheel_dir }}/*.whl
+            ${{ matrix.gallery_wheel_dir }}/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 manylinux release wheel and audit
@@ -1822,9 +1781,9 @@ jobs:
         with:
           name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
           path: |
-            ${{ matrix.manylinux_build_dir }}/manylinux-wheelhouse/*.whl
+            ${{ matrix.release_wheel_dir }}/*.whl
             ${{ matrix.manylinux_build_dir }}/manylinux-audit.json
-            ${{ matrix.build_dir }}/gallery-wheelhouse/*.whl
+            ${{ matrix.gallery_wheel_dir }}/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 release acceptance snapshot

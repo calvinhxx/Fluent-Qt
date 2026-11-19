@@ -73,8 +73,9 @@ Modules upload artifacts into the caller's run. The
 [Pages workflow](../../.github/workflows/pages.yml) consumes the payload from
 main CI; its manual entry prepares both the website and Gallery for recovery.
 
-Website generation runs on pull requests as well as `main`. The planning job
-and website job install the pinned source formatter before preparing the
+The required website job runs the build, asset, hero-particle and Spatial
+showcase tests on pull requests and `main`. Both the planning and website
+jobs install the pinned source formatter before preparing the
 playground factories and descriptors, so clean runners do not depend on a
 developer's local formatter environment. The Gallery language gate validates
 localized category labels as well as property and preset labels.
@@ -116,8 +117,8 @@ changes to its runtime, shell, or browser helpers still select that module.
 The mixed UI/runtime scripts `site/site.js` and `site/spatial-showcase.js` also
 keep the WASM lane because they own real iframe lifecycle and host messages.
 The component preview templates, `component_docs.py`, and `site/api/`'s
-`component.js`, `component.css`, and `playground.js` use the same lane. Its Gallery
-browser group checks the Button property editor against the built Qt payload,
+`component.js`, `component.css`, and `playground.js` use the same lane. Its full
+browser suite checks the Button property editor against the built Qt payload,
 including accepted values, code copying, stale replies, and recovery. Frontend
 changes can reuse a matching compiled payload; they still run the browser checks.
 
@@ -137,8 +138,16 @@ corrupt or mismatched entry triggers normal compilation. Cache transport errors
 also fall back to compilation; a save failure does not fail validated output.
 The first run after adopting or changing the cache format needs a normal build.
 
-This is a build cache, not reusable test approval. Both browser groups, wide
-viewport checks, Spatial fallback checks and the installed consumer still run.
+On a full build-cache miss, Emscripten uses ccache for individual Clang
+compilations. Resources are generated and applications are linked in the fresh
+build tree. The object cache holds up to 512 MB and is scoped by Ubuntu release,
+architecture, Qt version and emsdk revision. Compatible runner image updates
+share objects; ccache checks Clang by content plus the compiler inputs. Main
+and manually dispatched branches can populate one weekly snapshot per key. Pull requests only restore it.
+A manual dispatch with `object_cache=disabled` runs the original compiler path.
+
+After a full build-cache hit, the current run executes its browser groups, wide viewport,
+Spatial fallback and installed-consumer checks.
 The new run stages its own input artifact and publishes it only after those
 checks pass. `build-info.json` keeps `commit` as the current validation/deployment
 commit, records the actual compiler source as `build_commit`, and includes
@@ -146,17 +155,26 @@ commit, records the actual compiler source as `build_commit`, and includes
 WASM artifacts. Gallery embeds `tools/site/release-history.json` for offline
 reading. Editing that file changes the build fingerprint.
 
-Browser failures retain diagnostics for both groups, including chart-workbench
+Browser failures retain diagnostics for each group, including chart-workbench
 screenshots. The log includes the failing Python call stack. Retrying an
 intermittent failure must not require discarding successful checks or rebuilding
 their shared input.
 
-Full validation sends the same staged files to two Chromium runners. One tests
-the Gallery, examples, wide viewport and Spatial fallback. The other tests
-command menus, the command palette, forms and DataGrid, keeping their failure
-diagnostics together. Fast validation uses the Gallery runner alone. Pages
-receives the tested files after every selected group passes. Each browser
-contract logs its duration.
+Full validation sends the same staged files to five parallel Chromium jobs.
+Gallery owns route traversal, examples, wide viewport and Spatial fallback.
+Interaction owns command menus, the command palette, forms and DataGrid.
+Three playground jobs divide the registered component editors in catalog order
+using round-robin assignment. The first also checks Button, layout, loading and
+editor entry points. Fast validation uses the Gallery job alone. Pages receives
+the tested files after every selected group passes.
+
+To compare Chromium environments, dispatch `ci-wasm.yml` directly with
+`mode=full` and `compare_chromium=true`. The build stages one artifact for
+both sets of five jobs. The `(image)` jobs use the digest-pinned Ubuntu 24.04
+Playwright Python image. Compare each pair's complete job duration, including
+container initialization and diagnostic uploads, and the last successful browser
+job in each set. Inspect queue delays separately. The usual CI and Pages callers
+continue to use the hosted setup alone.
 
 Use CMake aggregate targets rather than duplicating lists in YAML:
 `fluent_qt_ci_fast_tests`, `fluent_qt_ci_full_tests`, and
@@ -292,12 +310,14 @@ report explicitly leaves hardware 3D unvalidated; GPU rendering and input need
 a capable graphics environment and separate native review.
 
 On an untagged release push with curated notes, Release Candidate owns the
-Windows ARM64 installer and the macOS ARM64 stable-ABI wheel. The Windows
-candidate requires live interface zoom and verifies the staged ARM64 runtime
-before the native installation test. Main CI keeps the Windows ARM64 native
-component tests. Full PR, manual, scheduled and already-tagged main runs keep
-the independent installer build. Bundle-enabled Python runs build one stable-ABI wheel per
-platform with its oldest supported CPython, then install and smoke-test that
+Windows ARM64 installer, both Qt 6.2 Linux DEBs, and the macOS ARM64 stable-ABI
+wheel. Both Linux full jobs still build Gallery and run their complete C++ test
+selection. The Windows candidate requires live interface zoom and verifies the
+staged ARM64 runtime before the native installation test. Main CI keeps the
+Windows ARM64 native component tests. Full PR, manual, scheduled and
+already-tagged main runs keep the independent installer build and both CI DEB
+uploads. Bundle-enabled Python runs build one stable-ABI wheel per platform
+with its oldest supported CPython, then install and smoke-test that
 same wheel on every newer interpreter in the lane's `test_python_versions`.
 The critical Windows ARM64 lane is queued first. Consult the wheel matrix for
 supported ABIs and the

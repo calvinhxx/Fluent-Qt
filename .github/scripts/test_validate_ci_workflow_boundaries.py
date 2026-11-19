@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
@@ -290,6 +291,9 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         for command in (
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             'python tools/site/test_generate_api_reference.py',
+            'python tools/site/test_build_site.py',
+            'python tools/site/test_site_assets.py',
+            'node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs',
             'python tools/site/test_theme_browser_runner.py',
             'node --test tools/site/test_support.mjs',
         ):
@@ -827,6 +831,18 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 errors = self.workflow_errors_with_replacement('ci-wasm.yml', before, after)
                 self.assertTrue(any('exact-input build cache contract' in error for error in errors), errors)
 
+    def test_wasm_compiler_cache_only_restores_objects_and_keeps_prs_read_only(self):
+        for before, after, diagnostic in (
+            ("path: ${{ runner.temp }}/wasm-ccache", "path: build/wasm", "compiler cache"),
+            ("&& github.event_name != 'pull_request'", "|| github.event_name == 'pull_request'", "compiler cache"),
+            ("objects-v2-$ImageOS-$RUNNER_ARCH", "objects-v2-$ImageVersion-$RUNNER_ARCH", "compiler cache"),
+            ("restore-keys: ${{ steps.wasm-objects.outputs.prefix }}", "restore-keys: fluentqt-", "compiler cache"),
+            ("CCACHE_COMPILERCHECK=content", "CCACHE_COMPILERCHECK=none", "configure/build step"),
+        ):
+            with self.subTest(change=after):
+                errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
+                self.assertTrue(any(diagnostic in error for error in errors), errors)
+
     def test_wasm_cache_only_skips_compilation_not_consumer_or_browser_checks(self):
         for before, after, diagnostic in (
             ("        if: ${{ steps.wasm-reuse.outputs.usable != 'true' }}\n", "        if: false\n", 'configure/build'),
@@ -838,9 +854,10 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 errors = self.workflow_errors_with_replacement('ci-wasm.yml', before, after)
                 self.assertTrue(any(diagnostic in error for error in errors), errors)
 
-    def test_wasm_pages_waits_for_both_full_groups_on_the_same_build_input(self):
+    def test_wasm_pages_waits_for_all_full_groups_on_the_same_build_input(self):
         for before, after, diagnostic in (
-            ('["gallery","interaction"]', '["gallery"]', "both browser groups"),
+            (',"interaction"', '', "every browser group"),
+            (',"playground-2"', '', "every browser group"),
             ("needs: [build, browser]", "needs: build", "every browser group"),
             ("fluentqt-wasm-input-${{ needs.build.outputs.payload_attempt }}",
              "fluentqt-wasm-input-${{ github.run_attempt }}", "same build attempt"),
@@ -851,9 +868,40 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 errors = self.workflow_errors_with_replacement("ci-wasm.yml", before, after)
                 self.assertTrue(any(diagnostic in error for error in errors), errors)
 
+    def test_chromium_comparison_preserves_the_hosted_baseline(self):
+        workflow = MODULE.read_workflow("ci-wasm.yml")
+        comparison = workflow.split("      compare_chromium:\n", 1)[1].split("  workflow_call:", 1)[0]
+        self.assertIn("        default: false", comparison.splitlines())
+        for before, after in (("|| '[\"host\"]'", "|| '[\"image\"]'"),
+                              ("--shm-size=1g", "--privileged"), ("@sha256:", ":latest-")):
+            with self.subTest(after=after):
+                self.assertIn(before, workflow)
+                errors = MODULE.wasm_supply_chain_errors(workflow.replace(before, after, 1))
+                self.assertTrue(any("pinned Chromium image" in error for error in errors), errors)
+        browser = MODULE.job_section(workflow, "browser")
+        for name in ("Set up Python", "Cache Chromium", "Install Chromium runtime"):
+            self.assertIn("        if: ${{ matrix.runtime == 'host' }}", MODULE.named_step_section(browser, name))
+        self.assertNotIn("        if:", MODULE.named_step_section(browser, "Install browser test dependencies"))
+
+    def test_wasm_browser_accepts_only_the_requested_commit_and_tier(self):
+        job = MODULE.job_section(MODULE.read_workflow("ci-wasm.yml"), "browser")
+        step = MODULE.named_step_section(job, "Verify browser input")
+        self.assertNotIn("        if:", step)
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        with tempfile.TemporaryDirectory() as work:
+            info = Path(work) / "build/wasm/app/build-info.json"
+            info.parent.mkdir(parents=True)
+            env = dict(os.environ, GITHUB_SHA="a" * 40, MODE="full")
+            for commit, mode, accepted in (("a" * 40, "full", True), ("b" * 40, "full", False),
+                                           ("a" * 40, "fast", False)):
+                info.write_text(json.dumps({"commit": commit, "validation_mode": mode}))
+                result = subprocess.run([sys.executable, "-c", script], cwd=work, env=env, capture_output=True)
+                self.assertEqual(result.returncode == 0, accepted)
+
     def test_wasm_browser_steps_invoke_the_selected_tier_group_and_viewport(self):
         job = MODULE.job_section(MODULE.read_workflow("ci-wasm.yml"), "browser")
-        for mode, group in (("fast", "gallery"), ("full", "gallery"), ("full", "interaction")):
+        full_groups = ("gallery", "interaction", *MODULE.PLAYGROUND_GROUPS)
+        for mode, group in [("fast", "gallery")] + [("full", group) for group in full_groups]:
             for name in ("Run browser smoke", "Check wide viewport"):
                 step = MODULE.named_step_section(job, name)
                 wide = name == "Check wide viewport"
@@ -1951,8 +1999,9 @@ class CiSourceContractsTest(unittest.TestCase):
                 self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow.replace(command, replacement, 1)))
         step = MODULE.named_step_section(MODULE.job_section(workflow, "plan"), "Validate CI orchestration contracts")
         for control in ("if: ${{ false }}", "continue-on-error: true"):
-            for position in ("        shell: bash\n", "          node --test"):
+            for position in ("        shell: bash\n", "          python3 tools/onboarding/test_fluentqt_doctor.py"):
                 with self.subTest(control=control, position=position):
+                    self.assertIn(position, step)
                     mutated = step.replace(position, "        " + control + "\n" + position, 1)
                     self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow.replace(step, mutated, 1)))
 

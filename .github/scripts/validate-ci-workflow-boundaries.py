@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from textwrap import dedent
@@ -15,6 +16,7 @@ from ci_action_policy import (
     normalize_action_references,
     required_action_errors,
 )
+from wasm_component_playground import PLAYGROUND_GROUPS
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -526,11 +528,14 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "      - name: Fingerprint WebAssembly build inputs",
         "      - name: Restore exact WebAssembly build",
         "      - name: Verify restored WebAssembly build",
+        "      - name: Prepare WebAssembly compiler cache",
+        "      - name: Restore WebAssembly compiler cache",
         "      - name: Configure and build WebAssembly targets",
         "      - name: Install WebAssembly development SDK",
         "      - name: Verify installed FluentQt WebAssembly consumer",
         "      - name: Package reusable WebAssembly build",
         "      - name: Save trusted WebAssembly build",
+        "      - name: Save WebAssembly compiler cache",
         "      - name: Stage browser payload",
         "      - name: Upload browser input",
     ]
@@ -550,9 +555,21 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     if ("    needs: build" not in job_level_lines(browser)
             or "    needs: [build, browser]" not in job_level_lines(publish)):
         errors.append("ci-wasm.yml must publish only after the build and every browser group pass")
-    matrix = """        group: ${{ fromJSON(inputs.mode == 'full' && '["gallery","interaction"]' || '["gallery"]') }}"""
+    full_groups = json.dumps(["gallery", "interaction", *PLAYGROUND_GROUPS], separators=(",", ":"))
+    matrix = """        group: ${{ fromJSON(inputs.mode == 'full' && '%s' || '["gallery"]') }}""" % full_groups
     if matrix not in uncommented_workflow_lines(browser):
-        errors.append("ci-wasm.yml full mode must run both browser groups and fast mode only Gallery")
+        errors.append("ci-wasm.yml full mode must run every browser group and fast mode only Gallery")
+    runtime_matrix = """        runtime: ${{ fromJSON(inputs.compare_chromium && '["host","image"]' || '["host"]') }}"""
+    active_browser = "\n".join(uncommented_workflow_lines(browser)) + "\n"
+    container = re.search(r"^    container:\n((?:^      .+\n)*)", active_browser, re.MULTILINE)
+    pinned_image = r"mcr\.microsoft\.com/playwright/python@sha256:[0-9a-f]{64}"
+    expected_container = (
+        r"      image: \$\{\{ matrix\.runtime == 'image' && '" + pinned_image + r"' \|\| '' \}\}\n"
+        r"      options: --init --shm-size=1g\n"
+    )
+    if (runtime_matrix not in active_browser.splitlines() or not container
+            or not re.fullmatch(expected_container, container[1])):
+        errors.append("ci-wasm.yml must compare a pinned Chromium image only on request alongside the hosted baseline")
     for job, step, path in ((browser, "Download browser input", "build/wasm/app"),
                             (publish, "Download tested browser input", "build/wasm-pages")):
         if uncommented_workflow_lines(named_step_section(job, step))[1:] != [
@@ -644,6 +661,43 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         errors.append("ci-wasm.yml must explicitly verify and fetch pinned Qt sources before offline configure")
 
     cache_steps = {
+        "Prepare WebAssembly compiler cache": '''
+            id: wasm-objects
+            if: ${{ steps.wasm-reuse.outputs.usable != 'true' && inputs.object_cache != 'disabled' }}
+            shell: bash
+            run: |
+              if ! command -v ccache >/dev/null && ! sudo apt-get install -y --no-install-recommends ccache; then
+                echo "::warning::ccache unavailable. Continuing with a clean build."
+                exit 0
+              fi
+              export CCACHE_DIR="$RUNNER_TEMP/wasm-ccache"
+              if ! mkdir -p "$CCACHE_DIR" || ! ccache --zero-stats; then
+                echo "::warning::Could not initialize ccache. Continuing with a clean build."
+                exit 0
+              fi
+              prefix="fluentqt-wasm-objects-v2-$ImageOS-$RUNNER_ARCH-qt$QT_VERSION-$EMSDK_REPOSITORY_REVISION-"
+              echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+              echo "key=$prefix$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+        ''',
+        "Restore WebAssembly compiler cache": '''
+            id: restore-objects
+            if: ${{ steps.wasm-objects.outputs.enabled == 'true' }}
+            continue-on-error: true
+            uses: actions/cache/restore@<commit>
+            with:
+              path: ${{ runner.temp }}/wasm-ccache
+              key: ${{ steps.wasm-objects.outputs.key }}
+              restore-keys: ${{ steps.wasm-objects.outputs.prefix }}
+        ''',
+        "Save WebAssembly compiler cache": '''
+            if: ${{ steps.wasm-objects.outputs.enabled == 'true' && steps.restore-objects.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.ref_type == 'branch')) && github.event_name != 'pull_request' }}
+            continue-on-error: true
+            uses: actions/cache/save@<commit>
+            with:
+              path: ${{ runner.temp }}/wasm-ccache
+              key: ${{ steps.wasm-objects.outputs.key }}
+        ''',
         "Validate browser checks": '''
             run: |
               python .github/scripts/test_wasm_build_cache.py
@@ -724,9 +778,17 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "        shell: bash",
         "        run: |",
         '          source "$EMSDK_ROOT/emsdk_env.sh"',
-        "          em++ --version",
-        "          cmake --preset wasm",
-        "          cmake --build --preset wasm --parallel 4",
+        '          em++ --version',
+        '          if [[ "${{ steps.wasm-objects.outputs.enabled }}" == "true" ]]; then',
+        '            export EM_COMPILER_WRAPPER=ccache CCACHE_DIR="$RUNNER_TEMP/wasm-ccache"',
+        '            export CCACHE_MAXSIZE=512M CCACHE_COMPILERCHECK=content',
+        '            ccache --zero-stats',
+        '          fi',
+        '          cmake --preset wasm',
+        '          cmake --build --preset wasm --parallel 4',
+        '          if [[ -n "${EM_COMPILER_WRAPPER:-}" ]]; then',
+        '            ccache --show-stats',
+        '          fi',
     ]
     if uncommented_workflow_lines(configure_step) != expected_configure_step:
         errors.append(
@@ -765,7 +827,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "        if: ${{ always() }}",
         "        uses: actions/upload-artifact@<commit>",
         "        with:",
-        "          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}",
+        "          name: fluentqt-wasm-browser-diagnostics-${{ matrix.group }}-${{ github.run_attempt }}${{ matrix.runtime == 'image' && '-image' || '' }}",
         "          path: |",
         "            build/wasm/command-palette-validation",
         "            build/wasm/command-menu-validation",
@@ -807,7 +869,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
         "        if: ${{ always() && matrix.group == 'gallery' }}",
         "        uses: actions/upload-artifact@<commit>",
         "        with:",
-        "          name: fluentqt-wasm-spatial-software-fallback",
+        "          name: fluentqt-wasm-spatial-software-fallback${{ matrix.runtime == 'image' && '-image' || '' }}",
         "          path: build/spatial-validation/ci-software-fallback",
         "          overwrite: true",
         "          if-no-files-found: ignore",
@@ -1018,9 +1080,10 @@ def canonical_job_level_errors(job: str, context: str) -> list[str]:
         )
         return errors
     seen: set[str] = set()
+    allowed = ALLOWED_JOB_LEVEL_KEYS | ({"container"} if context == "ci-wasm.yml browser" else set())
     for line in job_level_lines(job):
         match = CANONICAL_JOB_LEVEL_ENTRY.fullmatch(line)
-        if not match or match.group("name") not in ALLOWED_JOB_LEVEL_KEYS:
+        if not match or match.group("name") not in allowed:
             errors.append(
                 f"{context} job must use an allowed plain job-level key: {line.strip()}"
             )
@@ -1373,6 +1436,7 @@ def validate_cpp_plan_contract(cpp: str) -> list[str]:
         "          CPP_TEST_LABEL_REGEX: ${{ inputs.cpp_test_label_regex }}",
         "          CPP_TEST_TARGETS: ${{ inputs.cpp_test_targets }}",
         "          CANDIDATE_OWNS_WINDOWS_ARM64: ${{ inputs.candidate_owns_windows_arm64 }}",
+        "          CANDIDATE_OWNS_LINUX_DEBS: ${{ inputs.candidate_owns_linux_debs }}",
         "        shell: bash",
         "        run: |",
         "          set -euo pipefail",
@@ -1719,6 +1783,8 @@ def site_generation_errors(contents: str) -> list[str]:
         "Generate and validate website": [
             'python tools/site/build_site.py --output build/site-pages --commit "$GITHUB_SHA"',
             "python tools/site/test_build_site.py",
+            "python tools/site/test_site_assets.py",
+            "node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs",
             "python tools/site/test_generate_api_reference.py",
             "python tools/site/test_theme_browser_runner.py",
             "node --test tools/site/test_support.mjs",
@@ -1840,6 +1906,7 @@ def validate_boundaries() -> list[str]:
         "run_compatibility_validation: true",
         "run_macos_release_validation: ${{ needs.plan.outputs.release_candidate_expected != 'true' }}",
         "candidate_owns_windows_arm64: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}",
+        "candidate_owns_linux_debs: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}",
         'refs/tags/$tag^{tag}',
         'docs/releases/$tag.md',
         "release_max_parallel: 4",
@@ -2049,7 +2116,7 @@ def validate_boundaries() -> list[str]:
         ".github/scripts/select-pyside-release-matrix.py",
         ".github/scripts/assemble-pyside-release-bundle.py",
         "Prioritized representative scenarios:",
-        "name: Test representative PySide6 bindings\n        if: ${{ matrix.extended_acceptance == true }}",
+        "name: Test representative PySide6 bindings\n        if: ${{ runner.os != 'Linux' && matrix.extended_acceptance == true }}",
         "fluentqt-pyside6-qt624-cp310-linux-x64",
         "fluentqt-pyside6-qt624-cp310-windows-x64",
         "fluentqt-pyside6-qt693-cp311-abi3-macos-arm64",

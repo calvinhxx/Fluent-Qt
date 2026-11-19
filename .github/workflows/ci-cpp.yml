@@ -11,6 +11,10 @@ on:
         description: The release candidate builds and verifies this commit's Windows ARM64 installer.
         type: boolean
         default: false
+      candidate_owns_linux_debs:
+        description: The same-commit release candidate builds and verifies both Qt 6 Linux DEBs.
+        type: boolean
+        default: false
       cpp_test_scope:
         description: Pull-request C++ test scope (none, selected, or all).
         required: false
@@ -84,6 +88,7 @@ jobs:
           CPP_TEST_LABEL_REGEX: ${{ inputs.cpp_test_label_regex }}
           CPP_TEST_TARGETS: ${{ inputs.cpp_test_targets }}
           CANDIDATE_OWNS_WINDOWS_ARM64: ${{ inputs.candidate_owns_windows_arm64 }}
+          CANDIDATE_OWNS_LINUX_DEBS: ${{ inputs.candidate_owns_linux_debs }}
         shell: bash
         run: |
           set -euo pipefail

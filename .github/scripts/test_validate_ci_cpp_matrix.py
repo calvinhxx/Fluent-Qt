@@ -198,6 +198,27 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
         for field in ("os", "qt_version", "qt_arch", "host_qt_arch", "preset", "package_preset"):
             self.assertEqual(installer[field], replacement[field], field)
 
+    def test_candidate_debs_only_disable_the_matching_linux_package_steps(self):
+        scope = CppTestSelection("none").output_values()
+        packages = json.loads(MODULE.DEFAULT_CATALOG.with_name("package-matrix.json").read_text(encoding="utf-8"))
+        linux = {"linux-x64-qt62-full", "linux-arm64-qt62-full"}
+        for tier in ("fast", "full"):
+            for windows_owner in (False, True):
+                jobs = select_matrix(self.catalog, tier, *scope, candidate_owns_package=windows_owner)["include"]
+                expected = [dict(job, package=False) if job["id"] in linux else job for job in jobs]
+                actual = select_matrix(self.catalog, tier, *scope, candidate_owns_package=windows_owner,
+                                       candidate_owns_linux_debs=True)["include"]
+                self.assertEqual(actual, expected)
+        for lane_id in sorted(linux):
+            lane = self.scenario(self.catalog, lane_id)
+            owner = self.scenario(packages, lane_id.removesuffix("-full"))
+            self.assertIs(lane["package"], True)
+            self.assertIs(owner["standard"], True)
+            for ci_field, candidate_field in (("os", "os"), ("package_arch", "arch"), ("qt_version", "qt_version"),
+                                              ("package_build_preset", "preset"), ("package_preset", "package_preset")):
+                self.assertEqual(lane[ci_field], owner[candidate_field], lane_id)
+            self.assertEqual(owner["linux_qt_dependency"], "qt6-qpa-plugins")
+
     def test_unsafe_or_disconnected_test_selection_is_rejected(self):
         for scope, labels, targets in (
             ("selected", "^(basicinput)$", "fluent_qt_windowing_tests"),

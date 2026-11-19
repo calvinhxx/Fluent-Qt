@@ -49,8 +49,14 @@ PyPA manylinux image and runs
 [`tools/build_manylinux_wheel.sh`](tools/build_manylinux_wheel.sh). The script
 selects `/opt/python/<tag>-<tag>` for the lane's build interpreter, installs the
 exact PySide6/Shiboken6 6.9.3 packages and the auditwheel version pinned by the
-matrix, then configures a fresh release build and invokes the opt-in CMake
-target:
+matrix, then configures a single release build with Spatial, live interface zoom and the
+Python Gallery enabled. That build repairs the core wheel, stages the Gallery install component,
+checks the generated bindings and runs the full `pyside` CTest selection.
+The Ubuntu runner packs the staged pure-Python files with the existing Gallery
+wheel builder so all six platforms produce the same archive bytes. It installs
+the repaired core and matching Gallery wheel for runtime-path,
+type-checking, example and X11 tests. It also installs these same files on
+each newer supported interpreter.
 
 ```bash
 cmake --build build/pyside6-manylinux-... \

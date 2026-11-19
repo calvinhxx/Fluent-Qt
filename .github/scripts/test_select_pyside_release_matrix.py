@@ -61,6 +61,17 @@ class PySideReleaseMatrixSelectorTest(unittest.TestCase):
             )
             self.assertTrue(scenario["stable_abi"])
 
+    def test_release_acceptance_reads_the_publishable_wheelhouse(self):
+        for lane in SELECTOR.select_release_matrix(self.catalog)["include"]:
+            with self.subTest(lane=lane["id"]):
+                if lane["platform"] == "linux":
+                    build = lane["manylinux_build_dir"]
+                    self.assertEqual(lane["release_wheel_dir"], f"{build}/manylinux-wheelhouse")
+                else:
+                    build = lane["build_dir"]
+                    self.assertEqual(lane["release_wheel_dir"], f"{build}/wheelhouse")
+                self.assertEqual(lane["gallery_wheel_dir"], f"{build}/gallery-wheelhouse")
+
     def test_fixed_fast_and_compatibility_lanes_are_excluded(self):
         matrix = SELECTOR.select_release_matrix(self.catalog)
         selected_ids = {scenario["id"] for scenario in matrix["include"]}

@@ -68,9 +68,6 @@ jobs:
           python3 scripts/release/test_preflight.py
           python3 tools/docs/validate_documentation.py --project-root . --self-test
           python3 tools/site/generate_api_reference.py --check
-          python3 tools/site/test_build_site.py
-          python3 tools/site/test_site_assets.py
-          node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs
           python3 tools/ai/validate_ai_assets.py --project-root .
           python3 tools/onboarding/test_fluentqt_doctor.py
           python3 tools/onboarding/test_fluentqt_create.py
@@ -215,6 +212,7 @@ jobs:
     with:
       mode: ${{ needs.plan.outputs.mode }}
       candidate_owns_windows_arm64: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}
+      candidate_owns_linux_debs: ${{ needs.plan.outputs.release_candidate_expected == 'true' }}
       cpp_test_scope: ${{ needs.plan.outputs.cpp_test_scope }}
       cpp_test_label_regex: ${{ needs.plan.outputs.cpp_test_label_regex }}
       cpp_test_targets: ${{ needs.plan.outputs.cpp_test_targets }}
