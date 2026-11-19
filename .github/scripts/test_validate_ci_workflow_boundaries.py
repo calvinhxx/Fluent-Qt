@@ -870,6 +870,8 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
 
     def test_chromium_comparison_preserves_the_hosted_baseline(self):
         workflow = MODULE.read_workflow("ci-wasm.yml")
+        comparison = workflow.split("      compare_chromium:\n", 1)[1].split("  workflow_call:", 1)[0]
+        self.assertIn("        default: false", comparison.splitlines())
         for before, after in (("|| '[\"host\"]'", "|| '[\"image\"]'"),
                               ("--shm-size=1g", "--privileged"), ("@sha256:", ":latest-")):
             with self.subTest(after=after):

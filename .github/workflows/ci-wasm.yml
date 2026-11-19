@@ -16,7 +16,7 @@ on:
       compare_chromium:
         description: Run the hosted setup and the preinstalled Chromium image on the same build.
         type: boolean
-        default: true
+        default: false
   workflow_call:
     inputs:
       mode:
