@@ -835,6 +835,8 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         for before, after, diagnostic in (
             ("path: ${{ runner.temp }}/wasm-ccache", "path: build/wasm", "compiler cache"),
             ("&& github.event_name != 'pull_request'", "|| github.event_name == 'pull_request'", "compiler cache"),
+            ("objects-v2-$ImageOS-$RUNNER_ARCH", "objects-v2-$ImageVersion-$RUNNER_ARCH", "compiler cache"),
+            ("restore-keys: ${{ steps.wasm-objects.outputs.prefix }}", "restore-keys: fluentqt-", "compiler cache"),
             ("CCACHE_COMPILERCHECK=content", "CCACHE_COMPILERCHECK=none", "configure/build step"),
         ):
             with self.subTest(change=after):
