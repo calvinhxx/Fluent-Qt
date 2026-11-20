@@ -11,6 +11,8 @@ import subprocess
 import sys
 from typing import Iterable
 
+from fluent_qt_preview_size import parse_size as preview_size
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ADAPTIVE_BUILD_TOOL = Path(__file__).with_name("fluent_qt_build.py")
@@ -38,19 +40,7 @@ def default_preset(system: str | None = None, machine: str | None = None) -> str
 
 
 def parse_size(value: str) -> str:
-    normalized = value.lower()
-    pieces = normalized.split("x", 1)
-    if len(pieces) != 2:
-        raise argparse.ArgumentTypeError("size must be WIDTHxHEIGHT")
-    try:
-        width, height = (int(piece) for piece in pieces)
-    except ValueError as error:
-        raise argparse.ArgumentTypeError("size must be WIDTHxHEIGHT") from error
-    if not 320 <= width <= 3840 or not 240 <= height <= 2160:
-        raise argparse.ArgumentTypeError(
-            "size must be within 320x240 and 3840x2160"
-        )
-    return f"{width}x{height}"
+    return preview_size(value, minimum=(320, 240))
 
 
 def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:

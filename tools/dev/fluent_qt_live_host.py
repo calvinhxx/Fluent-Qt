@@ -20,6 +20,8 @@ import time
 import traceback
 from typing import Iterable
 
+from fluent_qt_preview_size import parse_dimensions as parse_size
+
 import fluentqt
 
 fluentqt.prepare_high_dpi_application()
@@ -68,21 +70,6 @@ class WidgetSnapshot:
 class SceneCandidate:
     widget: QWidget
     title: str
-
-
-def parse_size(value: str) -> tuple[int, int]:
-    pieces = value.lower().split("x", 1)
-    if len(pieces) != 2:
-        raise argparse.ArgumentTypeError("size must be WIDTHxHEIGHT")
-    try:
-        width, height = (int(piece) for piece in pieces)
-    except ValueError as error:
-        raise argparse.ArgumentTypeError("size must be WIDTHxHEIGHT") from error
-    if not 520 <= width <= 3840 or not 420 <= height <= 2160:
-        raise argparse.ArgumentTypeError(
-            "size must be within 520x420 and 3840x2160"
-        )
-    return width, height
 
 
 def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
