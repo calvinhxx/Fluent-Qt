@@ -59,6 +59,38 @@ TEST(PropertyPanelTest, Contract_LargeSchemaCreatesVisibleAndRequestedEditorsWit
     EXPECT_EQ(form->field(last)->editor(), panel.editor(last));
 }
 
+TEST(PropertyPanelTest, Contract_DeferredReadsPreserveEditorTypesWithoutCreatingWidgets)
+{
+    PropertyPanel panel;
+    QVector<PropertyDefinition> schema;
+    for (int i = 0; i < 6; ++i)
+        schema.append(definition(QString::number(i), PropertyDefinition::Text, QStringLiteral("text")));
+    const QString key = QStringLiteral("accent");
+    const QString initial = QStringLiteral("#80468acf");
+    schema.append(definition(key, PropertyDefinition::Color, initial));
+    schema.append(definition("count", PropertyDefinition::Number, 17));
+    schema.append(definition("ratio", PropertyDefinition::Number, 0.25));
+    ASSERT_TRUE(panel.setProperties(schema));
+
+    const QVariant deferred = panel.value(key);
+    EXPECT_EQ(deferred.userType(), QMetaType::QColor);
+    EXPECT_EQ(deferred.value<QColor>(), QColor(initial));
+    EXPECT_FALSE(panel.findChild<QWidget*>(QStringLiteral("propertyEditor_accent")));
+    const QVariant count = panel.value("count");
+    EXPECT_EQ(count.userType(), QMetaType::Double);
+    EXPECT_DOUBLE_EQ(count.toDouble(), 17.0);
+    EXPECT_DOUBLE_EQ(panel.value("ratio").toDouble(), 0.25);
+    EXPECT_TRUE(panel.findChildren<textfields::NumberBox*>().isEmpty());
+    ASSERT_NE(panel.editor(key), nullptr);
+    const QVariant ready = panel.value(key);
+    EXPECT_EQ(ready.userType(), deferred.userType());
+    EXPECT_EQ(ready.value<QColor>(), deferred.value<QColor>());
+    ASSERT_NE(panel.editor("count"), nullptr);
+    EXPECT_EQ(panel.value("count").userType(), count.userType());
+    EXPECT_EQ(panel.value("count"), count);
+    EXPECT_TRUE(panel.modifiedPropertyKeys().isEmpty());
+}
+
 TEST(PropertyPanelTest, Contract_KeyboardTraversesDeferredRowsInBothDirections)
 {
     PropertyPanel panel;

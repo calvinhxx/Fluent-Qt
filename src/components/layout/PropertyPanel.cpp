@@ -717,8 +717,15 @@ QVariant PropertyPanel::value(const QString& key) const
     if (i < 0)
         return {};
     const auto& definition = d->entries.at(i).definition;
-    if (d->entries.at(i).pending && definition.defaultValue.isValid() && definition.type != PropertyDefinition::Number)
+    if (d->entries.at(i).pending && definition.defaultValue.isValid()) {
+        // setProperties has already validated the range and type. Match the editor's return type.
+        // zh_CN: 默认值已通过类型和范围校验，按编辑器的实际类型返回。
+        if (definition.type == PropertyDefinition::Number)
+            return definition.defaultValue.toDouble();
+        if (definition.type == PropertyDefinition::Color)
+            return definition.defaultValue.value<QColor>();
         return definition.defaultValue;
+    }
     if (!d->ensureEditor(i))
         return {};
     const auto& e = d->entries[i];
