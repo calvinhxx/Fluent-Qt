@@ -1053,10 +1053,13 @@ TEST_F(GalleryShellFrameworkTest, WhatsNewReadsOfflineHistoryAndFitsAResizedWind
     }
     const QString history = text.join(QLatin1Char('\n'));
     EXPECT_TRUE(history.contains(QStringLiteral("v1.11.4")));
-    EXPECT_TRUE(history.contains(QStringLiteral("Report a problem from Gallery")));
     EXPECT_FALSE(history.contains(QStringLiteral("Snap Layouts")));
-    const auto first = model->index(0, 0);
-    const int wideHeight = scroll->visualRect(first).height();
+    // This release has a long paragraph that wraps at the compact width.
+    const auto matches = model->match(model->index(0, 0), Qt::AccessibleTextRole,
+        QStringLiteral("Report a problem from Gallery"), 1, Qt::MatchContains);
+    ASSERT_FALSE(matches.isEmpty());
+    const auto longNote = matches.first();
+    const int wideHeight = scroll->visualRect(longNote).height();
     ASSERT_GT(wideHeight, 0);
     auto snapshot = [&](const QString& variant) {
         if (tests::support::shouldCaptureVisualSnapshot()) {
@@ -1082,7 +1085,7 @@ TEST_F(GalleryShellFrameworkTest, WhatsNewReadsOfflineHistoryAndFitsAResizedWind
     EXPECT_TRUE(bar->dragExclusionRects().contains(entry->geometry()));
     EXPECT_LT(entry->geometry().right(), bar->width() - bar->systemReservedTrailingWidth());
     EXPECT_GT(scroll->verticalScrollBar()->maximum(), 0);
-    EXPECT_TRUE(QTest::qWaitFor([&] { return scroll->visualRect(first).height() > wideHeight; }));
+    EXPECT_TRUE(QTest::qWaitFor([&] { return scroll->visualRect(longNote).height() > wideHeight; }));
     snapshot(QStringLiteral("compact"));
     scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
     const auto last = model->index(model->rowCount() - 1, 0);
