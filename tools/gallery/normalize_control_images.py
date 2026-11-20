@@ -8,7 +8,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from export_control_images import SOURCE_ROOT
+from export_control_images import IMAGE_ROOT, SOURCE_ROOT
 from validate_control_artwork import validate
 
 try:
@@ -20,7 +20,6 @@ except ImportError as error:  # pragma: no cover - maintainer dependency guard
 
 
 ROOT = Path(__file__).resolve().parents[2]
-IMAGE_ROOT = ROOT / "app" / "assets" / "control_images"
 TARGET_SIZE = (72, 72)
 
 
@@ -110,6 +109,9 @@ def audit(fix: bool) -> int:
     images = set(IMAGE_ROOT.rglob("*.png"))
     sources = set(SOURCE_ROOT.rglob("*.svg"))
     failures = validate(ROOT)
+    expected = {IMAGE_ROOT / p.relative_to(SOURCE_ROOT).with_suffix(".png") for p in sources}
+    failures.extend(f"{p}: missing PNG export" for p in sorted(expected - images))
+    failures.extend(f"{p}: no SVG master" for p in sorted(images - expected))
     normalized_paths: list[Path] = []
 
     for path in sorted(images):

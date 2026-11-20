@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = ROOT / "tools" / "gallery" / "artwork"
-IMAGE_ROOT = ROOT / "app" / "assets" / "control_images"
+IMAGE_ROOT = ROOT / "build" / "gallery-artwork" / "control_images"
 CANVAS = 72
 SCALE = 4
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"

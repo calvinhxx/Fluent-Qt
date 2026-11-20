@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Gallery artwork sources, paired exports, and Qt resource aliases without Qt."""
+"""Validate Gallery artwork sources and Qt resource aliases without Qt."""
 
 from __future__ import annotations
 
@@ -7,27 +7,23 @@ from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
 
-from export_control_images import ROOT, source_pairs, validate_source
+from export_control_images import ROOT, validate_source
 
 
 def validate(project_root: Path) -> list[str]:
     source_root = project_root / "tools/gallery/artwork"
-    image_root = project_root / "app/assets/control_images"
     qrc_path = project_root / "app/gallery_resources.qrc"
     failures = []
-    try:
-        pairs = source_pairs(source_root, image_root)
-    except ValueError as error:
-        return [str(error)]
+    sources = sorted(source_root.rglob("*.svg"))
+    if not sources:
+        return [f"{source_root}: no SVG masters found"]
 
     expected = {}
-    for source, output in pairs:
+    for source in sources:
         try:
             validate_source(source)
         except (ValueError, ET.ParseError) as error:
             failures.append(str(error))
-        if not output.is_file():
-            failures.append(f"{source}: missing PNG export")
         expected[source.resolve()] = "assets/control_images/" + source.relative_to(source_root).as_posix()
 
     try:
@@ -66,7 +62,7 @@ def main() -> int:
         for failure in failures:
             print(f"  {failure}", file=sys.stderr)
         return 1
-    print("Gallery SVG masters, PNG exports, and resource aliases are consistent.")
+    print("Gallery SVG masters and resource aliases are consistent.")
     return 0
 
 

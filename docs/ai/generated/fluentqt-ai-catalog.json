@@ -1431,7 +1431,7 @@
       "gallery": {
         "route_id": "button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/Button.png"
+        "control_image": "tools/gallery/artwork/basic-input/Button.svg"
       },
       "samples": [
         {
@@ -1566,7 +1566,7 @@
       "gallery": {
         "route_id": "compound-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/CompoundButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/CompoundButton.svg"
       },
       "samples": [
         {
@@ -1674,7 +1674,7 @@
       "gallery": {
         "route_id": "checkbox",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/CheckBox.png"
+        "control_image": "tools/gallery/artwork/basic-input/CheckBox.svg"
       },
       "samples": [
         {
@@ -1781,7 +1781,7 @@
       "gallery": {
         "route_id": "color-picker",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/ColorPicker.png"
+        "control_image": "tools/gallery/artwork/basic-input/ColorPicker.svg"
       },
       "samples": [
         {
@@ -1889,7 +1889,7 @@
       "gallery": {
         "route_id": "combobox",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/ComboBox.png"
+        "control_image": "tools/gallery/artwork/basic-input/ComboBox.svg"
       },
       "samples": [
         {
@@ -2003,7 +2003,7 @@
       "gallery": {
         "route_id": "dropdown-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/DropDownButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/DropDownButton.svg"
       },
       "samples": [
         {
@@ -2113,7 +2113,7 @@
       "gallery": {
         "route_id": "file-drop-zone",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/FileDropZone.png"
+        "control_image": "tools/gallery/artwork/basic-input/FileDropZone.svg"
       },
       "samples": [
         {
@@ -2191,7 +2191,7 @@
       "gallery": {
         "route_id": "hyperlink-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/HyperlinkButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/HyperlinkButton.svg"
       },
       "samples": [
         {
@@ -2287,7 +2287,7 @@
       "gallery": {
         "route_id": "multi-select-combobox",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/MultiSelectComboBox.png"
+        "control_image": "tools/gallery/artwork/basic-input/MultiSelectComboBox.svg"
       },
       "samples": [
         {
@@ -2398,7 +2398,7 @@
       "gallery": {
         "route_id": "radio-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/RadioButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/RadioButton.svg"
       },
       "samples": [
         {
@@ -2504,7 +2504,7 @@
       "gallery": {
         "route_id": "tree-select",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/TreeSelect.png"
+        "control_image": "tools/gallery/artwork/basic-input/TreeSelect.svg"
       },
       "samples": [
         {
@@ -2606,7 +2606,7 @@
       "gallery": {
         "route_id": "range-slider",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/RangeSlider.png"
+        "control_image": "tools/gallery/artwork/basic-input/RangeSlider.svg"
       },
       "samples": [
         {
@@ -2725,7 +2725,7 @@
       "gallery": {
         "route_id": "rating-control",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/RatingControl.png"
+        "control_image": "tools/gallery/artwork/basic-input/RatingControl.svg"
       },
       "samples": [
         {
@@ -2830,7 +2830,7 @@
       "gallery": {
         "route_id": "repeat-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/RepeatButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/RepeatButton.svg"
       },
       "samples": [
         {
@@ -2930,7 +2930,7 @@
       "gallery": {
         "route_id": "slider",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/Slider.png"
+        "control_image": "tools/gallery/artwork/basic-input/Slider.svg"
       },
       "samples": [
         {
@@ -3041,7 +3041,7 @@
       "gallery": {
         "route_id": "split-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/SplitButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/SplitButton.svg"
       },
       "samples": [
         {
@@ -3135,7 +3135,7 @@
       "gallery": {
         "route_id": "toggle-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/ToggleButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/ToggleButton.svg"
       },
       "samples": [
         {
@@ -3233,7 +3233,7 @@
       "gallery": {
         "route_id": "toggle-split-button",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/ToggleSplitButton.png"
+        "control_image": "tools/gallery/artwork/basic-input/ToggleSplitButton.svg"
       },
       "samples": [
         {
@@ -3336,7 +3336,7 @@
       "gallery": {
         "route_id": "toggle-switch",
         "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
-        "control_image": "app/assets/control_images/basic-input/ToggleSwitch.png"
+        "control_image": "tools/gallery/artwork/basic-input/ToggleSwitch.svg"
       },
       "samples": [
         {
@@ -3475,7 +3475,7 @@
       "gallery": {
         "route_id": "chart-view",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/ChartView.png"
+        "control_image": "tools/gallery/artwork/charts/ChartView.svg"
       },
       "samples": [
         {
@@ -3559,7 +3559,7 @@
       "gallery": {
         "route_id": "line-chart",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/LineChart.png"
+        "control_image": "tools/gallery/artwork/charts/LineChart.svg"
       },
       "samples": [
         {
@@ -3622,7 +3622,7 @@
       "gallery": {
         "route_id": "area-chart",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/AreaChart.png"
+        "control_image": "tools/gallery/artwork/charts/AreaChart.svg"
       },
       "samples": [
         {
@@ -3685,7 +3685,7 @@
       "gallery": {
         "route_id": "bar-chart",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/BarChart.png"
+        "control_image": "tools/gallery/artwork/charts/BarChart.svg"
       },
       "samples": [
         {
@@ -3748,7 +3748,7 @@
       "gallery": {
         "route_id": "horizontal-bar-chart",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/HorizontalBarChart.png"
+        "control_image": "tools/gallery/artwork/charts/HorizontalBarChart.svg"
       },
       "samples": [
         {
@@ -3811,7 +3811,7 @@
       "gallery": {
         "route_id": "pie-chart",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/PieChart.png"
+        "control_image": "tools/gallery/artwork/charts/PieChart.svg"
       },
       "samples": [
         {
@@ -3874,7 +3874,7 @@
       "gallery": {
         "route_id": "donut-chart",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/DonutChart.png"
+        "control_image": "tools/gallery/artwork/charts/DonutChart.svg"
       },
       "samples": [
         {
@@ -3937,7 +3937,7 @@
       "gallery": {
         "route_id": "scatter-chart",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/ScatterChart.png"
+        "control_image": "tools/gallery/artwork/charts/ScatterChart.svg"
       },
       "samples": [
         {
@@ -3999,7 +3999,7 @@
       "gallery": {
         "route_id": "sparkline",
         "sample_source": "app/view/widgets/samples/ChartsSamples.cpp",
-        "control_image": "app/assets/control_images/charts/Sparkline.png"
+        "control_image": "tools/gallery/artwork/charts/Sparkline.svg"
       },
       "samples": [
         {
@@ -4113,7 +4113,7 @@
       "gallery": {
         "route_id": "data-grid",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/DataGrid.png"
+        "control_image": "tools/gallery/artwork/collections/DataGrid.svg"
       },
       "samples": [
         {
@@ -4236,7 +4236,7 @@
       "gallery": {
         "route_id": "drawer-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/DrawerView.png"
+        "control_image": "tools/gallery/artwork/collections/DrawerView.svg"
       },
       "samples": [
         {
@@ -4324,7 +4324,7 @@
       "gallery": {
         "route_id": "file-list-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/FileListView.png"
+        "control_image": "tools/gallery/artwork/collections/FileListView.svg"
       },
       "samples": [
         {
@@ -4409,7 +4409,7 @@
       "gallery": {
         "route_id": "flip-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/FlipView.png"
+        "control_image": "tools/gallery/artwork/collections/FlipView.svg"
       },
       "samples": [
         {
@@ -4531,7 +4531,7 @@
       "gallery": {
         "route_id": "flow-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/FlowView.png"
+        "control_image": "tools/gallery/artwork/collections/FlowView.svg"
       },
       "samples": [
         {
@@ -4672,7 +4672,7 @@
       "gallery": {
         "route_id": "grid-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/GridView.png"
+        "control_image": "tools/gallery/artwork/collections/GridView.svg"
       },
       "samples": [
         {
@@ -4825,7 +4825,7 @@
       "gallery": {
         "route_id": "list-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/ListView.png"
+        "control_image": "tools/gallery/artwork/collections/ListView.svg"
       },
       "samples": [
         {
@@ -4936,7 +4936,7 @@
       "gallery": {
         "route_id": "timeline",
         "sample_source": "app/view/widgets/samples/SequenceSamples.cpp",
-        "control_image": "app/assets/control_images/collections/Timeline.png"
+        "control_image": "tools/gallery/artwork/collections/Timeline.svg"
       },
       "samples": [
         {
@@ -5012,7 +5012,7 @@
       "gallery": {
         "route_id": "transfer",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/Transfer.png"
+        "control_image": "tools/gallery/artwork/collections/Transfer.svg"
       },
       "samples": [
         {
@@ -5096,7 +5096,7 @@
       "gallery": {
         "route_id": "split-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/SplitView.png"
+        "control_image": "tools/gallery/artwork/collections/SplitView.svg"
       },
       "samples": [
         {
@@ -5192,7 +5192,7 @@
       "gallery": {
         "route_id": "stack-view",
         "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
-        "control_image": "app/assets/control_images/collections/StackView.png"
+        "control_image": "tools/gallery/artwork/collections/StackView.svg"
       },
       "samples": [
         {
@@ -5359,7 +5359,7 @@
       "gallery": {
         "route_id": "tree-view",
         "sample_source": "app/view/widgets/samples/CollectionsTreeSamples.cpp",
-        "control_image": "app/assets/control_images/collections/TreeView.png"
+        "control_image": "tools/gallery/artwork/collections/TreeView.svg"
       },
       "samples": [
         {
@@ -5455,7 +5455,7 @@
       "gallery": {
         "route_id": "calendar-date-picker",
         "sample_source": "app/view/widgets/samples/DateTimeSamples.cpp",
-        "control_image": "app/assets/control_images/date-time/CalendarDatePicker.png"
+        "control_image": "tools/gallery/artwork/date-time/CalendarDatePicker.svg"
       },
       "samples": [
         {
@@ -5518,7 +5518,7 @@
       "gallery": {
         "route_id": "calendar-view",
         "sample_source": "app/view/widgets/samples/DateTimeSamples.cpp",
-        "control_image": "app/assets/control_images/date-time/CalendarView.png"
+        "control_image": "tools/gallery/artwork/date-time/CalendarView.svg"
       },
       "samples": [
         {
@@ -5578,7 +5578,7 @@
       "gallery": {
         "route_id": "date-picker",
         "sample_source": "app/view/widgets/samples/DateTimeSamples.cpp",
-        "control_image": "app/assets/control_images/date-time/DatePicker.png"
+        "control_image": "tools/gallery/artwork/date-time/DatePicker.svg"
       },
       "samples": [
         {
@@ -5674,7 +5674,7 @@
       "gallery": {
         "route_id": "date-time-range-picker",
         "sample_source": "app/view/widgets/samples/DateTimeSamples.cpp",
-        "control_image": "app/assets/control_images/date-time/DateTimeRangePicker.png"
+        "control_image": "tools/gallery/artwork/date-time/DateTimeRangePicker.svg"
       },
       "samples": [
         {
@@ -5748,7 +5748,7 @@
       "gallery": {
         "route_id": "time-picker",
         "sample_source": "app/view/widgets/samples/DateTimeSamples.cpp",
-        "control_image": "app/assets/control_images/date-time/TimePicker.png"
+        "control_image": "tools/gallery/artwork/date-time/TimePicker.svg"
       },
       "samples": [
         {
@@ -5829,7 +5829,7 @@
       "gallery": {
         "route_id": "content-dialog",
         "sample_source": "app/view/widgets/samples/DialogsFlyoutsSamples.cpp",
-        "control_image": "app/assets/control_images/dialogs-flyouts/ContentDialog.png"
+        "control_image": "tools/gallery/artwork/dialogs-flyouts/ContentDialog.svg"
       },
       "samples": [
         {
@@ -5917,7 +5917,7 @@
       "gallery": {
         "route_id": "dialog",
         "sample_source": "app/view/widgets/samples/DialogsFlyoutsSamples.cpp",
-        "control_image": "app/assets/control_images/dialogs-flyouts/Dialog.png"
+        "control_image": "tools/gallery/artwork/dialogs-flyouts/Dialog.svg"
       },
       "samples": [
         {
@@ -6004,7 +6004,7 @@
       "gallery": {
         "route_id": "flyout",
         "sample_source": "app/view/widgets/samples/DialogsFlyoutsSamples.cpp",
-        "control_image": "app/assets/control_images/dialogs-flyouts/Flyout.png"
+        "control_image": "tools/gallery/artwork/dialogs-flyouts/Flyout.svg"
       },
       "samples": [
         {
@@ -6099,7 +6099,7 @@
       "gallery": {
         "route_id": "popup",
         "sample_source": "app/view/widgets/samples/DialogsFlyoutsSamples.cpp",
-        "control_image": "app/assets/control_images/dialogs-flyouts/Popup.png"
+        "control_image": "tools/gallery/artwork/dialogs-flyouts/Popup.svg"
       },
       "samples": [
         {
@@ -6191,7 +6191,7 @@
       "gallery": {
         "route_id": "teaching-tip",
         "sample_source": "app/view/widgets/samples/DialogsFlyoutsSamples.cpp",
-        "control_image": "app/assets/control_images/dialogs-flyouts/TeachingTip.png"
+        "control_image": "tools/gallery/artwork/dialogs-flyouts/TeachingTip.svg"
       },
       "samples": [
         {
@@ -6268,7 +6268,7 @@
       "gallery": {
         "route_id": "coach-mark",
         "sample_source": "app/view/widgets/samples/DialogsFlyoutsSamples.cpp",
-        "control_image": "app/assets/control_images/dialogs-flyouts/CoachMark.png"
+        "control_image": "tools/gallery/artwork/dialogs-flyouts/CoachMark.svg"
       },
       "samples": [
         {
@@ -6345,7 +6345,7 @@
       "gallery": {
         "route_id": "accordion",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/Accordion.png"
+        "control_image": "tools/gallery/artwork/layout/Accordion.svg"
       },
       "samples": [
         {
@@ -6434,7 +6434,7 @@
       "gallery": {
         "route_id": "card",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/Card.png"
+        "control_image": "tools/gallery/artwork/layout/Card.svg"
       },
       "samples": [
         {
@@ -6519,7 +6519,7 @@
       "gallery": {
         "route_id": "divider",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/Divider.png"
+        "control_image": "tools/gallery/artwork/layout/Divider.svg"
       },
       "samples": [
         {
@@ -6601,7 +6601,7 @@
       "gallery": {
         "route_id": "expander",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/Expander.png"
+        "control_image": "tools/gallery/artwork/layout/Expander.svg"
       },
       "samples": [
         {
@@ -6722,7 +6722,7 @@
       "gallery": {
         "route_id": "field",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/Field.png"
+        "control_image": "tools/gallery/artwork/layout/Field.svg"
       },
       "samples": [
         {
@@ -6812,7 +6812,7 @@
       "gallery": {
         "route_id": "data-grid-tool-bar",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/DataGridToolBar.png"
+        "control_image": "tools/gallery/artwork/layout/DataGridToolBar.svg"
       },
       "samples": [
         {
@@ -6892,7 +6892,7 @@
       "gallery": {
         "route_id": "property-panel",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/PropertyPanel.png"
+        "control_image": "tools/gallery/artwork/layout/PropertyPanel.svg"
       },
       "samples": [
         {
@@ -6998,7 +6998,7 @@
       "gallery": {
         "route_id": "list-detail-view",
         "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
-        "control_image": "app/assets/control_images/layout/ListDetailView.png"
+        "control_image": "tools/gallery/artwork/layout/ListDetailView.svg"
       },
       "samples": [
         {
@@ -7104,7 +7104,7 @@
       "gallery": {
         "route_id": "particle-backdrop",
         "sample_source": "app/view/widgets/samples/ParticlesSamples.cpp",
-        "control_image": "app/assets/control_images/particles/ParticleBackdrop.png"
+        "control_image": "tools/gallery/artwork/particles/ParticleBackdrop.svg"
       },
       "samples": [
         {
@@ -7274,7 +7274,7 @@
       "gallery": {
         "route_id": "spatial-view",
         "sample_source": "app/view/widgets/samples/SpatialSamples.cpp",
-        "control_image": "app/assets/control_images/spatial/SpatialView.png"
+        "control_image": "tools/gallery/artwork/spatial/SpatialView.svg"
       },
       "samples": [
         {
@@ -7404,7 +7404,7 @@
       "gallery": {
         "route_id": "spatial-item",
         "sample_source": "app/view/widgets/samples/SpatialSamples.cpp",
-        "control_image": "app/assets/control_images/spatial/SpatialItem.png"
+        "control_image": "tools/gallery/artwork/spatial/SpatialItem.svg"
       },
       "samples": [
         {
@@ -7508,7 +7508,7 @@
       "gallery": {
         "route_id": "qml-view",
         "sample_source": "app/view/widgets/samples/QmlBridgeSamples.cpp",
-        "control_image": "app/assets/control_images/qml-bridge/QmlView.png"
+        "control_image": "tools/gallery/artwork/qml-bridge/QmlView.svg"
       },
       "samples": [
         {
@@ -7778,7 +7778,7 @@
       "gallery": {
         "route_id": "menu",
         "sample_source": "app/view/widgets/samples/MenusToolbarsSamples.cpp",
-        "control_image": "app/assets/control_images/menus-toolbars/Menu.png"
+        "control_image": "tools/gallery/artwork/menus-toolbars/Menu.svg"
       },
       "samples": [
         {
@@ -7860,7 +7860,7 @@
       "gallery": {
         "route_id": "menu-bar",
         "sample_source": "app/view/widgets/samples/MenusToolbarsSamples.cpp",
-        "control_image": "app/assets/control_images/menus-toolbars/MenuBar.png"
+        "control_image": "tools/gallery/artwork/menus-toolbars/MenuBar.svg"
       },
       "samples": [
         {
@@ -7967,7 +7967,7 @@
       "gallery": {
         "route_id": "command-bar",
         "sample_source": "app/view/widgets/samples/MenusToolbarsSamples.cpp",
-        "control_image": "app/assets/control_images/menus-toolbars/CommandBar.png"
+        "control_image": "tools/gallery/artwork/menus-toolbars/CommandBar.svg"
       },
       "samples": [
         {
@@ -8083,7 +8083,7 @@
       "gallery": {
         "route_id": "command-palette",
         "sample_source": "app/view/widgets/samples/MenusToolbarsSamples.cpp",
-        "control_image": "app/assets/control_images/menus-toolbars/CommandPalette.png"
+        "control_image": "tools/gallery/artwork/menus-toolbars/CommandPalette.svg"
       },
       "samples": [
         {
@@ -8196,7 +8196,7 @@
       "gallery": {
         "route_id": "command-bar-flyout",
         "sample_source": "app/view/widgets/samples/MenusToolbarsSamples.cpp",
-        "control_image": "app/assets/control_images/menus-toolbars/CommandBarFlyout.png"
+        "control_image": "tools/gallery/artwork/menus-toolbars/CommandBarFlyout.svg"
       },
       "samples": [
         {
@@ -8320,7 +8320,7 @@
       "gallery": {
         "route_id": "breadcrumb",
         "sample_source": "app/view/widgets/samples/NavigationSamples.cpp",
-        "control_image": "app/assets/control_images/navigation/Breadcrumb.png"
+        "control_image": "tools/gallery/artwork/navigation/Breadcrumb.svg"
       },
       "samples": [
         {
@@ -8457,7 +8457,7 @@
       "gallery": {
         "route_id": "navigation-view",
         "sample_source": "app/view/widgets/samples/NavigationSamples.cpp",
-        "control_image": "app/assets/control_images/navigation/NavigationView.png"
+        "control_image": "tools/gallery/artwork/navigation/NavigationView.svg"
       },
       "samples": [
         {
@@ -8572,7 +8572,7 @@
       "gallery": {
         "route_id": "pivot",
         "sample_source": "app/view/widgets/samples/NavigationSamples.cpp",
-        "control_image": "app/assets/control_images/navigation/Pivot.png"
+        "control_image": "tools/gallery/artwork/navigation/Pivot.svg"
       },
       "samples": [
         {
@@ -8679,7 +8679,7 @@
       "gallery": {
         "route_id": "selector-bar",
         "sample_source": "app/view/widgets/samples/NavigationSamples.cpp",
-        "control_image": "app/assets/control_images/navigation/SelectorBar.png"
+        "control_image": "tools/gallery/artwork/navigation/SelectorBar.svg"
       },
       "samples": [
         {
@@ -8777,7 +8777,7 @@
       "gallery": {
         "route_id": "stepper",
         "sample_source": "app/view/widgets/samples/SequenceSamples.cpp",
-        "control_image": "app/assets/control_images/navigation/Stepper.png"
+        "control_image": "tools/gallery/artwork/navigation/Stepper.svg"
       },
       "samples": [
         {
@@ -8910,7 +8910,7 @@
       "gallery": {
         "route_id": "tab-view",
         "sample_source": "app/view/widgets/samples/NavigationSamples.cpp",
-        "control_image": "app/assets/control_images/navigation/TabView.png"
+        "control_image": "tools/gallery/artwork/navigation/TabView.svg"
       },
       "samples": [
         {
@@ -9056,7 +9056,7 @@
       "gallery": {
         "route_id": "annotated-scrollbar",
         "sample_source": "app/view/widgets/samples/ScrollingSamples.cpp",
-        "control_image": "app/assets/control_images/scrolling/AnnotatedScrollBar.png"
+        "control_image": "tools/gallery/artwork/scrolling/AnnotatedScrollBar.svg"
       },
       "samples": [
         {
@@ -9185,7 +9185,7 @@
       "gallery": {
         "route_id": "image-viewer",
         "sample_source": "app/view/widgets/samples/ScrollingSamples.cpp",
-        "control_image": "app/assets/control_images/scrolling/ImageViewer.png"
+        "control_image": "tools/gallery/artwork/scrolling/ImageViewer.svg"
       },
       "samples": [
         {
@@ -9316,7 +9316,7 @@
       "gallery": {
         "route_id": "pips-pager",
         "sample_source": "app/view/widgets/samples/ScrollingSamples.cpp",
-        "control_image": "app/assets/control_images/scrolling/PipsPager.png"
+        "control_image": "tools/gallery/artwork/scrolling/PipsPager.svg"
       },
       "samples": [
         {
@@ -9430,7 +9430,7 @@
       "gallery": {
         "route_id": "scrollbar",
         "sample_source": "app/view/widgets/samples/ScrollingSamples.cpp",
-        "control_image": "app/assets/control_images/scrolling/ScrollBar.png"
+        "control_image": "tools/gallery/artwork/scrolling/ScrollBar.svg"
       },
       "samples": [
         {
@@ -9558,7 +9558,7 @@
       "gallery": {
         "route_id": "scroll-view",
         "sample_source": "app/view/widgets/samples/ScrollingSamples.cpp",
-        "control_image": "app/assets/control_images/scrolling/ScrollView.png"
+        "control_image": "tools/gallery/artwork/scrolling/ScrollView.svg"
       },
       "samples": [
         {
@@ -9666,7 +9666,7 @@
       "gallery": {
         "route_id": "avatar",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/Avatar.png"
+        "control_image": "tools/gallery/artwork/status-info/Avatar.svg"
       },
       "samples": [
         {
@@ -9768,7 +9768,7 @@
       "gallery": {
         "route_id": "info-badge",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/InfoBadge.png"
+        "control_image": "tools/gallery/artwork/status-info/InfoBadge.svg"
       },
       "samples": [
         {
@@ -9867,7 +9867,7 @@
       "gallery": {
         "route_id": "info-bar",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/InfoBar.png"
+        "control_image": "tools/gallery/artwork/status-info/InfoBar.svg"
       },
       "samples": [
         {
@@ -9961,7 +9961,7 @@
       "gallery": {
         "route_id": "progress-bar",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/ProgressBar.png"
+        "control_image": "tools/gallery/artwork/status-info/ProgressBar.svg"
       },
       "samples": [
         {
@@ -10052,7 +10052,7 @@
       "gallery": {
         "route_id": "progress-ring",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/ProgressRing.png"
+        "control_image": "tools/gallery/artwork/status-info/ProgressRing.svg"
       },
       "samples": [
         {
@@ -10135,7 +10135,7 @@
       "gallery": {
         "route_id": "splash-screen",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/SplashScreen.png"
+        "control_image": "tools/gallery/artwork/status-info/SplashScreen.svg"
       },
       "samples": [
         {
@@ -10215,7 +10215,7 @@
       "gallery": {
         "route_id": "shimmer",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/Shimmer.png"
+        "control_image": "tools/gallery/artwork/status-info/Shimmer.svg"
       },
       "samples": [
         {
@@ -10357,7 +10357,7 @@
       "gallery": {
         "route_id": "toast",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/Toast.png"
+        "control_image": "tools/gallery/artwork/status-info/Toast.svg"
       },
       "samples": [
         {
@@ -10465,7 +10465,7 @@
       "gallery": {
         "route_id": "tooltip",
         "sample_source": "app/view/widgets/samples/StatusInfoSamples.cpp",
-        "control_image": "app/assets/control_images/status-info/ToolTip.png"
+        "control_image": "tools/gallery/artwork/status-info/ToolTip.svg"
       },
       "samples": [
         {
@@ -10563,7 +10563,7 @@
       "gallery": {
         "route_id": "auto-suggest-box",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/AutoSuggestBox.png"
+        "control_image": "tools/gallery/artwork/text-fields/AutoSuggestBox.svg"
       },
       "samples": [
         {
@@ -10656,7 +10656,7 @@
       "gallery": {
         "route_id": "tag-input",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/TagInput.png"
+        "control_image": "tools/gallery/artwork/text-fields/TagInput.svg"
       },
       "samples": [
         {
@@ -10746,7 +10746,7 @@
       "gallery": {
         "route_id": "code-block",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/CodeBlock.png"
+        "control_image": "tools/gallery/artwork/text-fields/CodeBlock.svg"
       },
       "samples": [
         {
@@ -10831,7 +10831,7 @@
       "gallery": {
         "route_id": "label",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/Label.png"
+        "control_image": "tools/gallery/artwork/text-fields/Label.svg"
       },
       "samples": [
         {
@@ -10952,7 +10952,7 @@
       "gallery": {
         "route_id": "line-edit",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/LineEdit.png"
+        "control_image": "tools/gallery/artwork/text-fields/LineEdit.svg"
       },
       "samples": [
         {
@@ -11077,7 +11077,7 @@
       "gallery": {
         "route_id": "number-box",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/NumberBox.png"
+        "control_image": "tools/gallery/artwork/text-fields/NumberBox.svg"
       },
       "samples": [
         {
@@ -11178,7 +11178,7 @@
       "gallery": {
         "route_id": "password-box",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/PasswordBox.png"
+        "control_image": "tools/gallery/artwork/text-fields/PasswordBox.svg"
       },
       "samples": [
         {
@@ -11301,7 +11301,7 @@
       "gallery": {
         "route_id": "text-edit",
         "sample_source": "app/view/widgets/samples/TextFieldsSamples.cpp",
-        "control_image": "app/assets/control_images/text-fields/TextEdit.png"
+        "control_image": "tools/gallery/artwork/text-fields/TextEdit.svg"
       },
       "samples": [
         {
@@ -11404,7 +11404,7 @@
       "gallery": {
         "route_id": "title-bar",
         "sample_source": "app/view/widgets/samples/WindowingSamples.cpp",
-        "control_image": "app/assets/control_images/windowing/TitleBar.png"
+        "control_image": "tools/gallery/artwork/windowing/TitleBar.svg"
       },
       "samples": [
         {
@@ -11492,7 +11492,7 @@
       "gallery": {
         "route_id": "window",
         "sample_source": "app/view/widgets/samples/WindowingSamples.cpp",
-        "control_image": "app/assets/control_images/windowing/Window.png"
+        "control_image": "tools/gallery/artwork/windowing/Window.svg"
       },
       "samples": [
         {
@@ -11603,7 +11603,7 @@
       "gallery": {
         "route_id": "font-icon",
         "sample_source": "app/view/widgets/samples/FoundationSamples.cpp",
-        "control_image": "app/assets/control_images/foundation/FontIcon.png"
+        "control_image": "tools/gallery/artwork/foundation/FontIcon.svg"
       },
       "samples": [
         {
