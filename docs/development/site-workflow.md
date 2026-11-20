@@ -450,6 +450,7 @@ data.
 The pull-request planning job regenerates and checks the AI and API catalogs. The
 [website CI module](ci-workflow.md) generates the homepage, documents and
 previews on every pull request and on `main`, then uploads a verified artifact.
+Packaging reuses the file list from the document generator to exclude retired routes.
 Pages deploys only that artifact after checking its commit and file hashes, and
 verifies all nine homepage paths and `sitemap.xml` during assembly. After
 building the website locally, verify its file hashes and commit receipt with

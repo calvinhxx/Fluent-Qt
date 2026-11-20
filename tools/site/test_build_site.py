@@ -102,17 +102,16 @@ class SiteArtifactTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("obsolete", encoding="utf-8")
         manifest = {"input_digest": "digest", "images": [{"path": self.files[-1]}]}
-        pages = {name: "html" for name in self.files if name.endswith(".html") or name.startswith("api/playground-i18n/")}
+        pages = {name for name in self.files if name.endswith(".html") or name.startswith("api/playground-i18n/")}
         output = self.root / "build/site-pages"
         with patch.object(build_site, "ROOT", self.root), \
-             patch.object(build_site, "validated_manifest", return_value=manifest), \
-             patch("generate_api_reference.generate_reference", return_value={}), \
-             patch("component_docs.collect", return_value=[]), \
-             patch("component_docs.generated_outputs", return_value=pages):
-            build_site.stage(output, "current-sha")
-            build_site.stage(output, "current-sha")  # Repeat builds replace only their own artifact.
+             patch.object(build_site, "validated_manifest", return_value=manifest):
+            build_site.stage(output, "current-sha", pages)
+            build_site.stage(output, "current-sha", pages)  # Repeat builds replace only their own artifact.
+            with self.assertRaisesRegex(ValueError, "Missing generated website files"):
+                build_site.stage(output, "current-sha", pages | {"ja/api/missing/index.html"})
             with self.assertRaisesRegex(ValueError, "separate"):
-                build_site.stage(self.site, "current-sha")
+                build_site.stage(self.site, "current-sha", pages)
         build_site.verify(output, "current-sha")
         self.assertFalse((output / "api/retired").exists())
         self.assertFalse((output / "ja/api/retired").exists())
@@ -210,6 +209,8 @@ class SiteGenerationTest(unittest.TestCase):
 
     def build(self, *arguments, current=True, failing=None):
         def run(*command):
+            if "--output-manifest" in command:
+                Path(command[-1]).write_text('["api/catalog.json"]', encoding="utf-8")
             if failing and failing in command:
                 raise subprocess.CalledProcessError(1, command)
         with self.invoke(*arguments), patch.object(build_site, "current_previews", return_value=current), \
@@ -238,7 +239,8 @@ class SiteGenerationTest(unittest.TestCase):
     def test_fresh_previews_skip_native_capture_but_regenerate_documents(self):
         self.build()
         self.assertIn(("tools/site/generate_localized_site.py",), self.commands)
-        self.assertIn(("tools/site/generate_api_reference.py", "--require-current-previews"), self.commands)
+        self.assertEqual(self.commands[-1][:-1], ("tools/site/generate_api_reference.py", "--require-current-previews", "--output-manifest"))
+        self.assertEqual(self.stage.call_args.args[-1], {"api/catalog.json"})
         self.assertFalse(any("tools/site/generate_component_previews.py" in command for command in self.commands))
         self.stage.assert_called_once()
 
