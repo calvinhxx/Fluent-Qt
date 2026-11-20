@@ -674,6 +674,14 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             "workflow validator accepted an extra post-provenance tamper step",
         )
 
+    def test_pages_assembly_requires_homepage_checks(self):
+        for page in ("index.html", "fr/index.html"):
+            with self.subTest(page=page):
+                errors = self.workflow_errors_with_replacement(
+                    "pages.yml", f"          test -f build/pages/{page}\n", ""
+                )
+                self.assertIn("pages.yml site assembly step must remain exact", errors)
+
     def test_pages_deploy_rejects_provenance_after_deployment(self):
         original_read = MODULE.read_workflow
         pages = original_read("pages.yml")
