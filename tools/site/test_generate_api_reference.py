@@ -428,7 +428,7 @@ class VisualDocumentationTest(unittest.TestCase):
                 if tag == 'a' and values.get('href'):
                     self.links.append(values['href'])
 
-        homepage = {locale.output_relative for locale in LOCALES}
+        homepage = {locale.output_relative for locale in generate_localized_site.LOCALES}
         outputs = self.outputs
         parsed = {path: Links(text) for path, text in outputs.items() if path.endswith('.html')}
         for path, page in parsed.items():

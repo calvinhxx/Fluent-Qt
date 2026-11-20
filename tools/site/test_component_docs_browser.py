@@ -4,10 +4,15 @@
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright, expect
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import docs_i18n
+from documentation_guides import guide_ui
 
 
 def main():
@@ -92,10 +97,47 @@ def main():
         expect(page.locator('[data-directory-search]')).to_have_value('')
         page.locator('[data-shell-link="home"]').click()
         expect(page.locator('[data-i18n="gallery.codeCopy"]')).to_have_text('切换查看 C++ / Python 代码')
+        page.locator('.language-switch summary').click()
         page.locator('.language-switch a[lang="en"]').click()
         page.locator('header [data-i18n="nav.api"]').click()
         expect(page).to_have_url(urljoin(args.url, "api/foundation/"))
         expect(page.locator('html')).to_have_attribute('lang', 'en')
+        page.goto(urljoin(args.url, "ja/"))
+        page.locator('header [data-i18n="nav.api"]').click()
+        expect(page).to_have_url(urljoin(args.url, "ja/api/foundation/"))
+        expect(page.locator('html')).to_have_attribute('lang', 'ja')
+        page.locator('[data-directory-search]').fill('Button')
+        page.locator('[data-directory-search]').press('Enter')
+        expect(page).to_have_url(urljoin(args.url, "ja/api/button/"))
+        expect(page.locator('html')).to_have_attribute('lang', 'ja')
+        ja_ui = guide_ui('ja')
+        ja_title = docs_i18n.display_component_title('Button', docs_i18n.component_locale('ja')['button']['name'], 'ja')
+        expect(page.locator('[data-shell-link="home"]')).to_have_text(ja_ui['home'])
+        expect(page.locator('h1')).to_have_text(ja_title)
+        expect(page.locator('#appearance-title')).to_have_text(ja_ui['exampleHeading'])
+        expect(page.locator('#usage-title')).to_have_text(ja_ui['usage'])
+        expect(page.locator('[data-playground-toggle]')).to_contain_text(ja_ui['propertyPreview'])
+        expect(page.locator('#api')).to_contain_text(ja_ui['apiGroups']['properties'])
+        page.screenshot(path=str(args.output / "button-ja-desktop.png"))
+        page.locator('#api').scroll_into_view_if_needed()
+        page.screenshot(path=str(args.output / "button-ja-api-desktop.png"))
+        page.locator('#api .api-inheritance a', has_text='FluentElement').first.click()
+        expect(page).to_have_url(re.compile('^' + re.escape(urljoin(args.url, "ja/api/reference/fluent-element/"))))
+        expect(page.locator('html')).to_have_attribute('lang', 'ja')
+        page.goto(urljoin(args.url, "ja/api/?q=ボタン"))
+        expect(page).to_have_url(re.compile('^' + re.escape(urljoin(args.url, "ja/api/button/"))))
+        expect(page.locator('html')).to_have_attribute('lang', 'ja')
+        expect(page.locator('h1')).to_have_text(ja_title)
+        page.goto(urljoin(args.url, "de/api/foundation/"))
+        page.locator('[data-directory-group="components"] > summary').click()
+        page.locator('[data-directory-group="category-basic-input"] > summary').click()
+        page.locator('[data-component-id="button"]').click()
+        expect(page).to_have_url(urljoin(args.url, "de/api/button/"))
+        expect(page.locator('html')).to_have_attribute('lang', 'de')
+        de_ui = guide_ui('de')
+        expect(page.locator('[data-playground-toggle]')).to_contain_text(de_ui['propertyPreview'])
+        expect(page.locator('#api')).to_contain_text(de_ui['apiGroups']['properties'])
+        page.screenshot(path=str(args.output / "button-de-desktop.png"))
         page.goto(urljoin(args.url, "zh-CN/api/"))
         expect(page).to_have_url(urljoin(args.url, "zh-CN/api/foundation/"))
         page.locator('[data-directory-search]').fill('复选框')

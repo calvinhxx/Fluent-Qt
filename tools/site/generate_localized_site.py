@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate and validate static English and Simplified Chinese site pages."""
+"""Generate and validate static localized website pages."""
 
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ import json
 import re
 import sys
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from site_assets import source_path
+from site_locales import FULL_API_LOCALES, LOCALES, Locale, relative_locale_url
 
 
 ROOT = Path(__file__).resolve().parents[2]
 SITE_ROOT = ROOT / "site"
+LOCALES_DIR = Path(__file__).with_name("locales") / "site"
 TEMPLATE_PATH = Path(__file__).with_name("index.template.html")
-SITE_SCRIPT_PATH = SITE_ROOT / "site.js"
 ERROR_PAGE_PATH = SITE_ROOT / "404.html"
 LEGACY_GALLERY_REDIRECT_PATH = SITE_ROOT / "app" / "index.html"
 BASE_URL = "https://calvinhxx.github.io/Fluent-Qt/"
@@ -28,6 +28,48 @@ REPOSITORY_URL = "https://github.com/calvinhxx/Fluent-Qt"
 # GitHub's Sponsor dialog shows custom funding links as bare URLs, so each tier
 # gets a short path; site.js selects the tier named by the `fuel` parameter.
 SUPPORT_TIERS = ("iced-coffee", "context-window", "max-reasoning", "freestyle")
+
+RUNTIME_I18N_KEYS: tuple[str, ...] = (
+    "a11y.systemHighContrastTheme",
+    "a11y.useDarkTheme",
+    "a11y.useHighContrastTheme",
+    "a11y.useLightTheme",
+    "a11y.openMenu",
+    "a11y.closeMenu",
+    "gallery.waitingTitle",
+    "gallery.waitingDetail",
+    "gallery.loadingTitle",
+    "gallery.loadingDetail",
+    "gallery.slowTitle",
+    "gallery.slowDetail",
+    "gallery.readyTitle",
+    "gallery.readyDetail",
+    "gallery.errorTitle",
+    "gallery.errorDetail",
+    "gallery.retryAction",
+    "copy.copy",
+    "copy.copied",
+    "copy.announcement",
+    "copy.failed",
+    "support.kofiMobileHelp",
+    "support.mobileHelp",
+    "support.kofiInstruction",
+    "support.linkedAnyInstruction",
+    "support.linkedInstruction",
+    "support.anyInstruction",
+    "support.instruction",
+    "support.any",
+    "support.tier19",
+    "support.tier49",
+    "support.tier99",
+    "downloads.macChoice",
+    "downloads.openRelease",
+    "downloads.downloadFor",
+    "spatial.runTitle",
+    "spatial.runCopy",
+    "spatial.stopped",
+    "spatial.reload",
+)
 
 
 def versioned_asset_url(path: str) -> str:
@@ -44,60 +86,7 @@ TEXT_PATTERN = re.compile(
     re.DOTALL,
 )
 START_TAG_PATTERN = re.compile(r"<(?!/|!)[^>]+>", re.DOTALL)
-
-
-@dataclass(frozen=True)
-class Locale:
-    key: str
-    html_lang: str
-    output: Path
-    canonical_url: str
-    og_locale: str
-    alternate_og_locale: str
-    resource_prefix: str
-    english_url: str
-    chinese_url: str
-    english_current: str
-    chinese_current: str
-    default_support_method: str
-    readme_url: str
-    image_alt: str
-
-
-LOCALES = (
-    Locale(
-        key="en",
-        html_lang="en",
-        output=SITE_ROOT / "index.html",
-        canonical_url=BASE_URL,
-        og_locale="en_US",
-        alternate_og_locale="zh_CN",
-        resource_prefix="",
-        english_url="./",
-        chinese_url="zh-CN/",
-        english_current="page",
-        chinese_current="false",
-        default_support_method="kofi",
-        readme_url=f"{REPOSITORY_URL}/blob/main/README.md",
-        image_alt="Fluent-Qt Gallery project preview with native Qt Widgets controls.",
-    ),
-    Locale(
-        key="zh",
-        html_lang="zh-CN",
-        output=SITE_ROOT / "zh-CN" / "index.html",
-        canonical_url=f"{BASE_URL}zh-CN/",
-        og_locale="zh_CN",
-        alternate_og_locale="en_US",
-        resource_prefix="../",
-        english_url="../",
-        chinese_url="./",
-        english_current="false",
-        chinese_current="page",
-        default_support_method="wechat",
-        readme_url=f"{REPOSITORY_URL}/blob/main/README.zh-CN.md",
-        image_alt="Fluent-Qt Gallery 项目预览，展示原生 Qt Widgets 控件。",
-    ),
-)
+PLACEHOLDER_PATTERN = re.compile(r"\{[a-z]+\}")
 
 
 def fail(message: str) -> None:
@@ -118,37 +107,45 @@ def project_version() -> str:
 
 def documentation_entry(language: str) -> str:
     from documentation_guides import guide_path
-    return guide_path('foundation', language).removesuffix('index.html')
+    return guide_path("foundation", language).removesuffix("index.html")
 
 
 def translations() -> dict[str, dict[str, str]]:
-    source = SITE_SCRIPT_PATH.read_text(encoding="utf-8")
-    declaration = "const translations = "
-    start = source.find(declaration)
-    end_marker = "\n};\n\nconst fallbackVersion"
-    end = source.find(end_marker, start)
-    if start < 0 or end < 0:
-        fail("could not locate the translations object in site/site.js")
+    parsed: dict[str, dict[str, str]] = {}
+    for locale in LOCALES:
+        path = LOCALES_DIR / f"{locale.key}.json"
+        if not path.is_file():
+            fail(f"missing site translation file: {path}")
+        try:
+            values = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            fail(f"{path} is not valid JSON: {error}")
+        if not isinstance(values, dict) or not all(
+            isinstance(key, str) and isinstance(value, str) for key, value in values.items()
+        ):
+            fail(f"{path} must map string keys to string values")
+        parsed[locale.key] = values
 
-    object_start = source.find("{", start)
-    literal = source[object_start : end + 2]
-    literal = re.sub(
-        r"^  (zh|en):",
-        lambda match: f'  "{match.group(1)}":',
-        literal,
-        flags=re.MULTILINE,
-    )
-    try:
-        parsed = json.loads(literal)
-    except json.JSONDecodeError as error:
-        fail(f"site/site.js translations are not JSON-compatible: {error}")
+    baseline = parsed["en"]
+    baseline_keys = set(baseline)
+    for key in RUNTIME_I18N_KEYS:
+        if key not in baseline_keys:
+            fail(f"missing runtime i18n key in en.json: {key}")
 
-    if not isinstance(parsed, dict) or set(parsed) != {"en", "zh"}:
-        fail("site/site.js must contain exactly the en and zh translation maps")
-    if set(parsed["en"]) != set(parsed["zh"]):
-        missing_en = sorted(set(parsed["zh"]) - set(parsed["en"]))
-        missing_zh = sorted(set(parsed["en"]) - set(parsed["zh"]))
-        fail(f"translation keys differ; missing_en={missing_en}, missing_zh={missing_zh}")
+    for locale in LOCALES:
+        values = parsed[locale.key]
+        if set(values) != baseline_keys:
+            missing = sorted(baseline_keys - set(values))
+            extra = sorted(set(values) - baseline_keys)
+            fail(f"translation keys differ for {locale.key}; missing={missing}, extra={extra}")
+        for key, en_value in baseline.items():
+            value = values[key]
+            if en_value and not value.strip():
+                fail(f"empty {locale.key} translation for {key}")
+            if not en_value and value:
+                fail(f"{locale.key} translation for {key} must stay empty")
+            if set(PLACEHOLDER_PATTERN.findall(value)) != set(PLACEHOLDER_PATTERN.findall(en_value)):
+                fail(f"placeholder mismatch in {locale.key} for {key}")
     return parsed
 
 
@@ -180,7 +177,7 @@ def localize_attributes(page: str, values: dict[str, str], locale: Locale) -> st
             tag = replace_attribute(tag, target_attribute, values[key])
 
         if "data-readme-link" in tag:
-            tag = replace_attribute(tag, "href", locale.readme_url)
+            tag = replace_attribute(tag, "href", locale.readme_url(REPOSITORY_URL))
         if 'name="support-method"' in tag:
             value_match = re.search(r'\bvalue="([^"]+)"', tag)
             tag = re.sub(r"\schecked\b", "", tag)
@@ -227,6 +224,7 @@ def prefix_resources(page: str, prefix: str) -> str:
         rf'(?P<head>\b(?:{attribute_names})=")'
         r'(?P<url>(?:assets/|styles\.css|site\.js|spatial-showcase\.js|gallery/|api/)[^"]*)'
     )
+
     def replace(match: re.Match[str]) -> str:
         url = match.group("url")
         path = url.split("?", 1)[0]
@@ -241,12 +239,61 @@ def prefix_resources(page: str, prefix: str) -> str:
     return pattern.sub(replace, page)
 
 
-def structured_data(locale: Locale, values: dict[str, str], version: str) -> str:
-    gallery_description = (
-        "Interactive C++ WebAssembly Gallery for evaluating Fluent-Qt controls in a browser."
-        if locale.key == "en"
-        else "可在浏览器中体验 Fluent-Qt 控件的交互式 C++ WebAssembly Gallery。"
+def alternate_links_markup() -> str:
+    lines = [
+        f'    <link rel="alternate" hreflang="{target.html_lang}" href="{target.canonical_url(BASE_URL)}">'
+        for target in LOCALES
+    ]
+    lines.append(f'    <link rel="alternate" hreflang="x-default" href="{BASE_URL}">')
+    return "\n".join(lines)
+
+
+def og_alternate_locales_markup(locale: Locale) -> str:
+    return "\n".join(
+        f'    <meta property="og:locale:alternate" content="{other.og_locale}">'
+        for other in LOCALES
+        if other.key != locale.key
     )
+
+
+def render_language_switch(locale: Locale, values: dict[str, str]) -> str:
+    label = html.escape(values["a11y.language"], quote=True)
+    items = []
+    for target in LOCALES:
+        href = html.escape(relative_locale_url(locale, target), quote=True)
+        current = "page" if target.key == locale.key else "false"
+        event = f'language_{target.key.lower().replace("-", "_")}'
+        items.append(
+            f'                <a href="{href}" lang="{target.html_lang}" hreflang="{target.html_lang}" '
+            f'aria-current="{current}" data-analytics-event="{event}">'
+            f'<span>{html.escape(target.native_name)}</span>'
+            f'<small>{html.escape(target.short_label)}</small></a>'
+        )
+    menu = "\n".join(items)
+    return (
+        '            <details class="language-switch">\n'
+        f'              <summary aria-label="{label}" data-i18n-aria-label="a11y.language">\n'
+        '                <svg class="language-globe" viewBox="0 0 24 24" aria-hidden="true">'
+        '<circle cx="12" cy="12" r="9"/>'
+        '<path d="M3.6 9h16.8M3.6 15h16.8M12 3a13.5 13.5 0 0 1 0 18M12 3a13.5 13.5 0 0 0 0 18"/>'
+        "</svg>\n"
+        f'                <span class="language-code">{html.escape(locale.short_label)}</span>\n'
+        '                <svg class="language-chevron" viewBox="0 0 16 16" aria-hidden="true">'
+        '<path d="M4.5 6.25 8 9.75l3.5-3.5"/></svg>\n'
+        "              </summary>\n"
+        '              <div class="language-menu" role="list">\n'
+        f"{menu}\n"
+        "              </div>\n"
+        "            </details>"
+    )
+
+
+def runtime_i18n_json(values: dict[str, str]) -> str:
+    subset = {key: values[key] for key in RUNTIME_I18N_KEYS}
+    return json.dumps(subset, ensure_ascii=False).replace("</", "<\\/")
+
+
+def structured_data(locale: Locale, values: dict[str, str], version: str) -> str:
     graph: dict[str, Any] = {
         "@context": "https://schema.org",
         "@graph": [
@@ -255,7 +302,7 @@ def structured_data(locale: Locale, values: dict[str, str], version: str) -> str
                 "@id": f"{BASE_URL}#project",
                 "name": "Fluent-Qt",
                 "alternateName": "FluentQt",
-                "url": locale.canonical_url,
+                "url": locale.canonical_url(BASE_URL),
                 "description": values["meta.description"],
                 "codeRepository": REPOSITORY_URL,
                 "programmingLanguage": "C++",
@@ -274,7 +321,7 @@ def structured_data(locale: Locale, values: dict[str, str], version: str) -> str
                 "@id": f"{BASE_URL}gallery/#application",
                 "name": "Fluent-Qt C++ Web Gallery",
                 "url": f"{BASE_URL}gallery/",
-                "description": gallery_description,
+                "description": locale.gallery_schema_description,
                 "applicationCategory": "DeveloperApplication",
                 "operatingSystem": "Web browser",
                 "isAccessibleForFree": True,
@@ -292,36 +339,44 @@ def render_page(
     values: dict[str, str],
     version: str,
 ) -> str:
+    canonical = locale.canonical_url(BASE_URL)
     token_values = {
         "HTML_LANG": locale.html_lang,
         "SITE_LANGUAGE": locale.key,
+        "PLAYGROUND_ART_LANG": locale.playground_art_lang,
         "META_TITLE": values["meta.title"],
         "META_DESCRIPTION": values["meta.description"],
-        "CANONICAL_URL": locale.canonical_url,
+        "CANONICAL_URL": canonical,
+        "ALTERNATE_LINKS": alternate_links_markup(),
         "OG_LOCALE": locale.og_locale,
-        "OG_ALTERNATE_LOCALE": locale.alternate_og_locale,
+        "OG_ALTERNATE_LOCALES": og_alternate_locales_markup(locale),
         "OG_IMAGE_URL": OG_IMAGE_URL,
-        "OG_IMAGE_ALT": locale.image_alt,
+        "OG_IMAGE_ALT": locale.og_image_alt,
         "STRUCTURED_DATA": structured_data(locale, values, version),
-        "EN_URL": locale.english_url,
-        "ZH_URL": locale.chinese_url,
-        "EN_CURRENT": locale.english_current,
-        "ZH_CURRENT": locale.chinese_current,
+        "LANGUAGE_SWITCH": render_language_switch(locale, values),
+        "RUNTIME_I18N": runtime_i18n_json(values),
+    }
+    raw_tokens = {
+        "STRUCTURED_DATA",
+        "ALTERNATE_LINKS",
+        "OG_ALTERNATE_LOCALES",
+        "LANGUAGE_SWITCH",
+        "RUNTIME_I18N",
     }
     page = template
     for token, value in token_values.items():
-        replacement = value if token == "STRUCTURED_DATA" else html.escape(value, quote=True)
+        replacement = value if token in raw_tokens else html.escape(value, quote=True)
         page = page.replace(f"{{{{{token}}}}}", replacement)
 
     page = localize_text(page, values, locale)
     page = localize_attributes(page, values, locale)
     page = prefix_resources(page, locale.resource_prefix)
-    # Resolve this locale-owned link after prefixing shared assets.
-    page = page.replace("{{API_URL}}", documentation_entry(locale.key).removeprefix("zh-CN/"))
-    page = page.replace('{{RELEASES_URL}}', 'api/releases/')
-    page = page.replace('{{PLAYGROUND_URL}}', 'api/checkbox/?playground=1')
+    # Resolve locale-owned routes after prefixing shared root assets.
+    page = page.replace("{{API_URL}}", locale.api_url)
+    page = page.replace("{{RELEASES_URL}}", locale.releases_url)
+    page = page.replace("{{PLAYGROUND_URL}}", locale.playground_url)
     if re.search(r"{{[A-Z0-9_]+}}", page):
-        fail(f"unresolved template token in {locale.output}")
+        fail(f"unresolved template token in {locale.output_relative}")
     return page.rstrip() + "\n"
 
 
@@ -330,79 +385,113 @@ def render_sitemap() -> str:
     from documentation_guides import guides, guide_path
     from api_sections import reference_headers, reference_path
     from generate_api_reference import generate_reference
+
     entries = []
-    paths = ['api/' + component['id'] + '/' for component in config()]
-    paths += ['api/releases/']
-    paths += [guide_path(item['id']).removesuffix('index.html') for item in guides()]
-    paths += [reference_path(item['source']).removesuffix('index.html') for item in reference_headers(generate_reference())]
-    for path in paths:
-        english = BASE_URL + path
-        chinese = BASE_URL + 'zh-CN/' + path
-        for url in (english, chinese):
-            entries.append(f'''  <url>
-    <loc>{url}</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="{english}" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="{chinese}" />
+    home_alternates = "\n".join(
+        f'    <xhtml:link rel="alternate" hreflang="{target.html_lang}" href="{target.canonical_url(BASE_URL)}" />'
+        for target in LOCALES
+    ) + f'\n    <xhtml:link rel="alternate" hreflang="x-default" href="{BASE_URL}" />'
+    for loc in LOCALES:
+        entries.append(f'''  <url>
+    <loc>{loc.canonical_url(BASE_URL)}</loc>
+{home_alternates}
   </url>''')
-    component_urls = "\n".join(entries)
+
+    for item in guides():
+        guide_urls = {
+            loc.key: BASE_URL + guide_path(item["id"], loc.key).removesuffix("index.html")
+            for loc in LOCALES
+        }
+        guide_alternates = "\n".join(
+            f'    <xhtml:link rel="alternate" hreflang="{loc.html_lang}" href="{guide_urls[loc.key]}" />'
+            for loc in LOCALES
+        ) + f'\n    <xhtml:link rel="alternate" hreflang="x-default" href="{guide_urls["en"]}" />'
+        for loc in LOCALES:
+            entries.append(f'''  <url>
+    <loc>{guide_urls[loc.key]}</loc>
+{guide_alternates}
+  </url>''')
+
+    paths = ["api/" + component["id"] + "/" for component in config()]
+    paths += ["api/releases/"]
+    paths += [
+        reference_path(item["source"]).removesuffix("index.html")
+        for item in reference_headers(generate_reference())
+    ]
+    for path in paths:
+        doc_alternates = "\n".join(
+            f'    <xhtml:link rel="alternate" hreflang="{loc.html_lang}" href="{BASE_URL}{loc.url_prefix}{path}" />'
+            for loc in LOCALES
+        ) + f'\n    <xhtml:link rel="alternate" hreflang="x-default" href="{BASE_URL}{path}" />'
+        for loc in LOCALES:
+            entries.append(f'''  <url>
+    <loc>{BASE_URL}{loc.url_prefix}{path}</loc>
+{doc_alternates}
+  </url>''')
+
+    url_entries = "\n".join(entries)
     return f'''<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url>
-    <loc>{BASE_URL}</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="{BASE_URL}" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="{BASE_URL}zh-CN/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="{BASE_URL}" />
-  </url>
-  <url>
-    <loc>{BASE_URL}zh-CN/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="{BASE_URL}" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="{BASE_URL}zh-CN/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="{BASE_URL}" />
-  </url>
-{component_urls}
+{url_entries}
 </urlset>
 '''
 
 
 def validate_page(page: str, locale: Locale, values: dict[str, str]) -> None:
-    requirements = (
+    canonical = locale.canonical_url(BASE_URL)
+    requirements = [
         f'<html lang="{locale.html_lang}" data-site-language="{locale.key}">',
         f"<title>{html.escape(values['meta.title'])}</title>",
-        f'<link rel="canonical" href="{locale.canonical_url}">',
-        '<link rel="alternate" hreflang="en"',
-        '<link rel="alternate" hreflang="zh-CN"',
+        f'<link rel="canonical" href="{canonical}">',
         '<link rel="alternate" hreflang="x-default"',
-        f'<meta property="og:url" content="{locale.canonical_url}">',
+        f'<meta property="og:url" content="{canonical}">',
         f'<meta property="og:locale" content="{locale.og_locale}">',
         '<script type="application/ld+json">',
-    )
+        '<script type="application/json" id="site-i18n">',
+    ]
+    for other in LOCALES:
+        requirements.append(
+            f'<link rel="alternate" hreflang="{other.html_lang}" href="{other.canonical_url(BASE_URL)}">'
+        )
     for requirement in requirements:
         if requirement not in page:
-            fail(f"{locale.output} is missing SEO contract: {requirement}")
+            fail(f"{locale.output_relative} is missing SEO contract: {requirement}")
 
     json_ld_match = re.search(
         r'<script type="application/ld\+json">\s*(.*?)\s*</script>', page, re.DOTALL
     )
     if not json_ld_match:
-        fail(f"{locale.output} is missing JSON-LD")
+        fail(f"{locale.output_relative} is missing JSON-LD")
     try:
         json.loads(json_ld_match.group(1).replace("<\\/", "</"))
     except json.JSONDecodeError as error:
-        fail(f"{locale.output} contains invalid JSON-LD: {error}")
+        fail(f"{locale.output_relative} contains invalid JSON-LD: {error}")
 
-    expected_links = (
-        f'href="{locale.english_url}" lang="en" hreflang="en"',
-        f'href="{locale.chinese_url}" lang="zh-CN" hreflang="zh-CN"',
+    i18n_match = re.search(
+        r'<script type="application/json" id="site-i18n">(.*?)</script>', page, re.DOTALL
     )
-    for expected in expected_links:
+    if not i18n_match:
+        fail(f"{locale.output_relative} is missing runtime i18n JSON")
+    try:
+        runtime_map = json.loads(i18n_match.group(1).replace("<\\/", "</"))
+    except json.JSONDecodeError as error:
+        fail(f"{locale.output_relative} contains invalid runtime i18n JSON: {error}")
+    if set(runtime_map) != set(RUNTIME_I18N_KEYS):
+        fail(f"{locale.output_relative} runtime i18n keys mismatch")
+
+    for target in LOCALES:
+        href = html.escape(relative_locale_url(locale, target), quote=True)
+        expected = f'href="{href}" lang="{target.html_lang}" hreflang="{target.html_lang}"'
         if expected not in page:
-            fail(f"{locale.output} is missing language link: {expected}")
+            fail(f"{locale.output_relative} is missing language link: {expected}")
 
     section_labels = re.findall(r'<p class="section-index"[^>]*>([^<]*)</p>', page)
     for number, label in enumerate(section_labels, start=1):
         if not label.startswith(f"{number:02d} / "):
-            fail(f"{locale.output} section {number:02d} has a missing or out-of-order index: {label}")
+            fail(
+                f"{locale.output_relative} section {number:02d} has a missing or out-of-order index: {label}"
+            )
 
 
 def validate_error_page() -> None:
@@ -411,13 +500,16 @@ def validate_error_page() -> None:
     except OSError as error:
         fail(f"cannot read {ERROR_PAGE_PATH}: {error}")
 
-    requirements = (
+    requirements = [
         '<html lang="en" data-site-language="en">',
         '<base href="/Fluent-Qt/">',
-        'location.pathname) ? "zh" : "en"',
-        'href="zh-CN/" data-lang-zh',
-        'href="./" data-lang-en',
-    )
+        "location.pathname",
+        'href="./"',
+    ]
+    for loc in LOCALES:
+        if loc.url_prefix:
+            requirements.append(loc.url_prefix)
+            requirements.append(loc.html_lang)
     for requirement in requirements:
         if requirement not in page:
             fail(f"site/404.html is missing URL-language contract: {requirement}")
@@ -443,8 +535,13 @@ def render_support_redirect(tier: str) -> str:
   <link rel="canonical" href="{BASE_URL}">
   <title>Support Fluent-Qt</title>
   <script>
-    // WeChat Pay and Alipay visitors usually read Chinese; both pages keep the tier.
-    if (navigator.language.toLowerCase().startsWith("zh")) location.replace("../../zh-CN/?fuel={tier}#support");
+    const navLang = (navigator.language || "").toLowerCase();
+    if (/^zh-(tw|hk|mo|hant)\\b/.test(navLang)) location.replace("../../zh-TW/?fuel={tier}#support");
+    else if (navLang.startsWith("zh")) location.replace("../../zh-CN/?fuel={tier}#support");
+    else {{
+      const prefix = {{"ja": "ja/", "ko": "ko/", "de": "de/", "ru": "ru/", "es": "es/", "fr": "fr/"}}[navLang.split("-")[0]];
+      if (prefix) location.replace(`../../${{prefix}}?fuel={tier}#support`);
+    }}
   </script>
 </head>
 <body><p><a href="{target}">Support Fluent-Qt</a></p></body>
@@ -515,19 +612,18 @@ def main() -> int:
     for locale in LOCALES:
         page = render_page(source, locale, localized_values[locale.key], version)
         validate_page(page, locale, localized_values[locale.key])
-        outputs.append((locale.output, page))
+        outputs.append((SITE_ROOT / locale.output_relative, page))
 
     sitemap = render_sitemap()
     try:
         ET.fromstring(sitemap)
     except ET.ParseError as error:
         fail(f"generated sitemap is invalid XML: {error}")
+    outputs.append((SITE_ROOT / "sitemap.xml", sitemap))
     outputs.extend(
-        (
-            (SITE_ROOT / "sitemap.xml", sitemap),
-        )
+        (SITE_ROOT / "fuel" / tier / "index.html", render_support_redirect(tier))
+        for tier in SUPPORT_TIERS
     )
-    outputs.extend((SITE_ROOT / "fuel" / tier / "index.html", render_support_redirect(tier)) for tier in SUPPORT_TIERS)
 
     valid = all(write_or_check(path, content, arguments.check) for path, content in outputs)
     if not valid:

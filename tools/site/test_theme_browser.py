@@ -13,7 +13,9 @@ import sys
 import threading
 from urllib.parse import parse_qs, urlsplit
 
+from documentation_guides import guide_ui
 from serve import SiteHandler
+from site_locales import LOCALES, locale_by_key
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -234,17 +236,17 @@ def check_release_documents(page: object, site_url: str, language: str, output: 
     check_release_anchor_navigation(page, site_url)
 
 
-def check_directory_hierarchy(page: object, site_url: str) -> None:
+def check_directory_hierarchy(page: object, site_url: str, *, full_api: bool = True, language: str = "en") -> None:
     """Keep each document discoverable through its owning branch and search."""
-    cases = (
-        ('releases', ['project']),
+    cases = [
         ('foundation', ['foundation']),
         ('foundation-iconography', ['foundation', 'category-foundation']),
         ('module-particles', ['modules', 'category-particles']),
         ('module-spatial', ['modules', 'category-spatial']),
         ('module-qmlbridge', ['modules', 'category-qml-bridge']),
-        ('reference/particles-session', ['reference']),
-    )
+    ]
+    if full_api:
+        cases = [('releases', ['project']), *cases, ('reference/particles-session', ['reference'])]
     # The previous release check also exercises the compact layout.
     page.set_viewport_size({'width': 1280, 'height': 800})
     for route, expected in cases:
@@ -266,7 +268,7 @@ def check_directory_hierarchy(page: object, site_url: str) -> None:
         if ancestors != expected:
             raise RuntimeError(f'Wrong documentation branch for {route}: {ancestors}')
 
-    page.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
+    page.goto(site_url + 'api/' + ('releases/' if full_api else 'foundation/'), wait_until='domcontentloaded')
     components = page.locator('[data-directory-group="components"]')
     components.locator(':scope > summary').click()
     basic = page.locator('[data-directory-group="category-basic-input"]')
@@ -280,9 +282,13 @@ def check_directory_hierarchy(page: object, site_url: str) -> None:
         search.fill(query)
         if not page.locator(f'[data-component-id="{component}"]').is_visible():
             raise RuntimeError(f'Search did not expand the matched component branch: {query}')
+    ui = guide_ui(language)
     search.fill('no-such-document-xyz')
     if page.locator('[data-directory-group]:not([hidden])').count():
         raise RuntimeError('Empty search results left empty branches visible')
+    status_text = page.locator('[data-directory-status]').text_content()
+    if status_text != ui['noResults']:
+        raise RuntimeError(f'Unexpected empty search status in {language}: {status_text!r} != {ui["noResults"]!r}')
     search.press('Escape')
     after = page.locator('[data-directory-group]').evaluate_all('groups => groups.map(g => g.open)')
     if before != after:
@@ -296,17 +302,20 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
         handler = partial(QuietSiteHandler, wasm_root=output / "no-wasm-runtime")
     else:
         site_root = site_root.resolve()
-        for name in ("index.html", "zh-CN/index.html"):
+        for loc in LOCALES:
+            name = loc.output_relative
             if not (site_root / name).is_file():
                 raise RuntimeError(f"Website artifact is missing {name}: {site_root}")
         handler = partial(QuietHandler, directory=str(site_root))
+    active_root = site_root or (PROJECT_ROOT / "site")
     output.mkdir(parents=True, exist_ok=True)
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
     results = []
     try:
-        for language, locale in (("en", ""), ("zh-CN", "zh-CN/")):
+        for loc in LOCALES:
+            language, locale = loc.html_lang, loc.url_prefix
             page = browser.new_page(viewport={"width": 1280, "height": 800})
             errors, runtime_requests = [], []
             page.on("pageerror", lambda error: errors.append(str(error)))
@@ -319,7 +328,7 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                 site_url = f"http://127.0.0.1:{server.server_port}/{locale}"
                 response = page.goto(site_url, wait_until="domcontentloaded")
                 if response is None or not response.ok:
-                    raise RuntimeError("Could not load the website theme contract")
+                    raise RuntimeError(f"Could not load the website theme contract for {language}")
                 page.wait_for_selector("html[data-i18n-ready]", timeout=10_000)
 
                 for width in (960, 1024, 1280):
@@ -331,6 +340,16 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     bounds = github.bounding_box()
                     if not bounds or bounds["x"] + bounds["width"] > width:
                         raise RuntimeError(f"Navigation exceeds {width}px in {language}")
+                    switcher = page.locator(".language-switch")
+                    switcher.locator("summary").click()
+                    if switcher.get_attribute("open") is None:
+                        raise RuntimeError(f"Language dropdown failed to open in {language}")
+                    menu_bounds = switcher.locator(".language-menu").bounding_box()
+                    if not menu_bounds or menu_bounds["x"] < 0 or menu_bounds["x"] + menu_bounds["width"] > width:
+                        raise RuntimeError(f"Language dropdown overflows {width}px in {language}: {menu_bounds}")
+                    page.keyboard.press("Escape")
+                    if switcher.get_attribute("open") is not None:
+                        raise RuntimeError(f"Language dropdown failed to close on Escape in {language}")
                     if menu.is_visible():
                         menu.click()
 
@@ -400,7 +419,7 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     page.goto(site_url + "#top")
                     page.wait_for_selector("html[data-i18n-ready]")
                     if page.evaluate("document.documentElement.scrollWidth > innerWidth"):
-                        raise RuntimeError(f"Website overflows horizontally at {width}px")
+                        raise RuntimeError(f"Website overflows horizontally in {language} at {width}px")
                     # The section clips overflow, so page width alone misses a cut-off title.
                     if not page.locator("#spatial-title").evaluate("""title => {
                         const text = document.createRange();
@@ -416,37 +435,75 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     if page.locator('[data-showcase-frame]').get_attribute('src'):
                         raise RuntimeError("Website eagerly loaded the opt-in Spatial runtime")
                     page.screenshot(path=str(output / f"{language}-{width}.png"))
-                if site_root is not None:
-                    check_release_documents(page, site_url, language, output)
-                    check_directory_hierarchy(page, site_url)
-                    fallback = browser.new_page(java_script_enabled=False)
-                    try:
-                        fallback.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
-                        entry_count = fallback.locator('[data-release-entry]').count()
-                        if not entry_count or fallback.locator('[data-release-entry]:visible').count() != entry_count:
-                            raise RuntimeError('No-JavaScript reading lost release entries')
-                        for scope in ('uilib', 'gallery'):
-                            if not fallback.locator(f'[id="v1.11.1"] [data-release-scope="{scope}"]').is_visible():
-                                raise RuntimeError('No-JavaScript reading hid a release scope')
-                        if not fallback.locator('#gallery-private-qt-headers').is_visible():
-                            raise RuntimeError('No-JavaScript reading hid migration instructions')
-                    finally:
-                        fallback.close()
-                if errors:
-                    raise RuntimeError(f"Website page errors ({language}): {errors}")
+
+                # A locale code deeper in a missing URL must not change its language or home link.
+                for mount in ("", "Fluent-Qt/"):
+                    site_base = f"http://127.0.0.1:{server.server_port}/{mount}"
+                    nested = "de" if locale else "ja"
+                    not_found_url = f"{site_base}{locale}api/{nested}/missing-page-check"
+                    page.route(
+                        not_found_url,
+                        lambda route: route.fulfill(
+                            status=404,
+                            content_type="text/html; charset=utf-8",
+                            body=(active_root / "404.html").read_text(encoding="utf-8"),
+                        ),
+                    )
+                    page.goto(not_found_url, wait_until="domcontentloaded")
+                    if page.locator("html").get_attribute("lang") != language:
+                        raise RuntimeError(f"404.html did not resolve lang={language} from URL {not_found_url}")
+                    home_url = page.locator("[data-404-home]").evaluate("link => link.href")
+                    if home_url != site_base + locale:
+                        raise RuntimeError(f"404.html links {not_found_url} to the wrong homepage: {home_url}")
+                    page.unroute(not_found_url)
+
+                release_checked = "not_run"
+                directory_checked = "not_run"
+                has_guide = (active_root / locale / "api/foundation/index.html").is_file()
+                if site_root is not None or has_guide:
+                    if loc.has_full_api_docs:
+                        check_release_documents(page, site_url, language, output)
+                        release_checked = "passed"
+                        fallback = browser.new_page(java_script_enabled=False)
+                        try:
+                            fallback.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
+                            entry_count = fallback.locator('[data-release-entry]').count()
+                            if not entry_count or fallback.locator('[data-release-entry]:visible').count() != entry_count:
+                                raise RuntimeError('No-JavaScript reading lost release entries')
+                            for scope in ('uilib', 'gallery'):
+                                if not fallback.locator(f'[id="v1.11.1"] [data-release-scope="{scope}"]').is_visible():
+                                    raise RuntimeError('No-JavaScript reading hid a release scope')
+                            if not fallback.locator('#gallery-private-qt-headers').is_visible():
+                                raise RuntimeError('No-JavaScript reading hid migration instructions')
+                        finally:
+                            fallback.close()
+                    check_directory_hierarchy(page, site_url, full_api=loc.has_full_api_docs, language=loc.key)
+                    directory_checked = "passed"
                 if runtime_requests:
                     raise RuntimeError(f"Static website eagerly requested WASM ({language}): {runtime_requests}")
+                if site_root is not None or has_guide:
+                    page.route("**/gallery/**", lambda route: route.fulfill(status=503, content_type="text/html", body="<h1>Unavailable</h1>"))
+                    page.locator('[data-component-id="button"]').click()
+                    page.wait_for_url(site_url + 'api/button/')
+                    actual_html_lang = page.locator('html').get_attribute('lang')
+                    if actual_html_lang != language:
+                        raise RuntimeError(f"Clicking Button from {loc.key} switched html lang to {actual_html_lang!r}")
+                    actual_home = page.locator('[data-shell-link="home"]').text_content()
+                    if actual_home != guide_ui(loc.key)['home']:
+                        raise RuntimeError(f"Unexpected localized home label after clicking Button in {loc.key}: {actual_home!r}")
+                if errors:
+                    raise RuntimeError(f"Website page errors ({language}): {errors}")
                 results.append({"language": language, "themes": ["light", "dark", "high-contrast"],
                                 "forced_colors": "passed", "widths": [1280, 390, 320], "runtime_requests": [],
-                                "release_documents": "passed" if site_root is not None else "not_run",
-                                "directory_hierarchy": "passed" if site_root is not None else "not_run"})
+                                "release_documents": release_checked,
+                                "directory_hierarchy": directory_checked})
             finally:
                 page.close()
     finally:
         server.shutdown()
         server.server_close()
         server_thread.join(timeout=5)
-    return {"status": "passed", "source": str(site_root or PROJECT_ROOT / "site"), "pages": results}
+    return {"status": "passed", "source": str(active_root), "pages": results}
 
 
 def main() -> None:
@@ -463,7 +520,7 @@ def main() -> None:
         finally:
             browser.close()
     (args.output / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    print("Website browser theme contract passed: both languages, three themes, forced colors, wide/narrow, no WASM")
+    print(f"Website browser theme contract passed: {len(LOCALES)} languages, three themes, forced colors, wide/narrow, no WASM")
 
 
 if __name__ == "__main__":
