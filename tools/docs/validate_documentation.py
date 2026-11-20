@@ -25,6 +25,19 @@ REQUIRED_INDEXES = (
     "docs/development/README.md",
     "docs/releases/README.md",
 )
+LOCALIZED_READMES = (
+    "README.zh-CN.md",
+    "README.zh-TW.md",
+    "README.ja.md",
+    "README.ko.md",
+    "README.de.md",
+    "README.ru.md",
+    "README.es.md",
+    "README.fr.md",
+)
+ROOT_README_FILES = ("README.md", *LOCALIZED_READMES)
+GIT_TAG_RE = re.compile(r"\bGIT_TAG\s+(v[^\s]+)")
+README_SWITCHER_RE = re.compile(r'<p align="center">\s*(.*?)\s*</p>', re.DOTALL)
 
 INLINE_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 REFERENCE_LINK_RE = re.compile(r"^\s*\[[^\]]+\]:\s*(\S+)", re.MULTILINE)
@@ -158,7 +171,7 @@ def cjk_hard_wrap_lines(text: str) -> list[int]:
 def english_document_cjk_lines(text: str, relative: str) -> list[int]:
     """Find CJK text outside the documented exceptions, preserving line numbers."""
 
-    if relative in {"README.md", "docs/SUMMARY.md"} or relative.endswith(".zh-CN.md"):
+    if relative in {"README.md", "docs/SUMMARY.md", *LOCALIZED_READMES} or relative.endswith(".zh-CN.md"):
         return []
 
     def blank(value: str) -> str:
@@ -220,6 +233,43 @@ def english_document_cjk_lines(text: str, relative: str) -> list[int]:
         if CJK_RE.search(line):
             violations.append(number)
     return violations
+
+
+def validate_localized_readmes(project_root: Path) -> list[str]:
+    """Verify root README translations cross-link each other and match GIT_TAG."""
+
+    readme_path = project_root / "README.md"
+    if not readme_path.is_file():
+        return []
+    existing = [name for name in ROOT_README_FILES if (project_root / name).is_file()]
+    if len(existing) <= 1:
+        return []
+
+    errors: list[str] = []
+    base_text = readme_path.read_text(encoding="utf-8")
+    tag_match = GIT_TAG_RE.search(base_text)
+    expected_tag = tag_match.group(1) if tag_match else None
+    for current in existing:
+        text = (project_root / current).read_text(encoding="utf-8")
+        switcher_match = README_SWITCHER_RE.match(text.lstrip())
+        switcher = switcher_match.group(1) if switcher_match else ""
+        for target in existing:
+            if target == current:
+                continue
+            if f'href="{target}"' not in switcher:
+                errors.append(
+                    f"localized README language bar in {current} is missing link to {target}"
+                )
+        if expected_tag:
+            current_tag = GIT_TAG_RE.search(text)
+            if not current_tag:
+                errors.append(f"localized README {current} is missing GIT_TAG {expected_tag}")
+            elif current_tag.group(1) != expected_tag:
+                errors.append(
+                    f"localized README {current} has GIT_TAG {current_tag.group(1)} "
+                    f"(expected {expected_tag})"
+                )
+    return errors
 
 
 def validate(project_root: Path) -> list[str]:
@@ -302,6 +352,7 @@ def validate(project_root: Path) -> list[str]:
             if not resolved.exists():
                 errors.append(f"broken local link: {relative} -> {raw_target}")
 
+    errors.extend(validate_localized_readmes(project_root))
     return errors
 
 

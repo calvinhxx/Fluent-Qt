@@ -13,11 +13,13 @@ from unittest import mock
 from generate_navigation import generate as generate_navigation
 from generate_navigation import render_release_index
 from validate_documentation import (
+    LOCALIZED_READMES,
     cjk_hard_wrap_lines,
     english_document_cjk_lines,
     markdown_files,
     relative_posix_path,
     validate,
+    validate_localized_readmes,
 )
 
 
@@ -261,12 +263,35 @@ class EnglishDocumentLanguageTest(unittest.TestCase):
                 self.assertTrue(english_document_cjk_lines(text, "docs/guide.md"))
 
     def test_only_root_readme_and_explicit_translation_are_exempt(self) -> None:
-        for relative in ("README.md", "README.zh-CN.md", "docs/guide.zh-CN.md"):
+        for relative in ("README.md", *LOCALIZED_READMES, "docs/guide.zh-CN.md"):
             with self.subTest(relative=relative):
                 self.assertEqual([], english_document_cjk_lines("中文正文", relative))
         for relative in ("docs/README.md", "docs/guide_CN.md", "docs/guide.zh-CN.notes.md"):
             with self.subTest(relative=relative):
                 self.assertEqual([1], english_document_cjk_lines("中文正文", relative))
+
+    def test_localized_readmes_validate_cross_links_and_git_tag(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_text(
+                '<p align="center">\n  English | <a href="README.ja.md">日本語</a>\n</p>\n\n'
+                "```cmake\nGIT_TAG v1.12.0\n```\n",
+                encoding="utf-8",
+            )
+            (root / "README.ja.md").write_text(
+                '<p align="center">\n  <a href="README.md">English</a> | 日本語\n</p>\n\n'
+                "```cmake\nGIT_TAG v1.12.0\n```\n",
+                encoding="utf-8",
+            )
+            self.assertEqual([], validate_localized_readmes(root))
+            (root / "README.ja.md").write_text(
+                '<p align="center">\n  日本語\n</p>\n\n```cmake\nGIT_TAG v1.11.0\n```\n',
+                encoding="utf-8",
+            )
+            errors = validate_localized_readmes(root)
+            self.assertEqual(len(errors), 2)
+            self.assertTrue(any("missing link to README.md" in e for e in errors))
+            self.assertTrue(any("GIT_TAG v1.11.0" in e for e in errors))
 
     def test_code_comments_and_link_destinations_are_exempt(self) -> None:
         text = "\n".join(
