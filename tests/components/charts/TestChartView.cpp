@@ -56,6 +56,39 @@ void movePointer(QWidget& target, const QPoint& position)
 }
 } // namespace
 
+TEST(ChartViewTest, Contract_AreaHoverLayerRefreshesAfterDataAndRangeChanges)
+{
+    ChartModel model;
+    model.setPoints(wave(1000));
+    AreaChart chart;
+    chart.resize(480, 320);
+    chart.setModel(&model);
+    chart.show();
+    QApplication::processEvents();
+    const auto first = chart.grab().toImage();
+    const auto generation = chart.projectionBuildCount();
+    movePointer(chart, QPoint(1, 1));
+    chart.grab();
+    EXPECT_EQ(chart.projectionBuildCount(), generation);
+    chart.setYRange(0, 200);
+    model.setPoints(wave(2000));
+    chart.exportImage(); // Force the new projection before warming hover again.
+    movePointer(chart, QPoint(1, 1));
+    const auto cached = chart.grab().toImage();
+    ASSERT_NE(cached, first);
+    chart.hide();
+    chart.show();
+    const auto direct = chart.grab().toImage();
+    ASSERT_EQ(cached.size(), direct.size());
+    // Compare the plot interior; alpha blending through a pixmap may round one channel.
+    for (int y = cached.height() / 3; y < cached.height() * 2 / 3; y += 4) {
+        for (int x = cached.width() / 4; x < cached.width() * 3 / 4; x += 4) {
+            const QColor a = cached.pixelColor(x, y), b = direct.pixelColor(x, y);
+            ASSERT_LE(qAbs(a.red() - b.red()) + qAbs(a.green() - b.green()) + qAbs(a.blue() - b.blue()), 6);
+        }
+    }
+}
+
 TEST(ChartViewTest, Contract_ExportKeepsRawRowsQuotesAndVisibleRange)
 {
     ChartModel model;

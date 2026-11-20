@@ -14,6 +14,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QWheelEvent>
+#include <QtMath>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -21,6 +22,7 @@
 #include "ChartRenderer_p.h"
 #include "ChartReadout_p.h"
 #include "compatibility/private/ClipboardCompat_p.h"
+#include "compatibility/PaintCompat.h"
 #include "design/ChartTokens_p.h"
 #include "design/ThemeColors.h"
 #include "design/Typography.h"
@@ -152,6 +154,8 @@ public:
     ChartView* q;
     QVector<Series> series;
     QVector<detail::Projection> projections;
+    QPixmap areaLayer;
+    bool areaHover = false;
     QVector<QColor> dataColors;
     std::unique_ptr<detail::ChartRenderer> renderer;
     QPointer<detail::ChartReadout> readout;
@@ -383,6 +387,8 @@ public:
     }
     void project()
     {
+        areaLayer = {};
+        areaHover = false;
         bounds();
         layout();
         dpr = q->devicePixelRatioF();
@@ -1252,11 +1258,35 @@ void ChartView::paintChart(QPainter& painter, bool interactive)
         d->paintAxes(painter);
         d->paintLegend(painter);
     }
-    painter.save();
-    painter.setClipRect(d->bars() || d->circular() ? d->plot : d->plot.adjusted(-4, -4, 4, 4));
-    for (int s = 0; s < d->projections.size(); ++s)
-        d->renderer->paint(painter, d->context(s), d->projections[s]);
-    painter.restore();
+    auto paintSeries = [&](QPainter& target) {
+        target.save();
+        target.setClipRect(d->bars() || d->circular() ? d->plot : d->plot.adjusted(-4, -4, 4, 4));
+        for (int s = 0; s < d->projections.size(); ++s)
+            d->renderer->paint(target, d->context(s), d->projections[s]);
+        target.restore();
+    };
+    // Rasterize stable area fills only on interaction. Streaming, exports and
+    // oversized canvases keep the direct path; overlays stay at native resolution.
+    const QSize pixels(qCeil(width() * d->dpr), qCeil(height() * d->dpr));
+    if (interactive && d->type == Area && d->areaHover && !d->dirty && isEnabled()
+        && qint64(pixels.width()) * pixels.height() <= 4 * 1024 * 1024) {
+        if (d->areaLayer.isNull()) {
+            d->areaLayer = QPixmap(pixels);
+            if (!d->areaLayer.isNull()) {
+                d->areaLayer.setDevicePixelRatio(d->dpr);
+                d->areaLayer.fill(Qt::transparent);
+                FluentRasterCachePainter layer(&d->areaLayer);
+                layer.setRenderHints(painter.renderHints());
+                paintSeries(layer);
+            }
+        }
+        if (!d->areaLayer.isNull())
+            fluentDrawPixmapAt(painter, QPointF(), d->areaLayer);
+        else
+            paintSeries(painter);
+    } else {
+        paintSeries(painter);
+    }
     if (d->renderer->innerRadius() > 0 && !d->loading && d->projectedPoints) {
         const qreal width = d->plot.width() * d->renderer->innerRadius() - 20;
         const qreal x = d->plot.center().x() - width / 2;
@@ -1300,6 +1330,8 @@ void ChartView::showEvent(QShowEvent* event)
 }
 void ChartView::hideEvent(QHideEvent* event)
 {
+    d->areaLayer = {};
+    d->areaHover = false;
     d->timer.stop();
     d->dismissReadout();
     QWidget::hideEvent(event);
@@ -1333,6 +1365,7 @@ void ChartView::mouseMoveEvent(QMouseEvent* event)
     d->hoverSeries = series;
     d->hoverRow = first;
     d->hoverLast = last;
+    d->areaHover = true;
     d->hoverPosition = event->pos();
     d->syncReadout();
     update();
