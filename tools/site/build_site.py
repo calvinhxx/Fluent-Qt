@@ -84,7 +84,7 @@ def verify(folder: Path, commit: str) -> None:
             raise ValueError(f"Incomplete site artifact: {name}")
 
 
-def stage(output: Path, commit: str) -> None:
+def stage(output: Path, commit: str, pages: set[str]) -> None:
     source = (ROOT / "site").resolve()
     output = output.resolve()
     if output == ROOT.resolve() or output in ROOT.resolve().parents or output == source or source in output.parents:
@@ -93,10 +93,8 @@ def stage(output: Path, commit: str) -> None:
         raise ValueError("Refusing to replace a directory without a site build receipt")
     output.parent.mkdir(parents=True, exist_ok=True)
     # Never deploy ignored local servers, build products or old generated routes.
-    from generate_api_reference import generate_reference
-    from component_docs import collect, generated_outputs
     previews = validated_manifest()
-    pages = generated_outputs(collect(generate_reference(), previews))
+    api_prefixes = tuple(f"{loc.url_prefix}api/" for loc in LOCALES)
     expected_images = {item["path"] for item in previews["images"]}
     expected_images.add("assets/component-previews/manifest.json")
     with tempfile.TemporaryDirectory(prefix="site-stage-", dir=output.parent) as temporary:
@@ -111,7 +109,6 @@ def stage(output: Path, commit: str) -> None:
                 raise ValueError(f"Unexpected symlink in website source: {path}")
             if not path.is_file() or path.name == ".DS_Store":
                 continue
-            api_prefixes = tuple(f"{loc.url_prefix}api/" for loc in LOCALES)
             if ((relative.startswith(api_prefixes) and path.suffix == ".html")
                     or relative.startswith("api/playground-i18n/")) and relative not in pages:
                 continue
@@ -122,6 +119,9 @@ def stage(output: Path, commit: str) -> None:
             destination = staged / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(path, destination)
+        missing = sorted(path for path in pages if not (staged / path).is_file())
+        if missing:
+            raise ValueError(f"Missing generated website files: {', '.join(missing)}")
         copy_assets(staged, ROOT)
         receipt = {"schema_version": 1, "commit": commit,
                    "preview_input_digest": previews["input_digest"], "files": checksums(staged)}
@@ -162,8 +162,10 @@ def main() -> None:
         if not args.gallery:
             parser.error("Preview inputs changed; build the native Gallery and pass --gallery")
         run("tools/site/generate_component_previews.py", "--executable", str(args.gallery.resolve()))
-    run("tools/site/generate_api_reference.py", "--require-current-previews")
-    stage(args.output, commit)
+    with tempfile.TemporaryDirectory(prefix="fluentqt-site-manifest-") as directory:
+        manifest = Path(directory) / "pages.json"
+        run("tools/site/generate_api_reference.py", "--require-current-previews", "--output-manifest", str(manifest))
+        stage(args.output, commit, set(json.loads(manifest.read_text(encoding="utf-8"))))
     print(f"Generated website and component documentation: {args.output}")
 
 

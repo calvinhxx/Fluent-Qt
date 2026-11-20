@@ -242,7 +242,10 @@ def main() -> int:
         action="store_true",
         help="Fail instead of reusing stale or placeholder previews (publication)",
     )
+    parser.add_argument("--output-manifest", type=Path, help="Write the list of generated site paths for packaging")
     arguments = parser.parse_args()
+    if arguments.output_manifest and (arguments.check or arguments.catalog_only):
+        parser.error("--output-manifest requires full document generation")
     from validate_documentation_claims import validate
     errors, coverage = validate()
     if errors:
@@ -282,6 +285,9 @@ def main() -> int:
     if arguments.catalog_only:
         print(f"Generated API catalog: {OUTPUT.relative_to(ROOT)}")
         return 0
+    if arguments.output_manifest:
+        paths = sorted(path.relative_to(ROOT / "site").as_posix() for path in outputs)
+        arguments.output_manifest.write_text(json.dumps(paths) + "\n", encoding="utf-8")
     pages = sum(path.suffix == '.html' for path in outputs)
     print(f"Generated API catalog and {pages} document pages ({len(outputs)} files)")
     return 0
