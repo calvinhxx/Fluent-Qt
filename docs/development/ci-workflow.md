@@ -127,7 +127,8 @@ reuse the Gallery, examples and SDK when their complete build-input fingerprint
 matches a cached build. The fingerprint covers tracked project files, Qt and
 Emscripten versions, the pinned emsdk revision, build-tool versions and the runner
 image. Website-only files, website generators, release-note Markdown and other non-SDK
-documentation are excluded. Installed AI documentation, the bundled Skill,
+documentation are excluded. The playground descriptor generator and release-history JSON
+are inputs because the Gallery embeds their data. Installed AI documentation, the bundled Skill,
 licenses, resources, presets and unknown new tracked paths remain inputs.
 
 The cache contains only the staged browser payload and installed SDK, with a

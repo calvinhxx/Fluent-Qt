@@ -2,6 +2,7 @@
 """Check type discovery in the installed-header API index."""
 
 import unittest
+import xml.etree.ElementTree as ET
 import copy
 import html
 import hashlib
@@ -338,9 +339,17 @@ class VisualDocumentationTest(unittest.TestCase):
         routes = {spec['component'] for spec in specs} | {'button'}
         expected = {doc['id'] for doc in self.catalog['components']}
         self.assertEqual(routes, expected)
-        self.assertEqual({p.stem for p in assets.glob('*.json')}, routes | {'components'})
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            generate_playgrounds.write_resources(output)
+            self.assertEqual({p.stem for p in output.glob('*.json')}, routes - {'button'})
+            qrc = ET.parse(output / 'playground_resources.qrc')
+            self.assertEqual({node.text for node in qrc.iter('file')}, {r + '.json' for r in routes - {'button'}})
+            for route in routes - {'button'}:
+                self.assertEqual(json.loads((output / (route + '.json')).read_text(encoding='utf-8')),
+                                 generate_playgrounds.descriptors()[route])
         for spec in specs:
-            generated = json.loads((assets / (spec['component'] + '.json')).read_text(encoding="utf-8"))
+            generated = generate_playgrounds.descriptors()[spec['component']]
             self.assertEqual(generated['recipe'], spec['recipe'])
             self.assertEqual(generated['properties'], spec['properties'])
             self.assertIn('%PARENT%', spec['recipe']['cpp']['setup'])

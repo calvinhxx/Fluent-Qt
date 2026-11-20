@@ -50,9 +50,21 @@ list(APPEND FLUENT_QT_GALLERY_CORE_SOURCES
 if(NOT TARGET FluentQtQmlBridge)
     list(FILTER FLUENT_QT_GALLERY_CORE_SOURCES EXCLUDE REGEX "/QmlBridgeSamples\\.cpp$")
 endif()
+# Qt enumerates QRC files during configuration (including the Qt 5 test target).
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(_playground_generator "${PROJECT_SOURCE_DIR}/tools/site/generate_playgrounds.py")
+set(_playground_dir "${CMAKE_CURRENT_BINARY_DIR}/playground-resources")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${_playground_generator}" "${CMAKE_CURRENT_SOURCE_DIR}/assets/playgrounds/components.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/playgrounds/button.json")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${_playground_generator}" --resource-dir "${_playground_dir}"
+    RESULT_VARIABLE _playground_result)
+if(NOT _playground_result EQUAL 0)
+    message(FATAL_ERROR "Could not generate Gallery playground resources")
+endif()
 set(FLUENT_QT_GALLERY_RESOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/gallery_resources.qrc
-    ${CMAKE_CURRENT_SOURCE_DIR}/playground_resources.qrc
+    "${_playground_dir}/playground_resources.qrc"
 )
 if(TARGET FluentQtQmlBridge)
     list(APPEND FLUENT_QT_GALLERY_RESOURCES
