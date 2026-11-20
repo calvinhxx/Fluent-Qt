@@ -1,7 +1,302 @@
-"""Bilingual introductions to FluentQt's shared foundations and optional modules."""
+"""Localized introductions to FluentQt's shared foundations and optional modules."""
+from functools import lru_cache
+import json
 from pathlib import Path
+import re
+
+from site_locales import LOCALE_KEYS, locale_url_prefix
 
 ROOT = Path(__file__).resolve().parents[2]
+GUIDES_LOCALES_DIR = Path(__file__).with_name("locales") / "guides"
+_PLACEHOLDER_RE = re.compile(r"\{[a-zA-Z0-9_]+\}")
+
+_BUILTIN_UI = {
+    "en": {
+        "home": "Home",
+        "documentation": "Documentation",
+        "siteNav": "Site navigation",
+        "breadcrumb": "Breadcrumb",
+        "contentsAndSearch": "Contents and search",
+        "searchDocumentation": "Search documentation",
+        "resultsTemplate": "{count} results",
+        "noResults": "No matching documentation",
+        "overview": "Overview",
+        "exampleHeading": "Example",
+        "usage": "Usage",
+        "api": "API",
+        "source": "Declaration",
+        "light": "Light",
+        "dark": "Dark",
+        "theme": "Example theme",
+        "loadingLive": "Loading example…",
+        "failedLive": "The example could not load. A preview is shown instead.",
+        "retryLive": "Retry",
+        "noScript": "Enable JavaScript to use this example.",
+        "editorError": "Property preview could not load. Select Property preview to retry.",
+        "previous": "Previous",
+        "next": "Next",
+        "filterApi": "Filter API members",
+        "noApiMatches": "No matching API members.",
+        "loadingPreview": "Loading preview…",
+        "previewUnavailable": "Preview unavailable. Refresh the page to retry.",
+        "headerFallback": "Public types, functions, and constants declared in this header.",
+        "releasesAndMigrations": "Releases and migrations",
+        "releasesDescription": "Updates and migration requirements for UILib and Gallery, grouped by version.",
+        "copy": "Copy code",
+        "copied": "Code copied",
+        "copyError": "Could not copy. Select the code to copy it manually.",
+        "skip": "Skip to content",
+        "onPage": "On this page",
+        "apiReference": "API reference",
+        "playgroundHeading": "Component property preview",
+        "playgroundCopy": "Adjust component properties and copy the corresponding C++ or PySide6 code.",
+        "playgroundPrimary": "Preview CheckBox",
+        "moduleHeading": "Components in this module",
+        "moduleCopy": "Open the documentation or try a component and copy its code.",
+        "propertyPreview": "Property preview",
+        "unreleasedNotice": "This page includes unreleased changes not available in stable {latest}.",
+        "viewReleaseNotes": "View related release notes",
+        "apiGroups": {
+            "constructors": "Constructors",
+            "properties": "Properties",
+            "methods": "Methods",
+            "signals": "Signals",
+            "enums": "Enumerations",
+            "types": "Types and aliases",
+            "fields": "Fields",
+            "constants": "Constants",
+            "destructors": "Destructors",
+            "python": "PySide6 additions",
+        },
+        "inherits": "Inherits",
+        "deprecated": "Deprecated",
+        "accessors": {
+            "read": "Read",
+            "write": "Write",
+            "reset": "Reset",
+            "notify": "Notify",
+        },
+        "protectedMembers": "Protected members",
+        "inheritedFrom": "Inherited from {name}",
+        "qtBaseDocs": "Qt base class docs: ",
+        "scopes": {
+            "uilib": "UILib",
+            "gallery": "Gallery",
+            "project": "Project notes",
+        },
+        "introducedIn": "Introduced in",
+        "before": "Before",
+        "after": "After",
+        "migrationRequired": "Migration required",
+        "latest": "Latest",
+        "releaseCandidate": "Release candidate",
+        "dateNotRecorded": "Date not recorded",
+        "unreleased": "Unreleased",
+        "unreleasedMerged": "Merged into source since {latest}:",
+        "unreleasedNone": "No unreleased public changes since {latest}.",
+        "downloads": "Downloads",
+        "releaseNotesEn": "Release notes",
+        "compareWith": "Compare with {previous}",
+        "commitsSince": "Commits since {latest}",
+        "linksAria": "{heading} links",
+        "filterReleases": "Filter releases",
+        "showUpdatesFor": "Show updates for",
+        "scopeAll": "All",
+        "scopeUilib": "UILib",
+        "scopeGallery": "Gallery",
+        "searchLabel": "Search",
+        "searchPlaceholder": "Component or keyword, e.g. ParticleBackdrop",
+        "upgradingFrom": "Upgrading from",
+        "anyVersion": "Any version",
+        "onlyMigration": "Only releases that need migration",
+        "clearFilters": "Clear filters",
+        "releaseEmpty": "Nothing matches. Try another keyword or clear the filters.",
+        "releaseCountTemplate": "{count} entries",
+        "releaseCountSingleTemplate": "{count} entry",
+        "releaseCountAfterTemplate": "{count} entries after {version}",
+        "releaseCountSingleAfterTemplate": "{count} entry after {version}",
+        "sections": {
+            "project": "Project updates",
+            "foundation": "Foundations",
+            "components": "Components",
+            "modules": "Modules",
+            "reference": "API reference",
+        },
+        "categories": {
+            "basic-input": "Basic input",
+            "charts": "Charts",
+            "collections": "Collections",
+            "date-time": "Date & time",
+            "dialogs-flyouts": "Dialogs & flyouts",
+            "layout": "Layout",
+            "menus-toolbars": "Menus & toolbars",
+            "navigation": "Navigation",
+            "scrolling": "Scrolling",
+            "status-info": "Status & info",
+            "text-fields": "Text fields",
+            "windowing": "Windowing",
+        },
+    },
+    "zh": {
+        "home": "官网",
+        "documentation": "文档",
+        "siteNav": "网站导航",
+        "breadcrumb": "当前位置",
+        "contentsAndSearch": "目录与搜索",
+        "searchDocumentation": "搜索文档",
+        "resultsTemplate": "{count} 个结果",
+        "noResults": "没有匹配的文档",
+        "overview": "概览",
+        "exampleHeading": "示例",
+        "usage": "用法",
+        "api": "API",
+        "source": "查看声明",
+        "light": "浅色",
+        "dark": "深色",
+        "theme": "示例主题",
+        "loadingLive": "正在加载示例…",
+        "failedLive": "示例加载失败，暂时显示预览图。",
+        "retryLive": "重试",
+        "noScript": "启用 JavaScript 后可操作示例。",
+        "editorError": "属性预览加载失败。请再次点击属性预览重试。",
+        "previous": "上一项",
+        "next": "下一项",
+        "filterApi": "筛选 API 成员",
+        "noApiMatches": "没有匹配的 API 成员。",
+        "loadingPreview": "正在加载预览…",
+        "previewUnavailable": "预览加载失败，请刷新页面重试。",
+        "headerFallback": "本头文件包含的类型、函数与常量。",
+        "releasesAndMigrations": "版本记录与迁移",
+        "releasesDescription": "按组件库（UILib）与 Gallery 分类查看各版本更新内容与升级说明。",
+        "copy": "复制代码",
+        "copied": "代码已复制",
+        "copyError": "复制失败，请选择代码手动复制。",
+        "skip": "跳转到正文",
+        "onPage": "本页内容",
+        "apiReference": "API 参考",
+        "playgroundHeading": "组件属性预览",
+        "playgroundCopy": "调整组件属性，然后复制对应的 C++ 或 PySide6 代码。",
+        "playgroundPrimary": "预览 CheckBox",
+        "moduleHeading": "本模块的组件",
+        "moduleCopy": "打开组件文档，或直接调整属性并复制代码。",
+        "propertyPreview": "属性动态预览",
+        "unreleasedNotice": "本页包含尚未随稳定版 {latest} 发布的最新改动。",
+        "viewReleaseNotes": "查看相关版本记录",
+        "apiGroups": {
+            "constructors": "构造函数",
+            "properties": "属性",
+            "methods": "方法",
+            "signals": "信号",
+            "enums": "枚举",
+            "types": "类型与别名",
+            "fields": "字段",
+            "constants": "常量",
+            "destructors": "析构函数",
+            "python": "PySide6 扩展",
+        },
+        "inherits": "继承自",
+        "deprecated": "已弃用",
+        "accessors": {
+            "read": "读取",
+            "write": "设置",
+            "reset": "重置",
+            "notify": "变化信号",
+        },
+        "protectedMembers": "受保护成员",
+        "inheritedFrom": "继承自 {name}",
+        "qtBaseDocs": "Qt 基类文档：",
+        "scopes": {
+            "uilib": "组件库 UILib",
+            "gallery": "Gallery 示例应用",
+            "project": "项目说明",
+        },
+        "introducedIn": "引入提交",
+        "before": "旧写法",
+        "after": "新写法",
+        "migrationRequired": "需要迁移",
+        "latest": "最新版本",
+        "releaseCandidate": "候选版本",
+        "dateNotRecorded": "未记录发布日期",
+        "unreleased": "开发中",
+        "unreleasedMerged": "自 {latest} 发布以来已合入源码的改动：",
+        "unreleasedNone": "{latest} 发布后暂无未发布的公开改动。",
+        "downloads": "下载",
+        "releaseNotesEn": "发布说明（英文）",
+        "compareWith": "与 {previous} 对比",
+        "commitsSince": "{latest} 之后的提交",
+        "linksAria": "{heading} 相关链接",
+        "filterReleases": "筛选版本记录",
+        "showUpdatesFor": "查看范围",
+        "scopeAll": "全部",
+        "scopeUilib": "组件库",
+        "scopeGallery": "Gallery",
+        "searchLabel": "搜索",
+        "searchPlaceholder": "组件名或关键词，如 ParticleBackdrop",
+        "upgradingFrom": "从哪个版本升级",
+        "anyVersion": "不限",
+        "onlyMigration": "只看需要迁移的版本",
+        "clearFilters": "清除筛选",
+        "releaseEmpty": "没有符合条件的记录。换个关键词，或清除筛选。",
+        "releaseCountTemplate": "共 {count} 条记录",
+        "releaseCountSingleTemplate": "共 {count} 条记录",
+        "releaseCountAfterTemplate": "{version} 之后共 {count} 条记录",
+        "releaseCountSingleAfterTemplate": "{version} 之后共 {count} 条记录",
+        "sections": {
+            "project": "项目更新",
+            "foundation": "基础指南",
+            "components": "组件",
+            "modules": "扩展模块",
+            "reference": "API 参考",
+        },
+        "categories": {
+            "basic-input": "基础输入",
+            "charts": "图表",
+            "collections": "集合视图",
+            "date-time": "日期与时间",
+            "dialogs-flyouts": "对话框与浮层",
+            "layout": "布局",
+            "menus-toolbars": "菜单与工具栏",
+            "navigation": "导航",
+            "scrolling": "滚动",
+            "status-info": "状态与信息",
+            "text-fields": "文本输入",
+            "windowing": "窗口",
+        },
+    },
+}
+
+
+def _validate_ui_dict(actual, baseline, location):
+    if not isinstance(actual, dict) or set(actual) != set(baseline):
+        missing = sorted(set(baseline) - set(actual)) if isinstance(actual, dict) else ["<not dict>"]
+        extra = sorted(set(actual) - set(baseline)) if isinstance(actual, dict) else []
+        raise ValueError(f"UI schema mismatch at {location}: missing={missing}, extra={extra}")
+    for key, base_val in baseline.items():
+        act_val = actual[key]
+        if isinstance(base_val, dict):
+            _validate_ui_dict(act_val, base_val, f"{location}.{key}")
+        else:
+            if not isinstance(act_val, str) or not act_val.strip():
+                raise ValueError(f"Empty UI string at {location}.{key}")
+            if sorted(_PLACEHOLDER_RE.findall(act_val)) != sorted(_PLACEHOLDER_RE.findall(base_val)):
+                raise ValueError(f"Placeholder mismatch at {location}.{key}: {act_val!r} vs {base_val!r}")
+
+
+@lru_cache(maxsize=None)
+def guide_locale_file(language):
+    path = GUIDES_LOCALES_DIR / f"{language}.json"
+    if not path.is_file():
+        raise ValueError(f"Missing guide locale file: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=None)
+def guide_ui(language):
+    if language in _BUILTIN_UI:
+        return _BUILTIN_UI[language]
+    ui = guide_locale_file(language)["ui"]
+    _validate_ui_dict(ui, _BUILTIN_UI["en"], f"guides/{language}.json:ui")
+    return ui
 
 
 def section(en, zh, english, chinese, cpp='', python=''):
@@ -239,13 +534,47 @@ GUIDES = [
 ]
 
 
+@lru_cache(maxsize=1)
 def guides():
+    localized = {
+        language: guide_locale_file(language)["guides"]
+        for language in LOCALE_KEYS
+        if language not in ("en", "zh")
+    }
+    merged = []
     for item in GUIDES:
         for header in item['headers']:
             if not (ROOT / header).is_file():
                 raise ValueError('Missing guide API header: ' + header)
-    return GUIDES
+        name = dict(item['name'])
+        description = dict(item['description'])
+        sections = [
+            {
+                'title': dict(sec['title']),
+                'body': dict(sec['body']),
+                'cpp': sec['cpp'],
+                'python': sec['python'],
+            }
+            for sec in item['sections']
+        ]
+        for language, guide_map in localized.items():
+            entry = guide_map.get(item['id'])
+            if not entry:
+                raise ValueError(f"Missing {language} translation for guide {item['id']}")
+            if len(entry['sections']) != len(sections):
+                raise ValueError(f"Section count mismatch in {language} guide {item['id']}")
+            if not entry['name'].strip() or not entry['description'].strip():
+                raise ValueError(f"Empty {language} metadata for guide {item['id']}")
+            name[language] = entry['name']
+            description[language] = entry['description']
+            for index, sec in enumerate(entry['sections']):
+                if not sec['title'].strip() or not sec['body'].strip():
+                    raise ValueError(f"Empty {language} section {index} in guide {item['id']}")
+                sections[index]['title'][language] = sec['title']
+                sections[index]['body'][language] = sec['body']
+        merged.append({**item, 'name': name, 'description': description, 'sections': sections})
+    return merged
 
 
 def guide_path(id, language='en'):
-    return ('zh-CN/' if language == 'zh' else '') + 'api/' + id + '/index.html'
+    return locale_url_prefix(language) + 'api/' + id + '/index.html'

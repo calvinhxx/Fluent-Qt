@@ -3,13 +3,12 @@
 import html
 import re
 from urllib.parse import urlencode
+from docs_i18n import translate_release_text
 from documentation_navigation import relative
+from documentation_guides import guide_ui
 from generate_localized_site import BASE_URL
 from release_history import load_history, page_path, REPOSITORY, SCOPES
-
-SCOPE_LABELS = {'uilib': {'en': 'UILib', 'zh': '组件库 UILib'},
-                'gallery': {'en': 'Gallery', 'zh': 'Gallery 示例应用'},
-                'project': {'en': 'Project notes', 'zh': '项目说明'}}
+from site_locales import LOCALE_KEYS, api_language, locale_by_key
 
 
 def escape(value):
@@ -36,129 +35,132 @@ def document_notice(document_id, source, page, language):
                 continue
             anchor = 'v' + item['version'] if 'version' in item else 'unreleased'
             params = {'change': document_id if by_id else source, 'scope': group['scope']}
-            target = page_path('releases', language) + '?' + urlencode(params) + '#' + anchor
-            if language == 'zh':
-                text = f'本页包含尚未随稳定版 {data["latest"]} 发布的最新改动。'
-                label = '查看相关版本记录'
-            else:
-                text = f'This page includes unreleased changes not available in stable {data["latest"]}.'
-                label = 'View related release notes'
-            return f'<p class="document-version-note">{escape(text)} <a href="{escape(relative(target, page))}">{label}</a></p>'
+            target = page_path('releases', api_language(language)) + '?' + urlencode(params) + '#' + anchor
+            ui = guide_ui(language)
+            text = ui['unreleasedNotice'].format(latest=data['latest'])
+            label = ui['viewReleaseNotes']
+            return f'<p class="document-version-note">{escape(text)} <a href="{escape(relative(target, page))}">{escape(label)}</a></p>'
     return ''
 
 
-def migration_html(migration, language):
-    zh = language == 'zh'
+def migration_html(migration, language, ui=None):
+    ui = ui or guide_ui(language)
     commit = migration.get('commit')
-    evidence = f'<p class="migration-commit">{"引入提交" if zh else "Introduced in"} <a href="{REPOSITORY}/commit/{commit}"><code>{commit[:7]}</code></a></p>' if commit else ''
+    evidence = f'<p class="migration-commit">{escape(ui["introducedIn"])} <a href="{REPOSITORY}/commit/{commit}"><code>{commit[:7]}</code></a></p>' if commit else ''
     return f'''<section class="migration-note" id="{migration['id']}">
-      <h4><a href="#{migration['id']}">{prose(migration['title'][language])}</a></h4>
-      <p>{prose(migration['impact'][language])}</p>
-      <p>{prose(migration['action'][language])}</p>
+      <h4><a href="#{migration['id']}">{prose(translate_release_text(migration['title'], language))}</a></h4>
+      <p>{prose(translate_release_text(migration['impact'], language))}</p>
+      <p>{prose(translate_release_text(migration['action'], language))}</p>
       <div class="migration-comparison">
-        <div><h5>{'旧写法' if zh else 'Before'}</h5><pre tabindex="0"><code>{escape(migration['before'])}</code></pre></div>
-        <div><h5>{'新写法' if zh else 'After'}</h5><pre tabindex="0"><code>{escape(migration['after'])}</code></pre></div>
+        <div><h5>{escape(ui['before'])}</h5><pre tabindex="0"><code>{escape(migration['before'])}</code></pre></div>
+        <div><h5>{escape(ui['after'])}</h5><pre tabindex="0"><code>{escape(migration['after'])}</code></pre></div>
       </div>{evidence}</section>'''
 
 
-def scope_group(group, language, version):
+def scope_group(group, language, version, ui=None):
+    ui = ui or guide_ui(language)
     migrations = group.get('migrations', [])
-    summary = group.get('summary', {}).get(language, '')
+    summary_dict = group.get('summary', {})
+    summary = translate_release_text(summary_dict, language) if summary_dict else ''
     changes = group.get('changes', [])
-    terms = ' '.join([version or 'unreleased 开发中', *group.get('related', []), *group.get('headers', []), plain(summary),
-                      *[plain(change[language]) for change in changes],
-                      *[plain(m[field][language]) for m in migrations for field in ('title', 'impact', 'action')],
-                      *[m['before'] + ' ' + m['after'] for m in migrations]])
-    badge = ('<span class="release-breaking">' + ('需要迁移' if language == 'zh' else 'Migration required')
-             + '</span>') if migrations else ''
-    change_list = '<ul class="release-changes">' + ''.join(f'<li>{prose(c[language])}</li>' for c in changes) + '</ul>' if changes else ''
+    terms = [version or f'unreleased 开发中 {ui["unreleased"]}', *group.get('related', []), *group.get('headers', [])]
+    if summary_dict:
+        terms.extend([plain(summary), plain(summary_dict.get('en', '')), plain(summary_dict.get('zh', ''))])
+    for change in changes:
+        terms.extend([plain(translate_release_text(change, language)), plain(change.get('en', '')), plain(change.get('zh', ''))])
+    for migration in migrations:
+        for field in ('title', 'impact', 'action'):
+            terms.extend([plain(translate_release_text(migration[field], language)), plain(migration[field].get('en', '')), plain(migration[field].get('zh', ''))])
+        terms.append(migration['before'] + ' ' + migration['after'])
+    badge = f'<span class="release-breaking">{escape(ui["migrationRequired"])}</span>' if migrations else ''
+    change_list = '<ul class="release-changes">' + ''.join(f'<li>{prose(translate_release_text(c, language))}</li>' for c in changes) + '</ul>' if changes else ''
     lead = f'<p>{prose(summary)}</p>' if summary else ''
-    return f'''<section class="release-scope" data-release-scope="{group['scope']}" data-breaking="{str(bool(migrations)).lower()}" data-release-search="{escape(terms.lower())}">
-      <header class="release-scope-heading"><h3>{SCOPE_LABELS[group['scope']][language]}</h3>{badge}</header>
-      {lead}{change_list}{''.join(migration_html(m, language) for m in migrations)}
+    return f'''<section class="release-scope" data-release-scope="{group['scope']}" data-breaking="{str(bool(migrations)).lower()}" data-release-search="{escape(' '.join(dict.fromkeys(terms)).lower())}">
+      <header class="release-scope-heading"><h3>{escape(ui['scopes'][group['scope']])}</h3>{badge}</header>
+      {lead}{change_list}{''.join(migration_html(m, language, ui=ui) for m in migrations)}
     </section>'''
 
 
-def release_entry(item, language, page, latest):
-    zh = language == 'zh'
+def release_entry(item, language, page, latest, ui=None):
+    ui = ui or guide_ui(language)
     version = item.get('version')
     anchor = 'v' + version if version else 'unreleased'
     status = item.get('status', 'unreleased')
     # Ordinary published releases need no label; the date already says so.
-    labels = {'candidate': ('Release candidate', '候选版本')}
-    label = ('最新版本' if zh else 'Latest') if version == latest else (labels[status][zh] if status in labels else '')
+    label = ui['latest'] if version == latest else (ui['releaseCandidate'] if status == 'candidate' else '')
     timestamp = item.get('published_at')
     date = f'<time datetime="{timestamp}">{timestamp[:10]}</time>' if timestamp else ''
     if status == 'archive':
-        date = '<span class="release-date">' + ('未记录发布日期' if zh else 'Date not recorded') + '</span>'
-    heading = version or ('开发中' if zh else 'Unreleased')
+        date = f'<span class="release-date">{escape(ui["dateNotRecorded"])}</span>'
+    heading = version or ui['unreleased']
     groups = item.get('groups', [])
     intro = ''
     if not version:
-        summary = (f'自 {latest} 发布以来已合入源码的改动：' if zh else f'Merged into source since {latest}:') if groups else (
-            f'{latest} 发布后暂无未发布的公开改动。' if zh else f'No unreleased public changes since {latest}.')
+        summary = ui['unreleasedMerged'].format(latest=latest) if groups else ui['unreleasedNone'].format(latest=latest)
         intro = f'<p>{prose(summary)}</p>'
     links = []
     if version:
         if timestamp:
-            links.append(f'<a href="{REPOSITORY}/releases/tag/v{version}">{"下载" if zh else "Downloads"}</a>')
-        links.append(f'<a href="{REPOSITORY}/blob/main/docs/releases/v{version}.md"' + (' hreflang="en">发布说明（英文）' if zh else '>Release notes') + '</a>')
+            links.append(f'<a href="{REPOSITORY}/releases/tag/v{version}">{escape(ui["downloads"])}</a>')
+        links.append(f'<a href="{REPOSITORY}/blob/main/docs/releases/v{version}.md"'
+                     + (' hreflang="en">' if language != 'en' else '>') + escape(ui['releaseNotesEn']) + '</a>')
         previous = item.get('previous')
         if previous:
-            links.append(f'<a href="{REPOSITORY}/compare/v{previous}...v{version}">' + (f'与 {previous} 对比' if zh else f'Compare with {previous}') + '</a>')
+            links.append(f'<a href="{REPOSITORY}/compare/v{previous}...v{version}">{escape(ui["compareWith"].format(previous=previous))}</a>')
     else:
-        links.append(f'<a href="{REPOSITORY}/compare/v{latest}...main">' + (f'{latest} 之后的提交' if zh else f'Commits since {latest}') + '</a>')
-    state = f'<span class="release-state">{label}</span>' if label else ''
-    content = ''.join(scope_group(group, language, version) for scope in SCOPES for group in groups if group['scope'] == scope)
+        links.append(f'<a href="{REPOSITORY}/compare/v{latest}...main">{escape(ui["commitsSince"].format(latest=latest))}</a>')
+    state = f'<span class="release-state">{escape(label)}</span>' if label else ''
+    content = ''.join(scope_group(group, language, version, ui=ui) for scope in SCOPES for group in groups if group['scope'] == scope)
     return f'''<article class="release-entry" id="{anchor}" data-release-entry data-version="{version or 'unreleased'}">
-      <header class="release-heading"><h2><a href="#{anchor}">{heading}</a></h2>{state}{date}</header>
+      <header class="release-heading"><h2><a href="#{anchor}">{escape(heading)}</a></h2>{state}{date}</header>
       {intro}{content}
-      <nav class="release-links" aria-label="{heading} {'相关链接' if zh else 'links'}">{' '.join(links)}</nav>
+      <nav class="release-links" aria-label="{escape(ui['linksAria'].format(heading=heading))}">{' '.join(links)}</nav>
     </article>'''
 
 
 def history_body(data, language, page):
-    zh = language == 'zh'
+    ui = guide_ui(language)
     options = ''.join(f'<option value="{v["version"]}">{v["version"]}</option>' for v in data['versions'])
-    filters = f'''<form class="release-filters" data-release-filters hidden role="search" aria-label="{'筛选版本记录' if zh else 'Filter releases'}">
-      <fieldset class="release-audience"><legend>{'查看范围' if zh else 'Show updates for'}</legend>
+    filters = f'''<form class="release-filters" data-release-filters hidden role="search" aria-label="{escape(ui['filterReleases'])}">
+      <fieldset class="release-audience"><legend>{escape(ui['showUpdatesFor'])}</legend>
         <div class="release-scope-options">
-          <label><input type="radio" name="scope" value="all" data-release-scope-filter checked><span>{'全部' if zh else 'All'}</span></label>
-          <label><input type="radio" name="scope" value="uilib" data-release-scope-filter><span>{'组件库' if zh else 'UILib'}</span></label>
-          <label><input type="radio" name="scope" value="gallery" data-release-scope-filter><span>Gallery</span></label>
+          <label><input type="radio" name="scope" value="all" data-release-scope-filter checked><span>{escape(ui['scopeAll'])}</span></label>
+          <label><input type="radio" name="scope" value="uilib" data-release-scope-filter><span>{escape(ui['scopeUilib'])}</span></label>
+          <label><input type="radio" name="scope" value="gallery" data-release-scope-filter><span>{escape(ui['scopeGallery'])}</span></label>
         </div>
       </fieldset>
-      <label>{'搜索' if zh else 'Search'}<input type="search" name="change" data-release-query placeholder="{'组件名或关键词，如 ParticleBackdrop' if zh else 'Component or keyword, e.g. ParticleBackdrop'}"></label>
-      <label>{'从哪个版本升级' if zh else 'Upgrading from'}<select name="from" data-release-from><option value="">{'不限' if zh else 'Any version'}</option>{options}</select></label>
-      <label class="release-checkbox"><input type="checkbox" name="breaking" data-release-breaking>{'只看需要迁移的版本' if zh else 'Only releases that need migration'}</label>
-      <button type="reset">{'清除筛选' if zh else 'Clear filters'}</button>
-      <p class="release-result" data-release-result role="status" aria-live="polite"></p>
+      <label>{escape(ui['searchLabel'])}<input type="search" name="change" data-release-query placeholder="{escape(ui['searchPlaceholder'])}"></label>
+      <label>{escape(ui['upgradingFrom'])}<select name="from" data-release-from><option value="">{escape(ui['anyVersion'])}</option>{options}</select></label>
+      <label class="release-checkbox"><input type="checkbox" name="breaking" data-release-breaking>{escape(ui['onlyMigration'])}</label>
+      <button type="reset">{escape(ui['clearFilters'])}</button>
+      <p class="release-result" data-release-result role="status" aria-live="polite" data-count-template="{escape(ui['releaseCountTemplate'])}" data-count-single-template="{escape(ui['releaseCountSingleTemplate'])}" data-count-after-template="{escape(ui['releaseCountAfterTemplate'])}" data-count-single-after-template="{escape(ui['releaseCountSingleAfterTemplate'])}"></p>
     </form>
-    <p class="release-empty" data-release-empty hidden>{'没有符合条件的记录。换个关键词，或清除筛选。' if zh else 'Nothing matches. Try another keyword or clear the filters.'}</p>'''
-    entries = [release_entry(data['unreleased'], language, page, data['latest'])]
+    <p class="release-empty" data-release-empty hidden>{escape(ui['releaseEmpty'])}</p>'''
+    entries = [release_entry(data['unreleased'], language, page, data['latest'], ui=ui)]
     for index, item in enumerate(data['versions']):
         version = dict(item)
         if index + 1 < len(data['versions']):
             version['previous'] = data['versions'][index + 1]['version']
-        entries.append(release_entry(version, language, page, data['latest']))
+        entries.append(release_entry(version, language, page, data['latest'], ui=ui))
     return filters + ''.join(entries)
 
 
 def roadmap_redirect(language):
     """Keep published roadmap URLs usable without a second project-updates page."""
+    ui = guide_ui(language)
     target = page_path('releases', language)
     link = relative(target, page_path('roadmap', language))
-    title = '版本记录与迁移' if language == 'zh' else 'Releases and migrations'
+    title = ui['releasesAndMigrations']
     return f'''<!doctype html>
-<html lang="{'zh-CN' if language == 'zh' else 'en'}">
+<html lang="{locale_by_key(language).html_lang}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="0; url={link}">
   <link rel="canonical" href="{BASE_URL}{target.removesuffix('index.html')}">
-  <title>{title} · Fluent-Qt</title>
+  <title>{escape(title)} · Fluent-Qt</title>
 </head>
-<body><p><a href="{link}">{title}</a></p></body>
+<body><p><a href="{link}">{escape(title)}</a></p></body>
 </html>
 '''
 
@@ -166,14 +168,14 @@ def roadmap_redirect(language):
 def generated_outputs(documents, catalog, render_shell):
     data = load_history()
     outputs = {}
-    for language in ('en', 'zh'):
-        zh = language == 'zh'
+    for language in LOCALE_KEYS:
+        ui = guide_ui(language)
         page = page_path('releases', language)
         context = {'id': 'releases', 'catalog': catalog, 'component': {'category_id': 'project'}}
-        title = '版本记录与迁移' if zh else 'Releases and migrations'
-        description = '按组件库（UILib）与 Gallery 分类查看各版本更新内容与升级说明。' if zh else 'Updates and migration requirements for UILib and Gallery, grouped by version.'
+        title = ui['releasesAndMigrations']
+        description = ui['releasesDescription']
         body = history_body(data, language, page)
-        toc = [('unreleased', '开发中' if zh else 'Unreleased')]
+        toc = [('unreleased', ui['unreleased'])]
         toc += [('v' + v['version'], v['version']) for v in data['versions']]
         outputs[page] = render_shell(context, documents, page, language, title, description, body, toc)
         outputs[page_path('roadmap', language)] = roadmap_redirect(language)

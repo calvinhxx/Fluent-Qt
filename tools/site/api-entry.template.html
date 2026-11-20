@@ -9,15 +9,16 @@
   <script>
     const params = new URLSearchParams(location.search);
     const requested = params.get('lang');
+    const supported = $supported_languages;
     let preferred = '$default_language';
     // Only the legacy language-neutral entry inherits its previous preference.
     if (document.documentElement.lang === 'en') {
       try {
         const saved = localStorage.getItem('fluent-qt-api-language');
-        if (saved === 'en' || saved === 'zh') preferred = saved;
+        if (supported.includes(saved)) preferred = saved;
       } catch { /* Storage can be disabled; the URL remains usable. */ }
     }
-    const language = requested === 'en' || requested === 'zh' ? requested : preferred;
+    const language = supported.includes(requested) ? requested : preferred;
     const documents = $documents;
     const query = (params.get('q') || '').trim();
     const match = documents.find(item => item.names.some(name => name.toLowerCase() === query.toLowerCase())) || documents[0];
@@ -27,5 +28,5 @@
     location.replace(target.href);
   </script>
 </head>
-<body><p><a href="$english">Documentation</a> · <a href="$chinese">文档</a></p></body>
+<body><p>$fallback_links</p></body>
 </html>

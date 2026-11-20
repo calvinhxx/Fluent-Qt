@@ -78,16 +78,18 @@ same whichever machine captured them.
 
 ### Component visual documentation
 
-Every component in the canonical Gallery catalog has English and Chinese pages under
-`site/api/<component>/` and `site/zh-CN/api/<component>/`. The homepage's single
-Documentation entry opens the foundations guide, preserving its language.
+All nine homepages and root READMEs link to guides, component API pages,
+header references, release history and property previews in the same language.
+For example, the Japanese foundations guide at `ja/api/foundation/` links to
+`ja/api/checkbox/?playground=1`. The directory indexes guide descriptions in
+the current language and retains translated guide names as search aliases.
 A searchable side directory contains foundation guides, optional modules,
 component examples and nonvisual API references. On narrow screens, the directory folds above the
 document. There is no separate card index; legacy `/api/` entries redirect to a
 document and preserve the old language/search parameters.
 The language-neutral `/api/` entry also honors the former
 `fluent-qt-api-language` preference. An explicit `?lang=` takes precedence;
-the localized `/zh-CN/api/` entry stays Chinese unless its URL requests otherwise.
+each localized `/<prefix>/api/` entry defaults to the language in its URL.
 The document header has Home and Documentation links only. Language follows the
 homepage's localized link; theme uses the same `fluent-qt-theme` preference,
 including High Contrast. Gallery, releases and global language selection stay
@@ -117,10 +119,9 @@ The full type-member inventory is used to generate HTML, not published again in
 public-header links for existing tools.
 It retains overloads, excludes private implementation, groups protected subclass
 interfaces separately, and follows public FluentQt base classes. Qt base APIs
-link to Qt's full member reference. Python-only wrapper methods come from the
-corresponding binding source rather than inferred C++ signatures.
-`tools/site/documentation_guides.py` owns the bilingual foundation and module
-introductions; their API links point to generated local reference pages.
+link to Qt's full member reference. Python-only wrapper methods use signatures
+and English docstrings from the binding source. Maintain their translations in
+`tools/site/locales/api/<language>.json`, including `zh.json` for Simplified Chinese.
 Do not edit generated detail pages. `tools/site/component.template.html` owns
 the shared reading shell, and `component-preview.template.html` owns the live example;
 `tools/site/documentation_navigation.py` owns shared navigation, and

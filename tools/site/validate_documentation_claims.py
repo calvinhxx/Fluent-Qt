@@ -136,9 +136,13 @@ def check_text(text, available, location, python_functions, context_owner=None):
 
 
 def validate(documents=None, introductions=None):
+    from docs_i18n import EXTRA_LOCALE_KEYS, component_locale
+
+    load_extra_components = documents is None
     documents = config() if documents is None else documents
     introductions = guides() if introductions is None else introductions
     components = {c['id']: c for c in catalog()['components']}
+    localized_components = {lang: component_locale(lang) for lang in EXTRA_LOCALE_KEYS} if load_extra_components else {}
     functions, extensions = python_symbols()
     errors, coverage = [], []
     # Guides introduce several types. Explicitly qualified names are still
@@ -150,8 +154,25 @@ def validate(documents=None, introductions=None):
         component = components.get(cid)
         owner = component['cpp']['qualified_type'] if component else None
         available = public_methods(owner) if owner else guide_methods
-        fields = [('description', document['description'])]
-        fields += [(f'example/{e["sample"]}', e['description']) for e in document.get('examples', [])]
+        desc_translations = dict(document['description'])
+        if component and localized_components:
+            for lang in EXTRA_LOCALE_KEYS:
+                loc_doc = localized_components[lang].get(cid)
+                if loc_doc:
+                    desc_translations[lang] = loc_doc['description']
+        fields = [('description', desc_translations)]
+        for example in document.get('examples', []):
+            ex_translations = dict(example['description'])
+            if component and localized_components:
+                for lang in EXTRA_LOCALE_KEYS:
+                    loc_doc = localized_components[lang].get(cid)
+                    if not loc_doc:
+                        continue
+                    if example['sample'] in loc_doc.get('examples', {}):
+                        ex_translations[lang] = loc_doc['examples'][example['sample']]['description']
+                    elif 'usage' in loc_doc and len(document.get('examples', [])) == 1:
+                        ex_translations[lang] = loc_doc['usage']
+            fields.append((f'example/{example["sample"]}', ex_translations))
         fields += [(f'section/{i}', s['body']) for i, s in enumerate(document.get('sections', []))]
         references = []
         for field, translations in fields:

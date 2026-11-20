@@ -25,8 +25,9 @@ function setupDirectory() {
     filtering = Boolean(value);
     const count = entries.filter(entry => !entry.hidden).length;
     status.hidden = !value;
-    status.textContent = count ? (chinese ? `${count} 个结果` : `${count} results`)
-      : (chinese ? '没有匹配的文档' : 'No matching documentation');
+    const resultsTemplate = status.dataset.resultsTemplate || (chinese ? `${count} 个结果` : `${count} results`);
+    const emptyLabel = status.dataset.emptyLabel || (chinese ? '没有匹配的文档' : 'No matching documentation');
+    status.textContent = count ? resultsTemplate.replace('{count}', String(count)) : emptyLabel;
     if (updateUrl) {
       const url = new URL(location.href);
       if (value) url.searchParams.set('q', search.value.trim());
@@ -348,9 +349,10 @@ function updateImage(img) {
 }
 document.querySelectorAll(".preview-panel img").forEach(img => {
   const panel = img.closest(".preview-panel");
+  const preview = img.closest("[data-component]");
   const chinese = document.documentElement.lang === "zh-CN";
-  panel.dataset.loadingLabel = chinese ? "正在加载预览…" : "Loading preview…";
-  panel.dataset.errorLabel = chinese ? "预览加载失败，请刷新页面重试。" : "Preview unavailable. Refresh the page to retry.";
+  panel.dataset.loadingLabel = preview?.dataset.loadingPreviewLabel || (chinese ? "正在加载预览…" : "Loading preview…");
+  panel.dataset.errorLabel = preview?.dataset.errorPreviewLabel || (chinese ? "预览加载失败，请刷新页面重试。" : "Preview unavailable. Refresh the page to retry.");
   img.addEventListener("load", () => { delete panel.dataset.imageError; updateImage(img); });
   img.addEventListener("error", () => { panel.setAttribute("aria-busy", "false"); panel.dataset.imageError = "true"; });
 });
@@ -513,8 +515,13 @@ function setupReleaseHistory() {
       if (outline) outline.hidden = !visible;
     });
     empty.hidden = count !== 0;
-    result.textContent = chinese ? `${from.value ? `${from.value} 之后共` : '共'} ${count} 条记录`
-      : `${count} ${count === 1 ? 'entry' : 'entries'}${from.value ? ` after ${from.value}` : ''}`;
+    const template = from.value
+      ? (count === 1 ? result.dataset.countSingleAfterTemplate : result.dataset.countAfterTemplate)
+      : (count === 1 ? result.dataset.countSingleTemplate : result.dataset.countTemplate);
+    result.textContent = template
+      ? template.replace('{count}', String(count)).replace('{version}', from.value)
+      : (chinese ? `${from.value ? `${from.value} 之后共` : '共'} ${count} 条记录`
+        : `${count} ${count === 1 ? 'entry' : 'entries'}${from.value ? ` after ${from.value}` : ''}`);
     if (updateUrl) {
       const url = new URL(location.href);
       for (const [key, value] of [['change', query.value.trim()], ['from', from.value],

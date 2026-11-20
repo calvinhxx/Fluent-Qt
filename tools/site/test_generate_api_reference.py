@@ -29,9 +29,11 @@ import component_inventory
 import generate_component_previews as previews
 import generate_localized_site
 import generate_playgrounds
+import docs_i18n
 from api_sections import localized_description, reference_headers, reference_path
 from public_api import resolve_type
-from documentation_guides import guides, guide_path
+from documentation_guides import guides, guide_path, guide_ui
+from site_locales import FULL_API_LOCALES, LOCALE_KEYS, LOCALES
 from test_public_api import PublicApiTest
 from test_documentation_claims import DocumentationClaimsTest
 
@@ -160,6 +162,7 @@ class VisualDocumentationTest(unittest.TestCase):
     def setUpClass(cls):
         cls.catalog = generate_reference()
         cls.documents = component_docs.collect(cls.catalog)
+        cls.outputs = component_docs.generated_outputs(cls.documents)
 
     def test_published_catalog_omits_generation_only_members(self):
         published = json.loads(_encoded(self.catalog))
@@ -202,7 +205,8 @@ class VisualDocumentationTest(unittest.TestCase):
         data['versions'] = [item for item in data['versions'] if item['status'] != 'candidate']
         with patch.object(release_pages, 'load_history', return_value=data):
             outputs = component_docs.generated_outputs(self.documents)
-        for prefix in ('', 'zh-CN/'):
+        for loc in LOCALES:
+            prefix = loc.url_prefix
             for route in ('font-icon', 'foundation-iconography', 'reference/particles-session'):
                 page = outputs[f'{prefix}api/{route}/index.html']
                 self.assertIn('class="document-version-note"', page)
@@ -211,8 +215,9 @@ class VisualDocumentationTest(unittest.TestCase):
                 self.assertNotIn('class="document-version-note"', outputs[f'{prefix}api/{route}/index.html'])
 
     def test_retired_roadmap_urls_forward_to_releases_in_their_language(self):
-        outputs = component_docs.generated_outputs(self.documents)
-        for prefix, lang in (('', 'en'), ('zh-CN/', 'zh-CN')):
+        outputs = self.outputs
+        for loc in LOCALES:
+            prefix, lang = loc.url_prefix, loc.html_lang
             page = outputs[f'{prefix}api/roadmap/index.html']
             self.assertIn(f'<html lang="{lang}">', page)
             self.assertIn('<meta http-equiv="refresh" content="0; url=../releases/">', page)
@@ -224,13 +229,13 @@ class VisualDocumentationTest(unittest.TestCase):
     def test_every_catalog_component_has_bilingual_visual_documentation(self):
         documents = {doc['id']: doc for doc in self.documents}
         self.assertEqual(set(documents), {c['id'] for c in self.catalog['components']})
-        outputs = component_docs.generated_outputs(self.documents)
+        outputs = self.outputs
         for component in self.catalog['components']:
             doc = documents[component['id']]
             self.assertTrue(doc['api'], component['id'])
             for preview in doc['previews']:
                 self.assertEqual(set(preview['images']), {'light', 'dark'})
-            for language in ('en', 'zh'):
+            for language in LOCALE_KEYS:
                 page = outputs[component_docs.detail_path(component['id'], language)]
                 self.assertIn('data-component="' + component['id'] + '"', page)
                 self.assertIn('data-kind="component"', page)
@@ -240,7 +245,7 @@ class VisualDocumentationTest(unittest.TestCase):
                 self.assertTrue(example['python'].strip())
 
     def test_document_pages_have_code_but_no_download_or_build_sections(self):
-        outputs = component_docs.generated_outputs(self.documents)
+        outputs = self.outputs
         for doc in self.documents:
             page = outputs[component_docs.detail_path(doc['id'], 'en')]
             self.assertNotIn('class="run-instructions"', page)
@@ -262,9 +267,9 @@ class VisualDocumentationTest(unittest.TestCase):
                 component_inventory.config()
 
     def test_bilingual_static_pages_include_code_without_wasm_embedding(self):
-        outputs = component_docs.generated_outputs(self.documents)
+        outputs = self.outputs
         for component in ('button', 'checkbox'):
-            for language in ('en', 'zh'):
+            for language in LOCALE_KEYS:
                 page = outputs[component_docs.detail_path(component, language)]
                 self.assertIn('role="tabpanel"', page)
                 self.assertIn('PySide6', page)
@@ -282,6 +287,29 @@ class VisualDocumentationTest(unittest.TestCase):
         rendered = component_docs.render_document(doc, self.documents, 'en')
         self.assertNotIn('<script>untrusted()</script>', rendered)
         self.assertIn('&lt;script&gt;untrusted()', rendered)
+
+    def test_guide_search_keeps_names_but_only_the_readers_description(self):
+        foundation = next(g for g in guides() if g['id'] == 'foundation')
+        for locale in LOCALES:
+            with self.subTest(language=locale.key):
+                button = self.outputs[component_docs.detail_path('button', locale.key)]
+                entries = re.findall(r'data-kind="guide" data-search="([^"]+)"', button)
+                terms = next(html.unescape(entry) for entry in entries if entry.startswith('foundation '))
+                for name in foundation['name'].values():
+                    self.assertIn(name.lower(), terms)
+                for language, description in foundation['description'].items():
+                    self.assertEqual(description.lower() in terms, language == locale.key)
+
+    def test_python_only_ownership_docs_use_the_page_language(self):
+        english = 'Install content that becomes parentless when released.'
+        for locale in LOCALES:
+            with self.subTest(language=locale.key):
+                page = self.outputs[component_docs.detail_path('drawer-view', locale.key)]
+                member = re.search(r'<code>setBorrowedContentWidget\(widget\)</code></a></dt><dd><p>([^<]+)</p>', page)
+                self.assertIsNotNone(member)
+                expected = english if locale.key == 'en' else docs_i18n.api_locale(locale.key)[docs_i18n.text_key(english)]
+                self.assertEqual(html.unescape(member[1]), expected)
+                self.assertEqual(expected == english, locale.key == 'en')
 
     def test_playground_is_opt_in_and_keeps_bilingual_static_examples(self):
         documents = {doc['id']: doc for doc in self.documents}
@@ -319,7 +347,7 @@ class VisualDocumentationTest(unittest.TestCase):
             self.assertIn('%PARENT%', spec['recipe']['python']['setup'])
 
     def test_document_navigation_keeps_catalog_coverage_without_an_index_page(self):
-        outputs = component_docs.generated_outputs(self.documents)
+        outputs = self.outputs
         for path in ('zh-CN/api/button/index.html', 'zh-CN/api/checkbox/index.html'):
             self.assertIn('class="documentation-header"', outputs[path])
             self.assertIn('data-shell-link="home"', outputs[path])
@@ -347,14 +375,18 @@ class VisualDocumentationTest(unittest.TestCase):
         self.assertNotIn('catalog.json', outputs['api/index.html'])
 
     def test_foundations_and_nonvisual_api_are_real_local_documents(self):
-        outputs = component_docs.generated_outputs(self.documents)
-        for language in ('en', 'zh'):
+        outputs = self.outputs
+        for loc in LOCALES:
+            self.assertIn('location.replace(target.href)', outputs[f'{loc.url_prefix}api/index.html'])
+        for language in LOCALE_KEYS:
             for guide in guides():
                 page = outputs[guide_path(guide['id'], language)]
                 self.assertIn(html.escape(guide['name'][language]), page)
+                self.assertIn(html.escape(guide['description'][language]), page)
                 self.assertIn('class="guide-section"', page)
                 self.assertNotIn('data-runtime-url', page)
                 self.assertNotIn('class="preview"', page)
+        for language in FULL_API_LOCALES:
             for reference in reference_headers(self.catalog):
                 page = outputs[reference_path(reference['source'], language)]
                 self.assertIn('data-api-member', page)
@@ -364,13 +396,20 @@ class VisualDocumentationTest(unittest.TestCase):
             self.assertIn(member, button)
         self.assertIn('qpushbutton.html', button)
         self.assertIn('setBorrowedEditor', outputs['zh-CN/api/field/index.html'])
+        ja_button = outputs['ja/api/button/index.html']
+        ja_ui = guide_ui('ja')
+        ja_title = docs_i18n.display_component_title('Button', docs_i18n.component_locale('ja')['button']['name'], 'ja')
+        self.assertIn('<html lang="ja"', ja_button)
+        self.assertIn(f'<h1>{html.escape(ja_title)}</h1>', ja_button)
+        self.assertIn(html.escape(ja_ui['propertyPreview']), ja_button)
+        self.assertIn(html.escape(ja_ui['apiGroups']['properties']), ja_button)
 
     def test_reference_pages_lead_with_their_namesake_type(self):
-        outputs = component_docs.generated_outputs(self.documents)
+        outputs = self.outputs
         for name, helper in (('fluent::charts::ChartModel', 'fluent::charts::ChartData'),
                              ('fluent::diagnostics::Inspector', 'fluent::diagnostics::InspectorOptions')):
             record, other = resolve_type(name), resolve_type(helper)
-            for language in ('en', 'zh'):
+            for language in LOCALE_KEYS:
                 page = outputs[reference_path(record['source'], language)]
                 heading = page.split('<header class="document-heading">', 1)[1].split('</header>', 1)[0]
                 self.assertIn(html.escape(localized_description(record, language)), heading)
@@ -389,9 +428,8 @@ class VisualDocumentationTest(unittest.TestCase):
                 if tag == 'a' and values.get('href'):
                     self.links.append(values['href'])
 
-        homepage = {locale.output.relative_to(generate_localized_site.SITE_ROOT).as_posix()
-                    for locale in generate_localized_site.LOCALES}
-        outputs = component_docs.generated_outputs(self.documents)
+        homepage = {locale.output_relative for locale in LOCALES}
+        outputs = self.outputs
         parsed = {path: Links(text) for path, text in outputs.items() if path.endswith('.html')}
         for path, page in parsed.items():
             self.assertEqual(len(page.ids), len(set(page.ids)), 'Duplicate member anchor in ' + path)
@@ -406,6 +444,37 @@ class VisualDocumentationTest(unittest.TestCase):
                     self.assertIn(unquote(url.fragment), parsed[target].ids, f'{path}: {href}')
                 elif target not in parsed and target not in homepage:
                     self.assertTrue((component_docs.SITE / target).is_file() or (component_docs.SITE / target).is_dir(), f'{path}: {href}')
+
+    def test_no_cross_locale_doc_link_leaks(self):
+        class Anchors(HTMLParser):
+            def __init__(self, text):
+                super().__init__(); self.links = []; self.feed(text)
+
+            def handle_starttag(self, tag, attrs):
+                values = dict(attrs)
+                if tag == 'a' and values.get('href'):
+                    self.links.append(values['href'])
+
+        non_en_prefixes = [loc.url_prefix for loc in LOCALES if loc.url_prefix]
+        for path, text in self.outputs.items():
+            if not path.endswith('.html') or path.endswith('api/index.html'):
+                continue
+            loc = next((item for item in LOCALES if item.url_prefix and path.startswith(item.url_prefix)), LOCALES[0])
+            for href in Anchors(text).links:
+                url = urlsplit(href)
+                if url.scheme or url.netloc or not url.path:
+                    continue
+                target = posixpath.normpath(posixpath.join(posixpath.dirname(path), unquote(url.path)))
+                if url.path.endswith('/'):
+                    target = posixpath.normpath(target + '/index.html')
+                if loc.url_prefix:
+                    self.assertTrue(target.startswith(loc.url_prefix), f'{path} leaked out of {loc.key}: {href} -> {target}')
+                else:
+                    for foreign in non_en_prefixes:
+                        self.assertFalse(target.startswith(foreign), f'{path} leaked into {foreign}: {href} -> {target}')
+
+    def test_docs_locales_are_complete(self):
+        docs_i18n.validate_docs_locales(self.documents, self.catalog)
 
 
 def png(width=4, height=2):
