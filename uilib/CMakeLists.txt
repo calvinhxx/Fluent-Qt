@@ -2,7 +2,17 @@ source_group(TREE ${PROJECT_SOURCE_DIR}/src FILES ${SRC})
 set_source_files_properties(${PROJECT_SOURCE_DIR}/src/utils/DiagnosticSession.cpp PROPERTIES
     COMPILE_DEFINITIONS "FLUENTQT_DIAGNOSTIC_VERSION=\"${PROJECT_VERSION}\"")
 
-add_library(FluentQt STATIC ${SRC} ${RESOURCES})
+set(icon_index "${CMAKE_CURRENT_BINARY_DIR}/generated/FluentQtIconIndex.inc")
+set(icon_catalog "${PROJECT_SOURCE_DIR}/res/icons/FluentQtIcons.json")
+set(icon_aliases "${PROJECT_SOURCE_DIR}/res/icons/FluentQtIconAliases.json")
+add_custom_command(OUTPUT "${icon_index}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    COMMAND "${CMAKE_COMMAND}" "-Dcatalog=${icon_catalog}" "-Daliases=${icon_aliases}" "-Doutput=${icon_index}"
+        -P "${PROJECT_SOURCE_DIR}/cmake/GenerateIconIndex.cmake"
+    DEPENDS "${icon_catalog}" "${icon_aliases}" "${PROJECT_SOURCE_DIR}/cmake/GenerateIconIndex.cmake"
+    VERBATIM)
+add_library(FluentQt STATIC ${SRC} ${RESOURCES} "${icon_index}")
+target_include_directories(FluentQt PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 add_library(FluentQt::FluentQt ALIAS FluentQt)
 # Backward-compatible build-tree alias for existing local tests and examples.
 add_library(fluent_qt_lib ALIAS FluentQt)

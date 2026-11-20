@@ -96,6 +96,7 @@ file(COPY
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtApplePlatformDependencies.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtConfig.cmake.in"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/GenerateIconIndex.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInstallHeaders.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtSpatial.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInterfaceZoom.cmake"
