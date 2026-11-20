@@ -312,6 +312,7 @@ def playground_en_strings() -> dict[str, str]:
     return mapping
 
 
+@lru_cache(maxsize=len(EXTRA_LOCALE_KEYS))
 def playground_runtime_payload(language: str) -> bytes:
     data = playground_locale(language)
     en_map = playground_en_strings()
@@ -328,6 +329,7 @@ def playground_runtime_payload(language: str) -> bytes:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
+@lru_cache(maxsize=len(EXTRA_LOCALE_KEYS))
 def playground_runtime_digest(language: str) -> str:
     return hashlib.sha256(playground_runtime_payload(language)).hexdigest()[:12]
 

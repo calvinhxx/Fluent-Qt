@@ -34,7 +34,7 @@ import docs_i18n
 from api_sections import localized_description, reference_headers, reference_path
 from public_api import resolve_type
 from documentation_guides import guides, guide_path, guide_ui
-from site_locales import FULL_API_LOCALES, LOCALE_KEYS, LOCALES
+from site_locales import LOCALE_KEYS, LOCALES
 from test_public_api import PublicApiTest
 from test_documentation_claims import DocumentationClaimsTest
 
@@ -395,7 +395,7 @@ class VisualDocumentationTest(unittest.TestCase):
                 self.assertIn('class="guide-section"', page)
                 self.assertNotIn('data-runtime-url', page)
                 self.assertNotIn('class="preview"', page)
-        for language in FULL_API_LOCALES:
+        for language in LOCALE_KEYS:
             for reference in reference_headers(self.catalog):
                 page = outputs[reference_path(reference['source'], language)]
                 self.assertIn('data-api-member', page)
