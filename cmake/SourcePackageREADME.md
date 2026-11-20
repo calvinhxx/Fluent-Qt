@@ -46,6 +46,10 @@ PySide6, Shiboken6, and Shiboken6 generator versions from 6.2 onward. See
 `bindings/pyside6/API_COMPATIBILITY.md` for API version governance, and
 `bindings/pyside6/MANYLINUX.md` for the publishable Linux wheel boundary.
 
+On MSVC, linking `FluentQt::FluentQt` enables UTF-8 source and execution
+character sets for the consuming C++ target. Set its `QT_NO_UTF8_SOURCE`
+property to `ON` if you supply your own UTF-8 source decoding flags.
+
 Top-level development builds include `FluentQt` and the minimal
 `fluentqt_hello_world` executable example. Source-subproject builds keep examples
 disabled by default. The included

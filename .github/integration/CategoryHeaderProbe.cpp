@@ -14,6 +14,9 @@
 
 #include <type_traits>
 
+// Verify source decoding even on hosts whose default code page can compile the headers by accident.
+static_assert(u"组件"[0] == u'\u7EC4' && u"组件"[1] == u'\u4EF6', "Consumers must decode UTF-8 source text");
+
 static_assert(std::is_base_of<QWidget, fluent::basicinput::Button>::value,
     "BasicInput.h must expose the basic-input widgets");
 static_assert(std::is_base_of<QWidget, fluent::basicinput::CompoundButton>::value,

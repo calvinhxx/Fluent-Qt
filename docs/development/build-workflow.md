@@ -11,6 +11,12 @@
 Run commands from the repository root. Reuse an existing configured build
 when its toolchain and options still match the task.
 
+On MSVC, C++ targets that link `FluentQt::FluentQt` use UTF-8 for source
+and execution character sets. This lets consumers read the public headers on
+Windows installations with a legacy system code page. A target that supplies
+its own character-set flags can set `QT_NO_UTF8_SOURCE` to `ON` and specify
+UTF-8 source decoding itself.
+
 ## First-use setup
 
 The public [CMake presets](../../CMakePresets.json) require CMake 3.25+; the
