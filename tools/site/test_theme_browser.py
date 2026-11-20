@@ -364,8 +364,10 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     raise RuntimeError("Website did not start in the emulated light theme")
                 preview = page.locator('.hero-playground-action')
                 preview.hover()
-                ratio = preview.evaluate("""async button => {
-                    await Promise.all(button.getAnimations().map(animation => animation.finished));
+                ratio = page.wait_for_function("""button => {
+                    // A hover transition can be replaced. Measure the settled, currently hovered frame.
+                    if (!button.matches(':hover') || button.getAnimations().some(a => a.pending || a.playState !== 'finished'))
+                        return false;
                     const ctx = document.createElement('canvas').getContext('2d');
                     function luminance(color) {
                         ctx.fillStyle = color;
@@ -379,7 +381,7 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     const style = getComputedStyle(button);
                     const fg = luminance(style.color), bg = luminance(style.backgroundColor);
                     return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
-                }""")
+                }""", arg=preview.element_handle()).json_value()
                 if ratio < 4.5:
                     raise RuntimeError(f"Property preview hover contrast is {ratio:.2f} in {language}")
                 toggle.click()
