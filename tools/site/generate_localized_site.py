@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from site_assets import source_path
-from site_locales import FULL_API_LOCALES, LOCALES, Locale, relative_locale_url
+from site_locales import LOCALES, Locale, relative_locale_url
 
 
 ROOT = Path(__file__).resolve().parents[2]

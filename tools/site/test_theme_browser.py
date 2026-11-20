@@ -236,17 +236,17 @@ def check_release_documents(page: object, site_url: str, language: str, output: 
     check_release_anchor_navigation(page, site_url)
 
 
-def check_directory_hierarchy(page: object, site_url: str, *, full_api: bool = True, language: str = "en") -> None:
+def check_directory_hierarchy(page: object, site_url: str, *, language: str = "en") -> None:
     """Keep each document discoverable through its owning branch and search."""
     cases = [
+        ('releases', ['project']),
         ('foundation', ['foundation']),
         ('foundation-iconography', ['foundation', 'category-foundation']),
         ('module-particles', ['modules', 'category-particles']),
         ('module-spatial', ['modules', 'category-spatial']),
         ('module-qmlbridge', ['modules', 'category-qml-bridge']),
+        ('reference/particles-session', ['reference']),
     ]
-    if full_api:
-        cases = [('releases', ['project']), *cases, ('reference/particles-session', ['reference'])]
     # The previous release check also exercises the compact layout.
     page.set_viewport_size({'width': 1280, 'height': 800})
     for route, expected in cases:
@@ -268,7 +268,7 @@ def check_directory_hierarchy(page: object, site_url: str, *, full_api: bool = T
         if ancestors != expected:
             raise RuntimeError(f'Wrong documentation branch for {route}: {ancestors}')
 
-    page.goto(site_url + 'api/' + ('releases/' if full_api else 'foundation/'), wait_until='domcontentloaded')
+    page.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
     components = page.locator('[data-directory-group="components"]')
     components.locator(':scope > summary').click()
     basic = page.locator('[data-directory-group="category-basic-input"]')
@@ -461,23 +461,22 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                 directory_checked = "not_run"
                 has_guide = (active_root / locale / "api/foundation/index.html").is_file()
                 if site_root is not None or has_guide:
-                    if loc.has_full_api_docs:
-                        check_release_documents(page, site_url, language, output)
-                        release_checked = "passed"
-                        fallback = browser.new_page(java_script_enabled=False)
-                        try:
-                            fallback.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
-                            entry_count = fallback.locator('[data-release-entry]').count()
-                            if not entry_count or fallback.locator('[data-release-entry]:visible').count() != entry_count:
-                                raise RuntimeError('No-JavaScript reading lost release entries')
-                            for scope in ('uilib', 'gallery'):
-                                if not fallback.locator(f'[id="v1.11.1"] [data-release-scope="{scope}"]').is_visible():
-                                    raise RuntimeError('No-JavaScript reading hid a release scope')
-                            if not fallback.locator('#gallery-private-qt-headers').is_visible():
-                                raise RuntimeError('No-JavaScript reading hid migration instructions')
-                        finally:
-                            fallback.close()
-                    check_directory_hierarchy(page, site_url, full_api=loc.has_full_api_docs, language=loc.key)
+                    check_release_documents(page, site_url, language, output)
+                    release_checked = "passed"
+                    fallback = browser.new_page(java_script_enabled=False)
+                    try:
+                        fallback.goto(site_url + 'api/releases/', wait_until='domcontentloaded')
+                        entry_count = fallback.locator('[data-release-entry]').count()
+                        if not entry_count or fallback.locator('[data-release-entry]:visible').count() != entry_count:
+                            raise RuntimeError('No-JavaScript reading lost release entries')
+                        for scope in ('uilib', 'gallery'):
+                            if not fallback.locator(f'[id="v1.11.1"] [data-release-scope="{scope}"]').is_visible():
+                                raise RuntimeError('No-JavaScript reading hid a release scope')
+                        if not fallback.locator('#gallery-private-qt-headers').is_visible():
+                            raise RuntimeError('No-JavaScript reading hid migration instructions')
+                    finally:
+                        fallback.close()
+                    check_directory_hierarchy(page, site_url, language=loc.key)
                     directory_checked = "passed"
                 if runtime_requests:
                     raise RuntimeError(f"Static website eagerly requested WASM ({language}): {runtime_requests}")

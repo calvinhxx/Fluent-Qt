@@ -23,7 +23,7 @@ from docs_i18n import (
 from documentation_guides import guides, guide_path, guide_ui
 from documentation_navigation import navigation as site_navigation, breadcrumb, relative as relative_url
 from site_assets import source_path
-from site_locales import FULL_API_LOCALES, LOCALE_KEYS, LOCALES, api_language, locale_by_key, locale_url_prefix
+from site_locales import LOCALE_KEYS, LOCALES, locale_by_key, locale_url_prefix
 from generate_localized_site import BASE_URL
 from release_history import page_path as release_page_path
 from release_pages import document_notice
@@ -148,7 +148,6 @@ def component_directory(doc, documents, page, language):
     category_guides = category_owners(doc['catalog'])
     active_category = available[doc['id']]['component']['category_id'] if doc['id'] in available else None
     ui = guide_ui(language)
-    doc_lang = api_language(language)
 
     def group(key, label, entries, active=False, headers=False):
         attributes = (' open' if active else '') + (' data-header-group' if headers else '')
@@ -168,9 +167,9 @@ def component_directory(doc, documents, page, language):
         components = [c for c in doc["catalog"]["components"] if c["category_id"] == category["id"]]
         for component in sorted(components, key=lambda c: (c["id"] not in available, c["title"].lower())):
             documented = available.get(component["id"])
-            localized = localized_component(documented, doc_lang) if documented else None
-            name = display_component_title(component["title"], localized["name"], doc_lang) if localized else component["title"]
-            url = relative_url(detail_path(component["id"], doc_lang), page) if documented else component["cpp"]["declaration_url"]
+            localized = localized_component(documented, language) if documented else None
+            name = display_component_title(component["title"], localized["name"], language) if localized else component["title"]
+            url = relative_url(detail_path(component["id"], language), page) if documented else component["cpp"]["declaration_url"]
             current = ' aria-current="page"' if component["id"] == doc["id"] else ''
             external = '' if documented else ' target="_blank" rel="noopener"'
             kind = '' if documented else '<span class="reference-kind">API</span>'
@@ -202,7 +201,7 @@ def component_directory(doc, documents, page, language):
     current = ' aria-current="page"' if doc['id'] == 'releases' else ''
     label = ui['releasesAndMigrations']
     project_terms = f'releases and migrations 版本记录与迁移 {label.lower()}'
-    project_link = f'<li data-directory-entry data-search="{escape(project_terms)}"><a href="{relative_url(release_page_path("releases", doc_lang), page)}"{current}>{escape(label)}</a></li>'
+    project_link = f'<li data-directory-entry data-search="{escape(project_terms)}"><a href="{relative_url(release_page_path("releases", language), page)}"{current}>{escape(label)}</a></li>'
     core = [value for key, value in category_groups.items() if key not in category_guides]
     groups = [group('project', section_label('project', language), [project_link], doc['id'] == 'releases'),
               guide_groups['foundation'],
@@ -213,7 +212,7 @@ def component_directory(doc, documents, page, language):
     for reference in sorted(reference_headers(doc['catalog']), key=lambda item: item['title'].lower()):
         terms = ' '.join([reference['title'], *[r['qualified_name'] for r in reference['types']]])
         current = ' aria-current="page"' if reference['id'] == doc['id'] else ''
-        references.append(f'<li data-directory-entry data-kind="reference" data-search="{escape(terms.lower())}"><a href="{relative_url(reference_path(reference["source"], doc_lang), page)}"{current}><span>{escape(reference["title"])}</span></a></li>')
+        references.append(f'<li data-directory-entry data-kind="reference" data-search="{escape(terms.lower())}"><a href="{relative_url(reference_path(reference["source"], language), page)}"{current}><span>{escape(reference["title"])}</span></a></li>')
     groups.append(group('reference', section_label('reference', language), references, doc['component']['category_id'] == 'reference', headers=True))
     search = ui['searchDocumentation']
     title = ui['contentsAndSearch']
@@ -362,16 +361,15 @@ def render_guide(guide, documents, catalog, language):
     context = {'id': guide['id'], 'catalog': catalog, 'component': {'category_id': guide['group']}}
     available = {item['id']: item for item in documents}
     ui = guide_ui(language)
-    doc_lang = api_language(language)
     body, toc = [], []
     if guide['id'] == 'foundation':
         heading = ui['playgroundHeading']
         copy = ui['playgroundCopy']
         primary = ui['playgroundPrimary']
-        primary_url = relative_url(detail_path('checkbox', doc_lang) + '?playground=1', page)
+        primary_url = relative_url(detail_path('checkbox', language) + '?playground=1', page)
         other_previews = ('button', 'combobox', 'data-grid', 'line-chart', 'spatial-view', 'particle-backdrop', 'qml-view')
         pills = ''.join(
-            f'<a class="guide-playground-pill" href="{escape(relative_url(detail_path(cid, doc_lang) + "?playground=1", page))}">{escape(available[cid]["component"]["title"])}</a>'
+            f'<a class="guide-playground-pill" href="{escape(relative_url(detail_path(cid, language) + "?playground=1", page))}">{escape(available[cid]["component"]["title"])}</a>'
             for cid in other_previews if cid in available
         )
         body.append(
@@ -393,9 +391,9 @@ def render_guide(guide, documents, catalog, language):
             rows = []
             for comp in category_components:
                 doc = available[comp['id']]
-                name = display_component_title(comp['title'], localized_component(doc, doc_lang)['name'], doc_lang)
-                doc_url = relative_url(detail_path(comp['id'], doc_lang), page)
-                pg_url = relative_url(detail_path(comp['id'], doc_lang) + '?playground=1', page)
+                name = display_component_title(comp['title'], localized_component(doc, language)['name'], language)
+                doc_url = relative_url(detail_path(comp['id'], language), page)
+                pg_url = relative_url(detail_path(comp['id'], language) + '?playground=1', page)
                 rows.append(
                     f'<div class="guide-module-item">'
                     f'<a class="guide-module-doc" href="{escape(doc_url)}">{escape(name)}</a>'
@@ -421,7 +419,7 @@ def render_guide(guide, documents, catalog, language):
         if records:
             record = primary_type(records, source) or records[0]
             label = source.rsplit('/', 1)[-1].removesuffix('.h')
-            references.append(f'<li><a href="{escape(type_url(record, catalog, page, doc_lang))}"><code>{escape(label)}</code></a></li>')
+            references.append(f'<li><a href="{escape(type_url(record, catalog, page, language))}"><code>{escape(label)}</code></a></li>')
     title = ui['apiReference']
     body.append(f'<section class="guide-section" id="api"><h2>{escape(title)}</h2><ul class="reference-links">{"".join(references)}</ul></section>')
     if guide['id'] == 'foundation-qt':
@@ -470,12 +468,12 @@ def generated_outputs(documents):
                           d['id'], d['component']['title'], d['name']['en'], d['name']['zh'],
                           *(localized_component(d, lang)['name'] for lang in LOCALE_KEYS),
                       ])),
-                      'urls': {lang: relative_url(detail_path(d['id'], api_language(lang)), entry) for lang in LOCALE_KEYS}} for d in documents]
+                      'urls': {lang: relative_url(detail_path(d['id'], lang), entry) for lang in LOCALE_KEYS}} for d in documents]
         introductions = [{'names': [g['id'], *g['name'].values()],
             'urls': {lang: relative_url(guide_path(g['id'], lang), entry) for lang in LOCALE_KEYS}} for g in guides()]
         redirects = introductions + redirects
         redirects.append({'names': release_names,
-                          'urls': {lang: relative_url(release_page_path('releases', api_language(lang)), entry) for lang in LOCALE_KEYS},
+                          'urls': {lang: relative_url(release_page_path('releases', lang), entry) for lang in LOCALE_KEYS},
                           'filterDirectory': False})
         fallback_links = ' · '.join(
             f'<a href="{escape(redirects[0]["urls"][target.key])}">{escape(target.native_name)}</a>'
@@ -490,7 +488,7 @@ def generated_outputs(documents):
     for language in LOCALE_KEYS:
         for guide in guides():
             outputs[guide_path(guide['id'], language)] = render_guide(guide, documents, catalog, language)
-    for language in FULL_API_LOCALES:
+    for language in LOCALE_KEYS:
         for doc in documents:
             outputs[detail_path(doc['id'], language)] = render_document(doc, documents, language)
         for reference in reference_headers(catalog):

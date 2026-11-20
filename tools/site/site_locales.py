@@ -16,7 +16,6 @@ class Locale:
     og_locale: str
     readme_file: str
     default_support_method: str
-    has_full_api_docs: bool
     playground_art_lang: str
     og_image_alt: str
     gallery_schema_description: str
@@ -58,7 +57,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="en_US",
         readme_file="README.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="Fluent-Qt Gallery project preview with native Qt Widgets controls.",
         gallery_schema_description=(
@@ -74,7 +72,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="zh_CN",
         readme_file="README.zh-CN.md",
         default_support_method="wechat",
-        has_full_api_docs=True,
         playground_art_lang="zh",
         og_image_alt="Fluent-Qt Gallery 项目预览，展示原生 Qt Widgets 控件。",
         gallery_schema_description=(
@@ -90,7 +87,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="zh_TW",
         readme_file="README.zh-TW.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="Fluent-Qt Gallery 專案預覽，展示原生 Qt Widgets 控制項。",
         gallery_schema_description=(
@@ -106,7 +102,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="ja_JP",
         readme_file="README.ja.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="ネイティブ Qt Widgets コントロールを表示する Fluent-Qt Gallery プロジェクトのプレビュー。",
         gallery_schema_description=(
@@ -122,7 +117,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="ko_KR",
         readme_file="README.ko.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="네이티브 Qt Widgets 컨트롤을 보여 주는 Fluent-Qt Gallery 프로젝트 미리 보기.",
         gallery_schema_description=(
@@ -138,7 +132,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="de_DE",
         readme_file="README.de.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="Vorschau auf das Fluent-Qt Gallery-Projekt mit nativen Qt Widgets-Steuerelementen.",
         gallery_schema_description=(
@@ -154,7 +147,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="ru_RU",
         readme_file="README.ru.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="Предпросмотр проекта Fluent-Qt Gallery с нативными элементами управления Qt Widgets.",
         gallery_schema_description=(
@@ -170,7 +162,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="es_ES",
         readme_file="README.es.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="Vista previa del proyecto Fluent-Qt Gallery con controles nativos de Qt Widgets.",
         gallery_schema_description=(
@@ -186,7 +177,6 @@ LOCALES: tuple[Locale, ...] = (
         og_locale="fr_FR",
         readme_file="README.fr.md",
         default_support_method="kofi",
-        has_full_api_docs=True,
         playground_art_lang="en",
         og_image_alt="Aperçu du projet Fluent-Qt Gallery avec des contrôles natifs Qt Widgets.",
         gallery_schema_description=(
@@ -197,15 +187,10 @@ LOCALES: tuple[Locale, ...] = (
 
 LOCALE_KEYS: tuple[str, ...] = tuple(locale.key for locale in LOCALES)
 LOCALE_BY_KEY: dict[str, Locale] = {locale.key: locale for locale in LOCALES}
-FULL_API_LOCALES: tuple[str, ...] = LOCALE_KEYS
 
 
 def locale_by_key(key: str) -> Locale:
     return LOCALE_BY_KEY[key]
-
-
-def api_language(language: str) -> str:
-    return LOCALE_BY_KEY[language].key
 
 
 def locale_url_prefix(language: str) -> str:

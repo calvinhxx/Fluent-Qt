@@ -8,7 +8,7 @@ from documentation_navigation import relative
 from documentation_guides import guide_ui
 from generate_localized_site import BASE_URL
 from release_history import load_history, page_path, REPOSITORY, SCOPES
-from site_locales import LOCALE_KEYS, api_language, locale_by_key
+from site_locales import LOCALE_KEYS, locale_by_key
 
 
 def escape(value):
@@ -35,7 +35,7 @@ def document_notice(document_id, source, page, language):
                 continue
             anchor = 'v' + item['version'] if 'version' in item else 'unreleased'
             params = {'change': document_id if by_id else source, 'scope': group['scope']}
-            target = page_path('releases', api_language(language)) + '?' + urlencode(params) + '#' + anchor
+            target = page_path('releases', language) + '?' + urlencode(params) + '#' + anchor
             ui = guide_ui(language)
             text = ui['unreleasedNotice'].format(latest=data['latest'])
             label = ui['viewReleaseNotes']
