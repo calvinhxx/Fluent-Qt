@@ -24,7 +24,11 @@ COMMIT = re.compile(r"[0-9a-f]{40}")
 # The installed SDK contains docs/ai, llms.txt and the .agents Skill: those
 # remain inputs. Other documentation and website files do not build the SDK.
 WEB_ONLY_PREFIXES = ("site/", "tools/site/")
-WEB_ONLY_FILES = {"AGENTS.md", "README.md", "README.zh-CN.md"}
+WEB_ONLY_FILES = {
+    "AGENTS.md", "README.md", "README.zh-CN.md", "README.zh-TW.md",
+    "README.ja.md", "README.ko.md", "README.de.md", "README.ru.md",
+    "README.es.md", "README.fr.md",
+}
 REQUIRED_SDK = ("include/FluentQt/FluentQt.h", "lib/libFluentQt.a",
                 "lib/cmake/FluentQt/FluentQtConfig.cmake")
 
