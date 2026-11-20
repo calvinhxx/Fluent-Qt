@@ -82,6 +82,14 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
 
     topRow->addStretch(1);
     innerLayout->insertLayout(0, topRow);
+    refreshDisplayedCode();
+}
+
+void GalleryCodeBlock::ensureFileSelector()
+{
+    if (m_fileSelector)
+        return;
+    auto* innerLayout = qobject_cast<QVBoxLayout*>(m_contentInner->layout());
     m_fileRow = new QWidget(m_contentInner);
     auto* filesLayout = new QHBoxLayout(m_fileRow);
     filesLayout->setContentsMargins(0, 0, 0, 0);
@@ -111,7 +119,6 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode, const QString& python
     connect(m_fileSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
         refreshDisplayedCode();
     });
-    refreshDisplayedCode();
 }
 
 QString GalleryCodeBlock::code() const
@@ -159,6 +166,10 @@ void GalleryCodeBlock::setSourceFiles(const QVector<GallerySourceFile>& cppFiles
 
 void GalleryCodeBlock::rebuildFileSelector(const QString& preferredName)
 {
+    if (!sourceFiles().isEmpty())
+        ensureFileSelector();
+    if (!m_fileSelector)
+        return;
     const QSignalBlocker blocker(m_fileSelector);
     m_fileSelector->clear();
     int selected = 0;
@@ -180,6 +191,8 @@ void GalleryCodeBlock::updateSourceControls()
         ? !file->usageSnippet.isEmpty() && file->usageSnippet != file->code
         : !m_cppExcerpt.isEmpty() && m_codeLanguage == GalleryCodeLanguage::Cpp;
     m_sourceSelector->setVisible(hasExcerpt);
+    if (!m_fileLanguage)
+        return;
     const auto language = sourceLanguage();
     m_fileLanguage->setText(language == QStringLiteral("cpp") ? QStringLiteral("C++")
             : language == QStringLiteral("python")            ? QStringLiteral("Python")

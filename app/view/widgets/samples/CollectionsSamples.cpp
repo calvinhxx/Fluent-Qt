@@ -1,5 +1,6 @@
 #include "CollectionsSamples.h"
 #include "TransferSample.h"
+#include <QPixmapCache>
 #include <QFile>
 #include "FilesSamples.h"
 #include "SequenceSamples.h"
@@ -459,6 +460,51 @@ private:
     fluent::FluentElement* m_themeHost = nullptr;
 };
 
+// Retain the recipe (or downloaded bytes) with the row. Decoded pictures compete
+// in Qt's bounded pixmap cache, including when their Gallery page is hidden.
+class PhotoItem final : public QStandardItem {
+public:
+    explicit PhotoItem(const FlowPhotoInfo& photo)
+        : QStandardItem(photo.title), m_size(photo.size), m_tint(photo.from), m_seed(photo.title)
+    {}
+
+    QVariant data(int role) const override
+    {
+        if (role != PhotoImageRole)
+            return QStandardItem::data(role);
+        QPixmap pixmap;
+        if (QPixmapCache::find(m_cacheKey, &pixmap))
+            return pixmap;
+        const QVariant source = QStandardItem::data(role);
+        if (source.canConvert<QPixmap>())
+            return source;
+        if (source.isValid() && !m_decodeFailed) {
+            if (pixmap.loadFromData(source.toByteArray())) {
+                m_cacheKey = QPixmapCache::insert(pixmap);
+                return pixmap;
+            }
+            m_decodeFailed = true;
+        }
+        return fluent::gallery::detail::renderScenicPhotoPixmap(m_size, m_tint, m_seed, 2.0);
+    }
+
+    void setData(const QVariant& value, int role) override
+    {
+        if (role == PhotoImageRole) {
+            QPixmapCache::remove(m_cacheKey);
+            m_decodeFailed = false;
+        }
+        QStandardItem::setData(value, role);
+    }
+
+private:
+    QSize m_size;
+    QColor m_tint;
+    QString m_seed;
+    mutable QPixmapCache::Key m_cacheKey;
+    mutable bool m_decodeFailed = false;
+};
+
 void loadFlowNetworkImage(QStandardItemModel* model, int row, const QUrl& url, QNetworkAccessManager* manager)
 {
     if (!model || !manager)
@@ -483,12 +529,7 @@ void loadFlowNetworkImage(QStandardItemModel* model, int row, const QUrl& url, Q
             return;
         }
 
-        QPixmap pixmap;
-        if (!pixmap.loadFromData(reply->readAll()) || pixmap.isNull()) {
-            LOG_WARN(QStringLiteral("Gallery photo response is not a supported image url=%1").arg(url.toString()));
-            return;
-        }
-        modelGuard->setData(index, pixmap, PhotoImageRole);
+        modelGuard->setData(index, reply->readAll(), PhotoImageRole);
     });
 }
 
@@ -519,12 +560,10 @@ QStandardItemModel* makeFlowPhotoModel(QObject* parent, const QVector<FlowPhotoI
 {
     auto* model = new QStandardItemModel(parent);
     for (const FlowPhotoInfo& photo : photos) {
-        auto* item = new QStandardItem(photo.title);
+        auto* item = new PhotoItem(photo);
         item->setEditable(false);
         item->setData(photo.subtitle, PhotoSubtitleRole);
         item->setData(photo.size, Qt::SizeHintRole);
-        item->setData(fluent::gallery::detail::renderScenicPhotoPixmap(photo.size, photo.from, photo.title, 2.0),
-            PhotoImageRole);
         model->appendRow(item);
     }
     return model;

@@ -37,7 +37,7 @@ _MODEL_IMPORTS = (
     "from PySide6.QtCore import (QEvent, QItemSelectionModel, QMargins, "
     "QPersistentModelIndex, QRectF, QSize, QSizeF, Qt, QUrl, QUrlQuery)\n"
     "from PySide6.QtGui import (QColor, QFont, QFontMetricsF, QGuiApplication, "
-    "QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QStandardItem, "
+    "QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QPixmapCache, QStandardItem, "
     "QStandardItemModel)\n"
     "from PySide6.QtNetwork import (QNetworkAccessManager, QNetworkReply, "
     "QNetworkRequest)\n"
@@ -566,9 +566,7 @@ _PHOTO_MODEL_HELPER = _SourceHelper(dedent(
                         or not current_index.isValid()
                     ):
                         return
-                    pixmap = QPixmap()
-                    if pixmap.loadFromData(current_reply.readAll()):
-                        model.setData(current_index, pixmap, PHOTO_IMAGE_ROLE)
+                    model.setData(current_index, current_reply.readAll(), PHOTO_IMAGE_ROLE)
                 finally:
                     owner._gallery_photo_network_pending = max(
                         0, owner._gallery_photo_network_pending - 1
@@ -582,24 +580,51 @@ _PHOTO_MODEL_HELPER = _SourceHelper(dedent(
             reply.finished.connect(finished)
 
 
+    class PhotoItem(QStandardItem):
+        def __init__(self, title, size, first, last):
+            super().__init__(title)
+            self._size = QSize(size.width() * 2, size.height() * 2)
+            self._colors = (first, last)
+            self._fallback = f"fluentqt.gallery.gradient/{self._size.width()}/{self._size.height()}/{first}/{last}"
+            self._cache_key = QPixmapCache.Key()
+            self._decode_failed = False
+
+        def data(self, role=Qt.ItemDataRole.UserRole + 1):
+            if role != PHOTO_IMAGE_ROLE:
+                return super().data(role)
+            pixmap = QPixmap()
+            if QPixmapCache.find(self._cache_key, pixmap):
+                return pixmap
+            source = super().data(role)
+            if isinstance(source, QPixmap):
+                return source
+            if source and not self._decode_failed:
+                if pixmap.loadFromData(source):
+                    self._cache_key = QPixmapCache.insert(pixmap)
+                    return pixmap
+                self._decode_failed = True
+            if not QPixmapCache.find(self._fallback, pixmap):
+                pixmap = make_gradient_pixmap(self._size, *self._colors)
+                QPixmapCache.insert(self._fallback, pixmap)
+            return pixmap
+
+        def setData(self, value, role=Qt.ItemDataRole.UserRole + 1):
+            if role == PHOTO_IMAGE_ROLE:
+                QPixmapCache.remove(self._cache_key)
+                self._decode_failed = False
+            super().setData(value, role)
+
+
     def make_photo_model(photos, parent=None, load_network=False):
         photos = tuple(photos)
         model = QStandardItemModel(parent)
         for title, subtitle, from_color, to_color, size in photos:
-            item = QStandardItem(title)
+            item = PhotoItem(title, size, from_color, to_color)
             item.setEditable(False)
             item.setData(subtitle, PHOTO_SUBTITLE_ROLE)
             item.setData(QColor(from_color), PHOTO_FROM_ROLE)
             item.setData(QColor(to_color), PHOTO_TO_ROLE)
             item.setData(size, Qt.ItemDataRole.SizeHintRole)
-            item.setData(
-                make_gradient_pixmap(
-                    QSize(size.width() * 2, size.height() * 2),
-                    from_color,
-                    to_color,
-                ),
-                PHOTO_IMAGE_ROLE,
-            )
             model.appendRow(item)
         if load_network and parent is not None:
             load_photo_network_images(model, photos, parent)

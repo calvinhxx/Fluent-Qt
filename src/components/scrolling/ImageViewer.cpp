@@ -699,6 +699,8 @@ void ImageViewer::paintEvent(QPaintEvent* event)
 
 bool ImageViewer::event(QEvent* event)
 {
+    if (event->type() == QEvent::Hide && m_pixmapCache)
+        m_pixmapCache->clear();
     if (event->type() == QEvent::NativeGesture && handleNativeGesture(event))
         return true;
     if (event->type() == QEvent::Gesture && handlePinchGesture(event))
