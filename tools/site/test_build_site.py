@@ -13,7 +13,9 @@ import unittest
 from unittest.mock import patch
 
 import build_site
+from docs_i18n import EXTRA_LOCALE_KEYS
 import generate_component_previews as previews
+from site_locales import LOCALES
 
 
 class SiteArtifactTest(unittest.TestCase):
@@ -35,11 +37,20 @@ class SiteArtifactTest(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         self.site = self.root / "site"
-        self.files = (".nojekyll", "index.html", "zh-CN/index.html", "api/index.html", "api/catalog.json",
-                      "api/button/index.html", "zh-CN/api/button/index.html", "sitemap.xml",
-                      "api/releases/index.html", "zh-CN/api/releases/index.html",
-                      "api/roadmap/index.html", "zh-CN/api/roadmap/index.html",
-                      "assets/component-previews/manifest.json", "assets/component-previews/button/light.png")
+        self.files = (
+            ".nojekyll",
+            *(loc.output_relative for loc in LOCALES),
+            *(f"{loc.url_prefix}api/index.html" for loc in LOCALES),
+            *(f"{loc.url_prefix}api/foundation/index.html" for loc in LOCALES),
+            "api/catalog.json",
+            *(f"{loc.url_prefix}api/button/index.html" for loc in LOCALES),
+            "sitemap.xml",
+            *(f"{loc.url_prefix}api/releases/index.html" for loc in LOCALES),
+            *(f"{loc.url_prefix}api/roadmap/index.html" for loc in LOCALES),
+            *(f"api/playground-i18n/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
+            "assets/component-previews/manifest.json",
+            "assets/component-previews/button/light.png",
+        )
         for name in self.files:
             path = self.site / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -84,13 +95,14 @@ class SiteArtifactTest(unittest.TestCase):
 
     def test_staging_removes_retired_documents_and_previews(self):
         (self.site / "assets/app-icon.png").write_bytes(b"stale local duplicate")
-        for name in ("api/retired/index.html", "zh-CN/api/retired/index.html",
+        for name in ("api/retired/index.html", "zh-CN/api/retired/index.html", "ja/api/retired/index.html",
+                     "api/playground-i18n/stale.json",
                      "assets/component-previews/retired/light.png", "gallery/local-only.wasm"):
             path = self.site / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("obsolete", encoding="utf-8")
         manifest = {"input_digest": "digest", "images": [{"path": self.files[-1]}]}
-        pages = {name: "html" for name in self.files if name.endswith(".html")}
+        pages = {name: "html" for name in self.files if name.endswith(".html") or name.startswith("api/playground-i18n/")}
         output = self.root / "build/site-pages"
         with patch.object(build_site, "ROOT", self.root), \
              patch.object(build_site, "validated_manifest", return_value=manifest), \
@@ -103,6 +115,9 @@ class SiteArtifactTest(unittest.TestCase):
                 build_site.stage(self.site, "current-sha")
         build_site.verify(output, "current-sha")
         self.assertFalse((output / "api/retired").exists())
+        self.assertFalse((output / "ja/api/retired").exists())
+        self.assertFalse((output / "api/playground-i18n/stale.json").exists())
+        self.assertTrue((output / "api/playground-i18n/ja.json").exists())
         self.assertFalse((output / "assets/component-previews/retired").exists())
         self.assertFalse((output / "gallery").exists())
         self.assertTrue((output / ".nojekyll").exists())

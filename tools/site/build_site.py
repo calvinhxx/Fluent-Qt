@@ -18,8 +18,10 @@ import subprocess
 import sys
 import tempfile
 
+from docs_i18n import EXTRA_LOCALE_KEYS
 from generate_component_previews import ROOT, capture_digest, validated_manifest
 from site_assets import COPIED_ASSETS, copy_assets
+from site_locales import LOCALES
 
 RECEIPT = "site-build-info.json"
 
@@ -64,11 +66,20 @@ def verify(folder: Path, commit: str) -> None:
         raise ValueError("Site artifact does not belong to the requested commit")
     if not receipt.get("files") or receipt["files"] != checksums(folder):
         raise ValueError("Site artifact contents differ from the validated build")
-    for name in ("index.html", "zh-CN/index.html", "api/index.html", "api/catalog.json",
-                 "api/button/index.html", "zh-CN/api/button/index.html", "sitemap.xml",
-                 "api/releases/index.html", "zh-CN/api/releases/index.html",
-                 "api/roadmap/index.html", "zh-CN/api/roadmap/index.html",
-                 "assets/component-previews/manifest.json", *COPIED_ASSETS):
+    required = [
+        *(loc.output_relative for loc in LOCALES),
+        *(f"{loc.url_prefix}api/index.html" for loc in LOCALES),
+        *(f"{loc.url_prefix}api/foundation/index.html" for loc in LOCALES),
+        "api/catalog.json",
+        *(f"{loc.url_prefix}api/button/index.html" for loc in LOCALES),
+        "sitemap.xml",
+        *(f"{loc.url_prefix}api/releases/index.html" for loc in LOCALES),
+        *(f"{loc.url_prefix}api/roadmap/index.html" for loc in LOCALES),
+        *(f"api/playground-i18n/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
+        "assets/component-previews/manifest.json",
+        *COPIED_ASSETS,
+    ]
+    for name in required:
         if name not in receipt["files"]:
             raise ValueError(f"Incomplete site artifact: {name}")
 
@@ -100,7 +111,9 @@ def stage(output: Path, commit: str) -> None:
                 raise ValueError(f"Unexpected symlink in website source: {path}")
             if not path.is_file() or path.name == ".DS_Store":
                 continue
-            if relative.startswith(("api/", "zh-CN/api/")) and path.suffix == ".html" and relative not in pages:
+            api_prefixes = tuple(f"{loc.url_prefix}api/" for loc in LOCALES)
+            if ((relative.startswith(api_prefixes) and path.suffix == ".html")
+                    or relative.startswith("api/playground-i18n/")) and relative not in pages:
                 continue
             if relative.startswith("assets/component-previews/") and relative not in expected_images:
                 continue

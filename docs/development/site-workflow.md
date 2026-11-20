@@ -433,7 +433,9 @@ Check the tracked catalog, the generated pages and the scripts:
 
 ```bash
 python3 tools/site/generate_api_reference.py --check
-python3 tools/site/generate_localized_site.py
+python3 tools/site/generate_localized_site.py --check
+python3 tools/site/test_generate_localized_site.py
+python3 .github/scripts/validate-ci-workflow-boundaries.py
 node --check site/site.js
 node --test tools/site/test_hero_particles.mjs
 node --test tools/site/test_spatial_showcase.mjs
@@ -449,12 +451,18 @@ The pull-request planning job regenerates and checks the AI and API catalogs. Th
 [website CI module](ci-workflow.md) generates the homepage, documents and
 previews on every pull request and on `main`, then uploads a verified artifact.
 Pages deploys only that artifact after checking its commit and file hashes, and
-verifies that both localized pages and `sitemap.xml` are present.
+verifies all nine homepage paths and `sitemap.xml` during assembly. After
+building the website locally, verify its file hashes and commit receipt with
+the Pages command.
+
+```bash
+python3 tools/site/build_site.py --verify build/site-pages --commit "$(git rev-parse HEAD)"
+```
 
 The motion tests use Node's built-in test runner (Node 20+) and cover visibility,
 pause persistence, system preferences, pointer input, resize limits, and page
-cleanup. They do not replace browser review: inspect both languages in Light,
-Dark, and High Contrast, check the mobile layout, and operate the pause control
+cleanup. Inspect the localized homepages in Light, Dark, and High Contrast,
+check the mobile layout, and operate the pause control
 with the keyboard.
 Also start the WASM Spatial sample, adjust its real camera Slider and switch
 2D/3D. Check offscreen suspension, theme changes, Stop/restart and error handling.

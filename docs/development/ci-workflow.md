@@ -108,7 +108,7 @@ New components still need Gallery registration, examples, and bilingual prose.
 CI generates their pages and previews, not their usage guidance.
 
 Website CI runs the static browser theme contract against that generated artifact
-before upload, on every pull request. It checks both homepage languages, three
+before upload, on every pull request. It checks all nine homepage languages, three
 themes, forced colors, and wide/narrow layouts without loading WebAssembly.
 Website styles, homepage templates, and generation helpers therefore use the
 required website lane without starting native validation or a WASM build.
