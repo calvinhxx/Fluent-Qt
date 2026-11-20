@@ -79,9 +79,12 @@ file(COPY
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui"
     DESTINATION "${_package_root}/.agents/skills"
+    PATTERN "fluentqt-ai-catalog.json" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE)
+configure_file("${FLUENT_QT_SOURCE_DIR}/docs/ai/generated/fluentqt-ai-catalog.json"
+    "${_package_root}/.agents/skills/build-fluentqt-gui/assets/fluentqt-ai-catalog.json" COPYONLY)
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/CMakeLists.txt"
     "${FLUENT_QT_SOURCE_DIR}/resources.qrc"

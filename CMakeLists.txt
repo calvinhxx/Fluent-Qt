@@ -267,10 +267,14 @@ if(FLUENT_QT_INSTALL)
         PATTERN "__pycache__" EXCLUDE
         PATTERN "*.pyc" EXCLUDE
         PATTERN "*.pyo" EXCLUDE)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/ai/generated/fluentqt-ai-catalog.json"
+        DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui/assets"
+        COMPONENT Development)
     install(DIRECTORY
         "${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui"
         DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills"
         COMPONENT Development
+        PATTERN "fluentqt-ai-catalog.json" EXCLUDE
         PATTERN "__pycache__" EXCLUDE
         PATTERN "*.pyc" EXCLUDE
         PATTERN "*.pyo" EXCLUDE)
