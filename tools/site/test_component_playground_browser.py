@@ -214,6 +214,31 @@ def run_preview_entries(browser, base_url):
         expect(popup).to_have_attribute('data-preview-state', 'ready', timeout=60000)
         assert len(scripts) == 2, scripts  # One failed request and one successful retry.
 
+        # A temporary dictionary failure must not initialize an English editor.
+        page.goto(urljoin(base_url, 'ja/api/button/'))
+        expect(page.locator('[data-component]')).to_have_attribute('data-live-state', 'ready', timeout=60000)
+        dictionaries = []
+        def fetch_dictionary(route):
+            dictionaries.append(route.request.url)
+            if len(dictionaries) == 1:
+                route.fulfill(status=503, body='Unavailable')
+            else:
+                route.continue_()
+        page.route('**/playground-i18n/ja.json*', fetch_dictionary)
+        trigger.click()
+        expect(page.locator('[data-preview-error]')).to_be_visible()
+        expect(trigger).to_have_attribute('aria-busy', 'false')
+        expect(popup).to_have_count(0)
+        trigger.press('Enter')
+        expect(popup).to_have_attribute('data-preview-state', 'ready', timeout=60000)
+        expect(popup.locator('.playground-badge')).to_have_text('プロパティプレビュー')
+        page.keyboard.press('Escape')
+        trigger.click()
+        expect(popup).to_be_visible()
+        assert len(dictionaries) == 2
+        assert len(scripts) == 3, scripts  # The dictionary retry reuses the loaded script.
+        page.keyboard.press('Escape')
+
         page.set_viewport_size({'width': 320, 'height': 400})
         for route, suffix in (('checkbox', ''), ('checkbox', '?playground=1'), ('button', '?playground=1')):
             page.goto(urljoin(base_url, f'zh-CN/api/{route}/{suffix}'))

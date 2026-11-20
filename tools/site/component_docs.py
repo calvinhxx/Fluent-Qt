@@ -13,8 +13,11 @@ from public_api import inventory, resolve_type
 from api_sections import (component_api, localized_description, primary_type, render_type,
                           reference_headers, reference_path, type_url, slug)
 from docs_i18n import (
+    EXTRA_LOCALE_KEYS,
     display_component_title,
     localized_component,
+    playground_runtime_digest,
+    playground_runtime_payload,
 )
 from documentation_guides import guides, guide_path, guide_ui
 from documentation_navigation import navigation as site_navigation, breadcrumb, relative as relative_url
@@ -260,7 +263,7 @@ def api_search(language):
     return f'<label class="api-search"><span class="visually-hidden">{label}</span><input type="search" data-api-filter placeholder="{label}" autocomplete="off"></label><p data-api-empty hidden role="status">{empty}</p>'
 
 
-def render_shell(doc, documents, page, language, title, description, body, toc, neighbors='', eyebrow=None, playground_toggle='', alternates=None):
+def render_shell(doc, documents, page, language, title, description, body, toc, neighbors='', eyebrow=None, playground_toggle='', alternates=None, playground_i18n=''):
     """Wrap a document body in the shared shell; non-component pages name their section above the title."""
     words = shell_words(language)
     if eyebrow is None:
@@ -282,6 +285,7 @@ def render_shell(doc, documents, page, language, title, description, body, toc, 
         'style': asset('api/component.css', page), 'navigation_style': asset('api/navigation.css', page),
         'script': asset('api/component.js', page), 'site_navigation': site_navigation(page, language),
         'playground_script': asset('api/playground.js', page),
+        'playground_i18n': escape(playground_i18n),
         'playground_toggle': playground_toggle,
         'breadcrumb': breadcrumb(page, language, title), 'app_icon': relative('assets/app-icon-64.png', page),
         'eyebrow': f'<p class="document-eyebrow">{escape(eyebrow)}</p>' if eyebrow else '',
@@ -315,6 +319,11 @@ def render_document(doc, documents, language):
     minimum = doc.get('minimum_preview_height', 196)
     playground = (ROOT / 'app/assets/playgrounds' / (doc['id'] + '.json')).is_file()
     customize = escape(ui['propertyPreview'])
+    playground_i18n = (
+        relative(f"api/playground-i18n/{language}.json", page) + "?v=" + playground_runtime_digest(language)
+        if playground and language in EXTRA_LOCALE_KEYS
+        else ""
+    )
 
     preview_values = {**{key: escape(value) for key, value in words.items()},
         'component_id': doc['id'], 'runtime_url': relative('gallery/', page) + '/',
@@ -343,7 +352,8 @@ def render_document(doc, documents, language):
     return render_shell(doc, documents, page, language, title, localized['description'], body,
                         [('appearance', words['overview']), ('usage', words['usage']), ('api', 'API')], ''.join(neighbors),
                         eyebrow=category_label(category, category_owners(doc['catalog']), language),
-                        playground_toggle=preview_values['playground_toggle'])
+                        playground_toggle=preview_values['playground_toggle'],
+                        playground_i18n=playground_i18n)
 
 
 def render_guide(guide, documents, catalog, language):
@@ -444,6 +454,8 @@ def generated_outputs(documents):
     from release_history import load_history, validate_related_documents
     validate_related_documents(load_history(), [d['id'] for d in documents] + [g['id'] for g in guides()])
     outputs = {'assets/app-icon-64.png': site_icon()}
+    for language in EXTRA_LOCALE_KEYS:
+        outputs[f'api/playground-i18n/{language}.json'] = playground_runtime_payload(language)
     api_template = Template((ROOT / 'tools/site/api-entry.template.html').read_text(encoding="utf-8"))
     supported_languages = json.dumps(list(LOCALE_KEYS))
     release_names = list(dict.fromkeys([

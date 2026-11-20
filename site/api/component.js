@@ -173,7 +173,8 @@ function createInteractivePreview() {
   let playground;
   const trigger = document.querySelector('[data-playground-toggle]');
   const editorError = root.querySelector('[data-preview-error]');
-  let loadingEditor;
+  let loadingEditor = false;
+  let editorScriptReady;
   let pendingOpen;
 
   function updateTrigger(open = false) {
@@ -190,7 +191,32 @@ function createInteractivePreview() {
     pendingOpen = null;
     playground.open(target);
   }
-  function requestOpen(target) {
+  function loadEditorScript(url) {
+    if (!editorScriptReady) {
+      editorScriptReady = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = resolve;
+        script.onerror = () => {
+          script.remove();
+          editorScriptReady = null;
+          reject(new Error('Could not load the property editor'));
+        };
+        document.head.append(script);
+      });
+    }
+    return editorScriptReady;
+  }
+  async function loadEditorLocale(url) {
+    if (!url) return null; // English and Simplified Chinese ship with the editor.
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Could not load the property editor translations');
+    const locale = await response.json();
+    if (!locale?.ui?.preview || !locale.options || !locale.strings)
+      throw new Error('Invalid property editor translations');
+    return locale;
+  }
+  async function requestOpen(target) {
     if (state === 'error') return;
     pendingOpen = {target};
     editorError.hidden = true;
@@ -198,10 +224,13 @@ function createInteractivePreview() {
     if (state === 'idle') begin();
     if (playground) { openWhenReady(); return; }
     if (loadingEditor) return;
-    const script = document.createElement('script');
-    loadingEditor = script;
-    script.src = document.querySelector('script[data-playground-script]').dataset.playgroundScript;
-    script.onload = () => {
+    loadingEditor = true;
+    try {
+      const assets = document.querySelector('script[data-playground-script]').dataset;
+      const [, i18n] = await Promise.all([
+        loadEditorScript(assets.playgroundScript),
+        loadEditorLocale(assets.playgroundI18n),
+      ]);
       playground = window.FluentQtPlayground.create(root, {
         example: selected, trigger, updateTrigger,
         send(type, command, requestId, selection) {
@@ -211,17 +240,16 @@ function createInteractivePreview() {
           post(type, {example: selected(), selection, command, requestId});
           if (sampleOffscreen) syncVisibility();
         }
-      });
+      }, i18n);
       playground.setReady(state === 'ready');
       openWhenReady();
-    };
-    script.onerror = () => {
-      script.remove();
-      loadingEditor = pendingOpen = null;
+    } catch {
+      pendingOpen = null;
       updateTrigger();
       editorError.hidden = false;
-    };
-    document.head.append(script);
+    } finally {
+      loadingEditor = false;
+    }
   }
   const selected = () => {
     const tab = root.querySelector('.state-tabs [aria-selected="true"]');

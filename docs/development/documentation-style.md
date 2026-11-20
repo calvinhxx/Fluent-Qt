@@ -87,9 +87,12 @@ generated source instead:
 ## Verify website claims
 
 Website prose comes from `tools/site/documentation_guides.py`,
+`tools/site/locales/{site,guides,components,api,releases,playground}/*.json`,
 `tools/site/component-docs.json`, `tools/site/component-translations.json`,
-and the Gallery catalog and sample descriptions. API descriptions come from
-installed public headers. Correct the owning source and regenerate; never
+`tools/site/release-history.json`, and the Gallery catalog and sample
+descriptions. Canonical API descriptions come from installed public headers
+(in `en` and `zh-CN`), while localized editions map into all 9 website locales
+via `tools/site/locales/`. Correct the owning source and regenerate; never
 patch a generated HTML page or catalog by hand.
 
 Check each capability against its public declaration and implementation.

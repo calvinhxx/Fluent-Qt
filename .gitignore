@@ -52,6 +52,7 @@ tmp/
 /site/sitemap.xml
 /site/fuel/
 /site/api/**/index.html
+/site/api/playground-i18n/
 /site/zh-CN/api/
 /site/assets/app-icon-64.png
 /site/assets/component-previews/
