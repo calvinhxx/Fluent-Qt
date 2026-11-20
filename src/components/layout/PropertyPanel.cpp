@@ -6,6 +6,8 @@
 #include <QPointer>
 #include <QPainter>
 #include <QResizeEvent>
+#include <QScrollBar>
+#include <QTimer>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QVBoxLayout>
@@ -126,6 +128,7 @@ class PropertyPanelPrivate {
 public:
     struct Entry {
         PropertyDefinition definition;
+        bool pending = true;
         QPointer<Field> field;
         QPointer<QWidget> editor;
         QPointer<QWidget> row;
@@ -145,6 +148,10 @@ public:
     textfields::LineEdit* search = nullptr;
     scrolling::ScrollView* scroll = nullptr;
     FormController* form = nullptr;
+    bool viewportUpdateQueued = false;
+    bool controllerExposed = false;
+    int labelWidth = 96;
+    bool leading = false;
     bool readOnly = false;
     bool rebuilding = false;
     PropertyPanel::LayoutMode layoutMode = PropertyPanel::LayoutMode::Automatic;
@@ -157,6 +164,33 @@ public:
             if (entries[i].definition.key == key)
                 return i;
         return -1;
+    }
+    QWidget* ensureEditor(int index, bool orderNow = true);
+    bool tabOrderDirty = false;
+    void arrangeTabOrder();
+    void scheduleVisibleEditors()
+    {
+        if (viewportUpdateQueued || !q->isVisible())
+            return;
+        viewportUpdateQueued = true;
+        QTimer::singleShot(0, q, [this] {
+            viewportUpdateQueued = false;
+            if (!q->isVisible() || rebuilding)
+                return;
+            const QPointer<PropertyPanel> guard(q);
+            const auto generation = revision;
+            const auto* viewport = scroll->viewport();
+            const QRect visible = viewport->rect().adjusted(0, -40, 0, 40);
+            for (int i = 0; i < entries.size(); ++i) {
+                const auto& entry = entries.at(i);
+                if (entry.pending && entry.row && entry.row->isVisible()
+                    && visible.intersects(QRect(entry.row->mapTo(viewport, QPoint()), entry.row->size())))
+                    ensureEditor(i, false);
+                if (!guard || generation != revision)
+                    return;
+            }
+            arrangeTabOrder();
+        });
     }
     void presentation()
     {
@@ -172,11 +206,14 @@ public:
         search->setVisible(showSearch);
         if (!guard || revision != currentRevision)
             return;
-        q->setFocusProxy(
-            showSearch ? static_cast<QWidget*>(search) : (entries.isEmpty() ? nullptr : entries.first().editor.data()));
+        q->setFocusProxy(showSearch
+                ? static_cast<QWidget*>(search)
+                : (entries.isEmpty()
+                          ? nullptr
+                          : (entries.first().pending ? entries.first().row.data() : entries.first().editor.data())));
         if (!guard || revision != currentRevision)
             return;
-        int labelWidth = 96;
+        labelWidth = 96;
         int editorWidth = 164;
         for (const auto& entry : snapshot)
             labelWidth = qMax(labelWidth, q->fontMetrics().horizontalAdvance(entry.definition.label));
@@ -184,7 +221,7 @@ public:
             if (entry.editor)
                 editorWidth = qMax(editorWidth, entry.editor->minimumWidth());
         labelWidth = qMin(labelWidth, 128);
-        const bool inlineLayout = layoutMode == PropertyPanel::LayoutMode::Inline
+        leading = layoutMode == PropertyPanel::LayoutMode::Inline
             || (layoutMode == PropertyPanel::LayoutMode::Automatic && q->width() >= labelWidth + editorWidth + 52);
         for (const auto& group : groupSnapshot) {
             if (group.heading)
@@ -194,16 +231,58 @@ public:
                 return;
         }
         for (const auto& entry : snapshot) {
+            if (entry.pending && entry.row) {
+                // Reserve one control plus the same caption/helper space while offscreen.
+                const auto& p = entry.definition;
+                const int width = qMax(32, scroll->viewport()->width() - 48);
+                const auto textHeight = [&](const QString& text) {
+                    return q->fontMetrics().boundingRect(QRect(0, 0, width, 0), Qt::TextWordWrap, text).height();
+                };
+                int height = 32;
+                if (!leading)
+                    height += textHeight(p.label) + ::Spacing::XSmall;
+                if (!p.description.isEmpty())
+                    height += textHeight(p.description) + ::Spacing::XSmall;
+                entry.row->setMinimumHeight(height);
+                continue;
+            }
             if (!entry.field)
                 continue;
             entry.field->setLabelWidth(labelWidth);
             if (!guard || revision != currentRevision || !entry.field)
                 return;
-            entry.field->setLabelPosition(inlineLayout ? Field::LabelPosition::Leading : Field::LabelPosition::Top);
+            entry.field->setLabelPosition(leading ? Field::LabelPosition::Leading : Field::LabelPosition::Top);
             if (!guard || revision != currentRevision)
                 return;
         }
     }
+    void writeValue(const Entry& e, const QVariant& value)
+    {
+        const QSignalBlocker blocked(e.editor);
+        switch (e.definition.type) {
+        case PropertyDefinition::Text:
+            static_cast<textfields::LineEdit*>(e.editor.data())->setText(value.toString());
+            break;
+        case PropertyDefinition::Number:
+            static_cast<textfields::NumberBox*>(e.editor.data())->setValue(value.toDouble());
+            break;
+        case PropertyDefinition::Boolean:
+            static_cast<basicinput::ToggleSwitch*>(e.editor.data())->setIsOn(value.toBool());
+            break;
+        case PropertyDefinition::Choice:
+            static_cast<basicinput::ComboBox*>(e.editor.data())->setCurrentText(value.toString());
+            break;
+        case PropertyDefinition::Color: {
+            if (!e.color)
+                return;
+            const QSignalBlocker colorBlocked(e.color);
+            e.color->setColor(value.value<QColor>());
+            updateColorButton(static_cast<basicinput::Button*>(e.editor.data()), e.color->color());
+            break;
+        }
+        }
+    }
+
     void updateReset(const Entry& entry)
     {
         if (!entry.reset)
@@ -280,6 +359,11 @@ public:
         const quint64 currentRevision = revision;
         for (const auto& entry : snapshot) {
             const bool locked = readOnly || entry.definition.readOnly;
+            if (entry.pending && entry.row) {
+                const bool focusable = !locked || entry.definition.type == PropertyDefinition::Text
+                    || entry.definition.type == PropertyDefinition::Number;
+                entry.row->setFocusPolicy(focusable ? Qt::TabFocus : Qt::NoFocus);
+            }
             if (auto* input = qobject_cast<textfields::LineEdit*>(entry.editor.data()))
                 input->setReadOnly(locked);
             else if (entry.editor)
@@ -319,9 +403,13 @@ PropertyPanel::PropertyPanel(QWidget* parent) : QWidget(parent), d(new PropertyP
         d->filter();
         if (guard)
             d->presentation();
+        if (guard)
+            d->scheduleVisibleEditors();
         if (guard && searchText() == text)
             emit searchTextChanged(text);
     });
+    connect(d->scroll->verticalScrollBar(), &QScrollBar::valueChanged, this, [this] { d->scheduleVisibleEditors(); });
+    d->scroll->viewport()->installEventFilter(this);
     setFocusProxy(d->search);
     setMinimumWidth(180);
     onThemeUpdated();
@@ -410,102 +498,28 @@ bool PropertyPanel::setProperties(const QVector<PropertyDefinition>& properties)
         entry.definition = p;
         auto* row = new QWidget(body);
         entry.row = row;
-        auto* rowLayout = new PropertyRowLayout(row);
-        rowLayout->setContentsMargins(0, 0, 0, 0);
-        rowLayout->setSpacing(::Spacing::Small);
-        entry.field = new Field(row);
-        entry.field->setLabelText(p.label);
-        entry.field->setHelperText(p.description);
-        const QString key = p.key;
-        const auto changed = [this, key] { d->edited(key); };
-        switch (p.type) {
-        case PropertyDefinition::Text: {
-            auto* input = new textfields::LineEdit(row);
-            entry.editor = input;
-            connect(input, &QLineEdit::textEdited, this, changed);
-            break;
+        const bool deferEditor = properties.size() > 8 && !d->controllerExposed;
+        if (deferEditor) {
+            row->setFocusPolicy(Qt::TabFocus);
+            row->setAccessibleName(p.label);
+            row->setProperty("fluentPropertyIndex", d->entries.size());
+            row->installEventFilter(this);
         }
-        case PropertyDefinition::Number: {
-            auto* input = new textfields::NumberBox(row);
-            input->setRange(p.minimum, p.maximum);
-            input->setSmallChange(p.step);
-            input->setLargeChange(p.step * 10);
-            input->setScrubbingEnabled(true);
-            input->setScrubSensitivity(p.step / 10);
-            input->setSpinButtonPlacementMode(textfields::NumberBox::SpinButtonPlacementMode::Hidden);
-            entry.editor = input;
-            connect(input, &textfields::NumberBox::valueChanged, this, changed);
-            break;
-        }
-        case PropertyDefinition::Boolean: {
-            auto* input = new basicinput::ToggleSwitch(row);
-            entry.editor = input;
-            connect(input, &basicinput::ToggleSwitch::toggled, this, changed);
-            break;
-        }
-        case PropertyDefinition::Choice: {
-            auto* input = new basicinput::ComboBox(row);
-            input->addItems(p.choices);
-            entry.editor = input;
-            connect(input, qOverload<int>(&QComboBox::currentIndexChanged), this, changed);
-            break;
-        }
-        case PropertyDefinition::Color: {
-            auto* input = new basicinput::Button(row);
-            auto* flyout = new dialogs_flyouts::Flyout(this);
-            auto* picker = new basicinput::ColorPicker(flyout);
-            picker->setObjectName(QStringLiteral("propertyColor_") + key);
-            picker->setAccessibleName(p.label);
-            auto* colorLayout = new QVBoxLayout(flyout);
-            colorLayout->setContentsMargins(16, 16, 16, 16);
-            colorLayout->addWidget(picker);
-            entry.editor = input;
-            entry.color = picker;
-            entry.flyout = flyout;
-            updateColorButton(input, picker->color());
-            connect(input, &QAbstractButton::clicked, flyout, [input, flyout] { flyout->showAt(input); });
-            connect(picker, &basicinput::ColorPicker::colorChanged, this, [input, changed](const QColor& color) {
-                updateColorButton(input, color);
-                changed();
-            });
-            break;
-        }
-        }
-        entry.editor->setObjectName(QStringLiteral("propertyEditor_") + key);
-        if (p.type != PropertyDefinition::Boolean)
-            entry.editor->setMinimumWidth(p.type == PropertyDefinition::Color ? 132 : 112);
-        entry.editor->setAccessibleName(p.label);
-        entry.field->setEditor(entry.editor, WidgetOwnership::Owned);
-        rowLayout->addWidget(entry.field, 1);
-        entry.reset = new basicinput::Button(row);
-        entry.reset->setObjectName(QStringLiteral("propertyReset_") + key);
-        entry.reset->setAccessibleName(tr("Reset %1").arg(p.label));
-        entry.reset->setToolTip(tr("Reset %1").arg(p.label));
-        entry.reset->setIconGlyph(Typography::Icons::Undo);
-        entry.reset->setFluentLayout(basicinput::Button::IconOnly);
-        entry.reset->setFluentStyle(basicinput::Button::Subtle);
-        entry.reset->setFixedSize(32, 32);
-        auto resetPolicy = entry.reset->sizePolicy();
-        resetPolicy.setRetainSizeWhenHidden(true);
-        entry.reset->setSizePolicy(resetPolicy);
-        entry.reset->hide();
-        rowLayout->addWidget(entry.reset, 0, Qt::AlignTop);
-        rowLayout->setEditorRow(entry.field, entry.editor, entry.reset);
-        connect(entry.reset, &QAbstractButton::clicked, this, [this, key] { resetProperty(key); });
         groupLayout->addWidget(row);
         d->entries.append(entry);
-        d->form->addField(key, entry.field);
-        if (p.defaultValue.isValid())
-            setValue(key, p.defaultValue);
+        if (!deferEditor)
+            d->ensureEditor(d->entries.size() - 1, false);
     }
     layout->addStretch(1);
     d->scroll->setContentWidget(body, WidgetOwnership::Owned);
     body->setAutoFillBackground(false);
     d->form->reset();
+    d->arrangeTabOrder();
     d->applyReadOnly();
     d->filter();
     d->presentation();
     d->rebuilding = false;
+    d->scheduleVisibleEditors();
     formSignals.unblock();
     const QPointer<PropertyPanel> guard(this);
     d->notifyModified();
@@ -513,6 +527,174 @@ bool PropertyPanel::setProperties(const QVector<PropertyDefinition>& properties)
         return true;
     emit propertiesChanged();
     return true;
+}
+
+QWidget* PropertyPanelPrivate::ensureEditor(int index, bool orderNow)
+{
+    if (index < 0)
+        return nullptr;
+    if (!entries.at(index).pending)
+        return entries.at(index).editor;
+    const QPointer<PropertyPanel> guard(q);
+    const auto generation = revision;
+    entries[index].pending = false;
+    auto entry = entries.at(index);
+    const auto& p = entry.definition;
+    QWidget* row = entry.row;
+    row->setMinimumHeight(0);
+    auto* rowLayout = new PropertyRowLayout(row);
+    rowLayout->setContentsMargins(0, 0, 0, 0);
+    rowLayout->setSpacing(::Spacing::Small);
+    entry.field = new Field(row);
+    entry.field->setLabelText(p.label);
+    entry.field->setHelperText(p.description);
+    entry.field->setLabelWidth(labelWidth);
+    entry.field->setLabelPosition(leading ? Field::LabelPosition::Leading : Field::LabelPosition::Top);
+    rowLayout->addWidget(entry.field, 1);
+    const QString key = p.key;
+    const auto changed = [this, key] { edited(key); };
+    switch (p.type) {
+    case PropertyDefinition::Text: {
+        auto* input = new textfields::LineEdit(row);
+        entry.editor = input;
+        QObject::connect(input, &QLineEdit::textEdited, q, changed);
+        break;
+    }
+    case PropertyDefinition::Number: {
+        auto* input = new textfields::NumberBox(row);
+        input->setRange(p.minimum, p.maximum);
+        input->setSmallChange(p.step);
+        input->setLargeChange(p.step * 10);
+        input->setScrubbingEnabled(true);
+        input->setScrubSensitivity(p.step / 10);
+        input->setSpinButtonPlacementMode(textfields::NumberBox::SpinButtonPlacementMode::Hidden);
+        entry.editor = input;
+        QObject::connect(input, &textfields::NumberBox::valueChanged, q, changed);
+        break;
+    }
+    case PropertyDefinition::Boolean: {
+        auto* input = new basicinput::ToggleSwitch(row);
+        entry.editor = input;
+        QObject::connect(input, &basicinput::ToggleSwitch::toggled, q, changed);
+        break;
+    }
+    case PropertyDefinition::Choice: {
+        auto* input = new basicinput::ComboBox(row);
+        input->addItems(p.choices);
+        entry.editor = input;
+        QObject::connect(input, qOverload<int>(&QComboBox::currentIndexChanged), q, changed);
+        break;
+    }
+    case PropertyDefinition::Color: {
+        auto* input = new basicinput::Button(row);
+        auto* flyout = new dialogs_flyouts::Flyout(q);
+        auto* picker = new basicinput::ColorPicker(flyout);
+        picker->setObjectName(QStringLiteral("propertyColor_") + key);
+        picker->setAccessibleName(p.label);
+        auto* colorLayout = new QVBoxLayout(flyout);
+        colorLayout->setContentsMargins(16, 16, 16, 16);
+        colorLayout->addWidget(picker);
+        entry.editor = input;
+        entry.color = picker;
+        entry.flyout = flyout;
+        updateColorButton(input, picker->color());
+        QObject::connect(input, &QAbstractButton::clicked, flyout, [input, flyout] { flyout->showAt(input); });
+        QObject::connect(picker, &basicinput::ColorPicker::colorChanged, q, [input, changed](const QColor& color) {
+            updateColorButton(input, color);
+            changed();
+        });
+        break;
+    }
+    }
+    entry.editor->setObjectName(QStringLiteral("propertyEditor_") + key);
+    if (p.type != PropertyDefinition::Boolean)
+        entry.editor->setMinimumWidth(p.type == PropertyDefinition::Color ? 132 : 112);
+    entry.editor->setAccessibleName(p.label);
+    entry.field->setEditor(entry.editor, WidgetOwnership::Owned);
+    entry.reset = new basicinput::Button(row);
+    entry.reset->setObjectName(QStringLiteral("propertyReset_") + key);
+    entry.reset->setAccessibleName(PropertyPanel::tr("Reset %1").arg(p.label));
+    entry.reset->setToolTip(PropertyPanel::tr("Reset %1").arg(p.label));
+    entry.reset->setIconGlyph(Typography::Icons::Undo);
+    entry.reset->setFluentLayout(basicinput::Button::IconOnly);
+    entry.reset->setFluentStyle(basicinput::Button::Subtle);
+    entry.reset->setFixedSize(32, 32);
+    auto resetPolicy = entry.reset->sizePolicy();
+    resetPolicy.setRetainSizeWhenHidden(true);
+    entry.reset->setSizePolicy(resetPolicy);
+    entry.reset->hide();
+    rowLayout->addWidget(entry.reset, 0, Qt::AlignTop);
+    rowLayout->setEditorRow(entry.field, entry.editor, entry.reset);
+    QObject::connect(entry.reset, &QAbstractButton::clicked, q, [this, key] { q->resetProperty(key); });
+    if (p.defaultValue.isValid())
+        writeValue(entry, p.defaultValue);
+    const bool locked = readOnly || p.readOnly;
+    if (auto* input = qobject_cast<textfields::LineEdit*>(entry.editor.data()))
+        input->setReadOnly(locked);
+    else
+        entry.editor->setEnabled(!locked);
+    if (!guard || generation != revision)
+        return nullptr;
+    entries[index] = entry;
+    entry.field->show();
+    if (!guard || generation != revision)
+        return nullptr;
+    // The validation controller enumerates fields in schema order, even if a
+    // search result or a programmatic access materialized the last row first.
+    int position = 0;
+    for (int i = 0; i < index; ++i)
+        position += entries.at(i).field != nullptr;
+    form->insertField(position, key, entry.field);
+    if (!guard || generation != revision)
+        return nullptr;
+    if (row->hasFocus() && entry.editor->isEnabled())
+        entry.editor->setFocus(Qt::OtherFocusReason);
+    if (!guard || generation != revision)
+        return nullptr;
+    row->setFocusPolicy(Qt::NoFocus);
+    tabOrderDirty = true;
+    if (orderNow)
+        arrangeTabOrder();
+    if (q->focusProxy() == row)
+        q->setFocusProxy(entry.editor);
+    return guard && generation == revision ? entry.editor.data() : nullptr;
+}
+
+void PropertyPanelPrivate::arrangeTabOrder()
+{
+    if (!tabOrderDirty)
+        return;
+    tabOrderDirty = false;
+    QWidget* previous = search;
+    for (const auto& item : entries) {
+        QWidget* next = item.pending ? item.row.data() : item.editor.data();
+        if (next) {
+            QWidget::setTabOrder(previous, next);
+            previous = next;
+        }
+        if (item.reset) {
+            QWidget::setTabOrder(previous, item.reset);
+            previous = item.reset;
+        }
+    }
+}
+
+bool PropertyPanel::eventFilter(QObject* watched, QEvent* event)
+{
+    if (event->type() == QEvent::FocusIn && watched->property("fluentPropertyIndex").isValid()) {
+        const int i = watched->property("fluentPropertyIndex").toInt();
+        if (i >= 0 && i < d->entries.size() && watched == d->entries.at(i).row && d->entries.at(i).pending) {
+            const auto reason = static_cast<QFocusEvent*>(event)->reason();
+            if (auto* input = d->ensureEditor(i))
+                input->setFocus(reason);
+            return true;
+        }
+    } else if (watched == d->scroll->viewport()
+        && (event->type() == QEvent::Show || event->type() == QEvent::Resize
+            || event->type() == QEvent::LayoutRequest)) {
+        d->scheduleVisibleEditors();
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 QVector<PropertyDefinition> PropertyPanel::properties() const
@@ -532,7 +714,12 @@ QStringList PropertyPanel::propertyKeys() const
 QVariant PropertyPanel::value(const QString& key) const
 {
     const int i = d->index(key);
-    if (i < 0 || !d->entries[i].editor)
+    if (i < 0)
+        return {};
+    const auto& definition = d->entries.at(i).definition;
+    if (d->entries.at(i).pending && definition.defaultValue.isValid() && definition.type != PropertyDefinition::Number)
+        return definition.defaultValue;
+    if (!d->ensureEditor(i))
         return {};
     const auto& e = d->entries[i];
     switch (e.definition.type) {
@@ -552,7 +739,9 @@ QVariant PropertyPanel::value(const QString& key) const
 bool PropertyPanel::setValue(const QString& key, const QVariant& value)
 {
     const int i = d->index(key);
-    if (i < 0 || !d->entries[i].editor || !accepts(d->entries[i].definition, value))
+    if (i < 0 || !accepts(d->entries[i].definition, value))
+        return false;
+    if (!d->ensureEditor(i))
         return false;
     const auto e = d->entries[i];
     const QPointer<PropertyPanel> guard(this);
@@ -563,31 +752,7 @@ bool PropertyPanel::setValue(const QString& key, const QVariant& value)
         return false;
     if (compatibility::detail::variantValuesEqual(this->value(key), value))
         return true;
-    {
-        const QSignalBlocker blocked(e.editor);
-        switch (e.definition.type) {
-        case PropertyDefinition::Text:
-            static_cast<textfields::LineEdit*>(e.editor.data())->setText(value.toString());
-            break;
-        case PropertyDefinition::Number:
-            static_cast<textfields::NumberBox*>(e.editor.data())->setValue(value.toDouble());
-            break;
-        case PropertyDefinition::Boolean:
-            static_cast<basicinput::ToggleSwitch*>(e.editor.data())->setIsOn(value.toBool());
-            break;
-        case PropertyDefinition::Choice:
-            static_cast<basicinput::ComboBox*>(e.editor.data())->setCurrentText(value.toString());
-            break;
-        case PropertyDefinition::Color: {
-            if (!e.color)
-                return false;
-            const QSignalBlocker colorBlocked(e.color);
-            e.color->setColor(value.value<QColor>());
-            updateColorButton(static_cast<basicinput::Button*>(e.editor.data()), e.color->color());
-            break;
-        }
-        }
-    }
+    d->writeValue(e, value);
     d->updateReset(e);
     if (!guard || revision != d->revision)
         return true;
@@ -626,7 +791,7 @@ QStringList PropertyPanel::modifiedPropertyKeys() const
 {
     QStringList result;
     for (const auto& entry : d->entries)
-        if (entry.definition.defaultValue.isValid()
+        if (!entry.pending && entry.definition.defaultValue.isValid()
             && !equivalentValue(entry.definition, value(entry.definition.key), entry.definition.defaultValue))
             result.append(entry.definition.key);
     return result;
@@ -712,16 +877,30 @@ void PropertyPanel::setReadOnly(bool readOnly)
 QWidget* PropertyPanel::editor(const QString& key) const
 {
     const int i = d->index(key);
-    return i >= 0 ? d->entries[i].editor.data() : nullptr;
+    return d->ensureEditor(i);
 }
 Field* PropertyPanel::field(const QString& key) const
 {
     const int i = d->index(key);
-    return i >= 0 ? d->entries[i].field.data() : nullptr;
+    if (i < 0 || (d->entries.at(i).pending && !d->ensureEditor(i)))
+        return nullptr;
+    return d->entries.at(i).field;
 }
 FormController* PropertyPanel::formController() const
 {
-    return d->form;
+    if (d->controllerExposed)
+        return d->form;
+    d->controllerExposed = true;
+    const QPointer<FormController> form(d->form);
+    const QPointer<const PropertyPanel> guard(this);
+    const auto revision = d->revision;
+    for (int i = 0; i < d->entries.size(); ++i) {
+        d->ensureEditor(i, false);
+        if (!guard || revision != d->revision)
+            return form;
+    }
+    d->arrangeTabOrder();
+    return form;
 }
 textfields::LineEdit* PropertyPanel::searchField() const
 {

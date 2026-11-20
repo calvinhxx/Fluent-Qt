@@ -110,6 +110,7 @@ signals:
     void modifiedPropertiesChanged();
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* event) override;
 

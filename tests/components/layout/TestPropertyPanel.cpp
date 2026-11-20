@@ -25,6 +25,71 @@ PropertyDefinition definition(QString key, PropertyDefinition::Type type, QVaria
 }
 } // namespace
 
+TEST(PropertyPanelTest, Contract_LargeSchemaCreatesVisibleAndRequestedEditorsWithoutLosingState)
+{
+    PropertyPanel panel;
+    QVector<PropertyDefinition> schema;
+    for (int i = 0; i < 100; ++i)
+        schema.append(definition(QStringLiteral("key%1").arg(i), PropertyDefinition::Text, QStringLiteral("initial")));
+    ASSERT_TRUE(panel.setProperties(schema));
+    const QString last = schema.last().key;
+    EXPECT_EQ(panel.value(last).toString(), QStringLiteral("initial"));
+    EXPECT_FALSE(panel.findChild<QWidget*>("propertyEditor_key99"));
+    panel.resize(460, 300);
+    panel.show();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return panel.findChild<QWidget*>("propertyEditor_key0"); }));
+    EXPECT_FALSE(panel.findChild<QWidget*>("propertyEditor_key99"));
+    panel.setSearchText(last);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return panel.findChild<QWidget*>("propertyEditor_key99"); }));
+    auto* editor = panel.editor(last);
+    ASSERT_NE(editor, nullptr);
+    EXPECT_NE(editor->focusPolicy(), Qt::NoFocus);
+    panel.setValue(last, QStringLiteral("edited"));
+    panel.setSearchText({});
+    EXPECT_EQ(panel.editor(last), editor);
+    EXPECT_EQ(panel.field(last)->editor(), editor);
+    EXPECT_EQ(panel.modifiedPropertyKeys(), QStringList{last});
+    auto* form = panel.formController();
+    EXPECT_EQ(form->fieldKeys(), panel.propertyKeys());
+    EXPECT_TRUE(form->isFieldDirty(last));
+    panel.resetAll();
+    EXPECT_EQ(panel.value(last).toString(), QStringLiteral("initial"));
+    ASSERT_TRUE(panel.setProperties(schema.mid(10)));
+    EXPECT_EQ(form->fieldKeys(), panel.propertyKeys());
+    EXPECT_EQ(form->field(last)->editor(), panel.editor(last));
+}
+
+TEST(PropertyPanelTest, Contract_KeyboardTraversesDeferredRowsInBothDirections)
+{
+    PropertyPanel panel;
+    QVector<PropertyDefinition> schema;
+    for (int i = 0; i < 24; ++i)
+        schema.append(definition(QString::number(i), PropertyDefinition::Text, QStringLiteral("")));
+    ASSERT_TRUE(panel.setProperties(schema));
+    panel.resize(420, 260);
+    panel.show();
+    panel.activateWindow();
+    QApplication::processEvents();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return panel.findChild<QWidget*>("propertyEditor_0"); }));
+    panel.searchField()->setFocus();
+    ASSERT_EQ(QApplication::focusWidget(), panel.searchField());
+    const auto step = [&](int expected, Qt::Key key) {
+        auto* focused = QApplication::focusWidget();
+        ASSERT_NE(focused, nullptr);
+        QTest::keyClick(focused, key);
+        QApplication::processEvents();
+        ASSERT_NE(QApplication::focusWidget(), nullptr);
+        ASSERT_EQ(QApplication::focusWidget()->objectName().toStdString(),
+            (QStringLiteral("propertyEditor_") + QString::number(expected)).toStdString());
+    };
+    for (int i = 0; i < schema.size(); ++i) {
+        SCOPED_TRACE(i);
+        ASSERT_NO_FATAL_FAILURE(step(i, Qt::Key_Tab));
+    }
+    for (int i = schema.size() - 2; i >= 0; --i)
+        ASSERT_NO_FATAL_FAILURE(step(i, Qt::Key_Backtab));
+}
+
 TEST(PropertyPanelTest, Contract_AdaptiveLayoutKeepsEditorsAndQuietResetActions)
 {
     PropertyPanel panel;

@@ -8,7 +8,8 @@
 
 namespace fluent::layout {
 class Field;
-}
+class PropertyPanelPrivate;
+} // namespace fluent::layout
 
 namespace fluent {
 
@@ -92,6 +93,8 @@ signals:
     void submissionFinished(bool success);
 
 private:
+    friend class layout::PropertyPanelPrivate;
+    bool insertField(int position, const QString& key, layout::Field* field);
     enum class Status { Unknown, Pending, Valid, Invalid };
     struct Entry {
         QString key;

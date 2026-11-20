@@ -28,6 +28,11 @@ int FormController::indexOf(const QString& key) const
 
 bool FormController::addField(const QString& key, layout::Field* field)
 {
+    return insertField(m_entries.size(), key, field);
+}
+
+bool FormController::insertField(int position, const QString& key, layout::Field* field)
+{
     if (key.trimmed().isEmpty() || !field || indexOf(key) >= 0)
         return false;
     for (const auto& entry : m_entries) {
@@ -43,7 +48,7 @@ bool FormController::addField(const QString& key, layout::Field* field)
         markFieldChanged(key);
     });
     entry.labelConnection = connect(field, &layout::Field::labelTextChanged, this, &FormController::stateChanged);
-    m_entries.append(entry);
+    m_entries.insert(position, entry);
     if (refreshPresentation())
         emit stateChanged();
     return true;
