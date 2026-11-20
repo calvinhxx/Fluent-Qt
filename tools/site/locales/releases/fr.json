@@ -1,4 +1,8 @@
 {
+"f25480bf":"`PropertyPanel` crée les éditeurs à mesure que les lignes deviennent visibles. `AreaChart` réutilise le remplissage lorsque le pointeur se déplace sur le graphique.",
+"c6a2d3a7":"Les séparateurs de la boîte de dialogue What’s new restent opaques pendant le défilement. Les exemples de photos chargent les images à la demande.",
+"6a98d65c":"Notes de version et photos dans Gallery",
+"60f81f2b":"Le site, la référence des API des composants et les éditeurs de propriétés interactifs sont disponibles en neuf langues.",
 "710e9751":"3D Gallery ne charge que les lignes de texture modifiées, rétablit un rendu net à l'arrêt du mouvement, plafonne la mémoire du cache de textures et repasse en 2D en cas de ralentissement prolongé.",
 "d1a31448":"Ajoute la prise en charge de Linux (X11 et Wayland sur x64 et ARM64) avec des paquets Debian. `Window::setBackdropEffect()` fournit une API Mica/Acrylic unique sur chaque plateforme.",
 "a130d44e":"Ajoute `CommandBar`, `CommandBarFlyout` et `EditingCommandRouter` pour annuler, copier, coller et les actions associées. `Toast` gagne des boutons d'action, la pause au survol et les mises à jour sur place.",

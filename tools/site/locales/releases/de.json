@@ -1,4 +1,8 @@
 {
+"f25480bf":"`PropertyPanel` erstellt Editoren, sobald ihre Zeilen in den sichtbaren Bereich kommen. `AreaChart` verwendet die Flächenfüllung bei Mausbewegungen erneut.",
+"c6a2d3a7":"Beim Scrollen im Dialog „What’s new“ bleiben die Trennlinien undurchsichtig. Die Fotobeispiele laden Bilder bei Bedarf.",
+"6a98d65c":"Versionshinweise und Fotos in der Gallery",
+"60f81f2b":"Website, API-Referenzen der Komponenten und interaktive Eigenschafteneditoren stehen in neun Sprachen zur Verfügung.",
 "710e9751":"Die 3D Gallery lädt nur geänderte Texturzeilen hoch, stellt nach Bewegungsende wieder eine scharfe Darstellung her, begrenzt den Texturcache und fällt bei anhaltend niedrigen Bildraten auf 2D zurück.",
 "d1a31448":"Fügt Linux-Unterstützung für X11 und Wayland auf x64 und ARM64 samt Debian-Paketen hinzu. `Window::setBackdropEffect()` bietet eine einheitliche Mica/Acrylic-API auf jeder Plattform.",
 "a130d44e":"Fügt `CommandBar`, `CommandBarFlyout` sowie `EditingCommandRouter` für Rückgängig, Kopieren, Einfügen und verwandte Aktionen hinzu. `Toast` erhält Aktionsschaltflächen, Pausieren bei Hover und direkte Aktualisierungen.",

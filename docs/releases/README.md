@@ -20,7 +20,7 @@ older releases; use each version note and GitHub compare link for release-by-rel
 <!-- docs-nav:release-table:start -->
 | Series | Releases |
 |---|---|
-| 1.12 | [1.12.0](v1.12.0.md) |
+| 1.12 | [1.12.1](v1.12.1.md) · [1.12.0](v1.12.0.md) |
 | 1.11 | [1.11.4](v1.11.4.md) · [1.11.3](v1.11.3.md) · [1.11.2](v1.11.2.md) · [1.11.1](v1.11.1.md) · [1.11.0](v1.11.0.md) |
 | 1.10 | [1.10.3](v1.10.3.md) · [1.10.2](v1.10.2.md) · [1.10.1](v1.10.1.md) · [1.10.0](v1.10.0.md) |
 | 1.9 | [1.9.3](v1.9.3.md) · [1.9.2](v1.9.2.md) · [1.9.1](v1.9.1.md) · [1.9.0](v1.9.0.md) |

@@ -1,4 +1,8 @@
 {
+"f25480bf":"`PropertyPanel` 會在資料列即將進入畫面時建立編輯器。游標在 `AreaChart` 上移動時會重用已繪製的填色區域。",
+"c6a2d3a7":"捲動 What’s new 對話框時，分隔線不再透出底層內容。相片範例會按需載入圖片。",
+"6a98d65c":"Gallery 更新記錄與相片",
+"60f81f2b":"官網、元件 API 文件和互動範例的屬性編輯器現已支援九種語言。",
 "710e9751":"3D Gallery 僅上傳變更的紋理列，互動停止後恢復清晰算繪，限制紋理快取記憶體，並在影格率持續過低時自動退回 2D。",
 "d1a31448":"新增 x64 與 ARM64 架構的 Linux 支援（涵蓋 X11 與 Wayland），並提供 Debian 安裝套件。`Window::setBackdropEffect()` 在所有平台上提供統一的 Mica/Acrylic API。",
 "a130d44e":"新增 `CommandBar`、`CommandBarFlyout`，以及統一處理復原、複製、貼上等操作的 `EditingCommandRouter`。`Toast` 新增動作按鈕、懸停暫停與原地更新功能。",
