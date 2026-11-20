@@ -163,7 +163,8 @@ class SiteGenerationTest(unittest.TestCase):
             root = Path(directory)
             sources = (
                 "CMakeLists.txt", "CMakePresets.json", "resources.qrc",
-                "tools/site/generate_component_previews.py", ".github/workflows/ci-site.yml",
+                "tools/site/generate_component_previews.py", "tools/site/generate_playgrounds.py",
+                "tools/gallery/artwork/navigation/Stepper.svg", ".github/workflows/ci-site.yml",
                 ".github/scripts/install-linux-dependencies.sh",
                 "src/components/basicinput/Button.cpp", "app/main.cpp",
                 "app/platform/desktop/GalleryApplication.cpp", "app/view/widgets/GallerySampleCard.h",
