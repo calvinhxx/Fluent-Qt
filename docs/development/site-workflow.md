@@ -8,21 +8,18 @@
 [← Tooltip Usage](tooltip-usage.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
-The GitHub Pages site uses static language-specific HTML so crawlers and users
-receive one stable language at each URL:
+The English homepage at `https://calvinhxx.github.io/Fluent-Qt/` is the
+`x-default` entry. The other eight homepages use `zh-CN/`, `zh-TW/`, `ja/`,
+`ko/`, `de/`, `ru/`, `es/`, and `fr/` under the same project root.
+The [locale registry](../../tools/site/site_locales.py) maps each language to
+its URL prefix, HTML language tag and root README. The language menu links
+directly to the generated HTML. Each homepage supplies its own canonical URL,
+reciprocal `hreflang` links, Open Graph metadata and JSON-LD.
 
-- `https://calvinhxx.github.io/Fluent-Qt/` — English and `x-default`
-- `https://calvinhxx.github.io/Fluent-Qt/zh-CN/` — Simplified Chinese
-
-Do not restore browser-language redirects or change the page language in
-JavaScript. Language switching uses ordinary links, and each page owns its
-canonical URL, reciprocal `hreflang` annotations, localized Open Graph data,
-and localized JSON-LD.
-
-The shared `404.html` follows the requested URL: missing paths below `zh-CN/`
-render Chinese, while all other missing paths render English. It must not read
-browser-language state, and its assets and home links resolve from the
-`/Fluent-Qt/` project root even for deeply nested missing URLs.
+The shared `404.html` uses the first path segment below the site root to choose
+the language and home link. For example, `/Fluent-Qt/fr/api/de/missing` returns
+to the French homepage, and `/Fluent-Qt/api/ja/missing` returns to the English
+homepage. The same rule applies when serving a local preview at `/`.
 
 The legacy `/Fluent-Qt/app/` path is retained as a no-index redirect to the
 canonical `/Fluent-Qt/gallery/` page. Keep `site/app/index.html` when changing
@@ -32,17 +29,28 @@ the Pages layout so links from older posts and bookmarks continue to work.
 
 1. Edit the shared HTML structure in
    [`tools/site/index.template.html`](../../tools/site/index.template.html).
-2. Edit English and Chinese strings together in the `translations` object in
-   [`site/site.js`](../../site/site.js).
-3. Generate the local pages:
+2. Edit homepage copy and runtime messages in the
+   [homepage locale files](../../tools/site/locales/site/). Use the registry
+   key for each filename, including `zh.json` for Simplified Chinese and
+   `zh-TW.json` for Traditional Chinese. Keep keys and named placeholders
+   such as `{platform}` aligned with `en.json`. The generator embeds the
+   runtime messages that `site/site.js` reads.
+3. Edit English and Simplified Chinese foundation and module guides, shared
+   code examples and header references in
+   [`documentation_guides.py`](../../tools/site/documentation_guides.py).
+   For the other seven languages, edit the matching
+   [guide locale file](../../tools/site/locales/guides/) using the same guide
+   IDs and section order.
+4. Generate the local homepages and documents.
 
    ```bash
    python3 tools/site/generate_localized_site.py
+   python3 tools/site/generate_api_reference.py
    ```
 
-The generator writes `site/index.html`, `site/zh-CN/index.html`, and
-`site/sitemap.xml`. These files are not tracked: CI generates them for every
-build. Do not edit them directly.
+The homepage generator writes `site/index.html`, one `site/<prefix>/index.html`
+per additional language, `site/sitemap.xml`, and the support-tier redirects.
+CI regenerates these files from their sources on each website build.
 Website copies of the application icon, README hero, and home JPEG are also
 untracked. `tools/site/site_assets.py` maps their existing URLs to canonical
 files in `app/assets/` and `docs/assets/readme/`. The local server serves those
@@ -254,7 +262,7 @@ The QmlBridge section follows Spatial and describes the optional plugin's QML
 support. Keep C++ and QML excerpts separate; link to the integration guide and
 complete example for setup.
 
-Chinese headings must fit the viewport. Allow longer titles such as Spatial
+Localized headings must fit the viewport. Allow longer titles such as Spatial
 to wrap on narrow screens.
 
 The showcase starts when visible. Its controller pauses the Qt content when
@@ -280,8 +288,8 @@ falls back to an ordinary image link without JavaScript or dialog support.
 ## Voluntary support
 
 The homepage's `#support` section presents WeChat Pay, Alipay, and Ko-fi as peer
-payment channels. The Chinese homepage defaults to WeChat Pay; the English
-homepage defaults to Ko-fi unless a `?fuel=` tier parameter selects a CNY tier.
+payment channels. Simplified Chinese defaults to WeChat Pay. All other languages
+default to Ko-fi unless a `?fuel=` tier parameter selects a CNY tier.
 WeChat Pay and Alipay offer ¥19, ¥49, ¥99, and an any-amount option; each preset
 selects its matching supplied fixed-amount code, and the any-amount option uses
 the generic code. Selecting Ko-fi displays `site/assets/support/kofi.png` in the
@@ -340,14 +348,14 @@ custom URLs, one per tier. GitHub's Sponsor dialog shows custom links as bare
 URLs without labels or styling, so each one is a short path that names its tier:
 `/fuel/iced-coffee/`, `/fuel/context-window/`, `/fuel/max-reasoning/`, and
 `/fuel/freestyle/`. `generate_localized_site.py` writes these redirect pages from
-`SUPPORT_TIERS`. Each opens `?fuel=<tier>#support` on the Chinese homepage when
-the browser language is Chinese, and on the English homepage otherwise; without
-JavaScript, the meta refresh opens the English homepage. The support controller selects the named CNY tier on WeChat Pay and greets the
+`SUPPORT_TIERS`. Each opens `?fuel=<tier>#support` in the supported language
+matching the browser preference. An unsupported language or a browser with
+JavaScript disabled goes to the English homepage. The support controller selects the named CNY tier on WeChat Pay and greets the
 visitor until they change the selection; unknown values keep each locale's
 default channel and copy. GitHub accepts at most four custom links.
 The separate `ko_fi` field identifies the same account as the tip panel and
 direct link. When changing the recipient, check the panel, link and QR code. The
-English and Chinese README links lead to their respective homepage support sections.
+localized README links lead to their respective homepage support sections.
 
 For publication, verify the codes in both payment apps, publish the website
 through the existing `main`-branch Pages workflow, and confirm the public
@@ -465,7 +473,7 @@ This serves the generated website from `site/` and `/gallery/` from `build/wasm/
 copying compiled binaries into tracked assets. Build the `wasm` Gallery first;
 a site-only `http.server --directory site` does not contain the runtime.
 
-After deployment, verify both language URLs and submit `sitemap.xml` to the
+After deployment, verify the homepage URLs in the locale registry and submit `sitemap.xml` to the
 configured search-engine webmaster tools. Search Console ownership and sitemap
 submission are external operations and are not performed by repository CI.
 

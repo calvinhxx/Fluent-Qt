@@ -12,9 +12,7 @@
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="theme-color" content="#eef3f7">
     <link rel="canonical" href="{{CANONICAL_URL}}">
-    <link rel="alternate" hreflang="en" href="https://calvinhxx.github.io/Fluent-Qt/">
-    <link rel="alternate" hreflang="zh-CN" href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/">
-    <link rel="alternate" hreflang="x-default" href="https://calvinhxx.github.io/Fluent-Qt/">
+{{ALTERNATE_LINKS}}
     <meta property="og:site_name" content="Fluent-Qt">
     <meta property="og:title" content="{{META_TITLE}}">
     <meta
@@ -24,7 +22,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{CANONICAL_URL}}">
     <meta property="og:locale" content="{{OG_LOCALE}}">
-    <meta property="og:locale:alternate" content="{{OG_ALTERNATE_LOCALE}}">
+{{OG_ALTERNATE_LOCALES}}
     <meta property="og:image" content="{{OG_IMAGE_URL}}">
     <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1731">
@@ -71,6 +69,7 @@
       })();
     </script>
     <link rel="stylesheet" href="styles.css">
+    <script type="application/json" id="site-i18n">{{RUNTIME_I18N}}</script>
     <script src="site.js" defer></script>
   </head>
   <body>
@@ -108,10 +107,7 @@
           </div>
 
           <div class="nav-actions">
-            <div class="language-switch" role="group" aria-label="语言" data-i18n-aria-label="a11y.language">
-              <a href="{{ZH_URL}}" lang="zh-CN" hreflang="zh-CN" aria-current="{{ZH_CURRENT}}" data-analytics-event="language_zh">中</a>
-              <a href="{{EN_URL}}" lang="en" hreflang="en" aria-current="{{EN_CURRENT}}" data-analytics-event="language_en">EN</a>
-            </div>
+{{LANGUAGE_SWITCH}}
             <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="切换到深色主题" data-i18n-aria-label="a11y.useDarkTheme">
               <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20 15.4A8.4 8.4 0 0 1 8.6 4a8.4 8.4 0 1 0 11.4 11.4Z"/>
@@ -351,10 +347,10 @@
           </div>
 
           <img class="playground-showcase-image" data-reveal data-reveal-delay="80"
-               src="assets/playground/checkbox-{{SITE_LANGUAGE}}-light.webp"
-               data-theme-src-light="assets/playground/checkbox-{{SITE_LANGUAGE}}-light.webp"
-               data-theme-src-dark="assets/playground/checkbox-{{SITE_LANGUAGE}}-dark.webp"
-               data-theme-src-contrast="assets/playground/checkbox-{{SITE_LANGUAGE}}-high-contrast.webp"
+               src="assets/playground/checkbox-{{PLAYGROUND_ART_LANG}}-light.webp"
+               data-theme-src-light="assets/playground/checkbox-{{PLAYGROUND_ART_LANG}}-light.webp"
+               data-theme-src-dark="assets/playground/checkbox-{{PLAYGROUND_ART_LANG}}-dark.webp"
+               data-theme-src-contrast="assets/playground/checkbox-{{PLAYGROUND_ART_LANG}}-high-contrast.webp"
                width="900" height="496" loading="lazy" decoding="async"
                alt="CheckBox 属性面板显示已勾选的复选框和生成的 C++ 代码。" data-i18n-alt="playground.imageAlt">
         </div>

@@ -8,7 +8,9 @@
     <meta name="theme-color" content="#e3ebf2">
     <base href="/Fluent-Qt/">
     <script>
-      if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+      const projectBase = new URL(document.baseURI).pathname;
+      const localPreview = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+      if (localPreview && !(location.pathname + "/").startsWith(projectBase)) {
         document.querySelector("base").href = "/";
       }
     </script>
@@ -17,18 +19,109 @@
       (() => {
         try {
           const saved = localStorage.getItem("fluent-qt-theme");
-          const theme = saved === "dark" || saved === "light"
+          const theme = saved === "dark" || saved === "light" || saved === "high-contrast"
             ? saved
             : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-          document.documentElement.dataset.theme = theme;
-          document.querySelector("meta[name='theme-color']").content = theme === "dark" ? "#070c12" : "#e3ebf2";
+          document.documentElement.dataset.theme = matchMedia("(forced-colors: active)").matches
+            ? "high-contrast"
+            : theme;
+          document.querySelector("meta[name='theme-color']").content =
+            document.documentElement.dataset.theme === "dark" ? "#070c12" : "#e3ebf2";
         } catch {
           document.documentElement.dataset.theme = "light";
         }
-        const language = /\/zh-cn(?:\/|$)/i.test(location.pathname) ? "zh" : "en";
-        document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
-        document.documentElement.dataset.siteLanguage = language;
-        document.title = language === "zh" ? "Fluent-Qt — 页面未找到" : "Fluent-Qt — Page not found";
+        const routes = [
+          {
+            key: "zh",
+            lang: "zh-CN",
+            home: "zh-CN/",
+            title: "Fluent-Qt — 页面未找到",
+            heading: "页面未找到",
+            copy: "你访问的页面不存在或链接已变更。",
+            action: "返回首页"
+          },
+          {
+            key: "zh-TW",
+            lang: "zh-TW",
+            home: "zh-TW/",
+            title: "Fluent-Qt — 找不到頁面",
+            heading: "找不到頁面",
+            copy: "你造訪的頁面不存在或連結已變更。",
+            action: "返回首頁"
+          },
+          {
+            key: "ja",
+            lang: "ja",
+            home: "ja/",
+            title: "Fluent-Qt — ページが見つかりません",
+            heading: "ページが見つかりません",
+            copy: "お探しのページは存在しないか、移動しました。",
+            action: "ホームに戻る"
+          },
+          {
+            key: "ko",
+            lang: "ko",
+            home: "ko/",
+            title: "Fluent-Qt — 페이지를 찾을 수 없습니다",
+            heading: "페이지를 찾을 수 없습니다",
+            copy: "요청하신 페이지가 존재하지 않거나 이동되었습니다.",
+            action: "홈으로 돌아가기"
+          },
+          {
+            key: "de",
+            lang: "de",
+            home: "de/",
+            title: "Fluent-Qt — Seite nicht gefunden",
+            heading: "Seite nicht gefunden",
+            copy: "Die angeforderte Seite existiert nicht oder wurde verschoben.",
+            action: "Zur Startseite"
+          },
+          {
+            key: "ru",
+            lang: "ru",
+            home: "ru/",
+            title: "Fluent-Qt — Страница не найдена",
+            heading: "Страница не найдена",
+            copy: "Запрошенная страница не существует или была перемещена.",
+            action: "На главную"
+          },
+          {
+            key: "es",
+            lang: "es",
+            home: "es/",
+            title: "Fluent-Qt — Página no encontrada",
+            heading: "Página no encontrada",
+            copy: "La página solicitada no existe o ha sido movida.",
+            action: "Volver al inicio"
+          },
+          {
+            key: "fr",
+            lang: "fr",
+            home: "fr/",
+            title: "Fluent-Qt — Page introuvable",
+            heading: "Page introuvable",
+            copy: "La page demandée n’existe pas ou a été déplacée.",
+            action: "Retour à l’accueil"
+          }
+        ];
+        const fallback = {
+          key: "en",
+          lang: "en",
+          home: "./",
+          title: "Fluent-Qt — Page not found",
+          heading: "Page not found",
+          copy: "The page you requested does not exist or has moved.",
+          action: "Back to home"
+        };
+        const basePath = new URL(document.baseURI).pathname;
+        const prefix = location.pathname.startsWith(basePath)
+          ? location.pathname.slice(basePath.length).split("/", 1)[0].toLowerCase()
+          : "";
+        const current = routes.find((entry) => entry.lang.toLowerCase() === prefix) || fallback;
+        window.__fluent404 = current;
+        document.documentElement.lang = current.lang;
+        document.documentElement.dataset.siteLanguage = current.key;
+        document.title = current.title;
       })();
     </script>
     <link rel="stylesheet" href="styles.css?v=20260820-3">
@@ -36,12 +129,24 @@
   <body class="error-page">
     <main class="error-card">
       <p class="section-index">404 / NOT FOUND</p>
-      <h1 data-lang-zh>页面未找到</h1>
-      <h1 data-lang-en>Page not found</h1>
-      <p data-lang-zh>你访问的页面不存在或链接已变更。</p>
-      <p data-lang-en>The page you requested does not exist or has moved.</p>
-      <a class="button button-primary" href="zh-CN/" data-lang-zh>返回首页</a>
-      <a class="button button-primary" href="./" data-lang-en>Back to home</a>
+      <h1 data-404-title>Page not found</h1>
+      <p data-404-copy>The page you requested does not exist or has moved.</p>
+      <a class="button button-primary" href="./" data-404-home>Back to home</a>
     </main>
+    <script>
+      (() => {
+        const current = window.__fluent404;
+        if (!current) return;
+        const title = document.querySelector("[data-404-title]");
+        const copy = document.querySelector("[data-404-copy]");
+        const home = document.querySelector("[data-404-home]");
+        if (title) title.textContent = current.heading;
+        if (copy) copy.textContent = current.copy;
+        if (home) {
+          home.textContent = current.action;
+          home.setAttribute("href", current.home);
+        }
+      })();
+    </script>
   </body>
 </html>

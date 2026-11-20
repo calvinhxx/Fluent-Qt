@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 
@@ -7,7 +7,16 @@ const source = await readFile(new URL('../../site/site.js', import.meta.url), 'u
 const template = await readFile(new URL('./index.template.html', import.meta.url), 'utf8');
 const funding = await readFile(new URL('../../.github/FUNDING.yml', import.meta.url), 'utf8');
 const setup = source.slice(source.indexOf('function setupSupport() {'), source.indexOf('\nfunction setupGalleryPreview()'));
-const strings = vm.runInNewContext(`(${source.slice(source.indexOf('{'), source.indexOf('\n};\n\nconst fallbackVersion') + 2)})`);
+const localeDir = new URL('./locales/site/', import.meta.url);
+const localeFiles = (await readdir(localeDir)).filter(name => name.endsWith('.json')).sort();
+const strings = Object.fromEntries(await Promise.all(
+  localeFiles.map(async name => [
+    name.replace(/\.json$/, ''),
+    JSON.parse(await readFile(new URL(name, localeDir), 'utf8'))
+  ])
+));
+const locales = Object.keys(strings);
+const localePrefix = locale => (locale === 'en' ? '' : (locale === 'zh' ? 'zh-CN/' : `${locale}/`));
 
 class Element {
   dataset = {};
@@ -46,7 +55,7 @@ function fixture(page = 'https://example.test/', locale = 'en', missing = '', se
   const mobileHelp = new Element(), kofiFallback = new Element();
   controls.hidden = true;
   kofiActions.hidden = true;
-  let amount = '19', method = locale === 'en' ? 'kofi' : 'wechat';
+  let amount = '19', method = locale === 'zh' ? 'wechat' : 'kofi';
   controls.querySelector = selector => {
     if (selector === '[data-support-cny]') return cnyFieldset;
     if (selector === '[data-support-kofi-actions]') return kofiActions;
@@ -67,7 +76,7 @@ function fixture(page = 'https://example.test/', locale = 'en', missing = '', se
   const payments = [['wechat', 'jpg'], ['alipay', 'jpg'], ['kofi', 'png']].map(([name, ext]) => {
     const payment = new Element(), viewport = new Element(), generic = new TestImage();
     const code = new Element(), loading = new Element(), error = new Element();
-    generic.src = new URL(`${locale === 'zh' ? '../' : ''}assets/support/${name}.${ext}`, page).href;
+    generic.src = new URL(`${locale === 'en' ? '' : '../'}assets/support/${name}.${ext}`, page).href;
     generic.complete = true;
     generic.naturalWidth = 828;
     viewport.children = [generic];
@@ -106,7 +115,7 @@ function fixture(page = 'https://example.test/', locale = 'en', missing = '', se
   };
 }
 
-test('locale defaults select WeChat Pay in Chinese and Ko-fi in English', () => {
+test('locale defaults select WeChat Pay in Simplified Chinese and Ko-fi in all other locales', () => {
   const zh = fixture('https://example.test/Fluent-Qt/zh-CN/', 'zh');
   assert.equal(zh.method, 'wechat');
   assert.equal(zh.cnyFieldset.hidden, false);
@@ -116,25 +125,28 @@ test('locale defaults select WeChat Pay in Chinese and Ko-fi in English', () => 
   assert.equal(zh.mobileHelp.textContent, strings.zh['support.mobileHelp']);
   assert.equal(zh.kofiFallback.hidden, true);
 
-  const en = fixture('https://example.test/Fluent-Qt/', 'en');
-  assert.equal(en.method, 'kofi');
-  assert.equal(en.cnyFieldset.hidden, true);
-  assert.equal(en.kofiActions.hidden, false);
-  assert.equal(en.payments[0].payment.hidden, true);
-  assert.equal(en.payments[2].payment.hidden, false);
-  assert.equal(en.instruction.textContent, strings.en['support.kofiInstruction']);
-  assert.equal(en.mobileHelp.textContent, strings.en['support.kofiMobileHelp']);
-  assert.equal(en.kofiFallback.hidden, true);
+  for (const locale of locales.filter(key => key !== 'zh')) {
+    const f = fixture(`https://example.test/Fluent-Qt/${localePrefix(locale)}`, locale);
+    assert.equal(f.method, 'kofi', locale);
+    assert.equal(f.cnyFieldset.hidden, true, locale);
+    assert.equal(f.kofiActions.hidden, false, locale);
+    assert.equal(f.payments[0].payment.hidden, true, locale);
+    assert.equal(f.payments[2].payment.hidden, false, locale);
+    assert.equal(f.instruction.textContent, strings[locale]['support.kofiInstruction'], locale);
+    assert.equal(f.mobileHelp.textContent, strings[locale]['support.kofiMobileHelp'], locale);
+    assert.equal(f.kofiFallback.hidden, true, locale);
+  }
 });
 
-test('all channel and tier selections keep QR codes and copy aligned in both locales and subpaths', async () => {
-  for (const [page, locale] of [['https://example.test/', 'en'], ['https://example.test/Fluent-Qt/zh-CN/', 'zh']]) {
+test('all channel and tier selections keep QR codes and copy aligned across all locales and subpaths', async () => {
+  for (const locale of locales) {
+    const page = `https://example.test/Fluent-Qt/${localePrefix(locale)}`;
     const f = fixture(page, locale);
     for (const method of ['wechat', 'alipay']) {
       for (const amount of ['19', '49', '99', 'any']) {
         const selected = f.choose(method, amount);
         const file = `${method}${amount === 'any' ? '' : `-${amount}`}.jpg`;
-        const expected = new URL(`${locale === 'zh' ? '../' : ''}assets/support/${file}`, page).href;
+        const expected = new URL(`${locale === 'en' ? '' : '../'}assets/support/${file}`, page).href;
         const image = selected.viewport.children[0];
         assert.equal(image.src, expected);
         assert.equal(f.payments.filter(entry => !entry.payment.hidden).length, 1);
@@ -154,7 +166,7 @@ test('all channel and tier selections keep QR codes and copy aligned in both loc
     }
     for (const amount of ['19', 'any']) {
       const kofi = f.choose('kofi', amount);
-      const expected = new URL(`${locale === 'zh' ? '../' : ''}assets/support/kofi.png`, page).href;
+      const expected = new URL(`${locale === 'en' ? '' : '../'}assets/support/kofi.png`, page).href;
       assert.equal(kofi.viewport.children[0], kofi.generic);
       assert.equal(kofi.viewport.children[0].src, expected);
       assert.equal(f.payments.filter(entry => !entry.payment.hidden).length, 1);
@@ -236,13 +248,13 @@ test('each custom GitHub funding link opens its CNY tier with a greeting until t
   const tiers = [...funding.matchAll(/^\s*- \S+\/fuel\/([a-z-]+)\/$/gm)].map(match => match[1]);
   assert.equal(tiers.length, 4, 'GitHub accepts at most four custom funding links, one per tier');
   const amounts = ['19', '49', '99', 'any'];
-  for (const locale of ['en', 'zh']) {
+  for (const locale of locales) {
     tiers.forEach((tier, index) => {
       const amount = amounts[index];
-      const f = fixture('https://example.test/', locale, '', `?fuel=${tier}`);
+      const f = fixture(`https://example.test/${localePrefix(locale)}`, locale, '', `?fuel=${tier}`);
       const label = strings[locale][amount === 'any' ? 'support.any' : `support.tier${amount}`];
       const greeting = strings[locale][amount === 'any' ? 'support.linkedAnyInstruction' : 'support.linkedInstruction'];
-      assert.equal(f.method, 'wechat', 'CNY tier links must activate WeChat Pay even when English defaults to Ko-fi');
+      assert.equal(f.method, 'wechat', 'CNY tier links must activate WeChat Pay in every locale');
       assert.equal(f.cnyFieldset.hidden, false);
       assert.equal(f.kofiActions.hidden, true);
       assert.equal(f.instruction.textContent, greeting.replace('{amount}', amount).replace('{tier}', label));
@@ -253,12 +265,16 @@ test('each custom GitHub funding link opens its CNY tier with a greeting until t
   }
   // Unknown and inherited names keep each locale's default channel and copy.
   for (const fuel of ['espresso', 'constructor', '__proto__']) {
-    const en = fixture('https://example.test/', 'en', '', `?fuel=${fuel}`);
-    assert.equal(en.method, 'kofi');
-    assert.equal(en.instruction.textContent, strings.en['support.kofiInstruction']);
-    const zh = fixture('https://example.test/zh-CN/', 'zh', '', `?fuel=${fuel}`);
-    assert.equal(zh.method, 'wechat');
-    assert.equal(zh.instruction.textContent, strings.zh['support.instruction'].replace('{amount}', '19'));
+    for (const locale of locales) {
+      const f = fixture(`https://example.test/${localePrefix(locale)}`, locale, '', `?fuel=${fuel}`);
+      if (locale === 'zh') {
+        assert.equal(f.method, 'wechat');
+        assert.equal(f.instruction.textContent, strings.zh['support.instruction'].replace('{amount}', '19'));
+      } else {
+        assert.equal(f.method, 'kofi');
+        assert.equal(f.instruction.textContent, strings[locale]['support.kofiInstruction']);
+      }
+    }
   }
 });
 

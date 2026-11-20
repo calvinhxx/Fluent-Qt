@@ -346,11 +346,11 @@ h3 {
 
 .nav-cluster {
   justify-content: flex-end;
-  gap: 34px;
+  gap: clamp(18px, 2.2vw, 34px);
 }
 
 .nav-links {
-  gap: 22px;
+  gap: clamp(12px, 1.45vw, 22px);
 }
 
 .nav-links a {
@@ -390,35 +390,138 @@ h3 {
 }
 
 .language-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--white) 52%, transparent);
+  position: relative;
 }
 
-.language-switch a {
-  display: inline-grid;
-  place-items: center;
-  min-width: 32px;
-  height: 28px;
-  padding: 0 7px;
-  border: 0;
-  border-radius: 6px;
-  color: var(--soft-muted);
-  background: transparent;
+.language-switch summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--nav-text);
+  background: color-mix(in srgb, var(--white) 52%, transparent);
   cursor: pointer;
   font-size: 12px;
   font-weight: 650;
-  text-decoration: none;
+  line-height: 1;
+  list-style: none;
+  user-select: none;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
-.language-switch a[aria-current="page"] {
+.language-switch summary::-webkit-details-marker {
+  display: none;
+}
+
+.language-switch summary:hover,
+.language-switch[open] summary {
   color: var(--ink);
+  border-color: color-mix(in srgb, var(--ink) 30%, var(--line));
   background: var(--white);
-  box-shadow: 0 1px 2px rgba(12, 32, 48, 0.08);
+}
+
+.language-globe,
+.language-chevron {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.language-globe {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.7;
+}
+
+.language-chevron {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.8;
+  transition: transform 160ms ease;
+}
+
+.language-switch[open] .language-chevron {
+  transform: rotate(180deg);
+}
+
+.language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  min-width: 196px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: var(--card-shadow);
+}
+
+.language-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--nav-text);
+  font-size: 13px;
+  font-weight: 520;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.language-menu a small {
+  color: var(--soft-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.language-menu a:hover {
+  color: var(--ink);
+  background: var(--panel);
+}
+
+.language-menu a[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 650;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.language-menu a[aria-current="page"] small {
+  color: var(--accent);
+}
+
+:root[data-theme="high-contrast"] .language-menu a:hover {
+  outline: 1px solid var(--line);
+}
+
+:root[data-theme="high-contrast"] .language-menu a[aria-current="page"] {
+  outline: 1px solid var(--accent);
+}
+
+@media (forced-colors: active) {
+  .language-switch summary,
+  .language-menu {
+    border-color: ButtonBorder;
+    background: Canvas;
+    color: ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .language-menu a[aria-current="page"],
+  .language-menu a[aria-current="page"] small {
+    background: Highlight;
+    color: HighlightText;
+  }
 }
 
 .theme-toggle {
@@ -3129,7 +3232,7 @@ html[data-support-pending] [data-support-loading] {
 
 html[data-support-pending] [data-support-payment="alipay"],
 html[data-site-language="zh"][data-support-pending] [data-support-payment="kofi"],
-html[data-site-language="en"][data-support-pending] [data-support-payment="wechat"],
+html:not([data-site-language="zh"])[data-support-pending] [data-support-payment="wechat"],
 html[data-support-pending] .support-kofi-fallback {
   display: none;
 }
@@ -3303,11 +3406,6 @@ html[data-support-pending] .support-kofi-fallback {
   text-transform: uppercase;
 }
 
-html:not([data-site-language="zh"]) [data-lang-zh],
-html[data-site-language="zh"] [data-lang-en] {
-  display: none;
-}
-
 .error-page {
   min-height: 100vh;
   display: grid;
@@ -3475,6 +3573,12 @@ html[data-site-language="zh"] [data-lang-en] {
   .nav-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .language-menu {
+    left: 0;
+    right: auto;
+    width: min(240px, calc(100vw - 48px));
   }
 
   .github-link span { display: inline; }
