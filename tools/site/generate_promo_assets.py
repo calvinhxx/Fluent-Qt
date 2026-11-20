@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from io import BytesIO
 from pathlib import Path
 
 
@@ -19,9 +20,10 @@ def main() -> int:
     output_root = args.output_root.resolve() if args.output_root else root
 
     try:
+        from PIL import Image
         from playwright.sync_api import sync_playwright
     except ImportError:
-        parser.error("Install Playwright and its Chromium browser; see site-workflow.md.")
+        parser.error("Install Pillow, Playwright and its Chromium browser; see site-workflow.md.")
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -46,16 +48,16 @@ def main() -> int:
                 context.drawImage(image, 0, 0, canvas.width, canvas.height);
                 image.replaceWith(canvas);
             }""")
-            for selector, paths in (
-                ("#readme", ("docs/assets/readme/hero.png",)),
-                ("#social", ("site/assets/og.png",)),
+            for selector, relative in (
+                ("#readme", "docs/assets/readme/hero.png"),
+                ("#social", "site/assets/og.png"),
             ):
                 png = page.locator(selector).screenshot(animations="disabled")
-                for relative in paths:
-                    output = output_root / relative
-                    output.parent.mkdir(parents=True, exist_ok=True)
-                    output.write_bytes(png)
-                    print(output)
+                output = output_root / relative
+                output.parent.mkdir(parents=True, exist_ok=True)
+                with Image.open(BytesIO(png)) as screenshot:
+                    screenshot.save(output, optimize=True)
+                print(output)
         finally:
             browser.close()
     return 0

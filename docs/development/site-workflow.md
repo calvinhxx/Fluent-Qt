@@ -408,7 +408,7 @@ background, and angled window. Update their Gallery content through
 [`promo-assets.html`](../../tools/site/promo-assets.html), then render:
 
 ```bash
-python3 -m pip install "playwright==1.58.0"
+python3 -m pip install "playwright==1.58.0" Pillow
 python3 -m playwright install chromium
 python3 tools/site/generate_promo_assets.py
 ```
