@@ -614,35 +614,14 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
 def main(argv: Iterable[str] | None = None) -> int:
     args = parse_args(argv)
     project_root = args.project_root.resolve()
-    outputs = (
-        [args.output.resolve()]
-        if args.output is not None
-        else [
-            project_root
-            / "docs"
-            / "ai"
-            / "generated"
-            / "fluentqt-ai-catalog.json",
-            project_root
-            / ".agents"
-            / "skills"
-            / "build-fluentqt-gui"
-            / "assets"
-            / "fluentqt-ai-catalog.json",
-        ]
-    )
+    output = args.output or project_root / "docs/ai/generated/fluentqt-ai-catalog.json"
     catalog = generate_catalog(project_root)
     if args.check:
-        return 0 if all(check_catalog(catalog, output) for output in outputs) else 1
-    for output in outputs:
-        write_catalog(catalog, output)
+        return 0 if check_catalog(catalog, output) else 1
+    write_catalog(catalog, output)
     print(
-        "Generated FluentQt AI catalog: "
-        "{component_count} components, {sample_count} samples, "
-        "{application_pattern_count} application patterns, {output_count} outputs".format(
-            output_count=len(outputs),
-            **catalog["summary"]
-        )
+        "Generated FluentQt AI catalog: {component_count} components, "
+        "{sample_count} samples, {application_pattern_count} application patterns".format(**catalog["summary"])
     )
     return 0
 

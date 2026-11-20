@@ -63,7 +63,7 @@ material, event loop, and unload contract.
 
 ## Find components and bootstrap
 
-Query small slices of the bundled [catalog](assets/fluentqt-ai-catalog.json)
+Query small slices of the component catalog
 with [query_catalog.py](scripts/query_catalog.py), from any directory:
 
 ```bash

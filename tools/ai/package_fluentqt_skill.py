@@ -24,7 +24,6 @@ REQUIRED_SKILL_FILES = (
     "assets/benchmarks/agent-run.schema.json",
     "assets/benchmarks/agent-run-workspace.json",
     "assets/composition-recipes.json",
-    "assets/fluentqt-ai-catalog.json",
     "assets/project-structure-templates.json",
     "references/art-direction.md",
     "references/component-selection.md",
@@ -172,8 +171,15 @@ def build_skill_package(
     with zipfile.ZipFile(
         archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
     ) as package:
+        catalog_name = "assets/fluentqt-ai-catalog.json"
+        package.writestr(
+            _zip_info(f"{SKILL_NAME}/{catalog_name}", executable=False),
+            (project_root / "docs/ai/generated/fluentqt-ai-catalog.json").read_bytes(),
+        )
         for source in skill_files(skill_root):
             relative = source.relative_to(skill_root).as_posix()
+            if relative == catalog_name:  # Already materialized in SDK/source distributions.
+                continue
             package.writestr(
                 _zip_info(
                     f"{SKILL_NAME}/{relative}",

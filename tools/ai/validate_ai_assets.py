@@ -1890,9 +1890,6 @@ def _validate_installable_skill(project_root: Path) -> None:
     skill_root = project_root / ".agents/skills/build-fluentqt-gui"
     query = skill_root / "scripts/query_catalog.py"
     catalog = project_root / "docs/ai/generated/fluentqt-ai-catalog.json"
-    bundled_catalog = skill_root / "assets/fluentqt-ai-catalog.json"
-    if bundled_catalog.read_bytes() != catalog.read_bytes():
-        raise AssertionError("Installable Skill catalog snapshot is stale")
     if (skill_root / "LICENSE.txt").read_bytes() != (
         project_root / "LICENSE"
     ).read_bytes():
@@ -1952,6 +1949,8 @@ def _validate_installable_skill(project_root: Path) -> None:
                     raise AssertionError(
                         f"Skill archive is missing {relative_path}"
                     )
+            if packaged_skill.read(prefix + "assets/fluentqt-ai-catalog.json") != catalog.read_bytes():
+                raise AssertionError("Packaged Skill catalog differs from the checkout")
             for relative_path in REQUIRED_PACKAGED_ONBOARDING_FILES:
                 archive_path = prefix + "tools/onboarding/" + relative_path
                 if archive_path not in entries:
@@ -2203,12 +2202,6 @@ def validate(project_root: Path) -> dict[str, int]:
     )
     if not check_catalog(generated, catalog_path):
         raise AssertionError("Committed FluentQt AI catalog is stale")
-    skill_catalog_path = (
-        project_root
-        / ".agents/skills/build-fluentqt-gui/assets/fluentqt-ai-catalog.json"
-    )
-    if not check_catalog(generated, skill_catalog_path):
-        raise AssertionError("Installable Skill catalog snapshot is stale")
     committed = json.loads(catalog_path.read_text(encoding="utf-8"))
     if committed != generated:
         raise AssertionError("Committed FluentQt AI catalog is not canonical")

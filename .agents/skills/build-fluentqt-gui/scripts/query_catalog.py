@@ -14,9 +14,13 @@ from typing import Iterable
 
 TERM_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+.-]*")
 
-BUNDLED_CATALOG = (
-    Path(__file__).resolve().parents[1] / "assets" / "fluentqt-ai-catalog.json"
-)
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+BUNDLED_CATALOG = SKILL_ROOT / "assets/fluentqt-ai-catalog.json"
+if not BUNDLED_CATALOG.is_file():
+    # Installed archives carry their snapshot; a checkout shares the docs catalog.
+    checkout_catalog = SKILL_ROOT.parent.parent.parent / "docs/ai/generated/fluentqt-ai-catalog.json"
+    if checkout_catalog.is_file():
+        BUNDLED_CATALOG = checkout_catalog
 
 STOP_TERMS = {
     "a",

@@ -65,7 +65,9 @@ FluentQt component and Gallery scenarios.
 ## Package and maintain the Skill
 
 Agents that discover `.agents/skills/` can use the repository copy directly.
-Other compatible agents can install the same archive, including its catalog,
+The checkout uses the catalog in `docs/ai/generated/`. The standalone Skill, SDK,
+and source package include a copy at the Skill’s local asset path.
+Other compatible agents can install the archive, including its catalog,
 onboarding tools, starters, references, and validators:
 
 ```bash
