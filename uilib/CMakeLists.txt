@@ -23,6 +23,11 @@ target_link_libraries(FluentQt
     PUBLIC
     Qt${QT_VERSION_MAJOR}::Widgets
 )
+if(QT_VERSION_MAJOR EQUAL 5)
+    # Consumers compile the public UTF-8 headers too. Match Qt 6's MSVC opt-out.
+    target_compile_options(FluentQt INTERFACE
+        "$<$<AND:$<COMPILE_LANG_AND_ID:CXX,MSVC>,$<NOT:$<BOOL:$<TARGET_PROPERTY:QT_NO_UTF8_SOURCE>>>>:/utf-8>")
+endif()
 if(APPLE)
     target_link_libraries(FluentQt PUBLIC FluentQt::ApplePlatformDependencies)
 endif()
