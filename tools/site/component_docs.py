@@ -8,6 +8,7 @@ import re
 import struct
 from string import Template
 
+from generate_playgrounds import descriptors
 from generate_component_previews import ROOT, available_previews, config, preview_path
 from public_api import inventory, resolve_type
 from api_sections import (component_api, localized_description, primary_type, render_type,
@@ -317,7 +318,7 @@ def render_document(doc, documents, language):
         panels.append(f'<div class="preview-panel" role="tabpanel" aria-labelledby="tab-{pid}" id="{pid}"{" hidden" if i else ""}>{picture(preview, page, language, i == 0, alt_text=localized_preview["alt"])}</div>')
     # The live example may grow to its sample's reported height, never below this.
     minimum = doc.get('minimum_preview_height', 196)
-    playground = (ROOT / 'app/assets/playgrounds' / (doc['id'] + '.json')).is_file()
+    playground = doc['id'] in descriptors()
     customize = escape(ui['propertyPreview'])
     playground_i18n = (
         relative(f"api/playground-i18n/{language}.json", page) + "?v=" + playground_runtime_digest(language)

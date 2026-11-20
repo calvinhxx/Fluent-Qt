@@ -201,10 +201,13 @@ Optional extension component pages retain their existing examples without intera
 playgrounds.
 
 `app/assets/playgrounds/button.json` defines the original Button editor.
-`app/assets/playgrounds/components.json` owns the other 94 core descriptors and
-their C++/PySide6 setup recipes. `tools/site/generate_playgrounds.py` derives
-individual descriptors, the resource list, and the compiled factory from these
-recipes; do not edit generated files. The generator uses the pinned C++ formatter.
+`app/assets/playgrounds/components.json` owns the remaining descriptors and their
+C++/PySide6 setup recipes. CMake runs the Python descriptor generator at
+configuration time and places the individual JSON files and Qt resource list in
+the Gallery build directory. Native and web builds use the same per-route
+resource URLs. Website generation reads the recipes directly. Regenerating the
+checked-in C++ factory uses `tools/site/generate_playgrounds.py` and the pinned
+formatter.
 `GalleryComponentPlayground` applies an allowlisted patch to a real control, then reads back its values and produces matching C++ and
 PySide6 code. Unknown properties or invalid types reject the entire patch.
 Numeric values are clamped to the documented editor range. The editor does not

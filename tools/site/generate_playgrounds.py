@@ -3,12 +3,49 @@
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
+import re
 import json
 from pathlib import Path
 import subprocess
 import shutil
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@lru_cache(maxsize=1)
+def descriptors(root: Path = ROOT) -> dict:
+    """Return exactly the public descriptors consumed by the Gallery and the website."""
+    assets = root / "app/assets/playgrounds"
+    result = {"button": json.loads((assets / "button.json").read_text(encoding="utf-8"))}
+    for spec in json.loads((assets / "components.json").read_text(encoding="utf-8")):
+        route = spec["component"]
+        if not re.fullmatch(r"[a-z][a-z0-9-]*", route) or route in result:
+            raise ValueError(f"Invalid or duplicate playground route: {route}")
+        descriptor = {"version": 1, **{k: v for k, v in spec.items()
+                      if k not in ("factorySetup", "factoryIncludes", "hostSize", "compileGuard")}}
+        descriptor.setdefault("presets", [{"id": "default", "label": {"en": "Initial example", "zh": "初始示例"}, "values": {}}])
+        result[route] = descriptor
+    return result
+
+
+def write_resources(directory: Path) -> None:
+    """Qt reads the QRC at configure time. Keep its paths relative to the build tree."""
+    directory.mkdir(parents=True, exist_ok=True)
+    entries = []
+    for route, data in descriptors().items():
+        if route == "button":  # Its handwritten resource is already in gallery_resources.qrc.
+            continue
+        filename = route + ".json"
+        content = (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        target = directory / filename
+        if not target.is_file() or target.read_bytes() != content:
+            target.write_bytes(content)
+        entries.append(f"    <file>{filename}</file>\n")
+    qrc = directory / "playground_resources.qrc"
+    content = ('<RCC>\n  <qresource prefix="/app/playgrounds">\n' + "".join(entries) + "  </qresource>\n</RCC>\n").encode()
+    if not qrc.is_file() or qrc.read_bytes() != content:
+        qrc.write_bytes(content)
 
 
 def outputs(root: Path) -> dict[Path, str]:
@@ -54,16 +91,6 @@ def outputs(root: Path) -> dict[Path, str]:
         if guard:
             factory_block = f"#if defined({guard})\n{factory_block}\n#endif"
         factories.append(factory_block)
-        descriptor = {
-            "version": 1,
-            **{
-                k: v
-                for k, v in spec.items()
-                if k not in ("factorySetup", "factoryIncludes", "hostSize", "compileGuard")
-            },
-        }
-        descriptor.setdefault("presets", [{"id": "default", "label": {"en": "Initial example", "zh": "初始示例"}, "values": {}}])
-        result[assets / f"{route}.json"] = json.dumps(descriptor, ensure_ascii=False, indent=2) + "\n"
     route_lines = []
     for route, guard in routes.items():
         line = f'        QStringLiteral("{route}"),'
@@ -92,17 +119,18 @@ def outputs(root: Path) -> dict[Path, str]:
         raise RuntimeError("Playground generation requires clang-format 22.1.8")
     source = subprocess.run([str(formatter)], input=source, text=True, capture_output=True, check=True).stdout
     result[root / "app/view/widgets/GalleryPlaygroundFactory.cpp"] = source
-    qrc = root / "app/playground_resources.qrc"
-    result[qrc] = '<RCC>\n  <qresource prefix="/app/playgrounds">\n' + "".join(
-        f'    <file alias="{route}.json">assets/playgrounds/{route}.json</file>\n' for route in routes if route != "button"
-    ) + "  </qresource>\n</RCC>\n"
     return result
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true")
+    mode.add_argument("--resource-dir", type=Path, help="Generate Qt resources in a build directory")
     args = parser.parse_args()
+    if args.resource_dir is not None:
+        write_resources(args.resource_dir)
+        return
     stale = []
     for path, content in outputs(ROOT).items():
         data = content.encode("utf-8")

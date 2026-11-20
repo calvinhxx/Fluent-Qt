@@ -9,11 +9,10 @@ import json
 from pathlib import Path
 import re
 
+from generate_playgrounds import descriptors
 from site_locales import LOCALE_KEYS
 
-ROOT = Path(__file__).resolve().parents[2]
 LOCALES_ROOT = Path(__file__).with_name("locales")
-PLAYGROUNDS_DIR = ROOT / "app/assets/playgrounds"
 EXTRA_LOCALE_KEYS: tuple[str, ...] = tuple(k for k in LOCALE_KEYS if k not in ("en", "zh"))
 
 PLACEHOLDER_RE = re.compile(r"\{[a-zA-Z0-9_]+\}")
@@ -297,10 +296,8 @@ def _walk_bilingual(node: object, pairs: dict[str, str]) -> None:
 @lru_cache(maxsize=1)
 def playground_en_zh_pairs() -> dict[str, str]:
     pairs: dict[str, str] = {}
-    for path in sorted(PLAYGROUNDS_DIR.glob("*.json")):
-        if path.name == "components.json":
-            continue
-        _walk_bilingual(json.loads(path.read_text(encoding="utf-8")), pairs)
+    for _, data in sorted(descriptors().items()):
+        _walk_bilingual(data, pairs)
     return pairs
 
 
