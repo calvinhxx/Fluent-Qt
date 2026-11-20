@@ -3401,6 +3401,24 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         )
         result = build_sample("flow-view", "flow-view-basic")
         try:
+            from PySide6.QtCore import QBuffer, QIODevice
+            from PySide6.QtGui import QPixmap, QPixmapCache
+
+            model = result.widget.model()
+            index = model.index(0, 0)
+            role = int(Qt.ItemDataRole.UserRole) + 701
+            fallback = index.data(role).toImage()
+            self.assertFalse(fallback.isNull())
+            QPixmapCache.clear()
+            self.assertEqual(index.data(role).toImage(), fallback)
+            photo = QPixmap(16, 12)
+            photo.fill(QColor("red"))
+            buffer = QBuffer()
+            buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+            self.assertTrue(photo.save(buffer, "PNG"))
+            model.setData(index, buffer.data(), role)
+            QPixmapCache.clear()
+            self.assertEqual(index.data(role).toImage().pixelColor(3, 4), QColor("red"))
             self.assertIsNotNone(
                 getattr(
                     result.widget,

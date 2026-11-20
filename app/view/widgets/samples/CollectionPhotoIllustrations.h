@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
+#include <QPixmapCache>
 #include <QPolygonF>
 #include <QRadialGradient>
 #include <QRectF>
@@ -405,17 +406,28 @@ inline QPixmap renderScenicPhotoPixmap(const QSize& logicalSize,
 {
     const QSize targetSize(qMax(1, logicalSize.width()), qMax(1, logicalSize.height()));
     const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);
+    const int sceneIndex = tint.isValid()
+        ? photo_card_detail::sceneIndexFromColor(tint)
+        : static_cast<int>(photo_card_detail::deterministicHash(seedText) % 6u);
+    const QString key =
+        QStringLiteral("fluentqt.gallery.scenic/%1/%2/%3/%4")
+            .arg(sceneIndex)
+            .arg(targetSize.width())
+            .arg(targetSize.height())
+            .arg(dpr, 0, 'g', 17);
+    QPixmap cached;
+    if (QPixmapCache::find(key, &cached))
+        return cached;
     QPixmap pixmap(QSize(qMax(1, qRound(targetSize.width() * dpr)), qMax(1, qRound(targetSize.height() * dpr))));
     pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(Qt::transparent);
 
     FluentRasterCachePainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing);
-    const int sceneIndex = tint.isValid()
-        ? photo_card_detail::sceneIndexFromColor(tint)
-        : static_cast<int>(photo_card_detail::deterministicHash(seedText) % 6u);
     photo_card_detail::paintScenicBackdrop(painter, QRectF(0.0, 0.0, targetSize.width(), targetSize.height()),
         sceneIndex);
+    painter.end();
+    QPixmapCache::insert(key, pixmap);
     return pixmap;
 }
 

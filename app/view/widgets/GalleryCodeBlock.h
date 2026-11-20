@@ -59,6 +59,7 @@ private:
     void refreshDisplayedCode();
     const QVector<GallerySourceFile>& sourceFiles() const;
     const GallerySourceFile* currentFile() const;
+    void ensureFileSelector();
     void rebuildFileSelector(const QString& preferredName = {});
     void updateSourceControls();
 
