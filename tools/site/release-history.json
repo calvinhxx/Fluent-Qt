@@ -2,6 +2,59 @@
   "schema_version": 2,
   "versions": [
     {
+      "version": "1.12.1",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "77fecb781bc913f3fae65dea7a81a3a9ff83551ce19d068be0c606924f58da60",
+      "groups": [
+        {
+          "scope": "uilib",
+          "summary": {
+            "en": "`PropertyPanel` creates editors as rows come into view. `AreaChart` reuses the fill while the pointer moves across the plot.",
+            "zh": "`PropertyPanel` 按需创建即将进入视野的编辑器。鼠标在 `AreaChart` 上移动时会复用已绘制的填充区域。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [
+            "property-panel",
+            "area-chart",
+            "image-viewer"
+          ],
+          "headers": []
+        },
+        {
+          "scope": "gallery",
+          "summary": {
+            "en": "The What’s new dialog keeps its dividers opaque while you scroll. Photo examples load images on demand.",
+            "zh": "滚动 What’s new 弹窗时，分隔线不再透出底层内容。照片示例按需加载图片。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [
+            "dialog",
+            "stepper",
+            "flow-view"
+          ],
+          "headers": [],
+          "headline": {
+            "en": "Gallery release notes and photos",
+            "zh": "Gallery 更新记录与照片"
+          }
+        },
+        {
+          "scope": "project",
+          "summary": {
+            "en": "Browse the website, component API references and live property editors in nine languages.",
+            "zh": "官网、组件 API 文档和交互示例的属性编辑器现支持九种语言。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [],
+          "headers": []
+        }
+      ]
+    },
+    {
       "version": "1.12.0",
       "status": "published",
       "published_at": "2026-11-18T15:28:14Z",
