@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+"""Shared loader and validator for multi-locale component, API, release, and playground copy."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+import hashlib
+import json
+from pathlib import Path
+import re
+
+from site_locales import LOCALE_KEYS
+
+ROOT = Path(__file__).resolve().parents[2]
+LOCALES_ROOT = Path(__file__).with_name("locales")
+EXTRA_LOCALE_KEYS: tuple[str, ...] = tuple(k for k in LOCALE_KEYS if k not in ("en", "zh"))
+
+PLACEHOLDER_RE = re.compile(r"\{[a-zA-Z0-9_]+\}")
+BACKTICK_RE = re.compile(r"`[^`]+`")
+
+def text_key(en_text: str) -> str:
+    """Return the 8-char SHA-256 hex digest key for an English source string."""
+    return hashlib.sha256(en_text.encode("utf-8")).hexdigest()[:8]
+
+
+def placeholders(text: str) -> list[str]:
+    return sorted(PLACEHOLDER_RE.findall(text))
+
+
+def _load_locale_json(domain: str, language: str) -> dict:
+    path = LOCALES_ROOT / domain / f"{language}.json"
+    if not path.is_file():
+        raise ValueError(f"Missing {domain} locale file: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=None)
+def component_locale(language: str) -> dict:
+    return _load_locale_json("components", language)
+
+
+@lru_cache(maxsize=None)
+def api_locale(language: str) -> dict[str, str]:
+    return _load_locale_json("api", language)
+
+
+@lru_cache(maxsize=None)
+def release_locale(language: str) -> dict[str, str]:
+    return _load_locale_json("releases", language)
+
+
+def translate_api_description(description: dict, language: str) -> str:
+    en = description.get("en") or ""
+    if language == "en":
+        return en
+    if language == "zh" and description.get("zh"):
+        return description["zh"]
+    if not en:
+        return description.get("zh") or ""
+    return api_locale(language).get(text_key(en)) or en
+
+
+def translate_release_text(value: dict, language: str) -> str:
+    if language in ("en", "zh"):
+        return value[language]
+    en = value["en"]
+    return release_locale(language).get(text_key(en)) or en
+
+
+def localized_component(doc: dict, language: str) -> dict:
+    if language in ("en", "zh"):
+        return {
+            "name": doc["name"][language],
+            "description": doc["description"][language],
+            "previews": {
+                p["id"]: {"name": p["name"][language], "alt": p["alt"][language]}
+                for p in doc["previews"]
+            },
+            "examples": {
+                e["sample"]: {"name": e["name"][language], "description": e["description"][language]}
+                for e in doc["examples"]
+            },
+        }
+    entry = component_locale(language)[doc["id"]]
+    if "examples" in entry:
+        return entry
+    from documentation_guides import guide_ui
+
+    ui = guide_ui(language)
+    preview = doc["previews"][0]
+    example = doc["examples"][0]
+    title = display_component_title(doc["name"]["en"], entry["name"], language)
+    return {
+        "name": entry["name"],
+        "description": entry["description"],
+        "previews": {
+            preview["id"]: {
+                "name": ui["exampleHeading"],
+                "alt": f"{title}: {entry['example']}",
+            }
+        },
+        "examples": {
+            example["sample"]: {
+                "name": entry["example"],
+                "description": entry["usage"],
+            }
+        },
+    }
+
+
+def display_component_title(component_title: str, localized_name: str, language: str) -> str:
+    if language == "en" or localized_name.casefold() == component_title.casefold():
+        return component_title
+    return f"{component_title} {localized_name}"
+
+
+def _walk_bilingual(node: object, pairs: dict[str, str]) -> None:
+    if isinstance(node, dict):
+        if "en" in node and "zh" in node and isinstance(node["en"], str) and isinstance(node["zh"], str):
+            pairs.setdefault(node["en"], node["zh"])
+            return
+        for value in node.values():
+            _walk_bilingual(value, pairs)
+    elif isinstance(node, list):
+        for item in node:
+            _walk_bilingual(item, pairs)
+
+
+def python_api_pairs(catalog: dict) -> dict[str, str]:
+    from public_api import python_only_members, resolve_type
+
+    pairs = {}
+    for component in catalog["components"]:
+        record = resolve_type(component["cpp"]["qualified_type"])
+        for member in python_only_members(record, component["python"]):
+            description = member["description"]
+            if description["en"]:
+                pairs.setdefault(description["en"], description["zh"])
+    return pairs
+
+
+def required_api_pairs(catalog: dict | None = None) -> dict[str, str]:
+    from public_api import inventory
+    if catalog is None:
+        from generate_api_reference import generate_reference
+        catalog = generate_reference()
+
+    pairs = python_api_pairs(catalog)
+    for record in inventory():
+        en = record.get("description", {}).get("en")
+        if en:
+            pairs.setdefault(en, record["description"].get("zh", ""))
+        for member in record["members"]:
+            m_en = member.get("description", {}).get("en")
+            if m_en:
+                pairs.setdefault(m_en, member["description"].get("zh", ""))
+            for val in member.get("values", []):
+                v_en = val.get("description", {}).get("en")
+                if v_en:
+                    pairs.setdefault(v_en, val["description"].get("zh", ""))
+    return pairs
+
+
+def required_release_pairs() -> dict[str, str]:
+    from release_history import load_history
+
+    pairs: dict[str, str] = {}
+    _walk_bilingual(load_history(), pairs)
+    return pairs
+
+
+def validate_docs_locales(documents: list[dict], catalog: dict | None = None) -> None:
+    """Validate 100% key coverage, non-empty strings, and placeholders across all extra locales."""
+    from documentation_guides import guide_ui
+
+    catalog = catalog if catalog is not None else documents[0]["catalog"]
+    api_pairs = required_api_pairs(catalog)
+    api_en_map = {text_key(en): en for en in api_pairs}
+    if len(api_en_map) != len(api_pairs):
+        raise ValueError("Hash collision in required API descriptions")
+    # C++ headers supply inline translations; wrapper docstrings use this catalog.
+    missing_zh = {text_key(en) for en, zh in python_api_pairs(catalog).items() if not zh}
+    zh = api_locale("zh")
+    if set(zh) != missing_zh or any(not isinstance(text, str) or not text.strip() for text in zh.values()):
+        raise ValueError("Incomplete supplemental Simplified Chinese API translations")
+    release_en_map = {text_key(en): en for en in sorted(required_release_pairs())}
+    if len(release_en_map) != len(required_release_pairs()):
+        raise ValueError("Hash collision in required release descriptions")
+
+    ui_en = guide_ui("en")
+
+    for language in EXTRA_LOCALE_KEYS:
+        # 1. Guide & docs-shell UI
+        guide_ui(language)
+        if not isinstance(guide_ui(language), dict) or set(guide_ui(language)) != set(ui_en):
+            raise ValueError(f"Guide UI key mismatch in {language}")
+
+        # 2. Components
+        comp_map = component_locale(language)
+        expected_ids = {doc["id"] for doc in documents}
+        if set(comp_map) != expected_ids:
+            raise ValueError(f"Component locale key mismatch in {language}: {set(comp_map) ^ expected_ids}")
+        for doc in documents:
+            cid = doc["id"]
+            entry = comp_map[cid]
+            if not isinstance(entry.get("name"), str) or not entry["name"].strip():
+                raise ValueError(f"Empty component name in {language}/{cid}")
+            if not isinstance(entry.get("description"), str) or not entry["description"].strip():
+                raise ValueError(f"Empty component description in {language}/{cid}")
+            if "examples" in entry:
+                expected_pvs = {p["id"] for p in doc["previews"]}
+                if set(entry.get("previews", {})) != expected_pvs:
+                    raise ValueError(f"Preview keys mismatch in {language}/{cid}")
+                for pid in expected_pvs:
+                    pv = entry["previews"][pid]
+                    if not isinstance(pv.get("name"), str) or not pv["name"].strip():
+                        raise ValueError(f"Empty preview name in {language}/{cid}/{pid}")
+                    if not isinstance(pv.get("alt"), str) or not pv["alt"].strip():
+                        raise ValueError(f"Empty preview alt in {language}/{cid}/{pid}")
+                expected_exs = {e["sample"] for e in doc["examples"]}
+                if set(entry.get("examples", {})) != expected_exs:
+                    raise ValueError(f"Example keys mismatch in {language}/{cid}")
+                for sample_id in expected_exs:
+                    ex = entry["examples"][sample_id]
+                    if not isinstance(ex.get("name"), str) or not ex["name"].strip():
+                        raise ValueError(f"Empty example name in {language}/{cid}/{sample_id}")
+                    if not isinstance(ex.get("description"), str) or not ex["description"].strip():
+                        raise ValueError(f"Empty example description in {language}/{cid}/{sample_id}")
+            elif len(doc["previews"]) == 1 and len(doc["examples"]) == 1:
+                if not isinstance(entry.get("example"), str) or not entry["example"].strip():
+                    raise ValueError(f"Empty component example title in {language}/{cid}")
+                if not isinstance(entry.get("usage"), str) or not entry["usage"].strip():
+                    raise ValueError(f"Empty component usage in {language}/{cid}")
+            else:
+                raise ValueError(f"Multi-preview/example component {cid} in {language} requires full schema")
+
+        # 3. API descriptions
+        api_map = api_locale(language)
+        if set(api_map) != set(api_en_map):
+            raise ValueError(f"API locale key mismatch in {language}: missing={len(set(api_en_map) - set(api_map))}, extra={len(set(api_map) - set(api_en_map))}")
+        for digest, text in api_map.items():
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError(f"Empty API translation in {language}/{digest}")
+
+        # 4. Releases
+        rel_map = release_locale(language)
+        if set(rel_map) != set(release_en_map):
+            raise ValueError(f"Release locale key mismatch in {language}: missing={len(set(release_en_map) - set(rel_map))}, extra={len(set(rel_map) - set(release_en_map))}")
+        for digest, en_text in release_en_map.items():
+            text = rel_map[digest]
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError(f"Empty release translation in {language}/{digest}")
+            if sorted(BACKTICK_RE.findall(text)) != sorted(BACKTICK_RE.findall(en_text)):
+                raise ValueError(f"Inline code span mismatch in {language} releases/{digest}: {en_text!r} -> {text!r}")

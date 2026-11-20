@@ -390,3 +390,9 @@ def python_extensions(module, type_name):
                 'description': {'en': ast.get_docstring(node) or '', 'zh': ''},
                 'source': str(path.relative_to(ROOT)), 'line': node.lineno, 'access': 'public'})
     return result
+
+
+def python_only_members(record, binding):
+    """Return the wrapper methods not already documented by this type or its bases."""
+    known = {m['name'] for base in [record, *inherited_types(record)] for m in base['members']}
+    return [m for m in python_extensions(binding['module'], binding['type']) if m['name'] not in known]

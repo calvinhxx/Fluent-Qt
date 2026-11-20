@@ -12,32 +12,19 @@ from generate_component_previews import ROOT, available_previews, config, previe
 from public_api import inventory, resolve_type
 from api_sections import (component_api, localized_description, primary_type, render_type,
                           reference_headers, reference_path, type_url, slug)
-from documentation_guides import guides, guide_path
+from docs_i18n import (
+    display_component_title,
+    localized_component,
+)
+from documentation_guides import guides, guide_path, guide_ui
 from documentation_navigation import navigation as site_navigation, breadcrumb, relative as relative_url
 from site_assets import source_path
+from site_locales import FULL_API_LOCALES, LOCALE_KEYS, LOCALES, api_language, locale_by_key, locale_url_prefix
 from generate_localized_site import BASE_URL
 from release_history import page_path as release_page_path
 from release_pages import document_notice
 
 SITE = ROOT / "site"
-WORDS = {
-    "en": {"overview": "Example", "usage": "Usage", "api": "API",
-           "source": "Declaration", "copy": "Copy code",
-           "copied": "Code copied", "copyError": "Could not copy. Select the code to copy it manually.",
-           "light": "Light", "dark": "Dark", "skip": "Skip to content",
-           "theme": "Example theme",
-           "loadingLive": "Loading example…", "failedLive": "The example could not load. A preview is shown instead.",
-           "retryLive": "Retry", "noScript": "Enable JavaScript to use this example.",
-           "onPage": "On this page"},
-    "zh": {"overview": "示例", "usage": "用法", "api": "API",
-           "source": "查看声明", "copy": "复制代码",
-           "copied": "代码已复制", "copyError": "复制失败，请选择代码手动复制。",
-           "light": "浅色", "dark": "深色", "skip": "跳转到正文",
-           "theme": "示例主题",
-           "loadingLive": "正在加载示例…", "failedLive": "示例加载失败，暂时显示预览图。",
-           "retryLive": "重试", "noScript": "启用 JavaScript 后可操作示例。",
-           "onPage": "本页内容"}
-}
 
 
 def escape(value):
@@ -67,16 +54,20 @@ def site_icon():
     raise ValueError("Gallery application icon is missing its 64px PNG")
 
 
-SECTIONS = {"project": ("Project updates", "项目更新"), "foundation": ("Foundations", "基础指南"),
-            "components": ("Components", "组件"), "modules": ("Modules", "扩展模块"),
-            "reference": ("API reference", "API 参考")}
-CATEGORY_NAMES_ZH = {"basic-input": "基础输入", "charts": "图表", "collections": "集合视图",
-    "date-time": "日期与时间", "dialogs-flyouts": "对话框与浮层", "layout": "布局", "menus-toolbars": "菜单与工具栏",
-    "navigation": "导航", "scrolling": "滚动", "status-info": "状态与信息", "text-fields": "文本输入", "windowing": "窗口"}
+def shell_words(language):
+    ui = guide_ui(language)
+    base = {"overview": ui["exampleHeading"]}
+    for key in (
+        "usage", "api", "source", "copy", "copied", "copyError",
+        "light", "dark", "skip", "theme", "loadingLive", "failedLive",
+        "retryLive", "noScript", "onPage", "loadingPreview", "previewUnavailable",
+    ):
+        base[key] = ui[key]
+    return base
 
 
 def section_label(key, language):
-    return SECTIONS[key][language == "zh"]
+    return guide_ui(language)["sections"][key]
 
 
 def category_owners(catalog):
@@ -96,11 +87,11 @@ def category_label(category, owners, language):
     """An introduced category takes its guide's name, so the branch and its overview agree."""
     if category["id"] in owners:
         return owners[category["id"]]["name"][language]
-    return CATEGORY_NAMES_ZH.get(category["id"], category["title"]) if language == "zh" else category["title"]
+    return guide_ui(language)["categories"].get(category["id"], category["title"])
 
 
 def detail_path(component_id, language):
-    return ("zh-CN/" if language == "zh" else "") + f"api/{component_id}/index.html"
+    return locale_url_prefix(language) + f"api/{component_id}/index.html"
 
 
 def icon(name):
@@ -152,6 +143,8 @@ def component_directory(doc, documents, page, language):
     introductions = guides()
     category_guides = category_owners(doc['catalog'])
     active_category = available[doc['id']]['component']['category_id'] if doc['id'] in available else None
+    ui = guide_ui(language)
+    doc_lang = api_language(language)
 
     def group(key, label, entries, active=False, headers=False):
         attributes = (' open' if active else '') + (' data-header-group' if headers else '')
@@ -159,9 +152,9 @@ def component_directory(doc, documents, page, language):
 
     def guide_entry(item, overview=False):
         current = ' aria-current="page"' if item['id'] == doc['id'] else ''
-        label = ('概览' if language == 'zh' else 'Overview') if overview else item['name'][language]
+        label = ui['overview'] if overview else item['name'][language]
         accessible = f' aria-label="{escape(item["name"][language] + ": " + label)}"' if overview else ''
-        terms = ' '.join([item['id'], label, *item['name'].values(), *item['description'].values()])
+        terms = ' '.join(dict.fromkeys([item['id'], label, *item['name'].values(), item['description'][language]]))
         return f'<li data-directory-entry data-kind="guide" data-search="{escape(terms.lower())}"><a href="{relative_url(guide_path(item["id"], language), page)}"{accessible}{current}>{escape(label)}</a></li>'
 
     category_groups = {}
@@ -171,12 +164,16 @@ def component_directory(doc, documents, page, language):
         components = [c for c in doc["catalog"]["components"] if c["category_id"] == category["id"]]
         for component in sorted(components, key=lambda c: (c["id"] not in available, c["title"].lower())):
             documented = available.get(component["id"])
-            name = component["title"] + (" " + documented["name"]["zh"] if documented and language == "zh" else "")
-            url = relative_url(detail_path(component["id"], language), page) if documented else component["cpp"]["declaration_url"]
+            localized = localized_component(documented, doc_lang) if documented else None
+            name = display_component_title(component["title"], localized["name"], doc_lang) if localized else component["title"]
+            url = relative_url(detail_path(component["id"], doc_lang), page) if documented else component["cpp"]["declaration_url"]
             current = ' aria-current="page"' if component["id"] == doc["id"] else ''
             external = '' if documented else ' target="_blank" rel="noopener"'
             kind = '' if documented else '<span class="reference-kind">API</span>'
-            terms = ' '.join([name, component['id'], component['cpp']['qualified_type'], component['python']['import_statement']])
+            search_names = [name, component['id'], component['cpp']['qualified_type'], component['python']['import_statement']]
+            if documented:
+                search_names.extend([documented['name']['en'], documented['name']['zh']])
+            terms = ' '.join(dict.fromkeys(search_names))
             entries.append(f'<li data-directory-entry data-kind="component" data-search="{escape(terms.lower())}">'
                            f'<a data-component-id="{component["id"]}" href="{escape(url)}"{current}{external}><span>{escape(name)}</span>{kind}</a></li>')
         name = category_label(category, category_guides, language)
@@ -199,8 +196,9 @@ def component_directory(doc, documents, page, language):
         guide_groups[family] = group(family, section_label(family, language), entries, active)
 
     current = ' aria-current="page"' if doc['id'] == 'releases' else ''
-    label = '版本记录与迁移' if language == 'zh' else 'Releases and migrations'
-    project_link = f'<li data-directory-entry data-search="releases and migrations 版本记录与迁移"><a href="{relative_url(release_page_path("releases", language), page)}"{current}>{label}</a></li>'
+    label = ui['releasesAndMigrations']
+    project_terms = f'releases and migrations 版本记录与迁移 {label.lower()}'
+    project_link = f'<li data-directory-entry data-search="{escape(project_terms)}"><a href="{relative_url(release_page_path("releases", doc_lang), page)}"{current}>{escape(label)}</a></li>'
     core = [value for key, value in category_groups.items() if key not in category_guides]
     groups = [group('project', section_label('project', language), [project_link], doc['id'] == 'releases'),
               guide_groups['foundation'],
@@ -211,37 +209,39 @@ def component_directory(doc, documents, page, language):
     for reference in sorted(reference_headers(doc['catalog']), key=lambda item: item['title'].lower()):
         terms = ' '.join([reference['title'], *[r['qualified_name'] for r in reference['types']]])
         current = ' aria-current="page"' if reference['id'] == doc['id'] else ''
-        references.append(f'<li data-directory-entry data-kind="reference" data-search="{escape(terms.lower())}"><a href="{relative_url(reference_path(reference["source"], language), page)}"{current}><span>{escape(reference["title"])}</span></a></li>')
+        references.append(f'<li data-directory-entry data-kind="reference" data-search="{escape(terms.lower())}"><a href="{relative_url(reference_path(reference["source"], doc_lang), page)}"{current}><span>{escape(reference["title"])}</span></a></li>')
     groups.append(group('reference', section_label('reference', language), references, doc['component']['category_id'] == 'reference', headers=True))
-    search = '搜索文档' if language == 'zh' else 'Search documentation'
-    title = '目录与搜索' if language == 'zh' else 'Contents and search'
-    return f'''<details class="documentation-directory" open><summary>{title}</summary>
+    search = ui['searchDocumentation']
+    title = ui['contentsAndSearch']
+    return f'''<details class="documentation-directory" open><summary>{escape(title)}</summary>
       <div class="directory-content">
-      <label class="directory-search"><span class="visually-hidden">{search}</span><input type="search" data-directory-search placeholder="{search}" autocomplete="off" aria-keyshortcuts="Control+K Meta+K"></label>
-      <p class="directory-status" data-directory-status role="status" hidden></p>
-      <nav class="directory-groups" aria-label="{title}">{''.join(groups)}</nav></div></details>'''
+      <label class="directory-search"><span class="visually-hidden">{escape(search)}</span><input type="search" data-directory-search placeholder="{escape(search)}" autocomplete="off" aria-keyshortcuts="Control+K Meta+K"></label>
+      <p class="directory-status" data-directory-status role="status" hidden data-results-template="{escape(ui["resultsTemplate"])}" data-empty-label="{escape(ui["noResults"])}"></p>
+      <nav class="directory-groups" aria-label="{escape(title)}">{''.join(groups)}</nav></div></details>'''
 
 
-def picture(preview, page, language, eager=False):
+def picture(preview, page, language, eager=False, alt_text=None):
     light, dark = (preview["images"][theme] for theme in ("light", "dark"))
     def url(image):
         version = "?v=" + image["sha256"][:12] if image["sha256"] else ""
         return escape(relative(image["path"], page) + version)
     w, h = light["logical_size"]
     priority = ' fetchpriority="high"' if eager else ''
+    alt = alt_text if alt_text is not None else preview["alt"][language]
     return (f'<picture><source data-dark-src="{url(dark)}" media="(prefers-color-scheme: dark)" srcset="{url(dark)}">'
-            f'<img src="{url(light)}" width="{w}" height="{h}" alt="{escape(preview["alt"][language])}" '
+            f'<img src="{url(light)}" width="{w}" height="{h}" alt="{escape(alt)}" '
             f'loading="{"eager" if eager else "lazy"}" decoding="async"{priority}></picture>')
 
 
 def code_block(cpp, python, name, key, language):
-    words = WORDS[language]
+    words = shell_words(language)
+    copy_label = escape(words["copy"])
     tabs, panels = [], []
     for index, (kind, label, source) in enumerate((('cpp', 'C++', cpp), ('python', 'PySide6', python))):
         pid = key + '-' + kind
         tabs.append(f'<button type="button" role="tab" id="tab-{pid}" aria-controls="{pid}" aria-selected="{str(index == 0).lower()}" tabindex="{0 if index == 0 else -1}">{label}</button>')
         panels.append(f'<div role="tabpanel" id="{pid}" aria-labelledby="tab-{pid}"{" hidden" if index else ""}><pre tabindex="0"><code>{escape(source)}</code></pre></div>')
-    return f'<div class="code-example" data-tabs><div class="code-toolbar"><div class="tab-list" role="tablist" aria-label="{escape(name)}">{"".join(tabs)}</div><button class="copy-code" type="button" data-copy aria-label="{words["copy"]}">{icon("copy")}<span>{words["copy"]}</span></button></div>{"".join(panels)}</div>'
+    return f'<div class="code-example" data-tabs><div class="code-toolbar"><div class="tab-list" role="tablist" aria-label="{escape(name)}">{"".join(tabs)}</div><button class="copy-code" type="button" data-copy aria-label="{copy_label}">{icon("copy")}<span>{copy_label}</span></button></div>{"".join(panels)}</div>'
 
 
 def example_source(example, component, kind):
@@ -254,21 +254,30 @@ def example_source(example, component, kind):
 
 
 def api_search(language):
-    label = '筛选 API 成员' if language == 'zh' else 'Filter API members'
-    empty = '没有匹配的 API 成员。' if language == 'zh' else 'No matching API members.'
+    ui = guide_ui(language)
+    label = escape(ui['filterApi'])
+    empty = escape(ui['noApiMatches'])
     return f'<label class="api-search"><span class="visually-hidden">{label}</span><input type="search" data-api-filter placeholder="{label}" autocomplete="off"></label><p data-api-empty hidden role="status">{empty}</p>'
 
 
-def render_shell(doc, documents, page, language, title, description, body, toc, neighbors='', eyebrow=None, playground_toggle=''):
+def render_shell(doc, documents, page, language, title, description, body, toc, neighbors='', eyebrow=None, playground_toggle='', alternates=None):
     """Wrap a document body in the shared shell; non-component pages name their section above the title."""
-    words = WORDS[language]
+    words = shell_words(language)
     if eyebrow is None:
         eyebrow = section_label(doc['component']['category_id'], language)
-    alternate = page.removeprefix('zh-CN/') if language == 'zh' else 'zh-CN/' + page
-    values = {'lang': 'zh-CN' if language == 'zh' else 'en', 'title': escape(title),
+    if alternates is None:
+        base_rel = page.removeprefix(locale_url_prefix(language))
+        alternates = [
+            (loc.html_lang, BASE_URL + (loc.url_prefix + base_rel).removesuffix("index.html"))
+            for loc in LOCALES
+        ] + [("x-default", BASE_URL + base_rel.removesuffix("index.html"))]
+    alternate_links = '\n  '.join(
+        f'<link rel="alternate" hreflang="{escape(hreflang)}" href="{escape(url)}">'
+        for hreflang, url in alternates
+    )
+    values = {'lang': locale_by_key(language).html_lang, 'title': escape(title),
         'description': escape(description), 'canonical': BASE_URL + page.removesuffix('index.html'),
-        'alternate': BASE_URL + alternate.removesuffix('index.html'),
-        'alternate_lang': 'en' if language == 'zh' else 'zh-CN',
+        'alternate_links': alternate_links,
         'directory': component_directory(doc, documents, page, language), 'neighbors': neighbors,
         'style': asset('api/component.css', page), 'navigation_style': asset('api/navigation.css', page),
         'script': asset('api/component.js', page), 'site_navigation': site_navigation(page, language),
@@ -278,40 +287,43 @@ def render_shell(doc, documents, page, language, title, description, body, toc, 
         'eyebrow': f'<p class="document-eyebrow">{escape(eyebrow)}</p>' if eyebrow else '',
         'version_notice': document_notice(doc['id'], doc.get('source'), page, language),
         'body': body, 'page_navigation': ''.join(f'<a href="#{id}">{escape(label)}</a>' for id, label in toc)}
-    values.update(words)
+    values.update({key: escape(value) for key, value in words.items()})
     return Template((ROOT / 'tools/site/component.template.html').read_text(encoding="utf-8")).substitute(values)
 
 
 def render_document(doc, documents, language):
     component = doc['component']
     page = detail_path(doc['id'], language)
-    words = WORDS[language]
-    title = component['title'] + (' ' + doc['name'][language] if language == 'zh' else '')
+    ui = guide_ui(language)
+    words = shell_words(language)
+    localized = localized_component(doc, language)
+    title = display_component_title(component['title'], localized['name'], language)
     position = next(i for i, item in enumerate(documents) if item['id'] == doc['id'])
     neighbors = []
-    for index, rel, labels in ((position - 1, 'prev', ('Previous', '上一项')), (position + 1, 'next', ('Next', '下一项'))):
+    for index, rel, label in ((position - 1, 'prev', ui['previous']), (position + 1, 'next', ui['next'])):
         if 0 <= index < len(documents):
             item = documents[index]
             neighbors.append(f'<a class="document-neighbor" rel="{rel}" href="{relative_url(detail_path(item["id"], language), page)}">'
-                             f'<span>{labels[language == "zh"]}</span><strong>{escape(item["component"]["title"])}</strong></a>')
+                             f'<span>{escape(label)}</span><strong>{escape(item["component"]["title"])}</strong></a>')
     tabs, panels = [], []
     for i, preview in enumerate(doc['previews']):
         pid = 'state-' + preview['id']
-        tabs.append(f'<button type="button" role="tab" id="tab-{pid}" aria-controls="{pid}" data-sample="{escape(preview["sample"])}" data-state="{escape(preview["id"])}" aria-selected="{str(i == 0).lower()}" tabindex="{0 if i == 0 else -1}">{escape(preview["name"][language])}</button>')
-        panels.append(f'<div class="preview-panel" role="tabpanel" aria-labelledby="tab-{pid}" id="{pid}"{" hidden" if i else ""}>{picture(preview, page, language, i == 0)}</div>')
+        localized_preview = localized['previews'][preview['id']]
+        tabs.append(f'<button type="button" role="tab" id="tab-{pid}" aria-controls="{pid}" data-sample="{escape(preview["sample"])}" data-state="{escape(preview["id"])}" aria-selected="{str(i == 0).lower()}" tabindex="{0 if i == 0 else -1}">{escape(localized_preview["name"])}</button>')
+        panels.append(f'<div class="preview-panel" role="tabpanel" aria-labelledby="tab-{pid}" id="{pid}"{" hidden" if i else ""}>{picture(preview, page, language, i == 0, alt_text=localized_preview["alt"])}</div>')
     # The live example may grow to its sample's reported height, never below this.
     minimum = doc.get('minimum_preview_height', 196)
     playground = (ROOT / 'app/assets/playgrounds' / (doc['id'] + '.json')).is_file()
-    customize = '属性动态预览' if language == 'zh' else 'Property preview'
+    customize = escape(ui['propertyPreview'])
 
-    preview_values = {**words, 'component_id': doc['id'], 'runtime_url': relative('gallery/', page) + '/',
+    preview_values = {**{key: escape(value) for key, value in words.items()},
+        'component_id': doc['id'], 'runtime_url': relative('gallery/', page) + '/',
         'playground_attribute': (' data-playground data-playground-layout="data"' if doc['component']['category_id'] in ('charts', 'collections') else ' data-playground') if playground else '',
         'playground_toggle': (f'<button type="button" class="playground-toggle" data-playground-toggle '
                               f'aria-label="{customize}" aria-pressed="false" aria-expanded="false" '
                               f'aria-controls="playground-popover" hidden><span class="playground-icon playground-icon-pick" '
                               f'aria-hidden="true"></span><span>{customize}</span></button>') if playground else '',
-        'editor_error': '属性预览加载失败。请再次点击属性预览重试。' if language == 'zh' else
-                        'Property preview could not load. Select Property preview to retry.',
+        'editor_error': escape(ui['editorError']),
         'title': escape(title), 'preview_light': doc['previews'][0]['images']['light']['background'],
         'preview_dark': doc['previews'][0]['images']['dark']['background'],
         'preview_min': minimum, 'preview_height': min(720, max(minimum,
@@ -320,14 +332,15 @@ def render_document(doc, documents, language):
     body = Template((ROOT / 'tools/site/component-preview.template.html').read_text(encoding="utf-8")).substitute(preview_values)
     examples = []
     for i, example in enumerate(doc['examples']):
-        examples.append(f'<section class="usage-example" aria-labelledby="example-title-{i}"><h3 id="example-title-{i}">{escape(example["name"][language])}</h3><p>{escape(example["description"][language])}</p>'
+        localized_example = localized['examples'][example['sample']]
+        examples.append(f'<section class="usage-example" aria-labelledby="example-title-{i}"><h3 id="example-title-{i}">{escape(localized_example["name"])}</h3><p>{escape(localized_example["description"])}</p>'
             + code_block(example_source(example, component, 'cpp'), example_source(example, component, 'python'),
-                         example['name'][language], 'example-' + str(i), language) + '</section>')
-    body += f'<section id="usage" aria-labelledby="usage-title"><h2 id="usage-title">{words["usage"]}</h2>{"".join(examples)}</section>'
-    body += f'<section id="api" aria-labelledby="api-title"><div class="section-heading"><h2 id="api-title">API</h2><a href="{escape(component["cpp"]["declaration_url"])}">{words["source"]} {icon("external")}</a></div>'
+                         localized_example['name'], 'example-' + str(i), language) + '</section>')
+    body += f'<section id="usage" aria-labelledby="usage-title"><h2 id="usage-title">{escape(words["usage"])}</h2>{"".join(examples)}</section>'
+    body += f'<section id="api" aria-labelledby="api-title"><div class="section-heading"><h2 id="api-title">API</h2><a href="{escape(component["cpp"]["declaration_url"])}">{escape(words["source"])} {icon("external")}</a></div>'
     body += api_search(language) + component_api(component, doc['catalog'], page, language) + '</section>'
     category = next(c for c in doc['catalog']['categories'] if c['id'] == component['category_id'])
-    return render_shell(doc, documents, page, language, title, doc['description'][language], body,
+    return render_shell(doc, documents, page, language, title, localized['description'], body,
                         [('appearance', words['overview']), ('usage', words['usage']), ('api', 'API')], ''.join(neighbors),
                         eyebrow=category_label(category, category_owners(doc['catalog']), language),
                         playground_toggle=preview_values['playground_toggle'])
@@ -337,25 +350,25 @@ def render_guide(guide, documents, catalog, language):
     page = guide_path(guide['id'], language)
     context = {'id': guide['id'], 'catalog': catalog, 'component': {'category_id': guide['group']}}
     available = {item['id']: item for item in documents}
+    ui = guide_ui(language)
+    doc_lang = api_language(language)
     body, toc = [], []
     if guide['id'] == 'foundation':
-        heading = '组件属性预览' if language == 'zh' else 'Component property preview'
-        copy = ('调整组件属性，然后复制对应的 C++ 或 PySide6 代码。'
-                if language == 'zh' else
-                'Adjust component properties and copy the corresponding C++ or PySide6 code.')
-        primary = '预览 CheckBox' if language == 'zh' else 'Preview CheckBox'
-        primary_url = relative_url(detail_path('checkbox', language) + '?playground=1', page)
+        heading = ui['playgroundHeading']
+        copy = ui['playgroundCopy']
+        primary = ui['playgroundPrimary']
+        primary_url = relative_url(detail_path('checkbox', doc_lang) + '?playground=1', page)
         other_previews = ('button', 'combobox', 'data-grid', 'line-chart', 'spatial-view', 'particle-backdrop', 'qml-view')
         pills = ''.join(
-            f'<a class="guide-playground-pill" href="{escape(relative_url(detail_path(cid, language) + "?playground=1", page))}">{escape(available[cid]["component"]["title"])}</a>'
+            f'<a class="guide-playground-pill" href="{escape(relative_url(detail_path(cid, doc_lang) + "?playground=1", page))}">{escape(available[cid]["component"]["title"])}</a>'
             for cid in other_previews if cid in available
         )
         body.append(
             f'<aside class="guide-playground-banner" aria-labelledby="guide-playground-title">'
-            f'<h2 id="guide-playground-title">{heading}</h2>'
-            f'<p>{copy}</p>'
+            f'<h2 id="guide-playground-title">{escape(heading)}</h2>'
+            f'<p>{escape(copy)}</p>'
             f'<div class="guide-playground-actions">'
-            f'<a class="guide-playground-primary" href="{escape(primary_url)}">{primary}</a>'
+            f'<a class="guide-playground-primary" href="{escape(primary_url)}">{escape(primary)}</a>'
             f'<div class="guide-playground-pills">{pills}</div>'
             f'</div></aside>'
         )
@@ -363,27 +376,25 @@ def render_guide(guide, documents, catalog, language):
         category_components = [c for c in catalog['components']
                                if c['category_id'] == guide['component_category'] and c['id'] in available]
         if category_components:
-            heading = '本模块的组件' if language == 'zh' else 'Components in this module'
-            copy = ('打开组件文档，或直接调整属性并复制代码。'
-                    if language == 'zh' else
-                    'Open the documentation or try a component and copy its code.')
-            cta_label = '属性动态预览' if language == 'zh' else 'Property preview'
+            heading = ui['moduleHeading']
+            copy = ui['moduleCopy']
+            cta_label = ui['propertyPreview']
             rows = []
             for comp in category_components:
                 doc = available[comp['id']]
-                name = comp['title'] + (' ' + doc['name']['zh'] if language == 'zh' else '')
-                doc_url = relative_url(detail_path(comp['id'], language), page)
-                pg_url = relative_url(detail_path(comp['id'], language) + '?playground=1', page)
+                name = display_component_title(comp['title'], localized_component(doc, doc_lang)['name'], doc_lang)
+                doc_url = relative_url(detail_path(comp['id'], doc_lang), page)
+                pg_url = relative_url(detail_path(comp['id'], doc_lang) + '?playground=1', page)
                 rows.append(
                     f'<div class="guide-module-item">'
                     f'<a class="guide-module-doc" href="{escape(doc_url)}">{escape(name)}</a>'
-                    f'<a class="guide-playground-pill" href="{escape(pg_url)}">{cta_label}</a>'
+                    f'<a class="guide-playground-pill" href="{escape(pg_url)}">{escape(cta_label)}</a>'
                     f'</div>'
                 )
             body.append(
                 f'<aside class="guide-playground-banner guide-module-banner" aria-labelledby="guide-playground-title">'
-                f'<h2 id="guide-playground-title">{heading}</h2>'
-                f'<p>{copy}</p>'
+                f'<h2 id="guide-playground-title">{escape(heading)}</h2>'
+                f'<p>{escape(copy)}</p>'
                 f'<div class="guide-module-components">{"".join(rows)}</div>'
                 f'</aside>'
             )
@@ -399,13 +410,17 @@ def render_guide(guide, documents, catalog, language):
         if records:
             record = primary_type(records, source) or records[0]
             label = source.rsplit('/', 1)[-1].removesuffix('.h')
-            references.append(f'<li><a href="{escape(type_url(record, catalog, page, language))}"><code>{escape(label)}</code></a></li>')
-    title = 'API 参考' if language == 'zh' else 'API reference'
-    body.append(f'<section class="guide-section" id="api"><h2>{title}</h2><ul class="reference-links">{"".join(references)}</ul></section>')
+            references.append(f'<li><a href="{escape(type_url(record, catalog, page, doc_lang))}"><code>{escape(label)}</code></a></li>')
+    title = ui['apiReference']
+    body.append(f'<section class="guide-section" id="api"><h2>{escape(title)}</h2><ul class="reference-links">{"".join(references)}</ul></section>')
     if guide['id'] == 'foundation-qt':
         body.append('<p><a href="https://doc.qt.io/qt-6/qtcore-index.html">Qt Core</a> · <a href="https://doc.qt.io/qt-6/qwidget.html">QWidget</a></p>')
     toc.append(('api', title))
-    return render_shell(context, documents, page, language, guide['name'][language], guide['description'][language], ''.join(body), toc)
+    alternates = [
+        (loc.html_lang, BASE_URL + guide_path(guide['id'], loc.key).removesuffix('index.html'))
+        for loc in LOCALES
+    ] + [('x-default', BASE_URL + guide_path(guide['id'], 'en').removesuffix('index.html'))]
+    return render_shell(context, documents, page, language, guide['name'][language], guide['description'][language], ''.join(body), toc, alternates=alternates)
 
 
 def render_reference(reference, documents, catalog, language):
@@ -414,7 +429,7 @@ def render_reference(reference, documents, catalog, language):
     # Lead with the header's namesake type; a helper struct's brief would misdescribe the page.
     primary = primary_type(reference['types'], reference['source'])
     lead = localized_description(primary, language) if primary else ''
-    fallback = '本头文件包含的类型、函数与常量。' if language == 'zh' else 'Public types, functions, and constants declared in this header.'
+    fallback = guide_ui(language)['headerFallback']
     description = lead or fallback
     body = '<section id="api" class="reference-body">' + api_search(language)
     body += ''.join(render_type(record, catalog, page, language, include_inherited=True,
@@ -429,25 +444,42 @@ def generated_outputs(documents):
     from release_history import load_history, validate_related_documents
     validate_related_documents(load_history(), [d['id'] for d in documents] + [g['id'] for g in guides()])
     outputs = {'assets/app-icon-64.png': site_icon()}
-    for language, entry in (('en', 'api/index.html'), ('zh', 'zh-CN/api/index.html')):
-        redirects = [{'names': [d['id'], d['name']['en'], d['name']['zh']],
-                      'urls': {lang: relative_url(detail_path(d['id'], lang), entry) for lang in ('en', 'zh')}} for d in documents]
+    api_template = Template((ROOT / 'tools/site/api-entry.template.html').read_text(encoding="utf-8"))
+    supported_languages = json.dumps(list(LOCALE_KEYS))
+    release_names = list(dict.fromkeys([
+        'releases', 'Changelog', 'roadmap', '版本记录', '更新日志', '路线图',
+        *(guide_ui(lang)['releasesAndMigrations'] for lang in LOCALE_KEYS),
+    ]))
+    for loc in LOCALES:
+        language = loc.key
+        entry = f'{loc.url_prefix}api/index.html'
+        redirects = [{'names': list(dict.fromkeys([
+                          d['id'], d['component']['title'], d['name']['en'], d['name']['zh'],
+                          *(localized_component(d, lang)['name'] for lang in LOCALE_KEYS),
+                      ])),
+                      'urls': {lang: relative_url(detail_path(d['id'], api_language(lang)), entry) for lang in LOCALE_KEYS}} for d in documents]
         introductions = [{'names': [g['id'], *g['name'].values()],
-            'urls': {lang: relative_url(guide_path(g['id'], lang), entry) for lang in ('en', 'zh')}} for g in guides()]
+            'urls': {lang: relative_url(guide_path(g['id'], lang), entry) for lang in LOCALE_KEYS}} for g in guides()]
         redirects = introductions + redirects
-        redirects.append({'names': ['releases', '版本记录', '更新日志', 'Changelog', 'roadmap', '路线图'],
-                          'urls': {lang: relative_url(release_page_path('releases', lang), entry) for lang in ('en', 'zh')},
+        redirects.append({'names': release_names,
+                          'urls': {lang: relative_url(release_page_path('releases', api_language(lang)), entry) for lang in LOCALE_KEYS},
                           'filterDirectory': False})
-        outputs[entry] = Template((ROOT / 'tools/site/api-entry.template.html').read_text(encoding="utf-8")).substitute(
-            lang='zh-CN' if language == 'zh' else 'en', default_language=language,
+        fallback_links = ' · '.join(
+            f'<a href="{escape(redirects[0]["urls"][target.key])}">{escape(target.native_name)}</a>'
+            for target in LOCALES
+        )
+        outputs[entry] = api_template.substitute(
+            lang=loc.html_lang, default_language=language,
+            supported_languages=supported_languages,
             canonical=BASE_URL + guide_path('foundation', language).removesuffix('index.html'),
             documents=json.dumps(redirects, ensure_ascii=False).replace('<', '\\u003c'),
-            english=redirects[0]['urls']['en'], chinese=redirects[0]['urls']['zh'])
-    for language in ('en', 'zh'):
-        for doc in documents:
-            outputs[detail_path(doc['id'], language)] = render_document(doc, documents, language)
+            fallback_links=fallback_links)
+    for language in LOCALE_KEYS:
         for guide in guides():
             outputs[guide_path(guide['id'], language)] = render_guide(guide, documents, catalog, language)
+    for language in FULL_API_LOCALES:
+        for doc in documents:
+            outputs[detail_path(doc['id'], language)] = render_document(doc, documents, language)
         for reference in reference_headers(catalog):
             outputs[reference_path(reference['source'], language)] = render_reference(reference, documents, catalog, language)
     from release_pages import generated_outputs as release_outputs

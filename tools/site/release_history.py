@@ -12,6 +12,8 @@ import re
 from datetime import datetime
 from functools import lru_cache
 
+from site_locales import locale_url_prefix
+
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = 'tools/site/release-history.json'
 REPOSITORY = 'https://github.com/calvinhxx/Fluent-Qt'
@@ -192,7 +194,7 @@ def load_history(root=ROOT):
 
 
 def page_path(kind, language='en'):
-    return ('zh-CN/' if language == 'zh' else '') + f'api/{kind}/index.html'
+    return locale_url_prefix(language) + f'api/{kind}/index.html'
 
 
 def validate_related_documents(data, document_ids):
