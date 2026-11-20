@@ -18,7 +18,7 @@
       <stop offset="0.45" stop-color="#eeeef5" />
       <stop offset="1" stop-color="#9397a6" />
     </radialGradient>
-    <radialGradient id="wheelLight">
+    <radialGradient id="wheelLight" cx="0.5" cy="0.5" r="0.5">
       <stop stop-color="#fff" stop-opacity="0.9" />
       <stop offset="1" stop-color="#fff" stop-opacity="0" />
     </radialGradient>
