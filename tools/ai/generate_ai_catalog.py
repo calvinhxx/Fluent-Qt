@@ -440,11 +440,11 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
 
         control_image = (
             project_root
-            / "app"
-            / "assets"
-            / "control_images"
+            / "tools"
+            / "gallery"
+            / "artwork"
             / category_id
-            / f"{component['title']}.png"
+            / f"{component['title']}.svg"
         )
         sample_source = (
             Path("app")

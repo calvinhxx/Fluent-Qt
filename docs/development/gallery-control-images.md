@@ -8,8 +8,7 @@
 [← AI-assisted GUI verification](gui-verification-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Tooltip Usage →](tooltip-usage.md)
 <!-- docs-nav:top:end -->
 
-Rules for Gallery component-card artwork under
-`app/assets/control_images/`.
+The Gallery uses the SVG masters in `tools/gallery/artwork/` for component cards.
 
 ## When to Use
 
@@ -20,7 +19,7 @@ Rules for Gallery component-card artwork under
 ## File Layout
 
 - Master: `tools/gallery/artwork/<category-id>/<Title>.svg`
-- Export: `app/assets/control_images/<category-id>/<Title>.png`
+- Optional PNG export: `build/gallery-artwork/control_images/<category-id>/<Title>.png`
 - Every PNG has one matching SVG master with the same category and title.
   `Placeholder.svg` and `Placeholder.png` sit directly in their respective roots.
 - `<category-id>` matches `GalleryComponentCategory.id`
@@ -32,8 +31,8 @@ Rules for Gallery component-card artwork under
   `../tools/gallery/artwork/<category-id>/<Title>.svg` source path.
 - Resolve images through `galleryControlImageResource()`; do not hard-code
   fallbacks that reuse unrelated category artwork
-- Edit the SVG master and regenerate its PNG. C++, Python, and WebAssembly
-  display and package the SVG masters; PNGs remain checked-in exports.
+- C++, Python, WebAssembly and the AI catalog use the SVG masters. Generate
+  PNGs in the build directory for pixel inspection or external use.
 - Masters contain self-contained vector geometry on a `0 0 72 72` view box.
   Outline text before saving; embedded bitmaps, external references, and live
   font-dependent text are rejected by the exporter.
@@ -98,12 +97,9 @@ control.
 1. Match the category color family above.
 2. Keep the motif simple enough to read at 72 × 72.
 3. Save an editable SVG under the matching `artwork/<category-id>/` folder.
-4. Export the PNG with the shared tool below. Canvas corners remain alpha 0
-   and curved edges retain partial coverage.
-5. Keep the export under the matching `control_images/<category-id>/` folder.
-6. Register the SVG master and its runtime alias in `app/gallery_resources.qrc`.
-7. Rebuild Gallery and confirm the card image on light and dark chrome.
-8. Run the source/export freshness check and the canvas/resource audit below.
+4. Register the SVG master and its runtime alias in `app/gallery_resources.qrc`.
+5. Rebuild Gallery and confirm the card image on light and dark chrome.
+6. Run the SVG resource validator. For a pixel review, export the PNGs and run the canvas audit below.
 
 ## Export All Categories
 
@@ -128,7 +124,7 @@ python3 tools/gallery/export_control_images.py --check navigation/Stepper
 missing PNGs and PNGs without a corresponding master. The canvas audit also
 checks source coverage and registration in `app/gallery_resources.qrc`.
 The shared CI and release preflight run `validate_control_artwork.py` without
-Qt or Pillow to check SVG compatibility, paired export coverage, resource
+Qt or Pillow to check SVG compatibility, resource
 aliases, and duplicate registrations. Pixel freshness and alpha checks use
 the tools above in the matched development environment.
 All categories use this exporter; category-specific drawing scripts are not

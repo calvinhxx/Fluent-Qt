@@ -17,12 +17,10 @@ class ArtworkValidationTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         self.source = self.root / "tools/gallery/artwork/navigation/Stepper.svg"
-        self.output = self.root / "app/assets/control_images/navigation/Stepper.png"
         self.qrc = self.root / "app/gallery_resources.qrc"
         self.source.parent.mkdir(parents=True)
-        self.output.parent.mkdir(parents=True)
+        self.qrc.parent.mkdir(parents=True)
         self.source.write_text(SVG)
-        self.output.touch()
         self.resources(ENTRY)
 
     def resources(self, entries, prefix="/app"):
@@ -30,12 +28,6 @@ class ArtworkValidationTest(unittest.TestCase):
 
     def test_mirrored_sources_and_correct_runtime_alias_pass(self):
         self.assertEqual(validate(self.root), [])
-
-    def test_missing_export_and_orphaned_png_fail(self):
-        self.output.unlink()
-        self.assertTrue(any("missing PNG export" in error for error in validate(self.root)))
-        self.output.with_name("Unknown.png").touch()
-        self.assertTrue(any("without SVG masters" in error for error in validate(self.root)))
 
     def test_missing_registration_and_duplicate_registration_fail(self):
         self.resources("")

@@ -152,7 +152,6 @@ def main(argv=None):
         "GitHub-Mark.png",
         "Header-Toolkit.png",
         "Header-WindowsDesign.png",
-        "Header-WinUI.png",
         "Qt-Logo.png",
     }
     actual_home_tiles = {

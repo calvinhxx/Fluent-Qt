@@ -135,6 +135,8 @@ configure_file("${_gallery_release_history}"
 install(FILES "${_gallery_release_history}" DESTINATION fluentqt_gallery/assets
     COMPONENT FluentQtPySide6Gallery EXCLUDE_FROM_ALL)
 list(APPEND FLUENTQT_PYSIDE6_GALLERY_SOURCE_PATHS "${_gallery_release_history}")
+# Remove retired tiles from incremental build-tree packages.
+file(REMOVE "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/home_header_tiles/Header-WinUI.png")
 file(GLOB_RECURSE FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES
     CONFIGURE_DEPENDS
     "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/home_header_tiles/*.png")
