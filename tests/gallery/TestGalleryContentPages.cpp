@@ -2000,6 +2000,17 @@ TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
     }
 }
 
+TEST_F(GalleryContentPagesTest, ColorPickerArtworkRetainsLightCenterAndSaturatedRim)
+{
+    const QString resource = galleryControlImageResource(QStringLiteral("ColorPicker"));
+    const QImage wheel = fluent::gallery::galleryArtworkPixmap(resource, QSize(36, 36), 2).toImage();
+    ASSERT_EQ(wheel.size(), QSize(72, 72));
+    const QColor center = wheel.pixelColor(36, 36);
+    EXPECT_GT(center.lightness(), 220);
+    EXPECT_LT(center.saturation(), 45);
+    EXPECT_GT(wheel.pixelColor(60, 36).saturation(), 120);
+}
+
 TEST_F(GalleryContentPagesTest, SvgArtworkUsesDisplayResolutionAndReusesCachedPixels)
 {
     const QString resource = galleryControlImageResource(QStringLiteral("Timeline"));
