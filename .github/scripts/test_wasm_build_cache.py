@@ -66,6 +66,15 @@ class WasmBuildCacheTest(unittest.TestCase):
                 self.write(path, 'updated publication state or website prose')
                 self.assertEqual(cache.fingerprint(self.root, self.toolchain), self.inputs)
 
+    def test_localized_root_readmes_do_not_change_build_identity(self):
+        for locale in ('zh-CN', 'zh-TW', 'ja', 'ko', 'de', 'ru', 'es', 'fr'):
+            path = f'README.{locale}.md'
+            with self.subTest(path=path):
+                self.write(path, 'Translation')
+                self.git('add', path)
+                self.write(path, 'Corrected translation')
+                self.assertEqual(cache.fingerprint(self.root, self.toolchain), self.inputs)
+
     def test_complete_runtime_sdk_and_toolchain_inputs_invalidate(self):
         self.assertIn('tools/site/release-history.json', self.inputs['inputs']['files'])
         for path in self.inputs['inputs']['files']:
