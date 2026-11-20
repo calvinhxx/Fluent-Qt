@@ -2,16 +2,43 @@
 
 // Picking borrows the existing example. All edits belong to a separate Qt preview.
 window.FluentQtPlayground = {
-  create(root, transport) {
+  create(root, transport, i18n = null) {
     if (!root.hasAttribute('data-playground')) return null;
     const zh = document.documentElement.lang === 'zh-CN';
-    const words = zh ? {
+    const baseWords = zh ? {
       preview: '属性动态预览',
       close: '关闭预览', more: '更多属性', reset: '重置属性', copy: '复制代码', copied: '已复制',
       copying: '复制中…', failed: '复制失败，请重试。', loading: '正在加载预览…',
       unavailable: '预览暂时无法加载', retry: '重新尝试', invalid: '输入无效，未应用这次修改。',
       search: '查找属性或 API', follow: '跟随主题', empty: '没有匹配的属性', language: '代码语言',
       numeric: '请输入有效数字。', noTargets: '当前示例没有可选取的组件。',
+      interactivePreview: '交互预览', propertyCategories: '属性分类',
+      catBasic: '基础属性', catIconLayout: '图标与布局', catAppearance: '交互与外观',
+      catIcons: '图标', catLayout: '布局', sourceCode: '源码预览',
+      resizeSplit: '调整左右两栏宽度', dragSplit: '拖拽调整左右栏宽度',
+      previewView: '预览视图', properties: '属性', code: '代码',
+      clear: '清除', am: '上午', pm: '下午', time12Template: '{period} {time}',
+      yearMonthTemplate: '{year}年{month}月', shortMonthTemplate: '{month}月', yearLabelTemplate: '{year}年',
+      monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+      shortMonths: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+      weekdays: ['日', '一', '二', '三', '四', '五', '六'], firstDayOfWeek: 1,
+      zoomOutCalendar: '切换日历视图层级', previous: '上一页', next: '下一页',
+      hour: '时', minute: '分', amPm: '时段', today: '今天', confirm: '确定', cancel: '取消',
+      notSet: '未设置', noSelection: '未选择', pageTemplate: '第 {page} 页',
+      node: '节点', removeRow: '删除行', addRow: '添加一行',
+      ascendingXError: 'X 值应按从小到大排列', removeRowTemplate: '删除第 {row} 行',
+      checkableHint: '开启后变为开关按钮（Toggle Button），通过下方“已选中”属性查看效果',
+      focusVisualHint: '通过 Tab 或点击让组件获得焦点，观察焦点边框。',
+      displayText: '显示文字', useSameText: '改用相同文字', differentTextPerState: '按状态分别设置',
+      mainIcon: '主图标', icon: '图标', dropdownIndicator: '下拉箭头', queryIcon: '查询图标',
+      eventClicked: '点击', eventToggled: '切换', eventBrowseRequested: '已触发选择文件请求', eventFilesDropped: '收到拖放文件',
+      fixedRangeHint: '当前范围只有一个可选值；先调整范围或最小间距。',
+      hoverHint: '将鼠标移到组件上查看悬停效果。',
+      chooseMainIconHint: '选择主图标后可调整位置、旋转和缩放。',
+      enterGlyphHint: '填写图标字形后可调整大小、旋转和颜色。',
+      textOnlyIconHint: '当前为仅文字布局；切换为显示图标的布局后可调整图标效果。',
+      stackedIconHint: '将图标置于文字上方或下方后可调整旋转和缩放。',
+      chooseDropdownHint: '选择下拉箭头后可调整大小和位置。',
       options: {ChevronDown: '向下', ChevronUp: '向上', ChevronRight: '向右', Standard: '标准', Accent: '强调', Subtle: '轻量', Small: '小', StandardSize: '默认', Medium: '中', Large: '大', ExtraLarge: '特大', None: '无', Add: '加号', CheckMark: '对勾', Save: '保存', FavoriteStar: '星标', Settings: '设置', Search: '搜索', Mail: '邮件', Home: '主页', Document: '文档', Info: '信息', Warning: '警告', ErrorBadge12: '错误', TextOnly: '仅文字', IconBefore: '图标在前', IconAfter: '图标在后', IconOnly: '仅图标', IconAbove: '图标在上', IconBelow: '图标在下', Rest: '默认', Hover: '悬停', Pressed: '按下', Disabled: '禁用', Unchecked: '未选中', PartiallyChecked: '部分选中', Checked: '已选中', Horizontal: '水平', Vertical: '垂直', NoTicks: '无刻度', TicksAbove: '上方刻度', TicksBelow: '下方刻度', TicksLeft: '左侧刻度', TicksRight: '右侧刻度', TicksBothSides: '双侧刻度', Peek: '点击预览', Hidden: '隐藏', Visible: '始终显示', Left: '左侧', Right: '右侧', Leading: '首端', Trailing: '尾端', Single: '单选', Multiple: '多选', Extended: '扩展多选', Compact: '紧凑', Inline: '行内', Caption: '辅助说明', Body: '正文', BodyStrong: '正文加粗', BodyLarge: '大号正文', BodyLargeStrong: '大号正文加粗', Subtitle: '副标题', Title: '标题', TitleLarge: '大标题', Display: '展示标题', ElideLeft: '左侧省略', ElideRight: '右侧省略', ElideMiddle: '中间省略', ElideNone: '不省略', Auto: '自动', Automatic: '自动', Stacked: '上下堆叠', Circular: '圆形', Square: '方形', Available: '在线', Away: '离开', Busy: '忙碌', DoNotDisturb: '请勿打扰', Offline: '离线', Dot: '圆点', Icon: '图标', Value: '数值', Informational: '通知', Attention: '关注', Caution: '警告', Success: '成功', Critical: '严重', Error: '错误', Validating: '校验中', Running: '运行中', Paused: '已暂停', Branded: '品牌样式', Simple: '简洁样式', Custom: '自定义', ImageCard: '图文卡片', AvatarTextRow: '头像文本行', TextBlock: '文本块', Top: '顶部', TopStart: '左上角', TopEnd: '右上角', Bottom: '底部', BottomStart: '左下角', BottomEnd: '右下角', TopLeft: '上左', TopRight: '上右', BottomLeft: '下左', BottomRight: '下右', LeftTop: '左上', LeftBottom: '左下', RightTop: '右上', RightBottom: '右下', Full: '居中/全幅', Day: '日', Month: '月', Year: '年', Monday: '周一', Tuesday: '周二', Wednesday: '周三', Thursday: '周四', Friday: '周五', Saturday: '周六', Sunday: '周日', FullMonthName: '完整月份', AbbreviatedMonthName: '缩写月份', NumericMonth: '数字月份', TwoDigitMonth: '两位月份', DayInteger: '日期数字', TwoDigitDay: '两位日期', DayIntegerWithAbbreviatedWeekday: '日期与星期', FullYear: '完整年份', TwoDigitYear: '两位年份', TwelveHourClock: '12 小时制', TwentyFourHourClock: '24 小时制', Layer: '默认层', LayerAlt: '交替层', Canvas: '画布底色', Beginning: '开头省略', Middle: '中间省略', List: '列表', Detail: '详情', LeftCompact: '左侧紧凑', LeftMinimal: '左侧极简', ScrollButtons: '滚动按钮', MoreButton: '更多按钮', Equal: '等宽', SizeToContent: '自适应内容', OnHover: '悬停显示', Always: '始终显示', Manual: '手动', Contain: '适应内容', ScaleDown: '缩小适应', Zoom: '缩放', Pan: '平移', Collapsed: '折叠', VisibleOnPointerOver: '悬停显示', FastTransformation: '快速采样', SmoothTransformation: '平滑采样', Line: '折线图', Area: '面积图', Bar: '柱状图', HorizontalBar: '条形图', Pie: '饼图', Donut: '环形图', Scatter: '散点图', Sparkline: '迷你图', Alternate: '交替', SlideFade: '滑动淡入', ScaleFade: '缩放淡入', Immediate: '立即切换', Transient: '轻量模式', Solid: '纯色', Transparent: '透明背景', FlowingRibbons: '流动光带', FloatingDots: '漂浮光点', Starfield: '星空穿梭', Raster: 'CPU 光栅', OpenGL: 'OpenGL 硬件', Mica: '云母 (Mica)', Acrylic: '亚克力 (Acrylic)', Design: '设计', Engineering: '工程', Research: '研究'}
     } : {
       preview: 'Property preview',
@@ -20,9 +47,39 @@ window.FluentQtPlayground = {
       unavailable: 'Preview could not load', retry: 'Try again', invalid: 'Invalid input. This change was not applied.',
       search: 'Find a property or API', follow: 'Follow theme', empty: 'No matching properties', language: 'Code language',
       numeric: 'Enter a valid number.', noTargets: 'No editable components in this example.',
+      interactivePreview: 'interactive preview', propertyCategories: 'Property categories',
+      catBasic: 'Basic', catIconLayout: 'Icon & Layout', catAppearance: 'Style & State',
+      catIcons: 'Icons', catLayout: 'Layout', sourceCode: 'Source Code',
+      resizeSplit: 'Resize split panes', dragSplit: 'Drag to resize panes',
+      previewView: 'Preview view', properties: 'Properties', code: 'Code',
+      clear: 'Clear', am: 'AM', pm: 'PM', time12Template: '{time} {period}',
+      yearMonthTemplate: '{monthName} {year}', shortMonthTemplate: '{shortMonth}', yearLabelTemplate: '{year}',
+      monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      shortMonths: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      weekdays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'], firstDayOfWeek: 0,
+      zoomOutCalendar: 'Zoom out calendar level', previous: 'Previous', next: 'Next',
+      hour: 'Hour', minute: 'Min', amPm: 'AM/PM', today: 'Today', confirm: 'Confirm', cancel: 'Cancel',
+      notSet: 'Not set', noSelection: 'No selection', pageTemplate: 'Page {page}',
+      node: 'Node', removeRow: 'Remove row', addRow: 'Add row',
+      ascendingXError: 'Keep X values in ascending order', removeRowTemplate: 'Remove row {row}',
+      checkableHint: 'Enables toggle button behavior. Toggle "Checked" below to see the active state.',
+      focusVisualHint: 'Focus the component with Tab or a click to inspect its focus ring.',
+      displayText: 'Display text', useSameText: 'Use the same text', differentTextPerState: 'Set different text for each state',
+      mainIcon: 'Main icon', icon: 'Icon', dropdownIndicator: 'Dropdown indicator', queryIcon: 'Query icon',
+      eventClicked: 'clicked', eventToggled: 'toggled', eventBrowseRequested: 'browseRequested', eventFilesDropped: 'filesDropped',
+      fixedRangeHint: 'Only one value fits. Adjust the bounds or minimum separation first.',
+      hoverHint: 'Move the pointer over the component to see its hover effect.',
+      chooseMainIconHint: 'Choose a main icon to adjust its placement and transforms.',
+      enterGlyphHint: 'Enter a glyph to adjust its size, rotation and color.',
+      textOnlyIconHint: 'Text only hides the icon. Choose an icon layout to adjust its transforms.',
+      stackedIconHint: 'Place the icon above or below the text to adjust rotation and scale.',
+      chooseDropdownHint: 'Choose a dropdown indicator to adjust its size and position.',
       options: {ChevronDown: 'Down', ChevronUp: 'Up', ChevronRight: 'Right', Standard: 'Standard', Accent: 'Accent', Subtle: 'Subtle', Small: 'Small', StandardSize: 'Default', Medium: 'Medium', Large: 'Large', ExtraLarge: 'Extra large', None: 'None', Add: 'Add', CheckMark: 'CheckMark', Save: 'Save', FavoriteStar: 'Favorite star', Settings: 'Settings', Search: 'Search', Mail: 'Mail', Home: 'Home', Document: 'Document', Info: 'Info', Warning: 'Warning', ErrorBadge12: 'Error badge', TextOnly: 'Text only', IconBefore: 'Icon before text', IconAfter: 'Icon after text', IconOnly: 'Icon only', IconAbove: 'Icon above text', IconBelow: 'Icon below text', Rest: 'Rest', Hover: 'Hover', Pressed: 'Pressed', Disabled: 'Disabled', Unchecked: 'Unchecked', PartiallyChecked: 'Partially checked', Checked: 'Checked', Horizontal: 'Horizontal', Vertical: 'Vertical', NoTicks: 'No ticks', TicksAbove: 'Ticks above', TicksBelow: 'Ticks below', TicksLeft: 'Ticks left', TicksRight: 'Ticks right', TicksBothSides: 'Both sides', Peek: 'Peek', Hidden: 'Hidden', Visible: 'Visible', Left: 'Left', Right: 'Right', Leading: 'Leading', Trailing: 'Trailing', Single: 'Single', Multiple: 'Multiple', Extended: 'Extended', Compact: 'Compact', Inline: 'Inline', Caption: 'Caption', Body: 'Body', BodyStrong: 'Body strong', BodyLarge: 'Body large', BodyLargeStrong: 'Body large strong', Subtitle: 'Subtitle', Title: 'Title', TitleLarge: 'Title large', Display: 'Display', ElideLeft: 'Elide left', ElideRight: 'Elide right', ElideMiddle: 'Elide middle', ElideNone: 'No elide', Auto: 'Auto', Automatic: 'Automatic', Stacked: 'Stacked', Circular: 'Circular', Square: 'Square', Available: 'Available', Away: 'Away', Busy: 'Busy', DoNotDisturb: 'Do not disturb', Offline: 'Offline', Dot: 'Dot', Icon: 'Icon', Value: 'Value', Informational: 'Informational', Attention: 'Attention', Caution: 'Caution', Success: 'Success', Critical: 'Critical', Error: 'Error', Validating: 'Validating', Running: 'Running', Paused: 'Paused', Branded: 'Branded', Simple: 'Simple', Custom: 'Custom', ImageCard: 'Image card', AvatarTextRow: 'Avatar & text', TextBlock: 'Text block', Top: 'Top', TopStart: 'Top start', TopEnd: 'Top end', Bottom: 'Bottom', BottomStart: 'Bottom start', BottomEnd: 'Bottom end', TopLeft: 'Top left', TopRight: 'Top right', BottomLeft: 'Bottom left', BottomRight: 'Bottom right', LeftTop: 'Left top', LeftBottom: 'Left bottom', RightTop: 'Right top', RightBottom: 'Right bottom', Full: 'Full / Center', Day: 'Day', Month: 'Month', Year: 'Year', Monday: 'Monday', Tuesday: 'Tuesday', Wednesday: 'Wednesday', Thursday: 'Thursday', Friday: 'Friday', Saturday: 'Saturday', Sunday: 'Sunday', FullMonthName: 'Full month name', AbbreviatedMonthName: 'Abbreviated month', NumericMonth: 'Numeric month', TwoDigitMonth: 'Two-digit month', DayInteger: 'Day integer', TwoDigitDay: 'Two-digit day', DayIntegerWithAbbreviatedWeekday: 'Day & weekday', FullYear: 'Full year', TwoDigitYear: 'Two-digit year', TwelveHourClock: '12-hour clock', TwentyFourHourClock: '24-hour clock', Layer: 'Layer', LayerAlt: 'Layer alt', Canvas: 'Canvas', Beginning: 'Beginning', Middle: 'Middle', List: 'List', Detail: 'Detail', LeftCompact: 'Left compact', LeftMinimal: 'Left minimal', ScrollButtons: 'Scroll buttons', MoreButton: 'More button', Equal: 'Equal', SizeToContent: 'Size to content', OnHover: 'On hover', Always: 'Always', Manual: 'Manual', Contain: 'Contain', ScaleDown: 'Scale down', Zoom: 'Zoom', Pan: 'Pan', Collapsed: 'Collapsed', VisibleOnPointerOver: 'On hover', FastTransformation: 'Fast', SmoothTransformation: 'Smooth', Line: 'Line', Area: 'Area', Bar: 'Bar', HorizontalBar: 'Horizontal bar', Pie: 'Pie', Donut: 'Donut', Scatter: 'Scatter', Sparkline: 'Sparkline', Alternate: 'Alternate', SlideFade: 'Slide fade', ScaleFade: 'Scale fade', Immediate: 'Immediate', Transient: 'Transient', Solid: 'Solid', Transparent: 'Transparent', FlowingRibbons: 'Flowing ribbons', FloatingDots: 'Floating dots', Starfield: 'Starfield', Raster: 'CPU raster', OpenGL: 'OpenGL', Mica: 'Mica', Acrylic: 'Acrylic'}
     };
-    const localized = value => value?.[zh ? 'zh' : 'en'] || value?.en || '';
+    const words = i18n
+      ? { ...baseWords, ...(i18n.ui || {}), options: { ...baseWords.options, ...(i18n.options || {}) } }
+      : baseWords;
+    const localized = value => (value?.en && i18n?.strings?.[value.en]) || value?.[zh ? 'zh' : 'en'] || value?.en || '';
     const dataLayout = root.dataset.playgroundLayout === 'data';
     const optionLabel = (field, value) => {
       const label = field.optionLabels?.[value] || field.valueLabels?.[String(value)];
@@ -162,7 +219,7 @@ window.FluentQtPlayground = {
         'host-theme': root.dataset.previewTheme || document.documentElement.dataset.theme,
         'host-session': liveSession, 'render-scale': 'native'}).forEach(([key, value]) => url.searchParams.set(key, value));
       liveFrame = node('iframe', 'playground-live-frame');
-      liveFrame.title = `${initial?.schema.title || root.dataset.component} ${zh ? '交互预览' : 'interactive preview'}`;
+      liveFrame.title = `${initial?.schema.title || root.dataset.component} ${words.interactivePreview}`;
       liveFrame.tabIndex = 0;
       liveFrame.style.width = '680px';
       liveFrame.style.visibility = 'hidden';
@@ -208,12 +265,12 @@ window.FluentQtPlayground = {
     // Segmented category tabs
     const categoryTabsBar = node('div', 'playground-category-tabs');
     categoryTabsBar.setAttribute('role', 'tablist');
-    categoryTabsBar.setAttribute('aria-label', zh ? '属性分类' : 'Property categories');
+    categoryTabsBar.setAttribute('aria-label', words.propertyCategories);
 
     const CATEGORIES = [
-      { id: 'basic', label: zh ? '基础属性' : 'Basic' },
-      { id: 'icon', label: zh ? '图标与布局' : 'Icon & Layout' },
-      { id: 'appearance', label: zh ? '交互与外观' : 'Style & State' }
+      { id: 'basic', label: words.catBasic },
+      { id: 'icon', label: words.catIconLayout },
+      { id: 'appearance', label: words.catAppearance }
     ];
 
     let activeCategoryTab = 'basic';
@@ -300,7 +357,7 @@ window.FluentQtPlayground = {
     codePane.id = 'playground-source-pane';
     const codeHeader = node('div', 'playground-code-header');
     const codeTitleWrap = node('div', 'playground-code-title-wrap');
-    codeTitleWrap.append(icon('code'), node('span', 'playground-code-title', zh ? '源码预览' : 'Source Code'));
+    codeTitleWrap.append(icon('code'), node('span', 'playground-code-title', words.sourceCode));
 
     const codeHeaderActions = node('div', 'playground-code-header-actions');
     codeHeaderActions.append(langTabs, copy);
@@ -321,20 +378,20 @@ window.FluentQtPlayground = {
     const splitter = node('div', 'playground-splitter');
     splitter.setAttribute('role', 'separator');
     splitter.setAttribute('aria-orientation', 'vertical');
-    splitter.setAttribute('aria-label', zh ? '调整左右两栏宽度' : 'Resize split panes');
+    splitter.setAttribute('aria-label', words.resizeSplit);
     splitter.setAttribute('tabindex', '0');
-    splitter.title = zh ? '拖拽调整左右栏宽度' : 'Drag to resize panes';
+    splitter.title = words.dragSplit;
 
     const splitterBar = node('div', 'playground-splitter-bar');
     splitter.append(splitterBar);
 
     const mobileViews = node('div', 'playground-mobile-views');
     mobileViews.setAttribute('role', 'group');
-    mobileViews.setAttribute('aria-label', zh ? '预览视图' : 'Preview view');
+    mobileViews.setAttribute('aria-label', words.previewView);
     const mobileButtons = new Map();
     for (const [view, label, target] of [
-      ['controls', zh ? '属性' : 'Properties', controlsPane.id],
-      ['code', zh ? '代码' : 'Code', codePane.id]
+      ['controls', words.properties, controlsPane.id],
+      ['code', words.code, codePane.id]
     ]) {
       const button = action(label, null, 'playground-mobile-view');
       button.textContent = label;
@@ -766,8 +823,8 @@ window.FluentQtPlayground = {
         clearBtn = node('button', 'playground-temporal-clear');
         clearBtn.type = 'button';
         clearBtn.tabIndex = -1;
-        clearBtn.title = zh ? '清除' : 'Clear';
-        clearBtn.setAttribute('aria-label', `${localized(field.label)}: ${zh ? '清除' : 'Clear'}`);
+        clearBtn.title = words.clear;
+        clearBtn.setAttribute('aria-label', `${localized(field.label)}: ${words.clear}`);
         clearBtn.innerHTML = '<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 3l6 6M9 3L3 9"/></svg>';
         clearBtn.addEventListener('click', event => {
           event.stopPropagation();
@@ -843,7 +900,7 @@ window.FluentQtPlayground = {
         if (day === 'Wednesday') return 3;
         if (day === 'Thursday') return 4;
         if (day === 'Friday') return 5;
-        return zh ? 1 : 0;
+        return words.firstDayOfWeek;
       }
 
       function isTwelveHour() {
@@ -866,8 +923,8 @@ window.FluentQtPlayground = {
           if (!t) return raw;
           if (isTwelveHour()) {
             const h12 = pad2(t.hour % 12 || 12);
-            const period = t.hour >= 12 ? (zh ? '下午' : 'PM') : (zh ? '上午' : 'AM');
-            return zh ? `${period} ${h12}:${pad2(t.minute)}` : `${h12}:${pad2(t.minute)} ${period}`;
+            const period = t.hour >= 12 ? words.pm : words.am;
+            return words.time12Template.replace('{period}', period).replace('{time}', `${h12}:${pad2(t.minute)}`);
           }
           return `${pad2(t.hour)}:${pad2(t.minute)}`;
         }
@@ -934,14 +991,16 @@ window.FluentQtPlayground = {
       }
 
       function monthLabelText(year, month) {
-        if (zh) return `${year}年${month}月`;
-        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        return `${months[month - 1]} ${year}`;
+        return words.yearMonthTemplate
+          .replace('{year}', String(year))
+          .replace('{month}', String(month))
+          .replace('{monthName}', words.monthNames[month - 1]);
       }
 
       function shortMonthLabel(month) {
-        if (zh) return `${month}月`;
-        return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1];
+        return words.shortMonthTemplate
+          .replace('{month}', String(month))
+          .replace('{shortMonth}', words.shortMonths[month - 1]);
       }
 
       function stepMonth(delta) {
@@ -959,9 +1018,9 @@ window.FluentQtPlayground = {
         titleBtn.textContent = calLevel === 'day'
           ? monthLabelText(viewYear, viewMonth)
           : calLevel === 'month'
-          ? (zh ? `${viewYear}年` : String(viewYear))
+          ? words.yearLabelTemplate.replace('{year}', String(viewYear))
           : `${decadeStart} - ${decadeStart + 9}`;
-        titleBtn.setAttribute('aria-label', zh ? '切换日历视图层级' : 'Zoom out calendar level');
+        titleBtn.setAttribute('aria-label', words.zoomOutCalendar);
         titleBtn.addEventListener('click', event => {
           event.stopPropagation();
           if (calLevel === 'day') calLevel = 'month';
@@ -973,7 +1032,7 @@ window.FluentQtPlayground = {
         const nav = node('div', 'playground-cal-nav');
         const prevBtn = node('button', 'playground-cal-nav-btn');
         prevBtn.type = 'button';
-        prevBtn.setAttribute('aria-label', zh ? '上一页' : 'Previous');
+        prevBtn.setAttribute('aria-label', words.previous);
         prevBtn.innerHTML = '<svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.5L6 4l3.5 3.5"/></svg>';
         prevBtn.addEventListener('click', event => {
           event.stopPropagation();
@@ -985,7 +1044,7 @@ window.FluentQtPlayground = {
 
         const nextBtn = node('button', 'playground-cal-nav-btn');
         nextBtn.type = 'button';
-        nextBtn.setAttribute('aria-label', zh ? '下一页' : 'Next');
+        nextBtn.setAttribute('aria-label', words.next);
         nextBtn.innerHTML = '<svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>';
         nextBtn.addEventListener('click', event => {
           event.stopPropagation();
@@ -1003,7 +1062,7 @@ window.FluentQtPlayground = {
         const calBody = node('div', 'playground-cal-body');
         if (calLevel === 'day') {
           const weekRow = node('div', 'playground-cal-weekdays');
-          const dayNames = zh ? ['日', '一', '二', '三', '四', '五', '六'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+          const dayNames = words.weekdays;
           const startDow = firstDayNumber();
           for (let col = 0; col < 7; ++col) {
             const cell = node('span', 'playground-cal-weekday', dayNames[(startDow + col) % 7]);
@@ -1108,7 +1167,7 @@ window.FluentQtPlayground = {
           const hour12Idx = stagedTime.hour % 12; // 0..11, maps 0 -> 12
           const periodIdx = stagedTime.hour >= 12 ? 1 : 0;
           cols.push({
-            label: zh ? '时' : 'Hour',
+            label: words.hour,
             items: Array.from({ length: 12 }, (_, idx) => String(idx === 0 ? 12 : idx)),
             index: hour12Idx,
             wrap: true,
@@ -1118,7 +1177,7 @@ window.FluentQtPlayground = {
             }
           });
           cols.push({
-            label: zh ? '分' : 'Min',
+            label: words.minute,
             items: minuteItems.map(pad2),
             index: minuteIdx,
             wrap: true,
@@ -1127,8 +1186,8 @@ window.FluentQtPlayground = {
             }
           });
           cols.push({
-            label: zh ? '时段' : 'AM/PM',
-            items: zh ? ['上午', '下午'] : ['AM', 'PM'],
+            label: words.amPm,
+            items: [words.am, words.pm],
             index: periodIdx,
             wrap: false,
             onStep(nextIdx) {
@@ -1138,7 +1197,7 @@ window.FluentQtPlayground = {
           });
         } else {
           cols.push({
-            label: zh ? '时' : 'Hour',
+            label: words.hour,
             items: Array.from({ length: 24 }, (_, idx) => pad2(idx)),
             index: stagedTime.hour,
             wrap: true,
@@ -1147,7 +1206,7 @@ window.FluentQtPlayground = {
             }
           });
           cols.push({
-            label: zh ? '分' : 'Min',
+            label: words.minute,
             items: minuteItems.map(pad2),
             index: minuteIdx,
             wrap: true,
@@ -1281,7 +1340,7 @@ window.FluentQtPlayground = {
         const rightActions = node('div', 'playground-temporal-footer-group');
 
         if (field.nullable) {
-          const footerClear = node('button', 'playground-temporal-textbtn', zh ? '清除' : 'Clear');
+          const footerClear = node('button', 'playground-temporal-textbtn', words.clear);
           footerClear.type = 'button';
           footerClear.disabled = !input.value;
           footerClear.addEventListener('click', event => {
@@ -1295,7 +1354,7 @@ window.FluentQtPlayground = {
         }
 
         if (showCalendar) {
-          const todayBtn = node('button', 'playground-temporal-textbtn is-accent', zh ? '今天' : 'Today');
+          const todayBtn = node('button', 'playground-temporal-textbtn is-accent', words.today);
           todayBtn.type = 'button';
           todayBtn.addEventListener('click', event => {
             event.stopPropagation();
@@ -1318,8 +1377,8 @@ window.FluentQtPlayground = {
         if (showWheel) {
           const acceptBtn = node('button', 'playground-temporal-cmd is-accept');
           acceptBtn.type = 'button';
-          acceptBtn.title = zh ? '确定' : 'Confirm';
-          acceptBtn.setAttribute('aria-label', zh ? '确定' : 'Confirm');
+          acceptBtn.title = words.confirm;
+          acceptBtn.setAttribute('aria-label', words.confirm);
           acceptBtn.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.5 12L13 4.5"/></svg>';
           acceptBtn.addEventListener('click', event => {
             event.stopPropagation();
@@ -1328,8 +1387,8 @@ window.FluentQtPlayground = {
 
           const cancelBtn = node('button', 'playground-temporal-cmd is-dismiss');
           cancelBtn.type = 'button';
-          cancelBtn.title = zh ? '取消' : 'Cancel';
-          cancelBtn.setAttribute('aria-label', zh ? '取消' : 'Cancel');
+          cancelBtn.title = words.cancel;
+          cancelBtn.setAttribute('aria-label', words.cancel);
           cancelBtn.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
           cancelBtn.addEventListener('click', event => {
             event.stopPropagation();
@@ -1363,7 +1422,7 @@ window.FluentQtPlayground = {
       function updateTrigger() {
         const formatted = formatTriggerLabel();
         const empty = !formatted;
-        triggerText.textContent = empty ? (zh ? '未设置' : 'Not set') : formatted;
+        triggerText.textContent = empty ? words.notSet : formatted;
         triggerText.classList.toggle('is-empty', empty);
         trigger.disabled = input.disabled;
         wrapper.classList.toggle('has-value', !empty);
@@ -1575,8 +1634,8 @@ window.FluentQtPlayground = {
       const value = input.value;
       input.replaceChildren();
       for (const choice of choices) {
-        const label = choice.value === -1 ? (zh ? '未选择' : 'No selection')
-          : choice.label?.page ? (zh ? `第 ${choice.label.page} 页` : `Page ${choice.label.page}`)
+        const label = choice.value === -1 ? words.noSelection
+          : choice.label?.page ? words.pageTemplate.replace('{page}', String(choice.label.page))
           : typeof choice.label === 'string' ? choice.label : localized(choice.label);
         const option = new Option(label, String(choice.value));
         option.disabled = choice.enabled === false;
@@ -1592,11 +1651,11 @@ window.FluentQtPlayground = {
       const viewport = node('div', 'playground-data-scroll');
       const table = node('table'), head = node('thead'), body = node('tbody');
       const heading = node('tr');
-      if (field.fixedRows) heading.append(node('th', '', zh ? '节点' : 'Node'));
+      if (field.fixedRows) heading.append(node('th', '', words.node));
       (field.columns || []).forEach(column => heading.append(node('th', '', localized(column.label))));
-      if (!field.fixedRows) { const th = node('th'); th.setAttribute('aria-label', zh ? '删除行' : 'Remove row'); heading.append(th); }
+      if (!field.fixedRows) { const th = node('th'); th.setAttribute('aria-label', words.removeRow); heading.append(th); }
       head.append(heading); table.append(head, body); viewport.append(table); host.append(viewport);
-      const add = node('button', 'playground-data-add', zh ? '添加一行' : 'Add row'); add.type = 'button';
+      const add = node('button', 'playground-data-add', words.addRow); add.type = 'button';
       add.hidden = Boolean(field.fixedRows); host.append(add);
       const read = () => [...body.rows].map(row => [...row.querySelectorAll('input')].map((input, col) =>
         field.columns[col].type === 'number' ? (input.value === '' ? null : Number(input.value)) : input.value));
@@ -1615,7 +1674,7 @@ window.FluentQtPlayground = {
           const col = field.ascendingColumn;
           values.forEach((row, i) => {
             if (i && row[col] < values[i - 1][col]) {
-              body.rows[i].querySelectorAll('input')[col].setCustomValidity(zh ? 'X 值应按从小到大排列' : 'Keep X values in ascending order'); valid = false;
+              body.rows[i].querySelectorAll('input')[col].setCustomValidity(words.ascendingXError); valid = false;
             }
           });
         }
@@ -1670,7 +1729,7 @@ window.FluentQtPlayground = {
               td.append(input); tr.append(td);
             });
             if (!field.fixedRows) {
-              const td = node('td'), remove = action(zh ? `删除第 ${rowIndex + 1} 行` : `Remove row ${rowIndex + 1}`, 'close', 'playground-data-remove');
+              const td = node('td'), remove = action(words.removeRowTemplate.replace('{row}', String(rowIndex + 1)), 'close', 'playground-data-remove');
               remove.dataset.row = rowIndex;
               remove.addEventListener('click', () => { const rows = read(); rows.splice(rowIndex, 1); change(field.id, rows, true); });
               td.append(remove); tr.append(td);
@@ -1702,9 +1761,9 @@ window.FluentQtPlayground = {
       const label = node('label', '', localized(field.label)); label.htmlFor = `playground-${field.id}`; row.append(label);
       label.id = `playground-label-${field.id}`;
       if (field.id === 'checkable') {
-        label.title = zh ? '开启后变为开关按钮（Toggle Button），通过下方“已选中”属性查看效果' : 'Enables toggle button behavior. Toggle "Checked" below to see the active state.';
+        label.title = words.checkableHint;
       } else if (field.id === 'focusVisual') {
-        label.title = zh ? '通过 Tab 或点击让组件获得焦点，观察焦点边框。' : 'Focus the component with Tab or a click to inspect its focus ring.';
+        label.title = words.focusVisualHint;
       }
       let input, output, follow, dropdown, colorSwatch, tableEditor, isTextInput = false;
       const rowState = {composing: false, dirty: false, forceSync: false};
@@ -1869,13 +1928,13 @@ window.FluentQtPlayground = {
       if (!pair || !stateTextToggle) return;
       if (separateStateText === null) separateStateText = state.values[pair.on] !== state.values[pair.off];
       const on = rows.get(pair.on), off = rows.get(pair.off);
-      on.label.textContent = separateStateText ? localized(on.field.label) : (zh ? '显示文字' : 'Display text');
+      on.label.textContent = separateStateText ? localized(on.field.label) : words.displayText;
       on.row.hidden = false;
       off.row.hidden = !separateStateText;
       off.enabledByValue = separateStateText;
       off.input.disabled = !separateStateText;
       stateTextToggle.textContent = separateStateText
-        ? (zh ? '改用相同文字' : 'Use the same text') : (zh ? '按状态分别设置' : 'Set different text for each state');
+        ? words.useSameText : words.differentTextPerState;
       stateTextToggle.setAttribute('aria-expanded', String(separateStateText));
     }
     function toggleStateTextEditor() {
@@ -1916,15 +1975,15 @@ window.FluentQtPlayground = {
         const iconFields = state.schema.properties.filter(field => field.category === 'icon');
         const hasIconLayout = iconFields.some(field => field.id === 'fluentLayout');
         const hasIconContent = iconFields.some(field => /icon|glyph|chevron/i.test(field.id));
-        categoryTabButtons.get('icon').textContent = hasIconLayout ? (zh ? '图标与布局' : 'Icon & Layout')
-          : hasIconContent ? (zh ? '图标' : 'Icons') : (zh ? '布局' : 'Layout');
+        categoryTabButtons.get('icon').textContent = hasIconLayout ? words.catIconLayout
+          : hasIconContent ? words.catIcons : words.catLayout;
         (state.schema.categories || []).forEach(category => { if (categoryTabButtons.has(category.id)) categoryTabButtons.get(category.id).textContent = localized(category.label); });
         categoryTabPanels.forEach(panel => panel.replaceChildren());
         const groupNames = {
           'primary-icon': state.schema.properties.some(field => field.group === 'dropdown-indicator')
-            ? (zh ? '主图标' : 'Main icon') : (zh ? '图标' : 'Icon'),
-          'dropdown-indicator': zh ? '下拉箭头' : 'Dropdown indicator',
-          'query-icon': zh ? '查询图标' : 'Query icon'
+            ? words.mainIcon : words.icon,
+          'dropdown-indicator': words.dropdownIndicator,
+          'query-icon': words.queryIcon
         };
         const categoryGroups = new Map();
         state.schema.properties.forEach(field => {
@@ -1969,9 +2028,15 @@ window.FluentQtPlayground = {
       if (freshState) { const resolve = freshState; freshState = null; resolve(!state.error); }
       const lastEvent = state.events?.at(-1);
       interactionFeedback.hidden = !lastEvent;
-      if (lastEvent) interactionFeedback.textContent = zh
-        ? `${lastEvent.name === 'clicked' ? '点击' : lastEvent.name === 'toggled' ? '切换' : lastEvent.name === 'browseRequested' ? '已触发选择文件请求' : lastEvent.name === 'filesDropped' ? '收到拖放文件' : lastEvent.name} · ${lastEvent.sequence}`
-        : `${lastEvent.name} · ${lastEvent.sequence}`;
+      if (lastEvent) {
+        const eventNames = {
+          clicked: words.eventClicked,
+          toggled: words.eventToggled,
+          browseRequested: words.eventBrowseRequested,
+          filesDropped: words.eventFilesDropped,
+        };
+        interactionFeedback.textContent = `${eventNames[lastEvent.name] || lastEvent.name} · ${lastEvent.sequence}`;
+      }
       requestedHover = Boolean(state.hovered);
       clearTimeout(replyTimer); retry.hidden = true; status.hidden = !state.error; status.textContent = state.error ? words.invalid : '';
 
@@ -2096,7 +2161,7 @@ window.FluentQtPlayground = {
               const label = node('label'), choice = node('input'); choice.type = single ? 'radio' : 'checkbox'; choice.value = option;
               if (single) choice.name = `playground-choice-${id}`;
               choice.addEventListener('change', () => change(id, [...entry.input.querySelectorAll('input:checked')].map(item => item.value).filter(Boolean), true));
-              label.append(choice, document.createTextNode(option ? optionLabel(entry.field, option) : (zh ? '未选择' : 'No selection'))); entry.input.append(label);
+              label.append(choice, document.createTextNode(option ? optionLabel(entry.field, option) : words.noSelection)); entry.input.append(label);
             });
           }
           entry.input.querySelectorAll('input').forEach(input => { input.checked = input.value ? value.includes(input.value) : value.length === 0; });
@@ -2134,11 +2199,11 @@ window.FluentQtPlayground = {
         if (entry.hint) {
           const effectVisible = !entry.field.effectWhen
             || isFieldEnabled({enabledWhen: entry.field.effectWhen}, state.values, true);
-          let explanation = fixedRange ? (zh ? '当前范围只有一个可选值；先调整范围或最小间距。' : 'Only one value fits. Adjust the bounds or minimum separation first.')
+          let explanation = fixedRange ? words.fixedRangeHint
             : !enabled && entry.field.disabledHint ? localized(entry.field.disabledHint)
             : !effectVisible || entry.field.effect ? localized(entry.field.effectHint) : '';
           if (!explanation && entry.field.previewInteraction === 'hover') {
-            explanation = zh ? '将鼠标移到组件上查看悬停效果。' : 'Move the pointer over the component to see its hover effect.';
+            explanation = words.hoverHint;
           }
           entry.hint.textContent = explanation;
           entry.hint.hidden = !explanation;
@@ -2165,12 +2230,12 @@ window.FluentQtPlayground = {
         if (id === 'primary-icon') {
           const hasIcon = rows.has('icon') ? Boolean(state.values.icon && state.values.icon !== 'None')
             : Boolean(state.values.glyph && state.values.glyph !== 'None');
-          if (rows.has('icon') && !hasIcon) message = zh ? '选择主图标后可调整位置、旋转和缩放。' : 'Choose a main icon to adjust its placement and transforms.';
-          else if (rows.has('glyph') && !hasIcon) message = zh ? '填写图标字形后可调整大小、旋转和颜色。' : 'Enter a glyph to adjust its size, rotation and color.';
-          else if (hasIcon && state.values.fluentLayout === 'TextOnly') message = zh ? '当前为仅文字布局；切换为显示图标的布局后可调整图标效果。' : 'Text only hides the icon. Choose an icon layout to adjust its transforms.';
-          else if (hasIcon && rows.get('iconRotation')?.row.hidden) message = zh ? '将图标置于文字上方或下方后可调整旋转和缩放。' : 'Place the icon above or below the text to adjust rotation and scale.';
+          if (rows.has('icon') && !hasIcon) message = words.chooseMainIconHint;
+          else if (rows.has('glyph') && !hasIcon) message = words.enterGlyphHint;
+          else if (hasIcon && state.values.fluentLayout === 'TextOnly') message = words.textOnlyIconHint;
+          else if (hasIcon && rows.get('iconRotation')?.row.hidden) message = words.stackedIconHint;
         } else if (id === 'dropdown-indicator' && state.values.chevronGlyph === 'None')
-          message = zh ? '选择下拉箭头后可调整大小和位置。' : 'Choose a dropdown indicator to adjust its size and position.';
+          message = words.chooseDropdownHint;
         group.hint.textContent = message; group.hint.hidden = !message;
         const source = id === 'primary-icon' ? (rows.get('icon') || rows.get('glyph'))
           : id === 'dropdown-indicator' ? rows.get('chevronGlyph') : null;

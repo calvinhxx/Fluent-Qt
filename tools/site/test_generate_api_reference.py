@@ -403,6 +403,7 @@ class VisualDocumentationTest(unittest.TestCase):
         self.assertIn(f'<h1>{html.escape(ja_title)}</h1>', ja_button)
         self.assertIn(html.escape(ja_ui['propertyPreview']), ja_button)
         self.assertIn(html.escape(ja_ui['apiGroups']['properties']), ja_button)
+        self.assertIn('data-playground-i18n="../../../api/playground-i18n/ja.json?v=', ja_button)
 
     def test_reference_pages_lead_with_their_namesake_type(self):
         outputs = self.outputs
@@ -473,8 +474,16 @@ class VisualDocumentationTest(unittest.TestCase):
                     for foreign in non_en_prefixes:
                         self.assertFalse(target.startswith(foreign), f'{path} leaked into {foreign}: {href} -> {target}')
 
-    def test_docs_locales_are_complete(self):
+    def test_docs_locales_and_playground_i18n_are_complete(self):
         docs_i18n.validate_docs_locales(self.documents, self.catalog)
+        for language in docs_i18n.EXTRA_LOCALE_KEYS:
+            key = f'api/playground-i18n/{language}.json'
+            self.assertIn(key, self.outputs)
+            payload = json.loads(self.outputs[key].decode('utf-8'))
+            self.assertEqual(set(payload), {'ui', 'options', 'strings'})
+            self.assertTrue(payload['ui'])
+            self.assertTrue(payload['options'])
+            self.assertTrue(payload['strings'])
 
 
 def png(width=4, height=2):
