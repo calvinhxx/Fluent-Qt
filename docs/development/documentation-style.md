@@ -25,8 +25,10 @@ If a document mixes historical and current material, split it or label the
 boundary explicitly.
 
 Keep documentation prose in English, including existing guides with filenames
-that have no language suffix. The project maintains bilingual entry points in
-`README.md` and `README.zh-CN.md`.
+that have no language suffix. The project maintains localized entry points in
+`README.md`, `README.zh-CN.md`, `README.zh-TW.md`, `README.ja.md`,
+`README.ko.md`, `README.de.md`, `README.ru.md`, `README.es.md`, and
+`README.fr.md`.
 
 Create Chinese versions of other documents only when explicitly requested.
 Use the `.zh-CN.md` suffix for those translations and keep them aligned with
@@ -34,7 +36,8 @@ the English source. Do not put Chinese prose in an unsuffixed document.
 
 The documentation check reports CJK text in English Markdown with its file
 and line number. It checks headings, paragraphs, lists, tables, and visible
-link text. Exceptions are the root README, `.zh-CN.md` translations, fenced
+link text. Exceptions are the root README files (`README.md` and the localized
+root `README.<lang>.md` translations), `.zh-CN.md` translations, fenced
 and inline code, HTML comments, link destinations, generated navigation, and
 the Chinese column of the [comment glossary](comment-style.md#glossary).
 Keep Chinese example text in code spans or fenced code blocks.
