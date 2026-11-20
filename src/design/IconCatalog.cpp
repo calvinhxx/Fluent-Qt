@@ -5,7 +5,7 @@
 #include <utility>
 
 #include <QFile>
-#include <QHash>
+#include <QStringView>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
@@ -86,98 +86,67 @@ QVector<IconInfo> loadCatalog()
     return icons;
 }
 
-const QHash<QString, int>& catalogIndex()
-{
-    static const QHash<QString, int> index = [] {
-        QHash<QString, int> result;
-        const auto& icons = catalog();
-        result.reserve(icons.size());
-        for (int row = 0; row < icons.size(); ++row)
-            result.insert(icons.at(row).name, row);
-        return result;
-    }();
-    return index;
-}
+struct Family {
+    const char* name;
+    int first;
+    int count;
+};
+struct Variant {
+    quint32 code;
+    int size;
+};
+struct CodeFamily {
+    quint32 code;
+    int family;
+};
+#include "FluentQtIconIndex.inc"
 
-const QHash<quint32, int>& catalogCodepointIndex()
-{
-    static const QHash<quint32, int> index = [] {
-        QHash<quint32, int> result;
-        const auto& icons = catalog();
-        result.reserve(icons.size());
-        for (int row = 0; row < icons.size(); ++row)
-            result.insert(icons.at(row).codepoint, row);
-        return result;
-    }();
-    return index;
-}
+struct NamedMatch {
+    const Family* family = nullptr;
+    quint32 code = 0;
+};
 
-const QHash<QString, QVector<int>>& catalogVariants()
+NamedMatch findName(QStringView name)
 {
-    static const QHash<QString, QVector<int>> variants = [] {
-        QHash<QString, QVector<int>> result;
-        const auto& icons = catalog();
-        for (int row = 0; row < icons.size(); ++row) {
-            const QRegularExpressionMatch match = iconNamePattern().match(icons.at(row).name);
-            if (match.hasMatch())
-                result[match.captured(1)].append(row);
-        }
-        return result;
-    }();
-    return variants;
-}
-
-QHash<quint32, QString> loadAliasTargets()
-{
-    fluent::resources::ensureRegistered();
-    QFile file(QStringLiteral(":/res/icons/FluentQtIconAliases.json"));
-    if (!file.open(QIODevice::ReadOnly)) {
-        qCWarning(fluent::logging::typographyCategory) << "Could not open the bundled Fluent semantic icon aliases";
+    const QLatin1String prefix("ic_fluent_"), suffix("_regular");
+    if (!name.startsWith(prefix) || !name.endsWith(suffix))
         return {};
-    }
-
-    QJsonParseError error;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
-    if (error.error != QJsonParseError::NoError || !document.isObject()) {
-        qCWarning(fluent::logging::typographyCategory)
-            << "Could not parse the bundled Fluent semantic icon aliases" << error.errorString();
+    const auto stem = name.mid(prefix.size(), name.size() - prefix.size() - suffix.size());
+    const auto split = stem.lastIndexOf(QLatin1Char('_'));
+    if (split <= 0)
         return {};
+    const auto number = stem.mid(split + 1);
+    if (number.isEmpty() || number.size() > 3 || number.front() == QLatin1Char('0'))
+        return {};
+    int size = 0;
+    for (QChar ch : number) {
+        if (ch < QLatin1Char('0') || ch > QLatin1Char('9'))
+            return {};
+        size = size * 10 + ch.unicode() - '0';
     }
-
-    QHash<quint32, QString> result;
-    const QJsonObject object = document.object();
-    result.reserve(object.size());
-    for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
-        bool ok = false;
-        const quint32 codepoint = it.key().toUInt(&ok, 16);
-        if (ok && it.value().isString())
-            result.insert(codepoint, it.value().toString());
-    }
-    return result;
+    const auto key = stem.left(split);
+    const auto* family = std::lower_bound(std::begin(families), std::end(families), key,
+        [](const Family& f, QStringView k) { return k.compare(QLatin1String(f.name)) > 0; });
+    if (family == std::end(families) || key.compare(QLatin1String(family->name)) != 0)
+        return {};
+    for (int i = family->first; i < family->first + family->count; ++i)
+        if (variants[i].size == size)
+            return {family, variants[i].code};
+    return {};
 }
 
-const QHash<quint32, QString>& aliasTargets()
+const Family* familyForGlyph(const QString& glyph)
 {
-    static const QHash<quint32, QString> targets = loadAliasTargets();
-    return targets;
-}
-
-QString sourceNameFor(const QString& glyphOrName)
-{
-    if (catalogIndex().contains(glyphOrName))
-        return glyphOrName;
-
-    const auto codepoints = glyphOrName.toUcs4();
-    if (codepoints.size() != 1)
-        return {};
-
-    const quint32 codepoint = static_cast<quint32>(codepoints.constFirst());
-    const auto alias = aliasTargets().constFind(codepoint);
-    if (alias != aliasTargets().constEnd())
-        return alias.value();
-
-    const auto catalogEntry = catalogCodepointIndex().constFind(codepoint);
-    return catalogEntry == catalogCodepointIndex().constEnd() ? QString() : catalog().at(catalogEntry.value()).name;
+    quint32 code = 0;
+    if (glyph.size() == 1)
+        code = glyph.front().unicode();
+    else if (glyph.size() == 2 && glyph.front().isHighSurrogate() && glyph.back().isLowSurrogate())
+        code = QChar::surrogateToUcs4(glyph.front(), glyph.back());
+    else
+        return nullptr;
+    const auto* match = std::lower_bound(std::begin(codeFamilies), std::end(codeFamilies), code,
+        [](const CodeFamily& entry, quint32 value) { return entry.code < value; });
+    return match != std::end(codeFamilies) && match->code == code ? &families[match->family] : nullptr;
 }
 
 } // namespace
@@ -195,8 +164,8 @@ const QVector<IconInfo>& catalog()
 
 QString glyph(const QString& name)
 {
-    const auto it = catalogIndex().constFind(name);
-    return it == catalogIndex().constEnd() ? QString() : catalog().at(it.value()).glyph();
+    const auto match = findName(name);
+    return match.family ? fluentCodepointGlyph(match.code) : QString();
 }
 
 int snapIconPixelSize(int requestedPixelSize)
@@ -224,46 +193,20 @@ int snapIconPixelSize(int requestedPixelSize)
 
 QString glyphForSize(const QString& glyphOrName, int designSize)
 {
-    QString fallback = glyphOrName;
-    const auto namedEntry = catalogIndex().constFind(glyphOrName);
-    if (namedEntry != catalogIndex().constEnd())
-        fallback = catalog().at(namedEntry.value()).glyph();
-    if (designSize <= 0)
-        return fallback;
-
-    const int snappedSize = snapIconPixelSize(designSize);
-
-    const QString sourceName = sourceNameFor(glyphOrName);
-    const QRegularExpressionMatch sourceMatch = iconNamePattern().match(sourceName);
-    if (!sourceMatch.hasMatch())
-        return fallback;
-
-    const QString family = sourceMatch.captured(1);
-    const QString exactName = family + QLatin1Char('_') + QString::number(snappedSize) + QStringLiteral("_regular");
-    const auto exact = catalogIndex().constFind(exactName);
-    if (exact != catalogIndex().constEnd())
-        return catalog().at(exact.value()).glyph();
-
-    const auto variants = catalogVariants().constFind(family);
-    if (variants == catalogVariants().constEnd() || variants.value().isEmpty())
-        return fallback;
-
-    int bestRow = -1;
-    int bestDelta = std::numeric_limits<int>::max();
-    int bestSize = 0;
-    for (int row : variants.value()) {
-        const int candidateSize = catalog().at(row).designSize;
-        const int delta = qAbs(candidateSize - snappedSize);
-        const bool candidateAtOrAbove = candidateSize >= snappedSize;
-        const bool bestAtOrAbove = bestSize >= snappedSize;
-        if (delta < bestDelta || (delta == bestDelta && candidateAtOrAbove && !bestAtOrAbove)
-            || (delta == bestDelta && candidateAtOrAbove == bestAtOrAbove && candidateSize < bestSize)) {
-            bestRow = row;
-            bestDelta = delta;
-            bestSize = candidateSize;
-        }
+    const auto named = findName(glyphOrName);
+    const Family* family = named.family ? named.family : familyForGlyph(glyphOrName);
+    if (!family || designSize <= 0)
+        return named.family ? fluentCodepointGlyph(named.code) : glyphOrName;
+    const int size = snapIconPixelSize(designSize);
+    const Variant* best = &variants[family->first];
+    for (int i = family->first + 1; i < family->first + family->count; ++i) {
+        const auto& candidate = variants[i];
+        const int delta = qAbs(candidate.size - size);
+        const int bestDelta = qAbs(best->size - size);
+        if (delta < bestDelta || (delta == bestDelta && candidate.size > best->size))
+            best = &candidate;
     }
-    return bestRow >= 0 ? catalog().at(bestRow).glyph() : fallback;
+    return fluentCodepointGlyph(best->code);
 }
 
 QFont font(int pixelSize)
