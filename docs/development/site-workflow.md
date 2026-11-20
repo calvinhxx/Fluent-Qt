@@ -303,11 +303,12 @@ The website does not create orders or confirm payment. WeChat Pay and Alipay
 status remains in the visitor's WeChat or Alipay bill, and community support
 retains the boundaries in [SUPPORT.md](../../SUPPORT.md).
 
-Keep the untouched generic images at `site/assets/support/wechat.jpg`,
+Keep the full generic images at `site/assets/support/wechat.jpg`,
 `site/assets/support/alipay.jpg`, and `site/assets/support/kofi.png`. Fixed-amount originals use the same directory
 and the names `wechat-19.jpg`, `wechat-49.jpg`, `wechat-99.jpg`, `alipay-19.jpg`,
 `alipay-49.jpg`, and `alipay-99.jpg`. CSS crops each image to the QR region inside
 a white quiet zone without exposing payee name labels or raw uncropped poster links.
+Lossless JPEG optimization must preserve the original pixels, metadata, and decoded QR content.
 While a new image loads, hide the previous code and show a loading message; an
 image failure must never fall back to a different amount.
 
