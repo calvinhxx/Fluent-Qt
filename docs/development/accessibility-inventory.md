@@ -322,7 +322,9 @@ through highlighted source still requires platform review.
 ## Field and form coordination
 
 `PropertyPanel` generates the existing accessible Fluent editors and labels them
-through Field. Search preserves editor identity and values; reset actions have
+through Field. Offscreen property rows can be reached by Tab or search. Once
+created, their editors retain focus behavior and identity across filtering and scrolling.
+Search preserves values; reset actions have
 field-specific names and tooltips, and enter the tab order only while reset is
 available. Reset actions align with the editor's center in inline, stacked, and
 right-to-left layouts, including wrapped labels and validation messages. Their

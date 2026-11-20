@@ -120,7 +120,10 @@ and `modifiedPropertiesChanged` let a host coordinate its own reset command.
 Read-only fields are not reset.
 Programmatic updates remain possible in read-only mode. Invalid or identical
 definitions leave the existing form intact. Changed definitions destroy old generated
-editors, invalidates their pointers and resets coordination state. `editor()`
+editors, invalidate their pointers and reset coordination state. Large panels create
+editors as rows approach the viewport. Calling `editor(key)` or `field(key)`
+materializes that row immediately. Accessing `formController()` makes the full
+set of fields and editors available for cross-field validation. `editor()`
 returns the swatch-and-value button for color fields; its Flyout hosts the existing ColorPicker.
 
 Number editors use NumberBox's optional drag handle. `setScrubbingEnabled(true)`
