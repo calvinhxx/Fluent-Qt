@@ -177,23 +177,21 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "CMakeLists.txt").write_text("project(FluentQt VERSION 1.2.3 LANGUAGES CXX)\n")
-            git = root / "git"
-            git.write_text(
-                '#!/bin/sh\n'
+            self.write_tool(
+                root / "git",
                 'case "$*" in\n'
                 '  "fetch --force --tags origin") exit 0 ;;\n'
                 '  "rev-parse -q --verify refs/tags/v1.2.3^{tag}") test -f annotated-tag ;;\n'
                 '  *) exit 2 ;;\n'
-                'esac\n'
+                'esac'
             )
-            git.chmod(0o755)
             notes = root / "docs/releases/v1.2.3.md"
             notes.parent.mkdir(parents=True)
             output = root / "output"
 
             def select(event, release_pr="false", mode="fast", bundle="false", ref="refs/heads/main"):
                 output.write_text("")
-                env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", GITHUB_EVENT_NAME=event,
+                env = dict(os.environ, PATH=f"{root}{os.pathsep}{os.environ['PATH']}", GITHUB_EVENT_NAME=event,
                            GITHUB_REF=ref, RELEASE_PULL_REQUEST=release_pr,
                            REQUESTED_MODE=mode, REQUESTED_BUNDLE=bundle, GITHUB_OUTPUT=str(output))
                 subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env, cwd=root,
@@ -1107,9 +1105,9 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
                 result = subprocess.run(
                     ["bash", "-c", mock_commands + script],
                     env=dict(os.environ, GITHUB_REPOSITORY="owner/repo", RUN_ID="42"),
-                    input="\n".join(states) + "\n", capture_output=True, text=True, timeout=5)
-                self.assertEqual(result.returncode, expected, result.stderr)
-                self.assertEqual(result.stderr.count("read run"), len(states))
+                    input=("\n".join(states) + "\n").encode(), capture_output=True, timeout=5)
+                self.assertEqual(result.returncode, expected, result.stderr.decode(errors="replace"))
+                self.assertEqual(result.stderr.count(b"read run"), len(states))
 
     def test_cpp_test_selection_must_reach_reusable_workflow(self):
         original_read = MODULE.read_workflow
@@ -1750,7 +1748,7 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
 
     @staticmethod
     def write_tool(path: Path, body: str) -> None:
-        path.write_text(f"#!/bin/sh\n{body}\n")
+        path.write_bytes(f"#!/bin/sh\n{body}\n".encode("utf-8"))
         path.chmod(0o755)
 
     def assert_compiler_cache_error(self, workflow: str, message: str) -> None:
@@ -1768,7 +1766,7 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             output = root / "env"
             for status in (1, 0):
                 output.write_text("")
-                env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", PROBE_STATUS=str(status),
+                env = dict(os.environ, PATH=f"{root}{os.pathsep}{os.environ['PATH']}", PROBE_STATUS=str(status),
                            RUNNER_OS="Linux", CCACHE_DIR=str(root / "cache"), CCACHE_MAXSIZE="384M",
                            CCACHE_NOHASHDIR="1", CCACHE_COMPRESSLEVEL="5", GITHUB_ENV=str(output))
                 subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env,
@@ -1827,7 +1825,7 @@ esac
                 with self.subTest(installed=installed, unlink_status=unlink_status):
                     log = root / "calls"
                     log.write_text("")
-                    env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}",
+                    env = dict(os.environ, PATH=f"{root}{os.pathsep}{os.environ['PATH']}",
                                PROBE_LOG=str(log), FMT_STATUS="0" if installed else "1",
                                UNLINK_STATUS=str(unlink_status))
                     result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
@@ -1845,7 +1843,7 @@ esac
                 self.write_tool(root / "c++", f'echo "{version}"\necho "Copyright"')
                 output = root / "outputs"
                 output.write_text("")
-                env = dict(os.environ, PATH=f"{root}:{os.environ['PATH']}", GITHUB_OUTPUT=str(output),
+                env = dict(os.environ, PATH=f"{root}{os.pathsep}{os.environ['PATH']}", GITHUB_OUTPUT=str(output),
                            CACHE_LANE="linux-x64-qt62-full", CACHE_QT_VERSION="6.2.4",
                            RUNNER_OS="Linux", RUNNER_ARCH="X64")
                 subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env,
