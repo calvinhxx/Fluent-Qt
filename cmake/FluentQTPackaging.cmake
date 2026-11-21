@@ -35,8 +35,12 @@ set(FLUENT_QT_RUNTIME_QT_SVG_SOURCE_ARCHIVE
 if((WIN32 OR APPLE) AND FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME)
     set(FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT
         "This package contains dynamically linked Qt libraries and plug-ins deployed with Gallery.")
+    set(_qml_source_notice "")
+    if(FLUENT_QT_BUILD_QML_BRIDGE)
+        set(_qml_source_notice "\nMatching Qt Declarative source archive: qtdeclarative-everywhere-src-${FLUENT_QT_RUNTIME_QT_VERSION}.tar.xz")
+    endif()
     set(FLUENT_QT_RUNTIME_QT_SOURCE_STATEMENT
-        "Matching Qt Base source archive: ${FLUENT_QT_RUNTIME_QT_SOURCE_ARCHIVE}\nMatching Qt SVG source archive: ${FLUENT_QT_RUNTIME_QT_SVG_SOURCE_ARCHIVE}\n\nBefore distributing this package, the distributor must retain both exact sources under its own control. See licenses/qt/NOTICE.md for the no-charge request instructions and three-year written offer.")
+        "Matching Qt Base source archive: ${FLUENT_QT_RUNTIME_QT_SOURCE_ARCHIVE}\nMatching Qt SVG source archive: ${FLUENT_QT_RUNTIME_QT_SVG_SOURCE_ARCHIVE}${_qml_source_notice}\n\nBefore distributing this package, the distributor must retain the listed sources under its own control. See licenses/qt/NOTICE.md for the no-charge request instructions and three-year written offer.")
 else()
     set(FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT
         "This package does not contain Qt binaries; Qt is supplied by the operating system or the user's Qt installation.")
@@ -384,6 +388,14 @@ elseif(UNIX)
             "fonts-noto-color-emoji, qt6-wayland")
     else()
         set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "fonts-noto-color-emoji")
+    endif()
+    if(FLUENT_QT_BUILD_QML_BRIDGE)
+        if(QT_VERSION_MAJOR EQUAL 6)
+            string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS
+                ", qml6-module-qtquick, qml6-module-qtqml, qml6-module-qtqml-models, qml6-module-qtqml-workerscript")
+        else()
+            set(CPACK_DEBIAN_PACKAGE_DEPENDS "qml-module-qtquick2")
+        endif()
     endif()
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/calvinhxx/Fluent-Qt")
 endif()

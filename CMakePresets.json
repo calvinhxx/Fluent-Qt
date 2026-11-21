@@ -67,7 +67,7 @@
       "description": "Apple Silicon release build used for DMG packaging.",
       "inherits": "vcpkg-osx",
       "cacheVariables": {
-        "FLUENT_QT_BUILD_QML_BRIDGE": "OFF",
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",
@@ -99,7 +99,7 @@
       "description": "Intel/Rosetta release build used for DMG packaging.",
       "inherits": "vcpkg-osx-x64",
       "cacheVariables": {
-        "FLUENT_QT_BUILD_QML_BRIDGE": "OFF",
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",
@@ -140,6 +140,7 @@
       "description": "Linux x64 release build using vcpkg manifest dependencies. Qt is discovered from the local or system Qt installation.",
       "inherits": "vcpkg-linux",
       "cacheVariables": {
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",
@@ -169,6 +170,7 @@
       "description": "Native Linux ARM64 release build used for DEB packaging.",
       "inherits": "vcpkg-linux-arm64",
       "cacheVariables": {
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",
@@ -198,6 +200,7 @@
       "description": "Windows x64 release build used for installer packaging.",
       "inherits": "vcpkg-windows",
       "cacheVariables": {
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",
@@ -226,6 +229,7 @@
       "description": "Windows ARM64 release build used for installer packaging.",
       "inherits": "vcpkg-windows-arm64",
       "cacheVariables": {
+        "FLUENT_QT_BUILD_QML_BRIDGE": "ON",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF",
         "FLUENT_QT_BUILD_EXAMPLES": "OFF",

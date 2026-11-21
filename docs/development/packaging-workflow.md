@@ -28,13 +28,11 @@ surface; the reusable component library is installed through the separate
   Spatial-enabled Gallery packages may include Qt 6 OpenGL/OpenGLWidgets;
   Qt 5 uses QOpenGLWidget from Widgets. Gallery restores native 2D when
   acceleration is unavailable; SpatialView has its own raster fallback.
-  Windows deployment disables
-  Qt Quick import scanning, Qt translations, the software OpenGL renderer, and
-  the system D3D compiler; Qt 5 deployment also disables ANGLE. Every Windows
-  and macOS package is then checked for translation/QML directories and
-  Qt QML or Quick modules. If Gallery intentionally adopts one of
-  those features later, update the deployment contract and compatibility tests
-  in the same change.
+  Release presets also enable QmlBridge. On Windows and macOS the deployment
+  tool scans the Gallery's QML examples and ships the QtQuick imports they use.
+  Windows skips Qt translations and the software GL, ANGLE and D3D compiler
+  payloads. Package checks verify the QtQuick module and exercise QML loading
+  and reloading against the full component catalog on native runners.
 - Windows NSIS packaging requires NSIS to be installed and available to CPack.
   For an install-free local toolchain, extract the official ZIP under
   `build/nsis-toolchain/nsis-<version>`; the project wrapper discovers its
@@ -55,13 +53,13 @@ Every Gallery package includes the project license, `THIRD_PARTY_NOTICES.md`,
 `TRADEMARKS.md`, dependency license files, and a generated
 `RUNTIME_DEPENDENCIES.txt` containing the resolved Qt, spdlog, and fmt versions.
 Windows and macOS packages dynamically deploy Qt; before publishing one, retain
-the exact Qt Base and Qt SVG corresponding sources named in that notice under maintainer
+the exact Qt Base, Qt SVG and Qt Declarative corresponding sources named in that notice under maintainer
 control for at least the period promised in
 `third_party/runtime/qt/NOTICE.md`. Linux DEBs do not bundle Qt and instead
 use the distribution's Qt packages.
 
 If Gallery starts deploying a Qt module outside its current Qt Core, GUI,
-Widgets, Network, SVG, OpenGL/OpenGLWidgets, and Qt Base plug-in contract, add that module's license and
+Widgets, Network, SVG, OpenGL/OpenGLWidgets, QML/Quick and Qt Base plug-in contract, add that module's license and
 corresponding source to the package process before release.
 
 Tagged releases also publish `FluentQt-<version>-source.zip`. This portable,
@@ -157,6 +155,8 @@ runtime is intentionally consumed from distribution packages rather than
 duplicated inside the DEB. Because `dpkg-shlibdeps` cannot see plugins loaded
 dynamically by `QApplication`, Qt 6 packages also declare `qt6-qpa-plugins` as
 an explicit dependency and recommend `qt6-wayland` for native Wayland sessions.
+The QmlView page imports `QtQuick`. Qt 5 DEBs depend on `qml-module-qtquick2`,
+and Qt 6 DEBs declare `qml6-module-qtquick` and its QtQml imports.
 Do not use the ARM64 preset as a cross-compilation preset on x64; it is intended
 for a native ARM64 Linux host or runner.
 

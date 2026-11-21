@@ -159,20 +159,9 @@ jobs:
       - name: Install Linux system packages
         if: ${{ runner.os == 'Linux' }}
         shell: bash
-        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
-
-      - name: Install QmlBridge Linux dependencies
-        if: ${{ runner.os == 'Linux' && matrix.qt_source == 'apt' && contains(matrix.configure_args, '-DFLUENT_QT_BUILD_QML_BRIDGE=ON') }}
-        shell: bash
         run: |
-          sudo apt-get install -y --no-install-recommends \
-            qt6-base-private-dev \
-            qt6-declarative-dev \
-            qt6-declarative-private-dev \
-            qml6-module-qtquick \
-            qml6-module-qtqml \
-            qml6-module-qtqml-models \
-            qml6-module-qtqml-workerscript
+          bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}" \
+            "${{ (matrix.package || contains(matrix.configure_args, '-DFLUENT_QT_BUILD_QML_BRIDGE=ON')) && 'qml' || '' }}"
 
       # matrix.compiler_cache names the full lane that owns the snapshot. Fast
       # PR lanes reuse an identically configured full lane because only the
