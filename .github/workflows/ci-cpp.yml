@@ -670,8 +670,10 @@ jobs:
         include:
           - name: Qt 5.15
             qt_source: apt5
+            designer_dev: qttools5-dev
           - name: Qt 6.2
             qt_source: apt6
+            designer_dev: qt6-tools-dev
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -812,8 +814,7 @@ jobs:
           QT_QPA_PLATFORM=offscreen build/integration-installed-spatial/fluentqt_external_integration
           QT_QPA_PLATFORM=offscreen build/integration-installed-particles/fluentqt_external_integration
 
-      - name: Verify FluentQt library source package
-        if: ${{ matrix.qt_source == 'apt6' }}
+      - name: Create and unpack the FluentQt library source package
         shell: bash
         run: |
           set -euo pipefail
@@ -823,6 +824,14 @@ jobs:
             -D "FLUENT_QT_SOURCE_PACKAGE_DIR=$output" \
             -D "FLUENT_QT_SOURCE_PACKAGE_VERSION=ci" \
             -P cmake/CreateSourcePackage.cmake
+          unzip -q "$output/FluentQt-ci-source.zip" -d "$output/unpacked"
+
+      - name: Verify FluentQt library source package
+        if: ${{ matrix.qt_source == 'apt6' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/source-package"
           archive="$output/FluentQt-ci-source.zip"
           test -f "$archive"
           # The native Python binding builds the shared texture host and the
@@ -850,6 +859,11 @@ jobs:
               cmake/FluentQtWasmAccessibility.cmake \
               cmake/wasm-accessibility/CMakeLists.txt \
               tools/wasm/qt_accessibility_overlay.py \
+              tools/designer/register_fluentqt.py \
+              tools/designer/prepare_catalog.py \
+              tools/designer/templates/fluentqt_form_templates.rcc \
+              tools/designer/templates/fluentqt_spatial_template.rcc \
+              tools/gallery/export_control_images.py \
               cmake/FluentQtSpatial.cmake \
               cmake/FluentQtInterfaceZoom.cmake \
               cmake/FluentQtQmlBridge.cmake \
@@ -1004,7 +1018,6 @@ jobs:
               exit 1
             fi
           done
-          unzip -q "$archive" -d "$output/unpacked"
           test -x \
             "$output/unpacked/FluentQt-ci-source/tools/onboarding/fluentqt"
           python3 \
@@ -1036,6 +1049,15 @@ jobs:
             -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=TRUE \
             -DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE
           cmake --build build/integration-source-package --parallel 4
+
+      - name: Build Designer plugin and sample from the source archive
+        shell: bash
+        run: |
+          sudo apt-get install -y --no-install-recommends "${{ matrix.designer_dev }}"
+          cmake -S "$RUNNER_TEMP/source-package/unpacked/FluentQt-ci-source/tools/designer" \
+            -B build/integration-designer -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt"
+          cmake --build build/integration-designer --parallel 4
 
       - name: Record installed C++ first-window trial
         shell: bash

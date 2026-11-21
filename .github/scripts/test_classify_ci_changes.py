@@ -220,6 +220,13 @@ class ClassifyCiChangesTest(unittest.TestCase):
             wasm=True,
         )
 
+    def test_designer_and_its_catalog_inputs_run_native_and_python_checks(self):
+        for path in ("tools/designer/register_fluentqt.py", "tools/designer/icons/FluentButton.png",
+                     "tools/gallery/export_control_images.py", "tools/gallery/artwork/basic-input/Button.svg",
+                     "docs/ai/generated/fluentqt-ai-catalog.json"):
+            with self.subTest(path=path):
+                self.assert_classification([path], native=True, pyside=True, wasm=False)
+
     def test_native_test_only_change_skips_pyside_matrix(self):
         self.assert_classification(
             ["tests/components/basicinput/TestButton.cpp"],

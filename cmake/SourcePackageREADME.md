@@ -4,6 +4,10 @@ This archive contains the FluentQt UI component library, optional PySide6
 binding sources, the optional WebAssembly adapter target, and minimal
 integration material. It can also build the `FluentQt` Python wheel.
 
+The Qt Designer tools include the C++ widget plugin, PySide6 registration, icons,
+and editable form templates. Follow `tools/designer/README.md` from the
+extracted archive root.
+
 The native C++ Gallery, top-level C++ tests, and application logging support
 are excluded. Building the separate `FluentQt-Gallery` application wheel
 requires a full checkout with the native Gallery catalogs and artwork.
