@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ContentDialogContent</class>
+ <widget class="QWidget" name="ContentDialogContent">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>330</width><height>140</height></rect></property>
+  <property name="windowTitle"><string>Confirm changes</string></property>
+  <property name="fluentFormHost" stdset="0"><string notr="true">ContentDialog</string></property>
+  <property name="fluentPrimaryText" stdset="0"><string>Apply</string></property>
+  <property name="fluentCloseText" stdset="0"><string>Cancel</string></property>
+  <layout class="QVBoxLayout" name="bodyLayout">
+   <item><widget class="FluentLabel" name="caption">
+    <property name="text"><string>Apply the changes to this project?</string></property>
+   </widget></item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget><class>FluentLabel</class><extends>QLabel</extends><header>fluentqt_designer.h</header></customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
