@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SpatialItemContent</class>
+ <widget class="QWidget" name="SpatialItemContent">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>330</width><height>140</height></rect></property>
+  <property name="windowTitle"><string>Project card</string></property>
+  <property name="fluentFormHost" stdset="0"><string notr="true">SpatialItem</string></property>
+  <property name="fluentItemScale" stdset="0"><double>0.900000</double></property>
+  <property name="fluentItemRotationY" stdset="0"><double>12.000000</double></property>
+  <layout class="QVBoxLayout" name="bodyLayout">
+   <item><widget class="FluentCard" name="card">
+    <layout class="QVBoxLayout" name="cardLayout">
+     <item><widget class="FluentLabel" name="caption">
+      <property name="text"><string>Current project</string></property>
+     </widget></item>
+    </layout>
+   </widget></item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget><class>FluentCard</class><extends>QFrame</extends><header>fluentqt_designer.h</header><container>1</container></customwidget>
+  <customwidget><class>FluentLabel</class><extends>QLabel</extends><header>fluentqt_designer.h</header></customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

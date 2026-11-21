@@ -1,0 +1,7 @@
+<RCC>
+ <qresource prefix="/qt-project.org/designer/templates/forms">
+  <file alias="FluentQt Window.ui">Window.ui</file>
+  <file alias="FluentQt Dialog.ui">Dialog.ui</file>
+  <file alias="FluentQt ContentDialog.ui">ContentDialog.ui</file>
+ </qresource>
+</RCC>

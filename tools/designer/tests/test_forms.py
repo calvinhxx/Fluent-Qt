@@ -1,0 +1,175 @@
+"""Exercise actual form loading for every widget supplied by the installed bindings."""
+import os
+from pathlib import Path
+import sys
+import unittest
+from xml.etree import ElementTree as ET
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from PySide6.QtCore import QBuffer, QCoreApplication, QEvent, QIODevice
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import QApplication, QDialogButtonBox, QWidget
+import shiboken6
+from fluentqt import initialize_resources
+from fluentqt_designer_catalog import DIRECTORY, WIDGETS, widget_xml
+from fluentqt_designer import available_widgets
+from fluentqt_designer_forms import make_form_host, show_form_host
+
+
+class DesignerForms(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+        initialize_resources()
+
+    def test_catalog_forms(self):
+        loader = QUiLoader()
+        installed = {entry["name"]: widget for entry, widget in available_widgets()}
+        for entry in WIDGETS:
+            name = entry["name"]
+            with self.subTest(name=name):
+                if name not in installed:
+                    self.assertIn("extension", entry)
+                    continue
+                widget_type = installed[name]
+                loader.registerCustomWidget(widget_type)
+                root = ET.fromstring('<ui version="4.0"><class>Form</class><widget class="QWidget" name="Form"/></ui>')
+                root.find("widget").append(ET.fromstring(widget_xml(entry)).find("widget"))
+                stream = QBuffer()
+                stream.setData(ET.tostring(root, encoding="utf-8"))
+                self.assertTrue(stream.open(QIODevice.OpenModeFlag.ReadOnly))
+                form = loader.load(stream)
+                control = form.findChild(widget_type)
+                self.assertIsNotNone(control)
+                self.assertEqual(control.metaObject().className(), name)
+                if "property" in entry:
+                    self.assertEqual(control.property(entry["property"]), entry["value"])
+                self.assertTrue((DIRECTORY / "icons" / (name + ".png")).is_file())
+
+    def test_overlay_anchors(self):
+        for entry, widget_type in available_widgets():
+            if "surface" not in entry:
+                continue
+            kind = entry["surface"]
+            with self.subTest(kind=kind):
+                owner = QWidget()
+                owner.resize(580, 360)
+                anchor = widget_type(owner)
+                owner.show()
+                self.app.processEvents()
+                if entry["adapter"] == "Commands":
+                    anchor.setActionTexts(["First", "Second"])
+                else:
+                    anchor.setSurfaceText("Edited in Designer")
+                if entry["adapter"] == "TimedMessage":
+                    anchor.setDuration(0)
+                surface = anchor.surface()
+                anchor.click()
+                self.app.processEvents()
+                self.assertTrue(surface.isVisible())
+                self.assertIs(anchor.surface(), surface)
+                if entry["adapter"] == "Commands":
+                    def actions():
+                        if kind == "CommandPalette":
+                            return surface.commands()
+                        if kind == "CommandBarFlyout":
+                            return surface.primaryActions()
+                        return surface.actions()
+                    received = []
+                    anchor.actionTriggered.connect(received.append)
+                    actions()[0].trigger()
+                    self.assertEqual(received, ["First"])
+                    anchor.setActionTexts(["Replacement"])
+                    self.assertEqual([action.text() for action in actions()], ["Replacement"])
+                if kind == "Toast":
+                    self.assertEqual(surface.message(), "Edited in Designer")
+                    self.assertEqual(surface.duration(), 0)
+                if kind == "ToolTip":
+                    anchor.setSurfaceText("Updated tip")
+                    self.assertEqual(surface.text(), "Updated tip")
+                shiboken6.delete(anchor)
+                QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+                self.assertFalse(shiboken6.isValid(surface))
+                shiboken6.delete(owner)
+
+    def test_duration_changed(self):
+        from fluentqt_designer import FluentSplashScreenButton, FluentToastButton
+
+        for widget_type in (FluentSplashScreenButton, FluentToastButton):
+            with self.subTest(widget=widget_type.__name__):
+                anchor = widget_type()
+                meta = anchor.metaObject()
+                prop = meta.property(meta.indexOfProperty("duration"))
+                self.assertEqual(bytes(prop.notifySignal().methodSignature()), b"durationChanged(int)")
+                values = []
+                anchor.durationChanged.connect(values.append)
+                anchor.setProperty("duration", 700)
+                anchor.surface()
+                anchor.setDuration(700)
+                anchor.setDuration(-1)
+                anchor.setProperty("duration", 0)
+                self.assertEqual(anchor.property("duration"), 0)
+                self.assertEqual(values, [700, 0])
+                shiboken6.delete(anchor)
+
+    def test_form_templates(self):
+        from importlib.util import find_spec
+        from fluentqt.dialogs_flyouts import ContentDialog, Dialog
+        from fluentqt.windowing import Window
+        hosts = {"Window": Window, "Dialog": Dialog, "ContentDialog": ContentDialog}
+        if find_spec("fluentqt.spatial") is not None:
+            from fluentqt.spatial import SpatialView
+            hosts["SpatialItem"] = SpatialView
+        loader = QUiLoader()
+        for _, widget in available_widgets():
+            loader.registerCustomWidget(widget)
+        for kind, host_type in hosts.items():
+            with self.subTest(kind=kind):
+                body = loader.load(str(DIRECTORY / "templates" / (kind + ".ui")))
+                with self.assertRaises(ValueError):
+                    make_form_host(body, body)
+                host = make_form_host(body)
+                self.assertIsInstance(host, host_type)
+                show_form_host(host)
+                self.app.processEvents()
+                self.assertTrue(host.isVisible())
+                if kind != "SpatialItem":
+                    self.assertTrue(body.isVisibleTo(host))
+                    self.assertTrue(host.isAncestorOf(body))
+                if kind == "SpatialItem":
+                    item, = host.items()
+                    self.assertIs(item.widget(), body)
+                    self.assertAlmostEqual(item.scale(), 0.9)
+                    self.assertEqual(item.rotation().y(), 12)
+                elif kind == "ContentDialog":
+                    self.assertTrue(host.isOpen())
+                    self.assertEqual(host.primaryButtonText(), "Apply")
+                elif kind == "Dialog":
+                    self.assertTrue(host.isOpen())
+                    host.setAnimationEnabled(False)
+                    box = body.findChild(QDialogButtonBox, "buttonBox")
+                    box.button(QDialogButtonBox.StandardButton.Ok).click()
+                    self.assertFalse(host.isOpen())
+                host.close()
+                shiboken6.delete(host)
+
+    def test_sample_connection(self):
+        loader = QUiLoader()
+        for _, widget_type in available_widgets():
+            loader.registerCustomWidget(widget_type)
+        form = loader.load(str(DIRECTORY / "preview.ui"))
+        name = form.findChild(QWidget, "projectName")
+        self.assertTrue(name.text())
+        choose = form.findChild(QWidget, "chooseName")
+        choices = choose.surface().actions()
+        choices[0].trigger()
+        self.assertEqual(name.text(), choices[0].text())
+        self.assertTrue(form.findChild(QWidget, "reopen").isChecked())
+        form.findChild(QWidget, "clearName").click()
+        self.assertEqual(name.text(), "")
+
+
+if __name__ == "__main__":
+    unittest.main()

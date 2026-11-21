@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ProjectSettings</class>
+ <widget class="QWidget" name="ProjectSettings">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>420</width><height>328</height></rect></property>
+  <property name="windowTitle"><string>项目设置</string></property>
+  <layout class="QVBoxLayout" name="formLayout">
+   <property name="leftMargin"><number>20</number></property>
+   <property name="topMargin"><number>16</number></property>
+   <property name="rightMargin"><number>20</number></property>
+   <property name="bottomMargin"><number>16</number></property>
+   <property name="spacing"><number>8</number></property>
+   <item><widget class="FluentLabel" name="nameLabel">
+    <property name="text"><string>项目名称</string></property>
+    <property name="buddy"><cstring>projectName</cstring></property>
+   </widget></item>
+   <item><widget class="FluentLineEdit" name="projectName">
+    <property name="text"><string>FluentQt 示例</string></property>
+    <property name="placeholderText"><string>输入项目名称</string></property>
+   </widget></item>
+   <item><widget class="FluentLabel" name="dateLabel">
+    <property name="text"><string>计划日期</string></property>
+    <property name="buddy"><cstring>plannedDate</cstring></property>
+   </widget></item>
+   <item><widget class="FluentCalendarDatePicker" name="plannedDate">
+    <property name="placeholderText"><string>选择日期</string></property>
+   </widget></item>
+   <item><widget class="FluentDivider" name="sectionDivider"/></item>
+   <item><widget class="FluentCheckBox" name="reopen">
+    <property name="text"><string>启动时打开上次的项目</string></property>
+    <property name="checked"><bool>true</bool></property>
+   </widget></item>
+   <item><layout class="QHBoxLayout" name="projectActions">
+    <item><widget class="FluentMenuButton" name="chooseName">
+     <property name="text"><string>选择项目名称</string></property>
+     <property name="actionTexts"><stringlist><string>日程助手</string><string>照片整理</string></stringlist></property>
+    </widget></item>
+    <item><widget class="FluentToastButton" name="testNotification">
+     <property name="text"><string>测试通知</string></property>
+     <property name="surfaceText"><string>项目通知已启用</string></property>
+    </widget></item>
+   </layout></item>
+   <item alignment="Qt::AlignLeft"><widget class="FluentButton" name="clearName">
+    <property name="text"><string>清空名称</string></property>
+   </widget></item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget><class>FluentMenuButton</class><extends>QPushButton</extends><header>fluentqt_designer.h</header><slots><signal>actionTriggered(QString)</signal></slots></customwidget>
+  <customwidget><class>FluentToastButton</class><extends>QPushButton</extends><header>fluentqt_designer.h</header></customwidget>
+  <customwidget><class>FluentLabel</class><extends>QLabel</extends><header>fluentqt_designer.h</header></customwidget>
+  <customwidget><class>FluentCalendarDatePicker</class><extends>QPushButton</extends><header>fluentqt_designer.h</header></customwidget>
+  <customwidget><class>FluentDivider</class><extends>QWidget</extends><header>fluentqt_designer.h</header></customwidget>
+  <customwidget><class>FluentButton</class><extends>QPushButton</extends><header>fluentqt_designer.h</header></customwidget>
+  <customwidget><class>FluentLineEdit</class><extends>QLineEdit</extends><header>fluentqt_designer.h</header></customwidget>
+  <customwidget><class>FluentCheckBox</class><extends>QCheckBox</extends><header>fluentqt_designer.h</header></customwidget>
+ </customwidgets>
+ <tabstops><tabstop>projectName</tabstop><tabstop>plannedDate</tabstop><tabstop>reopen</tabstop><tabstop>clearName</tabstop></tabstops>
+ <resources/>
+ <connections>
+  <connection><sender>chooseName</sender><signal>actionTriggered(QString)</signal><receiver>projectName</receiver><slot>setText(QString)</slot></connection>
+  <connection><sender>clearName</sender><signal>clicked()</signal><receiver>projectName</receiver><slot>clear()</slot></connection>
+ </connections>
+</ui>

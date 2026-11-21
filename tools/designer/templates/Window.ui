@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WindowContent</class>
+ <widget class="QWidget" name="WindowContent">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>460</width><height>240</height></rect></property>
+  <property name="windowTitle"><string>Project settings</string></property>
+  <property name="fluentFormHost" stdset="0"><string notr="true">Window</string></property>
+  <layout class="QVBoxLayout" name="bodyLayout">
+   <item><widget class="FluentLabel" name="caption">
+    <property name="text"><string>Project name</string></property>
+   </widget></item>
+   <item><widget class="FluentLineEdit" name="projectName">
+    <property name="placeholderText"><string>Enter a name</string></property>
+   </widget></item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget><class>FluentLabel</class><extends>QLabel</extends><header>fluentqt_designer.h</header></customwidget>
+  <customwidget><class>FluentLineEdit</class><extends>QLineEdit</extends><header>fluentqt_designer.h</header></customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
