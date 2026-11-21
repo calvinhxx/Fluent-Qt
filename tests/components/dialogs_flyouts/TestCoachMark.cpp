@@ -93,6 +93,27 @@ protected:
     FluentTestWindow* window = nullptr;
 };
 
+TEST_F(CoachMarkTest, OversizedCardRemainsOpenWhenTheOwnerShrinks)
+{
+    auto* target = makeTarget(QPoint(10, 10));
+    CoachMark coach(window);
+    coach.setCardSize(QSize(300, 140));
+    coach.setTarget(target);
+    coach.open();
+    window->setFixedSize(150, 90);
+    QApplication::processEvents();
+    EXPECT_TRUE(coach.isOpen());
+    EXPECT_EQ(coach.pos(), ::fluent::overlay::overlaySurfaceRect(window).topLeft());
+
+    coach.setCardSize(QSize(12, 12));
+    for (auto placement : {CoachMark::Bottom, CoachMark::Right}) {
+        coach.setPlacement(placement);
+        EXPECT_TRUE(coach.isOpen());
+        EXPECT_FALSE(coach.grab().isNull());
+    }
+    coach.close();
+}
+
 // ── 1. Default property values match the documented contract ─────────────────
 TEST_F(CoachMarkTest, DefaultProperties)
 {
