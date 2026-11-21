@@ -299,6 +299,8 @@ def main():
         raise AssertionError("Core-only wheel contains an unusable Spatial facade")
     for module, names in OPTIONAL_NATIVE_EXPORTS.items():
         exports = tuple(hasattr(native.fluent, name) for name in names)
+        if module == "qmlbridge" and os.environ.get("FLUENTQT_REQUIRE_QML_BRIDGE") == "1" and not all(exports):
+            raise AssertionError("Release wheel must include the native QmlBridge API")
         if any(exports) and not all(exports):
             raise AssertionError("Installed native {0} API is incomplete".format(module))
         if all(exports):

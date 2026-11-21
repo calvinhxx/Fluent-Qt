@@ -261,10 +261,9 @@ cache use after a warm `main` run before changing a lane's limit.
 
 Full Python validation also builds the optional Spatial binding on one Linux
 Qt 6.9 lane. It checks the binding and Gallery contracts offscreen, then OpenGL
-resource destruction under Xvfb. Release wheels also enable Spatial on every
-platform. Candidate and package-index clean installs require its native API,
-stubs, and full Gallery catalog; a missing module must fail instead of passing
-through the 2D fallback. These checks do not replace native desktop rendering
+resource destruction under Xvfb. Release wheels enable Spatial and QmlBridge on every
+platform. Candidate and package-index clean installs check the native APIs,
+stubs and complete Gallery catalog, then load the bundled Basic.qml scene. These checks do not replace native desktop rendering
 and input review.
 
 Run the [local integration preflight](testing-workflow.md#local-integration-preflight)

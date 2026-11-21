@@ -69,10 +69,12 @@ def verify_source_contract(project_root, package_dir, contract):
 
 def verify_runtime_catalog(contract, categories, entries, routes, support_types,
                            ported_keys, spatial_available, require_spatial=False,
-                           qmlbridge_available=False):
+                           qmlbridge_available=False, require_qmlbridge=False):
     """Check the active subset without weakening the complete packaged contract."""
     if require_spatial and not spatial_available:
         raise AssertionError("Release Gallery must include Spatial; a 2D-only fallback is not a complete package")
+    if require_qmlbridge and not qmlbridge_available:
+        raise AssertionError("Release Gallery must include QmlView")
     expected_categories = [c["id"] for c in contract["categories"]
                            if (spatial_available or c["id"] != "spatial")
                            and (qmlbridge_available or c["id"] != "qml-bridge")]
@@ -168,7 +170,8 @@ def main(argv=None):
     verify_runtime_catalog(CONTRACT, CATEGORIES, ENTRIES, ROUTES, SUPPORT_TYPES,
                            ported_sample_keys(), SPATIAL_AVAILABLE,
                            require_spatial=os.environ.get("FLUENTQT_REQUIRE_SPATIAL") == "1",
-                           qmlbridge_available=QML_BRIDGE_AVAILABLE)
+                           qmlbridge_available=QML_BRIDGE_AVAILABLE,
+                           require_qmlbridge=os.environ.get("FLUENTQT_REQUIRE_QML_BRIDGE") == "1")
 
     fluentqt.prepare_high_dpi_application()
     from PySide6.QtCore import QCoreApplication, QEvent
@@ -179,6 +182,8 @@ def main(argv=None):
     app.setProperty("fluentqtGalleryAutomated", True)
     if not fluentqt.initialize_resources():
         raise AssertionError("FluentQt resources could not be initialized")
+    from fluentqt_gallery.app import _prepare_qml_bridge_application
+    _prepare_qml_bridge_application()
     window = GalleryWindow()
     window.show()
     QApplication.processEvents()
@@ -194,6 +199,14 @@ def main(argv=None):
                 len(ROUTES), route_count
             )
         )
+    if QML_BRIDGE_AVAILABLE:
+        from fluentqt.qmlbridge import QmlView
+        window.navigate("qml-view", animated=False)
+        app.processEvents()
+        view = window.findChild(QmlView, "qmlBridgeLoadView")
+        if view is None or view.status() != QmlView.Status.Ready or view.rootObject() is None:
+            raise AssertionError("Packaged QmlView failed to load Basic.qml: " +
+                                 (view.lastError() if view is not None else "missing view"))
     window.navigate_component("button")
     if window.current_route != "button":
         raise AssertionError("Standalone Gallery could not navigate")
@@ -202,8 +215,8 @@ def main(argv=None):
     QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
     app.processEvents()
     print(
-        "FluentQt Gallery {0} standalone wheel smoke passed".format(
-            expected_version
+        "FluentQt Gallery {0} standalone wheel smoke passed ({1} components)".format(
+            expected_version, len(ENTRIES)
         ),
         flush=True,
     )

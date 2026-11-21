@@ -1542,7 +1542,7 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
                 EXPECT_EQ(reference.pythonType, component.title);
                 EXPECT_EQ(reference.pythonImport,
                     QStringLiteral("from fluentqt.qmlbridge import %1").arg(component.title));
-                EXPECT_TRUE(reference.pythonInstall.contains(QStringLiteral("FLUENT_QT_BUILD_QML_BRIDGE=ON")));
+                EXPECT_EQ(reference.pythonInstall, QStringLiteral("python -m pip install FluentQt"));
             } else {
                 EXPECT_TRUE(reference.hasPythonReference());
                 EXPECT_EQ(reference.pythonInstall, QStringLiteral("python -m pip install FluentQt"));
