@@ -53,11 +53,16 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/.github/scripts/setup-shiboken-clang.py"
     DESTINATION "${_package_root}/.github/scripts")
 file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/tools/designer"
     "${FLUENT_QT_SOURCE_DIR}/tools/fonts"
     DESTINATION "${_package_root}/tools"
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE)
+file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/tools/gallery/artwork"
+    "${FLUENT_QT_SOURCE_DIR}/tools/gallery/export_control_images.py"
+    DESTINATION "${_package_root}/tools/gallery")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/onboarding"
     DESTINATION "${_package_root}/tools"

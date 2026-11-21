@@ -39,6 +39,11 @@ the same environment. Only a successful unclassified full run supplies
 `Release ready`: a release-candidate push, the weekly schedule, or a manual
 full run.
 
+The Linux Qt 5 and Qt 6 integration jobs build the Designer plugin and sample
+from the release source archive against the installed Widgets SDK. The macOS
+PySide6 wheel job checks the Designer catalog, icons, template resources and
+form behavior with the installed bindings.
+
 Other pushes to `main`, such as post-release history updates, compare the
 pushed commit with the previous `main` tip. Pages deploys the website and Web
 Gallery from one run, so these pushes always keep the WebAssembly lane. A new

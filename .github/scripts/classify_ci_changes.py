@@ -27,7 +27,10 @@ DOCUMENTATION_ROOT_FILES = {
     "llms.txt",
 }
 
+DESIGNER_CATALOG = "docs/ai/generated/fluentqt-ai-catalog.json"
+
 NON_DOCUMENTATION_PATHS = {
+    DESIGNER_CATALOG,
     "docs/development/component-api-policy.json",
     "docs/development/technical-debt-roadmap.md",
     "docs/development/visual-evidence-inventory.json",
@@ -43,6 +46,8 @@ PYSIDE_PREFIXES = (
     "plugin/",
     "src/",
     "third_party/",
+    "tools/designer/",
+    "tools/gallery/artwork/",
     "uilib/",
 )
 
@@ -276,6 +281,7 @@ def affects_pyside(path: str) -> bool:
         return False
     return (
         path in PYSIDE_ROOT_FILES
+        or path in (DESIGNER_CATALOG, "tools/gallery/export_control_images.py")
         or path in PYSIDE_CI_FILES
         or path in PYSIDE_ONBOARDING_FILES
         or path.startswith(PYSIDE_PREFIXES)

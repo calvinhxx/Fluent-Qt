@@ -63,8 +63,9 @@ Widgets, Network, SVG, OpenGL/OpenGLWidgets, QML/Quick and Qt Base plug-in contr
 corresponding source to the package process before release.
 
 Tagged releases also publish `FluentQt-<version>-source.zip`. This portable,
-library-only archive excludes Gallery, tests, and `support/logging`; create it
-locally after any normal configure with:
+archive includes the [Qt Designer tools](../../tools/designer/README.md) and the
+SVG inputs for rebuilding their icons. The Gallery applications, top-level tests
+and `support/logging` are excluded. Create it locally after any normal configure:
 
 ```bash
 cmake --build <build-dir> --target fluent_qt_source_package

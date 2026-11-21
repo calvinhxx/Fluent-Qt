@@ -1155,6 +1155,20 @@ jobs:
             --interpreter "3.13=${{ steps.python313.outputs.python-path }}" \
             --work-dir "$RUNNER_TEMP/fluentqt-stable-abi-smoke"
 
+      - name: Verify PySide6 Designer from the source archive
+        shell: bash
+        run: |
+          unset PYTHONPATH DYLD_LIBRARY_PATH QT_PLUGIN_PATH QT_QPA_PLATFORM_PLUGIN_PATH
+          export QT_QPA_PLATFORM=offscreen
+          wheel_python="$RUNNER_TEMP/fluentqt-wheel-smoke-macos/bin/python"
+          output="$RUNNER_TEMP/designer-source"
+          cmake -DFLUENT_QT_SOURCE_DIR=. -DFLUENT_QT_SOURCE_PACKAGE_DIR="$output" \
+            -DFLUENT_QT_SOURCE_PACKAGE_VERSION=ci -P cmake/CreateSourcePackage.cmake
+          unzip -q "$output/FluentQt-ci-source.zip" -d "$output"
+          designer="$output/FluentQt-ci-source/tools/designer"
+          "$wheel_python" "$designer/prepare_catalog.py" --check
+          "$wheel_python" -m unittest discover -s "$designer/tests"
+
       - name: Verify native Cocoa Window and TitleBar
         shell: bash
         run: |
