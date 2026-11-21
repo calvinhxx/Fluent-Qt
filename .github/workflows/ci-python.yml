@@ -909,6 +909,7 @@ jobs:
     timeout-minutes: 45
     env:
       FLUENTQT_REQUIRE_SPATIAL: "1"
+      FLUENTQT_REQUIRE_QML_BRIDGE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -963,6 +964,7 @@ jobs:
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.11,<3.14" \
             -DFLUENT_QT_PYSIDE6_PRECOMPILE_WRAPPERS=ON \
             -DFLUENT_QT_BUILD_SPATIAL=ON \
+            -DFLUENT_QT_BUILD_QML_BRIDGE=ON \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
             -DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
@@ -1229,6 +1231,7 @@ jobs:
     timeout-minutes: ${{ matrix.timeout_minutes }}
     env:
       FLUENTQT_REQUIRE_SPATIAL: "1"
+      FLUENTQT_REQUIRE_QML_BRIDGE: "1"
     strategy:
       fail-fast: false
       # Each platform builds one stable-ABI wheel, so five dynamic lanes run
@@ -1334,6 +1337,7 @@ jobs:
             -DPython_EXECUTABLE="$(command -v python)"
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=${{ matrix.requires_python }}"
             -DFLUENT_QT_BUILD_SPATIAL=ON
+            -DFLUENT_QT_BUILD_QML_BRIDGE=ON
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON
             -DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON
             -DFLUENT_QT_BUILD_EXAMPLES=OFF
@@ -1368,6 +1372,7 @@ jobs:
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=${{ matrix.requires_python }}",
             "-DFLUENT_QT_BUILD_SPATIAL=ON",
+            "-DFLUENT_QT_BUILD_QML_BRIDGE=ON",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
             "-DFLUENT_QT_REQUIRE_INTERFACE_ZOOM=ON",
             "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
@@ -1474,6 +1479,7 @@ jobs:
             --env FLUENTQT_SHIBOKEN_VERSION \
             --env FLUENTQT_AUDITWHEEL_VERSION \
             --env FLUENTQT_REQUIRE_SPATIAL \
+            --env FLUENTQT_REQUIRE_QML_BRIDGE \
             --env FLUENTQT_CHECK_BACKDROP_CONVERTER \
             --env FLUENTQT_BUILD_PARALLEL \
             --env "FLUENTQT_HOST_UID=$host_uid" \

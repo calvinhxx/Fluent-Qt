@@ -232,13 +232,14 @@ See [Spatial](../../docs/architecture/spatial-view.md) for supported content and
 
 ### Optional QmlBridge module
 
-Enable `FLUENT_QT_BUILD_QML_BRIDGE=ON` in the matched Qt/PySide6 source build
-and rebuild `fluentqt_pyside6_stubs` to include `fluentqt.qmlbridge`. The module
+Release wheel builds enable `fluentqt.qmlbridge` for the Gallery's QmlView page.
+The published 1.12.1 wheels omitted this module. For a source build, enable
+`FLUENT_QT_BUILD_QML_BRIDGE=ON` and build `fluentqt_pyside6_stubs`. The module
 exports the shared native `QmlPlugin`, `QmlSession`, `QmlTheme`,
 `QmlTextureLayer`, and `QmlView`.
-Its Qt QuickWidgets dependencies remain opt-in. Importing `fluentqt` does not
-import the Quick Python modules; explicit `fluentqt.qmlbridge` imports register
-the converters used by returned QML root objects.
+Source builds can omit Qt QuickWidgets by disabling QmlBridge. Import
+`fluentqt.qmlbridge` to register the Quick converters used by returned QML root
+objects.
 
 Call `QmlSession.prepareApplication()` once at startup before creating the
 first Qt Quick view when sharing a window with Spatial or `QOpenGLWidget`. Then

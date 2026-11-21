@@ -53,6 +53,10 @@ class GalleryWheelSmokeContractsTest(unittest.TestCase):
                     with self.assertRaisesRegex(AssertionError, "Release Gallery must include Spatial"):
                         SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys,
                                                      available, require_spatial=True, qmlbridge_available=qmlbridge)
+                if not qmlbridge:
+                    with self.assertRaisesRegex(AssertionError, "Release Gallery must include QmlView"):
+                        SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, keys,
+                                                     available, require_qmlbridge=True)
                 # Same-sized wrong catalog and missing ports must still fail.
                 with self.assertRaisesRegex(AssertionError, "wrong coverage"):
                     SMOKE.verify_runtime_catalog(contract, categories, entries, routes, {"Theme"}, set(), available,

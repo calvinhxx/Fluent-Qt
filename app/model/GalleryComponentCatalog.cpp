@@ -213,7 +213,7 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
             if (category.id == QStringLiteral("qml-bridge")) {
                 return {categoryHeaders.value(category.sourceDirectory),
                     QStringLiteral("%1::%2").arg(apiNamespace, typeName), QStringLiteral("FluentQt::QmlBridge"),
-                    QStringLiteral("Source build: FLUENT_QT_BUILD_QML_BRIDGE=ON"),
+                    QStringLiteral("python -m pip install FluentQt"),
                     QStringLiteral("from fluentqt.qmlbridge import %1").arg(typeName), typeName};
             }
             return {categoryHeaders.value(category.sourceDirectory, QStringLiteral("<FluentQt/FluentQt.h>")),
