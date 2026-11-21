@@ -130,7 +130,7 @@ jobs:
       - name: Install Linux dependencies
         if: ${{ matrix.platform == 'linux' }}
         shell: bash
-        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}" qml
 
       - name: Install NSIS
         if: ${{ matrix.needs_nsis == true }}

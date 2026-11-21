@@ -2,6 +2,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/scrolling/ScrollView.h"
+#include "model/GalleryComponentCatalog.h"
 #include "view/preview/GalleryPreviewActions.h"
 #include "view/preview/GalleryPreviewSession.h"
 #include "view/widgets/GallerySampleCard.h"
@@ -636,6 +637,12 @@ QJsonObject galleryPreviewReport(GalleryPreviewWindow* window,
     const bool interactionFailed = resolvedInteractionReport.value(QStringLiteral("requested")).toBool()
         && resolvedInteractionReport.value(QStringLiteral("status")).toString() != QStringLiteral("pass");
 
+    QJsonArray componentRoutes;
+    for (const auto& category : galleryComponentCatalog()) {
+        for (const auto& component : category.components)
+            componentRoutes.append(component.id);
+    }
+
     return {{QStringLiteral("schema_version"), kPreviewReportSchemaVersion},
         {QStringLiteral("tool"), QStringLiteral("FluentQt Gallery Preview")},
         {QStringLiteral("status"),
@@ -643,6 +650,7 @@ QJsonObject galleryPreviewReport(GalleryPreviewWindow* window,
                 : interactionFailed
                 ? QStringLiteral("interaction-error")
                 : QStringLiteral("ok")},
+        {QStringLiteral("component_routes"), componentRoutes},
         {QStringLiteral("selection"),
             QJsonObject{{QStringLiteral("route"), options.routeId},
                 {QStringLiteral("sample"), window ? window->sampleId() : QString()}}},

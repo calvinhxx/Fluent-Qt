@@ -130,7 +130,7 @@ jobs:
       - name: Install Linux build and packaging dependencies
         if: ${{ matrix.platform == 'linux' }}
         shell: bash
-        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}" qml
 
       - name: Install host Qt ${{ matrix.qt_version }}
         if: ${{ matrix.windows_arm64_cross == true }}
@@ -296,6 +296,18 @@ jobs:
             exit 1
           fi
 
+          if [[ "${{ matrix.qt_source }}" == "apt5" ]]; then
+            required_imports=(qml-module-qtquick2)
+          else
+            required_imports=(qml6-module-qtquick qml6-module-qtqml qml6-module-qtqml-models qml6-module-qtqml-workerscript)
+          fi
+          for module in "${required_imports[@]}"; do
+            if ! grep -Eq "(^|, )${module}( |,|$)" <<< "$depends"; then
+              echo "::error::DEB is missing the QML import dependency $module."
+              exit 1
+            fi
+          done
+
       - name: Collect package artifact
         shell: pwsh
         run: |
@@ -316,6 +328,11 @@ jobs:
 
           $package = $packages[0]
           $targetName = $package.Name
+          if ("${{ matrix.windows_arm64_cross }}" -ne "true") {
+            $python = if ($IsWindows) { "python" } else { "python3" }
+            & $python .github/scripts/verify-packaged-gallery.py $package.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           $assetSuffix = "${{ matrix.asset_suffix }}"
           if ($assetSuffix) {
             $targetName = "$($package.BaseName)-$assetSuffix$($package.Extension)"

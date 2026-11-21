@@ -60,11 +60,12 @@ corresponding-source offer, and replacement/relinking instructions are under
 `third_party/runtime/qt/NOTICE.md` and are installed with binary packages.
 
 For every official package that contains Qt binaries, the distributor must
-retain the exact corresponding Qt Base and Qt SVG sources under its control for the period
+retain the exact corresponding Qt module sources under its control for the period
 stated in the written offer. `qtbase` covers the Qt Core, GUI, Widgets, Network, OpenGL, OpenGLWidgets,
 and platform plug-in runtime contract currently used by Gallery, including the
 third-party source and license material shipped inside Qt Base. `qtsvg` covers
-the Gallery's SVG renderer. If the runtime contract grows beyond these modules,
+the Gallery's SVG renderer. `qtdeclarative` covers the QmlBridge page's Qt QML,
+Quick, QuickWidgets and QtQuick imports. If the runtime contract grows beyond these modules,
 the corresponding module source must be added before publishing the package.
 
 The C++ Web Gallery is a separate static WebAssembly distribution built with

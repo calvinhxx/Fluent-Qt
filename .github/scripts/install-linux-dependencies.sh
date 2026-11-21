@@ -35,8 +35,15 @@ packages=(
 
 if [[ "$qt_source" == "apt5" ]]; then
     packages+=(qtbase5-dev qtbase5-private-dev qtbase5-dev-tools libqt5svg5-dev)
+    if [[ "${2:-}" == "qml" ]]; then
+        packages+=(qtdeclarative5-dev qml-module-qtquick2)
+    fi
 elif [[ "$qt_source" == "apt" || "$qt_source" == "apt6" ]]; then
     packages+=(qt6-base-dev qt6-base-private-dev qt6-base-dev-tools libqt6opengl6-dev libqt6svg6-dev)
+    if [[ "${2:-}" == "qml" ]]; then
+        packages+=(qt6-declarative-dev qt6-declarative-private-dev qml6-module-qtquick
+            qml6-module-qtqml qml6-module-qtqml-models qml6-module-qtqml-workerscript)
+    fi
 fi
 
 sudo apt-get update
