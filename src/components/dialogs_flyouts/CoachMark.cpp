@@ -361,20 +361,19 @@ void CoachMark::reposition(bool animated)
         break;
     }
 
-    if (ownerWindow) {
-        const QRect bounds = ::fluent::overlay::overlaySurfaceRect(ownerWindow);
-        topLeft.setX(qBound(bounds.left(), topLeft.x(), bounds.right() - win.width()));
-        topLeft.setY(qBound(bounds.top(), topLeft.y(), bounds.bottom() - win.height()));
-    }
+    if (ownerWindow)
+        topLeft = ::fluent::overlay::clampCardTopLeft(topLeft, win, ::fluent::overlay::overlaySurfaceRect(ownerWindow),
+            0);
 
     const QRect card = ::fluent::overlay::visibleCardRect(QRect(QPoint(0, 0), win));
-    const int r = themeRadius().overlay;
-    if (m_tailEdge == 1 || m_tailEdge == 2) {
-        const int localX = targetRef.center().x() - topLeft.x();
-        m_tailCenter = qBound(card.left() + r + kTailSize, localX, card.right() - r - kTailSize);
-    } else {
-        const int localY = targetRef.center().y() - topLeft.y();
-        m_tailCenter = qBound(card.top() + r + kTailSize, localY, card.bottom() - r - kTailSize);
+    const int inset = themeRadius().overlay + kTailSize;
+    const bool horizontalEdge = m_tailEdge == 1 || m_tailEdge == 2;
+    const int first = (horizontalEdge ? card.left() : card.top()) + inset;
+    const int last = (horizontalEdge ? card.right() : card.bottom()) - inset;
+    m_tailVisible = first <= last;
+    if (m_tailVisible) {
+        const QPoint local = targetRef.center() - topLeft;
+        m_tailCenter = qBound(first, horizontalEdge ? local.x() : local.y(), last);
     }
 
     if (animated && isVisible()) {
