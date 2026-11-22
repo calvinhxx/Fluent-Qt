@@ -28,13 +28,13 @@ if(FLUENTQT_BUILD_DESIGNER_PLUGIN)
     else()
         set(qt_package Qt5)
     endif()
-    find_package(${qt_package} REQUIRED COMPONENTS UiPlugin)
-    add_library(fluentqt_designer_plugin MODULE WidgetCollection.cpp "${generated}/widget_icons.qrc"
+    find_package(${qt_package} REQUIRED COMPONENTS UiPlugin Designer)
+    add_library(fluentqt_designer_plugin MODULE WidgetCollection.cpp DesignerPageExtension.h "${generated}/widget_icons.qrc"
         templates/fluentqt_form_templates.qrc)
     if("Spatial" IN_LIST FLUENTQT_DESIGNER_EXTENSIONS)
         target_sources(fluentqt_designer_plugin PRIVATE templates/fluentqt_spatial_template.qrc)
     endif()
-    target_link_libraries(fluentqt_designer_plugin PRIVATE fluentqt_form_widgets ${qt_package}::UiPlugin)
+    target_link_libraries(fluentqt_designer_plugin PRIVATE fluentqt_form_widgets ${qt_package}::UiPlugin ${qt_package}::Designer)
     set_target_properties(fluentqt_designer_plugin PROPERTIES
         AUTORCC ON
         LIBRARY_OUTPUT_DIRECTORY "$<1:${CMAKE_BINARY_DIR}/plugins/designer>"

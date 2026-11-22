@@ -1,4 +1,5 @@
 #include "fluentqt_designer.h"
+#include "DesignerPageExtension.h"
 
 #include <FluentQt/FluentQt.h>
 #include <QtUiPlugin/customwidget.h>
@@ -22,6 +23,17 @@ public:
           m_xml(QString::fromUtf8(xml)), m_container(container), m_factory(factory)
     {}
 
+    void initialize(QDesignerFormEditorInterface* core) override
+    {
+        auto* manager = core->extensionManager();
+        if (!manager->findChild<QObject*>(QStringLiteral("fluentDesignerPages"))) {
+            auto* factory = new fluentqt_designer::PageFactory(manager);
+            factory->setObjectName(QStringLiteral("fluentDesignerPages"));
+            manager->registerExtensions(factory, Q_TYPEID(QDesignerContainerExtension));
+        }
+        m_initialized = true;
+    }
+    bool isInitialized() const override { return m_initialized; }
     QString name() const override { return m_name; }
     QString group() const override { return m_group; }
     QString includeFile() const override { return QStringLiteral("fluentqt_designer.h"); }
@@ -42,6 +54,7 @@ private:
     QString m_xml;
     bool m_container;
     Factory m_factory;
+    bool m_initialized = false;
 };
 
 template <typename Widget> WidgetEntry* entry(QObject* parent, const char* group, const char* xml, bool container)

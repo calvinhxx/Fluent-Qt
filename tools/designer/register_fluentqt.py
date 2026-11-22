@@ -5,7 +5,8 @@ from PySide6.QtCore import QResource
 from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 from fluentqt import initialize_resources
 
-from fluentqt_designer_catalog import DIRECTORY, widget_xml
+from fluentqt_designer_catalog import DIRECTORY, PAGE_METHODS, widget_xml
+from fluentqt_designer_containers import register_container
 from fluentqt_designer import available_widgets
 
 initialize_resources()
@@ -17,6 +18,9 @@ for resource in templates:
     if not QResource.registerResource(str(path)):
         raise RuntimeError(f"Could not load FluentQt Designer templates from {path}")
 for entry, widget in available_widgets():
+    if entry["name"] in PAGE_METHODS:
+        register_container(QPyDesignerCustomWidgetCollection, entry, widget)
+        continue
     QPyDesignerCustomWidgetCollection.registerCustomWidget(
         widget,
         group="FluentQt / " + entry["group"],

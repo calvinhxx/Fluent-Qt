@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from fluentqt_designer_catalog import DIRECTORY, WIDGETS, widget_xml
+from fluentqt_designer_catalog import DIRECTORY, PAGE_METHODS, WIDGETS, form_data_property, widget_xml
 
 
 def write(path, content):
@@ -21,6 +21,7 @@ def main():
     header = ["#pragma once", ""]
     header += ["#include " + path for path in sorted({w["header"] for w in widgets})]
     header.append('#include "DesignerSurfaces.h"')
+    header.append('#include "DesignerFormData.h"')
     entries = []
     root = ET.Element("RCC")
     resources = ET.SubElement(root, "qresource", prefix="/fluentqt/designer/icons")
@@ -31,7 +32,19 @@ def main():
             base = "fluentqt_designer::" + widget["adapter"] + "Button"
             params = "fluentqt_designer::Surface::" + widget["surface"] + ", parent"
         header.extend(["", f"class {name} : public {base} {{", "    Q_OBJECT", "public:",
-                       f"    explicit {name}(QWidget* parent = nullptr) : {base}({params}) {{}}", "};"])
+                       f"    explicit {name}(QWidget* parent = nullptr) : {base}({params}) {{}}"])
+        if name in PAGE_METHODS:
+            header.append(f"    Q_INVOKABLE void setFormPage(QWidget* page) {{ {PAGE_METHODS[name]}(page, fluent::WidgetOwnership::Owned); }}")
+        prop = form_data_property(widget)
+        if prop:
+            method = "set" + prop[0].upper() + prop[1:]
+            apply = "setNavigationItems" if name in ("FluentStepper", "FluentSelectorBar", "FluentPivot") else method
+            header.extend([f"    Q_PROPERTY(QStringList {prop} READ {prop} WRITE {method})",
+                           f"    QStringList {prop}() const {{ return m_formData; }}",
+                           f"    void {method}(const QStringList& values) {{",
+                           f"        m_formData = values; fluentqt_designer::{apply}(this, values);",
+                           "    }", "private:", "    QStringList m_formData;"])
+        header.append("};")
         container = "true" if widget.get("container") else "false"
         entries.append(f'entry<{name}>(this, "FluentQt / {widget["group"]}", '
                        f'R"xml({widget_xml(widget)})xml", {container}),')
