@@ -554,7 +554,7 @@ def wasm_supply_chain_errors(contents: str) -> list[str]:
     for job, step_names in (
         (browser, ("Checkout", "Download browser input", "Verify browser input", "Set up Python",
                    "Install browser test dependencies", "Cache Chromium", "Install Chromium runtime", "Run browser smoke",
-                   "Check wide viewport", "Upload browser smoke diagnostics", "Run Spatial software fallback smoke",
+                   "Verify Studio with the built WebAssembly Gallery", "Check wide viewport", "Upload browser smoke diagnostics", "Run Spatial software fallback smoke",
                    "Upload Spatial fallback evidence")),
         (publish, ("Download tested browser input", "Upload WebAssembly Pages payload")),
     ):
@@ -1796,6 +1796,7 @@ def site_generation_errors(contents: str) -> list[str]:
             "python tools/site/test_generate_api_reference.py",
             "python tools/site/test_theme_browser_runner.py",
             "node --test tools/site/test_support.mjs",
+            "node --test tools/site/test_studio.mjs",
         ],
     }.items():
         section = named_step_section(build, step)

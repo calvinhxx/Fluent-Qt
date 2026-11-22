@@ -227,6 +227,12 @@ class ClassifyCiChangesTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assert_classification([path], native=True, pyside=True, wasm=False)
 
+    def test_studio_changes_run_export_and_browser_checks(self):
+        for path in ("site/studio/studio-core.mjs", "tools/site/studio-check/export.mjs",
+                     "tools/site/test_studio_browser.py", "tools/site/generate_studio_metadata.py"):
+            with self.subTest(path=path):
+                self.assert_classification([path], native=True, pyside=True, wasm=True)
+
     def test_native_test_only_change_skips_pyside_matrix(self):
         self.assert_classification(
             ["tests/components/basicinput/TestButton.cpp"],

@@ -103,6 +103,7 @@ jobs:
           python tools/site/test_theme_browser_runner.py
           node --test tools/site/test_hero_particles.mjs tools/site/test_spatial_showcase.mjs
           node --test tools/site/test_support.mjs
+          node --test tools/site/test_studio.mjs
 
       - name: Cache Chromium
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -118,6 +119,9 @@ jobs:
       - name: Verify website browser themes
         shell: bash
         run: python tools/site/test_theme_browser.py --site-root build/site-pages --output build/site-theme-browser
+
+      - name: Verify Studio schematic editing and sharing
+        run: python tools/site/test_studio_browser.py --site-root build/site-pages
 
       - name: Upload generated website
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
