@@ -17,6 +17,7 @@
 #include "platform/wasm/WasmSmokeRunner.h"
 #include "platform/wasm/GallerySpatialShowcase.h"
 #include "platform/wasm/GalleryComponentPreview.h"
+#include "platform/wasm/GalleryStudioPreview.h"
 #include "support/logging/Log.h"
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryWindow.h"
@@ -106,6 +107,13 @@ int runApplication(int argc, char** argv)
     const bool componentPreview = emscripten_run_script_int("window.fluentQtComponentPreview === true");
     if (componentPreview) {
         showcaseWindow.reset(createComponentPreview());
+        showTopLevelWindow(showcaseWindow.get(), application->primaryScreen()->availableGeometry(), true);
+        return 0;
+    }
+
+    const bool studioPreview = emscripten_run_script_int("window.fluentQtStudioPreview === true");
+    if (studioPreview) {
+        showcaseWindow.reset(createStudioPreview());
         showTopLevelWindow(showcaseWindow.get(), application->primaryScreen()->availableGeometry(), true);
         return 0;
     }

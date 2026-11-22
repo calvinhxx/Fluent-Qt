@@ -10,9 +10,11 @@
     document.documentElement.dataset.fluentQtLoadStartedAt = String(Date.now());
     const componentParameters = new URLSearchParams(window.location.search);
     window.fluentQtComponentPreview = componentParameters.get('preview') === 'component';
+    window.fluentQtStudioPreview = componentParameters.get('studio') === '1';
     window.fluentQtInteractivePlayground = componentParameters.get('playground') === 'interactive';
     document.documentElement.dataset.fluentQtInteractivePlayground = String(window.fluentQtInteractivePlayground);
     document.documentElement.dataset.fluentQtComponentPreview = String(window.fluentQtComponentPreview);
+    document.documentElement.dataset.fluentQtStudioPreview = String(window.fluentQtStudioPreview);
     window.fluentQtComponentRequest = {
       route: componentParameters.get('route') || '',
       sample: componentParameters.get('sample') || '',
@@ -118,7 +120,8 @@
       transition: opacity 180ms ease;
     }
     #loading.hidden { opacity: 0; pointer-events: none; }
-    html[data-fluent-qt-component-preview="true"] #loading { display: none; }
+    html[data-fluent-qt-component-preview="true"] #loading,
+    html[data-fluent-qt-studio-preview="true"] #loading { display: none; }
     #loading.error { color: #b42318; }
     .spinner { width: 28px; height: 28px; margin: auto; border: 3px solid #c7c7c7;
       border-top-color: #0067c0; border-radius: 50%; animation: spin .8s linear infinite; }
@@ -199,6 +202,7 @@
     let wasmInstance = null;
     const showcase = new URLSearchParams(window.location.search).get('showcase') === 'spatial';
     const componentPreview = window.fluentQtComponentPreview;
+    const studioPreview = window.fluentQtStudioPreview;
     const showcaseSession = new URLSearchParams(window.location.search).get('host-session') || '';
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let showcaseActive = true;
@@ -297,6 +301,46 @@
           }
         }
       }
+      if (studioPreview && event.data.session === showcaseSession) {
+        const fitsStudioLimit = (value) => {
+          try {
+            const text = JSON.stringify(value);
+            return text.length <= 131072 && new TextEncoder().encode(text).length <= 131072;
+          } catch {
+            return false;
+          }
+        };
+        if (event.data.type === 'studio-render' && event.data.document
+            && typeof event.data.document === 'object' && !Array.isArray(event.data.document)) {
+          if (!fitsStudioLimit(event.data.document)) return;
+          window.fluentQtStudioRequest = {
+            requestId: Number.isSafeInteger(event.data.requestId) ? event.data.requestId : 0,
+            preview: Boolean(event.data.preview),
+            document: event.data.document
+          };
+          wasmInstance?._fluentQtGalleryStudioApply?.();
+        }
+        if (event.data.type === 'studio-patch' && typeof event.data.nodeId === 'string' && event.data.nodeId.length <= 128
+            && event.data.patch && typeof event.data.patch === 'object' && !Array.isArray(event.data.patch)) {
+          if (!fitsStudioLimit(event.data.patch)
+              || (event.data.document && !fitsStudioLimit(event.data.document))) return;
+          window.fluentQtStudioPatchRequest = {
+            requestId: Number.isSafeInteger(event.data.requestId) ? event.data.requestId : 0,
+            preview: Boolean(event.data.preview),
+            nodeId: event.data.nodeId,
+            patch: event.data.patch,
+            document: event.data.document || null
+          };
+          wasmInstance?._fluentQtGalleryStudioPatch?.();
+        }
+        if (event.data.type === 'studio-select' && typeof event.data.nodeId === 'string' && event.data.nodeId.length <= 128) {
+          window.fluentQtStudioSelectedId = event.data.nodeId;
+          wasmInstance?._fluentQtGalleryStudioSelect?.();
+        }
+        if (event.data.type === 'studio-refresh') {
+          wasmInstance?._fluentQtGalleryStudioRefresh?.();
+        }
+      }
       if (showcase && event.data.type === 'showcase-visibility'
           && typeof event.data.active === 'boolean') {
         showcaseActive = event.data.active;
@@ -342,6 +386,21 @@
     };
     window.fluentQtPickerChanged = json => {
       if (componentPreview) notifyHost('picker-state', JSON.parse(json));
+    };
+    window.fluentQtStudioReady = () => {
+      if (studioPreview) notifyHost('studio-ready', {});
+    };
+    window.fluentQtStudioApplied = json => {
+      if (studioPreview) notifyHost('studio-applied', JSON.parse(json));
+    };
+    window.fluentQtStudioLayoutChanged = json => {
+      if (studioPreview) notifyHost('studio-layout', JSON.parse(json));
+    };
+    window.fluentQtStudioEvent = json => {
+      if (studioPreview) notifyHost('studio-event', JSON.parse(json));
+    };
+    window.fluentQtStudioInspected = json => {
+      if (studioPreview) notifyHost('studio-inspected', JSON.parse(json));
     };
     const syncPlaygroundFocus = () => {
       if (!window.fluentQtInteractivePlayground) return;
@@ -441,6 +500,7 @@
         syncShowcase();
         if (componentPreview && !window.fluentQtInteractivePlayground) selectComponent();
         syncComponent();
+        if (studioPreview && window.fluentQtStudioRequest) wasmInstance?._fluentQtGalleryStudioApply?.();
       } catch (error) {
         console.error(error);
         document.documentElement.dataset.fluentQtError = String(error);
