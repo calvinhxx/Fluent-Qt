@@ -12,6 +12,8 @@ function(fluent_qt_configure_gallery_webassembly target source_dir)
         "${_adapter_dir}/GalleryComponentPreview.h"
         "${_adapter_dir}/GallerySpatialShowcase.cpp"
         "${_adapter_dir}/GallerySpatialShowcase.h"
+        "${_adapter_dir}/GalleryStudioPreview.cpp"
+        "${_adapter_dir}/GalleryStudioPreview.h"
         "${_adapter_dir}/GalleryPlatform.cpp"
         "${_adapter_dir}/WasmSmokeRunner.cpp"
         "${_adapter_dir}/WasmSmokeRunner.h")
