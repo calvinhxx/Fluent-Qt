@@ -98,6 +98,7 @@
           <div class="nav-links">
             <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
             <a href="{{API_URL}}" data-i18n="nav.api">文档</a>
+            <a href="{{STUDIO_URL}}" data-i18n="nav.studio">Studio</a>
             <a href="{{RELEASES_URL}}" data-i18n="nav.releases">版本</a>
             <a href="#quick-start" data-i18n="nav.quickStart">接入</a>
             <a href="#why" data-i18n="nav.why">概览</a>
@@ -163,6 +164,14 @@
                 href="#gallery"
               >
                 <span data-i18n="hero.tryGallery">在线打开 Gallery</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+              <a
+                class="button button-quiet hero-studio-action"
+                href="{{STUDIO_URL}}"
+                data-analytics-event="hero_studio"
+              >
+                <span data-i18n="hero.studio">拖拽构建页面</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
               </a>
               <a
@@ -245,14 +254,20 @@
               <p data-i18n="path.tryCopy">在浏览器中搜索控件、切换主题并直接交互体验。</p>
               <span class="path-action"><span data-i18n="path.tryAction">打开 Gallery</span><span aria-hidden="true">→</span></span>
             </a>
-            <a class="path-card" href="#quick-start" data-analytics-event="path_cpp">
+            <a class="path-card" href="{{STUDIO_URL}}" data-analytics-event="path_studio">
               <span class="path-number">02</span>
+              <strong data-i18n="path.studioTitle">Page Studio</strong>
+              <p data-i18n="path.studioCopy">使用真实 Fluent-Qt 控件拖拽排版，导出 C++、PySide6 与 Qt Designer 页面代码。</p>
+              <span class="path-action"><span data-i18n="path.studioAction">打开构建器</span><span aria-hidden="true">→</span></span>
+            </a>
+            <a class="path-card" href="#quick-start" data-analytics-event="path_cpp">
+              <span class="path-number">03</span>
               <strong data-i18n="path.cppTitle">C++ / Qt Widgets</strong>
               <p data-i18n="path.cppCopy">通过几行 CMake 配置接入现有 Qt Widgets 工程。</p>
               <span class="path-action"><span data-i18n="path.cppAction">查看 C++ 接入</span><span aria-hidden="true">→</span></span>
             </a>
             <a class="path-card" href="https://pypi.org/project/FluentQt/" data-analytics-event="path_python">
-              <span class="path-number">03</span>
+              <span class="path-number">04</span>
               <strong data-i18n="path.pythonTitle">Python / PySide6</strong>
               <p data-i18n="path.pythonCopy">从 PyPI 安装 FluentQt，通过 PySide6 使用同一套控件。</p>
               <span class="path-action"><span data-i18n="path.pythonAction">查看 PyPI 安装</span><span aria-hidden="true">↗</span></span>
@@ -447,6 +462,10 @@
               </a>
               <a class="text-link" href="https://pypi.org/project/FluentQt/" data-analytics-event="pypi_quick_start">
                 <span data-i18n="quickStart.python">Python / PySide6 · pip install FluentQt</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/tools/designer/README.md" data-analytics-event="designer_quick_start">
+                <span data-i18n="quickStart.designer">Qt Designer 插件 · Qt Creator / PySide6</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
               </a>
               <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/discussions/categories/q-a" data-analytics-event="discussions_quick_start">
@@ -832,11 +851,13 @@ target_link_libraries(
             <a href="#support" data-i18n="support.footer">支持项目</a>
             <a href="{{API_URL}}" data-i18n="nav.api">文档</a>
             <a href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples">Examples</a>
+            <a href="{{STUDIO_URL}}">Page Studio</a>
           </div>
           <div>
             <span data-i18n="footer.docs">文档</span>
             <a href="{{RELEASES_URL}}" data-i18n="footer.releases">版本记录与迁移</a>
             <a data-readme-link data-i18n="footer.readme" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/README.zh-CN.md">README</a>
+            <a href="https://github.com/calvinhxx/Fluent-Qt/blob/main/tools/designer/README.md" data-analytics-event="designer_footer">Qt Designer</a>
             <a data-i18n="footer.license" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/LICENSE">MIT 许可证</a>
             <a data-i18n="footer.notices" href="https://github.com/calvinhxx/Fluent-Qt/blob/main/THIRD_PARTY_NOTICES.md">第三方声明</a>
           </div>

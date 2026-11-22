@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fluent-Qt Studio</title>
+    <meta name="description" content="Calm, visual Fluent UI page builder powered by real C++ Fluent-Qt Widgets in WebAssembly, exporting C++, PySide6, and Qt Designer .ui.">
+    <link rel="icon" href="../assets/app-icon-64.png">
+    <script>
+      (function () {
+        document.documentElement.classList.add('js');
+        try {
+          var theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          var saved = localStorage.getItem('fluent-qt-theme');
+          if (saved === 'light' || saved === 'dark' || saved === 'high-contrast') {
+            theme = saved;
+          }
+          document.documentElement.dataset.theme = matchMedia('(forced-colors: active)').matches ? 'high-contrast' : theme;
+        } catch (err) {
+          document.documentElement.dataset.theme = 'light';
+        }
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var qLang = params.get('lang');
+          var lang = '';
+          if (qLang === 'en' || qLang === 'zh') {
+            lang = qLang;
+          } else if (document.referrer) {
+            var refUrl = new URL(document.referrer, window.location.href);
+            if (refUrl.origin === window.location.origin && !refUrl.pathname.includes('/studio/')) {
+              lang = /\/zh-(cn|tw)(\/|$)/i.test(refUrl.pathname) ? 'zh' : 'en';
+            }
+          }
+          if (!lang) {
+            lang = (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+          }
+          document.documentElement.dataset.lang = lang;
+          document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+        } catch (err) {
+          document.documentElement.dataset.lang = 'zh';
+          document.documentElement.lang = 'zh-CN';
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="studio.css">
+  </head>
+  <body>
+    <header class="studio-header">
+      <div class="header-left">
+        <a id="nav-home-link" class="brand" href="../" title="Fluent-Qt Home">
+          <img src="../assets/app-icon-64.png" alt="" width="24" height="24">
+          <span>Fluent-Qt</span>
+          <span class="studio-pill">Studio</span>
+        </a>
+      </div>
+
+      <div class="header-center">
+        <div class="segmented mode-segmented" role="group" aria-label="Canvas interaction mode">
+          <button id="mode-edit" type="button" class="seg-btn is-active" data-mode="edit" aria-pressed="true" data-i18n="mode.edit">编辑</button>
+          <button id="mode-play" type="button" class="seg-btn" data-mode="play" aria-pressed="false" data-i18n="mode.play">试玩</button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="segmented viewport-group" role="group" aria-label="Stage width preset">
+          <button type="button" class="seg-btn is-active" data-width="860" aria-pressed="true" data-i18n="viewport.desktop">桌面</button>
+          <button type="button" class="seg-btn" data-width="620" aria-pressed="false" data-i18n="viewport.tablet">平板</button>
+          <button type="button" class="seg-btn" data-width="400" aria-pressed="false" data-i18n="viewport.compact">紧凑</button>
+        </div>
+
+        <div class="action-group" aria-label="History">
+          <button id="btn-undo" type="button" class="icon-btn" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)" disabled>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M6.5 3.5L3 7l3.5 3.5M3.5 7H10a3.5 3.5 0 0 1 0 7H8"/></svg>
+          </button>
+          <button id="btn-redo" type="button" class="icon-btn" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)" disabled>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M9.5 3.5L13 7l-3.5 3.5M12.5 7H6a3.5 3.5 0 0 0 0 7h2"/></svg>
+          </button>
+        </div>
+
+        <button id="btn-code" type="button" class="studio-btn is-accent" aria-expanded="false" data-i18n="toolbar.code">导出代码</button>
+      </div>
+    </header>
+
+    <main id="studio-workspace">
+      <aside id="palette-panel" class="panel-pane" aria-label="Component palette">
+        <div class="palette-controls">
+          <div class="palette-search-box">
+            <svg class="search-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M10.4 10.4L14 14"/></svg>
+            <input id="palette-search" type="text" class="palette-search-input" autocomplete="off" aria-label="Filter controls">
+            <span id="catalog-count" class="palette-count-pill">103</span>
+            <button id="btn-clear-search" type="button" class="search-clear-btn" hidden aria-label="Clear search">✕</button>
+          </div>
+        </div>
+        <div id="palette-list" class="pane-scroll"></div>
+      </aside>
+
+      <section id="stage-panel" aria-label="Canvas stage">
+        <div id="stage-bar">
+          <div class="stage-status">
+            <span id="runtime-badge" class="runtime-badge" data-state="loading">WASM Initializing…</span>
+            <button id="btn-retry-wasm" type="button" class="mini-btn" hidden data-i18n="stage.retryWasm">重试 WASM</button>
+            <span id="event-pill" class="event-pill" aria-live="polite"></span>
+          </div>
+          <nav id="node-crumb" class="node-crumb" aria-label="Selected hierarchy"></nav>
+        </div>
+
+        <div id="stage-scroll">
+          <div id="stage-frame" style="--stage-width: 860px;">
+            <div id="canvas-shell" class="canvas-shell is-wasm-loading">
+              <iframe id="wasm-stage" title="Fluent-Qt WASM Studio Canvas"></iframe>
+              <div id="schematic-stage" class="schematic-stage" aria-label="Schematic preview"></div>
+              <div id="wasm-loader" class="wasm-loader" role="status" aria-live="polite" aria-label="Loading C++ Qt WASM canvas">
+                <div class="wasm-skeleton is-artboard" aria-hidden="true">
+                  <div class="sk-artboard-btn"></div>
+                </div>
+                <div class="wasm-loader-card">
+                  <div class="wasm-loader-emblem" aria-hidden="true">
+                    <svg class="fluent-progress-ring" viewBox="0 0 48 48" width="48" height="48">
+                      <circle class="ring-track" cx="24" cy="24" r="20" fill="none" stroke-width="3"></circle>
+                      <circle class="ring-arc" cx="24" cy="24" r="20" fill="none" stroke-width="3" stroke-linecap="round"></circle>
+                    </svg>
+                    <span class="wasm-loader-icon">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"></rect>
+                        <rect x="13" y="3" width="8" height="8" rx="2" fill="currentColor" opacity="0.72"></rect>
+                        <rect x="3" y="13" width="8" height="8" rx="2" fill="currentColor" opacity="0.72"></rect>
+                        <rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor" opacity="0.4"></rect>
+                      </svg>
+                    </span>
+                  </div>
+                  <div class="wasm-loader-copy">
+                    <div class="wasm-loader-title" data-i18n="loader.title">正在启动 C++ Qt 实时画布</div>
+                    <div id="wasm-loader-stage" class="wasm-loader-stage">正在加载 WebAssembly 运行时…</div>
+                  </div>
+                  <div class="fluent-indeterminate-bar" aria-hidden="true">
+                    <span class="bar-runner"></span>
+                  </div>
+                </div>
+              </div>
+              <div id="edit-overlay" class="edit-overlay" aria-label="Canvas drop and selection overlay">
+                <div id="hitbox-layer" class="hitbox-layer"></div>
+                <div id="hover-box" class="hover-box" hidden></div>
+                <div id="drop-container-box" class="drop-container-box" hidden>
+                  <span id="drop-container-tag" class="drop-container-tag"></span>
+                </div>
+                <div id="drop-guide-x" class="drop-guide is-x" hidden></div>
+                <div id="drop-guide-y" class="drop-guide is-y" hidden></div>
+                <div id="drop-line" class="drop-line" hidden></div>
+                <div id="drag-preview-box" class="drag-preview-box" hidden>
+                  <span id="drag-preview-tag" class="drag-preview-tag"></span>
+                  <span class="dp-handle tl" aria-hidden="true"></span>
+                  <span class="dp-handle tr" aria-hidden="true"></span>
+                  <span class="dp-handle bl" aria-hidden="true"></span>
+                  <span class="dp-handle br" aria-hidden="true"></span>
+                </div>
+                <div id="selection-box" class="selection-box" hidden>
+                  <div class="selection-bar">
+                    <span id="selection-tag" class="selection-tag"></span>
+                    <div class="selection-ops">
+                      <button id="sel-up" type="button" aria-label="Move node up" title="Move Up">↑</button>
+                      <button id="sel-down" type="button" aria-label="Move node down" title="Move Down">↓</button>
+                      <button id="sel-dup" type="button" aria-label="Duplicate node" title="Duplicate">⧉</button>
+                      <button id="sel-del" type="button" aria-label="Delete node" title="Delete">✕</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside id="inspector-panel" class="panel-pane" aria-label="Inspector and layers">
+        <div class="panel-tabs" role="tablist" aria-label="Inspector views">
+          <button id="tab-props" type="button" role="tab" class="panel-tab is-active" data-panel-tab="props" aria-selected="true" data-i18n="pane.inspector">属性</button>
+          <button id="tab-layers" type="button" role="tab" class="panel-tab" data-panel-tab="layers" aria-selected="false">
+            <span data-i18n="pane.outline">图层</span>
+            <span id="node-count" class="pane-badge">0 / 160</span>
+          </button>
+        </div>
+
+        <section id="props-pane" class="tab-pane" role="tabpanel" aria-labelledby="tab-props">
+          <div class="insp-summary">
+            <div class="insp-summary-top">
+              <div class="insp-summary-title-wrap">
+                <strong id="selected-type-badge" class="insp-title">页面</strong>
+                <span id="selected-id-pill" class="insp-id-code">#root</span>
+              </div>
+              <div class="node-actions-inline">
+                <button id="btn-reset-props" type="button" class="icon-btn compact" aria-label="Reset properties" title="重置属性" disabled>
+                  <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3.5 6.5a5 5 0 1 1 1.2 5.4"/>
+                    <path d="M3.5 3v3.5H7"/>
+                  </svg>
+                </button>
+                <button id="btn-duplicate" type="button" class="icon-btn compact" aria-label="Duplicate selected node" title="Duplicate (Ctrl/Cmd+D)">⧉</button>
+                <button id="btn-delete" type="button" class="icon-btn compact danger" aria-label="Delete selected node" title="Delete (Del)">✕</button>
+              </div>
+            </div>
+            <div id="selected-api-hint" class="insp-api-hint">fluent::AnchorLayout · AnchorLayout</div>
+            <p id="selected-desc-hint" class="insp-desc-hint" hidden></p>
+          </div>
+          <div id="inspector-body" class="pane-scroll"></div>
+        </section>
+
+        <section id="layers-pane" class="tab-pane" role="tabpanel" aria-labelledby="tab-layers" hidden>
+          <div id="outline-tree" class="pane-scroll outline-scroll" role="tree"></div>
+        </section>
+      </aside>
+    </main>
+
+    <section id="code-drawer" class="code-drawer" hidden aria-label="Code export drawer">
+      <div class="drawer-header">
+        <div class="drawer-tabs" role="tablist">
+          <button type="button" role="tab" class="drawer-tab is-active" data-format="cpp" aria-selected="true">C++17</button>
+          <button type="button" role="tab" class="drawer-tab" data-format="python" aria-selected="false">PySide6</button>
+          <button type="button" role="tab" class="drawer-tab" data-format="ui" aria-selected="false">Qt Designer (.ui)</button>
+          <button type="button" role="tab" class="drawer-tab" data-format="json" aria-selected="false">Studio JSON</button>
+        </div>
+        <div class="drawer-actions">
+          <span id="export-status" class="drawer-status" aria-live="polite"></span>
+          <button id="btn-copy-code" type="button" class="studio-btn" data-i18n="drawer.copy">复制代码</button>
+          <button id="btn-download-code" type="button" class="studio-btn" data-i18n="drawer.download">下载文件</button>
+          <button id="btn-close-drawer" type="button" class="icon-btn" aria-label="Close code drawer">✕</button>
+        </div>
+      </div>
+      <pre id="code-output" class="code-output"><code></code></pre>
+    </section>
+
+    <div id="drag-ghost" class="drag-ghost" hidden aria-hidden="true">
+      <div class="drag-ghost-card">
+        <span id="drag-ghost-label" class="drag-ghost-label"></span>
+        <div id="drag-ghost-body" class="drag-ghost-body"></div>
+      </div>
+      <div id="drag-ghost-pill" class="drag-ghost-pill"></div>
+    </div>
+
+    <div id="toast" class="studio-toast" hidden role="status" aria-live="polite"></div>
+
+    <script type="module" src="studio.js"></script>
+  </body>
+</html>

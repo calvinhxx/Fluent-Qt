@@ -222,7 +222,7 @@ def prefix_resources(page: str, prefix: str) -> str:
     attribute_names = "|".join(re.escape(name) for name in attributes)
     pattern = re.compile(
         rf'(?P<head>\b(?:{attribute_names})=")'
-        r'(?P<url>(?:assets/|styles\.css|site\.js|spatial-showcase\.js|gallery/|api/)[^"]*)'
+        r'(?P<url>(?:assets/|styles\.css|site\.js|spatial-showcase\.js|gallery/|api/|studio/)[^"]*)'
     )
 
     def replace(match: re.Match[str]) -> str:
@@ -375,6 +375,7 @@ def render_page(
     page = page.replace("{{API_URL}}", locale.api_url)
     page = page.replace("{{RELEASES_URL}}", locale.releases_url)
     page = page.replace("{{PLAYGROUND_URL}}", locale.playground_url)
+    page = page.replace("{{STUDIO_URL}}", locale.studio_url)
     if re.search(r"{{[A-Z0-9_]+}}", page):
         fail(f"unresolved template token in {locale.output_relative}")
     return page.rstrip() + "\n"
