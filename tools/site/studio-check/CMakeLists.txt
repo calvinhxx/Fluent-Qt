@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.21)
+project(StudioExportCheck LANGUAGES CXX)
+find_package(FluentQt CONFIG REQUIRED)
+file(GLOB templates CONFIGURE_DEPENDS "${EXPORT_DIR}/*.cpp")
+add_library(studio_exports OBJECT ${templates})
+target_compile_features(studio_exports PRIVATE cxx_std_17)
+target_link_libraries(studio_exports PRIVATE FluentQt::FluentQt)

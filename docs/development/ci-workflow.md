@@ -42,7 +42,11 @@ full run.
 The Linux Qt 5 and Qt 6 integration jobs build the Designer plugin and sample
 from the release source archive against the installed Widgets SDK. The macOS
 PySide6 wheel job checks the Designer catalog, icons, template resources and
-form behavior with the installed bindings.
+form behavior with the installed bindings. Linux also compiles the C++ pages
+exported by Studio's built-in templates. On macOS the same templates run with
+the installed wheel and open in PySide6 Designer, where the check inspects
+the real widgets, their data, and their layouts. Website and WebAssembly jobs
+exercise the schematic and native browser renderers respectively.
 
 Other pushes to `main`, such as post-release history updates, compare the
 pushed commit with the previous `main` tip. Pages deploys the website and Web

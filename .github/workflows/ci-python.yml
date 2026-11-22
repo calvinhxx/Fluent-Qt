@@ -1168,6 +1168,8 @@ jobs:
           designer="$output/FluentQt-ci-source/tools/designer"
           "$wheel_python" "$designer/prepare_catalog.py" --check
           "$wheel_python" -m unittest discover -s "$designer/tests"
+          node tools/site/studio-check/export.mjs "$RUNNER_TEMP/studio-exports"
+          "$wheel_python" tools/site/studio-check/verify_python.py "$RUNNER_TEMP/studio-exports" --designer-tools "$designer"
 
       - name: Verify native Cocoa Window and TitleBar
         shell: bash

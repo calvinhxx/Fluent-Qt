@@ -374,6 +374,15 @@ jobs:
             --group "${{ matrix.group }}" \
             --device-scale-factor 2
 
+      - name: Verify Studio with the built WebAssembly Gallery
+        if: ${{ matrix.group == 'gallery' && matrix.runtime == 'host' }}
+        shell: bash
+        run: |
+          python tools/site/generate_localized_site.py
+          python -c 'import sys; sys.path.insert(0, "tools/site"); from site_assets import ROOT, copy_assets; copy_assets(ROOT / "site")'
+          ln -s "$PWD/build/wasm/app" site/gallery
+          python tools/site/test_studio_browser.py --site-root site --wasm
+
       - name: Check wide viewport
         if: ${{ matrix.group == 'gallery' }}
         shell: bash

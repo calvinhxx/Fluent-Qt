@@ -37,6 +37,14 @@ NON_DOCUMENTATION_PATHS = {
     "site/api/catalog.json",
 }
 
+STUDIO_PREFIXES = ("site/studio/", "tools/site/studio-check/")
+STUDIO_FILES = {"tools/site/generate_studio_metadata.py", "tools/site/test_studio.mjs", "tools/site/test_studio_browser.py"}
+
+
+def is_studio_path(path: str) -> bool:
+    return path in STUDIO_FILES or path.startswith(STUDIO_PREFIXES)
+
+
 PYSIDE_PREFIXES = (
     "app/",
     "bindings/",
@@ -259,7 +267,7 @@ class CppTestSelection:
 
 def is_documentation_path(path: str) -> bool:
     """Return whether a path is covered by the documentation-only gate."""
-    if path in NON_DOCUMENTATION_PATHS or path in WASM_CI_FILES:
+    if path in NON_DOCUMENTATION_PATHS or path in WASM_CI_FILES or is_studio_path(path):
         return False
     return (
         path.endswith(".md")
@@ -280,7 +288,8 @@ def affects_pyside(path: str) -> bool:
     if is_wasm_only_path(path):
         return False
     return (
-        path in PYSIDE_ROOT_FILES
+        is_studio_path(path)
+        or path in PYSIDE_ROOT_FILES
         or path in (DESIGNER_CATALOG, "tools/gallery/export_control_images.py")
         or path in PYSIDE_CI_FILES
         or path in PYSIDE_ONBOARDING_FILES
@@ -293,7 +302,8 @@ def affects_pyside(path: str) -> bool:
 def affects_wasm(path: str) -> bool:
     """Return whether a non-documentation path can affect browser artifacts."""
     return (
-        is_wasm_only_path(path)
+        is_studio_path(path)
+        or is_wasm_only_path(path)
         or path in WASM_ROOT_FILES
         or path in WASM_CI_FILES
         or path.startswith(WASM_PREFIXES)
