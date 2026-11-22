@@ -193,6 +193,10 @@ python -m pip install FluentQt
 
 Примеры, матрицу совместимости и сборку из исходников смотрите в [руководстве по Python](bindings/pyside6/README.md).
 
+### Qt Designer
+
+Перетаскивайте виджеты и шаблоны форм FluentQt в Qt Creator (C++) или pyside6-designer (Python) с общими файлами `.ui`. Настройку и использование смотрите в [руководстве по Qt Designer](tools/designer/README.md).
+
 ## 🛠 Сборка
 
 ### Зависимости
@@ -282,7 +286,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 | Задача | Точка входа |
 |---|---|
 | Обзор виджетов и API | [Документация и API](https://calvinhxx.github.io/Fluent-Qt/ru/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/ru/#gallery) |
-| Создание приложения | [Разработка с ИИ](docs/ai/README.md) · [Инструменты онбординга](tools/onboarding/README.md) |
+| Создание приложения | [Разработка с ИИ](docs/ai/README.md) · [Инструменты онбординга](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
 | Вклад в FluentQt | [Руководства для разработчиков](docs/development/README.md) · [Архитектура](docs/architecture/README.md) · [Дизайн Fluent](docs/design-languages/README.md) |
 | Упаковка и релизы | [Упаковка](docs/development/packaging-workflow.md) · [Правила релизов](docs/development/release-governance.md) · [Заметки о релизах](docs/releases/README.md) |
 | Помощь и сообщения об ошибках | [Сообщество](docs/community/README.md) · [Поддержка](SUPPORT.md) · [Безопасность](SECURITY.md) |

@@ -193,6 +193,10 @@ python -m pip install FluentQt
 
 サンプル、互換性情報、ソースビルド手順は [Python ガイド](bindings/pyside6/README.md)を参照してください。
 
+### Qt Designer
+
+Qt Creator（C++）と pyside6-designer（Python）で FluentQt ウィジェットやフォームテンプレートをドラッグ＆ドロップでき、`.ui` ファイルを共有できます。手順は [Qt Designer ガイド](tools/designer/README.md)を参照してください。
+
 ## 🛠 ビルド
 
 ### 依存関係
@@ -282,7 +286,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 | 目的 | エントリーポイント |
 |---|---|
 | コントロールと API の閲覧 | [ドキュメント・API](https://calvinhxx.github.io/Fluent-Qt/ja/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/ja/#gallery) |
-| アプリの構築 | [AI 支援開発](docs/ai/README.md) · [オンボーディングツール](tools/onboarding/README.md) |
+| アプリの構築 | [AI 支援開発](docs/ai/README.md) · [オンボーディングツール](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
 | FluentQt への貢献 | [開発ガイド](docs/development/README.md) · [アーキテクチャ](docs/architecture/README.md) · [Fluent デザイン](docs/design-languages/README.md) |
 | パッケージングとリリース | [パッケージング](docs/development/packaging-workflow.md) · [リリース運用](docs/development/release-governance.md) · [リリースノート](docs/releases/README.md) |
 | 質問・バグ報告 | [コミュニティ](docs/community/README.md) · [サポート](SUPPORT.md) · [セキュリティ](SECURITY.md) |
