@@ -34,6 +34,7 @@ def prepare_catalogs() -> None:
     """Refresh derived inputs before quality gates or preview recipe discovery."""
     run("tools/site/release_history.py")
     run("tools/site/generate_playgrounds.py")
+    run("tools/site/generate_studio_metadata.py", "--check")
     run("tools/ai/generate_ai_catalog.py", "--project-root", str(ROOT))
     run("tools/site/generate_api_reference.py", "--catalog-only")
     run("tools/ai/generate_ai_catalog.py", "--project-root", str(ROOT), "--check")
@@ -76,6 +77,11 @@ def verify(folder: Path, commit: str) -> None:
         *(f"{loc.url_prefix}api/releases/index.html" for loc in LOCALES),
         *(f"{loc.url_prefix}api/roadmap/index.html" for loc in LOCALES),
         *(f"api/playground-i18n/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
+        "studio/index.html",
+        "studio/studio.js",
+        "studio/studio-core.mjs",
+        "studio/studio-metadata.mjs",
+        "studio/studio.css",
         "assets/component-previews/manifest.json",
         *COPIED_ASSETS,
     ]

@@ -48,6 +48,11 @@ class SiteArtifactTest(unittest.TestCase):
             *(f"{loc.url_prefix}api/releases/index.html" for loc in LOCALES),
             *(f"{loc.url_prefix}api/roadmap/index.html" for loc in LOCALES),
             *(f"api/playground-i18n/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
+            "studio/index.html",
+            "studio/studio.js",
+            "studio/studio-core.mjs",
+            "studio/studio-metadata.mjs",
+            "studio/studio.css",
             "assets/component-previews/manifest.json",
             "assets/component-previews/button/light.png",
         )
@@ -246,9 +251,10 @@ class SiteGenerationTest(unittest.TestCase):
 
     def test_catalogs_are_generated_before_checks_and_invalid_sources_still_fail(self):
         self.build()
-        self.assertEqual(self.commands[:6], [
+        self.assertEqual(self.commands[:7], [
             ("tools/site/release_history.py",),
             ("tools/site/generate_playgrounds.py",),
+            ("tools/site/generate_studio_metadata.py", "--check"),
             ("tools/ai/generate_ai_catalog.py", "--project-root", str(build_site.ROOT)),
             ("tools/site/generate_api_reference.py", "--catalog-only"),
             ("tools/ai/generate_ai_catalog.py", "--project-root", str(build_site.ROOT), "--check"),

@@ -40,6 +40,11 @@ class Locale:
     def playground_url(self) -> str:
         return "api/checkbox/?playground=1"
 
+    @property
+    def studio_url(self) -> str:
+        lang = "zh" if self.key in ("zh", "zh-TW") else "en"
+        return f"{self.resource_prefix}studio/?lang={lang}"
+
     def canonical_url(self, base_url: str) -> str:
         return f"{base_url}{self.url_prefix}"
 

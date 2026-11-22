@@ -346,11 +346,11 @@ h3 {
 
 .nav-cluster {
   justify-content: flex-end;
-  gap: clamp(18px, 2.2vw, 34px);
+  gap: clamp(14px, 1.8vw, 30px);
 }
 
 .nav-links {
-  gap: clamp(12px, 1.45vw, 22px);
+  gap: clamp(10px, 1.25vw, 20px);
 }
 
 .nav-links a {
@@ -1207,7 +1207,7 @@ html[data-site-language="zh"] :is(h1, h2, h3, h4, h5, h6) {
 
 .path-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
