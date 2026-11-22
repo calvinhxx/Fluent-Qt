@@ -193,6 +193,10 @@ python -m pip install FluentQt
 
 安装方法、代码示例、兼容矩阵及源码编译说明见 [Python 指南](bindings/pyside6/README.md)。
 
+### Qt Designer
+
+支持在 Qt Creator（C++）和 pyside6-designer（Python）中拖拽控件与表单模板，两端共用 `.ui` 文件。配置与用法见 [Qt Designer 指南](tools/designer/README.md)。
+
 ## 🛠 构建
 
 ### 依赖
@@ -282,7 +286,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 | 目标 | 入口 |
 |---|---|
 | 查看控件与 API | [组件与 API 文档](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) |
-| 开发桌面应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) |
+| 开发桌面应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
 | 参与项目开发 | [开发指南](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计规范](docs/design-languages/README.md) |
 | 打包与发布 | [打包流程](docs/development/packaging-workflow.md) · [发布规范](docs/development/release-governance.md) · [更新日志](docs/releases/README.md) |
 | 反馈问题或交流 | [社区入口](docs/community/README.md) · [支持说明](SUPPORT.md) · [安全报告](SECURITY.md) |

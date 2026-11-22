@@ -193,6 +193,10 @@ python -m pip install FluentQt
 
 Beispiele, Kompatibilität und Source-Builds beschreibt der [Python-Guide](bindings/pyside6/README.md).
 
+### Qt Designer
+
+Ziehe FluentQt-Widgets und Formularvorlagen per Drag-and-Drop in Qt Creator (C++) oder pyside6-designer (Python) mit gemeinsamen `.ui`-Dateien. Einrichtung und Nutzung beschreibt der [Qt-Designer-Guide](tools/designer/README.md).
+
 ## 🛠 Bauen
 
 ### Abhängigkeiten
@@ -282,7 +286,7 @@ Starte mit der [Dokumentationsübersicht](docs/README.md) oder springe direkt zu
 | Ziel | Einstiegspunkt |
 |---|---|
 | Steuerelemente & API ansehen | [Komponenten-Doku & API](https://calvinhxx.github.io/Fluent-Qt/de/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/de/#gallery) |
-| Eine App bauen | [KI-gestützte Entwicklung](docs/ai/README.md) · [Onboarding-Tools](tools/onboarding/README.md) |
+| Eine App bauen | [KI-gestützte Entwicklung](docs/ai/README.md) · [Onboarding-Tools](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
 | Zu FluentQt beitragen | [Entwicklungsguides](docs/development/README.md) · [Architektur](docs/architecture/README.md) · [Fluent-Design](docs/design-languages/README.md) |
 | Paketieren oder releasen | [Packaging](docs/development/packaging-workflow.md) · [Release-Governance](docs/development/release-governance.md) · [Release-Notes](docs/releases/README.md) |
 | Hilfe oder Bugs melden | [Community](docs/community/README.md) · [Support](SUPPORT.md) · [Sicherheit](SECURITY.md) |

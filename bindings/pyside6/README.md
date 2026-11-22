@@ -15,6 +15,7 @@ repeating details across pages.
 | Install and use FluentQt | [Python package guide](PYPI.md) |
 | Run a minimal application | [Hello World](examples/hello_world/README.md) |
 | Explore the complete component set | [Python Gallery package](gallery/README.md) |
+| Design forms visually in `pyside6-designer` | [Qt Designer guide](../../tools/designer/README.md) |
 | Build the bindings from source | [Build from source](#build-from-source) |
 | Check supported Python, Qt, platforms, and APIs | [Compatibility and coverage](ROADMAP.md) |
 | Publish wheels | [Publishing runbook](PUBLISHING.md) |

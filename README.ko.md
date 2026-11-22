@@ -193,6 +193,10 @@ python -m pip install FluentQt
 
 예제, 호환성 및 소스 빌드 안내는 [Python 가이드](bindings/pyside6/README.md)를 확인하세요.
 
+### Qt Designer
+
+Qt Creator(C++)와 pyside6-designer(Python)에서 FluentQt 위젯과 폼 템플릿을 드래그 앤 드롭하고 `.ui` 파일을 공유할 수 있습니다. 설정 및 사용법은 [Qt Designer 가이드](tools/designer/README.md)를 확인하세요.
+
 ## 🛠 빌드
 
 ### 의존성
@@ -282,7 +286,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 | 목표 | 바로가기 |
 |---|---|
 | 컨트롤 및 API 탐색 | [컴포넌트 문서 및 API](https://calvinhxx.github.io/Fluent-Qt/ko/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/ko/#gallery) |
-| 앱 구축 | [AI 지원 개발](docs/ai/README.md) · [온보딩 도구](tools/onboarding/README.md) |
+| 앱 구축 | [AI 지원 개발](docs/ai/README.md) · [온보딩 도구](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
 | FluentQt 기여 | [개발 가이드](docs/development/README.md) · [아키텍처](docs/architecture/README.md) · [Fluent 디자인](docs/design-languages/README.md) |
 | 패키징 및 릴리스 | [패키징](docs/development/packaging-workflow.md) · [릴리스 거버넌스](docs/development/release-governance.md) · [릴리스 노트](docs/releases/README.md) |
 | 도움 받기 및 버그 제보 | [커뮤니티](docs/community/README.md) · [지원](SUPPORT.md) · [보안](SECURITY.md) |
