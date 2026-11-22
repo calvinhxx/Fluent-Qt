@@ -26,6 +26,31 @@ public:
     static GalleryComponentPlayground* fromButton(const basicinput::Button* source, QWidget* parent);
     static GalleryComponentPlayground* fromWidget(const QString& route, const QWidget* source, QWidget* parent);
     static bool accepts(const QString& route, const QWidget* source);
+
+    /**
+     * @brief Resolves a Studio PascalCase widget type to its documentation playground route.
+     * zh_CN: 将 Studio 控件类型名映射为文档动态属性预览的组件路由。
+     */
+    static QString routeForStudioType(const QString& studioType);
+
+    /**
+     * @brief Returns the filtered playground schema, live values, and theme fallbacks for a Studio widget.
+     * zh_CN: 提取 Studio 控件过滤后的属性 Schema、当前控件实时值与主题回退有效值。
+     */
+    static QJsonObject studioSchemaForWidget(const QString& studioType, QObject* target);
+
+    /**
+     * @brief Applies Studio node properties to a live widget in playground schema order.
+     * zh_CN: 按属性 Schema 顺序将 Studio 节点属性安全写入真实控件。
+     */
+    static bool applyStudioProperties(const QString& studioType, QObject* target, const QJsonObject& props);
+
+    /**
+     * @brief Returns whether every key in a property patch can be applied in-place without rebuilding siblings.
+     * zh_CN: 检查属性补丁中的每一项是否均可通过已有控件就地更新而无需重建兄弟节点。
+     */
+    static bool canPatchStudioProperties(const QString& studioType, const QObject* target, const QJsonObject& patch);
+
     ~GalleryComponentPlayground() override;
     QWidget* widget() const;
     QJsonObject snapshot() const;

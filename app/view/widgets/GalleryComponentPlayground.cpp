@@ -779,6 +779,275 @@ QString quoted(const QString& text, bool python)
     }
     return result + QStringLiteral("\")");
 }
+
+QJsonObject enrichEnumFieldMeta(QJsonObject field, const QMetaProperty& prop)
+{
+    if (!prop.isEnumType() && !isCollectionsSelectionMode(prop))
+        return field;
+    QJsonArray options;
+    QJsonObject numbers;
+    const auto enumeration =
+        isCollectionsSelectionMode(prop) ? QMetaEnum::fromType<collections::SelectionMode>() : prop.enumerator();
+    for (int key = 0; key < enumeration.keyCount(); ++key) {
+        options.append(QString::fromLatin1(enumeration.key(key)));
+        numbers[QString::fromLatin1(enumeration.key(key))] = enumeration.value(key);
+    }
+    field["enumValues"] = numbers;
+    if (!field.contains("options"))
+        field["options"] = options;
+    const auto scope = QString::fromLatin1(enumeration.scope());
+    const auto enumName = QString::fromLatin1(enumeration.name());
+    if (!field.contains("cppPrefix"))
+        field["cppPrefix"] = scope + QStringLiteral("::") + enumName + QStringLiteral("::");
+    if (!field.contains("pythonPrefix")) {
+        const auto pythonScope = isCollectionsSelectionMode(prop) ? QStringLiteral("fluentqt")
+            : (scope == QStringLiteral("Qt") || scope.startsWith(QLatin1Char('Q')))
+            ? scope
+            : QStringLiteral("fluentqt.") + scope.section(QStringLiteral("::"), -1);
+        field["pythonPrefix"] = pythonScope + QLatin1Char('.') + enumName + QLatin1Char('.');
+    }
+    return field;
+}
+
+bool isButtonSpecialFieldId(const QString& id, const QObject* target)
+{
+    return qobject_cast<const Button*>(target)
+        && (id == QStringLiteral("icon") || id == QStringLiteral("cornerRadius") || id == QStringLiteral("iconOffsetX")
+            || id == QStringLiteral("iconOffsetY"));
+}
+
+bool isStudioFilteredField(const QJsonObject& field)
+{
+    const QString id = field.value("id").toString();
+    return field.value("snapshotOnly").toBool() || field.value("previewOnly").toBool()
+        || id == QStringLiteral("focusVisual") || id == QStringLiteral("isOpen") || id == QStringLiteral("open")
+        || field.contains("adapter");
+}
+
+QJsonObject loadPlaygroundSchema(const QString& route)
+{
+    if (route.isEmpty() || !playgroundRoutes().contains(route))
+        return {};
+    QFile file(QStringLiteral(":/app/playgrounds/%1.json").arg(route));
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    const auto schema = QJsonDocument::fromJson(file.readAll()).object();
+    if (schema.value("version").toInt() != 1 || schema.value("component").toString() != route)
+        return {};
+    return schema;
+}
+
+bool isStudioNonPlaygroundType(const QString& studioType)
+{
+    static const QSet<QString> excluded = {
+        QStringLiteral("VBox"),
+        QStringLiteral("HBox"),
+        QStringLiteral("Grid"),
+        QStringLiteral("AnchorBox"),
+        QStringLiteral("Menu"),
+        QStringLiteral("CommandBarFlyout"),
+        QStringLiteral("CommandPalette"),
+        QStringLiteral("Toast"),
+        QStringLiteral("ToolTip"),
+        QStringLiteral("DrawerView"),
+        QStringLiteral("ContentDialog"),
+        QStringLiteral("Dialog"),
+        QStringLiteral("Flyout"),
+        QStringLiteral("Popup"),
+        QStringLiteral("TeachingTip"),
+        QStringLiteral("CoachMark"),
+    };
+    return excluded.contains(studioType);
+}
+
+QJsonValue
+readSinglePropertyValue(const QJsonObject& field, const QObject* target, const QString& iconOverride = QString())
+{
+    const auto id = field.value("id").toString();
+    if (id == QStringLiteral("icon") && qobject_cast<const Button*>(target)) {
+        if (!iconOverride.isEmpty())
+            return iconOverride;
+        const QString glyph = target->property("_studioIconGlyph").toString();
+        return glyph.isEmpty() ? QStringLiteral("None") : glyphNameFor(glyph);
+    }
+    if (field.contains("adapter"))
+        return adapterValue(field, const_cast<QObject*>(target));
+    const auto name = field.value("property").toString().toLatin1();
+    const auto prop = target->metaObject()->property(target->metaObject()->indexOfProperty(name));
+    if (!prop.isValid() && !methodProperty(target, QString::fromLatin1(name)))
+        return {};
+    const auto value = prop.isValid() ? prop.read(target) : readMethodProperty(target, QString::fromLatin1(name));
+    const auto type = field.value("type").toString();
+    if (field.contains("sizeAxis"))
+        return field.value("sizeAxis") == QStringLiteral("width") ? value.toSize().width() : value.toSize().height();
+    if (field.contains("pointAxis"))
+        return field.value("pointAxis") == QStringLiteral("x") ? value.toPoint().x() : value.toPoint().y();
+    if (field.contains("pointFAxis")) {
+        const QPointF pt = value.toPointF();
+        return field.value("pointFAxis") == QStringLiteral("x") ? pt.x() : pt.y();
+    }
+    if (field.contains("vectorAxis")) {
+        const QVector3D vec = value.value<QVector3D>();
+        const auto axis = field.value("vectorAxis").toString();
+        return axis == QStringLiteral("x") ? vec.x() : (axis == QStringLiteral("y") ? vec.y() : vec.z());
+    }
+    if (field.value("itemList").toBool()) {
+        QJsonArray items;
+        for (const auto& item : value.toList())
+            items.append(item.toMap().value(QStringLiteral("text")).toString());
+        return items;
+    }
+    if (id == QStringLiteral("selectedRows")) {
+        QJsonArray items;
+        const auto options = field.value("options").toArray();
+        for (const auto& row : value.toList())
+            if (row.toInt() >= 0 && row.toInt() < options.size())
+                items.append(options[row.toInt()]);
+        return items;
+    }
+    if (field.value("glyphEnum").toBool())
+        return glyphNameFor(value.toString());
+    if (isCollectionsSelectionMode(prop)) {
+        return QString::fromLatin1(QMetaEnum::fromType<collections::SelectionMode>().valueToKey(
+            int(value.value<collections::SelectionMode>())));
+    }
+    if (isBackdropEffect(prop)) {
+        switch (value.value<windowing::BackdropEffect>()) {
+        case windowing::BackdropEffect::Solid:
+            return QStringLiteral("Solid");
+        case windowing::BackdropEffect::Mica:
+            return QStringLiteral("Mica");
+        case windowing::BackdropEffect::Acrylic:
+            return QStringLiteral("Acrylic");
+        }
+    }
+    if (prop.isEnumType() || field.contains("enumValues"))
+        return resolvedEnumKey(field, target, value.toInt());
+    if (type == QStringLiteral("color")) {
+        const QColor color = value.value<QColor>();
+        return (field.value("nullable").toBool() && !color.isValid())
+            ? QJsonValue(QJsonValue::Null)
+            : QJsonValue(color.name(QColor::HexArgb));
+    }
+    if (type == QStringLiteral("date")) {
+        const QDate date = value.toDate();
+        return (!date.isValid() && field.value("nullable").toBool())
+            ? QJsonValue(QJsonValue::Null)
+            : QJsonValue(date.toString(Qt::ISODate));
+    }
+    if (type == QStringLiteral("time")) {
+        return !value.toTime().isValid() && field.value("nullable").toBool()
+            ? QJsonValue(QJsonValue::Null)
+            : QJsonValue(value.toTime().toString(Qt::ISODate));
+    }
+    if (type == QStringLiteral("datetime")) {
+        return value.toDateTime().isValid()
+            ? QJsonValue(value.toDateTime().toString(Qt::ISODate))
+            : QJsonValue(QJsonValue::Null);
+    }
+    return QJsonValue::fromVariant(value);
+}
+
+void writeSinglePropertyValue(const QJsonObject& field, QObject* target, const QJsonValue& value)
+{
+    const auto id = field.value("id").toString();
+    const auto name = field.value("property").toString().toLatin1();
+    const auto prop = target->metaObject()->property(target->metaObject()->indexOfProperty(name));
+    if (!prop.isValid() && !methodProperty(target, QString::fromLatin1(name)))
+        return;
+    const auto type = field.value("type").toString();
+    QVariant argument = value.toVariant();
+    if (field.contains("sizeAxis")) {
+        QSize size = prop.read(target).toSize();
+        if (field.value("sizeAxis") == QStringLiteral("width"))
+            size.setWidth(value.toInt());
+        else
+            size.setHeight(value.toInt());
+        argument = size;
+    } else if (field.contains("pointAxis")) {
+        QPoint point = prop.read(target).toPoint();
+        if (field.value("pointAxis") == QStringLiteral("x"))
+            point.setX(value.toInt());
+        else
+            point.setY(value.toInt());
+        argument = point;
+    } else if (field.contains("pointFAxis")) {
+        QPointF point = prop.read(target).toPointF();
+        if (field.value("pointFAxis") == QStringLiteral("x"))
+            point.setX(value.toDouble());
+        else
+            point.setY(value.toDouble());
+        argument = point;
+    } else if (field.contains("vectorAxis")) {
+        QVector3D vec = prop.read(target).value<QVector3D>();
+        const auto axis = field.value("vectorAxis").toString();
+        if (axis == QStringLiteral("x"))
+            vec.setX(float(value.toDouble()));
+        else if (axis == QStringLiteral("y"))
+            vec.setY(float(value.toDouble()));
+        else
+            vec.setZ(float(value.toDouble()));
+        argument = QVariant::fromValue(vec);
+    } else if (field.value("itemList").toBool()) {
+        QVariantList items;
+        for (const auto& item : value.toArray())
+            items.append(
+                QVariantMap{{QStringLiteral("key"), item.toString()}, {QStringLiteral("text"), item.toString()}});
+        argument = items;
+    } else if (id == QStringLiteral("selectedRows")) {
+        QVariantList rows;
+        const auto options = field.value("options").toArray();
+        for (const auto& item : value.toArray()) {
+            for (int row = 0; row < options.size(); ++row)
+                if (options[row] == item)
+                    rows.append(row);
+        }
+        argument = rows;
+    } else if (type == QStringLiteral("string-list") || type == QStringLiteral("multi-enum")) {
+        QStringList items;
+        for (const auto& item : value.toArray())
+            items.append(item.toString());
+        argument = items;
+    } else if (field.value("glyphEnum").toBool()) {
+        argument = glyphValueFor(value.toString());
+    } else if (isCollectionsSelectionMode(prop)) {
+        const int enumVal = QMetaEnum::fromType<collections::SelectionMode>().keyToValue(
+            value.toString().toLatin1().constData());
+        if (enumVal == -1)
+            return;
+        argument = fluentEnumPropertyValue(prop, static_cast<collections::SelectionMode>(enumVal));
+    } else if (isBackdropEffect(prop)) {
+        const auto key = value.toString();
+        const auto effect = key == QStringLiteral("Solid") ? windowing::BackdropEffect::Solid
+            : key == QStringLiteral("Acrylic")
+            ? windowing::BackdropEffect::Acrylic
+            : windowing::BackdropEffect::Mica;
+        argument = fluentEnumPropertyValue(prop, effect);
+    } else if (field.contains("enumValues")) {
+        const auto enumObj = field.value("enumValues").toObject();
+        if (!enumObj.contains(value.toString()))
+            return;
+        argument = enumObj.value(value.toString()).toInt();
+    } else if (prop.isEnumType()) {
+        const int enumVal = prop.enumerator().keyToValue(value.toString().toLatin1().constData());
+        if (enumVal == -1)
+            return;
+        argument = enumVal;
+    } else if (type == QStringLiteral("color"))
+        argument = value.isNull() ? QColor() : QColor(value.toString());
+    else if (type == QStringLiteral("date"))
+        argument = value.isNull() ? QDate() : QDate::fromString(value.toString(), Qt::ISODate);
+    else if (type == QStringLiteral("time"))
+        argument = value.isNull() ? QTime() : QTime::fromString(value.toString(), Qt::ISODate);
+    else if (type == QStringLiteral("datetime"))
+        argument = value.isNull() ? QDateTime() : QDateTime::fromString(value.toString(), Qt::ISODate);
+    else if (type == QStringLiteral("number") && value.isNull())
+        argument = std::numeric_limits<double>::quiet_NaN();
+    if (prop.isValid())
+        prop.write(target, argument);
+    else
+        writeMethodProperty(target, QString::fromLatin1(name), argument);
+}
 } // namespace
 
 GalleryComponentPlayground* GalleryComponentPlayground::create(const QString& route, QWidget* parent, bool interactive)
@@ -880,31 +1149,7 @@ GalleryComponentPlayground::GalleryComponentPlayground(const QJsonObject& schema
                 m_target = nullptr;
                 return;
             }
-            if (prop.isEnumType() || isCollectionsSelectionMode(prop)) {
-                QJsonArray options;
-                QJsonObject numbers;
-                const auto enumeration = isCollectionsSelectionMode(prop)
-                    ? QMetaEnum::fromType<collections::SelectionMode>()
-                    : prop.enumerator();
-                for (int key = 0; key < enumeration.keyCount(); ++key) {
-                    options.append(QString::fromLatin1(enumeration.key(key)));
-                    numbers[QString::fromLatin1(enumeration.key(key))] = enumeration.value(key);
-                }
-                field["enumValues"] = numbers;
-                if (!field.contains("options"))
-                    field["options"] = options;
-                const auto scope = QString::fromLatin1(enumeration.scope());
-                const auto enumName = QString::fromLatin1(enumeration.name());
-                if (!field.contains("cppPrefix"))
-                    field["cppPrefix"] = scope + QStringLiteral("::") + enumName + QStringLiteral("::");
-                if (!field.contains("pythonPrefix")) {
-                    const auto pythonScope = isCollectionsSelectionMode(prop) ? QStringLiteral("fluentqt")
-                        : (scope == QStringLiteral("Qt") || scope.startsWith(QLatin1Char('Q')))
-                        ? scope
-                        : QStringLiteral("fluentqt.") + scope.section(QStringLiteral("::"), -1);
-                    field["pythonPrefix"] = pythonScope + QLatin1Char('.') + enumName + QLatin1Char('.');
-                }
-            }
+            field = enrichEnumFieldMeta(field, prop);
             fields[i] = field;
         }
         m_schema["properties"] = fields;
@@ -1713,84 +1958,9 @@ QJsonObject GalleryComponentPlayground::genericValues(const QObject* target) con
         return result;
     for (const auto& entry : m_schema.value("properties").toArray()) {
         const auto field = entry.toObject();
-        if (field.value("id") == QStringLiteral("icon")) {
-            result["icon"] = m_icon;
-            continue;
-        }
-        if (field.contains("adapter")) {
-            result[field.value("id").toString()] = adapterValue(field, const_cast<QObject*>(target));
-            continue;
-        }
-        const auto name = field.value("property").toString().toLatin1();
-        const auto prop = target->metaObject()->property(target->metaObject()->indexOfProperty(name));
-        if (!prop.isValid() && !methodProperty(target, QString::fromLatin1(name)))
-            continue;
-        const auto value = prop.isValid() ? prop.read(target) : readMethodProperty(target, QString::fromLatin1(name));
-        const auto type = field.value("type").toString();
-        const auto id = field.value("id").toString();
-        if (field.contains("sizeAxis")) {
-            result[id] =
-                field.value("sizeAxis") == QStringLiteral("width") ? value.toSize().width() : value.toSize().height();
-        } else if (field.contains("pointAxis")) {
-            result[id] = field.value("pointAxis") == QStringLiteral("x") ? value.toPoint().x() : value.toPoint().y();
-        } else if (field.contains("pointFAxis")) {
-            const QPointF pt = value.toPointF();
-            result[id] = field.value("pointFAxis") == QStringLiteral("x") ? pt.x() : pt.y();
-        } else if (field.contains("vectorAxis")) {
-            const QVector3D vec = value.value<QVector3D>();
-            const auto axis = field.value("vectorAxis").toString();
-            result[id] = axis == QStringLiteral("x") ? vec.x() : (axis == QStringLiteral("y") ? vec.y() : vec.z());
-        } else if (field.value("itemList").toBool()) {
-            QJsonArray items;
-            for (const auto& item : value.toList())
-                items.append(item.toMap().value(QStringLiteral("text")).toString());
-            result[id] = items;
-        } else if (id == QStringLiteral("selectedRows")) {
-            QJsonArray items;
-            const auto options = field.value("options").toArray();
-            for (const auto& row : value.toList())
-                if (row.toInt() >= 0 && row.toInt() < options.size())
-                    items.append(options[row.toInt()]);
-            result[id] = items;
-        } else if (field.value("glyphEnum").toBool()) {
-            result[id] = glyphNameFor(value.toString());
-        } else if (isCollectionsSelectionMode(prop)) {
-            result[id] = QString::fromLatin1(QMetaEnum::fromType<collections::SelectionMode>().valueToKey(
-                int(value.value<collections::SelectionMode>())));
-        } else if (isBackdropEffect(prop)) {
-            switch (value.value<windowing::BackdropEffect>()) {
-            case windowing::BackdropEffect::Solid:
-                result[id] = QStringLiteral("Solid");
-                break;
-            case windowing::BackdropEffect::Mica:
-                result[id] = QStringLiteral("Mica");
-                break;
-            case windowing::BackdropEffect::Acrylic:
-                result[id] = QStringLiteral("Acrylic");
-                break;
-            }
-        } else if (prop.isEnumType() || field.contains("enumValues"))
-            result[id] = resolvedEnumKey(field, target, value.toInt());
-        else if (type == QStringLiteral("color")) {
-            const QColor color = value.value<QColor>();
-            result[id] = (field.value("nullable").toBool() && !color.isValid())
-                ? QJsonValue(QJsonValue::Null)
-                : QJsonValue(color.name(QColor::HexArgb));
-        } else if (type == QStringLiteral("date")) {
-            const QDate date = value.toDate();
-            result[id] = (!date.isValid() && field.value("nullable").toBool())
-                ? QJsonValue(QJsonValue::Null)
-                : QJsonValue(date.toString(Qt::ISODate));
-        } else if (type == QStringLiteral("time"))
-            result[id] = !value.toTime().isValid() && field.value("nullable").toBool()
-                ? QJsonValue(QJsonValue::Null)
-                : QJsonValue(value.toTime().toString(Qt::ISODate));
-        else if (type == QStringLiteral("datetime"))
-            result[id] = value.toDateTime().isValid()
-                ? QJsonValue(value.toDateTime().toString(Qt::ISODate))
-                : QJsonValue(QJsonValue::Null);
-        else
-            result[id] = QJsonValue::fromVariant(value);
+        const auto val = readSinglePropertyValue(field, target, m_icon);
+        if (!val.isUndefined())
+            result[field.value("id").toString()] = val;
     }
     return result;
 }
@@ -1886,93 +2056,7 @@ void GalleryComponentPlayground::writeGenericValues(const QJsonObject& values)
             }
             continue;
         }
-        const auto name = field.value("property").toString().toLatin1();
-        const auto prop = m_target->metaObject()->property(m_target->metaObject()->indexOfProperty(name));
-        const auto value = values.value(id);
-        const auto type = field.value("type").toString();
-        QVariant argument = value.toVariant();
-        if (field.contains("sizeAxis")) {
-            QSize size = prop.read(m_target).toSize();
-            if (field.value("sizeAxis") == QStringLiteral("width"))
-                size.setWidth(value.toInt());
-            else
-                size.setHeight(value.toInt());
-            argument = size;
-        } else if (field.contains("pointAxis")) {
-            QPoint point = prop.read(m_target).toPoint();
-            if (field.value("pointAxis") == QStringLiteral("x"))
-                point.setX(value.toInt());
-            else
-                point.setY(value.toInt());
-            argument = point;
-        } else if (field.contains("pointFAxis")) {
-            QPointF point = prop.read(m_target).toPointF();
-            if (field.value("pointFAxis") == QStringLiteral("x"))
-                point.setX(value.toDouble());
-            else
-                point.setY(value.toDouble());
-            argument = point;
-        } else if (field.contains("vectorAxis")) {
-            QVector3D vec = prop.read(m_target).value<QVector3D>();
-            const auto axis = field.value("vectorAxis").toString();
-            if (axis == QStringLiteral("x"))
-                vec.setX(float(value.toDouble()));
-            else if (axis == QStringLiteral("y"))
-                vec.setY(float(value.toDouble()));
-            else
-                vec.setZ(float(value.toDouble()));
-            argument = QVariant::fromValue(vec);
-        } else if (field.value("itemList").toBool()) {
-            QVariantList items;
-            for (const auto& item : value.toArray())
-                items.append(
-                    QVariantMap{{QStringLiteral("key"), item.toString()}, {QStringLiteral("text"), item.toString()}});
-            argument = items;
-        } else if (id == QStringLiteral("selectedRows")) {
-            QVariantList rows;
-            const auto options = field.value("options").toArray();
-            for (const auto& item : value.toArray()) {
-                for (int row = 0; row < options.size(); ++row)
-                    if (options[row] == item)
-                        rows.append(row);
-            }
-            argument = rows;
-        } else if (type == QStringLiteral("string-list") || type == QStringLiteral("multi-enum")) {
-            QStringList items;
-            for (const auto& item : value.toArray())
-                items.append(item.toString());
-            argument = items;
-        } else if (field.value("glyphEnum").toBool()) {
-            argument = glyphValueFor(value.toString());
-        } else if (isCollectionsSelectionMode(prop)) {
-            argument = fluentEnumPropertyValue(prop,
-                static_cast<collections::SelectionMode>(QMetaEnum::fromType<collections::SelectionMode>().keyToValue(
-                    value.toString().toLatin1().constData())));
-        } else if (isBackdropEffect(prop)) {
-            const auto key = value.toString();
-            const auto effect = key == QStringLiteral("Solid") ? windowing::BackdropEffect::Solid
-                : key == QStringLiteral("Acrylic")
-                ? windowing::BackdropEffect::Acrylic
-                : windowing::BackdropEffect::Mica;
-            argument = fluentEnumPropertyValue(prop, effect);
-        } else if (field.contains("enumValues"))
-            argument = field.value("enumValues").toObject().value(value.toString()).toInt();
-        else if (prop.isEnumType())
-            argument = prop.enumerator().keyToValue(value.toString().toLatin1().constData());
-        else if (type == QStringLiteral("color"))
-            argument = value.isNull() ? QColor() : QColor(value.toString());
-        else if (type == QStringLiteral("date"))
-            argument = value.isNull() ? QDate() : QDate::fromString(value.toString(), Qt::ISODate);
-        else if (type == QStringLiteral("time"))
-            argument = value.isNull() ? QTime() : QTime::fromString(value.toString(), Qt::ISODate);
-        else if (type == QStringLiteral("datetime"))
-            argument = value.isNull() ? QDateTime() : QDateTime::fromString(value.toString(), Qt::ISODate);
-        else if (type == QStringLiteral("number") && value.isNull())
-            argument = std::numeric_limits<double>::quiet_NaN();
-        if (prop.isValid())
-            prop.write(m_target, argument);
-        else
-            writeMethodProperty(m_target, QString::fromLatin1(name), argument);
+        writeSinglePropertyValue(field, m_target, values.value(id));
     }
     if (writeRangePair)
         range->setValues(values.value("lowerValue").toInt(), values.value("upperValue").toInt());
@@ -2533,5 +2617,294 @@ void GalleryComponentPlayground::recordEvent(const QString& name, bool checked)
         m_events.removeAt(0);
     ++m_revision;
     emit stateChanged();
+}
+
+QString GalleryComponentPlayground::routeForStudioType(const QString& studioType)
+{
+    if (studioType.isEmpty() || isStudioNonPlaygroundType(studioType))
+        return {};
+    static const QHash<QString, QString> routeByNormalized = [] {
+        QHash<QString, QString> map;
+        for (const QString& route : playgroundRoutes()) {
+            QString normalized = route;
+            normalized.remove(QLatin1Char('-'));
+            map.insert(normalized.toLower(), route);
+        }
+        return map;
+    }();
+    QString query = studioType;
+    query.remove(QLatin1Char('-'));
+    return routeByNormalized.value(query.toLower());
+}
+
+QJsonObject GalleryComponentPlayground::studioSchemaForWidget(const QString& studioType, QObject* target)
+{
+    const QString route = routeForStudioType(studioType);
+    if (route.isEmpty() || !target)
+        return {};
+    if (studioType == QStringLiteral("SpatialItem")) {
+        if (!target->inherits("fluent::spatial::SpatialItem"))
+            return {};
+    } else if (!accepts(route, qobject_cast<const QWidget*>(target))) {
+        return {};
+    }
+
+    const QJsonObject schema = loadPlaygroundSchema(route);
+    if (schema.isEmpty())
+        return {};
+
+    QJsonArray filteredFields;
+    QJsonObject values;
+    QJsonObject effective;
+    const auto* buttonTarget = qobject_cast<const Button*>(target);
+
+    for (const auto& entry : schema.value("properties").toArray()) {
+        auto field = entry.toObject();
+        if (isStudioFilteredField(field))
+            continue;
+
+        const QString id = field.value("id").toString();
+        const QByteArray name = field.value("property").toString().toLatin1();
+        const int propIndex = name.isEmpty() ? -1 : target->metaObject()->indexOfProperty(name);
+        const QMetaProperty prop = propIndex >= 0 ? target->metaObject()->property(propIndex) : QMetaProperty();
+        const bool isButtonSpecial = isButtonSpecialFieldId(id, target);
+        if (!isButtonSpecial && (!prop.isValid() || !prop.isReadable() || !prop.isWritable())
+            && !methodProperty(target, QString::fromLatin1(name))) {
+            continue;
+        }
+
+        field = enrichEnumFieldMeta(field, prop);
+        field = resolvedFieldBounds(resolvedModelField(resolvedEnumField(field, target), target, {}), target, {});
+
+        QJsonValue val;
+        if (buttonTarget && id == QStringLiteral("icon")) {
+            const QString storedGlyph = buttonTarget->property("_studioIconGlyph").toString();
+            val = storedGlyph.isEmpty() ? QStringLiteral("None") : glyphNameFor(storedGlyph);
+        } else if (buttonTarget && id == QStringLiteral("cornerRadius")) {
+            const bool custom = buttonTarget->property("_studioCustomCornerRadius").toBool();
+            const int radius = buttonTarget->cornerRadii().left();
+            val = custom ? QJsonValue(radius) : QJsonValue(QJsonValue::Null);
+            effective.insert(id, radius);
+        } else if (buttonTarget && id == QStringLiteral("iconOffsetX")) {
+            val = buttonTarget->iconOffset().x();
+        } else if (buttonTarget && id == QStringLiteral("iconOffsetY")) {
+            val = buttonTarget->iconOffset().y();
+        } else {
+            val = readSinglePropertyValue(field, target);
+        }
+
+        if (val.isUndefined())
+            continue;
+
+        if (field.value("nullable").toBool() && val.isNull()) {
+            if (field.value("type") == QStringLiteral("color"))
+                effective.insert(id, resolvedNullableColorFallback(target, field));
+            else if (!effective.contains(id))
+                effective.insert(id,
+                    field.contains("default") && !field.value("default").isNull()
+                        ? field.value("default")
+                        : field.value("minimum"));
+        }
+
+        values.insert(id, val);
+        filteredFields.append(field);
+    }
+
+    QJsonObject out;
+    out.insert(QStringLiteral("route"), route);
+    out.insert(QStringLiteral("title"), schema.value("title").toString(studioType));
+    if (schema.contains("description"))
+        out.insert(QStringLiteral("description"), schema.value("description"));
+    if (schema.contains("categories"))
+        out.insert(QStringLiteral("categories"), schema.value("categories"));
+    if (schema.contains("stateTextPair"))
+        out.insert(QStringLiteral("stateTextPair"), schema.value("stateTextPair"));
+    out.insert(QStringLiteral("properties"), filteredFields);
+    out.insert(QStringLiteral("values"), values);
+    out.insert(QStringLiteral("effective"), effective);
+    return out;
+}
+
+bool GalleryComponentPlayground::canPatchStudioProperties(const QString& studioType,
+    const QObject* target,
+    const QJsonObject& patch)
+{
+    const QString route = routeForStudioType(studioType);
+    if (route.isEmpty() || !target || patch.isEmpty())
+        return false;
+    if (studioType == QStringLiteral("SpatialItem")) {
+        if (!target->inherits("fluent::spatial::SpatialItem"))
+            return false;
+    } else if (!accepts(route, qobject_cast<const QWidget*>(target))) {
+        return false;
+    }
+
+    const QJsonObject schema = loadPlaygroundSchema(route);
+    if (schema.isEmpty())
+        return false;
+
+    QSet<QString> patchableIds;
+    for (const auto& entry : schema.value("properties").toArray()) {
+        const auto field = entry.toObject();
+        if (isStudioFilteredField(field))
+            continue;
+        const QString id = field.value("id").toString();
+        const QByteArray name = field.value("property").toString().toLatin1();
+        const int propIndex = name.isEmpty() ? -1 : target->metaObject()->indexOfProperty(name);
+        const QMetaProperty prop = propIndex >= 0 ? target->metaObject()->property(propIndex) : QMetaProperty();
+        if (isButtonSpecialFieldId(id, target) || (prop.isValid() && prop.isWritable())
+            || methodProperty(target, QString::fromLatin1(name))) {
+            patchableIds.insert(id);
+        }
+    }
+
+    for (auto it = patch.constBegin(); it != patch.constEnd(); ++it) {
+        if (!patchableIds.contains(it.key()))
+            return false;
+    }
+    return true;
+}
+
+bool GalleryComponentPlayground::applyStudioProperties(const QString& studioType,
+    QObject* target,
+    const QJsonObject& props)
+{
+    const QString route = routeForStudioType(studioType);
+    if (route.isEmpty() || !target || props.isEmpty())
+        return false;
+    if (studioType == QStringLiteral("SpatialItem")) {
+        if (!target->inherits("fluent::spatial::SpatialItem"))
+            return false;
+    } else if (!accepts(route, qobject_cast<const QWidget*>(target))) {
+        return false;
+    }
+
+    const QJsonObject schema = loadPlaygroundSchema(route);
+    if (schema.isEmpty())
+        return false;
+
+    auto* buttonTarget = qobject_cast<Button*>(target);
+    auto* rangeTarget = qobject_cast<basicinput::RangeSlider*>(target);
+    const bool writeRangePair = rangeTarget && props.contains(QStringLiteral("lowerValue"))
+        && props.contains(QStringLiteral("upperValue"));
+
+    for (const auto& entry : schema.value("properties").toArray()) {
+        auto field = entry.toObject();
+        if (isStudioFilteredField(field))
+            continue;
+
+        const QString id = field.value("id").toString();
+        if (!props.contains(id))
+            continue;
+
+        QJsonValue val = props.value(id);
+        const QString type = field.value("type").toString();
+
+        if (val.isNull() && !field.value("nullable").toBool())
+            continue;
+        if (type == QStringLiteral("boolean") && !val.isBool())
+            continue;
+        if (type == QStringLiteral("text") && !val.isString())
+            continue;
+        if (type == QStringLiteral("number") && !val.isNull() && (!val.isDouble() || !std::isfinite(val.toDouble())))
+            continue;
+        if ((type == QStringLiteral("string-list") || type == QStringLiteral("multi-enum")) && !val.isArray())
+            continue;
+        if (type == QStringLiteral("color") && !val.isNull() && (!val.isString() || !QColor(val.toString()).isValid()))
+            continue;
+        if ((type == QStringLiteral("date") && !val.isNull()
+                && !QDate::fromString(val.toString(), Qt::ISODate).isValid())
+            || (type == QStringLiteral("time") && !val.isNull()
+                && !QTime::fromString(val.toString(), Qt::ISODate).isValid())
+            || (type == QStringLiteral("datetime") && !val.isNull()
+                && !QDateTime::fromString(val.toString(), Qt::ISODate).isValid())) {
+            continue;
+        }
+
+        if (studioType == QStringLiteral("SpatialView") && id == QStringLiteral("zoom") && val.toDouble() > 4.0)
+            val = val.toDouble() / 100.0;
+        if (studioType == QStringLiteral("SpatialItem") && id == QStringLiteral("scale") && val.toDouble() > 4.0)
+            val = val.toDouble() / 100.0;
+        if (studioType == QStringLiteral("SpatialItem") && id == QStringLiteral("surfaceIntensity")
+            && val.toDouble() > 1.0)
+            val = val.toDouble() / 100.0;
+
+        if (type == QStringLiteral("number") && !val.isNull() && field.value("integer").toBool())
+            val = double(std::round(val.toDouble()));
+
+        if (id == QStringLiteral("expanded")) {
+            if (auto* expander = qobject_cast<layout::Expander*>(target)) {
+                expander->setExpandedAnimated(val.toBool(), false);
+                continue;
+            }
+        }
+
+        if (writeRangePair && (id == QStringLiteral("lowerValue") || id == QStringLiteral("upperValue")))
+            continue;
+
+        if (buttonTarget && id == QStringLiteral("icon")) {
+            const QString previousGlyph = buttonTarget->property("_studioIconGlyph").toString();
+            const bool hadIcon = !previousGlyph.isEmpty() || !buttonTarget->icon().isNull();
+            const QString glyph = glyphValueFor(val.toString());
+            buttonTarget->setIconGlyph(glyph);
+            buttonTarget->setProperty("_studioIconGlyph", glyph);
+            if (!props.contains(QStringLiteral("fluentLayout"))) {
+                if (glyph.isEmpty())
+                    buttonTarget->setFluentLayout(Button::TextOnly);
+                else if (!hadIcon && buttonTarget->fluentLayout() == Button::TextOnly)
+                    buttonTarget->setFluentLayout(Button::IconBefore);
+            }
+            continue;
+        }
+
+        if (buttonTarget && id == QStringLiteral("cornerRadius")) {
+            const bool custom = !val.isNull();
+            buttonTarget->setProperty("_studioCustomCornerRadius", custom);
+            if (custom) {
+                const int radius = qBound(0, val.toInt(), 24);
+                buttonTarget->setCornerRadii(QMargins(radius, radius, radius, radius));
+            } else {
+                buttonTarget->resetCornerRadii();
+            }
+            continue;
+        }
+
+        if (buttonTarget && (id == QStringLiteral("iconOffsetX") || id == QStringLiteral("iconOffsetY"))) {
+            QPoint offset = buttonTarget->iconOffset();
+            if (id == QStringLiteral("iconOffsetX"))
+                offset.setX(val.toInt());
+            else
+                offset.setY(val.toInt());
+            buttonTarget->setIconOffset(offset);
+            continue;
+        }
+
+        const QByteArray propName = field.value("property").toString().toLatin1();
+        const int propIndex = propName.isEmpty() ? -1 : target->metaObject()->indexOfProperty(propName);
+        const QMetaProperty prop = propIndex >= 0 ? target->metaObject()->property(propIndex) : QMetaProperty();
+        if ((!prop.isValid() || !prop.isWritable()) && !methodProperty(target, QString::fromLatin1(propName)))
+            continue;
+
+        field = enrichEnumFieldMeta(field, prop);
+        if (type == QStringLiteral("enum")) {
+            const QString enumKey = val.toString();
+            const QJsonArray options = field.value("options").toArray();
+            if (enumKey.isEmpty() || (!options.isEmpty() && !options.contains(enumKey)))
+                continue;
+        }
+        writeSinglePropertyValue(field, target, val);
+    }
+
+    if (writeRangePair) {
+        rangeTarget->setValues(props.value(QStringLiteral("lowerValue")).toInt(),
+            props.value(QStringLiteral("upperValue")).toInt());
+    }
+    if (auto* combo = qobject_cast<QComboBox*>(target); combo && combo->lineEdit())
+        combo->lineEdit()->setPlaceholderText(combo->placeholderText());
+    if (auto* splash = qobject_cast<status_info::SplashScreen*>(target); splash
+        && props.contains(QStringLiteral("indeterminate")) && props.value(QStringLiteral("indeterminate")).isBool()) {
+        splash->setIndeterminate(props.value(QStringLiteral("indeterminate")).toBool());
+    }
+    return true;
 }
 } // namespace fluent::gallery
