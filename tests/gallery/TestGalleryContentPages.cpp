@@ -1123,8 +1123,9 @@ TEST_F(GalleryContentPagesTest, QmlPlusAnchorExamplesCenterMoveAndRestoreOneButt
         ASSERT_TRUE(QTest::qWaitFor([&] { return surface->width() > 300; }, 1000));
         surface->layout()->activate();
         const QRect initial = button->geometry();
-        auto* toggle = preview->findChild<fluent::basicinput::ToggleSwitch*>();
-        if (toggle) {
+        if (sampleId == QStringLiteral("qmlplus-anchors-state")) {
+            auto* toggle = preview->findChild<fluent::basicinput::ToggleSwitch*>();
+            ASSERT_NE(toggle, nullptr);
             EXPECT_EQ(button->x(), 12);
             toggle->setIsOn(true);
             surface->layout()->activate();

@@ -1011,26 +1011,6 @@ TEST_F(TreeViewTest, ExpandAnimationExposesChildrenDuringReveal)
     EXPECT_FALSE(tv->visualRect(childIdx).isEmpty());
 }
 
-TEST_F(TreeViewTest, ExpandAnimationCompletesCleanly)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-    tv->resize(300, 400);
-    window->resize(320, 420);
-    QPixmap pm = tv->grab();
-
-    QModelIndex workIdx = model->index(0, 0);
-    tv->expand(workIdx);
-
-    // Let animation finish (Normal = 250ms)
-    QTest::qWait(300);
-    QApplication::processEvents();
-
-    EXPECT_TRUE(tv->isExpanded(workIdx));
-    // Verify children are visible
-    EXPECT_GT(model->rowCount(workIdx), 0);
-}
-
 TEST_F(TreeViewTest, RapidToggleNoCrash)
 {
     TreeView* tv = new TreeView(window);

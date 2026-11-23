@@ -982,103 +982,45 @@ TEST_F(GridViewTest, DragDisplacementRepeatedStableMoveKeepsRunningAnimations)
     QTest::qWait(50);
 }
 
-TEST_F(GridViewTest, DragReorderMultipleMode)
-{
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP()
-            << "Requires a real windowing platform; offscreen cannot deliver "
-               "synthetic pointer/keyboard input or show native popups.";
-    }
-    // Multiple selection + drag: only the pressed item should reorder,
-    // multi-selection state shouldn't prevent drag
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    GridView* gv = new GridView(window);
-    gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(SelectionMode::Multiple);
-    gv->setCanReorderItems(true);
-
-    auto* mdl = new QStandardItemModel(gv);
-    for (auto& t : {"A", "B", "C", "D", "E"})
-        mdl->appendRow(new QStandardItem(t));
-    gv->setModel(mdl);
-    attachFluentDelegate(gv);
-    window->show();
-    QTest::qWait(50);
-
-    // Pre-select items 0 and 2
-    gv->selectionModel()->select(mdl->index(0, 0), QItemSelectionModel::Select);
-    gv->selectionModel()->select(mdl->index(2, 0), QItemSelectionModel::Select);
-    QTest::qWait(20);
-    EXPECT_EQ(gv->selectedRows().size(), 2);
-
-    QSignalSpy reorderSpy(gv, &GridView::itemReordered);
-
-    // Drag item 0 toward item 3
-    QRect r0 = gv->visualRect(mdl->index(0, 0));
-    QRect r3 = gv->visualRect(mdl->index(3, 0));
-
-    QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
-    QTest::qWait(20);
-    QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    sendDragMove(gv->viewport(), mid);
-    QTest::qWait(20);
-    sendDragMove(gv->viewport(), r3.center());
-    QTest::qWait(20);
-    QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r3.center());
-    QTest::qWait(50);
-
-    EXPECT_EQ(reorderSpy.count(), 1);
-    // Item moved — verify model changed
-    QStringList result;
-    for (int i = 0; i < mdl->rowCount(); ++i)
-        result << mdl->index(i, 0).data().toString();
-    EXPECT_NE(result.at(0), "A");
-}
-
 TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode)
 {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP()
-            << "Requires a real windowing platform; offscreen cannot deliver "
-               "synthetic pointer/keyboard input or show native popups.";
+    window->setAttribute(Qt::WA_DontShowOnScreen);
+    window->show();
+    for (int secondRow : {1, 2}) {
+        SCOPED_TRACE(secondRow);
+        GridView view(window);
+        view.resize(600, 400);
+        view.setSelectionMode(SelectionMode::Multiple);
+        view.setCanReorderItems(true);
+        const QStringList original{"A", "B", "C", "D", "E", "F"};
+        auto* model = attachStandardModel(&view, original);
+        view.show();
+        view.doItemsLayout();
+        view.selectionModel()->select(model->index(0, 0), QItemSelectionModel::Select);
+        view.selectionModel()->select(model->index(secondRow, 0), QItemSelectionModel::Select);
+
+        const QPoint start = view.visualRect(model->index(0, 0)).center();
+        const QRect target = view.visualRect(model->index(4, 0));
+        const QPoint drop(target.right() - 1, target.center().y());
+        ASSERT_EQ(view.indexAt(start).row(), 0);
+        ASSERT_EQ(view.indexAt(drop).row(), 4);
+        QSignalSpy reordered(&view, &GridView::itemReordered);
+        QTest::mousePress(view.viewport(), Qt::LeftButton, Qt::NoModifier, start);
+        sendDragMove(view.viewport(), start + QPoint(QApplication::startDragDistance() + 2, 0));
+        sendDragMove(view.viewport(), drop);
+        EXPECT_EQ(modelTexts(model), original);
+        EXPECT_EQ(reordered.count(), 0);
+        QTest::mouseRelease(view.viewport(), Qt::LeftButton, Qt::NoModifier, drop);
+
+        ASSERT_EQ(reordered.count(), 1);
+        EXPECT_EQ(reordered.first().at(0).toInt(), 0);
+        EXPECT_EQ(reordered.first().at(1).toInt(), 3);
+        const QStringList expected =
+            secondRow == 1 ? QStringList{"C", "D", "E", "A", "B", "F"} : QStringList{"B", "D", "E", "A", "C", "F"};
+        EXPECT_EQ(modelTexts(model), expected);
+        EXPECT_EQ(view.selectedRows(), (QList<int>{3, 4}));
+        EXPECT_EQ(view.currentIndex().data().toString(), "A");
     }
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    GridView* gv = new GridView(window);
-    gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(SelectionMode::Multiple);
-    gv->setCanReorderItems(true);
-
-    auto* mdl = attachStandardModel(gv, QStringList{"A", "B", "C", "D", "E", "F"});
-    showOffscreen(window);
-
-    gv->selectionModel()->select(mdl->index(0, 0), QItemSelectionModel::Select);
-    gv->selectionModel()->select(mdl->index(1, 0), QItemSelectionModel::Select);
-    ASSERT_EQ(gv->selectedRows().size(), 2);
-
-    QSignalSpy reorderSpy(gv, &GridView::itemReordered);
-    const QRect sourceRect = gv->visualRect(mdl->index(0, 0));
-    const QRect targetRect = gv->visualRect(mdl->index(4, 0));
-    const QPoint dropPoint(targetRect.right() - 1, targetRect.center().y());
-
-    QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, sourceRect.center());
-    QTest::qWait(10);
-    sendDragMove(gv->viewport(), sourceRect.center() + QPoint(QApplication::startDragDistance() + 2, 0));
-    QTest::qWait(10);
-
-    const QStringList beforeRelease = modelTexts(mdl);
-    sendDragMove(gv->viewport(), dropPoint);
-    QTest::qWait(10);
-    EXPECT_EQ(modelTexts(mdl), beforeRelease);
-    EXPECT_EQ(reorderSpy.count(), 0);
-
-    QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, dropPoint);
-    QTest::qWait(50);
-
-    EXPECT_EQ(reorderSpy.count(), 1);
-    EXPECT_EQ(modelTexts(mdl), (QStringList{"C", "D", "E", "A", "B", "F"}));
-    const QList<int> selectedRows = gv->selectedRows();
-    EXPECT_TRUE(selectedRows.contains(3));
-    EXPECT_TRUE(selectedRows.contains(4));
 }
 
 TEST_F(GridViewTest, DragReorderExtendedMode)
@@ -1212,45 +1154,6 @@ TEST_F(GridViewTest, DragReorderDisabledWhenFlagOff)
     EXPECT_EQ(modelTexts(mdl), beforeDrag);
 }
 
-TEST_F(GridViewTest, DragReorderPreservesSelectionInMultipleMode)
-{
-    // After drag reorder in Multiple mode, selections should adapt (moved item selected)
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    GridView* gv = new GridView(window);
-    gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(SelectionMode::Multiple);
-    gv->setCanReorderItems(true);
-
-    auto* mdl = new QStandardItemModel(gv);
-    for (auto& t : {"A", "B", "C", "D"})
-        mdl->appendRow(new QStandardItem(t));
-    gv->setModel(mdl);
-    attachFluentDelegate(gv);
-    window->show();
-    QTest::qWait(50);
-
-    QSignalSpy reorderSpy(gv, &GridView::itemReordered);
-
-    QRect r0 = gv->visualRect(mdl->index(0, 0));
-    QRect r2 = gv->visualRect(mdl->index(2, 0));
-
-    QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
-    QTest::qWait(20);
-    QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    sendDragMove(gv->viewport(), mid);
-    QTest::qWait(20);
-    sendDragMove(gv->viewport(), r2.center());
-    QTest::qWait(20);
-    QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r2.center());
-    QTest::qWait(50);
-
-    if (reorderSpy.count() > 0) {
-        int toRow = reorderSpy.at(0).at(1).toInt();
-        // After reorder, the moved item should be current
-        EXPECT_EQ(gv->currentIndex().row(), toRow);
-    }
-}
-
 TEST_F(GridViewTest, ReorderStandardItemModelTakeRowFallback)
 {
     if (tests::support::isHeadlessPlatform()) {
@@ -1294,46 +1197,6 @@ TEST_F(GridViewTest, ReorderStandardItemModelTakeRowFallback)
     EXPECT_EQ(reorderSpy.count(), 1);
     // Z should now be at the front
     EXPECT_EQ(mdl->index(0, 0).data().toString(), "Z");
-}
-
-TEST_F(GridViewTest, DragReorderItemReorderedSignalArgs)
-{
-    // Verify itemReordered signal carries correct from/to arguments
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    GridView* gv = new GridView(window);
-    gv->setGeometry(0, 0, 600, 400);
-    gv->setCanReorderItems(true);
-
-    auto* mdl = new QStandardItemModel(gv);
-    for (auto& t : {"A", "B", "C", "D"})
-        mdl->appendRow(new QStandardItem(t));
-    gv->setModel(mdl);
-    attachFluentDelegate(gv);
-    window->show();
-    QTest::qWait(50);
-
-    QSignalSpy reorderSpy(gv, &GridView::itemReordered);
-
-    QRect r0 = gv->visualRect(mdl->index(0, 0));
-    QRect r3 = gv->visualRect(mdl->index(3, 0));
-
-    QTest::mousePress(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r0.center());
-    QTest::qWait(20);
-    QPoint mid = r0.center() + QPoint(QApplication::startDragDistance() + 2, 0);
-    sendDragMove(gv->viewport(), mid);
-    QTest::qWait(20);
-    sendDragMove(gv->viewport(), r3.center());
-    QTest::qWait(20);
-    QTest::mouseRelease(gv->viewport(), Qt::LeftButton, Qt::NoModifier, r3.center());
-    QTest::qWait(50);
-
-    if (reorderSpy.count() == 1) {
-        int fromIdx = reorderSpy.at(0).at(0).toInt();
-        int toIdx = reorderSpy.at(0).at(1).toInt();
-        EXPECT_EQ(fromIdx, 0);
-        EXPECT_GE(toIdx, 1); // moved forward
-        EXPECT_LT(toIdx, 4);
-    }
 }
 
 TEST_F(GridViewTest, DisabledStateUpdatesTextPaletteAndHeaderStyle)
