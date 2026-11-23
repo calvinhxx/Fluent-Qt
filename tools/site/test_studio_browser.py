@@ -932,9 +932,13 @@ def main() -> int:
         p = stack.enter_context(sync_playwright())
         browser = p.chromium.launch()
         context = browser.new_context(viewport={"width": 1440, "height": 900})
+        # Homepage navigation is part of this test. Its live download metadata is independent.
+        context.route("https://api.github.com/repos/calvinhxx/Fluent-Qt/releases/latest",
+                      lambda route: route.fulfill(json={"tag_name": "v1.0.0", "assets": []}))
         page = context.new_page()
         page.on("pageerror", lambda err: errors.append(f"pageerror: {err}"))
-        page.on("console", lambda msg: errors.append(f"console.{msg.type}: {msg.text}") if msg.type == "error" else None)
+        page.on("console", lambda msg: errors.append(f"console.error: {msg.text} ({msg.location['url']})")
+                if msg.type == "error" else None)
 
         if args.wasm:
             verify_loading_state(browser, url, args.output)
