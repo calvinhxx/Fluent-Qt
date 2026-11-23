@@ -23,30 +23,39 @@ class DesignerForms(unittest.TestCase):
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
         initialize_resources()
+        cls.loader = QUiLoader(cls.app)
+        cls.widgets = {entry["name"]: widget for entry, widget in available_widgets()}
+        for widget in cls.widgets.values():
+            cls.loader.registerCustomWidget(widget)
+
+    def dispose(self, widget):
+        widget.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.assertFalse(shiboken6.isValid(widget))
+        self.assertTrue(shiboken6.isValid(self.loader))
+        self.assertIs(QApplication.instance(), self.app)
 
     def test_catalog_forms(self):
-        loader = QUiLoader()
-        installed = {entry["name"]: widget for entry, widget in available_widgets()}
         for entry in WIDGETS:
             name = entry["name"]
             with self.subTest(name=name):
-                if name not in installed:
+                if name not in self.widgets:
                     self.assertIn("extension", entry)
                     continue
-                widget_type = installed[name]
-                loader.registerCustomWidget(widget_type)
+                widget_type = self.widgets[name]
                 root = ET.fromstring('<ui version="4.0"><class>Form</class><widget class="QWidget" name="Form"/></ui>')
                 root.find("widget").append(ET.fromstring(widget_xml(entry)).find("widget"))
                 stream = QBuffer()
                 stream.setData(ET.tostring(root, encoding="utf-8"))
                 self.assertTrue(stream.open(QIODevice.OpenModeFlag.ReadOnly))
-                form = loader.load(stream)
+                form = self.loader.load(stream)
                 control = form.findChild(widget_type)
                 self.assertIsNotNone(control)
                 self.assertEqual(control.metaObject().className(), name)
                 if "property" in entry:
                     self.assertEqual(control.property(entry["property"]), entry["value"])
                 self.assertTrue((DIRECTORY / "icons" / (name + ".png")).is_file())
+                self.dispose(form)
 
     def test_overlay_anchors(self):
         for entry, widget_type in available_widgets():
@@ -89,10 +98,10 @@ class DesignerForms(unittest.TestCase):
                 if kind == "ToolTip":
                     anchor.setSurfaceText("Updated tip")
                     self.assertEqual(surface.text(), "Updated tip")
-                shiboken6.delete(anchor)
+                self.dispose(anchor)
                 QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
                 self.assertFalse(shiboken6.isValid(surface))
-                shiboken6.delete(owner)
+                self.dispose(owner)
 
     def test_duration_changed(self):
         from fluentqt_designer import FluentSplashScreenButton, FluentToastButton
@@ -112,7 +121,7 @@ class DesignerForms(unittest.TestCase):
                 anchor.setProperty("duration", 0)
                 self.assertEqual(anchor.property("duration"), 0)
                 self.assertEqual(values, [700, 0])
-                shiboken6.delete(anchor)
+                self.dispose(anchor)
 
     def test_form_templates(self):
         from importlib.util import find_spec
@@ -122,12 +131,9 @@ class DesignerForms(unittest.TestCase):
         if find_spec("fluentqt.spatial") is not None:
             from fluentqt.spatial import SpatialView
             hosts["SpatialItem"] = SpatialView
-        loader = QUiLoader()
-        for _, widget in available_widgets():
-            loader.registerCustomWidget(widget)
         for kind, host_type in hosts.items():
             with self.subTest(kind=kind):
-                body = loader.load(str(DIRECTORY / "templates" / (kind + ".ui")))
+                body = self.loader.load(str(DIRECTORY / "templates" / (kind + ".ui")))
                 with self.assertRaises(ValueError):
                     make_form_host(body, body)
                 host = make_form_host(body)
@@ -153,13 +159,10 @@ class DesignerForms(unittest.TestCase):
                     box.button(QDialogButtonBox.StandardButton.Ok).click()
                     self.assertFalse(host.isOpen())
                 host.close()
-                shiboken6.delete(host)
+                self.dispose(host)
 
     def test_sample_connection(self):
-        loader = QUiLoader()
-        for _, widget_type in available_widgets():
-            loader.registerCustomWidget(widget_type)
-        form = loader.load(str(DIRECTORY / "preview.ui"))
+        form = self.loader.load(str(DIRECTORY / "preview.ui"))
         name = form.findChild(QWidget, "projectName")
         self.assertTrue(name.text())
         choose = form.findChild(QWidget, "chooseName")
@@ -169,6 +172,7 @@ class DesignerForms(unittest.TestCase):
         self.assertTrue(form.findChild(QWidget, "reopen").isChecked())
         form.findChild(QWidget, "clearName").click()
         self.assertEqual(name.text(), "")
+        self.dispose(form)
 
 
 if __name__ == "__main__":
