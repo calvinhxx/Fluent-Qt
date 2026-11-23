@@ -89,6 +89,105 @@ protected:
     AnchorLayout* layout = nullptr;
 };
 
+TEST_F(NumberBoxTest, RequiredValuesSurviveBlankInvalidAndProgrammaticCommits)
+{
+    NumberBox box;
+    EXPECT_TRUE(box.isEmptyAllowed());
+    box.setRange(1, 99);
+    QSignalSpy values(&box, &NumberBox::valueChanged);
+    QSignalSpy policy(&box, &NumberBox::emptyAllowedChanged);
+    box.setEmptyAllowed(false);
+    box.setEmptyAllowed(false);
+    EXPECT_EQ(policy.count(), 1);
+    EXPECT_EQ(values.count(), 1);
+    EXPECT_DOUBLE_EQ(box.value(), 1);
+    EXPECT_EQ(box.text(), QStringLiteral("1"));
+
+    box.setValue(23);
+    values.clear();
+    box.selectAll();
+    QTest::keyClick(&box, Qt::Key_Backspace);
+    EXPECT_TRUE(box.text().isEmpty());
+    EXPECT_DOUBLE_EQ(box.value(), 23);
+    QTest::keyClicks(&box, "45");
+    QTest::keyClick(&box, Qt::Key_Return);
+    EXPECT_DOUBLE_EQ(box.value(), 45);
+    EXPECT_EQ(values.count(), 1);
+    values.clear();
+    for (const auto& draft : {QString(), QStringLiteral("abc"), QStringLiteral("1 / 0")}) {
+        box.setText(draft);
+        box.commitInput();
+        EXPECT_EQ(box.text(), QStringLiteral("45"));
+    }
+    box.setValue(std::numeric_limits<double>::quiet_NaN());
+    EXPECT_DOUBLE_EQ(box.value(), 45);
+    EXPECT_TRUE(values.isEmpty());
+    box.clear();
+    QFocusEvent blur(QEvent::FocusOut, Qt::TabFocusReason);
+    QApplication::sendEvent(&box, &blur);
+    EXPECT_EQ(box.text(), QStringLiteral("45"));
+    box.setScrubbingEnabled(true);
+    box.clear();
+    QTest::mousePress(&box, Qt::LeftButton, Qt::NoModifier, box.scrubHandleRect().center());
+    ASSERT_TRUE(box.isScrubbing());
+    QApplication::sendEvent(&box, &blur);
+    EXPECT_FALSE(box.isScrubbing());
+    EXPECT_EQ(box.text(), QStringLiteral("45"));
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, box.scrubHandleRect().center());
+    box.setRange(-9, -2);
+    EXPECT_DOUBLE_EQ(box.value(), -2);
+    box.setEmptyAllowed(true);
+    box.clear();
+    box.commitInput();
+    EXPECT_TRUE(std::isnan(box.value()));
+    box.setEmptyAllowed(false);
+    EXPECT_DOUBLE_EQ(box.value(), -2);
+}
+
+TEST_F(NumberBoxTest, SplitPlacesCommandsAroundTextAndMirrorsWithTheField)
+{
+    using Placement = NumberBox::SpinButtonPlacementMode;
+    NumberBox box;
+    box.setRange(1, 3);
+    box.setValue(2);
+    box.setHeader("Quantity");
+    box.setTrailingText("kg");
+    box.setScrubbingEnabled(true);
+    box.setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    const auto original = box.alignment();
+    box.setSpinButtonPlacementMode(Placement::Split);
+    box.resize(240, box.sizeHint().height());
+    box.show();
+    QApplication::processEvents();
+    auto* minus = box.findChild<RepeatButton*>("NumberBoxSpinDownButton");
+    auto* plus = box.findChild<RepeatButton*>("NumberBoxSpinUpButton");
+    ASSERT_NE(minus, nullptr);
+    ASSERT_NE(plus, nullptr);
+    EXPECT_EQ(minus->fluentStyle(), Button::Subtle);
+    EXPECT_EQ(plus->fluentStyle(), Button::Subtle);
+    EXPECT_EQ(box.alignment(), Qt::AlignCenter);
+    for (auto direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+        box.setLayoutDirection(direction);
+        const auto handle = box.scrubHandleRect();
+        EXPECT_FALSE(minus->geometry().intersects(handle));
+        EXPECT_FALSE(plus->geometry().intersects(handle));
+        EXPECT_EQ(minus->x() < plus->x(), direction == Qt::LeftToRight);
+        EXPECT_EQ(box.childAt(plus->geometry().center()), plus);
+        QTest::mouseClick(plus, Qt::LeftButton);
+        EXPECT_DOUBLE_EQ(box.value(), 3);
+        EXPECT_FALSE(plus->isEnabled());
+        QTest::mouseClick(minus, Qt::LeftButton);
+        EXPECT_DOUBLE_EQ(box.value(), 2);
+    }
+    box.setSpinButtonPlacementMode(Placement::Inline);
+    EXPECT_EQ(box.alignment(), original);
+    EXPECT_EQ(minus->fluentStyle(), Button::Standard);
+    box.setSpinButtonPlacementMode(Placement::Split);
+    box.setAlignment(Qt::AlignLeft);
+    box.setSpinButtonPlacementMode(Placement::Hidden);
+    EXPECT_TRUE(box.alignment().testFlag(Qt::AlignLeft));
+}
+
 TEST_F(NumberBoxTest, Contract_ExplicitCommitKeepsPrecisionUntilTextChanges)
 {
     NumberBox box;

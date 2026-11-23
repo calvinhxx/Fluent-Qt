@@ -179,6 +179,18 @@ Enter, Tab and focus-out commit current text; Escape cancels. Preserve the model
 EditRole type, and do not route wide integers through a double-valued editor.
 Unchanged formatted text must not reduce the stored value's precision.
 
+NumberBox allows empty values by default. In a range containing a finite value,
+`setEmptyAllowed(false)` fills an empty field with zero clamped to that range.
+The user can still clear the text while editing. Committing a blank or invalid
+draft restores the last number. The same policy applies to a nonfinite value
+passed to `setValue()`. A required field ignores a range with no finite value.
+
+`SpinButtonPlacementMode::Split` places the decrement button at the leading
+edge and the increment button at the trailing edge. It centers the number,
+uses `inlineSpinButtonSize` for both buttons and applies `spinButtonRightMargin`
+at both ends. Button names, keyboard steps and press-and-hold repeat are shared
+with Inline and Compact.
+
 - Public components derived from an interactive Qt control must preserve the
   base class's observable input signals with the same meaning and exact-once
   delivery. An event override may call the Qt base implementation or reproduce

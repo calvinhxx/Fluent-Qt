@@ -40,6 +40,11 @@ class NumberBox : public LineEdit {
      * zh_CN: 输入框当前提交的数值。
      */
     Q_PROPERTY(double value READ value WRITE setValue NOTIFY valueChanged)
+    /** @brief Allows an empty committed value (NaN) by default. When disabled, empty or invalid input
+     * restores the committed number. An initially empty field starts at zero clamped to the range.
+     * zh_CN: 默认允许空值（NaN）。关闭后，空白或无效输入在提交时恢复为已提交数值；原本为空时取范围内最接近零的值。
+     */
+    Q_PROPERTY(bool emptyAllowed READ isEmptyAllowed WRITE setEmptyAllowed NOTIFY emptyAllowedChanged)
     /**
      * @brief Lower bound used to clamp typed and stepped values.
      * zh_CN: 用于限制输入值和步进值的下边界。
@@ -73,8 +78,8 @@ class NumberBox : public LineEdit {
      */
     Q_PROPERTY(bool acceptsExpression READ acceptsExpression WRITE setAcceptsExpression NOTIFY acceptsExpressionChanged)
     /**
-     * @brief Placement mode for hidden, compact, or inline spin buttons.
-     * zh_CN: 步进按钮的隐藏、紧凑或内联布局模式。
+     * @brief Placement of spin buttons. Split places minus and plus on opposite sides of the value.
+     * zh_CN: 步进按钮布局。Split 将减号和加号放在数值两侧。
      */
     Q_PROPERTY(SpinButtonPlacementMode spinButtonPlacementMode
         READ spinButtonPlacementMode
@@ -147,7 +152,7 @@ class NumberBox : public LineEdit {
     Q_PROPERTY(bool scrubbing READ isScrubbing NOTIFY scrubbingChanged)
 
 public:
-    enum class SpinButtonPlacementMode { Hidden, Compact, Inline };
+    enum class SpinButtonPlacementMode { Hidden, Compact, Inline, Split };
     Q_ENUM(SpinButtonPlacementMode)
 
     explicit NumberBox(QWidget* parent = nullptr);
@@ -155,6 +160,9 @@ public:
 
     double value() const { return m_value; }
     void setValue(double value);
+
+    bool isEmptyAllowed() const { return m_emptyAllowed; }
+    void setEmptyAllowed(bool allowed);
 
     double minimum() const { return m_minimum; }
     void setMinimum(double minimum);
@@ -218,8 +226,8 @@ public:
 
     /** @brief Parses and commits the current text using bounds and expression rules.
      *
-     * Invalid input keeps its text and sets value to NaN; unchanged formatted text keeps its original precision.
-     * zh_CN: 按数值范围与表达式规则解析并提交当前文本；无效输入保留文本并将 value 设为 NaN，未修改的格式化文本保留原精度。 */
+     * With emptyAllowed, invalid input keeps its text and sets value to NaN. Otherwise the last value is restored.
+     * zh_CN: 按数值范围与表达式规则解析并提交当前文本；允许空值时无效输入保留文本且 value 为 NaN，否则恢复上次的数值。 */
     void commitInput();
 
     QSize sizeHint() const override;
@@ -229,6 +237,7 @@ public:
 
 signals:
     void valueChanged(double value);
+    void emptyAllowedChanged(bool allowed);
     void minimumChanged(double minimum);
     void maximumChanged(double maximum);
     void smallChangeChanged(double change);
@@ -315,7 +324,9 @@ private:
     double m_maximum;
     double m_smallChange = 1.0;
     double m_largeChange = 10.0;
+    bool m_emptyAllowed = true;
     bool m_acceptsExpression = false;
+    Qt::Alignment m_alignmentBeforeSplit = Qt::AlignLeading | Qt::AlignVCenter;
     SpinButtonPlacementMode m_spinButtonPlacementMode = SpinButtonPlacementMode::Hidden;
     int m_displayPrecision = -1;
     double m_formatStep = 0.0;

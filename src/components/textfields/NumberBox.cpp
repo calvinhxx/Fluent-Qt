@@ -13,6 +13,7 @@
 #include <QPointer>
 #include <QResizeEvent>
 #include <QSignalBlocker>
+#include <QStyle>
 #include <QValidator>
 
 #include <cmath>
@@ -21,6 +22,7 @@
 #include "components/basicinput/RepeatButton.h"
 #include "components/foundation/private/ValueAccessibility_p.h"
 #include "components/textfields/private/NumberBoxAccessibility_p.h"
+#include "design/IconCatalog.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -254,6 +256,18 @@ void NumberBox::setValue(double value)
     setValueInternal(value, true, false);
 }
 
+void NumberBox::setEmptyAllowed(bool allowed)
+{
+    if (m_emptyAllowed == allowed || (!allowed && !isFiniteNumber(normalizedStepStart())))
+        return;
+    m_emptyAllowed = allowed;
+    const QPointer<NumberBox> guard(this);
+    if (!allowed && !isFiniteNumber(m_value))
+        setValueInternal(0.0, true, false);
+    if (guard && m_emptyAllowed == allowed)
+        emit emptyAllowedChanged(allowed);
+}
+
 void NumberBox::setMinimum(double minimum)
 {
     if (isNan(minimum) || numbersEqual(m_minimum, minimum))
@@ -274,6 +288,10 @@ void NumberBox::setRange(double minimum, double maximum)
         return;
     if (maximum < minimum)
         maximum = minimum;
+
+    if (!m_emptyAllowed
+        && (minimum == std::numeric_limits<double>::infinity() || maximum == -std::numeric_limits<double>::infinity()))
+        return;
 
     const double oldMinimum = m_minimum;
     const double oldMaximum = m_maximum;
@@ -353,10 +371,16 @@ void NumberBox::setSpinButtonPlacementMode(SpinButtonPlacementMode mode)
 {
     if (m_spinButtonPlacementMode == mode)
         return;
+    if (mode == SpinButtonPlacementMode::Split) {
+        m_alignmentBeforeSplit = alignment();
+        setAlignment(Qt::AlignCenter);
+    } else if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Split && alignment() == Qt::AlignCenter) {
+        setAlignment(m_alignmentBeforeSplit);
+    }
     m_spinButtonPlacementMode = mode;
+    updateSpinButtonIcons();
     updateSpinnerState();
     updateTextMarginsForChrome();
-    updateChildGeometry();
     update();
     emit spinButtonPlacementModeChanged(m_spinButtonPlacementMode);
 }
@@ -495,7 +519,14 @@ void NumberBox::setScrubSensitivity(double sensitivity)
 
 QRect NumberBox::scrubHandleRect() const
 {
-    return m_scrubbingEnabled ? QRect(4, inputTop() + 4, 24, inputRect().height() - 8) : QRect();
+    if (!m_scrubbingEnabled)
+        return {};
+    QRect handle(4, inputTop() + 4, 24, inputRect().height() - 8);
+    if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Split) {
+        handle.translate(m_spinButtonRightMargin + m_inlineSpinButtonSize.width(), 0);
+        return QStyle::visualRect(layoutDirection(), inputRect(), handle);
+    }
+    return handle;
 }
 
 void NumberBox::cancelScrub()
@@ -512,7 +543,10 @@ void NumberBox::finishScrub(bool canceled, bool overHandle)
     const QString initialText = m_scrubInitialText;
     const QPointer<NumberBox> guard(this);
     if (canceled) {
-        setValueInternal(initial, false, true);
+        if (!m_emptyAllowed && !isFiniteNumber(initial))
+            setValueInternal(0.0, true, false);
+        else
+            setValueInternal(initial, false, true);
         if (!guard)
             return;
         if (numbersEqual(m_value, normalizeValue(initial)))
@@ -638,6 +672,8 @@ void NumberBox::focusOutEvent(QFocusEvent* event)
         return;
     if (!canceled)
         commitInput();
+    else if (!m_emptyAllowed && text() != formatValue(m_value))
+        setFormattedText(formatValue(m_value));
     if (!guard)
         return;
     m_focused = false;
@@ -853,22 +889,20 @@ void NumberBox::initializeSpinnerButtons()
     m_spinUpButton = new ::fluent::basicinput::RepeatButton(this);
     m_spinDownButton = new ::fluent::basicinput::RepeatButton(this);
 
-    auto configureButton =
-        [this](::fluent::basicinput::RepeatButton* button, const QString& glyph, const QString& objectName) {
-            button->setObjectName(objectName);
-            button->setCursor(Qt::ArrowCursor);
-            button->setFluentStyle(::fluent::basicinput::Button::Standard);
-            button->setFluentLayout(::fluent::basicinput::Button::IconOnly);
-            button->setFluentSize(::fluent::basicinput::Button::Small);
-            button->setFocusPolicy(Qt::NoFocus);
-            button->setFixedSize(m_spinButtonSize);
-            button->setIconGlyph(glyph, m_spinButtonIconSize, Typography::FontFamily::FluentIcons);
-            button->installEventFilter(this);
-            button->hide();
-        };
+    auto configureButton = [this](::fluent::basicinput::RepeatButton* button, const QString& objectName) {
+        button->setObjectName(objectName);
+        button->setCursor(Qt::ArrowCursor);
+        button->setFluentLayout(::fluent::basicinput::Button::IconOnly);
+        button->setFluentSize(::fluent::basicinput::Button::Small);
+        button->setFocusPolicy(Qt::NoFocus);
+        button->setFixedSize(m_spinButtonSize);
+        button->installEventFilter(this);
+        button->hide();
+    };
 
-    configureButton(m_spinUpButton, Typography::Icons::ChevronUp, QStringLiteral("NumberBoxSpinUpButton"));
-    configureButton(m_spinDownButton, Typography::Icons::ChevronDown, QStringLiteral("NumberBoxSpinDownButton"));
+    configureButton(m_spinUpButton, QStringLiteral("NumberBoxSpinUpButton"));
+    configureButton(m_spinDownButton, QStringLiteral("NumberBoxSpinDownButton"));
+    updateSpinButtonIcons();
     m_spinUpButton->setAccessibleName(tr("Increase value"));
     m_spinDownButton->setAccessibleName(tr("Decrease value"));
 
@@ -886,14 +920,17 @@ void NumberBox::initializeSpinnerButtons()
 
 void NumberBox::updateSpinButtonIcons()
 {
-    if (m_spinUpButton) {
-        m_spinUpButton->setIconGlyph(Typography::Icons::ChevronUp, m_spinButtonIconSize,
-            Typography::FontFamily::FluentIcons);
-    }
-    if (m_spinDownButton) {
-        m_spinDownButton->setIconGlyph(Typography::Icons::ChevronDown, m_spinButtonIconSize,
-            Typography::FontFamily::FluentIcons);
-    }
+    const bool split = m_spinButtonPlacementMode == SpinButtonPlacementMode::Split;
+    const auto style = split ? ::fluent::basicinput::Button::Subtle : ::fluent::basicinput::Button::Standard;
+    m_spinUpButton->setFluentStyle(style);
+    m_spinDownButton->setFluentStyle(style);
+    m_spinUpButton->setIconGlyph(
+        split ? Typography::Icons::glyph(QStringLiteral("ic_fluent_add_20_regular")) : Typography::Icons::ChevronUp,
+        m_spinButtonIconSize, Typography::FontFamily::FluentIcons);
+    m_spinDownButton->setIconGlyph(split
+            ? Typography::Icons::glyph(QStringLiteral("ic_fluent_subtract_20_regular"))
+            : Typography::Icons::ChevronDown,
+        m_spinButtonIconSize, Typography::FontFamily::FluentIcons);
 }
 
 void NumberBox::updateChildGeometry()
@@ -902,13 +939,18 @@ void NumberBox::updateChildGeometry()
         return;
     const QRect input = inputRect();
 
-    if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Inline) {
-        m_spinUpButton->setFixedSize(m_inlineSpinButtonSize);
-        m_spinDownButton->setFixedSize(m_inlineSpinButtonSize);
+    const bool split = m_spinButtonPlacementMode == SpinButtonPlacementMode::Split;
+    if (split || m_spinButtonPlacementMode == SpinButtonPlacementMode::Inline) {
         const int y = input.top() + qMax(0, (input.height() - m_inlineSpinButtonSize.height()) / 2);
-        const int x = input.right() - m_spinButtonRightMargin - inlineSpinnerWidth() + 1;
-        m_spinDownButton->move(x, y);
-        m_spinUpButton->move(x + m_inlineSpinButtonSize.width() + m_spinButtonSpacing, y);
+        const int upX = input.right() - m_spinButtonRightMargin - m_inlineSpinButtonSize.width() + 1;
+        const int downX =
+            split ? input.left() + m_spinButtonRightMargin : upX - m_spinButtonSpacing - m_inlineSpinButtonSize.width();
+        const QRect up(QPoint(upX, y), m_inlineSpinButtonSize);
+        const QRect down(QPoint(downX, y), m_inlineSpinButtonSize);
+        m_spinUpButton->setFixedSize(up.size());
+        m_spinDownButton->setFixedSize(down.size());
+        m_spinUpButton->move(split ? QStyle::visualRect(layoutDirection(), input, up).topLeft() : up.topLeft());
+        m_spinDownButton->move(split ? QStyle::visualRect(layoutDirection(), input, down).topLeft() : down.topLeft());
     } else {
         m_spinUpButton->setFixedSize(m_spinButtonSize);
         m_spinDownButton->setFixedSize(m_spinButtonSize);
@@ -946,17 +988,23 @@ void NumberBox::updateSpinnerState()
 
 void NumberBox::updateTextMarginsForChrome()
 {
+    int leftMargin = ::Spacing::Padding::TextFieldHorizontal + (m_scrubbingEnabled ? 24 : 0);
     int rightMargin = ::Spacing::Padding::TextFieldHorizontal;
-    if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Inline) {
+    const bool split = m_spinButtonPlacementMode == SpinButtonPlacementMode::Split;
+    if (split) {
+        const int reserved = m_spinButtonRightMargin + m_inlineSpinButtonSize.width() + m_spinButtonTextGap;
+        leftMargin += reserved;
+        rightMargin += reserved;
+    } else if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Inline) {
         rightMargin += m_spinButtonRightMargin + inlineSpinnerWidth() + m_spinButtonTextGap;
     } else if (m_spinButtonPlacementMode == SpinButtonPlacementMode::Compact) {
         rightMargin += m_spinButtonRightMargin + compactExpandedSpinnerWidth() + m_spinButtonTextGap;
     }
 
     QMargins margins = contentMargins();
-    margins.setLeft(::Spacing::Padding::TextFieldHorizontal + (m_scrubbingEnabled ? 24 : 0));
+    margins.setLeft(leftMargin);
     margins.setRight(rightMargin);
-    if (layoutDirection() == Qt::RightToLeft) {
+    if (!split && layoutDirection() == Qt::RightToLeft) {
         const int left = margins.left();
         margins.setLeft(margins.right());
         margins.setRight(left);
@@ -1099,7 +1147,11 @@ void NumberBox::setFormattedText(const QString& value)
 
 bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN)
 {
-    const double normalized = normalizeValue(value);
+    double normalized = normalizeValue(value);
+    if (!m_emptyAllowed && !isFiniteNumber(normalized)) {
+        normalized = qBound(m_minimum, isFiniteNumber(m_value) ? m_value : 0.0, m_maximum);
+        updateText = true;
+    }
     const bool wasInvalid = isNan(m_value);
     const bool changed = !numbersEqual(m_value, normalized);
     m_value = normalized;
