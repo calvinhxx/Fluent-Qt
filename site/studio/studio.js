@@ -1,3 +1,4 @@
+import { isSafeStudioSvg, isStudioPhotoUrl } from './studio-media.mjs';
 import {
   ANCHOR_CHILD_SCHEMA,
   ANCHOR_PROP_KEYS,
@@ -27,10 +28,51 @@ import {
   resolveDropTarget,
   updateNodeProps,
 } from './studio-core.mjs';
+import {
+  AI_PROVIDER_PRESETS,
+  changeAiEndpoint,
+  providerOrigin,
+  generateStudioPageWithAi,
+} from './studio-ai.mjs';
 
 const UI_STRINGS = {
   zh: {
     'toolbar.code': '导出代码',
+    'toolbar.ai': 'AI 生成',
+    'ai.title': 'AI 新建页面',
+    'ai.run': '生成界面',
+    'ai.running': '生成中…',
+    'ai.promptPlaceholder': '一句话描述你想新建的 Fluent-Qt 桌面界面（Enter 生成）',
+    'ai.settingsSummary': 'AI 配置',
+    'ai.providerLabel': '生成引擎',
+    'ai.providerAuto': '免费云端',
+    'ai.providerCustom': '自定义 API',
+    'ai.workerUrlLabel': 'Cloudflare Worker 地址',
+    'ai.workerHint': '填入已部署的免费 Worker 地址；没有 Worker 时请切换「自定义 API」填写你自己的 Key 或 Ollama。',
+    'ai.presetLabel': '快捷填充',
+    'ai.baseUrlLabel': 'Base URL',
+    'ai.modelLabel': '模型名称',
+    'ai.apiKeyLabel': 'API Key（仅存当前浏览器，本地 Ollama 可留空）',
+    'ai.statusGenerating': '正在构建 Fluent-Qt 桌面布局…',
+    'ai.statusThinking': '模型正在构思桌面布局…',
+    'ai.statusStreaming': '正在生成界面（已构思约 {widgets} 个组件）…',
+    'ai.statusEmptyPrompt': '请先输入你想生成的页面描述。',
+    'ai.generatedToast': '已生成 {count} 个组件（{source}）· Ctrl/Cmd+Z 可撤销',
+    'ai.modeCreate': '新建整页',
+    'ai.modeIterate': '迭代当前页',
+    'ai.modeRefine': '精修选中',
+    'ai.promptIteratePlaceholder': '描述你想如何修改当前页面（例如：给左侧加搜索框、把按钮改成图标按钮）',
+    'ai.promptRefinePlaceholder': '描述如何局部优化当前选中组件（不影响页面其余区域）',
+    'ai.targetLabel': '目标：',
+    'ai.styleAuto': '智能匹配',
+    'ai.styleWinui': 'WinUI 浅蓝',
+    'ai.styleCyber': '暗青监控',
+    'ai.styleEditorial': '珊瑚画廊',
+    'ai.styleCreative': '暗紫创意',
+    'ai.styleEmerald': '翡翠商务',
+    'artboard.light': '浅色',
+    'artboard.dark': '暗色',
+    'artboard.reset': '还原',
     'mode.edit': '编辑',
     'mode.play': '试玩',
     'viewport.desktop': '桌面',
@@ -82,6 +124,27 @@ const UI_STRINGS = {
     dragFreeAnchor: '自由定位',
     dragNoop: '保持当前位置',
     dragCancelHint: 'Esc 取消',
+    'intro.guideTitle': '使用引导',
+    'intro.title': '欢迎使用 Fluent-Qt Studio',
+    'intro.subtitle': '真实 C++ Qt Widgets 可视化工作台 · 拖拽组装、AI 生成、三端代码导出',
+    'intro.step1': '拖入 103 个真实 Qt 控件，或按 ⌘K 一句话生成整页',
+    'intro.step2': '画板独立切换明暗与主题色，切「试玩」直测真实交互',
+    'intro.step3': '一键导出 C++17、PySide6 或共享 Qt Designer .ui',
+    'intro.startTour': '开始 30 秒交互导览',
+    'intro.tryAi': '✦ 试试 AI 生成',
+    'intro.loadSample': '加载示例仪表盘',
+    'intro.sampleLoadedToast': '已加载监控仪表盘示例 · Ctrl/Cmd+Z 可返回初始画布',
+    'tour.prev': '上一步',
+    'tour.next': '下一步',
+    'tour.done': '开始创作',
+    'tour.step1Title': '103 个真实 C++ Fluent-Qt 控件',
+    'tour.step1Desc': '从左侧分类搜索或直接拖拽任意布局、图表与控件到画布，所有渲染均由真实 Qt Widgets WebAssembly 驱动。',
+    'tour.step2Title': '一句话生成整页或局部精修 (⌘K)',
+    'tour.step2Desc': '输入自然语言即可生成完整桌面布局，支持「新建整页」「迭代当前页」和选中控件后点 ✦ 局部精修。',
+    'tour.step3Title': '独立画板调色与实时试玩',
+    'tour.step3Desc': '在画板顶部零 Token 切换明暗与 6 组强调色（不影响外层网站主题），切到顶部「试玩」即可直接点击交互控件。',
+    'tour.step4Title': '属性检查与三端代码导出',
+    'tour.step4Desc': '在右侧微调真实 Qt 属性后，一键导出可直接编译的 C++17、PySide6 或共享 Qt Designer .ui 表单。',
     optionLabels: {
       ChevronDown: '向下', ChevronUp: '向上', ChevronRight: '向右',
       Standard: '标准', Accent: '强调', Subtle: '轻量',
@@ -124,6 +187,41 @@ const UI_STRINGS = {
   },
   en: {
     'toolbar.code': 'Export Code',
+    'toolbar.ai': 'AI Build',
+    'ai.title': 'AI New Page',
+    'ai.run': 'Generate',
+    'ai.running': 'Generating…',
+    'ai.promptPlaceholder': 'Describe the Fluent-Qt desktop UI you want to create (Enter to run)',
+    'ai.settingsSummary': 'AI Config',
+    'ai.providerLabel': 'Provider',
+    'ai.providerAuto': 'Free Cloud',
+    'ai.providerCustom': 'Custom API',
+    'ai.workerUrlLabel': 'Cloudflare Worker URL',
+    'ai.workerHint': 'Enter a deployed free Worker URL, or switch to Custom API to use your own key or Ollama.',
+    'ai.presetLabel': 'Presets',
+    'ai.baseUrlLabel': 'Base URL',
+    'ai.modelLabel': 'Model',
+    'ai.apiKeyLabel': 'API Key (stored locally in browser; optional for localhost Ollama)',
+    'ai.statusGenerating': 'Architecting Fluent-Qt desktop layout…',
+    'ai.statusThinking': 'Thinking through desktop layout…',
+    'ai.statusStreaming': 'Generating UI (~{widgets} widgets)…',
+    'ai.statusEmptyPrompt': 'Enter a description of the page you want to create.',
+    'ai.generatedToast': 'Generated {count} widgets ({source}) · Ctrl/Cmd+Z to undo',
+    'ai.modeCreate': 'New Page',
+    'ai.modeIterate': 'Iterate Page',
+    'ai.modeRefine': 'Refine Selected',
+    'ai.promptIteratePlaceholder': 'Describe edits to apply on top of the current page (Enter to run)',
+    'ai.promptRefinePlaceholder': 'Describe how to refine ONLY the selected component/container',
+    'ai.targetLabel': 'Target: ',
+    'ai.styleAuto': 'Auto Match',
+    'ai.styleWinui': 'WinUI Light',
+    'ai.styleCyber': 'Cyber Dark',
+    'ai.styleEditorial': 'Coral Light',
+    'ai.styleCreative': 'Violet Dark',
+    'ai.styleEmerald': 'Emerald Light',
+    'artboard.light': 'Light',
+    'artboard.dark': 'Dark',
+    'artboard.reset': 'Reset',
     'mode.edit': 'Edit',
     'mode.play': 'Play',
     'viewport.desktop': 'Desktop',
@@ -175,6 +273,27 @@ const UI_STRINGS = {
     dragFreeAnchor: 'Free anchor',
     dragNoop: 'Keep position',
     dragCancelHint: 'Esc to cancel',
+    'intro.guideTitle': 'Studio Guide',
+    'intro.title': 'Welcome to Fluent-Qt Studio',
+    'intro.subtitle': 'Real C++ Qt Widgets visual workbench · drag & drop, AI build, and 3-target code export',
+    'intro.step1': 'Drag 103 real Qt widgets onto the stage, or press ⌘K to build with AI',
+    'intro.step2': 'Switch isolated artboard themes & accents, or toggle Play for live interaction',
+    'intro.step3': 'Export production C++17, PySide6, or shared Qt Designer .ui files',
+    'intro.startTour': 'Start 30s Tour',
+    'intro.tryAi': '✦ Try AI Build',
+    'intro.loadSample': 'Load Sample Dashboard',
+    'intro.sampleLoadedToast': 'Loaded Analytics Dashboard sample · Ctrl/Cmd+Z to undo',
+    'tour.prev': 'Back',
+    'tour.next': 'Next',
+    'tour.done': 'Start Building',
+    'tour.step1Title': '103 Real C++ Fluent-Qt Widgets',
+    'tour.step1Desc': 'Search categories or drag any layout, chart, or widget onto the canvas — powered by real Qt Widgets in WebAssembly.',
+    'tour.step2Title': 'Generate Pages or Refine Selection (⌘K)',
+    'tour.step2Desc': 'Describe any desktop UI to generate full layouts, iterate on the current page, or select a widget and click ✦ to refine just that part.',
+    'tour.step3Title': 'Isolated Artboard & Live Play Mode',
+    'tour.step3Desc': 'Switch artboard light/dark themes and 6 accent colors without changing the outer site theme, or toggle Play mode to interact live.',
+    'tour.step4Title': 'Export C++, PySide6 & Qt Designer .ui',
+    'tour.step4Desc': 'Fine-tune real Qt properties on the right, then export ready-to-build C++17, PySide6, or shared Qt Designer .ui files.',
     optionLabels: {
       ChevronDown: 'Down', ChevronUp: 'Up', ChevronRight: 'Right',
       Standard: 'Standard', Accent: 'Accent', Subtle: 'Subtle',
@@ -220,6 +339,11 @@ const els = {
   nodeCrumb: qs('#node-crumb'),
   stageFrame: qs('#stage-frame'),
   stageScroll: qs('#stage-scroll'),
+  artboardBar: qs('#artboard-bar'),
+  artboardTitle: qs('#artboard-title'),
+  artboardThemeButtons: Array.from(document.querySelectorAll('[data-artboard-theme]')),
+  artboardSwatches: Array.from(document.querySelectorAll('[data-artboard-accent]')),
+  btnArtboardReset: qs('#btn-artboard-reset'),
   canvasShell: qs('#canvas-shell'),
   wasmStage: qs('#wasm-stage'),
   schematicStage: qs('#schematic-stage'),
@@ -243,6 +367,7 @@ const els = {
   selectionBar: qs('.selection-bar'),
   selectionTag: qs('#selection-tag'),
   selectionOps: qs('.selection-ops'),
+  selAiRefine: qs('#sel-ai-refine'),
   selUp: qs('#sel-up'),
   selDown: qs('#sel-down'),
   selDup: qs('#sel-dup'),
@@ -261,6 +386,41 @@ const els = {
   btnDownloadCode: qs('#btn-download-code'),
   btnCloseDrawer: qs('#btn-close-drawer'),
   codeOutput: qs('#code-output code'),
+  btnAi: qs('#btn-ai'),
+  aiModal: qs('#ai-modal'),
+  btnCloseAi: qs('#btn-close-ai'),
+  aiModeButtons: Array.from(document.querySelectorAll('.ai-mode-group [data-ai-mode]')),
+  aiTargetPill: qs('#ai-target-pill'),
+  aiStyleButtons: Array.from(document.querySelectorAll('#ai-style-row [data-ai-style]')),
+  aiPromptInput: qs('#ai-prompt-input'),
+  btnAiRun: qs('#btn-ai-run'),
+  aiStatus: qs('#ai-status'),
+  aiSettingsDetails: qs('#ai-settings-details'),
+  aiProviderButtons: Array.from(document.querySelectorAll('.ai-provider-group .seg-btn')),
+  aiWorkerFields: qs('#ai-worker-fields'),
+  aiCustomFields: qs('#ai-custom-fields'),
+  aiWorkerUrl: qs('#ai-worker-url'),
+  aiBaseUrl: qs('#ai-base-url'),
+  aiModel: qs('#ai-model'),
+  aiApiKey: qs('#ai-api-key'),
+  aiPresetButtons: Array.from(document.querySelectorAll('[data-ai-preset]')),
+  btnIntro: qs('#btn-intro'),
+  introCard: qs('#studio-intro-card'),
+  btnIntroDismiss: qs('#btn-intro-dismiss'),
+  btnIntroTour: qs('#btn-intro-tour'),
+  btnIntroAi: qs('#btn-intro-ai'),
+  btnIntroSample: qs('#btn-intro-sample'),
+  tourLayer: qs('#tour-layer'),
+  tourBackdrop: qs('#tour-backdrop'),
+  tourSpotlight: qs('#tour-spotlight'),
+  tourPopover: qs('#tour-popover'),
+  tourStepBadge: qs('#tour-step-badge'),
+  tourTitle: qs('#tour-title'),
+  tourDesc: qs('#tour-desc'),
+  tourDots: Array.from(document.querySelectorAll('[data-tour-dot]')),
+  btnTourClose: qs('#btn-tour-close'),
+  btnTourPrev: qs('#btn-tour-prev'),
+  btnTourNext: qs('#btn-tour-next'),
   toast: qs('#toast'),
 };
 
@@ -275,6 +435,7 @@ const initialDoc = decodedHashDoc || cloneDoc(STUDIO_TEMPLATES[initialTemplate].
 const state = {
   lang: document.documentElement.dataset.lang === 'en' ? 'en' : 'zh',
   theme: document.documentElement.dataset.theme || 'light',
+  canvasTheme: document.documentElement.dataset.theme || 'light',
   mode: 'edit',
   openCategories: new Set(['layout']),
   searchExpandedSnapshot: null,
@@ -304,11 +465,20 @@ const state = {
   dragSession: null,
   suppressNextClick: false,
   hoveredNodeId: null,
+  introEvaluated: false,
+  introCardVisible: false,
+  tourOpen: false,
+  tourStep: 0,
   eventText: '',
   toastTimerId: null,
   propSyncTimerId: null,
   pendingPatch: null,
   playGesture: { nodeId: null, eventName: null, at: 0 },
+  aiOpen: false,
+  aiBusy: false,
+  aiMode: 'create',
+  aiStylePreset: 'auto',
+  aiAbortController: null,
 };
 
 function t(key) {
@@ -626,9 +796,14 @@ function applyLanguage() {
     el.textContent = t(el.dataset.i18n);
   });
   els.paletteSearch.placeholder = t('searchPlaceholder');
+  updateAiModalModeUi();
   if (els.navHome) els.navHome.href = state.lang === 'zh' ? '../zh-CN/' : '../';
   if (els.btnUndo) els.btnUndo.title = t('undoTitle');
   if (els.btnRedo) els.btnRedo.title = t('redoTitle');
+  if (els.btnIntro) {
+    els.btnIntro.title = t('intro.guideTitle');
+    els.btnIntro.setAttribute('aria-label', t('intro.guideTitle'));
+  }
   if (els.btnResetProps) {
     els.btnResetProps.title = t('resetProps');
     els.btnResetProps.setAttribute('aria-label', t('resetProps'));
@@ -638,6 +813,7 @@ function applyLanguage() {
   renderOutline();
   renderInspector();
   updateRuntimeBadge();
+  if (state.tourOpen) renderTourStep();
 }
 
 function syncSelectionToWasm() {
@@ -699,6 +875,7 @@ function selectNode(nodeId, userInitiated = true) {
 }
 
 function setMode(nextMode) {
+  if (state.introCardVisible) dismissIntroCard({ remember: true });
   flushLiveDraft({ syncWasm: true });
   state.mode = nextMode === 'play' ? 'play' : 'edit';
   const isPlay = state.mode === 'play';
@@ -735,14 +912,13 @@ function resolveSiteTheme() {
 
 function inheritTheme() {
   const nextTheme = forcedColorsQuery.matches ? 'high-contrast' : resolveSiteTheme();
-  const changed = state.theme !== nextTheme;
   state.theme = nextTheme;
   document.documentElement.dataset.theme = nextTheme;
-  postToWasm({ type: 'theme', theme: nextTheme });
-  if (changed && state.wasmReady) {
-    setTimeout(() => {
-      postToWasm({ type: 'studio-refresh', session: state.wasmSession });
-    }, 90);
+  if (typeof currentDoc === 'function' && els.canvasShell) {
+    applyDocumentDesign(currentDoc());
+  } else {
+    state.canvasTheme = nextTheme;
+    postToWasm({ type: 'theme', theme: nextTheme });
   }
 }
 
@@ -2094,7 +2270,89 @@ function renderCodeDrawer() {
   els.codeOutput.textContent = code;
 }
 
+const MEDIA_THEME_GRADIENTS = {
+  Landscape: 'linear-gradient(135deg, #2e6d92 0%, #6eb5b5 55%, #f0b88c 100%)',
+  Coffee: 'linear-gradient(135deg, #5c3a21 0%, #a46b3e 55%, #e5b887 100%)',
+  Architecture: 'linear-gradient(135deg, #2c3e50 0%, #5b7896 55%, #c8d6e5 100%)',
+  City: 'linear-gradient(135deg, #1b2845 0%, #48639c 55%, #f3a683 100%)',
+  Portrait: 'linear-gradient(135deg, #7f4448 0%, #c8746c 55%, #f5cdb6 100%)',
+  Technology: 'linear-gradient(135deg, #0b2538 0%, #008c99 55%, #7de2ec 100%)',
+  Abstract: 'linear-gradient(135deg, #4b2d73 0%, #8764b8 55%, #e6b8ff 100%)',
+  Music: 'linear-gradient(135deg, #28194a 0%, #8764b8 55%, #f283b6 100%)',
+};
+let activeDocThemeOverride = false;
+
+function contrastForegroundHex(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return ((0.299 * r + 0.587 * g + 0.114 * b) / 255) > 0.62 ? '#0b141c' : '#ffffff';
+}
+
+function syncArtboardBar(doc, effectiveCanvasTheme) {
+  const design = doc?.design && typeof doc.design === 'object' ? doc.design : null;
+  if (els.artboardTitle) {
+    els.artboardTitle.textContent = `Artboard · ${state.viewportWidth}px`;
+  }
+  const hasExplicitTheme = design?.theme === 'light' || design?.theme === 'dark';
+  const activeBarTheme = hasExplicitTheme ? design.theme : (effectiveCanvasTheme === 'dark' ? 'dark' : 'light');
+  els.artboardThemeButtons.forEach((btn) => {
+    const active = btn.dataset.artboardTheme === activeBarTheme;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  const accUpper = typeof design?.accentColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(design.accentColor)
+    ? design.accentColor.toUpperCase()
+    : '';
+  els.artboardSwatches.forEach((btn) => {
+    const active = (btn.dataset.artboardAccent || '').toUpperCase() === accUpper;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  if (els.btnArtboardReset) {
+    els.btnArtboardReset.hidden = !(hasExplicitTheme || Boolean(accUpper));
+  }
+}
+
+function applyDocumentDesign(doc) {
+  const design = doc?.design && typeof doc.design === 'object' ? doc.design : null;
+  const nextCanvasTheme = forcedColorsQuery.matches
+    ? 'high-contrast'
+    : ((design?.theme === 'light' || design?.theme === 'dark') ? design.theme : state.theme);
+  const themeChanged = state.canvasTheme !== nextCanvasTheme;
+  state.canvasTheme = nextCanvasTheme;
+
+  if (els.canvasShell) {
+    els.canvasShell.dataset.canvasTheme = nextCanvasTheme;
+    const acc = typeof design?.accentColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(design.accentColor)
+      ? design.accentColor
+      : null;
+    if (acc) {
+      els.canvasShell.style.setProperty('--accent', acc);
+      els.canvasShell.style.setProperty('--accent-fg', contrastForegroundHex(acc));
+      els.canvasShell.style.setProperty('--active', `color-mix(in srgb, ${acc} 14%, transparent)`);
+      els.canvasShell.style.setProperty('--studio-doc-accent', acc);
+    } else {
+      els.canvasShell.style.removeProperty('--accent');
+      els.canvasShell.style.removeProperty('--accent-fg');
+      els.canvasShell.style.removeProperty('--active');
+      els.canvasShell.style.removeProperty('--studio-doc-accent');
+    }
+  }
+
+  if (themeChanged) {
+    postToWasm({ type: 'theme', theme: nextCanvasTheme });
+    if (state.wasmReady) {
+      setTimeout(() => {
+        postToWasm({ type: 'studio-refresh', session: state.wasmSession });
+      }, 90);
+    }
+  }
+  syncArtboardBar(doc, nextCanvasTheme);
+}
+
 function renderAll() {
+  applyDocumentDesign(currentDoc());
   updateToolbarButtons();
   renderBreadcrumbs();
   renderOutline();
@@ -2116,6 +2374,163 @@ function fireSchematicEvent(nodeId, eventName, value = '') {
     : value;
   setEventPill(`${nodeId} · ${eventName}${shown !== '' ? ` (${shown})` : ''}`);
   syncPlayInteractionToDoc(nodeId, eventName, value);
+}
+
+const SCHEMATIC_GLYPHS = {
+  Settings: 'M8 10.2a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4Zm0-7.7v1.3m0 8.4v1.3M3.6 4.6l1 1m6.8 6.8 1 1M2.5 8h1.3m8.4 0h1.3M3.6 11.4l1-1m6.8-6.8 1-1',
+  Home: 'M2.5 7.5 8 3l5.5 4.5V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7.5ZM6.5 14V9.5h3V14',
+  Search: 'M7 11.2a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4Zm3.2-1 3.3 3.3',
+  Save: 'M3 3.5h8.2L13 5.3v7.2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.5Zm2.5 0v3h4.5v-3M5.5 13.5v-4h5v4',
+  Edit: 'M11.2 2.6a1.4 1.4 0 0 1 2 2L6 11.8l-3 .75.75-3 7.45-6.95Z',
+  Add: 'M8 3.2v9.6M3.2 8h9.6',
+  Share: 'M8 9.8V2.5M5.2 5.2 8 2.4l2.8 2.8M3.5 9.5V13a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V9.5',
+  Export: 'M8 9.8V2.5M5.2 5.2 8 2.4l2.8 2.8M3.5 9.5V13a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V9.5',
+  Info: 'M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-6.5V11M8 5.2h.01',
+  Document: 'M4 2.5h5.2L12.5 5.8V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Zm5 0v3.5h3.5',
+  File: 'M4 2.5h5.2L12.5 5.8V13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Zm5 0v3.5h3.5',
+  Folder: 'M2.5 4.5a1 1 0 0 1 1-1h3l1.2 1.4h4.8a1 1 0 0 1 1 1v6.6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-8Z',
+  Refresh: 'M13 6.6A5 5 0 1 0 12 11M13 3.5v3.1h-3.1',
+  Play: 'M5 3.4 12.5 8 5 12.6V3.4Z',
+  Pause: 'M5 3.5h2v9H5Zm4.5 0h2v9h-2Z',
+  Delete: 'M3.5 4.5h9M6 4.5V3h4v1.5M5 4.5l.6 8.5h4.8l.6-8.5',
+  Grid: 'M2.5 2.5h4.5v4.5H2.5Zm6.5 0h4.5v4.5H9Zm-6.5 6.5h4.5v4.5H2.5Zm6.5 0h4.5v4.5H9Z',
+  Camera: 'M2.5 5.2h2.2l1-1.7h4.6l1 1.7h2.2a1 1 0 0 1 1 1v6.3a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V6.2a1 1 0 0 1 1-1ZM8 11.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6Z',
+  Music: 'M6 12V4.5l7-1.5v7.5M6 12a1.7 1.7 0 1 1-3.4 0A1.7 1.7 0 0 1 6 12Zm7-1.5a1.7 1.7 0 1 1-3.4 0 1.7 1.7 0 0 1 3.4 0Z',
+  Heart: 'M8 13.3 3.2 8.7a3 3 0 0 1 4.2-4.2L8 5.1l.6-.6a3 3 0 1 1 4.2 4.2L8 13.3Z',
+  FavoriteStar: 'M8 2.4l1.7 3.5 3.8.6-2.7 2.7.6 3.8L8 11.2 4.6 13l.6-3.8L2.5 6.5l3.8-.6L8 2.4Z',
+  Cloud: 'M4.8 12.5h6.8a2.5 2.5 0 0 0 .4-5 3.6 3.6 0 0 0-6.9-.9A2.6 2.6 0 0 0 4.8 12.5Z',
+  Upload: 'M8 10.5V2.8M5 5.6 8 2.6l3 3M3 10.5V13h10v-2.5',
+  Download: 'M8 2.8v7.7M5 7.7l3 3 3-3M3 10.5V13h10v-2.5',
+  Filter: 'M2.5 3.5h11L9.2 8.4v3.8L6.8 13.5V8.4L2.5 3.5Z',
+  Sync: 'M12.8 6.5A5 5 0 0 0 4 4.8M12.8 3.2v3.3H9.5M3.2 9.5a5 5 0 0 0 8.8 1.7M3.2 12.8V9.5h3.3',
+  Brush: 'M11.6 2.5 13.5 4.4 7.2 10.7l-1.9-1.9 6.3-6.3ZM5.3 8.8C3.5 9.5 3.8 11.8 2.5 13c1.9.4 3.7-.2 4.4-2.1',
+  Color: 'M8 2.4a5.6 5.6 0 1 0 0 11.2c1.1 0 1.7-.7 1.7-1.4 0-.5-.2-.9-.2-1.2 0-.6.5-1 1.1-1H12a1.6 1.6 0 0 0 1.6-1.6A5.6 5.6 0 0 0 8 2.4Z',
+  Shield: 'M8 2.3 13 4.3v3.5c0 3.1-2.1 5.2-5 6-2.9-.8-5-2.9-5-6V4.3l5-2Z',
+  Lock: 'M4 7.5h8v5.5H4Zm1.5 0V5.3a2.5 2.5 0 0 1 5 0v2.2',
+  Mail: 'M2.5 4.2h11v7.6h-11Zm0 .4 5.5 3.9 5.5-3.9',
+  Calendar: 'M2.5 4.5h11v9h-11Zm2.8-2v2.4m5.4-2.4v2.4M2.5 7.5h11',
+  Clock: 'M8 13.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11Zm0-8V8l2 1.4',
+  Video: 'M2.5 4.8h7.4v6.4H2.5Zm7.4 2.2 3.6-1.8v5.6L9.9 9',
+  Headphones: 'M3 10V8a5 5 0 0 1 10 0v2M3 9.5h2V13H3Zm8 0h2V13h-2Z',
+  List: 'M5.5 4.2h8M5.5 8h8M5.5 11.8h8M2.5 4.2h.5M2.5 8h.5M2.5 11.8h.5',
+  Warning: 'M8 2.6 13.6 12.8H2.4L8 2.6Zm0 4v2.8m0 1.8h.01',
+  CheckMark: 'M3 8.4 6.4 11.8 13 4.6',
+  Dismiss: 'M4 4l8 8m0-8-8 8',
+  People: 'M6 7.5a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4ZM2.5 13a3.5 3.5 0 0 1 7 0M11 8.5a1.8 1.8 0 1 0 0-3.6M13.5 13a2.8 2.8 0 0 0-2.5-2.7',
+};
+
+const SCHEMATIC_GLYPH_ALIASES = {
+  palette: 'Color',
+  paint: 'Brush',
+  design: 'Brush',
+  dashboard: 'Grid',
+  analytics: 'Grid',
+  metrics: 'Grid',
+  bell: 'Info',
+  notification: 'Info',
+  photo: 'Camera',
+  gallery: 'Camera',
+  image: 'Camera',
+  sparkle: 'FavoriteStar',
+  ai: 'FavoriteStar',
+  code: 'Document',
+  terminal: 'Document',
+  trash: 'Delete',
+  close: 'Dismiss',
+  user: 'People',
+  rocket: 'Upload',
+  globe: 'Cloud',
+};
+
+function resolveSchematicGlyph(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return 'Document';
+  if (SCHEMATIC_GLYPHS[clean]) return clean;
+  const low = clean.toLowerCase();
+  const alias = SCHEMATIC_GLYPH_ALIASES[low];
+  if (alias) return alias;
+  const direct = Object.keys(SCHEMATIC_GLYPHS).find((k) => k.toLowerCase() === low);
+  return direct || 'Document';
+}
+
+function createGlyphSvg(name, size = 14) {
+  const resolvedName = resolveSchematicGlyph(name);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', SCHEMATIC_GLYPHS[resolvedName] || SCHEMATIC_GLYPHS.Document);
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', '1.45');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(path);
+  return svg;
+}
+
+function parseItemIconAndLabel(raw) {
+  const str = String(raw || '');
+  const sep = str.indexOf('|');
+  if (sep > 0) {
+    const left = str.slice(0, sep).trim();
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(left)) {
+      const right = str.slice(sep + 1).trim();
+      return { glyph: resolveSchematicGlyph(left), label: right || left };
+    }
+  }
+  return { glyph: inferCommandGlyph(str), label: str.trim() };
+}
+
+function inferCommandGlyph(label) {
+  const s = String(label || '');
+  if (/new|add|create|新建|添加|新增/i.test(s)) return 'Add';
+  if (/save|commit|apply|保存|提交/i.test(s)) return 'Save';
+  if (/edit|rename|format|编辑|修改|格式/i.test(s)) return 'Edit';
+  if (/search|find|filter|搜索|筛选|查找/i.test(s)) return 'Search';
+  if (/refresh|sync|reload|刷新|同步/i.test(s)) return 'Refresh';
+  if (/share|export|download|导出|分享/i.test(s)) return 'Export';
+  if (/play|run|start|运行|执行/i.test(s)) return 'Play';
+  if (/delete|remove|close|删除|移除|关闭/i.test(s)) return 'Delete';
+  if (/setting|config|设置|配置/i.test(s)) return 'Settings';
+  if (/home|overview|概览|首页/i.test(s)) return 'Home';
+  return 'Document';
+}
+
+function isHeaderLeadingChild(node) {
+  if (!node) return false;
+  if (node.type === 'Breadcrumb' || node.type === 'FontIcon') return true;
+  if (node.type === 'Label') {
+    const typo = node.props?.typography || 'Body';
+    return /Title|Subtitle|Display|Strong/.test(typo);
+  }
+  if (node.type === 'HBox' && Array.isArray(node.children)) {
+    return node.children.some((c) => isHeaderLeadingChild(c));
+  }
+  return false;
+}
+
+function hasSidebarDescendant(node, depth = 0) {
+  if (!node || depth > 2) return false;
+  if (['ListView', 'TreeView', 'FileListView', 'NavigationView'].includes(node.type)) return true;
+  return (node.children || []).some((c) => hasSidebarDescendant(c, depth + 1));
+}
+
+function classifyStatusTone(text) {
+  const low = String(text || '').trim().toLowerCase();
+  if (!low || low.length > 24) return '';
+  if (/^(healthy|ready|online|active|done|success|verified|normal|ok|saved|utf-8|正常|在线|已完成|就绪|已保存)$/.test(low)) {
+    return 'is-ok';
+  }
+  if (/^(warning|pending|degraded|syncing|running|draft|警告|待处理|同步中)$/.test(low)) {
+    return 'is-warn';
+  }
+  if (/^(error|failed|critical|offline|down|timeout|异常|失败|离线|错误)$/.test(low)) {
+    return 'is-err';
+  }
+  return '';
 }
 
 function textElement(tag, value) {
@@ -2154,12 +2569,31 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     }
     case 'HBox': {
       wrap.classList.add('sch-hbox');
+      const children = node.children || [];
+      const leadingTypes = new Set(['FontIcon', 'Label', 'InfoBadge']);
+      const trailingTypes = new Set([
+        'AutoSuggestBox', 'LineEdit', 'ComboBox', 'MultiSelectComboBox',
+        'Button', 'DropDownButton', 'SplitButton', 'ToggleButton',
+        'ToggleSwitch', 'SelectorBar', 'Pivot', 'Avatar', 'DatePicker', 'CalendarDatePicker',
+      ]);
+      let splitIdx = -1;
+      if (children.length >= 2) {
+        let prefix = 0;
+        while (prefix < children.length && leadingTypes.has(children[prefix].type)) prefix++;
+        if (prefix >= 1 && prefix < children.length && trailingTypes.has(children[prefix].type)) {
+          splitIdx = prefix;
+        }
+      }
       wrap.style.gap = `${p.spacing ?? 12}px`;
       wrap.style.padding = `${p.padding ?? 0}px`;
-      if (p.align === 'Center') wrap.style.alignItems = 'center';
+      if (p.align === 'Center' || splitIdx >= 0) wrap.style.alignItems = 'center';
       else if (p.align === 'Start') wrap.style.alignItems = 'flex-start';
       else if (p.align === 'End') wrap.style.alignItems = 'flex-end';
       renderChildrenInto(wrap);
+      if (splitIdx >= 1 && wrap.children[splitIdx - 1]) {
+        wrap.classList.add('is-header-row');
+        wrap.children[splitIdx - 1].classList.add('sch-hbox-push');
+      }
       return wrap;
     }
     case 'Grid': {
@@ -2175,6 +2609,8 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     case 'Card': {
       wrap.classList.add('sch-card');
       if (p.borderVisible === false) wrap.classList.add('is-borderless');
+      if (p.appearance === 'LayerAlt') wrap.classList.add('is-alt');
+      else if (p.appearance === 'Canvas') wrap.classList.add('is-canvas');
       wrap.style.gap = `${p.spacing ?? 10}px`;
       wrap.style.padding = `${p.padding ?? 16}px`;
       renderChildrenInto(wrap);
@@ -2253,7 +2689,12 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       let checked = Boolean(p.checked);
       if (node.type === 'ToggleButton' && checked) btn.classList.add('is-checked');
       btn.disabled = p.enabled === false;
-      btn.textContent = p.text || node.type;
+      const labelText = p.text || node.type;
+      if (node.type === 'Button' && typeof p.icon === 'string' && p.icon && p.icon !== 'None') {
+        btn.append(createGlyphSvg(p.icon, 13), textElement('span', labelText));
+      } else {
+        btn.textContent = labelText;
+      }
       if (interactive) {
         btn.addEventListener('click', () => {
           if (node.type === 'ToggleButton') {
@@ -2261,7 +2702,7 @@ function renderSchematicNode(node, { interactive = true } = {}) {
             btn.classList.toggle('is-checked', checked);
             fireSchematicEvent(node.id, 'toggled', checked);
           } else {
-            fireSchematicEvent(node.id, 'clicked', btn.textContent);
+            fireSchematicEvent(node.id, 'clicked', labelText);
           }
         });
       }
@@ -2474,13 +2915,16 @@ function renderSchematicNode(node, { interactive = true } = {}) {
         BodyStrong: '14px',
         BodyLarge: '16px',
         BodyLargeStrong: '16px',
-        Subtitle: '19px',
-        Title: '23px',
+        Subtitle: '18px',
+        Title: '22px',
         TitleLarge: '28px',
-        Display: '36px',
+        Display: '34px',
       };
       lbl.style.fontSize = sizeMap[typo] || '14px';
+      lbl.style.lineHeight = '1.32';
       lbl.style.fontWeight = /Strong|Title|Subtitle|Display/.test(typo) ? '700' : '400';
+      if (/Title|Display/.test(typo)) lbl.style.letterSpacing = '-0.02em';
+      if (typo === 'TitleLarge') lbl.style.fontVariantNumeric = 'tabular-nums';
       if (p.colorRole === 'Secondary' || p.colorRole === 'Tertiary') lbl.style.color = 'var(--muted)';
       if (p.colorRole === 'Accent') lbl.style.color = 'var(--accent)';
       if (p.colorRole === 'Critical') lbl.style.color = 'var(--danger)';
@@ -2531,9 +2975,9 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     }
     case 'TextEdit': {
       const area = document.createElement('textarea');
-      area.className = 'studio-textarea';
+      area.className = 'studio-textarea sch-textedit';
       area.style.width = '100%';
-      area.rows = Math.max(2, Number(p.minVisibleLines ?? 3));
+      area.rows = Math.max(5, Number(p.minVisibleLines ?? 8));
       area.value = p.plainText || '';
       area.placeholder = p.placeholderText || '';
       area.disabled = p.enabled === false;
@@ -2545,7 +2989,10 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       wrap.classList.add('sch-codeblock');
       const hd = document.createElement('div');
       hd.className = 'sch-codeblock-hd';
-      hd.textContent = `${p.headerText || 'Snippet'} (${p.language || 'cpp'})`;
+      const titleEl = textElement('span', p.headerText || 'Code');
+      const langPill = textElement('span', String(p.language || 'cpp').toUpperCase());
+      langPill.className = 'sch-lang-pill';
+      hd.append(titleEl, langPill);
       const pre = document.createElement('pre');
       pre.textContent = p.code || '';
       pre.hidden = p.expanded === false;
@@ -2563,7 +3010,7 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     }
     case 'InfoBadge': {
       const b = document.createElement('span');
-      b.className = `sch-badge ${p.status || 'Informational'}`;
+      b.className = `sch-badge ${p.status || 'Informational'}${p.displayMode === 'Dot' ? ' is-dot' : ''}`;
       b.textContent = p.displayMode === 'Dot' ? '' : String(p.value ?? 5);
       wrap.appendChild(b);
       return wrap;
@@ -2630,7 +3077,7 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       wrap.classList.add('sch-list');
       (p.items || ['Item 1', 'Item 2']).forEach((item, i) => {
         const row = document.createElement('div');
-        row.className = 'sch-list-item';
+        row.className = `sch-list-item${i === 0 ? ' is-active' : ''}`;
         row.textContent = item;
         row.addEventListener('click', () => {
           wrap.querySelectorAll('.sch-list-item').forEach((el) => el.classList.remove('is-active'));
@@ -2638,6 +3085,124 @@ function renderSchematicNode(node, { interactive = true } = {}) {
           fireSchematicEvent(node.id, 'activated', String(i));
         });
         wrap.appendChild(row);
+      });
+      return wrap;
+    }
+    case 'TreeView': {
+      wrap.classList.add('sch-tree');
+      const items = p.items || ['src/', '  main.cpp', 'app/', 'README.md'];
+      items.forEach((rawItem, i) => {
+        const str = String(rawItem || '');
+        const indentMatch = str.match(/^(\s+)/);
+        const depth = indentMatch ? Math.min(3, Math.floor(indentMatch[1].length / 2)) : 0;
+        const label = str.trim() || `Item ${i + 1}`;
+        const isFolder = label.endsWith('/');
+        const row = document.createElement('div');
+        row.className = `sch-tree-row${i === 0 ? ' is-active' : ''}`;
+        row.style.paddingLeft = `${10 + depth * 14}px`;
+        const chev = textElement('span', isFolder ? '▾' : '');
+        chev.className = 'sch-tree-chev';
+        const icon = createGlyphSvg(isFolder ? 'Folder' : 'File', 13);
+        const txt = textElement('span', label);
+        txt.className = 'sch-tree-label';
+        row.append(chev, icon, txt);
+        row.addEventListener('click', () => {
+          wrap.querySelectorAll('.sch-tree-row').forEach((el) => el.classList.remove('is-active'));
+          row.classList.add('is-active');
+          fireSchematicEvent(node.id, 'activated', String(i));
+        });
+        wrap.appendChild(row);
+      });
+      return wrap;
+    }
+    case 'FileListView': {
+      wrap.classList.add('sch-filelist');
+      (p.items || ['FluentQt.wasm', 'design-tokens.json']).forEach((item, i) => {
+        const str = String(item || '');
+        const dotIdx = str.lastIndexOf('.');
+        const ext = dotIdx > 0 ? str.slice(dotIdx + 1).toUpperCase().slice(0, 6) : '';
+        const row = document.createElement('div');
+        row.className = `sch-list-item sch-file-row${i === 0 ? ' is-active' : ''}`;
+        row.append(createGlyphSvg('Document', 13), textElement('span', str));
+        if (ext) {
+          const badge = textElement('span', ext);
+          badge.className = 'sch-ext-pill';
+          row.appendChild(badge);
+        }
+        row.addEventListener('click', () => {
+          wrap.querySelectorAll('.sch-list-item').forEach((el) => el.classList.remove('is-active'));
+          row.classList.add('is-active');
+          fireSchematicEvent(node.id, 'activated', String(i));
+        });
+        wrap.appendChild(row);
+      });
+      return wrap;
+    }
+    case 'Timeline': {
+      wrap.classList.add('sch-timeline');
+      const items = p.items || ['Queued', 'Building UI', 'Ready'];
+      items.forEach((item, i) => {
+        const row = document.createElement('div');
+        row.className = `sch-timeline-row${i === items.length - 1 ? ' is-current' : ''}`;
+        const rail = document.createElement('div');
+        rail.className = 'sch-timeline-rail';
+        rail.appendChild(document.createElement('span'));
+        row.append(rail, textElement('span', String(item)));
+        wrap.appendChild(row);
+      });
+      return wrap;
+    }
+    case 'GridView':
+    case 'FlowView': {
+      wrap.classList.add('sch-tile-wrap');
+      if (p.headerText) {
+        const hd = textElement('div', p.headerText);
+        hd.className = 'sch-chart-title';
+        wrap.appendChild(hd);
+      }
+      const grid = document.createElement('div');
+      const isGrid = node.type === 'GridView';
+      grid.className = isGrid ? 'sch-tile-grid' : 'sch-flow-grid';
+      const gradBg = MEDIA_THEME_GRADIENTS[p.mediaTheme] || MEDIA_THEME_GRADIENTS.Landscape;
+      (p.items || ['Alpha', 'Beta', 'Gamma', 'Delta']).forEach((item, idx) => {
+        const raw = String(item);
+        if (!isGrid) {
+          const tile = textElement('div', raw);
+          tile.className = 'sch-tile-card';
+          grid.appendChild(tile);
+          return;
+        }
+        const sep = raw.indexOf('|');
+        const titleStr = sep >= 0 ? raw.slice(0, sep).trim() : raw;
+        const subStr = sep >= 0 ? raw.slice(sep + 1).trim() : '';
+        const card = document.createElement('div');
+        card.className = 'sch-tile-card is-media';
+        const thumb = document.createElement('div');
+        thumb.className = 'sch-tile-thumb';
+        thumb.style.background = gradBg;
+        thumb.style.filter = `hue-rotate(${(idx % 5) * 14 - 18}deg)`;
+        const body = document.createElement('div');
+        body.className = 'sch-tile-body';
+        body.appendChild(textElement('strong', titleStr));
+        if (subStr) body.appendChild(textElement('small', subStr));
+        card.append(thumb, body);
+        grid.appendChild(card);
+      });
+      wrap.appendChild(grid);
+      return wrap;
+    }
+    case 'PropertyPanel': {
+      wrap.classList.add('sch-prop-panel');
+      const rows = [
+        ['Layout Mode', p.layoutMode || 'Automatic'],
+        ['Theme', 'Fluent Light / Dark'],
+        ['Access', p.readOnly ? 'Read Only' : 'Editable'],
+      ];
+      rows.forEach(([k, v]) => {
+        const r = document.createElement('div');
+        r.className = 'sch-prop-row';
+        r.append(textElement('span', k), textElement('strong', v));
+        wrap.appendChild(r);
       });
       return wrap;
     }
@@ -2651,9 +3216,16 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     case 'Sparkline':
     case 'ChartView': {
       wrap.classList.add('sch-chart');
-      const title = document.createElement('div');
+      const head = document.createElement('div');
+      head.className = 'sch-chart-head';
+      const title = textElement('div', p.title || node.type);
       title.className = 'sch-chart-title';
-      title.textContent = `${p.title || node.type} · ${p.seriesName || ''}`;
+      head.appendChild(title);
+      if (p.seriesName) {
+        const series = textElement('span', p.seriesName);
+        series.className = 'sch-chart-series';
+        head.appendChild(series);
+      }
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'sch-chart-svg');
       svg.setAttribute('viewBox', '0 0 240 100');
@@ -2661,48 +3233,114 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       const vals = Array.isArray(p.values) && p.values.length ? p.values : [20, 40, 35, 60];
       const maxV = Math.max(1, ...vals);
       if (node.type === 'PieChart' || node.type === 'DonutChart') {
+        const track = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        track.setAttribute('cx', '120');
+        track.setAttribute('cy', '50');
+        track.setAttribute('r', '34');
+        track.setAttribute('fill', 'none');
+        track.setAttribute('stroke', 'var(--line)');
+        track.setAttribute('stroke-width', '14');
         const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         ring.setAttribute('cx', '120');
         ring.setAttribute('cy', '50');
         ring.setAttribute('r', '34');
         ring.setAttribute('fill', node.type === 'PieChart' ? 'var(--active)' : 'none');
         ring.setAttribute('stroke', 'var(--accent)');
-        ring.setAttribute('stroke-width', node.type === 'PieChart' ? '8' : '16');
-        svg.appendChild(ring);
-      } else if (node.type === 'LineChart' || node.type === 'AreaChart' || node.type === 'Sparkline' || node.type === 'ChartView' || node.type === 'ScatterChart') {
-        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-        const step = vals.length > 1 ? 220 / (vals.length - 1) : 220;
-        const pts = vals.map((v, i) => `${10 + i * step},${90 - (v / maxV) * 74}`).join(' ');
-        poly.setAttribute('fill', 'none');
-        poly.setAttribute('stroke', 'currentColor');
-        poly.setAttribute('stroke-width', '3');
-        poly.style.color = 'var(--accent)';
-        poly.setAttribute('points', pts);
-        svg.appendChild(poly);
+        ring.setAttribute('stroke-width', node.type === 'PieChart' ? '8' : '14');
+        ring.setAttribute('stroke-dasharray', '155 220');
+        ring.setAttribute('stroke-linecap', 'round');
+        svg.append(track, ring);
       } else {
-        const barW = Math.max(10, 180 / vals.length);
-        const gap = 220 / vals.length;
-        vals.forEach((v, i) => {
-          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          const h = Math.max(4, (v / maxV) * 78);
-          rect.setAttribute('x', String(12 + i * gap));
-          rect.setAttribute('y', String(92 - h));
-          rect.setAttribute('width', String(barW));
-          rect.setAttribute('height', String(h));
-          rect.setAttribute('rx', '3');
-          rect.style.fill = 'var(--accent)';
-          svg.appendChild(rect);
-        });
+        for (const gy of [24, 52, 80]) {
+          const gl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          gl.setAttribute('x1', '10');
+          gl.setAttribute('x2', '230');
+          gl.setAttribute('y1', String(gy));
+          gl.setAttribute('y2', String(gy));
+          gl.setAttribute('stroke', 'var(--line)');
+          gl.setAttribute('stroke-width', '1');
+          gl.setAttribute('stroke-dasharray', '3 3');
+          svg.appendChild(gl);
+        }
+        if (node.type === 'LineChart' || node.type === 'AreaChart' || node.type === 'Sparkline' || node.type === 'ChartView' || node.type === 'ScatterChart') {
+          const step = vals.length > 1 ? 220 / (vals.length - 1) : 220;
+          const coords = vals.map((v, i) => [10 + i * step, 88 - (v / maxV) * 70]);
+          const pointList = coords.map(([x, y]) => `${x},${y}`);
+          if (node.type === 'AreaChart') {
+            const area = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            area.setAttribute('points', `10,92 ${pointList.join(' ')} ${coords[coords.length - 1][0]},92`);
+            area.style.fill = 'var(--accent)';
+            area.style.fillOpacity = '0.16';
+            svg.appendChild(area);
+          }
+          const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+          poly.setAttribute('fill', 'none');
+          poly.setAttribute('stroke', 'currentColor');
+          poly.setAttribute('stroke-width', '2.5');
+          poly.setAttribute('stroke-linecap', 'round');
+          poly.setAttribute('stroke-linejoin', 'round');
+          poly.style.color = 'var(--accent)';
+          poly.setAttribute('points', pointList.join(' '));
+          svg.appendChild(poly);
+          if (vals.length <= 14) {
+            for (const [cx, cy] of coords) {
+              const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              dot.setAttribute('cx', String(cx));
+              dot.setAttribute('cy', String(cy));
+              dot.setAttribute('r', '2.6');
+              dot.style.fill = 'var(--accent)';
+              svg.appendChild(dot);
+            }
+          }
+        } else {
+          const barW = Math.max(10, 176 / vals.length);
+          const gap = 220 / vals.length;
+          vals.forEach((v, i) => {
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            const h = Math.max(4, (v / maxV) * 76);
+            rect.setAttribute('x', String(14 + i * gap));
+            rect.setAttribute('y', String(92 - h));
+            rect.setAttribute('width', String(barW));
+            rect.setAttribute('height', String(h));
+            rect.setAttribute('rx', '4');
+            rect.style.fill = 'var(--accent)';
+            svg.appendChild(rect);
+          });
+        }
       }
-      wrap.append(title, svg);
+      wrap.append(head, svg);
+      return wrap;
+    }
+    case 'SplitView': {
+      wrap.classList.add('sch-split');
+      const paneCount = (node.children || []).length;
+      if (p.orientation === 'Vertical') wrap.classList.add('is-vertical');
+      else if (paneCount >= 3) wrap.classList.add('is-three-pane-split');
+      else if (paneCount === 2 && hasSidebarDescendant(node.children[0])) {
+        wrap.classList.add('is-sidebar-split');
+      }
+      if (p.minHeight) wrap.style.minHeight = `${Number(p.minHeight)}px`;
+      renderChildrenInto(wrap);
+      return wrap;
+    }
+    case 'ListDetailView': {
+      wrap.classList.add('sch-listdetail');
+      const paneW = Math.max(140, Math.min(420, Number(p.listPaneWidth ?? 216)));
+      wrap.style.gridTemplateColumns = `${paneW}px minmax(0, 1fr)`;
+      if (p.minHeight) wrap.style.minHeight = `${Number(p.minHeight)}px`;
+      renderChildrenInto(wrap);
+      return wrap;
+    }
+    case 'ScrollView':
+    case 'StackView': {
+      wrap.classList.add('sch-vbox', node.type === 'ScrollView' ? 'sch-scrollview' : 'sch-stackview');
+      wrap.style.gap = '10px';
+      if (p.minHeight) wrap.style.minHeight = `${Number(p.minHeight)}px`;
+      renderChildrenInto(wrap);
       return wrap;
     }
     case 'Accordion':
-    case 'ScrollView':
-    case 'SplitView':
-    case 'FlipView':
-    case 'StackView':
-    case 'ListDetailView': {
+    case 'FlipView': {
       wrap.classList.add('sch-card');
       wrap.style.gap = '10px';
       wrap.style.padding = '12px';
@@ -2715,60 +3353,154 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     }
     case 'NavigationView': {
       wrap.classList.add('sch-navview');
+      const navItems = p.items || ['Home', 'Analytics', 'Settings'];
+      const pageNodes = node.children || [];
+      let activeIdx = 0;
       const pane = document.createElement('div');
       pane.className = 'sch-navpane';
-      (p.items || ['Home', 'Analytics', 'Settings']).forEach((item, i) => {
+      const content = document.createElement('div');
+      content.className = 'sch-vbox sch-navcontent';
+      content.style.gap = '12px';
+
+      const renderActivePage = () => {
+        content.innerHTML = '';
+        const activeNode = pageNodes[activeIdx];
+        if (activeNode) {
+          content.appendChild(renderSchematicNode(activeNode, activeIdx));
+        } else {
+          const fallback = document.createElement('div');
+          fallback.className = 'sch-card';
+          fallback.style.padding = '14px';
+          const fallbackLabel = navItems[activeIdx] ? parseItemIconAndLabel(navItems[activeIdx]).label : `Page ${activeIdx + 1}`;
+          fallback.appendChild(textElement('div', fallbackLabel, 'sch-title'));
+          content.appendChild(fallback);
+        }
+      };
+
+      const navButtons = [];
+      navItems.forEach((item, i) => {
+        const spec = parseItemIconAndLabel(item);
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = `sch-tab${i === 0 ? ' is-active' : ''}`;
-        b.style.textAlign = 'left';
-        b.textContent = item;
-        b.addEventListener('click', () => fireSchematicEvent(node.id, 'navItemClicked', String(i)));
+        b.className = `sch-nav-item${i === activeIdx ? ' is-active' : ''}`;
+        b.append(createGlyphSvg(spec.glyph, 14), textElement('span', spec.label));
+        b.addEventListener('click', () => {
+          activeIdx = i;
+          navButtons.forEach((btn, idx) => btn.classList.toggle('is-active', idx === activeIdx));
+          renderActivePage();
+          fireSchematicEvent(node.id, 'navItemClicked', String(i));
+        });
+        navButtons.push(b);
         pane.appendChild(b);
       });
-      const content = document.createElement('div');
-      content.className = 'sch-vbox';
-      content.style.gap = '8px';
-      renderChildrenInto(content);
+      renderActivePage();
       wrap.append(pane, content);
       return wrap;
     }
-    case 'Pivot':
-    case 'SelectorBar':
     case 'TabView': {
-      wrap.classList.add('sch-tabs');
+      wrap.classList.add('sch-tabbar');
       const activeIdx = Number(p.selectedIndex ?? 0);
       (p.items || ['Tab 1', 'Tab 2']).forEach((item, i) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `sch-tab${i === activeIdx ? ' is-active' : ''}`;
+        btn.className = `sch-tabbar-item${i === activeIdx ? ' is-active' : ''}`;
+        btn.appendChild(textElement('span', item));
+        if (p.tabsClosable !== false) {
+          const close = textElement('span', '×');
+          close.className = 'sch-tabbar-close';
+          btn.appendChild(close);
+        }
+        btn.addEventListener('click', () => fireSchematicEvent(node.id, 'selectedIndexChanged', String(i)));
+        wrap.appendChild(btn);
+      });
+      return wrap;
+    }
+    case 'Pivot':
+    case 'SelectorBar': {
+      wrap.classList.add('sch-pivot');
+      const activeIdx = Number(p.selectedIndex ?? 0);
+      (p.items || ['Tab 1', 'Tab 2']).forEach((item, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `sch-pivot-item${i === activeIdx ? ' is-active' : ''}`;
         btn.textContent = item;
         btn.addEventListener('click', () => fireSchematicEvent(node.id, 'selectedIndexChanged', String(i)));
         wrap.appendChild(btn);
       });
       return wrap;
     }
-    case 'MenuBar':
-    case 'CommandBar':
-    case 'DataGridToolBar': {
-      wrap.classList.add('sch-toolbar');
-      (p.items || ['File', 'Edit', 'View']).forEach((item) => {
+    case 'MenuBar': {
+      wrap.classList.add('sch-menubar');
+      (p.items || ['File', 'Edit', 'View', 'Help']).forEach((item) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'mini-btn';
+        btn.className = 'sch-menu-item';
         btn.textContent = item;
         btn.addEventListener('click', () => fireSchematicEvent(node.id, 'triggered', item));
         wrap.appendChild(btn);
       });
       return wrap;
     }
+    case 'CommandBar':
+    case 'DataGridToolBar': {
+      wrap.classList.add('sch-commandbar');
+      (p.items || ['New', 'Save', 'Share']).forEach((item) => {
+        const spec = parseItemIconAndLabel(item);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sch-cmd-btn';
+        btn.append(createGlyphSvg(spec.glyph, 13), textElement('span', spec.label));
+        btn.addEventListener('click', () => fireSchematicEvent(node.id, 'triggered', spec.label));
+        wrap.appendChild(btn);
+      });
+      return wrap;
+    }
     case 'DataGrid': {
+      const holder = document.createElement('div');
+      holder.className = 'sch-table-wrap';
       const tbl = document.createElement('table');
       tbl.className = 'sch-table';
-      tbl.innerHTML = '<thead><tr><th>Module</th><th>Qt Target</th><th>Status</th></tr></thead>'
-        + '<tbody><tr><td>BasicInput</td><td>Qt 6.9</td><td>Ready</td></tr>'
-        + '<tr><td>Charts</td><td>Qt 6.9</td><td>Verified</td></tr></tbody>';
-      wrap.appendChild(tbl);
+      const defaultRows = [
+        ['BasicInput', 'Qt 6.9', 'Ready'],
+        ['Charts', 'Qt 6.9', 'Verified'],
+      ];
+      const rows = Array.isArray(p.modelData) && p.modelData.length > 0 ? p.modelData : defaultRows;
+      const customHeaders = Array.isArray(p.headers) && p.headers.length > 0 ? p.headers.map((h) => String(h ?? '')) : null;
+      const colCount = Math.max(1, customHeaders ? customHeaders.length : 0, ...rows.map((r) => (Array.isArray(r) ? r.length : 1)));
+      const defaultHeaders = state.lang === 'zh'
+        ? ['项目', '详情', '状态']
+        : ['Item', 'Details', 'Status'];
+      const headerLabels = customHeaders || defaultHeaders;
+      const thead = document.createElement('thead');
+      const htr = document.createElement('tr');
+      for (let c = 0; c < colCount; c++) {
+        const th = document.createElement('th');
+        th.textContent = headerLabels[c] || `Col ${c + 1}`;
+        htr.appendChild(th);
+      }
+      thead.appendChild(htr);
+      const tbody = document.createElement('tbody');
+      for (const row of rows) {
+        const tr = document.createElement('tr');
+        const cells = Array.isArray(row) ? row : [row];
+        for (let c = 0; c < colCount; c++) {
+          const td = document.createElement('td');
+          const cellVal = cells[c] === null || cells[c] === undefined ? '' : String(cells[c]);
+          const tone = classifyStatusTone(cellVal);
+          if (tone) {
+            const pill = textElement('span', cellVal);
+            pill.className = `sch-status-pill ${tone}`;
+            td.appendChild(pill);
+          } else {
+            td.textContent = cellVal;
+          }
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      tbl.append(thead, tbody);
+      holder.appendChild(tbl);
+      wrap.appendChild(holder);
       return wrap;
     }
     case 'Shimmer': {
@@ -2787,14 +3519,20 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     }
     case 'TitleBar': {
       wrap.classList.add('sch-titlebar');
-      wrap.append(textElement('span', p.title || 'Fluent Window'), textElement('span', '— ▢ ✕'));
+      const left = document.createElement('div');
+      left.className = 'sch-window-title';
+      const dot = document.createElement('span');
+      dot.className = 'sch-app-mark';
+      left.append(dot, textElement('span', p.title || 'Fluent Window'));
+      const ctrls = textElement('span', '─  ☐  ✕');
+      ctrls.className = 'sch-window-controls';
+      wrap.append(left, ctrls);
       return wrap;
     }
     case 'FontIcon': {
       const ic = document.createElement('span');
-      ic.className = 'sch-ring';
-      ic.style.borderRadius = '8px';
-      ic.textContent = (p.glyph || 'Set').slice(0, 3);
+      ic.className = 'sch-font-icon';
+      ic.appendChild(createGlyphSvg(p.glyph || 'Settings', 16));
       wrap.appendChild(ic);
       return wrap;
     }
@@ -2837,7 +3575,14 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       wrap.classList.add('sch-window');
       const bar = document.createElement('div');
       bar.className = 'sch-window-bar';
-      bar.append(textElement('span', `${p.title || 'Fluent Window'} · ${p.backdropEffect || 'Mica'}`), textElement('span', '— ▢ ✕'));
+      const left = document.createElement('div');
+      left.className = 'sch-window-title';
+      const dot = document.createElement('span');
+      dot.className = 'sch-app-mark';
+      left.append(dot, textElement('span', p.title || 'Fluent Window'));
+      const ctrls = textElement('span', '─  ☐  ✕');
+      ctrls.className = 'sch-window-controls';
+      bar.append(left, ctrls);
       const body = document.createElement('div');
       body.className = 'sch-vbox';
       body.style.padding = `${p.padding ?? 16}px`;
@@ -2872,6 +3617,37 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       stage.style.transform = `perspective(900px) rotateX(${p.rotX ?? 6}deg) rotateY(${p.rotY ?? -16}deg)`;
       renderChildrenInto(stage);
       wrap.append(tag, stage);
+      return wrap;
+    }
+    case 'ImageViewer': {
+      wrap.classList.add('sch-image-viewer');
+      wrap.style.minHeight = `${p.minHeight ?? 200}px`;
+      const svgRaw = typeof p.svg === 'string' ? p.svg.trim() : '';
+      if (isSafeStudioSvg(svgRaw)) {
+        const img = document.createElement('img');
+        img.className = 'sch-image-svg';
+        img.alt = '';
+        img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgRaw)}`;
+        wrap.appendChild(img);
+        return wrap;
+      }
+      const photoUrl = typeof p.imageUrl === 'string' ? p.imageUrl.trim() : '';
+      if (isStudioPhotoUrl(photoUrl)) {
+        const img = document.createElement('img');
+        img.className = 'sch-image-photo';
+        img.alt = '';
+        img.src = photoUrl;
+        wrap.appendChild(img);
+        return wrap;
+      }
+      const surface = document.createElement('div');
+      surface.className = 'sch-image-placeholder';
+      surface.style.background = MEDIA_THEME_GRADIENTS[p.mediaTheme] || MEDIA_THEME_GRADIENTS.Landscape;
+      const badge = document.createElement('div');
+      badge.className = 'sch-image-badge';
+      badge.append(createGlyphSvg('Camera', 16), textElement('span', p.mediaTheme || 'ImageViewer'));
+      surface.appendChild(badge);
+      wrap.appendChild(surface);
       return wrap;
     }
     case 'QmlView': {
@@ -3230,6 +4006,8 @@ function startDragAutoScroll(drag) {
 }
 
 function activateDrag(drag, clientX, clientY) {
+  if (state.introCardVisible) dismissIntroCard({ remember: true });
+  if (state.tourOpen) closeIntroTour();
   drag.pending = false;
   drag.active = true;
   state.suppressNextClick = true;
@@ -3644,6 +4422,7 @@ function revealWasmStage() {
   els.canvasShell.classList.add('is-wasm-ready');
   updateRuntimeBadge();
   requestAnimationFrame(syncOverlay);
+  maybeShowFirstVisitIntro();
 }
 
 function activateFallback(showRetry = true) {
@@ -3658,6 +4437,7 @@ function activateFallback(showRetry = true) {
   updateRuntimeBadge();
   els.btnRetryWasm.hidden = !showRetry;
   requestAnimationFrame(syncOverlay);
+  maybeShowFirstVisitIntro();
 }
 
 async function initWasmStage() {
@@ -3695,7 +4475,7 @@ async function initWasmStage() {
   const iframeUrl = new URL('../gallery/', window.location.href);
   iframeUrl.searchParams.set('embed', 'site');
   iframeUrl.searchParams.set('studio', '1');
-  iframeUrl.searchParams.set('host-theme', state.theme);
+  iframeUrl.searchParams.set('host-theme', state.canvasTheme);
   iframeUrl.searchParams.set('host-session', state.wasmSession);
   iframeUrl.searchParams.set('render-scale', 'native');
   els.wasmStage.src = iframeUrl.toString();
@@ -3712,6 +4492,7 @@ window.addEventListener('message', (event) => {
     state.wasmPainted = false;
     state.wasmFallback = false;
     updateRuntimeBadge();
+    postToWasm({ type: 'theme', theme: state.canvasTheme });
     syncToWasm();
     postToWasm({ type: 'studio-select', session: state.wasmSession, nodeId: state.selectedId });
     clearTimeout(state.wasmRevealTimerId);
@@ -3861,6 +4642,7 @@ els.widthButtons.forEach((btn) => {
       b.setAttribute('aria-pressed', String(active));
     });
     els.stageFrame.style.setProperty('--stage-width', `${width}px`);
+    if (els.artboardTitle) els.artboardTitle.textContent = `Artboard · ${width}px`;
     syncViewportTier(width);
     clearTimeout(state.viewportTimerId);
     requestAnimationFrame(() => {
@@ -3897,7 +4679,37 @@ els.btnRedo.addEventListener('click', () => {
 els.btnResetProps?.addEventListener('click', resetSelectedProps);
 els.btnDuplicate?.addEventListener('click', duplicateSelected);
 els.btnDelete?.addEventListener('click', deleteSelected);
+els.selAiRefine?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  openAiModal({ mode: 'refine' });
+});
 els.selUp.addEventListener('click', (e) => { e.stopPropagation(); moveSelectedByOffset(-1); });
+
+els.artboardThemeButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const nextTheme = btn.dataset.artboardTheme === 'dark' ? 'dark' : 'light';
+    const nextDoc = cloneDoc(currentDoc());
+    nextDoc.design = { ...(nextDoc.design || {}), theme: nextTheme };
+    commitDocument(nextDoc, state.selectedId, true, false);
+  });
+});
+
+els.artboardSwatches.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const hex = btn.dataset.artboardAccent;
+    if (!hex) return;
+    const nextDoc = cloneDoc(currentDoc());
+    nextDoc.design = { ...(nextDoc.design || {}), accentColor: hex };
+    commitDocument(nextDoc, state.selectedId, true, false);
+  });
+});
+
+els.btnArtboardReset?.addEventListener('click', () => {
+  const nextDoc = cloneDoc(currentDoc());
+  if (!nextDoc.design) return;
+  delete nextDoc.design;
+  commitDocument(nextDoc, state.selectedId, true, false);
+});
 els.selDown.addEventListener('click', (e) => { e.stopPropagation(); moveSelectedByOffset(1); });
 els.selDup.addEventListener('click', (e) => { e.stopPropagation(); duplicateSelected(); });
 els.selDel.addEventListener('click', (e) => { e.stopPropagation(); deleteSelected(); });
@@ -3911,6 +4723,7 @@ els.btnClearSearch?.addEventListener('click', () => {
 els.btnRetryWasm.addEventListener('click', () => initWasmStage());
 
 els.btnCode.addEventListener('click', () => {
+  if (state.introCardVisible) dismissIntroCard({ remember: true });
   state.drawerOpen = !state.drawerOpen;
   els.codeDrawer.hidden = !state.drawerOpen;
   els.btnCode.setAttribute('aria-expanded', String(state.drawerOpen));
@@ -3956,6 +4769,339 @@ els.btnDownloadCode.addEventListener('click', () => {
   URL.revokeObjectURL(a.href);
 });
 
+/* AI One-Sentence Page Composer */
+const AI_STORAGE_KEY = 'fluent-studio-ai-config';
+
+function defaultWorkerEndpoint() {
+  const meta = document.querySelector('meta[name="fluent-studio-ai-endpoint"]');
+  const fromMeta = meta?.getAttribute('content')?.trim() || '';
+  const fromGlobal = typeof window.FLUENT_STUDIO_AI_ENDPOINT === 'string'
+    ? window.FLUENT_STUDIO_AI_ENDPOINT.trim()
+    : '';
+  return fromGlobal || fromMeta;
+}
+
+function loadAiConfig() {
+  const defaults = {
+    provider: 'auto',
+    workerUrl: defaultWorkerEndpoint(),
+    baseUrl: AI_PROVIDER_PRESETS.deepseek.baseUrl,
+    model: AI_PROVIDER_PRESETS.deepseek.model,
+    apiKey: '',
+    keyOrigin: '',
+  };
+  try {
+    const raw = localStorage.getItem(AI_STORAGE_KEY);
+    if (!raw) return defaults;
+    const saved = JSON.parse(raw);
+    if (!saved || typeof saved !== 'object') return defaults;
+    const keyOrigin = providerOrigin(saved.baseUrl);
+    return {
+      keyOrigin,
+      provider: ['auto', 'custom'].includes(saved.provider) ? saved.provider : 'auto',
+      workerUrl: typeof saved.workerUrl === 'string' && saved.workerUrl.trim() ? saved.workerUrl.trim() : defaults.workerUrl,
+      baseUrl: typeof saved.baseUrl === 'string' && saved.baseUrl.trim() ? saved.baseUrl.trim() : defaults.baseUrl,
+      model: typeof saved.model === 'string' && saved.model.trim() ? saved.model.trim() : defaults.model,
+      apiKey: keyOrigin && saved.keyOrigin === keyOrigin && typeof saved.apiKey === 'string' ? saved.apiKey : '',
+    };
+  } catch (_) {
+    return defaults;
+  }
+}
+
+const aiConfig = loadAiConfig();
+
+function saveAiConfig() {
+  try {
+    localStorage.setItem(AI_STORAGE_KEY, JSON.stringify({
+      provider: aiConfig.provider,
+      workerUrl: aiConfig.workerUrl === defaultWorkerEndpoint() ? '' : aiConfig.workerUrl,
+      baseUrl: aiConfig.baseUrl,
+      model: aiConfig.model,
+      apiKey: aiConfig.apiKey,
+      keyOrigin: aiConfig.keyOrigin,
+    }));
+  } catch (_) {
+    // Ignore storage errors in restricted contexts.
+  }
+}
+
+function setAiStatus(text, tone = '') {
+  if (!els.aiStatus) return;
+  els.aiStatus.textContent = text || '';
+  if (tone) els.aiStatus.dataset.tone = tone;
+  else delete els.aiStatus.dataset.tone;
+}
+
+function setAiBusy(busy) {
+  state.aiBusy = Boolean(busy);
+  if (els.btnAiRun) {
+    els.btnAiRun.disabled = state.aiBusy;
+    els.btnAiRun.classList.toggle('is-busy', state.aiBusy);
+    els.btnAiRun.textContent = t(state.aiBusy ? 'ai.running' : 'ai.run');
+  }
+}
+
+function syncAiSettingsUi() {
+  els.aiProviderButtons.forEach((btn) => {
+    const active = btn.dataset.aiProvider === aiConfig.provider;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  if (els.aiWorkerFields) els.aiWorkerFields.hidden = aiConfig.provider !== 'auto';
+  if (els.aiCustomFields) els.aiCustomFields.hidden = aiConfig.provider !== 'custom';
+  if (els.aiWorkerUrl && els.aiWorkerUrl.value !== aiConfig.workerUrl) {
+    els.aiWorkerUrl.value = aiConfig.workerUrl;
+  }
+  if (els.aiBaseUrl && els.aiBaseUrl.value !== aiConfig.baseUrl) {
+    els.aiBaseUrl.value = aiConfig.baseUrl;
+  }
+  if (els.aiModel && els.aiModel.value !== aiConfig.model) {
+    els.aiModel.value = aiConfig.model;
+  }
+  if (els.aiApiKey && els.aiApiKey.value !== aiConfig.apiKey) {
+    els.aiApiKey.value = aiConfig.apiKey;
+  }
+}
+
+function canRefineSelectedNode() {
+  return Boolean(state.selectedId && state.selectedId !== 'root' && findNode(currentDoc().root, state.selectedId));
+}
+
+function updateAiModalModeUi() {
+  const refineOk = canRefineSelectedNode();
+  if (state.aiMode === 'refine' && !refineOk) state.aiMode = 'create';
+
+  els.aiModeButtons.forEach((btn) => {
+    const m = btn.dataset.aiMode;
+    if (m === 'refine') btn.disabled = !refineOk;
+    const active = m === state.aiMode;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+
+  if (els.aiTargetPill) {
+    if (state.aiMode === 'refine' && refineOk) {
+      const targetNode = findNode(currentDoc().root, state.selectedId);
+      const label = targetNode ? `${t('ai.targetLabel')}${targetNode.type} #${targetNode.id}` : '';
+      els.aiTargetPill.textContent = label;
+      els.aiTargetPill.hidden = !label;
+    } else {
+      els.aiTargetPill.hidden = true;
+      els.aiTargetPill.textContent = '';
+    }
+  }
+
+  els.aiStyleButtons.forEach((btn) => {
+    const active = btn.dataset.aiStyle === state.aiStylePreset;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+
+  if (els.aiPromptInput) {
+    const key = state.aiMode === 'refine'
+      ? 'ai.promptRefinePlaceholder'
+      : (state.aiMode === 'iterate' ? 'ai.promptIteratePlaceholder' : 'ai.promptPlaceholder');
+    els.aiPromptInput.placeholder = t(key);
+  }
+}
+
+function openAiModal({ mode } = {}) {
+  if (!els.aiModal) return;
+  if (state.introCardVisible) dismissIntroCard({ remember: true });
+  if (state.tourOpen) closeIntroTour();
+  closeActiveComboMenu(false);
+  const refineOk = canRefineSelectedNode();
+  if (mode === 'refine' && refineOk) {
+    state.aiMode = 'refine';
+  } else if (mode === 'iterate' || mode === 'create') {
+    state.aiMode = mode;
+  } else if (state.hasUserSelection && refineOk) {
+    state.aiMode = 'refine';
+  } else {
+    state.aiMode = 'create';
+  }
+  state.aiOpen = true;
+  els.aiModal.hidden = false;
+  els.btnAi?.setAttribute('aria-expanded', 'true');
+  syncAiSettingsUi();
+  updateAiModalModeUi();
+  if (!state.aiBusy) setAiStatus('');
+  requestAnimationFrame(() => els.aiPromptInput?.focus());
+}
+
+function closeAiModal() {
+  if (!els.aiModal) return;
+  if (state.aiAbortController) {
+    state.aiAbortController.abort();
+    state.aiAbortController = null;
+  }
+  setAiBusy(false);
+  state.aiOpen = false;
+  els.aiModal.hidden = true;
+  els.btnAi?.setAttribute('aria-expanded', 'false');
+}
+
+function toggleAiModal() {
+  if (state.aiOpen) closeAiModal();
+  else openAiModal();
+}
+
+function formatAiSourceLabel(result) {
+  const base = result.model || 'AI';
+  const u = result.usage;
+  if (!u || !(u.inputTokens > 0)) return base;
+  const fmtCount = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+  const tok = state.lang === 'zh'
+    ? `${fmtCount(u.inputTokens)}入/${fmtCount(u.outputTokens)}出`
+    : `${fmtCount(u.inputTokens)}in/${fmtCount(u.outputTokens)}out`;
+  if (u.cachedTokens > 0) {
+    return state.lang === 'zh'
+      ? `${base} · 缓存 ${u.cacheHitRate}% · ${tok}`
+      : `${base} · ${u.cacheHitRate}% cached · ${tok}`;
+  }
+  return `${base} · ${tok}`;
+}
+
+function applyAiGeneratedDocument(result) {
+  if (state.mode === 'play') setMode('edit');
+  const nextFocusId = result.focusNodeId || result.document.root.id;
+  commitDocument(result.document, nextFocusId, true, nextFocusId !== result.document.root.id);
+  const sourceLabel = formatAiSourceLabel(result);
+  const msg = t('ai.generatedToast')
+    .replace('{count}', String(result.count))
+    .replace('{source}', sourceLabel);
+  closeAiModal();
+  showToast(msg);
+  setEventPill(msg);
+}
+
+async function runAiGenerate(promptOverride = null) {
+  if (state.aiBusy) return;
+  const prompt = String(promptOverride ?? els.aiPromptInput?.value ?? '').trim();
+  if (!prompt) {
+    setAiStatus(t('ai.statusEmptyPrompt'), 'error');
+    els.aiPromptInput?.focus();
+    return;
+  }
+  if (state.aiAbortController) state.aiAbortController.abort();
+  const controller = new AbortController();
+  state.aiAbortController = controller;
+  setAiBusy(true);
+  setAiStatus(t('ai.statusGenerating'));
+
+  let lastProgressKey = '';
+  const handleProgress = (evt) => {
+    if (!evt || state.aiAbortController !== controller) return;
+    if (evt.phase === 'thinking') {
+      if (lastProgressKey === 'thinking') return;
+      lastProgressKey = 'thinking';
+      setAiStatus(t('ai.statusThinking'), 'info');
+    } else if (evt.phase === 'generating') {
+      const count = Math.max(1, Number(evt.widgets) || 0);
+      const key = `gen:${count}`;
+      if (lastProgressKey === key) return;
+      lastProgressKey = key;
+      setAiStatus(t('ai.statusStreaming').replace('{widgets}', String(count)), 'info');
+    }
+  };
+
+  try {
+    const activeDoc = currentDoc();
+    const targetNodeId = state.aiMode === 'refine' && canRefineSelectedNode() ? state.selectedId : null;
+    const result = await generateStudioPageWithAi({
+      prompt,
+      lang: state.lang,
+      mode: state.aiMode,
+      currentDoc: state.aiMode === 'create' ? null : activeDoc,
+      targetNodeId,
+      stylePreset: state.aiStylePreset,
+      config: { ...aiConfig },
+      signal: controller.signal,
+      onProgress: handleProgress,
+    });
+    if (controller.signal.aborted || state.aiAbortController !== controller) return;
+    if (!result.ok) {
+      setAiStatus(result.error || 'Failed to generate page.', result.needsConfig ? 'info' : 'error');
+      if (result.needsConfig && els.aiSettingsDetails) {
+        els.aiSettingsDetails.open = true;
+      }
+      return;
+    }
+    applyAiGeneratedDocument(result);
+  } finally {
+    if (state.aiAbortController === controller) {
+      state.aiAbortController = null;
+      setAiBusy(false);
+    }
+  }
+}
+
+els.btnAi?.addEventListener('click', () => openAiModal());
+els.btnCloseAi?.addEventListener('click', closeAiModal);
+els.aiModal?.addEventListener('click', (e) => {
+  if (e.target === els.aiModal) closeAiModal();
+});
+els.aiModeButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    const nextMode = btn.dataset.aiMode;
+    if (!['create', 'iterate', 'refine'].includes(nextMode)) return;
+    state.aiMode = nextMode;
+    updateAiModalModeUi();
+    els.aiPromptInput?.focus();
+  });
+});
+els.aiStyleButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    state.aiStylePreset = btn.dataset.aiStyle || 'auto';
+    updateAiModalModeUi();
+  });
+});
+els.aiProviderButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    aiConfig.provider = btn.dataset.aiProvider === 'custom' ? 'custom' : 'auto';
+    saveAiConfig();
+    syncAiSettingsUi();
+  });
+});
+els.aiPresetButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const preset = AI_PROVIDER_PRESETS[btn.dataset.aiPreset];
+    if (!preset) return;
+    aiConfig.provider = 'custom';
+    changeAiEndpoint(aiConfig, preset.baseUrl);
+    aiConfig.model = preset.model;
+    saveAiConfig();
+    syncAiSettingsUi();
+  });
+});
+els.aiWorkerUrl?.addEventListener('input', () => {
+  aiConfig.workerUrl = els.aiWorkerUrl.value.trim();
+  saveAiConfig();
+});
+els.aiBaseUrl?.addEventListener('input', () => {
+  changeAiEndpoint(aiConfig, els.aiBaseUrl.value.trim());
+  els.aiApiKey.value = aiConfig.apiKey;
+  saveAiConfig();
+});
+els.aiModel?.addEventListener('input', () => {
+  aiConfig.model = els.aiModel.value.trim();
+  saveAiConfig();
+});
+els.aiApiKey?.addEventListener('input', () => {
+  aiConfig.keyOrigin = providerOrigin(aiConfig.baseUrl);
+  aiConfig.apiKey = els.aiApiKey.value;
+  saveAiConfig();
+});
+els.btnAiRun?.addEventListener('click', () => runAiGenerate());
+els.aiPromptInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    runAiGenerate();
+  }
+});
+
 els.editOverlay.addEventListener('mouseleave', () => {
   if (state.dragSession?.active) return;
   state.hoveredNodeId = null;
@@ -3998,15 +5144,224 @@ window.addEventListener('blur', () => {
   if (state.dragSession) cancelDrag();
 });
 
+const INTRO_STORAGE_KEY = 'fluent-qt-studio-intro-v1';
+const TOUR_STEPS = [
+  { selector: '#palette-panel', placement: 'right', titleKey: 'tour.step1Title', descKey: 'tour.step1Desc' },
+  { selector: '#btn-ai', placement: 'bottom', titleKey: 'tour.step2Title', descKey: 'tour.step2Desc' },
+  { selector: '#artboard-bar', placement: 'bottom', titleKey: 'tour.step3Title', descKey: 'tour.step3Desc' },
+  { selector: '#btn-code', placement: 'bottom-end', titleKey: 'tour.step4Title', descKey: 'tour.step4Desc' },
+];
+
+function hasSeenIntro() {
+  try {
+    return localStorage.getItem(INTRO_STORAGE_KEY) === 'seen';
+  } catch (_) {
+    return false;
+  }
+}
+
+function markIntroSeen() {
+  try {
+    localStorage.setItem(INTRO_STORAGE_KEY, 'seen');
+  } catch (_) {}
+}
+
+function shouldAutoShowIntro() {
+  if (params.get('intro') === '1') {
+    try {
+      localStorage.removeItem(INTRO_STORAGE_KEY);
+    } catch (_) {}
+    return true;
+  }
+  if (params.get('intro') === '0' || decodedHashDoc || params.get('template')) return false;
+  return !hasSeenIntro();
+}
+
+function maybeShowFirstVisitIntro() {
+  if (state.introEvaluated) return;
+  state.introEvaluated = true;
+  if (!shouldAutoShowIntro()) return;
+  startIntroTour(0);
+}
+
+function dismissIntroCard() {}
+
+function positionTourStep() {
+  if (!state.tourOpen || !els.tourSpotlight || !els.tourPopover) return;
+  const step = TOUR_STEPS[state.tourStep] || TOUR_STEPS[0];
+  const target = qs(step.selector);
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const pad = 6;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const sx = Math.max(4, Math.round(rect.left - pad));
+  const sy = Math.max(4, Math.round(rect.top - pad));
+  const sw = Math.min(vw - sx - 4, Math.round(rect.width + pad * 2));
+  const sh = Math.min(vh - sy - 4, Math.round(rect.height + pad * 2));
+  els.tourSpotlight.style.left = `${sx}px`;
+  els.tourSpotlight.style.top = `${sy}px`;
+  els.tourSpotlight.style.width = `${Math.max(24, sw)}px`;
+  els.tourSpotlight.style.height = `${Math.max(24, sh)}px`;
+
+  const popRect = els.tourPopover.getBoundingClientRect();
+  const popW = popRect.width || 336;
+  const popH = popRect.height || 184;
+  const gap = 14;
+  let px = sx;
+  let py = sy + sh + gap;
+  if (step.placement === 'right') {
+    px = sx + sw + gap;
+    py = Math.max(64, sy + 24);
+    if (px + popW > vw - 12) {
+      px = sx + 12;
+      py = sy + 24;
+    }
+  } else if (step.placement === 'bottom-end') {
+    px = sx + sw - popW;
+    py = sy + sh + gap;
+  } else {
+    px = sx;
+    py = sy + sh + gap;
+  }
+  px = Math.max(12, Math.min(vw - popW - 12, Math.round(px)));
+  py = Math.max(12, Math.min(vh - popH - 12, Math.round(py)));
+  els.tourPopover.style.left = `${px}px`;
+  els.tourPopover.style.top = `${py}px`;
+}
+
+function renderTourStep() {
+  if (!state.tourOpen) return;
+  const total = TOUR_STEPS.length;
+  const idx = Math.max(0, Math.min(total - 1, state.tourStep));
+  state.tourStep = idx;
+  const step = TOUR_STEPS[idx];
+  if (els.tourStepBadge) els.tourStepBadge.textContent = `${idx + 1} / ${total}`;
+  if (els.tourTitle) els.tourTitle.textContent = t(step.titleKey);
+  if (els.tourDesc) els.tourDesc.textContent = t(step.descKey);
+  if (els.btnTourPrev) {
+    els.btnTourPrev.hidden = idx === 0;
+    els.btnTourPrev.textContent = t('tour.prev');
+  }
+  if (els.btnTourNext) {
+    els.btnTourNext.textContent = t(idx === total - 1 ? 'tour.done' : 'tour.next');
+  }
+  els.tourDots.forEach((dot, i) => {
+    const active = i === idx;
+    dot.classList.toggle('is-active', active);
+    dot.setAttribute('aria-selected', String(active));
+  });
+  positionTourStep();
+  requestAnimationFrame(positionTourStep);
+}
+
+function startIntroTour(stepIndex = 0) {
+  dismissIntroCard({ remember: true });
+  closeActiveComboMenu(false);
+  if (state.aiOpen) closeAiModal();
+  if (!els.tourLayer) return;
+  state.tourOpen = true;
+  state.tourStep = Math.max(0, Math.min(TOUR_STEPS.length - 1, Number(stepIndex) || 0));
+  els.tourLayer.hidden = false;
+  renderTourStep();
+}
+
+function closeIntroTour() {
+  markIntroSeen();
+  state.tourOpen = false;
+  if (els.tourLayer) els.tourLayer.hidden = true;
+}
+
+els.btnIntro?.addEventListener('click', () => {
+  if (state.tourOpen) closeIntroTour();
+  else startIntroTour(0);
+});
+els.btnTourClose?.addEventListener('click', closeIntroTour);
+document.addEventListener('pointerdown', (e) => {
+  if (!state.tourOpen) return;
+  const target = e.target;
+  if (target instanceof Node && (els.tourPopover?.contains(target) || els.btnIntro?.contains(target))) {
+    return;
+  }
+  closeIntroTour();
+}, true);
+els.btnTourPrev?.addEventListener('click', () => {
+  if (state.tourStep > 0) {
+    state.tourStep -= 1;
+    renderTourStep();
+  }
+});
+els.btnTourNext?.addEventListener('click', () => {
+  if (state.tourStep < TOUR_STEPS.length - 1) {
+    state.tourStep += 1;
+    renderTourStep();
+  } else {
+    closeIntroTour();
+  }
+});
+els.tourDots.forEach((dot) => {
+  dot.addEventListener('click', () => {
+    const idx = Number(dot.dataset.tourDot);
+    if (Number.isFinite(idx)) {
+      state.tourStep = idx;
+      renderTourStep();
+    }
+  });
+});
+window.addEventListener('resize', () => {
+  if (state.tourOpen) positionTourStep();
+});
+
 document.addEventListener('keydown', (e) => {
+  if (state.tourOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeIntroTour();
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (state.tourStep < TOUR_STEPS.length - 1) {
+        state.tourStep += 1;
+        renderTourStep();
+      } else {
+        closeIntroTour();
+      }
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (state.tourStep > 0) {
+        state.tourStep -= 1;
+        renderTourStep();
+      }
+      return;
+    }
+  }
+  if (e.key === 'Escape' && state.aiOpen) {
+    e.preventDefault();
+    closeAiModal();
+    return;
+  }
   if (e.key === 'Escape' && state.dragSession?.active) {
     e.preventDefault();
     cancelDrag();
     return;
   }
+  if (e.key === 'Escape' && state.introCardVisible) {
+    e.preventDefault();
+    dismissIntroCard({ remember: true });
+    return;
+  }
   const tag = e.target?.tagName;
   const isEditingField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   const mod = e.metaKey || e.ctrlKey;
+
+  if (mod && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    toggleAiModal();
+    return;
+  }
 
   if (!isEditingField && mod && e.key.toLowerCase() === 'z') {
     e.preventDefault();
@@ -4069,6 +5424,7 @@ new ResizeObserver(() => {
 /* Boot */
 syncViewportTier(state.viewportWidth);
 setInspectorTab(state.inspectorTab);
+syncAiSettingsUi();
 applyLanguage();
 inheritTheme();
 renderAll();

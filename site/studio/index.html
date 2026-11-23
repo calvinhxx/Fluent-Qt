@@ -4,7 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fluent-Qt Studio</title>
+    <meta http-equiv="Content-Security-Policy" content="img-src 'self' data: blob: https://images.unsplash.com">
     <meta name="description" content="Calm, visual Fluent UI page builder powered by real C++ Fluent-Qt Widgets in WebAssembly, exporting C++, PySide6, and Qt Designer .ui.">
+    <meta name="fluent-studio-ai-endpoint" content="">
     <link rel="icon" href="../assets/app-icon-64.png">
     <script>
       (function () {
@@ -52,6 +54,11 @@
           <span>Fluent-Qt</span>
           <span class="studio-pill">Studio</span>
         </a>
+        <button id="btn-ai" type="button" class="studio-btn ai-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="ai-modal">
+          <svg class="ai-sparkle-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 1.5 9.55 5.45 13.5 7 9.55 8.55 8 12.5 6.45 8.55 2.5 7l3.95-1.55L8 1.5Zm4.2 8.8.7 1.7 1.7.7-1.7.7-.7 1.7-.7-1.7-1.7-.7 1.7-.7.7-1.7Z"/></svg>
+          <span data-i18n="toolbar.ai">AI 生成</span>
+          <kbd class="ai-kbd">⌘K</kbd>
+        </button>
       </div>
 
       <div class="header-center">
@@ -76,6 +83,14 @@
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M9.5 3.5L13 7l-3.5 3.5M12.5 7H6a3.5 3.5 0 0 0 0 7h2"/></svg>
           </button>
         </div>
+
+        <button id="btn-intro" type="button" class="icon-btn" aria-label="Studio Guide" title="使用引导">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M6.4 6.2a1.65 1.55 0 1 1 2.42 1.38c-.56.31-.82.63-.82 1.27"/>
+            <circle cx="8" cy="11.35" r="0.85" fill="currentColor"/>
+          </svg>
+        </button>
 
         <button id="btn-code" type="button" class="studio-btn is-accent" aria-expanded="false" data-i18n="toolbar.code">导出代码</button>
       </div>
@@ -106,6 +121,24 @@
 
         <div id="stage-scroll">
           <div id="stage-frame" style="--stage-width: 860px;">
+            <div id="artboard-bar" class="artboard-bar" role="toolbar" aria-label="Artboard design tokens">
+              <div class="artboard-meta">
+                <span id="artboard-title" class="artboard-title">Artboard · 860px</span>
+                <div class="artboard-theme-group" role="group" aria-label="Artboard theme">
+                  <button id="artboard-theme-light" type="button" class="artboard-seg-btn" data-artboard-theme="light" aria-pressed="false" data-i18n="artboard.light">浅色</button>
+                  <button id="artboard-theme-dark" type="button" class="artboard-seg-btn" data-artboard-theme="dark" aria-pressed="false" data-i18n="artboard.dark">暗色</button>
+                </div>
+              </div>
+              <div class="artboard-swatches" role="group" aria-label="Artboard accent color">
+                <button type="button" class="artboard-swatch" data-artboard-accent="#0067C0" title="Fluent Blue (#0067C0)" aria-label="Accent #0067C0" style="--swatch-color: #0067C0;"></button>
+                <button type="button" class="artboard-swatch" data-artboard-accent="#00B7C3" title="Cyber Cyan (#00B7C3)" aria-label="Accent #00B7C3" style="--swatch-color: #00B7C3;"></button>
+                <button type="button" class="artboard-swatch" data-artboard-accent="#D84A38" title="Editorial Coral (#D84A38)" aria-label="Accent #D84A38" style="--swatch-color: #D84A38;"></button>
+                <button type="button" class="artboard-swatch" data-artboard-accent="#8764B8" title="Creative Violet (#8764B8)" aria-label="Accent #8764B8" style="--swatch-color: #8764B8;"></button>
+                <button type="button" class="artboard-swatch" data-artboard-accent="#107C10" title="Emerald (#107C10)" aria-label="Accent #107C10" style="--swatch-color: #107C10;"></button>
+                <button type="button" class="artboard-swatch" data-artboard-accent="#C26D2D" title="Warm Amber (#C26D2D)" aria-label="Accent #C26D2D" style="--swatch-color: #C26D2D;"></button>
+                <button id="btn-artboard-reset" type="button" class="artboard-reset-btn" hidden data-i18n="artboard.reset">还原</button>
+              </div>
+            </div>
             <div id="canvas-shell" class="canvas-shell is-wasm-loading">
               <iframe id="wasm-stage" title="Fluent-Qt WASM Studio Canvas"></iframe>
               <div id="schematic-stage" class="schematic-stage" aria-label="Schematic preview"></div>
@@ -157,6 +190,7 @@
                   <div class="selection-bar">
                     <span id="selection-tag" class="selection-tag"></span>
                     <div class="selection-ops">
+                      <button id="sel-ai-refine" type="button" class="sel-ai-btn" aria-label="AI refine selected" title="AI 局部精修">✦</button>
                       <button id="sel-up" type="button" aria-label="Move node up" title="Move Up">↑</button>
                       <button id="sel-down" type="button" aria-label="Move node down" title="Move Down">↓</button>
                       <button id="sel-dup" type="button" aria-label="Duplicate node" title="Duplicate">⧉</button>
@@ -233,6 +267,130 @@
         <div id="drag-ghost-body" class="drag-ghost-body"></div>
       </div>
       <div id="drag-ghost-pill" class="drag-ghost-pill"></div>
+    </div>
+
+    <div id="ai-modal" class="ai-modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="ai-modal-title">
+      <div class="ai-modal-card">
+        <div class="ai-modal-header">
+          <div class="ai-modal-title-wrap">
+            <svg class="ai-sparkle-icon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 1.5 9.55 5.45 13.5 7 9.55 8.55 8 12.5 6.45 8.55 2.5 7l3.95-1.55L8 1.5Zm4.2 8.8.7 1.7 1.7.7-1.7.7-.7 1.7-.7-1.7-1.7-.7 1.7-.7.7-1.7Z"/></svg>
+            <strong id="ai-modal-title" data-i18n="ai.title">AI 新建页面</strong>
+          </div>
+          <button id="btn-close-ai" type="button" class="icon-btn compact" aria-label="Close AI dialog">✕</button>
+        </div>
+
+        <div class="ai-mode-bar">
+          <div class="segmented ai-mode-group" role="group" aria-label="AI edit mode">
+            <button type="button" class="seg-btn is-active" data-ai-mode="create" aria-pressed="true" data-i18n="ai.modeCreate">新建整页</button>
+            <button type="button" class="seg-btn" data-ai-mode="iterate" aria-pressed="false" data-i18n="ai.modeIterate">迭代当前页</button>
+            <button type="button" class="seg-btn" data-ai-mode="refine" aria-pressed="false" disabled data-i18n="ai.modeRefine">精修选中</button>
+          </div>
+          <span id="ai-target-pill" class="ai-target-pill" hidden></span>
+        </div>
+
+        <div id="ai-style-row" class="ai-style-row" role="group" aria-label="Design style preset">
+          <button type="button" class="ai-style-chip is-active" data-ai-style="auto" aria-pressed="true">
+            <span class="ai-style-dot is-auto" aria-hidden="true"></span>
+            <span data-i18n="ai.styleAuto">智能匹配</span>
+          </button>
+          <button type="button" class="ai-style-chip" data-ai-style="winui-light" aria-pressed="false">
+            <span class="ai-style-dot" style="background: #0067C0;" aria-hidden="true"></span>
+            <span data-i18n="ai.styleWinui">WinUI 浅蓝</span>
+          </button>
+          <button type="button" class="ai-style-chip" data-ai-style="cyber-dark" aria-pressed="false">
+            <span class="ai-style-dot" style="background: #00B7C3;" aria-hidden="true"></span>
+            <span data-i18n="ai.styleCyber">暗青监控</span>
+          </button>
+          <button type="button" class="ai-style-chip" data-ai-style="editorial-coral" aria-pressed="false">
+            <span class="ai-style-dot" style="background: #D84A38;" aria-hidden="true"></span>
+            <span data-i18n="ai.styleEditorial">珊瑚画廊</span>
+          </button>
+          <button type="button" class="ai-style-chip" data-ai-style="creative-violet" aria-pressed="false">
+            <span class="ai-style-dot" style="background: #8764B8;" aria-hidden="true"></span>
+            <span data-i18n="ai.styleCreative">暗紫创意</span>
+          </button>
+          <button type="button" class="ai-style-chip" data-ai-style="emerald-finance" aria-pressed="false">
+            <span class="ai-style-dot" style="background: #107C10;" aria-hidden="true"></span>
+            <span data-i18n="ai.styleEmerald">翡翠商务</span>
+          </button>
+        </div>
+
+        <div class="ai-prompt-row">
+          <textarea id="ai-prompt-input" class="studio-textarea ai-prompt-input" rows="2" aria-label="Describe the Fluent-Qt page you want to build"></textarea>
+          <button id="btn-ai-run" type="button" class="studio-btn is-accent ai-run-btn" data-i18n="ai.run">生成界面</button>
+        </div>
+
+        <div id="ai-status" class="ai-status" role="status" aria-live="polite"></div>
+
+        <details id="ai-settings-details" class="ai-settings">
+          <summary data-i18n="ai.settingsSummary">AI 配置</summary>
+          <div class="ai-settings-body">
+            <div class="ai-settings-row">
+              <span class="ai-field-label" data-i18n="ai.providerLabel">生成引擎</span>
+              <div class="segmented ai-provider-group" role="group" aria-label="AI provider">
+                <button type="button" class="seg-btn is-active" data-ai-provider="auto" aria-pressed="true" data-i18n="ai.providerAuto">免费云端</button>
+                <button type="button" class="seg-btn" data-ai-provider="custom" aria-pressed="false" data-i18n="ai.providerCustom">自定义 API</button>
+              </div>
+            </div>
+
+            <div id="ai-worker-fields" class="ai-subpanel">
+              <label class="ai-field">
+                <span data-i18n="ai.workerUrlLabel">Cloudflare Worker 地址</span>
+                <input id="ai-worker-url" type="url" class="studio-input" placeholder="https://fluentqt-studio-ai.your-name.workers.dev" autocomplete="off">
+              </label>
+              <p class="ai-hint" data-i18n="ai.workerHint">填入已部署的免费 Worker 地址；没有 Worker 时请切换「自定义 API」填写你自己的 Key 或 Ollama。</p>
+            </div>
+
+            <div id="ai-custom-fields" class="ai-subpanel" hidden>
+              <div class="ai-preset-row">
+                <span class="ai-field-label" data-i18n="ai.presetLabel">快捷填充</span>
+                <button type="button" class="ai-chip" data-ai-preset="deepseek">DeepSeek</button>
+                <button type="button" class="ai-chip" data-ai-preset="openrouter">OpenRouter</button>
+                <button type="button" class="ai-chip" data-ai-preset="openai">OpenAI</button>
+                <button type="button" class="ai-chip" data-ai-preset="ollama">Ollama</button>
+              </div>
+              <div class="ai-field-grid">
+                <label class="ai-field">
+                  <span data-i18n="ai.baseUrlLabel">Base URL</span>
+                  <input id="ai-base-url" type="url" class="studio-input" placeholder="https://api.deepseek.com/v1" autocomplete="off">
+                </label>
+                <label class="ai-field">
+                  <span data-i18n="ai.modelLabel">模型名称</span>
+                  <input id="ai-model" type="text" class="studio-input" placeholder="deepseek-chat" autocomplete="off">
+                </label>
+              </div>
+              <label class="ai-field">
+                <span data-i18n="ai.apiKeyLabel">API Key（仅存当前浏览器，本地 Ollama 可留空）</span>
+                <input id="ai-api-key" type="password" class="studio-input" placeholder="sk-..." autocomplete="off">
+              </label>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div id="tour-layer" class="tour-layer" hidden>
+      <div id="tour-spotlight" class="tour-spotlight" aria-hidden="true"></div>
+      <div id="tour-popover" class="tour-popover" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+        <div class="tour-popover-head">
+          <span id="tour-step-badge" class="tour-step-badge">1 / 4</span>
+          <button id="btn-tour-close" type="button" class="icon-btn" aria-label="Close tour">✕</button>
+        </div>
+        <h3 id="tour-title" class="tour-title">103 个真实 C++ Fluent-Qt 控件</h3>
+        <p id="tour-desc" class="tour-desc">从左侧分类搜索或直接拖拽任意布局、图表与控件到画布，所有渲染均由真实 Qt Widgets WebAssembly 驱动。</p>
+        <div class="tour-popover-foot">
+          <div id="tour-dots" class="tour-dots" role="tablist" aria-label="Tour steps">
+            <button type="button" class="tour-dot is-active" data-tour-dot="0" aria-label="Step 1"></button>
+            <button type="button" class="tour-dot" data-tour-dot="1" aria-label="Step 2"></button>
+            <button type="button" class="tour-dot" data-tour-dot="2" aria-label="Step 3"></button>
+            <button type="button" class="tour-dot" data-tour-dot="3" aria-label="Step 4"></button>
+          </div>
+          <div class="tour-nav-btns">
+            <button id="btn-tour-prev" type="button" class="studio-btn" data-i18n="tour.prev">上一步</button>
+            <button id="btn-tour-next" type="button" class="studio-btn is-accent" data-i18n="tour.next">下一步</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="toast" class="studio-toast" hidden role="status" aria-live="polite"></div>
