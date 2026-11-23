@@ -179,12 +179,7 @@ def smoke_interpreter(
         env=environment,
     )
     run(
-        [
-            clean_python,
-            project_root / "bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py",
-            "--project-root",
-            project_root,
-        ],
+        [clean_python, project_root / "bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py"],
         cwd=project_root,
         env=environment,
     )
