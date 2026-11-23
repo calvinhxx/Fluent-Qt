@@ -5,9 +5,7 @@
 [Documentation home](../README.md) · [Contents](../SUMMARY.md)
 
 Use the [build-fluentqt-gui Skill](../../.agents/skills/build-fluentqt-gui/SKILL.md)
-to create, integrate, redesign, or fix a C++ or PySide6 interface. Describe the
-app goal you want, and the Skill picks the right templates, components, and
-validation checks.
+to create, integrate, redesign, or fix a C++ or PySide6 interface.
 
 ## Choose an entry point
 
@@ -17,6 +15,23 @@ validation checks.
 | Fix an existing application | The Skill's existing-interface workflow and the owning code/tests |
 | Maintain FluentQt components, Gallery, or bindings | Repository `AGENTS.md` and [maintainer gates](../../.agents/skills/build-fluentqt-gui/references/fluentqt-maintainer-gates.md) |
 | Edit docs, catalogs, or Skill guidance | [Documentation style](../development/documentation-style.md) and asset checks below |
+
+## Describe the change
+
+Name the action a user should be able to take and what they should see
+afterward. For an existing app, point to the screen, model, or sample data
+the agent can use to verify the result. If appearance matters, identify the
+reference and which details to carry over.
+
+> In our C++ binary-size viewer, let me filter the symbol table by name.
+> Reuse the existing symbol model and match the search field and typography
+> on the Files page. With the sample binary open, typing `main` should show
+> only matching symbols. Clearing the field should restore all rows in their
+> previous sort order. Build the app and try both actions.
+
+This example uses an existing screen as its visual reference. For a new
+interface, the [design workflow](../../.agents/skills/build-fluentqt-gui/SKILL.md#new-or-redesigned-interfaces)
+lets you compare concepts and select one before implementation.
 
 ## Set up a consumer project
 

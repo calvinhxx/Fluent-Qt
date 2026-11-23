@@ -7,6 +7,12 @@ Read the owning code and the guide sections relevant to the task below.
 [docs/README.md](docs/README.md) owns the reader tree. Use the
 [development index](docs/development/README.md) for workflows not listed here.
 
+For implementation requests, identify the caller-visible result and how to
+check it. Resolve routine choices from the owning code and proceed through
+the relevant checks below. Ask when a decision would change the requested
+scope or needs user approval, such as selecting a new GUI design. At handoff,
+report any assumption that affects the result and how you verified it.
+
 | Task | Read |
 |---|---|
 | Local setup and builds | [Build workflow](docs/development/build-workflow.md); [Linux workflow](docs/development/linux-workflow.md) for Linux |
