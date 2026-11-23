@@ -197,6 +197,12 @@ Beispiele, Kompatibilität und Source-Builds beschreibt der [Python-Guide](bindi
 
 Ziehe FluentQt-Widgets und Formularvorlagen per Drag-and-Drop in Qt Creator (C++) oder pyside6-designer (Python) mit gemeinsamen `.ui`-Dateien. Einrichtung und Nutzung beschreibt der [Qt-Designer-Guide](tools/designer/README.md).
 
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer mit FluentQt-Widget-Box, Formular-Editor und FluentButton-Eigenschaftseditor">
+  </a>
+</p>
+
 ## 🛠 Bauen
 
 ### Abhängigkeiten

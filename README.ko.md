@@ -197,6 +197,12 @@ python -m pip install FluentQt
 
 Qt Creator(C++)와 pyside6-designer(Python)에서 FluentQt 위젯과 폼 템플릿을 드래그 앤 드롭하고 `.ui` 파일을 공유할 수 있습니다. 설정 및 사용법은 [Qt Designer 가이드](tools/designer/README.md)를 확인하세요.
 
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="FluentQt 위젯 상자, 폼 캔버스 및 FluentButton 속성 편집기를 보여 주는 Qt Designer">
+  </a>
+</p>
+
 ## 🛠 빌드
 
 ### 의존성

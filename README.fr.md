@@ -197,6 +197,12 @@ Consultez le [guide Python](bindings/pyside6/README.md) pour les exemples, la ma
 
 Glissez-déposez des widgets et modèles FluentQt dans Qt Creator (C++) ou pyside6-designer (Python) avec des fichiers `.ui` partagés. Consultez le [guide Qt Designer](tools/designer/README.md) pour la configuration et l’utilisation.
 
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer affichant la boîte à widgets FluentQt, le formulaire et l’éditeur de propriétés FluentButton">
+  </a>
+</p>
+
 ## 🛠 Compilation
 
 ### Dépendances

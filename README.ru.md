@@ -197,6 +197,12 @@ python -m pip install FluentQt
 
 Перетаскивайте виджеты и шаблоны форм FluentQt в Qt Creator (C++) или pyside6-designer (Python) с общими файлами `.ui`. Настройку и использование смотрите в [руководстве по Qt Designer](tools/designer/README.md).
 
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer с панелью виджетов FluentQt, формой настроек и редактором свойств FluentButton">
+  </a>
+</p>
+
 ## 🛠 Сборка
 
 ### Зависимости

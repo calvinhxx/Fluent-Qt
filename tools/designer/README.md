@@ -2,6 +2,10 @@
 
 Search the Widget Box for `Fluent`. Controls are grouped by their Gallery category and use the matching Gallery icon. Drag a control onto the form, edit its properties, and save it. C++ and PySide6 use the same class names and can open the same `.ui` file when both have the required components installed.
 
+<p>
+  <img src="../../docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer showing the FluentQt Widget Box, live Workspace Preferences form, and FluentButton Property Editor">
+</p>
+
 With all modules installed, the two designers cover the Gallery's 99 entries: 95 Widget Box entries and four New Form templates. The core build includes 92 Widget Box entries and three templates. Particles adds `FluentParticleBackdrop`, Spatial adds `FluentSpatialView` and the SpatialItem template, and QmlBridge adds `FluentQmlView`.
 
 ## Using the Widget Box
