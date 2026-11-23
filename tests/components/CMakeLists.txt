@@ -13,7 +13,7 @@ if(TARGET FluentQtPlugins)
     target_link_libraries(test_plugin_manager_objects PRIVATE FluentQt::Plugins)
 endif()
 add_qt_test_module(test_typography TestTypography.cpp TestControlTextAlignment.cpp TestInputTextInsets.cpp DesignTokenProbe.cpp)
-add_qt_test_module(test_qt_compat TestQtCompat.cpp TestWindowBackdropCompatibility.cpp)
+add_qt_test_module(test_qt_compat TestQtCompat.cpp TestWindowBackdropCompatibility.cpp TestWidgetCursors.cpp)
 # Compile each installed compatibility header without the umbrella or incidental includes.
 foreach(_header IN LISTS FLUENT_QT_INSTALL_HEADERS)
     if(_header MATCHES "^src/compatibility/(.+)\\.h$")
