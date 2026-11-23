@@ -47,7 +47,7 @@ def run(browser, base_url, output, screenshots=False):
         return box['x']+(target['x']+target['width']*fx)*scale,box['y']+(target['y']+target['height']*fy)*scale
 
     def start_trace():
-        page.evaluate('''geometry => {
+        page.evaluate(r'''geometry => {
           window.layoutSamples=[]; window.layoutTracing=true;
           window.paintClips=[];
           const frame=document.querySelector('.playground-live-frame');
