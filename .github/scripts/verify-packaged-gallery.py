@@ -56,7 +56,7 @@ def verify(package_root, work):
         env.pop(key, None)
     env["QT_QUICK_BACKEND"] = "software"
     if sys.platform == "win32":
-        env["PATH"] = str(Path(env["SystemRoot"]) / "System32")
+        env["PATH"] = str(Path(os.environ["SystemRoot"]) / "System32")
     elif sys.platform.startswith("linux"):
         env["QT_QPA_PLATFORM"] = "offscreen"
     subprocess.run([str(binaries[0]), "--preview", "--route", "qml-view", "--sample", "qml-view-lifecycle",
