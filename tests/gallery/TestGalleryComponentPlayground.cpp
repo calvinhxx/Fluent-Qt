@@ -1112,12 +1112,12 @@ TEST(GalleryComponentPlaygroundInteractionTest, NativeTextInputKeepsFocusAndResp
     edit->setFocus();
     edit->selectAll();
     QSignalSpy changed(playground, &fluent::gallery::GalleryComponentPlayground::stateChanged);
+    ASSERT_EQ(host.focusWidget(), edit);
     QTest::keyClicks(edit, "Native typing");
-    QTest::qWait(100);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !changed.isEmpty(); }, 2000));
     EXPECT_EQ(playground->snapshot().value("values").toObject().value("text"), "Native typing");
     EXPECT_TRUE(playground->snapshot().value("python").toString().contains("Native typing"));
-    EXPECT_NE(edit->focusPolicy(), Qt::NoFocus);
-    EXPECT_GT(changed.size(), 0);
+    EXPECT_EQ(host.focusWidget(), edit);
     ASSERT_TRUE(playground->apply({{"operation", "set"}, {"values", QJsonObject{{"readOnly", true}}}}));
     QTest::keyClicks(edit, " blocked");
     EXPECT_EQ(edit->text(), QStringLiteral("Native typing"));

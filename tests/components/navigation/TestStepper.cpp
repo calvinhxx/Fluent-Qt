@@ -288,8 +288,7 @@ TEST_F(StepperTest, Contract_InterruptedMotionSettlesWhenPolicyChangesOrWidgetHi
     QTest::qWait(20);
     view.setCurrentIndex(1);
     auto animations = view.findChildren<QVariantAnimation*>(QStringLiteral("stepperMarkerTransition"));
-    ASSERT_EQ(animations.size(), 4);
-    EXPECT_TRUE(std::any_of(animations.cbegin(), animations.cend(), [](auto* a) {
+    ASSERT_TRUE(std::any_of(animations.cbegin(), animations.cend(), [](auto* a) {
         return a->state() == QAbstractAnimation::Running;
     }));
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Disabled);

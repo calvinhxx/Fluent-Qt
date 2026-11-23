@@ -133,13 +133,9 @@ set(FLUENT_QT_LOCAL_DESKTOP_TESTS
     GridViewTest.DragReorderBoundaryJitterKeepsStableTargetUntilRelease
     GridViewTest.DragReorderClearThresholdCrossingChangesTarget
     GridViewTest.DragDisplacementRepeatedStableMoveKeepsRunningAnimations
-    GridViewTest.DragReorderMultipleMode
-    GridViewTest.DragReorderSelectedItemsMoveAsGroupInMultipleMode
     GridViewTest.DragReorderExtendedMode
     GridViewTest.DragReorderNoneSelectionDisablesDrag
     GridViewTest.DragReorderDisabledWhenFlagOff
-    GridViewTest.DragReorderPreservesSelectionInMultipleMode
-    GridViewTest.DragReorderItemReorderedSignalArgs
     GridViewTest.ReorderStandardItemModelTakeRowFallback
     FlyoutTest.TopLevelResizeRepositionsAndRaisesAboveSiblings
     AutoSuggestBoxTest.ClearButtonReceivesMouseInputWhileSuggestionsOpen
