@@ -35,6 +35,10 @@ import {
   generateStudioPageWithAi,
 } from './studio-ai.mjs';
 
+const shortcuts = /^(mac|ip(?:hone|ad|od)|ios)/i.test(navigator.userAgentData?.platform || navigator.platform)
+  ? { ai: '⌘K', undo: '⌘Z', redo: '⇧⌘Z', duplicate: '⌘D' }
+  : { ai: 'Ctrl+K', undo: 'Ctrl+Z', redo: 'Ctrl+Shift+Z', duplicate: 'Ctrl+D' };
+
 const UI_STRINGS = {
   zh: {
     'toolbar.code': '导出代码',
@@ -57,7 +61,7 @@ const UI_STRINGS = {
     'ai.statusThinking': '模型正在构思桌面布局…',
     'ai.statusStreaming': '正在生成界面（已构思约 {widgets} 个组件）…',
     'ai.statusEmptyPrompt': '请先输入你想生成的页面描述。',
-    'ai.generatedToast': '已生成 {count} 个组件（{source}）· Ctrl/Cmd+Z 可撤销',
+    'ai.generatedToast': `已生成 {count} 个组件（{source}）· ${shortcuts.undo} 可撤销`,
     'ai.modeCreate': '新建整页',
     'ai.modeIterate': '迭代当前页',
     'ai.modeRefine': '精修选中',
@@ -84,8 +88,9 @@ const UI_STRINGS = {
     'stage.retryWasm': '重试 WASM',
     'drawer.copy': '复制代码',
     'drawer.download': '下载文件',
-    undoTitle: '撤销 (Ctrl/Cmd+Z)',
-    redoTitle: '重做 (Ctrl/Cmd+Shift+Z)',
+    undoTitle: `撤销 (${shortcuts.undo})`,
+    redoTitle: `重做 (${shortcuts.redo})`,
+    duplicateTitle: `复制选中节点 (${shortcuts.duplicate})`,
     searchPlaceholder: '搜索 103 个组件与布局…',
     anchorSectionTitle: '锚点定位 (AnchorLayout)',
     containerTag: '容器',
@@ -127,19 +132,19 @@ const UI_STRINGS = {
     'intro.guideTitle': '使用引导',
     'intro.title': '欢迎使用 Fluent-Qt Studio',
     'intro.subtitle': '真实 C++ Qt Widgets 可视化工作台 · 拖拽组装、AI 生成、三端代码导出',
-    'intro.step1': '拖入 103 个真实 Qt 控件，或按 ⌘K 一句话生成整页',
+    'intro.step1': `拖入 103 个真实 Qt 控件，或按 ${shortcuts.ai} 一句话生成整页`,
     'intro.step2': '画板独立切换明暗与主题色，切「试玩」直测真实交互',
     'intro.step3': '一键导出 C++17、PySide6 或共享 Qt Designer .ui',
     'intro.startTour': '开始 30 秒交互导览',
     'intro.tryAi': '✦ 试试 AI 生成',
     'intro.loadSample': '加载示例仪表盘',
-    'intro.sampleLoadedToast': '已加载监控仪表盘示例 · Ctrl/Cmd+Z 可返回初始画布',
+    'intro.sampleLoadedToast': `已加载监控仪表盘示例 · ${shortcuts.undo} 可返回初始画布`,
     'tour.prev': '上一步',
     'tour.next': '下一步',
     'tour.done': '开始创作',
     'tour.step1Title': '103 个真实 C++ Fluent-Qt 控件',
     'tour.step1Desc': '从左侧分类搜索或直接拖拽任意布局、图表与控件到画布，所有渲染均由真实 Qt Widgets WebAssembly 驱动。',
-    'tour.step2Title': '一句话生成整页或局部精修 (⌘K)',
+    'tour.step2Title': `一句话生成整页或局部精修 (${shortcuts.ai})`,
     'tour.step2Desc': '输入自然语言即可生成完整桌面布局，支持「新建整页」「迭代当前页」和选中控件后点 ✦ 局部精修。',
     'tour.step3Title': '独立画板调色与实时试玩',
     'tour.step3Desc': '在画板顶部零 Token 切换明暗与 6 组强调色（不影响外层网站主题），切到顶部「试玩」即可直接点击交互控件。',
@@ -206,7 +211,7 @@ const UI_STRINGS = {
     'ai.statusThinking': 'Thinking through desktop layout…',
     'ai.statusStreaming': 'Generating UI (~{widgets} widgets)…',
     'ai.statusEmptyPrompt': 'Enter a description of the page you want to create.',
-    'ai.generatedToast': 'Generated {count} widgets ({source}) · Ctrl/Cmd+Z to undo',
+    'ai.generatedToast': `Generated {count} widgets ({source}) · ${shortcuts.undo} to undo`,
     'ai.modeCreate': 'New Page',
     'ai.modeIterate': 'Iterate Page',
     'ai.modeRefine': 'Refine Selected',
@@ -233,8 +238,9 @@ const UI_STRINGS = {
     'stage.retryWasm': 'Retry WASM',
     'drawer.copy': 'Copy',
     'drawer.download': 'Download',
-    undoTitle: 'Undo (Ctrl/Cmd+Z)',
-    redoTitle: 'Redo (Ctrl/Cmd+Shift+Z)',
+    undoTitle: `Undo (${shortcuts.undo})`,
+    redoTitle: `Redo (${shortcuts.redo})`,
+    duplicateTitle: `Duplicate selected node (${shortcuts.duplicate})`,
     searchPlaceholder: 'Search 103 widgets & layouts…',
     anchorSectionTitle: 'Anchor Placement (AnchorLayout)',
     containerTag: 'Container',
@@ -276,19 +282,19 @@ const UI_STRINGS = {
     'intro.guideTitle': 'Studio Guide',
     'intro.title': 'Welcome to Fluent-Qt Studio',
     'intro.subtitle': 'Real C++ Qt Widgets visual workbench · drag & drop, AI build, and 3-target code export',
-    'intro.step1': 'Drag 103 real Qt widgets onto the stage, or press ⌘K to build with AI',
+    'intro.step1': `Drag 103 real Qt widgets onto the stage, or press ${shortcuts.ai} to build with AI`,
     'intro.step2': 'Switch isolated artboard themes & accents, or toggle Play for live interaction',
     'intro.step3': 'Export production C++17, PySide6, or shared Qt Designer .ui files',
     'intro.startTour': 'Start 30s Tour',
     'intro.tryAi': '✦ Try AI Build',
     'intro.loadSample': 'Load Sample Dashboard',
-    'intro.sampleLoadedToast': 'Loaded Analytics Dashboard sample · Ctrl/Cmd+Z to undo',
+    'intro.sampleLoadedToast': `Loaded Analytics Dashboard sample · ${shortcuts.undo} to undo`,
     'tour.prev': 'Back',
     'tour.next': 'Next',
     'tour.done': 'Start Building',
     'tour.step1Title': '103 Real C++ Fluent-Qt Widgets',
     'tour.step1Desc': 'Search categories or drag any layout, chart, or widget onto the canvas — powered by real Qt Widgets in WebAssembly.',
-    'tour.step2Title': 'Generate Pages or Refine Selection (⌘K)',
+    'tour.step2Title': `Generate Pages or Refine Selection (${shortcuts.ai})`,
     'tour.step2Desc': 'Describe any desktop UI to generate full layouts, iterate on the current page, or select a widget and click ✦ to refine just that part.',
     'tour.step3Title': 'Isolated Artboard & Live Play Mode',
     'tour.step3Desc': 'Switch artboard light/dark themes and 6 accent colors without changing the outer site theme, or toggle Play mode to interact live.',
@@ -800,6 +806,8 @@ function applyLanguage() {
   if (els.navHome) els.navHome.href = state.lang === 'zh' ? '../zh-CN/' : '../';
   if (els.btnUndo) els.btnUndo.title = t('undoTitle');
   if (els.btnRedo) els.btnRedo.title = t('redoTitle');
+  els.btnDuplicate.title = t('duplicateTitle');
+  els.btnAi.querySelector('kbd').textContent = shortcuts.ai;
   if (els.btnIntro) {
     els.btnIntro.title = t('intro.guideTitle');
     els.btnIntro.setAttribute('aria-label', t('intro.guideTitle'));

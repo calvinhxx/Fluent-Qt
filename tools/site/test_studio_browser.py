@@ -666,6 +666,27 @@ def verify_loading_state(browser, base_url: str, output_dir: Path) -> None:
         loading_context.close()
 
 
+def verify_platform_shortcuts(browser, base_url: str) -> None:
+    for platform, lang, modifier, hint, redo in (
+        ("Windows", "en", "Control", "Ctrl+K", "Ctrl+Shift+Z"),
+        ("Linux", "zh", "Control", "Ctrl+K", "Ctrl+Shift+Z"),
+        ("macOS", "en", "Meta", "⌘K", "⇧⌘Z"),
+    ):
+        page = browser.new_page()
+        try:
+            page.add_init_script(f"""Object.defineProperty(navigator, 'userAgentData',
+                {{value: {{platform: {json.dumps(platform)}}}}});
+                localStorage.setItem('fluent-qt-studio-intro-v1', 'seen');""")
+            page.goto(base_url + f"studio/?renderer=schematic&lang={lang}")
+            page.wait_for_selector('#runtime-badge[data-state="schematic"]')
+            assert page.locator("#btn-ai kbd").inner_text() == hint, platform
+            assert redo in page.locator("#btn-redo").get_attribute("title"), platform
+            page.keyboard.press(modifier + "+k")
+            page.locator("#ai-modal:not([hidden])").wait_for()
+        finally:
+            page.close()
+
+
 def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     text = "Review <em>literal</em> & diagrams"
     document = {"schemaVersion": 1, "root": {"id": "root", "type": "VBox", "children": [
@@ -919,6 +940,7 @@ def main() -> int:
             verify_loading_state(browser, url, args.output)
             run_wasm_checks(page, url, args.output)
         else:
+            verify_platform_shortcuts(browser, url)
             run_schematic_checks(page, url, args.output)
 
         browser.close()
