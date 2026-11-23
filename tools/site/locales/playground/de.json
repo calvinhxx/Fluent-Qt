@@ -266,6 +266,8 @@
 "Research":"Forschung"
 },
 "strings": {
+"6d95472d":"Leeren Wert zulassen",
+"3390e052":"Bei deaktivierter Option wird beim Bestätigen einer leeren oder ungültigen Eingabe der letzte Wert wiederhergestellt.",
 "dc133f65":"0 erlaubt das Überlappen der Regler. Jeder Endpunkt wird durch den anderen Endpunkt und diesen Mindestabstand begrenzt.",
 "7f8e0d63":"0 leitet den Abstand aus den Schritten ab. Wählen Sie eine Skalenposition, um sie beim Darüberfahren anzuzeigen.",
 "637388e1":"3D-Perspektive",

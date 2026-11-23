@@ -266,6 +266,8 @@
 "Zoom":"Zoom"
 },
 "strings": {
+"6d95472d":"Autoriser une valeur vide",
+"3390e052":"Si cette option est désactivée, valider une saisie vide ou incorrecte rétablit la dernière valeur.",
 "dc133f65":"0 permet aux curseurs de se chevaucher. Chaque extrémité est limitée par l'autre et par cet écart minimal.",
 "7f8e0d63":"0 déduit l'espacement à partir des pas. Sélectionnez une position de graduation pour l'afficher au survol.",
 "637388e1":"Perspective 3D",
