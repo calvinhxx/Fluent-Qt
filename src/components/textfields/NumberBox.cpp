@@ -698,26 +698,40 @@ void NumberBox::leaveEvent(QEvent* event)
     update();
 }
 
+bool NumberBox::tryBeginScrub(QMouseEvent* event)
+{
+    if (!event || event->button() != Qt::LeftButton || !isEnabled() || isReadOnly()
+        || !scrubHandleRect().contains(event->pos()))
+        return false;
+    const QPointer<NumberBox> guard(this);
+    setFocus(Qt::MouseFocusReason);
+    if (!guard)
+        return true;
+    m_scrubInitialValue = m_value;
+    m_scrubInitialText = text();
+    m_scrubBase = std::isfinite(m_value) ? m_value : normalizedStepStart();
+    m_scrubStart = fluentMouseGlobalPos(event);
+    m_scrubbing = true;
+    event->accept();
+    updateWidgetCursor(m_pointerCursor, this, Qt::SizeHorCursor);
+    if (!guard || !m_scrubbing)
+        return true;
+    emit scrubbingChanged(true);
+    if (guard && m_scrubbing)
+        emit scrubStarted(m_scrubInitialValue);
+    return true;
+}
+
+void NumberBox::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (!tryBeginScrub(event))
+        LineEdit::mouseDoubleClickEvent(event);
+}
+
 void NumberBox::mousePressEvent(QMouseEvent* event)
 {
-    if (event && event->button() == Qt::LeftButton && isEnabled() && !isReadOnly()
-        && scrubHandleRect().contains(event->pos())) {
-        const QPointer<NumberBox> guard(this);
-        setFocus(Qt::MouseFocusReason);
-        if (!guard)
-            return;
-        m_scrubInitialValue = m_value;
-        m_scrubInitialText = text();
-        m_scrubBase = std::isfinite(m_value) ? m_value : normalizedStepStart();
-        m_scrubStart = fluentMouseGlobalPos(event);
-        m_scrubbing = true;
-        updateWidgetCursor(m_pointerCursor, this, Qt::SizeHorCursor);
-        event->accept();
-        emit scrubbingChanged(true);
-        if (guard && m_scrubbing)
-            emit scrubStarted(m_scrubInitialValue);
+    if (tryBeginScrub(event))
         return;
-    }
     if (event && event->button() == Qt::LeftButton && isEnabled() && !isReadOnly()) {
         m_pressed = inputRect().contains(event->pos());
         update();
