@@ -163,6 +163,18 @@ class TimedMessageButton(MessageButton):
         self._apply_duration(surface)
 
 
+class _FormAction(QAction):
+    textTriggered = Signal(str)
+
+    def __init__(self, text, parent):
+        super().__init__(text, parent)
+        self.triggered.connect(self._emit_text)
+
+    @Slot()
+    def _emit_text(self):
+        self.textTriggered.emit(self.text())
+
+
 class CommandsButton(SurfaceButton):
     actionTriggered = Signal(str)
 
@@ -197,14 +209,10 @@ class CommandsButton(SurfaceButton):
                 action.deleteLater()
         self._actions = []
         for text in self._texts:
-            action = QAction(text, surface)
-            action.triggered.connect(self._dispatch)
+            action = _FormAction(text, surface)
+            action.textTriggered.connect(self.actionTriggered)
             if kind == "CommandPalette":
                 surface.addCommand(action)
             else:
                 surface.addAction(action)
             self._actions.append(action)
-
-    @Slot()
-    def _dispatch(self):
-        self.actionTriggered.emit(self.sender().text())

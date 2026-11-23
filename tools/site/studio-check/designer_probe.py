@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 from fluentqt_designer_catalog import WIDGETS
 
 DIRECTORY = Path(os.environ["STUDIO_EXPORT_DIR"])
-templates = json.loads((DIRECTORY / "templates.json").read_text())
+templates = json.loads((DIRECTORY / "templates.json").read_text(encoding="utf-8"))
 classes = {w.get("surface", w["name"].removeprefix("Fluent")): w["name"] for w in WIDGETS}
 
 
@@ -52,7 +52,8 @@ def verify(form, root):
             assert [widget.itemText(i) for i in range(widget.count())] == props["items"], node["id"]
             assert widget.currentIndex() == props["currentIndex"], node["id"]
         if kind == "Button" and "fluentStyle" in props:
-            assert widget.fluentStyle().name == props["fluentStyle"], node["id"]
+            style = widget.fluentStyle()
+            assert style == getattr(type(style), props["fluentStyle"]), (node["id"], style)
         if kind == "Expander":
             assert widget.isExpanded() == props["expanded"], node["id"]
         if kind in ("Slider", "RatingControl", "ProgressRing", "ProgressBar", "InfoBadge"):
@@ -80,11 +81,11 @@ def inspect_forms():
                 target.mkdir(parents=True, exist_ok=True)
                 assert form.mainContainer().grab().save(str(target / (name + ".png")))
             print("Designer verified", name, flush=True)
-        (DIRECTORY / "designer-verified.json").write_text(json.dumps(sorted(forms)))
-        os._exit(0)
+        (DIRECTORY / "designer-verified.json").write_text(json.dumps(sorted(forms)), encoding="utf-8")
+        QApplication.exit(0)
     except BaseException:
         traceback.print_exc()
-        os._exit(1)
+        QApplication.exit(1)
 
 
 QTimer.singleShot(500, inspect_forms)
