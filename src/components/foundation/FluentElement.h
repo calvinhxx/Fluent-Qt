@@ -97,8 +97,7 @@ public:
         int overlay; // 8: overlay containers (Dialog, ToolTip, Flyout). zh_CN: 浮层容器。
     };
 
-// Windows RPC headers define small as char; keep that macro intact for the including file.
-#pragma push_macro("small")
+#pragma push_macro("small") // Windows RPC headers define small as char.
 #undef small
     struct Spacing {
         struct {
