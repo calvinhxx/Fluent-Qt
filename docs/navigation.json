@@ -169,6 +169,7 @@
         {
           "title": "1.12",
           "pages": [
+            "releases/v1.12.2.md",
             "releases/v1.12.1.md",
             "releases/v1.12.0.md"
           ]

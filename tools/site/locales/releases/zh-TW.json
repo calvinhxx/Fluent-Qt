@@ -1,4 +1,8 @@
 {
+"0b980ca9":"`NumberBox` 可設為必填，也可在數值兩側顯示減號與加號。拖曳控制項或取色結束後，會還原應用程式設定的游標。",
+"0ca130e3":"桌面版與 Python 版 Gallery 的安裝套件現已收錄全部 99 個項目，包含 `QmlView`。",
+"a736ef94":"安裝版 Gallery 收錄全部 99 個項目",
+"7ac09ef2":"C++ 與 PySide6 可共用 Qt Designer 表單。網頁版 Page Studio 可將版面配置匯出為 C++、PySide6 或 Designer 檔案。",
 "f25480bf":"`PropertyPanel` 會在資料列即將進入畫面時建立編輯器。游標在 `AreaChart` 上移動時會重用已繪製的填色區域。",
 "c6a2d3a7":"捲動 What’s new 對話框時，分隔線不再透出底層內容。相片範例會按需載入圖片。",
 "6a98d65c":"Gallery 更新記錄與相片",

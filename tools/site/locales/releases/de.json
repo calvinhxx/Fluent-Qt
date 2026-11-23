@@ -1,4 +1,8 @@
 {
+"0b980ca9":"`NumberBox` kann eine Zahl verlangen und Minus und Plus auf gegenüberliegenden Seiten anzeigen. Nach dem Ziehen oder der Farbauswahl stellen Widgets den Mauszeiger der Anwendung wieder her.",
+"0ca130e3":"Die Desktop- und Python-Pakete der Gallery enthalten jetzt alle 99 Einträge, einschließlich `QmlView`.",
+"a736ef94":"Alle 99 Gallery-Einträge in den Installationspaketen",
+"7ac09ef2":"Erstellen Sie gemeinsame Qt-Designer-Formulare für C++ und PySide6. Page Studio exportiert Layouts als C++-, PySide6- oder Designer-Dateien.",
 "f25480bf":"`PropertyPanel` erstellt Editoren, sobald ihre Zeilen in den sichtbaren Bereich kommen. `AreaChart` verwendet die Flächenfüllung bei Mausbewegungen erneut.",
 "c6a2d3a7":"Beim Scrollen im Dialog „What’s new“ bleiben die Trennlinien undurchsichtig. Die Fotobeispiele laden Bilder bei Bedarf.",
 "6a98d65c":"Versionshinweise und Fotos in der Gallery",

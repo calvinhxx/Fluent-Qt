@@ -1,4 +1,8 @@
 {
+"0b980ca9":"`NumberBox` peut exiger une valeur et placer les boutons moins et plus de part et d’autre du nombre. Après un glisser ou un prélèvement de couleur, les contrôles rétablissent le curseur de l’application.",
+"0ca130e3":"Les paquets de Gallery pour le bureau et Python comprennent désormais les 99 entrées, dont `QmlView`.",
+"a736ef94":"Les 99 entrées de Gallery dans les paquets installés",
+"7ac09ef2":"Créez des formulaires Qt Designer communs à C++ et PySide6. Page Studio exporte les mises en page en C++, en PySide6 ou au format Designer.",
 "f25480bf":"`PropertyPanel` crée les éditeurs à mesure que les lignes deviennent visibles. `AreaChart` réutilise le remplissage lorsque le pointeur se déplace sur le graphique.",
 "c6a2d3a7":"Les séparateurs de la boîte de dialogue What’s new restent opaques pendant le défilement. Les exemples de photos chargent les images à la demande.",
 "6a98d65c":"Notes de version et photos dans Gallery",

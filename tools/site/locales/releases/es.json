@@ -1,4 +1,8 @@
 {
+"0b980ca9":"`NumberBox` puede exigir un valor y colocar los botones menos y más a cada lado. Al terminar de arrastrar o elegir un color, los controles restauran el cursor de la aplicación.",
+"0ca130e3":"Los paquetes de Gallery para escritorio y Python incluyen las 99 entradas, entre ellas `QmlView`.",
+"a736ef94":"Las 99 entradas de Gallery en los paquetes de instalación",
+"7ac09ef2":"Cree formularios de Qt Designer compartidos entre C++ y PySide6. Page Studio exporta diseños a C++, PySide6 y archivos de Designer.",
 "f25480bf":"`PropertyPanel` crea los editores a medida que las filas entran en pantalla. `AreaChart` reutiliza el relleno al mover el puntero por el gráfico.",
 "c6a2d3a7":"Al desplazarse por el diálogo What’s new, las líneas divisorias permanecen opacas. Los ejemplos de fotos cargan las imágenes cuando se necesitan.",
 "6a98d65c":"Notas de versión y fotos en Gallery",
