@@ -97,6 +97,9 @@ public:
         int overlay; // 8: overlay containers (Dialog, ToolTip, Flyout). zh_CN: 浮层容器。
     };
 
+// Windows RPC headers define small as char; keep that macro intact for the including file.
+#pragma push_macro("small")
+#undef small
     struct Spacing {
         struct {
             int controlH, controlV;
@@ -112,6 +115,7 @@ public:
         } controlHeight; // Standard control heights. zh_CN: 标准控件高度。
         int xSmall, small, medium, standard, large, xLarge, xxLarge;
     };
+#pragma pop_macro("small")
 
     struct Animation {
         // Durations (ms)
