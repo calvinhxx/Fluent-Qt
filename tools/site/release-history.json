@@ -2,6 +2,58 @@
   "schema_version": 2,
   "versions": [
     {
+      "version": "1.12.2",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "d641bb07dca38b7da0287210d31e4574407ad2bef98b70a6dc970030cb0ebd32",
+      "groups": [
+        {
+          "scope": "uilib",
+          "summary": {
+            "en": "`NumberBox` can require a value and place minus and plus on opposite sides. Widgets restore the application cursor after dragging or picking a color.",
+            "zh": "`NumberBox` 可设为必填，也可在数值两侧显示减号和加号。拖动控件或取色结束后会恢复应用设置的光标。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [
+            "number-box",
+            "color-picker"
+          ],
+          "headers": [
+            "src/components/textfields/NumberBox.h"
+          ]
+        },
+        {
+          "scope": "gallery",
+          "summary": {
+            "en": "Desktop and Python Gallery packages now include all 99 entries, including `QmlView`.",
+            "zh": "桌面和 Python 版 Gallery 安装包现均包含全部 99 项，其中包括 `QmlView`。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [
+            "qml-view"
+          ],
+          "headers": [],
+          "headline": {
+            "en": "All 99 Gallery entries in installed packages",
+            "zh": "安装版 Gallery 补齐 99 项"
+          }
+        },
+        {
+          "scope": "project",
+          "summary": {
+            "en": "Build shared Qt Designer forms for C++ and PySide6. Page Studio exports layouts to C++, PySide6 and Designer files.",
+            "zh": "C++ 和 PySide6 可共用 Qt Designer 表单。网页版 Page Studio 可将布局导出为 C++、PySide6 或 Designer 文件。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [],
+          "headers": []
+        }
+      ]
+    },
+    {
       "version": "1.12.1",
       "status": "published",
       "published_at": "2026-11-20T10:14:09Z",

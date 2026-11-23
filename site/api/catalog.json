@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project": {
     "name": "FluentQt",
-    "version": "1.12.1",
+    "version": "1.12.2",
     "api_version": "1.12",
     "cpp_standard": "C++17",
     "qt_versions": [
