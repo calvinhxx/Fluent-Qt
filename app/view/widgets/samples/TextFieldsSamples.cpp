@@ -6,6 +6,7 @@
 
 #include <cmath>
 
+#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QFile>
 #include <QIntValidator>
@@ -769,46 +770,56 @@ QVector<GallerySample> numberBoxSamples()
                 layout->addWidget(status);
                 return surface;
             }),
-        makeSample(QStringLiteral("number-box-spin-placement"), QStringLiteral("Spin button placement"),
-            QStringLiteral("Inline and compact placement expose the same value model with different chrome density."),
+        makeSample(QStringLiteral("number-box-spin-placement"), QStringLiteral("Quantity and precision"),
+            QStringLiteral("Adjust a required quantity or precision, or leave the discount empty."),
             QStringLiteral(
-                "auto* inlineBox = new NumberBox(this);\n"
-                "inlineBox->setHeader(\"Inline\");\n"
-                "inlineBox->setRange(0, 100);\n"
-                "inlineBox->setSmallChange(5);\n"
-                "inlineBox->setLargeChange(25);\n"
-                "inlineBox->setValue(50);\n"
-                "inlineBox->setSpinButtonPlacementMode(\n"
-                "    NumberBox::SpinButtonPlacementMode::Inline);\n"
+                "auto* quantity = new NumberBox(this);\n"
+                "quantity->setHeader(\"Purchase quantity\");\n"
+                "quantity->setRange(1, 99);\n"
+                "quantity->setEmptyAllowed(false);\n"
+                "quantity->setValue(3);\n"
+                "quantity->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Split);\n"
                 "\n"
-                "auto* compactBox = new NumberBox(this);\n"
-                "compactBox->setHeader(\"Compact\");\n"
-                "compactBox->setRange(0, 100);\n"
-                "compactBox->setSmallChange(5);\n"
-                "compactBox->setLargeChange(25);\n"
-                "compactBox->setValue(50);\n"
-                "compactBox->setSpinButtonPlacementMode(\n"
-                "    NumberBox::SpinButtonPlacementMode::Compact);"),
+                "auto* precision = new NumberBox(this);\n"
+                "precision->setHeader(\"Decimal places\");\n"
+                "precision->setRange(0, 6);\n"
+                "precision->setEmptyAllowed(false);\n"
+                "precision->setValue(2);\n"
+                "precision->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Compact);\n"
+                "\n"
+                "auto* discount = new NumberBox(this);\n"
+                "discount->setHeader(\"Discount (optional)\");\n"
+                "discount->setRange(0, 100);\n"
+                "discount->setTrailingText(\"%\");\n"
+                "discount->setSpinButtonPlacementMode(NumberBox::SpinButtonPlacementMode::Inline);"),
             [](QWidget* parent) {
-                auto* surface = textFieldSurface(parent, 10);
-                auto* layout = static_cast<QVBoxLayout*>(surface->layout());
-
-                auto createBox = [surface](const QString& header, NumberBox::SpinButtonPlacementMode mode) {
+                auto* surface = new QWidget(parent);
+                auto* form = new QFormLayout(surface);
+                form->setContentsMargins(0, 0, 0, 0);
+                form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+                form->setFormAlignment(Qt::AlignLeading | Qt::AlignTop);
+                form->setSpacing(::Spacing::Medium);
+                using Placement = NumberBox::SpinButtonPlacementMode;
+                auto field = [surface](const QString& label, Placement mode, int minimum, int maximum) {
                     auto* box = new NumberBox(surface);
-                    box->setHeader(header);
-                    box->setRange(0, 100);
-                    box->setSmallChange(5);
-                    box->setLargeChange(25);
-                    box->setValue(50);
+                    box->setHeader(label);
+                    box->setRange(minimum, maximum);
                     box->setSpinButtonPlacementMode(mode);
-                    box->setFixedWidth(260);
+                    box->setFixedWidth(168);
                     return box;
                 };
+                auto* quantity = field(QStringLiteral("Purchase quantity"), Placement::Split, 1, 99);
+                quantity->setEmptyAllowed(false);
+                quantity->setValue(3);
 
-                addLabeledWidget(surface, layout, QStringLiteral("Inline"),
-                    createBox(QStringLiteral("Inline"), NumberBox::SpinButtonPlacementMode::Inline));
-                addLabeledWidget(surface, layout, QStringLiteral("Compact"),
-                    createBox(QStringLiteral("Compact"), NumberBox::SpinButtonPlacementMode::Compact));
+                auto* precision = field(QStringLiteral("Decimal places"), Placement::Compact, 0, 6);
+                precision->setEmptyAllowed(false);
+                precision->setValue(2);
+                form->addRow(quantity, precision);
+
+                auto* discount = field(QStringLiteral("Discount (optional)"), Placement::Inline, 0, 100);
+                discount->setTrailingText(QStringLiteral("%"));
+                form->addRow(discount);
                 return surface;
             }),
         makeSample(QStringLiteral("number-box-formatting"), QStringLiteral("Precision and format step"),

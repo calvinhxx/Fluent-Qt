@@ -1560,7 +1560,7 @@
     {
       "route_id": "number-box",
       "sample_id": "number-box-spin-placement",
-      "source": "inline = fluentqt.NumberBox()\ninline.setHeader(\"Inline\")\ninline.setRange(0, 100)\ninline.setSmallChange(5)\ninline.setLargeChange(25)\ninline.setValue(50)\ninline.setSpinButtonPlacementMode(\n    fluentqt.NumberBox.SpinButtonPlacementMode.Inline\n)\n\ncompact = fluentqt.NumberBox()\ncompact.setHeader(\"Compact\")\ncompact.setRange(0, 100)\ncompact.setSmallChange(5)\ncompact.setLargeChange(25)\ncompact.setValue(50)\ncompact.setSpinButtonPlacementMode(\n    fluentqt.NumberBox.SpinButtonPlacementMode.Compact\n)\n"
+      "source": "placement = fluentqt.NumberBox.SpinButtonPlacementMode\n\nquantity = fluentqt.NumberBox()\nquantity.setHeader(\"Purchase quantity\")\nquantity.setRange(1, 99)\nquantity.setEmptyAllowed(False)\nquantity.setValue(3)\nquantity.setSpinButtonPlacementMode(placement.Split)\n\nprecision = fluentqt.NumberBox()\nprecision.setHeader(\"Decimal places\")\nprecision.setRange(0, 6)\nprecision.setEmptyAllowed(False)\nprecision.setValue(2)\nprecision.setSpinButtonPlacementMode(placement.Compact)\n\ndiscount = fluentqt.NumberBox()\ndiscount.setHeader(\"Discount (optional)\")\ndiscount.setRange(0, 100)\ndiscount.setTrailingText(\"%\")\ndiscount.setSpinButtonPlacementMode(placement.Inline)\n"
     },
     {
       "route_id": "number-box",

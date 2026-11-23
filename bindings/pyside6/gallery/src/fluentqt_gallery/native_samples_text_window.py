@@ -1024,23 +1024,38 @@ register_source_samples(
         ),
         "number-box-spin-placement": (
             "root",
-            _text_script(
+            _script(
                 """
-                root, layout = make_text_surface(10)
-                for header, mode in (
-                    ("Inline", fluentqt.NumberBox.SpinButtonPlacementMode.Inline),
-                    ("Compact", fluentqt.NumberBox.SpinButtonPlacementMode.Compact),
-                ):
+                root = QWidget(globals().get("gallery_parent"))
+                form = QFormLayout(root)
+                form.setContentsMargins(0, 0, 0, 0)
+                form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+                form.setFormAlignment(Qt.AlignLeading | Qt.AlignTop)
+                form.setSpacing(12)
+                placement = fluentqt.NumberBox.SpinButtonPlacementMode
+
+                def field(label, mode, minimum, maximum):
                     box = fluentqt.NumberBox(root)
-                    box.setHeader(header)
-                    box.setRange(0, 100)
-                    box.setSmallChange(5)
-                    box.setLargeChange(25)
-                    box.setValue(50)
+                    box.setHeader(label)
+                    box.setRange(minimum, maximum)
                     box.setSpinButtonPlacementMode(mode)
-                    box.setFixedWidth(260)
-                    add_labeled_widget(root, layout, header, box)
-                """
+                    box.setFixedWidth(168)
+                    return box
+
+                quantity = field("Purchase quantity", placement.Split, 1, 99)
+                quantity.setEmptyAllowed(False)
+                quantity.setValue(3)
+
+                precision = field("Decimal places", placement.Compact, 0, 6)
+                precision.setEmptyAllowed(False)
+                precision.setValue(2)
+                form.addRow(quantity, precision)
+
+                discount = field("Discount (optional)", placement.Inline, 0, 100)
+                discount.setTrailingText("%")
+                form.addRow(discount)
+                """,
+                "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QFormLayout, QWidget",
             ),
         ),
         "number-box-formatting": (
