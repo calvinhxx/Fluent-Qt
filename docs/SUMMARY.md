@@ -19,6 +19,8 @@ standalone reading tasks.
     - [Particles: optional decorative effects](architecture/particles.md)
     - [QmlBridge: application QML in a QWidget host](architecture/qml-bridge.md)
     - [Window Chrome Architecture](architecture/window-chrome.md)
+    - [Mouse cursors in Widgets](architecture/pointer-cursors.md)
+    - [Widget cursor audit](architecture/pointer-cursor-audit.md)
     - [Overlay Behavior Contract](architecture/overlay-behavior.md)
     - [Typography Resolution](architecture/typography-resolution.md)
     - [Inspector Report Contract](architecture/inspector-report.md)

@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← Window Chrome Architecture](window-chrome.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Typography Resolution →](typography-resolution.md)
+[← Widget cursor audit](pointer-cursor-audit.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Typography Resolution →](typography-resolution.md)
 <!-- docs-nav:top:end -->
 
 Transient overlays (`Popup`, `Flyout`, `ComboBox` / `MultiSelectComboBox`
@@ -561,5 +561,5 @@ window instead.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Window Chrome Architecture](window-chrome.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Typography Resolution →](typography-resolution.md)
+[← Widget cursor audit](pointer-cursor-audit.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Typography Resolution →](typography-resolution.md)
 <!-- docs-nav:bottom:end -->

@@ -605,6 +605,19 @@ and leaves the action available for retry. This presentation adaptation
 does not repair upstream accessibility geometry updates or replace native
 screen-reader and IME acceptance.
 
+## Pointer feedback
+
+Field text, built-in buttons and drag handles have distinct hit areas. Read-only
+editors retain native selection and cursor behavior. An interrupted pick or drag releases
+its temporary cursor. Keyboard actions, focus and accessible names are owned
+by the same widgets as before. See the [cursor contract](../architecture/pointer-cursors.md)
+and [interaction tests](../../tests/components/TestWidgetCursors.cpp).
+
+NumberBox exposes increase and decrease actions in each button layout. In
+Split mode the minus and plus buttons keep their accessible names when the
+layout direction changes. With empty values disabled, a blank edit can be
+typed and replaced; committing it restores the previous numeric value.
+
 ## Component contracts
 
 `FontIcon` remains a non-focusable, mouse-transparent decoration with either

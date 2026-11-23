@@ -28,6 +28,8 @@
             "architecture/particles.md",
             "architecture/qml-bridge.md",
             "architecture/window-chrome.md",
+            "architecture/pointer-cursors.md",
+            "architecture/pointer-cursor-audit.md",
             "architecture/overlay-behavior.md",
             "architecture/typography-resolution.md",
             "architecture/inspector-report.md",

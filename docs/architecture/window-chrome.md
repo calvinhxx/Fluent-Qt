@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
 
-[← QmlBridge: application QML in a QWidget host](qml-bridge.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
+[← QmlBridge: application QML in a QWidget host](qml-bridge.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Mouse cursors in Widgets →](pointer-cursors.md)
 <!-- docs-nav:top:end -->
 
 ## Ownership and boundary
@@ -347,5 +347,5 @@ When changing backdrop behavior, verify:
 
 <!-- docs-nav:bottom:start -->
 ---
-[← QmlBridge: application QML in a QWidget host](qml-bridge.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
+[← QmlBridge: application QML in a QWidget host](qml-bridge.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Mouse cursors in Widgets →](pointer-cursors.md)
 <!-- docs-nav:bottom:end -->
