@@ -88,9 +88,12 @@ class GalleryWheelBuilderTest(unittest.TestCase):
                 ).decode("utf-8")
             self.assertIn("fluentqt_gallery/__init__.py", names)
             self.assertFalse(any(name.startswith("fluentqt/") for name in names))
-            self.assertIn("Requires-Dist: FluentQt (==1.5.0)", metadata)
             self.assertIn("Requires-Python: >=3.11,<3.14", metadata)
             parsed = Parser().parsestr(metadata)
+            self.assertRegex(
+                parsed.get("Requires-Dist", ""),
+                r"(?i)^fluentqt\s*(?:==\s*1\.5\.0|\(\s*==\s*1\.5\.0\s*\))$",
+            )
             self.assertEqual(parsed["Metadata-Version"], "2.4")
             self.assertEqual(
                 parsed["Description-Content-Type"],

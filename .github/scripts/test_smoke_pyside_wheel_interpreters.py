@@ -157,13 +157,14 @@ class StableAbiWheelSmokeTest(unittest.TestCase):
         for install in installs:
             self.assertTrue(install[-2].endswith("cp311-abi3-win_amd64.whl"))
             self.assertTrue(install[-1].endswith("py3-none-any.whl"))
+        smoke_names = {"test_wheel_smoke.py", "test_gallery_wheel_smoke.py"}
         smoke_runs = [
-            (command, kwargs)
+            (Path(command[1]).name, kwargs)
             for command, kwargs in commands
-            if command[-1].endswith("test_wheel_smoke.py")
+            if len(command) == 2 and Path(command[1]).name in smoke_names
         ]
-        self.assertEqual(len(smoke_runs), 2)
-        for _command, kwargs in smoke_runs:
+        self.assertCountEqual([name for name, _ in smoke_runs], sorted(smoke_names) * 2)
+        for _name, kwargs in smoke_runs:
             self.assertEqual(kwargs["env"]["QT_QPA_PLATFORM"], "offscreen")
             self.assertEqual(kwargs["env"]["FLUENTQT_EXPECTED_VERSION"], "1.10.3")
             self.assertNotIn("PYTHONPATH", kwargs["env"])

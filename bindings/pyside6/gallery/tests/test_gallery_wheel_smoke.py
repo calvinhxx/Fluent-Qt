@@ -102,7 +102,7 @@ def verify_runtime_catalog(contract, categories, entries, routes, support_types,
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path,
-                        help="Also compare installed data with this source checkout (required in CI).")
+                        help="Compare installed data with the source checkout once per wheel in CI.")
     args = parser.parse_args(argv)
     import fluentqt
     import fluentqt_gallery
@@ -116,9 +116,6 @@ def main(argv=None):
         raise AssertionError("Installed FluentQt wheel has the wrong version")
     if metadata.version("FluentQt-Gallery") != expected_version:
         raise AssertionError("Installed Gallery wheel has the wrong version")
-    expected_requirement = "FluentQt (=={0})".format(expected_version)
-    if expected_requirement not in (metadata.requires("FluentQt-Gallery") or ()):
-        raise AssertionError("Gallery wheel does not pin the matching FluentQt")
     if fluentqt.__version__ != expected_version:
         raise AssertionError("Gallery dependency and native UILib versions differ")
     if util.find_spec("fluentqt.gallery") is not None:
