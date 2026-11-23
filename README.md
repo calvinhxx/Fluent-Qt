@@ -199,6 +199,12 @@ See the [Python guide](bindings/pyside6/README.md) for examples, compatibility, 
 
 Drag and drop FluentQt widgets and form templates in Qt Creator (C++) or pyside6-designer (Python) with shared `.ui` files. See the [Qt Designer guide](tools/designer/README.md) for setup and usage.
 
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer showing the FluentQt Widget Box, Workspace Preferences form canvas, and FluentButton Property Editor">
+  </a>
+</p>
+
 ## 🛠 Build
 
 ### Dependencies

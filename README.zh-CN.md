@@ -197,6 +197,12 @@ python -m pip install FluentQt
 
 支持在 Qt Creator（C++）和 pyside6-designer（Python）中拖拽控件与表单模板，两端共用 `.ui` 文件。配置与用法见 [Qt Designer 指南](tools/designer/README.md)。
 
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer 中的 FluentQt 控件箱、实时表单画布与 FluentButton 属性编辑器">
+  </a>
+</p>
+
 ## 🛠 构建
 
 ### 依赖
