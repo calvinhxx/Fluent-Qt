@@ -266,6 +266,8 @@
 "Zoom":"Zoom"
 },
 "strings": {
+"6d95472d":"Permitir un valor vacío",
+"3390e052":"Si se desactiva, confirmar una entrada vacía o no válida restaura el último valor.",
 "dc133f65":"0 permite que los controles se superpongan. Cada extremo queda limitado por el otro y por esta separación mínima.",
 "7f8e0d63":"0 calcula el espaciado según los pasos. Seleccione una posición de marca para verla al pasar el cursor.",
 "637388e1":"Perspectiva 3D",

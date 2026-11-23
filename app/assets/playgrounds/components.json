@@ -4491,6 +4491,23 @@
         "effect": "behavior"
       },
       {
+        "id": "emptyAllowed",
+        "property": "emptyAllowed",
+        "setter": "setEmptyAllowed",
+        "type": "boolean",
+        "label": {
+          "en": "Allow empty value",
+          "zh": "允许空值"
+        },
+        "category": "basic",
+        "default": true,
+        "effect": "behavior",
+        "effectHint": {
+          "en": "When off, committing blank or invalid text restores the last value.",
+          "zh": "关闭后，提交空白或无效文本会恢复上次的数值。"
+        }
+      },
+      {
         "id": "value",
         "property": "value",
         "setter": "setValue",
