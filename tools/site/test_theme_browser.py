@@ -295,6 +295,32 @@ def check_directory_hierarchy(page: object, site_url: str, *, language: str = "e
         raise RuntimeError('Clearing search lost the reader\'s expanded branches')
 
 
+def check_playground_hover_contrast(preview: object) -> None:
+    preview.hover()
+    ratio = preview.evaluate("""button => {
+        if (!button.matches(':hover')) throw new Error('Pointer missed the property preview button');
+        for (const transition of button.getAnimations()) {
+            if (['color', 'background-color'].includes(transition.transitionProperty)) transition.finish();
+        }
+        const ctx = document.createElement('canvas').getContext('2d');
+        function luminance(color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, 1, 1);
+            const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+            function linear(byte) {
+                const channel = byte / 255;
+                return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+            }
+            return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+        }
+        const style = getComputedStyle(button);
+        const fg = luminance(style.color), bg = luminance(style.backgroundColor);
+        return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+    }""")
+    if ratio < 4.5:
+        raise RuntimeError(f"Property preview hover contrast is {ratio:.2f}, expected at least 4.5")
+
+
 def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | None = None) -> dict:
     if site_root is None:
         prepare_site_theme_contract(PROJECT_ROOT)
@@ -331,6 +357,11 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                     raise RuntimeError(f"Could not load the website theme contract for {language}")
                 page.wait_for_selector("html[data-i18n-ready]", timeout=10_000)
 
+                preview = page.locator(".hero-playground-action")
+                preview.wait_for(state="visible")
+                if language == "en":  # All localized homepages share the button stylesheet.
+                    check_playground_hover_contrast(preview)
+
                 for width in (960, 1024, 1280):
                     page.set_viewport_size({"width": width, "height": 800})
                     menu = page.locator(".menu-button")
@@ -362,28 +393,6 @@ def run_site_theme_contract(browser: object, output: Path, *, site_root: Path | 
                 toggle = page.locator("[data-theme-toggle]")
                 if active_theme() != "light":
                     raise RuntimeError("Website did not start in the emulated light theme")
-                preview = page.locator('.hero-playground-action')
-                preview.hover()
-                ratio = page.wait_for_function("""button => {
-                    // A hover transition can be replaced. Measure the settled, currently hovered frame.
-                    if (!button.matches(':hover') || button.getAnimations().some(a => a.pending || a.playState !== 'finished'))
-                        return false;
-                    const ctx = document.createElement('canvas').getContext('2d');
-                    function luminance(color) {
-                        ctx.fillStyle = color;
-                        ctx.fillRect(0, 0, 1, 1);
-                        const [r, g, b] = [...ctx.getImageData(0, 0, 1, 1).data].map(byte => {
-                            const channel = byte / 255;
-                            return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-                        });
-                        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                    }
-                    const style = getComputedStyle(button);
-                    const fg = luminance(style.color), bg = luminance(style.backgroundColor);
-                    return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
-                }""", arg=preview.element_handle()).json_value()
-                if ratio < 4.5:
-                    raise RuntimeError(f"Property preview hover contrast is {ratio:.2f} in {language}")
                 toggle.click()
                 if active_theme() != "dark" or stored_theme() != "dark":
                     raise RuntimeError("Website light-to-dark theme transition failed")

@@ -10,7 +10,7 @@ from wasm_drawer_lifecycle import run_drawer_lifecycle_contract
 
 
 def run_command_palette_contract(browser: object, base_url: str, artifact_dir: Path) -> None:
-    from playwright.sync_api import expect, TimeoutError as PlaywrightTimeoutError
+    from playwright.sync_api import expect
 
     artifact_dir.mkdir(parents=True, exist_ok=True)
     page = browser.new_page(viewport={"width": 1440, "height": 900}, device_scale_factor=2)
@@ -27,16 +27,21 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
     def expect_absent(target: object) -> None:
         expect(target).to_have_count(0, timeout=30_000)
 
-    def text_is(value: str, timeout: int = 30_000) -> None:
-        # Qt exposes focused editor text through its input-method element.
-        # The separate accessibility input can remain empty, so inspect both
-        # document and Qt shadow roots without writing to either input.
+    def label_value(object_name: str, expected: str) -> None:
+        label = page.locator(f'textarea[id$=".{object_name}"][aria-hidden="false"]')
+        expect(label).to_have_value(expected, timeout=30_000)
+
+    def expect_cut_result() -> None:
+        # Qt may publish physical edits only through its focused input-method proxy.
+        expect_absent(search)
         page.wait_for_function(
-            """expected => [document, document.querySelector('#qt-shadow-container').shadowRoot]
-                .some(root => [...root.querySelectorAll('[role="textbox"], textarea, input')]
-                    .some(element => (element.value ?? element.textContent) === expected))""",
-            arg=value,
-            timeout=timeout,
+            """expected => {
+                const root = document.querySelector('#qt-shadow-container').shadowRoot;
+                const editor = root.querySelector('input[id$=".Gallery.CommandPalette.Editor"][aria-hidden="false"]');
+                const inputMethod = document.querySelector('body > input[type="text"]:focus');
+                return editor && (editor.value === expected || inputMethod?.value === expected);
+            }""",
+            arg=" the release notes", timeout=30_000,
         )
 
     def click(button: object) -> None:
@@ -82,7 +87,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         page.screenshot(path=str(artifact_dir / "default-modal-blur.png"))
         page.keyboard.type("inbox")
         page.keyboard.press("Enter")
-        text_is("Current page: Inbox")
+        label_value("Gallery.CommandPalette.BasicLocation", "Current page: Inbox")
         expect_absent(search)
         page.set_viewport_size({"width": 1440, "height": 2800})
         open_route("command-palette")
@@ -99,19 +104,19 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         click(open_button)
         page.keyboard.type("properties")
         page.keyboard.press("Enter")
-        text_is("0 notes")
+        label_value("Gallery.CommandPalette.Status", "0 notes")
         click(open_button)
         page.keyboard.type("new")
         page.wait_for_timeout(300)
         page.screenshot(path=str(artifact_dir / "search.png"))
         page.keyboard.press("Enter")
-        text_is("1 note")
+        label_value("Gallery.CommandPalette.Status", "1 note")
         expect_absent(search)
         page.screenshot(path=str(artifact_dir / "executed.png"))
         click(open_button)
         page.keyboard.type("clear")
         page.keyboard.press("Enter")
-        text_is("0 notes")
+        label_value("Gallery.CommandPalette.Status", "0 notes")
         expect_absent(search)
         # Toggle the same checked action from the toolbar and restore the
         # sample before continuing through its navigation commands.
@@ -121,7 +126,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
             click(open_button)
             page.keyboard.type(destination.lower())
             page.keyboard.press("Enter")
-            text_is(destination)
+            label_value("Gallery.CommandPalette.Location", destination)
             expect_absent(search)
         # Both samples fit in this viewport, including the editing commands.
         edit_button = page.get_by_role("button", name="Search editing commands", exact=True)
@@ -129,7 +134,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         expect_visible(search)
         page.keyboard.type("cut")
         page.keyboard.press("Enter")
-        text_is(" the release notes")
+        expect_cut_result()
         click(page.get_by_role("button", name="Reset text", exact=True))
         click(edit_button)
         expect_visible(search)
@@ -143,7 +148,7 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
         expect_visible(search)
         page.keyboard.type("cut")
         page.keyboard.press("Enter")
-        text_is(" the release notes")
+        expect_cut_result()
         click(page.get_by_role("button", name="Reset text", exact=True))
         # A modal outside press dismisses without activating the sidebar.
         # The runtime now exposes visible navigation rows as named tree items.
@@ -175,38 +180,26 @@ def run_command_palette_contract(browser: object, base_url: str, artifact_dir: P
             # <dialog> container is closed even while the canvas card is open.
             effects = control("Modal")
             expect_visible(effects)
-            if route == "drawer-view":
-                page.wait_for_timeout(350)
-            def adjust_slider(suffix: str, expected: str) -> None:
-                # Wait for real input to reach the settled control instead of
-                # assuming that one fixed delay covers slow browser frames.
-                for attempt in range(5):
-                    click(control(suffix))
-                    page.keyboard.press("End")
-                    try:
-                        text_is(expected, timeout=5_000)
-                        return
-                    except PlaywrightTimeoutError as error:
-                        if attempt == 4:
-                            raise RuntimeError(
-                                f"{route} {suffix} did not reach {expected!r} "
-                                "after physical click and End"
-                            ) from error
+            labels = page.locator(f'textarea[id*=".{prefix}.Effects."][aria-hidden="false"]')
+            for suffix, expected in (("Blur", "Blur: 24 px"), ("Dim", "Dim: 60%")):
+                slider = control(suffix)
+                slider.scroll_into_view_if_needed(timeout=30_000)
+                click(slider)
+                page.keyboard.press("End")
+                expect(labels.filter(has_text=expected)).to_have_value(expected, timeout=30_000)
 
-            adjust_slider("Blur", "Blur: 24 px")
-            adjust_slider("Dim", "Dim: 60%")
             background = page.get_by_role("button", name="Background action", exact=True)
             click(background)
-            text_is("Background clicks: 0")
+            label_value(f"{prefix}.Status", "Background clicks: 0")
             expect_visible(effects)
             page.screenshot(path=str(artifact_dir / f"{route}-effects.png"))
             click(control("DimEnabled"))
             click(background)
-            text_is("Background clicks: 0")
+            label_value(f"{prefix}.Status", "Background clicks: 0")
             expect_visible(effects)
             click(control("Modal"))
             click(background)
-            text_is("Background clicks: 1")
+            label_value(f"{prefix}.Status", "Background clicks: 1")
             expect_visible(effects)
             click(control("Modal"))
             click(sidebar)

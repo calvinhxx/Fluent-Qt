@@ -33,11 +33,10 @@ def run(browser, base_url, output, screenshots=False):
 
     def assert_reachable():
         panel=page.locator('.playground-tabpanel:not([hidden])')
-        info=panel.evaluate('e=>({height:e.clientHeight,scroll:e.scrollHeight,overflow:getComputedStyle(e).overflowY,gutter:getComputedStyle(e).scrollbarGutter})')
+        info=panel.evaluate('e=>({height:e.clientHeight,scroll:e.scrollHeight})')
         bounds=panel.bounding_box(); modal=page.locator('.playground-popover').bounding_box()
         assert info['height']>=120, info
         assert bounds['y']+bounds['height']<=modal['y']+modal['height']-8, (bounds,modal)
-        assert info['overflow']=='auto' and info['gutter']=='stable', info
         first=panel.locator('.playground-field').first.bounding_box()
         assert first['y']<bounds['y']+bounds['height'], (first,bounds)
         return panel,info

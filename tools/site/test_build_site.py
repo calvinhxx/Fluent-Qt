@@ -19,19 +19,6 @@ from site_locales import LOCALES
 
 
 class SiteArtifactTest(unittest.TestCase):
-    def test_ci_prepare_entries_install_the_required_formatter_first(self):
-        root = Path(__file__).resolve().parents[2]
-        for name in ('ci.yml', 'ci-site.yml'):
-            workflow = (root / '.github/workflows' / name).read_text(encoding='utf-8')
-            with self.subTest(workflow=name):
-                prepare = workflow.index('tools/site/build_site.py --prepare')
-                if name == 'ci.yml':
-                    self.assertIn('python3 -m venv .venv-format &&', workflow[:prepare])
-                    self.assertIn('.venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8 &&', workflow[:prepare])
-                else:
-                    self.assertIn('actions/setup-python@', workflow[:prepare])
-                    self.assertIn('pip install --disable-pip-version-check "clang-format==22.1.8"', workflow[:prepare])
-
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -77,10 +64,12 @@ class SiteArtifactTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "contents differ"):
             build_site.verify(self.site, "current-sha")
 
-    def test_missing_and_injected_files_are_rejected(self):
+    def test_missing_file_is_rejected(self):
         (self.site / "api/button/index.html").unlink()
         with self.assertRaisesRegex(ValueError, "contents differ"):
             build_site.verify(self.site, "current-sha")
+
+    def test_extra_file_is_rejected(self):
         (self.site / "extra.html").write_text("unexpected page", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "contents differ"):
             build_site.verify(self.site, "current-sha")

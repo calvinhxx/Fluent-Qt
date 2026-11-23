@@ -20,7 +20,7 @@ class Target {
   get listenerCount() { return [...this.listeners.values()].reduce((sum, set) => sum + set.size, 0); }
 }
 
-function fixture({ width = 1280, height = 950, reduced = false, stored = "", canvasAvailable = true } = {}) {
+function fixture({ width = 1280, height = 950, reduced = false, storage = new Map(), canvasAvailable = true } = {}) {
   const hero = new Target();
   const toggle = new Target();
   toggle.hidden = true;
@@ -36,7 +36,7 @@ function fixture({ width = 1280, height = 950, reduced = false, stored = "", can
   let now = 0;
   window.requestAnimationFrame = (callback) => { frames.set(++frameId, callback); return frameId; };
   window.cancelAnimationFrame = (id) => frames.delete(id);
-  window.sessionStorage = { getItem: () => stored, setItem: (_, value) => { stored = value; } };
+  window.sessionStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
   window.getComputedStyle = () => ({ getPropertyValue: () => root.dataset.theme === "dark" ? "#72e4f5" : "#168c89" });
   const reducedQuery = new Target();
   reducedQuery.matches = reduced;
@@ -47,8 +47,9 @@ function fixture({ width = 1280, height = 950, reduced = false, stored = "", can
   for (const name of ["IntersectionObserver", "ResizeObserver", "MutationObserver"]) {
     window[name] = class {
       constructor(callback) { this.callback = callback; observers[name] = this; }
-      observe() {}
-      disconnect() { this.disconnected = true; }
+      observe(target) { this.target = target; }
+      disconnect() { this.target = null; }
+      notify(target, entries) { if (this.target === target) this.callback(entries); }
     };
   }
   const context = {
@@ -68,12 +69,12 @@ function fixture({ width = 1280, height = 950, reduced = false, stored = "", can
   hero.ownerDocument = document;
   hero.closest = () => null;
   document.defaultView = window;
-  hero.querySelector = (selector) => selector === ".hero-particles" ? canvas : toggle;
+  const elements = new Map([[".hero-particles", canvas], ["[data-particle-toggle]", toggle]]);
+  hero.querySelector = selector => elements.get(selector) ?? null;
   const controller = createHeroParticles(hero);
   return {
     hero, toggle, root, document, window, frames, context, canvas, controller, observers,
-    get stored() { return stored; },
-    visible(value) { observers.IntersectionObserver.callback([{ isIntersecting: value }]); },
+    visible(value) { observers.IntersectionObserver.notify(hero, [{ isIntersecting: value }]); },
     advance(milliseconds = 20) {
       now += milliseconds;
       const callbacks = [...frames.values()];
@@ -82,8 +83,8 @@ function fixture({ width = 1280, height = 950, reduced = false, stored = "", can
     },
     reduced(value) { reducedQuery.matches = value; reducedQuery.emit("change"); },
     forced(value) { forcedQuery.matches = value; forcedQuery.emit("change"); },
-    theme(value) { root.dataset.theme = value; observers.MutationObserver.callback(); },
-    resize(w, h) { width = w; height = h; observers.ResizeObserver.callback(); },
+    theme(value) { root.dataset.theme = value; observers.MutationObserver.notify(root); },
+    resize(w, h) { width = w; height = h; observers.ResizeObserver.notify(hero); },
     targets: [hero, toggle, root, document, window, reducedQuery, forcedQuery]
   };
 }
@@ -113,23 +114,23 @@ test("animation runs only while the hero and document are visible, with one pend
 });
 
 test("pause persists and is not overridden by resize, theme, or visibility changes", () => {
-  const f = fixture();
+  const storage = new Map();
+  const f = fixture({ storage });
   f.visible(true);
   f.toggle.emit("click");
   assert.equal(f.toggle.attributes["aria-pressed"], "false");
-  assert.equal(f.stored, "paused");
   f.resize(390, 1050);
   f.theme("dark");
   f.visible(false);
   f.visible(true);
   assert.equal(f.frames.size, 0);
-  f.toggle.emit("click");
-  assert.equal(f.frames.size, 1);
-  assert.equal(f.stored, "playing");
   f.controller.destroy();
-  const restored = fixture({ stored: "paused" });
+  const restored = fixture({ storage });
   restored.visible(true);
   assert.equal(restored.frames.size, 0);
+  restored.toggle.emit("click");
+  assert.equal(restored.frames.size, 1);
+  assert.equal(storage.get("fluentqt-hero-motion"), "playing");
   restored.controller.destroy();
 });
 
@@ -240,7 +241,7 @@ test("page cache restoration resumes; navigation tears down observers, listeners
   assert.equal(f.frames.size, 1);
   f.window.emit("pagehide", { persisted: false });
   assert.equal(f.frames.size, 0);
-  assert.ok(Object.values(f.observers).every((observer) => observer.disconnected));
+  assert.ok(Object.values(f.observers).every((observer) => observer.target === null));
   assert.ok(f.targets.every((target) => target.listenerCount === 0));
   assert.equal(f.toggle.hidden, true);
   f.controller.destroy();
