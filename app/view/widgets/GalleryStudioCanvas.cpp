@@ -1,5 +1,7 @@
 #include "view/widgets/GalleryStudioCanvas.h"
+#include "components/foundation/UserTheme.h"
 #include "view/widgets/GalleryComponentPlayground.h"
+#include "view/widgets/samples/CollectionPhotoIllustrations.h"
 
 #include <FluentQt/FluentQt.h>
 #if defined(FLUENT_QT_HAS_PARTICLES)
@@ -22,30 +24,48 @@
 #include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDate>
 #include <QDateTime>
 #include <QEvent>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QHeaderView>
+#include <QIcon>
+#include <QImage>
+#include <QImageReader>
 #include <QJsonArray>
 #include <QLayout>
 #include <QLayoutItem>
+#include <QLinearGradient>
 #include <QLocale>
 #include <QMargins>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPixmap>
 #include <QPointF>
 #include <QPushButton>
+#include <QRadialGradient>
+#include <QRegion>
+#include <QRegularExpression>
 #include <QScrollBar>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QStyledItemDelegate>
+#include <QSvgRenderer>
 #include <QTime>
 #include <QTimer>
+#include <QUrl>
 #include <QVBoxLayout>
+#include <QXmlStreamReader>
 #include <QtGlobal>
+#include <QtMath>
 #include <functional>
 
 namespace fluent::gallery {
@@ -356,35 +376,438 @@ Typography::FontRole parseTypography(const QString& key)
         Typography::FontRole::Body);
 }
 
+bool isAutomatedTestRun()
+{
+    return QCoreApplication::instance() && QCoreApplication::instance()->property("fluentqtGalleryAutomated").toBool();
+}
+
+const QHash<QString, QString>& studioIconLookupTable()
+{
+    static const QHash<QString, QString> table = {
+        {QStringLiteral("globalnav"), Typography::Icons::GlobalNav},
+        {QStringLiteral("chevrondown"), Typography::Icons::ChevronDown},
+        {QStringLiteral("chevronup"), Typography::Icons::ChevronUp},
+        {QStringLiteral("chevronleft"), Typography::Icons::ChevronLeft},
+        {QStringLiteral("chevronright"), Typography::Icons::ChevronRight},
+        {QStringLiteral("back"), Typography::Icons::Back},
+        {QStringLiteral("forward"), Typography::Icons::Forward},
+        {QStringLiteral("home"), Typography::Icons::Home},
+        {QStringLiteral("menu"), Typography::Icons::Menu},
+        {QStringLiteral("up"), Typography::Icons::Up},
+        {QStringLiteral("down"), Typography::Icons::Down},
+        {QStringLiteral("sort"), Typography::Icons::Up},
+        {QStringLiteral("fullscreen"), Typography::Icons::FullScreen},
+        {QStringLiteral("backtowindow"), Typography::Icons::BackToWindow},
+        {QStringLiteral("more"), Typography::Icons::More},
+        {QStringLiteral("morehorizontal"), Typography::Icons::More},
+        {QStringLiteral("allapps"), Typography::Icons::AllApps},
+        {QStringLiteral("layers"), Typography::Icons::AllApps},
+        {QStringLiteral("add"), Typography::Icons::Add},
+        {QStringLiteral("cancel"), Typography::Icons::Cancel},
+        {QStringLiteral("delete"), Typography::Icons::Delete},
+        {QStringLiteral("trash"), Typography::Icons::Delete},
+        {QStringLiteral("save"), Typography::Icons::Save},
+        {QStringLiteral("saveas"), Typography::Icons::SaveAs},
+        {QStringLiteral("search"), Typography::Icons::Search},
+        {QStringLiteral("view"), Typography::Icons::View},
+        {QStringLiteral("hide"), Typography::Icons::Hide},
+        {QStringLiteral("settings"), Typography::Icons::Settings},
+        {QStringLiteral("edit"), Typography::Icons::Edit},
+        {QStringLiteral("refresh"), Typography::Icons::Refresh},
+        {QStringLiteral("share"), Typography::Icons::Share},
+        {QStringLiteral("copy"), Typography::Icons::Copy},
+        {QStringLiteral("cut"), Typography::Icons::Cut},
+        {QStringLiteral("paste"), Typography::Icons::Paste},
+        {QStringLiteral("filter"), Typography::Icons::Filter},
+        {QStringLiteral("link"), Typography::Icons::Link},
+        {QStringLiteral("favoritestar"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("favoritestarfill"), Typography::Icons::FavoriteStarFill},
+        {QStringLiteral("sparkle"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("sparkles"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("sparkle"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("magic"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("wand"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("bot"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("robot"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("agent"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("assistant"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("brain"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("prism"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("cpu"), Typography::Icons::AllApps},
+        {QStringLiteral("chip"), Typography::Icons::AllApps},
+        {QStringLiteral("circuit"), Typography::Icons::AllApps},
+        {QStringLiteral("ai"), Typography::Icons::FavoriteStar},
+        {QStringLiteral("chat"), Typography::Icons::Message},
+        {QStringLiteral("comment"), Typography::Icons::Message},
+        {QStringLiteral("conversation"), Typography::Icons::Message},
+        {QStringLiteral("workflow"), Typography::Icons::Sync},
+        {QStringLiteral("zap"), Typography::Icons::Sync},
+        {QStringLiteral("bolt"), Typography::Icons::Sync},
+        {QStringLiteral("activity"), Typography::Icons::Sync},
+        {QStringLiteral("pulse"), Typography::Icons::Sync},
+        {QStringLiteral("attach"), Typography::Icons::Link},
+        {QStringLiteral("paperclip"), Typography::Icons::Link},
+        {QStringLiteral("plus"), Typography::Icons::Add},
+        {QStringLiteral("inbox"), Typography::Icons::Mail},
+        {QStringLiteral("archive"), Typography::Icons::Folder},
+        {QStringLiteral("bookmark"), Typography::Icons::Pin},
+        {QStringLiteral("tag"), Typography::Icons::Pin},
+        {QStringLiteral("chart"), Typography::Icons::Grid},
+        {QStringLiteral("barchart"), Typography::Icons::Grid},
+        {QStringLiteral("linechart"), Typography::Icons::Grid},
+        {QStringLiteral("piechart"), Typography::Icons::Grid},
+        {QStringLiteral("metrics"), Typography::Icons::Grid},
+        {QStringLiteral("database"), Typography::Icons::Storage},
+        {QStringLiteral("server"), Typography::Icons::Storage},
+        {QStringLiteral("bug"), Typography::Icons::Settings},
+        {QStringLiteral("wrench"), Typography::Icons::Settings},
+        {QStringLiteral("sliders"), Typography::Icons::Settings},
+        {QStringLiteral("compass"), Typography::Icons::MapPin},
+        {QStringLiteral("map"), Typography::Icons::MapPin},
+        {QStringLiteral("location"), Typography::Icons::MapPin},
+        {QStringLiteral("book"), Typography::Icons::Document},
+        {QStringLiteral("notes"), Typography::Icons::Document},
+        {QStringLiteral("pen"), Typography::Icons::Edit},
+        {QStringLiteral("pencil"), Typography::Icons::Edit},
+        {QStringLiteral("check"), Typography::Icons::CheckMark},
+        {QStringLiteral("circlecheck"), Typography::Icons::CheckMark},
+        {QStringLiteral("alert"), Typography::Icons::Warning},
+        {QStringLiteral("alerttriangle"), Typography::Icons::Warning},
+        {QStringLiteral("help"), Typography::Icons::Info},
+        {QStringLiteral("question"), Typography::Icons::Info},
+        {QStringLiteral("moon"), Typography::Icons::Brightness},
+        {QStringLiteral("sun"), Typography::Icons::Brightness},
+        {QStringLiteral("eye"), Typography::Icons::View},
+        {QStringLiteral("eyeoff"), Typography::Icons::Hide},
+        {QStringLiteral("key"), Typography::Icons::Lock},
+        {QStringLiteral("external"), Typography::Icons::Share},
+        {QStringLiteral("pin"), Typography::Icons::Pin},
+        {QStringLiteral("pinfill"), Typography::Icons::PinFill},
+        {QStringLiteral("unpin"), Typography::Icons::Unpin},
+        {QStringLiteral("flag"), Typography::Icons::Flag},
+        {QStringLiteral("block"), Typography::Icons::Block},
+        {QStringLiteral("zoom"), Typography::Icons::Zoom},
+        {QStringLiteral("zoomin"), Typography::Icons::ZoomIn},
+        {QStringLiteral("zoomout"), Typography::Icons::ZoomOut},
+        {QStringLiteral("undo"), Typography::Icons::Undo},
+        {QStringLiteral("redo"), Typography::Icons::Redo},
+        {QStringLiteral("selectall"), Typography::Icons::SelectAll},
+        {QStringLiteral("play"), Typography::Icons::Play},
+        {QStringLiteral("pause"), Typography::Icons::Pause},
+        {QStringLiteral("stop"), Typography::Icons::Stop},
+        {QStringLiteral("volume"), Typography::Icons::Volume},
+        {QStringLiteral("mute"), Typography::Icons::Mute},
+        {QStringLiteral("microphone"), Typography::Icons::Microphone},
+        {QStringLiteral("video"), Typography::Icons::Video},
+        {QStringLiteral("camera"), Typography::Icons::Camera},
+        {QStringLiteral("photo"), Typography::Icons::Camera},
+        {QStringLiteral("gallery"), Typography::Icons::Camera},
+        {QStringLiteral("image"), Typography::Icons::Camera},
+        {QStringLiteral("music"), Typography::Icons::Music},
+        {QStringLiteral("album"), Typography::Icons::Music},
+        {QStringLiteral("audio"), Typography::Icons::Music},
+        {QStringLiteral("movie"), Typography::Icons::Movie},
+        {QStringLiteral("headphones"), Typography::Icons::Headphones},
+        {QStringLiteral("speaker"), Typography::Icons::Speaker},
+        {QStringLiteral("skipback"), Typography::Icons::SkipBack},
+        {QStringLiteral("skipforward"), Typography::Icons::SkipForward},
+        {QStringLiteral("mail"), Typography::Icons::Mail},
+        {QStringLiteral("people"), Typography::Icons::People},
+        {QStringLiteral("user"), Typography::Icons::People},
+        {QStringLiteral("phone"), Typography::Icons::Phone},
+        {QStringLiteral("message"), Typography::Icons::Message},
+        {QStringLiteral("send"), Typography::Icons::Send},
+        {QStringLiteral("contact"), Typography::Icons::Contact},
+        {QStringLiteral("group"), Typography::Icons::Group},
+        {QStringLiteral("emoji"), Typography::Icons::Emoji},
+        {QStringLiteral("world"), Typography::Icons::World},
+        {QStringLiteral("globe"), Typography::Icons::World},
+        {QStringLiteral("contactinfo"), Typography::Icons::ContactInfo},
+        {QStringLiteral("accounts"), Typography::Icons::Accounts},
+        {QStringLiteral("folder"), Typography::Icons::Folder},
+        {QStringLiteral("file"), Typography::Icons::File},
+        {QStringLiteral("document"), Typography::Icons::Document},
+        {QStringLiteral("code"), Typography::Icons::Document},
+        {QStringLiteral("terminal"), Typography::Icons::Document},
+        {QStringLiteral("cloud"), Typography::Icons::Cloud},
+        {QStringLiteral("download"), Typography::Icons::Download},
+        {QStringLiteral("upload"), Typography::Icons::Upload},
+        {QStringLiteral("rocket"), Typography::Icons::Upload},
+        {QStringLiteral("sync"), Typography::Icons::Sync},
+        {QStringLiteral("storage"), Typography::Icons::Storage},
+        {QStringLiteral("calculator"), Typography::Icons::Calculator},
+        {QStringLiteral("calendar"), Typography::Icons::Calendar},
+        {QStringLiteral("clock"), Typography::Icons::Clock},
+        {QStringLiteral("history"), Typography::Icons::History},
+        {QStringLiteral("wifi"), Typography::Icons::Wifi},
+        {QStringLiteral("bluetooth"), Typography::Icons::Bluetooth},
+        {QStringLiteral("battery"), Typography::Icons::Battery},
+        {QStringLiteral("print"), Typography::Icons::Print},
+        {QStringLiteral("laptop"), Typography::Icons::Laptop},
+        {QStringLiteral("mobile"), Typography::Icons::Mobile},
+        {QStringLiteral("desktop"), Typography::Icons::Desktop},
+        {QStringLiteral("appicondefault"), Typography::Icons::AppIconDefault},
+        {QStringLiteral("mouse"), Typography::Icons::Mouse},
+        {QStringLiteral("keyboard"), Typography::Icons::Keyboard},
+        {QStringLiteral("controller"), Typography::Icons::Controller},
+        {QStringLiteral("power"), Typography::Icons::Power},
+        {QStringLiteral("brightness"), Typography::Icons::Brightness},
+        {QStringLiteral("airplane"), Typography::Icons::Airplane},
+        {QStringLiteral("warning"), Typography::Icons::Warning},
+        {QStringLiteral("erroricon"), Typography::Icons::ErrorIcon},
+        {QStringLiteral("info"), Typography::Icons::Info},
+        {QStringLiteral("bell"), Typography::Icons::Info},
+        {QStringLiteral("notification"), Typography::Icons::Info},
+        {QStringLiteral("checkmark"), Typography::Icons::CheckMark},
+        {QStringLiteral("success"), Typography::Icons::Success},
+        {QStringLiteral("errorbadge12"), Typography::Icons::ErrorBadge12},
+        {QStringLiteral("importantbadge12"), Typography::Icons::ImportantBadge12},
+        {QStringLiteral("shield"), Typography::Icons::Shield},
+        {QStringLiteral("security"), Typography::Icons::Shield},
+        {QStringLiteral("lock"), Typography::Icons::Lock},
+        {QStringLiteral("unlock"), Typography::Icons::Unlock},
+        {QStringLiteral("heart"), Typography::Icons::Heart},
+        {QStringLiteral("heartfill"), Typography::Icons::HeartFill},
+        {QStringLiteral("star"), Typography::Icons::Star},
+        {QStringLiteral("dismiss"), Typography::Icons::Dismiss},
+        {QStringLiteral("close"), Typography::Icons::Dismiss},
+        {QStringLiteral("clear"), Typography::Icons::Clear},
+        {QStringLiteral("brush"), Typography::Icons::Brush},
+        {QStringLiteral("design"), Typography::Icons::Brush},
+        {QStringLiteral("color"), Typography::Icons::Color},
+        {QStringLiteral("palette"), Typography::Icons::Color},
+        {QStringLiteral("font"), Typography::Icons::Font},
+        {QStringLiteral("grid"), Typography::Icons::Grid},
+        {QStringLiteral("dashboard"), Typography::Icons::Grid},
+        {QStringLiteral("analytics"), Typography::Icons::Grid},
+        {QStringLiteral("list"), Typography::Icons::List},
+        {QStringLiteral("alignleft"), Typography::Icons::AlignLeft},
+        {QStringLiteral("aligncenter"), Typography::Icons::AlignCenter},
+        {QStringLiteral("alignright"), Typography::Icons::AlignRight},
+        {QStringLiteral("mappin"), Typography::Icons::MapPin},
+        {QStringLiteral("sunny"), Typography::Icons::Sunny},
+        {QStringLiteral("cloudweather"), Typography::Icons::CloudWeather},
+        {QStringLiteral("rain"), Typography::Icons::Rain},
+        {QStringLiteral("snow"), Typography::Icons::Snow},
+    };
+    return table;
+}
+
+QString inferStudioCommandGlyph(const QString& label, int fallbackIndex, bool navigation);
+
 QString resolveIconGlyph(const QString& nameOrGlyph)
 {
-    if (nameOrGlyph == QLatin1String("Home"))
-        return Typography::Icons::Home;
-    if (nameOrGlyph == QLatin1String("Add"))
-        return Typography::Icons::Add;
-    if (nameOrGlyph == QLatin1String("Search"))
-        return Typography::Icons::Search;
-    if (nameOrGlyph == QLatin1String("Save"))
-        return Typography::Icons::Save;
-    if (nameOrGlyph == QLatin1String("Edit"))
-        return Typography::Icons::Edit;
-    if (nameOrGlyph == QLatin1String("Delete"))
-        return Typography::Icons::Delete;
-    if (nameOrGlyph == QLatin1String("Settings"))
-        return Typography::Icons::Settings;
-    if (nameOrGlyph == QLatin1String("Info"))
-        return Typography::Icons::Info;
-    if (nameOrGlyph == QLatin1String("Share"))
-        return Typography::Icons::Share;
-    if (nameOrGlyph == QLatin1String("Document"))
-        return Typography::Icons::Document;
-    if (!nameOrGlyph.isEmpty()) {
-        const QString lookedUp = Typography::Icons::glyph(nameOrGlyph);
+    const QString trimmed = nameOrGlyph.trimmed();
+    if (!trimmed.isEmpty()) {
+        const auto& table = studioIconLookupTable();
+        const auto it = table.constFind(trimmed.toLower());
+        if (it != table.constEnd() && !it.value().isEmpty())
+            return it.value();
+        const QString lookedUp = Typography::Icons::glyph(trimmed);
         if (!lookedUp.isEmpty())
             return lookedUp;
-        return nameOrGlyph;
+        if (trimmed.size() <= 2 && trimmed.at(0).unicode() >= 0x80)
+            return trimmed;
+        return inferStudioCommandGlyph(trimmed, 0, false);
     }
     return Typography::Icons::Settings;
+}
+
+int measureWidgetHeightForWidth(QWidget* widget, int availWidth, int maxCap = 1400)
+{
+    if (!widget)
+        return 0;
+    if (QLayout* lay = widget->layout())
+        lay->activate();
+    int h = qMax(widget->minimumSizeHint().height(), widget->sizeHint().height());
+    if (availWidth > 0 && widget->hasHeightForWidth())
+        h = qMax(h, widget->heightForWidth(availWidth));
+    if (QLayout* lay = widget->layout()) {
+        h = qMax(h, qMax(lay->totalMinimumSize().height(), lay->totalSizeHint().height()));
+        if (availWidth > 0 && lay->hasHeightForWidth())
+            h = qMax(h, lay->totalHeightForWidth(availWidth));
+    }
+    return qBound(0, h, maxCap);
+}
+
+// Accept the same static artwork vocabulary as site/studio/studio-media.mjs.
+bool isStudioSvg(const QByteArray& svg)
+{
+    if (svg.size() > 16384 || !svg.startsWith("<svg"))
+        return false;
+    static const auto elements =
+        QStringLiteral(
+            "svg g defs path rect circle ellipse line polyline polygon "
+            "linearGradient radialGradient stop clipPath text tspan title desc")
+            .split(QLatin1Char(' '));
+    static const auto attributes = QStringLiteral(
+        "viewBox width height x y x1 y1 x2 y2 cx cy r rx ry fx fy d points "
+        "id transform fill stroke color fill-rule clip-rule clip-path fill-opacity stroke-opacity opacity stroke-width "
+        "stroke-linecap stroke-linejoin stroke-dasharray stroke-dashoffset gradientUnits gradientTransform "
+        "offset stop-color stop-opacity preserveAspectRatio text-anchor font-size font-weight font-family")
+                                       .split(QLatin1Char(' '));
+    static const auto paints = QStringLiteral("fill stroke color stop-color clip-path").split(QLatin1Char(' '));
+    static const QRegularExpression paint(
+        QStringLiteral(R"(^(?:[A-Za-z]+|#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([\d.,% +\-]+\)|url\(#[\w.-]+\))$)"));
+    static const QRegularExpression geometry(QStringLiteral(R"(^[\w.,%# +()\s-]*$)"));
+
+    QXmlStreamReader xml(svg);
+    bool hasRoot = false;
+    while (!xml.atEnd()) {
+        const auto token = xml.readNext();
+        if (token == QXmlStreamReader::StartElement) {
+            const auto name = xml.qualifiedName().toString();
+            if ((!hasRoot && name != QStringLiteral("svg")) || !elements.contains(name))
+                return false;
+            hasRoot = true;
+            for (const auto& ns : xml.namespaceDeclarations()) {
+                if (!ns.prefix().isEmpty()
+                    || ns.namespaceUri().toString() != QStringLiteral("http://www.w3.org/2000/svg"))
+                    return false;
+            }
+            for (const auto& attr : xml.attributes()) {
+                const auto key = attr.qualifiedName().toString();
+                const auto& pattern = paints.contains(key) ? paint : geometry;
+                if (!attributes.contains(key) || !pattern.match(attr.value().toString()).hasMatch())
+                    return false;
+            }
+        } else if (token == QXmlStreamReader::DTD || token == QXmlStreamReader::ProcessingInstruction
+            || token == QXmlStreamReader::EntityReference || token == QXmlStreamReader::Comment || xml.isCDATA()) {
+            return false;
+        }
+    }
+    return hasRoot && !xml.hasError();
+}
+
+QPixmap renderSanitizedSvgPixmap(const QString& svgText, QSize logicalSize, qreal dpr)
+{
+    const QByteArray svg = svgText.trimmed().toUtf8();
+    if (!isStudioSvg(svg))
+        return {};
+    QSvgRenderer renderer(svg);
+    if (!renderer.isValid())
+        return {};
+
+    const qreal safeDpr = qMax<qreal>(1.0, dpr);
+    const QSize targetLogical(qMax(32, logicalSize.width()), qMax(32, logicalSize.height()));
+    QPixmap pixmap(qCeil(targetLogical.width() * safeDpr), qCeil(targetLogical.height() * safeDpr));
+    pixmap.setDevicePixelRatio(safeDpr);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QSizeF svgSize = renderer.defaultSize();
+    if (!svgSize.isValid() || svgSize.isEmpty())
+        svgSize = renderer.viewBoxF().size();
+    if (!svgSize.isValid() || svgSize.isEmpty())
+        svgSize = QSizeF(targetLogical);
+    const qreal scale = qMin(targetLogical.width() / svgSize.width(), targetLogical.height() / svgSize.height());
+    const QSizeF drawnSize(svgSize.width() * scale, svgSize.height() * scale);
+    const QRectF bounds((targetLogical.width() - drawnSize.width()) * 0.5,
+        (targetLogical.height() - drawnSize.height()) * 0.5, drawnSize.width(), drawnSize.height());
+    renderer.render(&painter, bounds);
+    return pixmap;
+}
+
+QColor studioThemeTint(const QString& mediaTheme, int index)
+{
+    static const QColor kFallbackTints[] = {
+        QColor(QStringLiteral("#3E6DA8")),
+        QColor(QStringLiteral("#2B6F73")),
+        QColor(QStringLiteral("#8764B8")),
+        QColor(QStringLiteral("#D84A38")),
+        QColor(QStringLiteral("#2E7D5E")),
+        QColor(QStringLiteral("#4A6572")),
+    };
+    const QString key = mediaTheme.trimmed().toLower();
+    if (key == QLatin1String("coffee"))
+        return QColor(QStringLiteral("#9C633B")).darker(100 + (index % 3) * 12);
+    if (key == QLatin1String("architecture"))
+        return QColor(QStringLiteral("#4D647D")).lighter(100 + (index % 3) * 10);
+    if (key == QLatin1String("city"))
+        return QColor(QStringLiteral("#355070")).lighter(100 + (index % 3) * 12);
+    if (key == QLatin1String("portrait"))
+        return QColor(QStringLiteral("#B5655C")).lighter(100 + (index % 3) * 10);
+    if (key == QLatin1String("technology"))
+        return QColor(QStringLiteral("#008C99")).darker(100 + (index % 3) * 12);
+    if (key == QLatin1String("abstract"))
+        return QColor(QStringLiteral("#7A5195")).lighter(100 + (index % 3) * 12);
+    if (key == QLatin1String("music"))
+        return QColor(QStringLiteral("#8764B8")).lighter(100 + (index % 3) * 10);
+    if (key == QLatin1String("landscape"))
+        return kFallbackTints[(index % 4 == 0 ? 3 : index) % 6];
+    return kFallbackTints[qAbs(index) % 6];
+}
+
+QUrl studioCuratedPhotoUrl(const QString& mediaTheme, int index, int width)
+{
+    static const QStringList kLandscapeIds = {
+        QStringLiteral("photo-1500530855697-b586d89ba3ee"),
+        QStringLiteral("photo-1470770841072-f978cf4d019e"),
+        QStringLiteral("photo-1441974231531-c6227db76b6e"),
+        QStringLiteral("photo-1470252649378-9c29740c9fa8"),
+        QStringLiteral("photo-1506744038136-46273834b3fb"),
+        QStringLiteral("photo-1472214103451-9374bd1c798e"),
+        QStringLiteral("photo-1469474968028-56623f02e42e"),
+    };
+    static const QStringList kArchitectureIds = {
+        QStringLiteral("photo-1511818966892-d7d671e672a2"),
+        QStringLiteral("photo-1497366754035-f200968a6e72"),
+        QStringLiteral("photo-1486406146926-c627a92ad1ab"),
+        QStringLiteral("photo-1513694203232-719a280e022f"),
+    };
+    static const QStringList kCoffeeIds = {
+        QStringLiteral("photo-1509042239860-f550ce710b93"),
+        QStringLiteral("photo-1495474472287-4d71bcdd2085"),
+        QStringLiteral("photo-1511920170033-f8396924c348"),
+    };
+    static const QStringList kCityIds = {
+        QStringLiteral("photo-1477959858617-67f85cf4f1df"),
+        QStringLiteral("photo-1480714378408-67cf0d13bc1b"),
+        QStringLiteral("photo-1519501025264-65ba15a82390"),
+    };
+    static const QStringList kPortraitIds = {
+        QStringLiteral("photo-1534528741775-53994a69daeb"),
+        QStringLiteral("photo-1507003211169-0a1dd7228f2d"),
+        QStringLiteral("photo-1517841905240-472988babdf9"),
+    };
+    static const QStringList kTechIds = {
+        QStringLiteral("photo-1518770660439-4636190af475"),
+        QStringLiteral("photo-1550751827-4bd374c3f58b"),
+        QStringLiteral("photo-1526374965328-7f61d4dc18c5"),
+    };
+    static const QStringList kMusicIds = {
+        QStringLiteral("photo-1511671782779-c97d3d27a1d4"),
+        QStringLiteral("photo-1470225620780-dba8ba36b745"),
+        QStringLiteral("photo-1514525253161-7a46d19cd819"),
+    };
+    static const QStringList kAbstractIds = {
+        QStringLiteral("photo-1557672172-298e090bd0f1"),
+        QStringLiteral("photo-1579546929518-9e396f3cc809"),
+        QStringLiteral("photo-1558591710-4b4a1ae0f04d"),
+    };
+
+    const QString key = mediaTheme.trimmed().toLower();
+    const QStringList* list = &kLandscapeIds;
+    if (key == QLatin1String("architecture"))
+        list = &kArchitectureIds;
+    else if (key == QLatin1String("coffee"))
+        list = &kCoffeeIds;
+    else if (key == QLatin1String("city"))
+        list = &kCityIds;
+    else if (key == QLatin1String("portrait"))
+        list = &kPortraitIds;
+    else if (key == QLatin1String("technology"))
+        list = &kTechIds;
+    else if (key == QLatin1String("music"))
+        list = &kMusicIds;
+    else if (key == QLatin1String("abstract"))
+        list = &kAbstractIds;
+
+    const QString& photoId = list->at(qAbs(index) % list->size());
+    return QUrl(QStringLiteral("https://images.unsplash.com/%1?auto=format&fit=crop&w=%2&q=80")
+            .arg(photoId)
+            .arg(qBound(160, width, 1280)));
 }
 
 QStringList jsonStringList(const QJsonValue& value, const QStringList& fallback)
@@ -451,6 +874,637 @@ QStandardItemModel* buildStringModel(QObject* parent, const QStringList& items, 
     return model;
 }
 
+QStandardItemModel* buildTreeModel(QObject* parent, const QStringList& items)
+{
+    auto* model = new QStandardItemModel(parent);
+    QStandardItem* currentParent = nullptr;
+    for (const QString& rawItem : items) {
+        const bool isIndented = !rawItem.isEmpty()
+            && (rawItem.startsWith(QLatin1Char(' ')) || rawItem.startsWith(QLatin1Char('\t')));
+        const QString cleanLabel = rawItem.trimmed();
+        if (cleanLabel.isEmpty())
+            continue;
+        auto* entry = new QStandardItem(cleanLabel);
+        if (isIndented && currentParent) {
+            currentParent->appendRow(entry);
+        } else {
+            model->appendRow(entry);
+            currentParent = entry;
+        }
+    }
+    return model;
+}
+
+QString inferStudioCommandGlyph(const QString& label, int fallbackIndex = 0, bool navigation = false)
+{
+    const QString low = label.toLower();
+    if (low.contains(QStringLiteral("new")) || low.contains(QStringLiteral("add"))
+        || low.contains(QStringLiteral("create")) || low.contains(QStringLiteral("import"))
+        || low.contains(QStringLiteral("upload")))
+        return Typography::Icons::Add;
+    if (low.contains(QStringLiteral("save")) || low.contains(QStringLiteral("apply")))
+        return Typography::Icons::Save;
+    if (low.contains(QStringLiteral("search")) || low.contains(QStringLiteral("find"))
+        || low.contains(QStringLiteral("filter")))
+        return Typography::Icons::Search;
+    if (low.contains(QStringLiteral("delete")) || low.contains(QStringLiteral("remove"))
+        || low.contains(QStringLiteral("clear")))
+        return Typography::Icons::Delete;
+    if (low.contains(QStringLiteral("share")) || low.contains(QStringLiteral("export"))
+        || low.contains(QStringLiteral("publish")))
+        return Typography::Icons::Share;
+    if (low.contains(QStringLiteral("setting")) || low.contains(QStringLiteral("config"))
+        || low.contains(QStringLiteral("prefer")))
+        return Typography::Icons::Settings;
+    if (low.contains(QStringLiteral("favorite")) || low.contains(QStringLiteral("star")))
+        return Typography::Icons::FavoriteStar;
+    if (low.contains(QStringLiteral("edit")) || low.contains(QStringLiteral("rename"))
+        || low.contains(QStringLiteral("note")))
+        return Typography::Icons::Edit;
+    if (low.contains(QStringLiteral("refresh")) || low.contains(QStringLiteral("sync"))
+        || low.contains(QStringLiteral("reload")))
+        return Typography::Icons::Sync;
+    if (low.contains(QStringLiteral("sort")))
+        return Typography::Icons::Up;
+    if (low.contains(QStringLiteral("overview")) || low.contains(QStringLiteral("home"))
+        || low.contains(QStringLiteral("all")) || low.contains(QStringLiteral("gallery")))
+        return Typography::Icons::Home;
+    if (low.contains(QStringLiteral("info")) || low.contains(QStringLiteral("detail"))
+        || low.contains(QStringLiteral("help")) || low.contains(QStringLiteral("about")))
+        return Typography::Icons::Info;
+    if (low.contains(QStringLiteral("alert")) || low.contains(QStringLiteral("warn"))
+        || low.contains(QStringLiteral("error")))
+        return Typography::Icons::Warning;
+
+    if (navigation) {
+        if (fallbackIndex == 0)
+            return Typography::Icons::Home;
+        static const QStringList kNavGlyphs = {
+            Typography::Icons::Document,
+            Typography::Icons::Info,
+            Typography::Icons::Settings,
+            Typography::Icons::Sync,
+            Typography::Icons::Search,
+            Typography::Icons::FavoriteStar,
+        };
+        return kNavGlyphs.at((qMax(0, fallbackIndex - 1)) % kNavGlyphs.size());
+    }
+    static const QStringList kCmdGlyphs = {
+        Typography::Icons::Add,
+        Typography::Icons::FavoriteStar,
+        Typography::Icons::Up,
+        Typography::Icons::Share,
+        Typography::Icons::Edit,
+        Typography::Icons::Search,
+        Typography::Icons::Settings,
+    };
+    return kCmdGlyphs.at(qMax(0, fallbackIndex) % kCmdGlyphs.size());
+}
+
+struct StudioItemSpec {
+    QString glyph;
+    QString label;
+};
+
+StudioItemSpec parseStudioItemIconAndLabel(const QString& raw, int fallbackIndex, bool navigation)
+{
+    const int sep = raw.indexOf(QLatin1Char('|'));
+    if (sep > 0) {
+        const QString iconPart = raw.left(sep).trimmed();
+        static const QRegularExpression kIconIdentRe(QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$"));
+        if (kIconIdentRe.match(iconPart).hasMatch()) {
+            const QString labelPart = raw.mid(sep + 1).trimmed();
+            return {resolveIconGlyph(iconPart), labelPart.isEmpty() ? iconPart : labelPart};
+        }
+    }
+    return {inferStudioCommandGlyph(raw, fallbackIndex, navigation), raw.trimmed()};
+}
+
+void applyStudioExtendedIconProps(QWidget* widget, const QJsonObject& props)
+{
+    if (!widget || props.isEmpty())
+        return;
+    if (auto* btn = qobject_cast<Button*>(widget)) {
+        if (props.contains(QStringLiteral("icon")) || props.contains(QStringLiteral("iconGlyph"))) {
+            const QString iconKey = props.contains(QStringLiteral("icon"))
+                ? props.value(QStringLiteral("icon")).toString().trimmed()
+                : props.value(QStringLiteral("iconGlyph")).toString().trimmed();
+            if (!iconKey.isEmpty() && iconKey != QLatin1String("None")) {
+                const QString resolved = resolveIconGlyph(iconKey);
+                btn->setIconGlyph(resolved, 16);
+                btn->setProperty("_studioIconGlyph", resolved);
+                if (!props.contains(QStringLiteral("fluentLayout")) && btn->fluentLayout() == Button::TextOnly)
+                    btn->setFluentLayout(Button::IconBefore);
+            }
+        }
+    } else if (auto* fi = qobject_cast<FontIcon*>(widget)) {
+        if (props.contains(QStringLiteral("glyph"))) {
+            const QString glyphName = props.value(QStringLiteral("glyph")).toString().trimmed();
+            if (!glyphName.isEmpty() && glyphName != QLatin1String("None"))
+                fi->setGlyph(resolveIconGlyph(glyphName));
+        }
+    }
+}
+
+QPixmap glyphPixmapForColor(const QString& glyph, int logicalSize, const QColor& color, qreal dpr)
+{
+    const qreal safeDpr = qMax<qreal>(1.0, dpr);
+    const int physicalSize = qMax(1, qCeil(logicalSize * safeDpr));
+    QPixmap pixmap(physicalSize, physicalSize);
+    pixmap.setDevicePixelRatio(safeDpr);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    painter.setPen(color);
+    Typography::Icons::paintGlyph(painter, QRectF(0, 0, logicalSize, logicalSize), glyph, logicalSize, Qt::AlignCenter);
+    painter.end();
+
+    // Font icons have font-line bearings; center their visible ink in the QAction slot.
+    const QRect ink = QRegion(pixmap.mask()).boundingRect();
+    if (!ink.isEmpty()) {
+        QPixmap centered(pixmap.size());
+        centered.setDevicePixelRatio(safeDpr);
+        centered.fill(Qt::transparent);
+        QPainter centeredPainter(&centered);
+        const QPointF offset((physicalSize - ink.width()) / 2.0 - ink.x(),
+            (physicalSize - ink.height()) / 2.0 - ink.y());
+        centeredPainter.drawPixmap(offset / safeDpr, pixmap);
+        return centered;
+    }
+    return pixmap;
+}
+
+QIcon makeThemedGlyphIcon(const QString& glyph, const FluentElement::Colors& colors, qreal dpr)
+{
+    QIcon icon;
+    for (const int size : {16, 20}) {
+        const QPixmap normal = glyphPixmapForColor(glyph, size, colors.textPrimary, dpr);
+        const QPixmap disabled = glyphPixmapForColor(glyph, size, colors.textDisabled, dpr);
+        icon.addPixmap(normal, QIcon::Normal, QIcon::Off);
+        icon.addPixmap(normal, QIcon::Active, QIcon::Off);
+        icon.addPixmap(disabled, QIcon::Disabled, QIcon::Off);
+    }
+    return icon;
+}
+
+void refreshCommandBarActionIcons(QWidget* root, FluentElement::Theme theme)
+{
+    if (!root)
+        return;
+    const auto& colors = ThemeRegistry::instance().colors(theme);
+    const qreal dpr = qMax<qreal>(1.0, root->devicePixelRatioF());
+    for (auto* bar : root->findChildren<CommandBar*>()) {
+        for (QAction* act : bar->primaryActions()) {
+            if (!act)
+                continue;
+            QString glyph = act->property("_studioGlyph").toString();
+            if (glyph.isEmpty())
+                glyph = inferStudioCommandGlyph(act->text());
+            act->setIcon(makeThemedGlyphIcon(glyph, colors, dpr));
+        }
+    }
+}
+
+bool isSidebarLikeNode(const QJsonObject& obj, int depth = 0)
+{
+    const QString type = obj.value(QStringLiteral("type")).toString();
+    if (type == QStringLiteral("ListView") || type == QStringLiteral("TreeView")
+        || type == QStringLiteral("FileListView") || type == QStringLiteral("NavigationView"))
+        return true;
+    if (depth >= 2)
+        return false;
+    const QJsonArray children = obj.value(QStringLiteral("children")).toArray();
+    for (const QJsonValue& val : children) {
+        if (isSidebarLikeNode(val.toObject(), depth + 1))
+            return true;
+    }
+    return false;
+}
+
+bool isPrimaryWideNode(const QJsonObject& obj, int depth = 0)
+{
+    const QString type = obj.value(QStringLiteral("type")).toString();
+    if (type == QStringLiteral("GridView") || type == QStringLiteral("DataGrid") || type == QStringLiteral("FlowView")
+        || type == QStringLiteral("TextEdit") || type == QStringLiteral("CodeBlock")
+        || type == QStringLiteral("AreaChart") || type == QStringLiteral("LineChart")
+        || type == QStringLiteral("BarChart") || type == QStringLiteral("ChartView")
+        || type == QStringLiteral("Timeline"))
+        return true;
+    if (depth >= 2)
+        return false;
+    const QJsonArray children = obj.value(QStringLiteral("children")).toArray();
+    for (const QJsonValue& val : children) {
+        if (isPrimaryWideNode(val.toObject(), depth + 1))
+            return true;
+    }
+    return false;
+}
+
+bool isHeaderLeadingControl(const QString& type)
+{
+    return type == QStringLiteral("FontIcon") || type == QStringLiteral("Label") || type == QStringLiteral("InfoBadge");
+}
+
+bool isHeaderTrailingControl(const QString& type)
+{
+    return type == QStringLiteral("AutoSuggestBox") || type == QStringLiteral("LineEdit")
+        || type == QStringLiteral("ComboBox") || type == QStringLiteral("MultiSelectComboBox")
+        || type == QStringLiteral("Button") || type == QStringLiteral("DropDownButton")
+        || type == QStringLiteral("SplitButton") || type == QStringLiteral("ToggleButton")
+        || type == QStringLiteral("ToggleSwitch") || type == QStringLiteral("SelectorBar")
+        || type == QStringLiteral("Pivot") || type == QStringLiteral("Avatar") || type == QStringLiteral("DatePicker")
+        || type == QStringLiteral("CalendarDatePicker");
+}
+
+// Lightweight WinUI 3 navigation rail item with transparent rest state,
+// subtle translucent active pill, and crisp 3px left accent indicator bar.
+class StudioNavRailItem final : public QAbstractButton {
+public:
+    StudioNavRailItem(fluent::FluentElement* themeHost,
+        const QString& label,
+        const QString& glyph,
+        QWidget* parent = nullptr)
+        : QAbstractButton(parent), m_themeHost(themeHost), m_glyph(glyph)
+    {
+        setText(label);
+        setCheckable(true);
+        setFixedHeight(36);
+        setMinimumWidth(0);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        setCursor(Qt::PointingHandCursor);
+        setAttribute(Qt::WA_Hover, true);
+    }
+
+    QSize sizeHint() const override
+    {
+        QFont f = font();
+        f.setPixelSize(13);
+        const int w = QFontMetrics(f).horizontalAdvance(text()) + 52;
+        return QSize(qBound(120, w, 240), 36);
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setRenderHint(QPainter::TextAntialiasing, true);
+
+        const auto& colors =
+            m_themeHost ? m_themeHost->themeColorsRef() : ThemeRegistry::instance().colors(FluentElement::Light);
+        const QRectF bounds(rect());
+        const bool active = isChecked();
+        const bool hovered = !active && underMouse() && isEnabled();
+
+        if (active || hovered) {
+            const QRectF pillRect = bounds.adjusted(2.0, 1.0, -2.0, -1.0);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(active ? colors.subtleSecondary : colors.subtleTertiary);
+            painter.drawRoundedRect(pillRect, CornerRadius::Control, CornerRadius::Control);
+        }
+
+        if (active) {
+            const QRectF indicator(4.0, (bounds.height() - 16.0) * 0.5, 3.0, 16.0);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(colors.accentDefault);
+            painter.drawRoundedRect(indicator, 1.5, 1.5);
+        }
+
+        const QColor iconColor =
+            !isEnabled() ? colors.textDisabled : (active ? colors.textAccentPrimary : colors.textSecondary);
+        painter.setPen(iconColor);
+        const QRectF iconRect(15.0, (bounds.height() - 16.0) * 0.5, 16.0, 16.0);
+        Typography::Icons::paintGlyph(painter, iconRect, m_glyph, 16, Qt::AlignCenter);
+
+        QFont labelFont = font();
+        labelFont.setPixelSize(13);
+        labelFont.setWeight(active ? QFont::DemiBold : QFont::Normal);
+        painter.setFont(labelFont);
+        painter.setPen(!isEnabled() ? colors.textDisabled : colors.textPrimary);
+        const QRectF textRect(40.0, 0.0, qMax(12.0, bounds.width() - 48.0), bounds.height());
+        const QString elided = QFontMetrics(labelFont).elidedText(text(), Qt::ElideRight, qRound(textRect.width()));
+        painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
+    }
+
+private:
+    fluent::FluentElement* m_themeHost = nullptr;
+    QString m_glyph;
+};
+
+// Fluent visual card delegate for Studio GridView items: renders cover-cropped media
+// above an optional Title | Subtitle two-line footer.
+class StudioGridTileDelegate final : public QStyledItemDelegate {
+public:
+    StudioGridTileDelegate(fluent::FluentElement* themeHost, GridView* view, QObject* parent = nullptr)
+        : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view)
+    {}
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        if (!index.isValid())
+            return;
+
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setRenderHint(QPainter::TextAntialiasing);
+
+        const auto& colors =
+            m_themeHost ? m_themeHost->themeColorsRef() : ThemeRegistry::instance().colors(FluentElement::Light);
+        const bool isSelected = (option.state & QStyle::State_Selected);
+        const bool isHovered = (option.state & QStyle::State_MouseOver);
+
+        const QRectF tileRect = QRectF(option.rect).adjusted(2.0, 2.0, -2.0, -2.0);
+        const qreal radius = CornerRadius::Control;
+
+        QPainterPath tileClip;
+        tileClip.addRoundedRect(tileRect, radius, radius);
+        QColor cardBg = isSelected ? colors.bgLayer : colors.bgLayerAlt;
+        painter->fillPath(tileClip, cardBg);
+
+        painter->save();
+        painter->setClipPath(tileClip);
+
+        const QString rawLabel = index.data(Qt::DisplayRole).toString();
+        const int sep = rawLabel.indexOf(QLatin1Char('|'));
+        const QString title = (sep >= 0) ? rawLabel.left(sep).trimmed() : rawLabel;
+        const QString subtitle = (sep >= 0) ? rawLabel.mid(sep + 1).trimmed() : QString();
+
+        const qreal footerH = subtitle.isEmpty()
+            ? qBound(24.0, tileRect.height() * 0.28, 30.0)
+            : qBound(34.0, tileRect.height() * 0.34, 42.0);
+        const QRectF thumbRect(tileRect.left() + 4.0, tileRect.top() + 4.0, qMax(24.0, tileRect.width() - 8.0),
+            qMax(24.0, tileRect.height() - footerH - 6.0));
+        const QRectF textRect(tileRect.left() + 8.0, tileRect.bottom() - footerH + 2.0,
+            qMax(20.0, tileRect.width() - 16.0), footerH - 4.0);
+
+        QPainterPath thumbClip;
+        thumbClip.addRoundedRect(thumbRect, 4.0, 4.0);
+        painter->save();
+        painter->setClipPath(thumbClip);
+
+        const QPixmap photo = index.data(Qt::DecorationRole).value<QPixmap>();
+        if (!photo.isNull() && thumbRect.width() > 2.0 && thumbRect.height() > 2.0) {
+            const QSizeF srcLogical = QSizeF(photo.size()) / qMax<qreal>(1.0, photo.devicePixelRatio());
+            if (!srcLogical.isEmpty()) {
+                const qreal coverScale = qMax(thumbRect.width() / srcLogical.width(),
+                    thumbRect.height() / srcLogical.height());
+                const qreal drawW = srcLogical.width() * coverScale;
+                const qreal drawH = srcLogical.height() * coverScale;
+                const QRectF targetRect(thumbRect.center().x() - drawW * 0.5, thumbRect.center().y() - drawH * 0.5,
+                    drawW, drawH);
+                painter->setRenderHint(QPainter::SmoothPixmapTransform, true);
+                painter->drawPixmap(targetRect, photo, QRectF(QPointF(0.0, 0.0), QSizeF(photo.size())));
+            }
+        } else {
+            struct PalettePair {
+                QRgb top;
+                QRgb bottom;
+                QRgb hillBack;
+                QRgb hillFront;
+                QRgb sun;
+            };
+            static constexpr PalettePair kPalettes[] = {
+                {0xFF3E6DA8, 0xFF8FB8DE, 0xFF284F82, 0xFF1A365D, 0xFFFFD584},
+                {0xFF2B6F73, 0xFF7BC8BF, 0xFF1D5258, 0xFF133B40, 0xFFFFE7A3},
+                {0xFF5D5499, 0xFFAB9CE0, 0xFF423A78, 0xFF2C2654, 0xFFFFD8B0},
+                {0xFF397654, 0xFF8CC99E, 0xFF27593D, 0xFF193D29, 0xFFFFF0A8},
+                {0xFFA45A4A, 0xFFE3A682, 0xFF7D3F35, 0xFF542822, 0xFFFFE5B8},
+                {0xFF2E6395, 0xFF6AAEE6, 0xFF1E4973, 0xFF12304D, 0xFFE6F4FF},
+            };
+            const PalettePair& pal = kPalettes[qAbs(index.row()) % 6];
+
+            QLinearGradient sky(thumbRect.topLeft(), thumbRect.bottomLeft());
+            sky.setColorAt(0.0, QColor::fromRgba(pal.top));
+            sky.setColorAt(1.0, QColor::fromRgba(pal.bottom));
+            painter->fillRect(thumbRect, sky);
+
+            const qreal sunR = qMin(thumbRect.width(), thumbRect.height()) * 0.19;
+            const QPointF sunCenter(thumbRect.right() - thumbRect.width() * 0.24,
+                thumbRect.top() + thumbRect.height() * 0.30);
+            QColor sunColor = QColor::fromRgba(pal.sun);
+            sunColor.setAlpha(215);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(sunColor);
+            painter->drawEllipse(sunCenter, sunR, sunR);
+
+            QPainterPath ridgeBack;
+            ridgeBack.moveTo(thumbRect.left(), thumbRect.bottom());
+            ridgeBack.lineTo(thumbRect.left(), thumbRect.top() + thumbRect.height() * 0.62);
+            ridgeBack.cubicTo(thumbRect.left() + thumbRect.width() * 0.28, thumbRect.top() + thumbRect.height() * 0.44,
+                thumbRect.left() + thumbRect.width() * 0.62, thumbRect.top() + thumbRect.height() * 0.72,
+                thumbRect.right(), thumbRect.top() + thumbRect.height() * 0.56);
+            ridgeBack.lineTo(thumbRect.right(), thumbRect.bottom());
+            ridgeBack.closeSubpath();
+            painter->setBrush(QColor::fromRgba(pal.hillBack));
+            painter->drawPath(ridgeBack);
+
+            QPainterPath ridgeFront;
+            ridgeFront.moveTo(thumbRect.left(), thumbRect.bottom());
+            ridgeFront.lineTo(thumbRect.left(), thumbRect.top() + thumbRect.height() * 0.76);
+            ridgeFront.cubicTo(thumbRect.left() + thumbRect.width() * 0.36, thumbRect.top() + thumbRect.height() * 0.64,
+                thumbRect.left() + thumbRect.width() * 0.68, thumbRect.top() + thumbRect.height() * 0.86,
+                thumbRect.right(), thumbRect.top() + thumbRect.height() * 0.70);
+            ridgeFront.lineTo(thumbRect.right(), thumbRect.bottom());
+            ridgeFront.closeSubpath();
+            painter->setBrush(QColor::fromRgba(pal.hillFront));
+            painter->drawPath(ridgeFront);
+        }
+
+        painter->restore();
+
+        if (isHovered && !isSelected)
+            painter->fillPath(thumbClip, QColor(255, 255, 255, 18));
+
+        QFont titleFont = option.font;
+        titleFont.setPixelSize(12);
+        titleFont.setWeight(QFont::DemiBold);
+        painter->setFont(titleFont);
+        painter->setPen(isSelected ? colors.textAccentPrimary : colors.textPrimary);
+
+        if (subtitle.isEmpty()) {
+            const QString elided = QFontMetrics(titleFont).elidedText(title, Qt::ElideRight, qRound(textRect.width()));
+            painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
+        } else {
+            const QRectF topLine(textRect.left(), textRect.top(), textRect.width(), textRect.height() * 0.54);
+            const QRectF subLine(textRect.left(), textRect.top() + textRect.height() * 0.52, textRect.width(),
+                textRect.height() * 0.48);
+            const QString elidedTitle = QFontMetrics(titleFont).elidedText(title, Qt::ElideRight,
+                qRound(topLine.width()));
+            painter->drawText(topLine, Qt::AlignLeft | Qt::AlignVCenter, elidedTitle);
+
+            QFont subFont = option.font;
+            subFont.setPixelSize(11);
+            painter->setFont(subFont);
+            painter->setPen(colors.textSecondary);
+            const QString elidedSub = QFontMetrics(subFont).elidedText(subtitle, Qt::ElideRight,
+                qRound(subLine.width()));
+            painter->drawText(subLine, Qt::AlignLeft | Qt::AlignVCenter, elidedSub);
+        }
+
+        painter->restore();
+
+        painter->setBrush(Qt::NoBrush);
+        painter->setPen(QPen(isSelected ? colors.accentDefault : colors.strokeCard, isSelected ? 2.0 : 1.0));
+        painter->drawPath(tileClip);
+
+        painter->restore();
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        Q_UNUSED(option);
+        Q_UNUSED(index);
+        if (m_view)
+            return m_view->cellSize();
+        return QSize(156, 128);
+    }
+
+private:
+    fluent::FluentElement* m_themeHost = nullptr;
+    GridView* m_view = nullptr;
+};
+
+// Wraps DataGrid's native delegate to render semantic status pills for recognized tokens.
+class StudioDataGridDelegate final : public QStyledItemDelegate {
+public:
+    explicit StudioDataGridDelegate(DataGrid* grid)
+        : QStyledItemDelegate(grid), m_grid(grid), m_baseDelegate(grid ? grid->itemDelegate() : nullptr)
+    {}
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        return m_baseDelegate
+            ? m_baseDelegate->createEditor(parent, option, index)
+            : QStyledItemDelegate::createEditor(parent, option, index);
+    }
+
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index)
+        const override
+    {
+        if (m_baseDelegate)
+            m_baseDelegate->updateEditorGeometry(editor, option, index);
+        else
+            QStyledItemDelegate::updateEditorGeometry(editor, option, index);
+    }
+
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
+    {
+        if (m_baseDelegate)
+            m_baseDelegate->setEditorData(editor, index);
+        else
+            QStyledItemDelegate::setEditorData(editor, index);
+    }
+
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override
+    {
+        if (m_baseDelegate)
+            m_baseDelegate->setModelData(editor, model, index);
+        else
+            QStyledItemDelegate::setModelData(editor, model, index);
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        if (!m_grid || !index.isValid()) {
+            if (m_baseDelegate)
+                m_baseDelegate->paint(painter, option, index);
+            return;
+        }
+
+        const QString text = index.data(Qt::DisplayRole).toString().trimmed();
+        const QString low = text.toLower();
+        const auto& colors = m_grid->themeColorsRef();
+        QColor pillFg;
+        QColor pillBg;
+        bool isStatus = false;
+
+        auto matchAny = [&](std::initializer_list<const char*> tokens) {
+            for (const char* tok : tokens) {
+                if (low == QLatin1String(tok))
+                    return true;
+            }
+            return false;
+        };
+
+        if (matchAny({"online", "active", "healthy", "ready", "verified", "running", "completed", "pass", "passed",
+                "ok", "synced", "enabled", "live", "up"})) {
+            pillFg = colors.systemSuccess;
+            pillBg = colors.systemSuccessBg;
+            isStatus = true;
+        } else if (matchAny({"warning", "warn", "degraded", "pending", "queued", "syncing", "indexing", "slow", "busy",
+                       "review"})) {
+            pillFg = colors.systemCaution;
+            pillBg = colors.systemCautionBg;
+            isStatus = true;
+        } else if (matchAny({"error", "failed", "offline", "critical", "down", "blocked", "timeout", "alert"})) {
+            pillFg = colors.systemCritical;
+            pillBg = colors.systemCriticalBg;
+            isStatus = true;
+        } else if (matchAny({"new", "beta", "info", "draft", "scheduled"})) {
+            pillFg = colors.textAccentPrimary;
+            pillBg = colors.subtleSecondary;
+            isStatus = true;
+        }
+
+        if (!isStatus || text.isEmpty() || text.size() > 24) {
+            if (m_baseDelegate)
+                m_baseDelegate->paint(painter, option, index);
+            else
+                QStyledItemDelegate::paint(painter, option, index);
+            return;
+        }
+
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing, true);
+        painter->setRenderHint(QPainter::TextAntialiasing, true);
+
+        const bool selected = option.state & QStyle::State_Selected;
+        const bool hovered = option.state & QStyle::State_MouseOver;
+        QColor rowBg = m_grid->isBackgroundVisible() ? colors.bgLayer : Qt::transparent;
+        painter->fillRect(option.rect, rowBg);
+        if (selected)
+            painter->fillRect(option.rect, colors.subtleSecondary);
+        else if (hovered)
+            painter->fillRect(option.rect, colors.subtleTertiary);
+
+        QFont pillFont = option.font;
+        pillFont.setPixelSize(11);
+        pillFont.setWeight(QFont::DemiBold);
+        const QFontMetrics fm(pillFont);
+        const int maxPillW = qMax(36, option.rect.width() - 18);
+        const int pillW = qMin(maxPillW, fm.horizontalAdvance(text) + 26);
+        const QRectF pillRect(option.rect.left() + 10.0, option.rect.center().y() - 10.5, pillW, 21.0);
+
+        QColor tintFill = pillBg.isValid() && pillBg.alpha() > 0 ? pillBg : pillFg;
+        if (tintFill == pillFg)
+            tintFill.setAlpha(34);
+        QColor borderColor = pillFg;
+        borderColor.setAlpha(90);
+
+        painter->setBrush(tintFill);
+        painter->setPen(QPen(borderColor, 1.0));
+        painter->drawRoundedRect(pillRect, 10.5, 10.5);
+
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(pillFg);
+        painter->drawEllipse(QPointF(pillRect.left() + 9.0, pillRect.center().y()), 2.5, 2.5);
+
+        painter->setFont(pillFont);
+        painter->setPen(pillFg);
+        const QRectF textRect(pillRect.left() + 15.0, pillRect.top(), qMax(10.0, pillRect.width() - 21.0),
+            pillRect.height());
+        const QString elided = fm.elidedText(text, Qt::ElideRight, qRound(textRect.width()));
+        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
+
+        painter->restore();
+    }
+
+private:
+    DataGrid* m_grid = nullptr;
+    QAbstractItemDelegate* m_baseDelegate = nullptr;
+};
+
 ChartView* configureChart(ChartView* chart, const QJsonObject& props, int defaultMinHeight)
 {
     auto* model = new ChartModel(chart);
@@ -462,21 +1516,6 @@ ChartView* configureChart(ChartView* chart, const QJsonObject& props, int defaul
     chart->setTitle(props.value(QStringLiteral("title")).toString());
     chart->setMinimumHeight(qBound(64, props.value(QStringLiteral("minHeight")).toInt(defaultMinHeight), 420));
     return chart;
-}
-
-QPixmap createSamplePreviewPixmap()
-{
-    QPixmap pixmap(320, 180);
-    pixmap.fill(QColor(QStringLiteral("#0F6CBD")));
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(QRect(0, 90, 320, 90), QColor(QStringLiteral("#115EA3")));
-    painter.setBrush(QColor(255, 255, 255, 36));
-    painter.setPen(Qt::NoPen);
-    painter.drawEllipse(QPoint(250, 56), 54, 54);
-    painter.setPen(Qt::white);
-    painter.drawText(pixmap.rect(), Qt::AlignCenter, QStringLiteral("Fluent-Qt ImageViewer"));
-    return pixmap;
 }
 
 bool validateNodeRecursive(const QJsonValue& value, int depth, int& count, QSet<QString>& seenIds, QString* error)
@@ -651,6 +1690,7 @@ struct GalleryStudioCanvas::ResponsiveBindings {
         int configuredSpacing = 12;
         int configuredPadding = 0;
         bool hasTrailingStretch = false;
+        int splitStretchIndex = -1;
     };
     struct BoxDensityBinding {
         QPointer<QWidget> host;
@@ -674,10 +1714,13 @@ struct GalleryStudioCanvas::ResponsiveBindings {
     struct ListDetailBinding {
         QPointer<ListDetailView> view;
         int configuredPaneWidth = 220;
+        int configuredMinHeight = 200;
     };
     struct SplitBinding {
         QPointer<SplitView> split;
         Qt::Orientation configuredOrientation = Qt::Horizontal;
+        int configuredMinHeight = 180;
+        QVector<QPointer<QWidget>> panes;
     };
     struct InfoBarBinding {
         QPointer<InfoBar> bar;
@@ -694,6 +1737,41 @@ struct GalleryStudioCanvas::ResponsiveBindings {
     QVector<SplitBinding> splits;
     QVector<InfoBarBinding> infoBars;
 };
+
+void GalleryStudioCanvas::fetchPhoto(const QUrl& url,
+    QObject* lifetimeGuard,
+    std::function<void(const QPixmap&)> onReady)
+{
+    if (isAutomatedTestRun() || !url.isValid() || url.scheme() != QLatin1String("https")
+        || url.host() != QLatin1String("images.unsplash.com")) {
+        return;
+    }
+    QNetworkRequest req(url);
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
+    req.setAttribute(QNetworkRequest::AutoDeleteReplyOnFinishAttribute, true);
+#ifndef Q_OS_WASM
+    req.setRawHeader("User-Agent", "FluentQtGalleryStudio/1.0");
+#endif
+    if (!m_network)
+        m_network = new QNetworkAccessManager(this);
+    QNetworkReply* reply = m_network->get(req);
+    QObject::connect(lifetimeGuard, &QObject::destroyed, reply, &QNetworkReply::abort);
+    QObject::connect(reply, &QNetworkReply::finished, lifetimeGuard, [reply, onReady = std::move(onReady)]() {
+        if (reply->error() != QNetworkReply::NoError || reply->url().host() != QLatin1String("images.unsplash.com"))
+            return;
+        QImageReader reader(reply);
+        const auto format = reader.format().toLower();
+        if (format != "jpeg" && format != "png" && format != "webp" && format != "avif")
+            return;
+        const QSize size = reader.size();
+        if (size.width() > 1280 || size.height() > 1280)
+            reader.setScaledSize(size.scaled(1280, 1280, Qt::KeepAspectRatio));
+        const QImage img = reader.read();
+        if (img.isNull())
+            return;
+        onReady(QPixmap::fromImage(img));
+    });
+}
 
 GalleryStudioCanvas::GalleryStudioCanvas(QWidget* parent)
     : QWidget(parent), m_responsive(std::make_unique<ResponsiveBindings>())
@@ -731,6 +1809,10 @@ GalleryStudioCanvas::GalleryStudioCanvas(QWidget* parent)
 GalleryStudioCanvas::~GalleryStudioCanvas()
 {
     deactivateEmbeddedSessions(m_rootWidget.data());
+    if (m_hasAccentOverride) {
+        ThemeRegistry::instance().resetToDefaults();
+        m_hasAccentOverride = false;
+    }
 }
 
 QStringList GalleryStudioCanvas::supportedTypes()
@@ -872,6 +1954,25 @@ bool GalleryStudioCanvas::applyDocument(const QJsonObject& document, QString* er
     if (!validateNodeRecursive(rootValue, 1, count, seenIds, error))
         return false;
 
+    const QJsonObject design = document.value(QStringLiteral("design")).toObject();
+    const QString designTheme = design.value(QStringLiteral("theme")).toString().trimmed().toLower();
+    if (designTheme == QLatin1String("dark")) {
+        m_theme = FluentElement::Dark;
+    } else if (designTheme == QLatin1String("light")) {
+        m_theme = FluentElement::Light;
+    }
+    const QString accentHex = design.value(QStringLiteral("accentColor")).toString().trimmed();
+    static const QRegularExpression kAccentHexRe(QStringLiteral("^#[0-9a-fA-F]{6}$"));
+    const QColor accentColor = kAccentHexRe.match(accentHex).hasMatch() ? QColor(accentHex) : QColor();
+    if (accentColor.isValid()) {
+        UserTheme::applyAccentOverride(accentColor);
+        m_hasAccentOverride = true;
+    } else if (m_hasAccentOverride) {
+        ThemeRegistry::instance().resetToDefaults();
+        m_hasAccentOverride = false;
+    }
+    FluentElement::setTheme(m_theme);
+
     QWidget* stagedParent = m_stage;
     QVector<NodeEntry> built;
     built.reserve(count);
@@ -912,6 +2013,7 @@ bool GalleryStudioCanvas::applyDocument(const QJsonObject& document, QString* er
     if (!m_rootIsAnchorBox)
         m_stageLayout->addStretch(1);
     m_rootWidget->show();
+    refreshCommandBarActionIcons(m_rootWidget.data(), m_theme);
     const int vpWidth =
         m_scroll && m_scroll->viewport()->width() > 0 ? m_scroll->viewport()->width() : (width() > 0 ? width() : 860);
     applyResponsiveLayout(vpWidth);
@@ -1003,6 +2105,7 @@ bool GalleryStudioCanvas::patchNodeProperties(const QString& nodeId, const QJson
             const QSignalBlocker blocker(target);
             if (!GalleryComponentPlayground::applyStudioProperties(found->type, target, widgetPatch))
                 return false;
+            applyStudioExtendedIconProps(found->widget.data(), widgetPatch);
             if (preserveComboIndex && combo->count() > 0 && prevComboIndex >= 0)
                 combo->setCurrentIndex(qBound(0, prevComboIndex, combo->count() - 1));
         }
@@ -1185,6 +2288,7 @@ void GalleryStudioCanvas::setTheme(FluentElement::Theme theme)
 {
     m_theme = theme;
     FluentElement::setTheme(theme);
+    refreshCommandBarActionIcons(m_rootWidget.data(), theme);
     update();
     if (m_scroll)
         m_scroll->viewport()->update();
@@ -1238,6 +2342,7 @@ QWidget* GalleryStudioCanvas::buildNode(const QJsonObject& nodeObj, QWidget* par
         const QSignalBlocker blocker(inspectTarget);
         GalleryComponentPlayground::applyStudioProperties(type, inspectTarget, props);
     }
+    applyStudioExtendedIconProps(widget, props);
     applyStudioOrientationConstraints(widget);
 
     widget->setObjectName(QStringLiteral("studioNode_%1").arg(id));
@@ -1269,27 +2374,52 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
         const QString alignKey = props.value(QStringLiteral("align")).toString();
         const bool isRow = type == QStringLiteral("HBox");
         QVector<QPointer<QWidget>> hItems;
+        QStringList childTypes;
         for (const QJsonValue& childVal : children) {
-            if (QWidget* child = buildNode(childVal.toObject(), box, built)) {
+            const QJsonObject childObj = childVal.toObject();
+            if (QWidget* child = buildNode(childObj, box, built)) {
                 hItems.append(child);
-                if (isRow && alignKey == QStringLiteral("Center"))
-                    layout->addWidget(child, 0, Qt::AlignVCenter);
-                else if (isRow && alignKey == QStringLiteral("Start"))
-                    layout->addWidget(child, 0, Qt::AlignTop);
-                else if (isRow && alignKey == QStringLiteral("End"))
-                    layout->addWidget(child, 0, Qt::AlignBottom);
-                else
-                    layout->addWidget(child);
+                childTypes.append(childObj.value(QStringLiteral("type")).toString());
             }
         }
-        const bool hasStretch = isRow
+        int splitStretchIndex = -1;
+        if (isRow && hItems.size() >= 2
+            && (alignKey == QStringLiteral("Center") || alignKey == QStringLiteral("Stretch") || alignKey.isEmpty())) {
+            int prefixLen = 0;
+            while (prefixLen < childTypes.size() && isHeaderLeadingControl(childTypes.at(prefixLen)))
+                ++prefixLen;
+            if (prefixLen >= 1 && prefixLen < childTypes.size() && isHeaderTrailingControl(childTypes.at(prefixLen))) {
+                splitStretchIndex = prefixLen;
+            }
+        }
+        for (int idx = 0; idx < hItems.size(); ++idx) {
+            QWidget* child = hItems.at(idx).data();
+            if (isRow && splitStretchIndex == idx)
+                layout->addStretch(1);
+            if (isRow && splitStretchIndex >= 0 && idx >= splitStretchIndex
+                && (childTypes.at(idx) == QStringLiteral("AutoSuggestBox")
+                    || childTypes.at(idx) == QStringLiteral("LineEdit"))) {
+                child->setMinimumWidth(qMax(child->minimumWidth(), 180));
+                child->setMaximumWidth(qMin(child->maximumWidth(), 260));
+            }
+            if (isRow && (alignKey == QStringLiteral("Center") || splitStretchIndex >= 0))
+                layout->addWidget(child, 0, Qt::AlignVCenter);
+            else if (isRow && alignKey == QStringLiteral("Start"))
+                layout->addWidget(child, 0, Qt::AlignTop);
+            else if (isRow && alignKey == QStringLiteral("End"))
+                layout->addWidget(child, 0, Qt::AlignBottom);
+            else
+                layout->addWidget(child);
+        }
+        const bool hasStretch = isRow && splitStretchIndex < 0
             && (alignKey == QStringLiteral("Start") || alignKey == QStringLiteral("Center")
                 || alignKey == QStringLiteral("End"));
         if (hasStretch)
             layout->addStretch(1);
         if (m_stagingResponsive) {
             if (isRow)
-                m_stagingResponsive->hboxes.append({box, layout, hItems, alignKey, spacing, pad, hasStretch});
+                m_stagingResponsive->hboxes.append(
+                    {box, layout, hItems, alignKey, spacing, pad, hasStretch, splitStretchIndex});
             else
                 m_stagingResponsive->boxes.append({box, layout, spacing, pad});
         }
@@ -1476,11 +2606,16 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
 
     if (type == QStringLiteral("ScrollView")) {
         auto* sv = new ScrollView(parentWidget);
+        sv->setMinimumWidth(0);
+        sv->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        sv->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sv->setWidgetResizable(true);
-        sv->setMinimumHeight(qBound(120, props.value(QStringLiteral("minHeight")).toInt(180), 420));
+        sv->setMinimumHeight(qBound(120, props.value(QStringLiteral("minHeight")).toInt(180), 640));
         auto* content = new QWidget();
+        content->setMinimumWidth(0);
+        content->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         auto* layout = new QVBoxLayout(content);
-        layout->setContentsMargins(10, 10, 10, 10);
+        layout->setContentsMargins(0, 2, 0, 2);
         layout->setSpacing(10);
         if (children.isEmpty()) {
             layout->addWidget(makeSamplePane(content, QStringLiteral("ScrollView Viewport"),
@@ -1504,22 +2639,98 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
             ? Qt::Vertical
             : Qt::Horizontal;
         split->setOrientation(configuredOrientation);
-        split->setMinimumHeight(qBound(120, props.value(QStringLiteral("minHeight")).toInt(180), 420));
+        const int requestedMinH = qBound(120, props.value(QStringLiteral("minHeight")).toInt(180), 960);
+        QVector<QPointer<QWidget>> panePtrs;
         if (children.isEmpty()) {
-            split->addPane(
-                makeSamplePane(split, QStringLiteral("Primary Pane"), QStringLiteral("Draggable splitter pane")),
-                WidgetOwnership::Owned);
-            split->addPane(
-                makeSamplePane(split, QStringLiteral("Secondary Pane"), QStringLiteral("Adaptive detail view")),
-                WidgetOwnership::Owned);
+            SplitViewPaneOptions firstOpts;
+            firstOpts.minimumSize = 140;
+            firstOpts.preferredSize = 240;
+            SplitViewPaneOptions secondOpts;
+            secondOpts.minimumSize = 180;
+            secondOpts.preferredSize = 360;
+            secondOpts.fill = true;
+            QWidget* p1 = makeSamplePane(split, QStringLiteral("Primary Pane"),
+                QStringLiteral("Draggable splitter pane"));
+            QWidget* p2 = makeSamplePane(split, QStringLiteral("Secondary Pane"),
+                QStringLiteral("Adaptive detail view"));
+            panePtrs.append(p1);
+            panePtrs.append(p2);
+            split->addPane(p1, WidgetOwnership::Owned, firstOpts);
+            split->addPane(p2, WidgetOwnership::Owned, secondOpts);
         } else {
+            QVector<QPair<QWidget*, QJsonObject>> builtPanes;
+            builtPanes.reserve(children.size());
+            panePtrs.reserve(children.size());
             for (const QJsonValue& childVal : children) {
-                if (QWidget* child = buildNode(childVal.toObject(), split, built))
-                    split->addPane(child, WidgetOwnership::Owned);
+                const QJsonObject childObj = childVal.toObject();
+                if (QWidget* child = buildNode(childObj, split, built)) {
+                    builtPanes.append({child, childObj});
+                    panePtrs.append(child);
+                }
+            }
+            const int count = builtPanes.size();
+            int primaryIdx = count - 1;
+            if (configuredOrientation == Qt::Horizontal && count >= 3) {
+                primaryIdx = 1;
+                for (int i = 0; i < count; ++i) {
+                    if (!isSidebarLikeNode(builtPanes.at(i).second) && isPrimaryWideNode(builtPanes.at(i).second)) {
+                        primaryIdx = i;
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < count; ++i) {
+                QWidget* paneWidget = builtPanes.at(i).first;
+                const QJsonObject& paneObj = builtPanes.at(i).second;
+                if (configuredOrientation == Qt::Vertical || count < 2) {
+                    split->addPane(paneWidget, WidgetOwnership::Owned);
+                    continue;
+                }
+                SplitViewPaneOptions opts;
+                if (count == 2) {
+                    const bool leftSidebar = isSidebarLikeNode(builtPanes.at(0).second)
+                        && !isSidebarLikeNode(builtPanes.at(1).second);
+                    if (i == 0) {
+                        opts.minimumSize = leftSidebar ? 150 : 180;
+                        opts.preferredSize = leftSidebar ? 204 : 320;
+                        opts.fill = false;
+                    } else {
+                        opts.minimumSize = leftSidebar ? 260 : 180;
+                        opts.preferredSize = leftSidebar ? 480 : 320;
+                        opts.fill = true;
+                    }
+                } else if (i == 0 && i != primaryIdx) {
+                    const bool sidebar = isSidebarLikeNode(paneObj);
+                    opts.minimumSize = sidebar ? 148 : 160;
+                    opts.preferredSize = sidebar ? 188 : 210;
+                    opts.fill = false;
+                } else if (i == primaryIdx) {
+                    opts.minimumSize = 260;
+                    opts.preferredSize = 380;
+                    opts.fill = true;
+                } else {
+                    opts.minimumSize = 210;
+                    opts.preferredSize = 256;
+                    opts.fill = false;
+                }
+                split->addPane(paneWidget, WidgetOwnership::Owned, opts);
             }
         }
+        int contentH = 0;
+        int hardMinH = 0;
+        for (const auto& panePtr : panePtrs) {
+            QWidget* pane = panePtr.data();
+            const int ph = measureWidgetHeightForWidth(pane, configuredOrientation == Qt::Vertical ? 780 : 380);
+            const int pMinH = pane
+                ? (pane->layout() ? pane->layout()->totalMinimumSize().height()
+                                  : qMax(pane->minimumHeight(), pane->minimumSizeHint().height()))
+                : 0;
+            contentH = (configuredOrientation == Qt::Vertical) ? (contentH + ph + 10) : qMax(contentH, ph);
+            hardMinH = (configuredOrientation == Qt::Vertical) ? (hardMinH + pMinH + 10) : qMax(hardMinH, pMinH);
+        }
+        split->setMinimumHeight(qMax(qMax(requestedMinH, hardMinH + 16), qMin(contentH + 16, 1280)));
         if (m_stagingResponsive)
-            m_stagingResponsive->splits.append({split, configuredOrientation});
+            m_stagingResponsive->splits.append({split, configuredOrientation, requestedMinH, panePtrs});
         return split;
     }
 
@@ -1575,12 +2786,17 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
         ldv->setMinimumWidth(0);
         const int paneWidth = qBound(140, props.value(QStringLiteral("listPaneWidth")).toInt(220), 420);
         ldv->setListPaneWidth(paneWidth);
-        ldv->setMinimumHeight(qBound(150, props.value(QStringLiteral("minHeight")).toInt(200), 420));
+        ldv->setCompactThreshold(500);
+        const int requestedMinH = qBound(150, props.value(QStringLiteral("minHeight")).toInt(200), 960);
 
+        ldv->listPane()->setMinimumWidth(0);
+        ldv->detailPane()->setMinimumWidth(0);
         auto* listLayout = new QVBoxLayout(ldv->listPane());
         listLayout->setContentsMargins(6, 6, 6, 6);
+        listLayout->setSpacing(8);
         auto* detailLayout = new QVBoxLayout(ldv->detailPane());
         detailLayout->setContentsMargins(10, 6, 6, 6);
+        detailLayout->setSpacing(10);
 
         if (children.isEmpty()) {
             auto* list = new ListView(ldv->listPane());
@@ -1603,8 +2819,13 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
                     QStringLiteral("Add a second child node for custom detail content.")));
             }
         }
+        const int listH = measureWidgetHeightForWidth(ldv->listPane(), paneWidth);
+        const int detailH = measureWidgetHeightForWidth(ldv->detailPane(), 560);
+        const int hardMinH = qMax(listLayout->totalMinimumSize().height(), detailLayout->totalMinimumSize().height())
+            + 16;
+        ldv->setMinimumHeight(qMax(qMax(requestedMinH, hardMinH), qMin(qMax(listH, detailH) + 16, 1280)));
         if (m_stagingResponsive)
-            m_stagingResponsive->listDetails.append({ldv, paneWidth});
+            m_stagingResponsive->listDetails.append({ldv, paneWidth, requestedMinH});
         return ldv;
     }
 
@@ -1620,21 +2841,33 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
         const bool configuredPaneOpen = props.value(QStringLiteral("paneOpen")).toBool(true);
         nav->setDisplayMode(configuredMode);
         nav->setPaneOpen(configuredPaneOpen);
-        nav->setExpandedPaneWidth(176);
-        nav->setMinimumHeight(qBound(180, props.value(QStringLiteral("minHeight")).toInt(240), 460));
+        nav->setExpandedPaneWidth(184);
+        const int requestedMinH = qBound(180, props.value(QStringLiteral("minHeight")).toInt(240), 720);
 
         auto* navPane = new QWidget();
         auto* paneLayout = new QVBoxLayout(navPane);
-        paneLayout->setContentsMargins(8, 8, 8, 8);
-        paneLayout->setSpacing(4);
+        paneLayout->setContentsMargins(6, 8, 6, 8);
+        paneLayout->setSpacing(2);
         const QStringList navItems = jsonStringList(props.value(QStringLiteral("items")),
             {QStringLiteral("Home"), QStringLiteral("Analytics"), QStringLiteral("Settings")});
+        auto navButtons = std::make_shared<QVector<QPointer<StudioNavRailItem>>>();
+        navButtons->reserve(navItems.size());
+        QStringList cleanNavLabels;
+        cleanNavLabels.reserve(navItems.size());
         for (int i = 0; i < navItems.size(); ++i) {
-            auto* itemBtn = new Button(navItems.at(i), navPane);
-            itemBtn->setFluentStyle(i == 0 ? Button::Accent : Button::Subtle);
-            connect(itemBtn, &Button::clicked, this, [this, id, nav, i]() {
+            const StudioItemSpec spec = parseStudioItemIconAndLabel(navItems.at(i), i, true);
+            cleanNavLabels.append(spec.label);
+            auto* itemBtn = new StudioNavRailItem(nav, spec.label, spec.glyph, navPane);
+            itemBtn->setChecked(i == 0);
+            navButtons->append(itemBtn);
+            connect(itemBtn, &QAbstractButton::clicked, this, [this, id, nav, i, navButtons]() {
                 if (nav->contentHost() && i < nav->contentHost()->count())
-                    nav->contentHost()->setCurrentIndex(i);
+                    nav->contentHost()->setCurrentIndex(i, 0, false);
+                for (int j = 0; j < navButtons->size(); ++j) {
+                    if (StudioNavRailItem* b = navButtons->at(j).data())
+                        b->setChecked(j == i);
+                }
+                scheduleLayoutSnapshot();
                 emit interactionEvent(id, QStringLiteral("navItemClicked"), i);
             });
             paneLayout->addWidget(itemBtn);
@@ -1642,21 +2875,28 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
         paneLayout->addStretch(1);
         nav->setMainChromeWidget(navPane, WidgetOwnership::Owned);
 
+        int maxPageH = measureWidgetHeightForWidth(navPane, 184) + 16;
         if (StackContentHost* host = nav->contentHost()) {
+            host->setTransitionAnimationEnabled(false);
             if (children.isEmpty()) {
-                for (int i = 0; i < navItems.size(); ++i) {
-                    host->insertPage(i,
-                        makeSamplePane(nullptr, navItems.at(i),
-                            QStringLiteral("NavigationView page content for %1.").arg(navItems.at(i))),
-                        WidgetOwnership::Owned);
+                for (int i = 0; i < cleanNavLabels.size(); ++i) {
+                    QWidget* sample = makeSamplePane(nullptr, cleanNavLabels.at(i),
+                        QStringLiteral("NavigationView page content for %1.").arg(cleanNavLabels.at(i)));
+                    maxPageH = qMax(maxPageH, measureWidgetHeightForWidth(sample, 620) + 24);
+                    host->insertPage(i, sample, WidgetOwnership::Owned);
                 }
             } else {
                 for (int i = 0; i < children.size(); ++i) {
-                    if (QWidget* child = buildNode(children.at(i).toObject(), nullptr, built))
+                    if (QWidget* child = buildNode(children.at(i).toObject(), nullptr, built)) {
+                        maxPageH = qMax(maxPageH, measureWidgetHeightForWidth(child, 620) + 24);
                         host->insertPage(i, child, WidgetOwnership::Owned);
+                    }
                 }
             }
+            if (host->count() > 0)
+                host->setCurrentIndex(0, 0, false);
         }
+        nav->setMinimumHeight(qMax(requestedMinH, qMin(maxPageH, 1280)));
         if (m_stagingResponsive)
             m_stagingResponsive->navs.append({nav, configuredMode, configuredPaneOpen});
         return nav;
@@ -2289,6 +3529,8 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
 
     if (type == QStringLiteral("TextEdit")) {
         auto* edit = new TextEdit(parentWidget);
+        edit->setMinimumWidth(0);
+        edit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         edit->setPlaceholderText(
             props.value(QStringLiteral("placeholderText")).toString(QStringLiteral("Write notes...")));
         edit->setPlainText(props.value(QStringLiteral("plainText")).toString());
@@ -2461,12 +3703,18 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
         bar->setLabelPosition(props.value(QStringLiteral("labelPosition")).toString() == QStringLiteral("Collapsed")
                 ? CommandBar::LabelPosition::Collapsed
                 : CommandBar::LabelPosition::Right);
+        const auto& colors = ThemeRegistry::instance().colors(m_theme);
+        const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
         const QStringList items = jsonStringList(props.value(QStringLiteral("items")),
             {QStringLiteral("New"), QStringLiteral("Save"), QStringLiteral("Share"), QStringLiteral("Settings")});
-        for (const QString& item : items) {
-            auto* act = new QAction(item, bar);
-            connect(act, &QAction::triggered, this, [this, id, item]() {
-                emit interactionEvent(id, QStringLiteral("commandTriggered"), item);
+        for (int i = 0; i < items.size(); ++i) {
+            const StudioItemSpec spec = parseStudioItemIconAndLabel(items.at(i), i, false);
+            auto* act = new QAction(spec.label, bar);
+            act->setProperty("_studioGlyph", spec.glyph);
+            act->setIcon(makeThemedGlyphIcon(spec.glyph, colors, dpr));
+            const QString cleanLabel = spec.label;
+            connect(act, &QAction::triggered, this, [this, id, cleanLabel]() {
+                emit interactionEvent(id, QStringLiteral("commandTriggered"), cleanLabel);
             });
             bar->addPrimaryAction(act);
         }
@@ -2586,9 +3834,31 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
     if (type == QStringLiteral("GridView")) {
         auto* grid = new GridView(parentWidget);
         grid->setHeaderText(props.value(QStringLiteral("headerText")).toString(QStringLiteral("Tiles")));
-        grid->setModel(buildStringModel(grid,
-            jsonStringList(props.value(QStringLiteral("items")),
-                {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma"), QStringLiteral("Delta")})));
+        grid->setCellSize(QSize(156, 128));
+        grid->setHorizontalSpacing(10);
+        grid->setVerticalSpacing(10);
+        grid->setItemDelegate(new StudioGridTileDelegate(grid, grid, grid));
+        const QStringList tileItems = jsonStringList(props.value(QStringLiteral("items")),
+            {QStringLiteral("Alpha"), QStringLiteral("Beta"), QStringLiteral("Gamma"), QStringLiteral("Delta")});
+        auto* model = buildStringModel(grid, tileItems);
+        const QString mediaTheme = props.value(QStringLiteral("mediaTheme")).toString().trimmed();
+        const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
+        for (int i = 0; i < model->rowCount(); ++i) {
+            QStandardItem* rowItem = model->item(i);
+            const QColor tint = studioThemeTint(mediaTheme, i);
+            const QString seed = QStringLiteral("%1-%2-%3").arg(id, mediaTheme, tileItems.value(i));
+            rowItem->setData(detail::renderScenicPhotoPixmap(QSize(240, 140), tint, seed, dpr), Qt::DecorationRole);
+            if (!mediaTheme.isEmpty() && mediaTheme != QLatin1String("None")) {
+                const QPersistentModelIndex index(model->index(i, 0));
+                fetchPhoto(studioCuratedPhotoUrl(mediaTheme, i, 360), model, [model, index](const QPixmap& pix) {
+                    if (index.isValid())
+                        model->setData(index, pix, Qt::DecorationRole);
+                });
+            }
+        }
+        grid->setModel(model);
+        if (grid->model() && grid->model()->rowCount() > 0)
+            grid->setSelectedIndex(0);
         grid->setBorderVisible(true);
         grid->setBackgroundVisible(true);
         grid->setMinimumHeight(qBound(120, props.value(QStringLiteral("minHeight")).toInt(170), 420));
@@ -2609,15 +3879,14 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
 
     if (type == QStringLiteral("TreeView")) {
         auto* tree = new TreeView(parentWidget);
-        auto* model = new QStandardItemModel(tree);
-        auto* rootItem = new QStandardItem(QStringLiteral("Workspace"));
         const QStringList items = jsonStringList(props.value(QStringLiteral("items")),
-            {QStringLiteral("src/"), QStringLiteral("app/"), QStringLiteral("tests/")});
-        for (const QString& item : items)
-            rootItem->appendRow(new QStandardItem(item));
-        model->appendRow(rootItem);
+            {QStringLiteral("src/"), QStringLiteral("  main.cpp"), QStringLiteral("tests/")});
+        auto* model = buildTreeModel(tree, items);
         tree->setModel(model);
+        tree->setHeaderHidden(true);
         tree->expandAll();
+        if (model->rowCount() > 0)
+            tree->setCurrentIndex(model->index(0, 0));
         tree->setBorderVisible(true);
         tree->setMinimumHeight(qBound(120, props.value(QStringLiteral("minHeight")).toInt(175), 420));
         return finish(tree);
@@ -2625,19 +3894,66 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
 
     if (type == QStringLiteral("DataGrid")) {
         auto* grid = new DataGrid(parentWidget);
-        auto* model = new QStandardItemModel(3, 3, grid);
-        model->setHorizontalHeaderLabels(
-            {QStringLiteral("Module"), QStringLiteral("Qt Target"), QStringLiteral("Status")});
-        const QList<QStringList> rows = {
-            {QStringLiteral("BasicInput"), QStringLiteral("Qt 6.9"), QStringLiteral("Ready")},
-            {QStringLiteral("Charts"), QStringLiteral("Qt 6.9"), QStringLiteral("Verified")},
-            {QStringLiteral("Collections"), QStringLiteral("Qt 6.9"), QStringLiteral("Ready")},
-        };
+        QStringList headers = jsonStringList(props.value(QStringLiteral("headers")), {});
+        QList<QStringList> rows;
+        const QJsonArray customRows = props.value(QStringLiteral("modelData")).toArray();
+        if (!customRows.isEmpty()) {
+            rows.reserve(customRows.size());
+            for (const QJsonValue& rowVal : customRows) {
+                QStringList cells;
+                if (rowVal.isArray()) {
+                    const QJsonArray arr = rowVal.toArray();
+                    cells.reserve(arr.size());
+                    for (const QJsonValue& c : arr) {
+                        if (c.isString())
+                            cells.append(c.toString());
+                        else if (c.isDouble())
+                            cells.append(QString::number(c.toDouble()));
+                        else if (c.isBool())
+                            cells.append(c.toBool() ? QStringLiteral("true") : QStringLiteral("false"));
+                        else
+                            cells.append(QString());
+                    }
+                } else if (!rowVal.toString().isEmpty()) {
+                    cells.append(rowVal.toString());
+                }
+                if (!cells.isEmpty())
+                    rows.append(cells);
+            }
+        }
+        int colCount = headers.size();
+        for (const QStringList& r : std::as_const(rows))
+            colCount = qMax(colCount, r.size());
+        if (rows.isEmpty() && headers.isEmpty()) {
+            headers = {QStringLiteral("Module"), QStringLiteral("Qt Target"), QStringLiteral("Status")};
+            rows = {
+                {QStringLiteral("BasicInput"), QStringLiteral("Qt 6.9"), QStringLiteral("Ready")},
+                {QStringLiteral("Charts"), QStringLiteral("Qt 6.9"), QStringLiteral("Verified")},
+                {QStringLiteral("Collections"), QStringLiteral("Qt 6.9"), QStringLiteral("Ready")},
+            };
+            colCount = 3;
+        } else {
+            colCount = qBound(1, colCount, 12);
+            while (headers.size() < colCount)
+                headers.append(QStringLiteral("Column %1").arg(headers.size() + 1));
+            if (rows.isEmpty()) {
+                QStringList emptyRow;
+                emptyRow.reserve(colCount);
+                for (int c = 0; c < colCount; ++c)
+                    emptyRow.append(QStringLiteral("--"));
+                rows.append(emptyRow);
+            }
+        }
+        auto* model = new QStandardItemModel(rows.size(), colCount, grid);
+        model->setHorizontalHeaderLabels(headers.mid(0, colCount));
         for (int r = 0; r < rows.size(); ++r) {
-            for (int c = 0; c < rows[r].size(); ++c)
-                model->setItem(r, c, new QStandardItem(rows[r][c]));
+            for (int c = 0; c < colCount; ++c)
+                model->setItem(r, c, new QStandardItem(c < rows[r].size() ? rows[r][c] : QString()));
         }
         grid->setModel(model);
+        grid->setItemDelegate(new StudioDataGridDelegate(grid));
+        if (grid->horizontalHeader())
+            grid->horizontalHeader()->setStretchLastSection(true);
         grid->setBorderVisible(true);
         grid->setMinimumHeight(qBound(140, props.value(QStringLiteral("minHeight")).toInt(190), 420));
         return finish(grid);
@@ -2731,9 +4047,34 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
 
     if (type == QStringLiteral("ImageViewer")) {
         auto* viewer = new ImageViewer(parentWidget);
-        viewer->setPixmap(createSamplePreviewPixmap());
+        const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
+        const QString svgText = props.value(QStringLiteral("svg")).toString();
+        const QString mediaTheme = props.value(QStringLiteral("mediaTheme")).toString().trimmed();
+        const QString imageUrlStr = props.value(QStringLiteral("imageUrl")).toString().trimmed();
+        QPixmap initialPix = renderSanitizedSvgPixmap(svgText, QSize(640, 380), dpr);
+        const bool usedSvg = !initialPix.isNull();
+        if (!usedSvg) {
+            const QColor tint = studioThemeTint(mediaTheme, 0);
+            initialPix = detail::renderScenicPhotoPixmap(QSize(640, 380), tint,
+                QStringLiteral("%1-%2").arg(id, mediaTheme), dpr);
+        }
+        viewer->setPixmap(initialPix);
+        viewer->setFitMode(ImageViewer::FitMode::Contain);
+        viewer->setTransformationMode(Qt::SmoothTransformation);
         viewer->setFrameVisible(true);
-        viewer->setMinimumHeight(qBound(140, props.value(QStringLiteral("minHeight")).toInt(180), 420));
+        viewer->setMinimumHeight(qBound(140, props.value(QStringLiteral("minHeight")).toInt(200), 420));
+
+        if (!usedSvg) {
+            QUrl fetchUrl;
+            static const QRegularExpression kUnsplashUrlRe(
+                QStringLiteral("^https://images\\.unsplash\\.com/photo-[a-zA-Z0-9_-]+(?:[?&#][^\\s\"'<>]*)?$"));
+            if (imageUrlStr.size() <= 512 && kUnsplashUrlRe.match(imageUrlStr).hasMatch())
+                fetchUrl = QUrl(imageUrlStr);
+            else if (!mediaTheme.isEmpty())
+                fetchUrl = studioCuratedPhotoUrl(mediaTheme, 0, 960);
+
+            fetchPhoto(fetchUrl, viewer, [viewer](const QPixmap& pix) { viewer->setPixmap(pix); });
+        }
         return finish(viewer);
     }
 
@@ -2899,10 +4240,18 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
     if (type == QStringLiteral("TitleBar")) {
         auto* bar = new TitleBar(parentWidget);
         bar->setTitleBarHeight(40);
+        auto* titleContent = new QWidget(bar);
+        auto* titleLayout = new QHBoxLayout(titleContent);
+        titleLayout->setContentsMargins(8, 0, 8, 0);
+        titleLayout->setSpacing(8);
+        auto* icon = new FontIcon(Typography::Icons::Home, titleContent);
+        icon->setIconSize(14);
+        titleLayout->addWidget(icon);
         auto* title = new Label(props.value(QStringLiteral("title")).toString(QStringLiteral("Fluent Studio Window")),
-            bar);
+            titleContent);
         title->setFluentTypography(Typography::FontRole::BodyStrong);
-        bar->setContentWidget(title);
+        titleLayout->addWidget(title);
+        bar->setContentWidget(titleContent);
         return finish(bar);
     }
 
@@ -3093,9 +4442,12 @@ void GalleryStudioCanvas::applyResponsiveLayout(int viewportWidth)
             while (QLayoutItem* item = hbox.layout->takeAt(0))
                 delete item;
             hbox.layout->setDirection(compact ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+            int childIdx = 0;
             for (const auto& itemPtr : hbox.items) {
                 if (!itemPtr)
                     continue;
+                if (!compact && hbox.splitStretchIndex == childIdx)
+                    hbox.layout->addStretch(1);
                 QWidget* child = itemPtr.data();
                 if (auto* lbl = qobject_cast<Label*>(child)) {
                     lbl->setWordWrap(compact);
@@ -3103,12 +4455,12 @@ void GalleryStudioCanvas::applyResponsiveLayout(int viewportWidth)
                 } else if (auto* btn = qobject_cast<Button*>(child)) {
                     btn->setSizePolicy(compact
                             ? QSizePolicy::Expanding
-                            : (hbox.alignKey == QStringLiteral("Stretch")
+                            : (hbox.alignKey == QStringLiteral("Stretch") && hbox.splitStretchIndex < 0
                                       ? QSizePolicy::Preferred
                                       : QSizePolicy::Maximum),
                         btn->sizePolicy().verticalPolicy());
                 }
-                if (!compact && hbox.alignKey == QStringLiteral("Center"))
+                if (!compact && (hbox.alignKey == QStringLiteral("Center") || hbox.splitStretchIndex >= 0))
                     hbox.layout->addWidget(child, 0, Qt::AlignVCenter);
                 else if (!compact && hbox.alignKey == QStringLiteral("Start"))
                     hbox.layout->addWidget(child, 0, Qt::AlignTop);
@@ -3116,6 +4468,7 @@ void GalleryStudioCanvas::applyResponsiveLayout(int viewportWidth)
                     hbox.layout->addWidget(child, 0, Qt::AlignBottom);
                 else
                     hbox.layout->addWidget(child);
+                ++childIdx;
             }
             if (!compact && hbox.hasTrailingStretch)
                 hbox.layout->addStretch(1);
@@ -3137,17 +4490,100 @@ void GalleryStudioCanvas::applyResponsiveLayout(int viewportWidth)
         box.host->updateGeometry();
     }
 
-    if (m_stageLayout)
+    // 4. Sync adaptive ListDetailView & SplitView minimum heights from final child layout hints.
+    for (const auto& ld : std::as_const(m_responsive->listDetails)) {
+        if (!ld.view)
+            continue;
+        const int effListW = tier == LayoutTier::Medium
+            ? qMin(ld.configuredPaneWidth, 172)
+            : (compact ? qMin(ld.configuredPaneWidth, 128) : ld.configuredPaneWidth);
+        const int detailW = compact ? qMax(200, width - 28) : qMax(220, width - effListW - 36);
+        const int listH = measureWidgetHeightForWidth(ld.view->listPane(), effListW);
+        const int detailH = measureWidgetHeightForWidth(ld.view->detailPane(), detailW);
+        const int listMinH =
+            ld.view->listPane()->layout() ? ld.view->listPane()->layout()->totalMinimumSize().height() : 0;
+        const int detailMinH =
+            ld.view->detailPane()->layout() ? ld.view->detailPane()->layout()->totalMinimumSize().height() : 0;
+        const int hardMinH = qMax(listMinH, detailMinH) + 16;
+        const int targetH = qMax(qMax(ld.configuredMinHeight, hardMinH), qMin(qMax(listH, detailH) + 16, 1280));
+        if (ld.view->minimumHeight() != targetH)
+            ld.view->setMinimumHeight(targetH);
+        ld.view->updateGeometry();
+    }
+
+    for (const auto& sb : std::as_const(m_responsive->splits)) {
+        if (!sb.split)
+            continue;
+        const Qt::Orientation effOrient = compact ? Qt::Vertical : sb.configuredOrientation;
+        int contentH = 0;
+        int hardMinH = 0;
+        const int paneCount = qMax(1, sb.panes.size());
+        const int paneAvailW =
+            (effOrient == Qt::Vertical) ? qMax(200, width - 32) : qMax(180, (width - 36) / paneCount);
+        for (const auto& panePtr : sb.panes) {
+            QWidget* pane = panePtr.data();
+            const int ph = measureWidgetHeightForWidth(pane, paneAvailW);
+            const int pMinH = pane
+                ? (pane->layout() ? pane->layout()->totalMinimumSize().height()
+                                  : qMax(pane->minimumHeight(), pane->minimumSizeHint().height()))
+                : 0;
+            contentH = (effOrient == Qt::Vertical) ? (contentH + ph + 10) : qMax(contentH, ph);
+            hardMinH = (effOrient == Qt::Vertical) ? (hardMinH + pMinH + 10) : qMax(hardMinH, pMinH);
+        }
+        const int targetH = qMax(qMax(sb.configuredMinHeight, hardMinH + 16), qMin(contentH + 16, 1280));
+        if (sb.split->minimumHeight() != targetH)
+            sb.split->setMinimumHeight(targetH);
+        sb.split->updateGeometry();
+    }
+
+    m_rootWidget->updateGeometry();
+    if (QLayout* rootLayout = m_rootWidget->layout())
+        rootLayout->invalidate();
+    if (m_stageLayout) {
+        m_stageLayout->invalidate();
         m_stageLayout->activate();
+    }
     const int vpW = (m_scroll && m_scroll->viewport()->width() > 0) ? m_scroll->viewport()->width() : width;
     const int minStageH = m_scroll ? m_scroll->viewport()->height() : height();
     const int rootDesiredH = m_rootIsAnchorBox
         ? qMax(m_rootWidget->minimumHeight(), m_rootWidget->sizeHint().height())
-        : qMax(m_rootWidget->height(), m_rootWidget->sizeHint().height());
+        : measureWidgetHeightForWidth(m_rootWidget.data(), vpW, 4800);
     const int neededH = qMax(minStageH, rootDesiredH);
     m_stage->resize(vpW, neededH);
     if (m_stageLayout)
         m_stageLayout->activate();
+
+    // Settle nested layouts top-down synchronously so pane and card heights match final parent bounds immediately.
+    if (QLayout* rootLayout = m_rootWidget->layout())
+        rootLayout->activate();
+    for (const auto& ld : std::as_const(m_responsive->listDetails)) {
+        if (!ld.view)
+            continue;
+        if (QLayout* ll = ld.view->listPane()->layout())
+            ll->activate();
+        if (QLayout* dl = ld.view->detailPane()->layout())
+            dl->activate();
+    }
+    for (const auto& sb : std::as_const(m_responsive->splits)) {
+        if (!sb.split)
+            continue;
+        for (const auto& panePtr : sb.panes) {
+            if (panePtr && panePtr->layout())
+                panePtr->layout()->activate();
+        }
+    }
+    for (const auto& box : std::as_const(m_responsive->boxes)) {
+        if (box.host && box.layout)
+            box.layout->activate();
+    }
+    for (const auto& grid : std::as_const(m_responsive->grids)) {
+        if (grid.host && grid.layout)
+            grid.layout->activate();
+    }
+    for (const auto& hbox : std::as_const(m_responsive->hboxes)) {
+        if (hbox.host && hbox.layout)
+            hbox.layout->activate();
+    }
 }
 
 void GalleryStudioCanvas::scheduleLayoutSnapshot()
