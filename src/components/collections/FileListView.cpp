@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "components/collections/FileListView.h"
 
 #include <QAbstractItemModel>
@@ -251,9 +252,25 @@ public:
         return FileAction::None;
     }
 
+    void refreshHover()
+    {
+        if (hoverPosition)
+            setHovered(q->indexAt(*hoverPosition), *hoverPosition);
+    }
+
+    void clearHover()
+    {
+        hoverPosition.reset();
+        setHovered(QModelIndex(), QPoint());
+    }
+
     void setHovered(const QModelIndex& index, const QPoint& point)
     {
         const FileAction action = actionAt(index, point);
+        if (action == FileAction::None)
+            updateWidgetCursor(cursor, q->viewport());
+        else
+            updateWidgetCursor(cursor, q->viewport(), Qt::PointingHandCursor);
         if (hovered == index && hoveredAction == action)
             return;
         hoveredAction = action;
@@ -355,6 +372,7 @@ public:
 
     void clear()
     {
+        updateWidgetCursor(cursor, q->viewport());
         stopMotion();
         heights.clear();
         pendingHeights.clear();
@@ -366,6 +384,8 @@ public:
     void rememberHeight(const QModelIndex& index, int height);
 
     FileListView* q;
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> cursor;
+    std::optional<QPoint> hoverPosition;
     FileListItemDelegate* delegate = nullptr;
     bool animationEnabled = true;
     bool heightDeliveryScheduled = false;
@@ -847,8 +867,17 @@ void FileListView::setModel(QAbstractItemModel* model)
                 ++it;
         }
         d->tick();
+        d->refreshHover();
     }));
-    d->modelConnections.append(connect(model, &QAbstractItemModel::layoutChanged, this, [this] { d->tick(); }));
+    d->modelConnections.append(connect(model, &QAbstractItemModel::layoutChanged, this, [this] {
+        d->tick();
+        d->refreshHover();
+    }));
+    auto refresh = [this] { d->refreshHover(); };
+    d->modelConnections.append(connect(model, &QAbstractItemModel::modelReset, this, refresh));
+    d->modelConnections.append(connect(model, &QAbstractItemModel::rowsInserted, this, refresh));
+    d->modelConnections.append(connect(model, &QAbstractItemModel::rowsMoved, this, refresh));
+    d->refreshHover();
 }
 
 bool FileListView::isAnimationEnabled() const
@@ -879,6 +908,8 @@ void FileListView::dataChanged(const QModelIndex& topLeft, const QModelIndex& bo
     // zh_CN: 保留已知几何，仅在可见内容实测高度改变时重新布局。上传过程常同时
     // 更新字节数说明与进度，不能因此每帧让整表几何失效。
     QAbstractItemView::dataChanged(topLeft, bottomRight, roles);
+    if (roles.isEmpty() || roles.contains(RemovableRole) || roles.contains(RetryableRole) || roles.contains(StatusRole))
+        d->refreshHover();
 }
 
 void FileListView::mousePressEvent(QMouseEvent* event)
@@ -913,9 +944,8 @@ void FileListView::mousePressEvent(QMouseEvent* event)
 void FileListView::mouseMoveEvent(QMouseEvent* event)
 {
     const QModelIndex index = indexAt(event->pos());
+    d->hoverPosition = event->pos();
     d->setHovered(index, event->pos());
-    viewport()->setCursor(
-        d->actionAt(index, event->pos()) == FileAction::None ? Qt::ArrowCursor : Qt::PointingHandCursor);
     if (d->pressedAction != FileAction::None) {
         event->accept();
         return;
@@ -957,8 +987,7 @@ void FileListView::keyPressEvent(QKeyEvent* event)
 
 void FileListView::leaveEvent(QEvent* event)
 {
-    d->setHovered(QModelIndex(), QPoint());
-    viewport()->unsetCursor();
+    d->clearHover();
     ListView::leaveEvent(event);
 }
 
@@ -970,11 +999,12 @@ void FileListView::resizeEvent(QResizeEvent* event)
         d->stopMotion();
     }
     ListView::resizeEvent(event);
+    d->refreshHover();
 }
 
 void FileListView::hideEvent(QHideEvent* event)
 {
-    d->hovered = QPersistentModelIndex();
+    d->clearHover();
     d->pressed = QPersistentModelIndex();
     d->pressedAction = FileAction::None;
     d->stopMotion();
@@ -983,14 +1013,20 @@ void FileListView::hideEvent(QHideEvent* event)
 
 bool FileListView::event(QEvent* event)
 {
-    if (d && (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::EnabledChange))
+    if (d && (event->type() == QEvent::WindowDeactivate || event->type() == QEvent::EnabledChange)) {
+        if (event->type() == QEvent::WindowDeactivate)
+            d->clearHover();
+        else
+            d->refreshHover();
         d->stopMotion();
+    }
     return ListView::event(event);
 }
 
 void FileListView::scrollContentsBy(int dx, int dy)
 {
     ListView::scrollContentsBy(dx, dy);
+    d->refreshHover();
     for (auto it = d->lastProgress.begin(); it != d->lastProgress.end();) {
         if (!d->visible(it.key()))
             it = d->lastProgress.erase(it);

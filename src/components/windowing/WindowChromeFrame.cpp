@@ -88,8 +88,10 @@ void ClientSideFrameEdgeOverlay::setResizeInputEnabled(bool enabled, int hitWidt
     setAttribute(Qt::WA_TransparentForMouseEvents, m_hitZonesAreSiblings ? true : !enabled);
     setMouseTracking(enabled);
     setAttribute(Qt::WA_Hover, enabled);
-    if (!enabled)
-        unsetCursor();
+    if (!enabled) {
+        m_hoverZone.clear();
+        setResizeGesture(std::nullopt);
+    }
     syncHitZones();
 }
 
@@ -100,45 +102,58 @@ void ClientSideFrameEdgeOverlay::setMouseEventHandler(MouseEventHandler handler)
 
 bool ClientSideFrameEdgeOverlay::event(QEvent* event)
 {
-    if (event && (event->type() == QEvent::Show || event->type() == QEvent::Hide))
+    if (event->type() == QEvent::Hide) {
+        m_hoverZone.clear();
+        setResizeGesture(std::nullopt);
+    }
+    if (event->type() == QEvent::Show || event->type() == QEvent::Hide)
         syncHitZones();
     return QWidget::event(event);
+}
+
+void ClientSideFrameEdgeOverlay::setResizeGesture(std::optional<Qt::CursorShape> shape)
+{
+    m_resizeGesture = shape;
+    updateResizeCursor();
+}
+
+void ClientSideFrameEdgeOverlay::updateResizeCursor()
+{
+    auto shape = m_resizeGesture;
+    if (!shape && m_hoverZone)
+        shape = m_hoverZone->cursor().shape();
+    if (!shape) {
+        m_overlayCursor.clear();
+        updateWidgetCursor(m_hostCursor, window());
+        return;
+    }
+
+    // Mirror alien child hit zones onto the native WSLg/X11 surface.
+    QWidget* host = window();
+    m_overlayCursor.apply(*shape);
+    if (host != this)
+        updateWidgetCursor(m_hostCursor, host, shape);
+    else
+        updateWidgetCursor(m_hostCursor, host);
 }
 
 bool ClientSideFrameEdgeOverlay::eventFilter(QObject* watched, QEvent* event)
 {
     auto* zone = qobject_cast<QWidget*>(watched);
-    if (!zone || !event)
+    if (!zone || !event || !m_resizeInputEnabled)
         return QWidget::eventFilter(watched, event);
 
     const QEvent::Type type = event->type();
-    if (type == QEvent::Enter || type == QEvent::HoverEnter || type == QEvent::HoverMove) {
-        // Alien/translucent child widgets do not reliably push their cursor to
-        // the native WSLg/X11 surface. Mirror the active zone cursor on the
-        // overlay, which owns that surface, whenever the pointer enters it.
-        // zh_CN: 透明的非原生子控件在 WSLg/X11 下不一定会把光标同步到原生表面；
-        // 指针进入命中区时，同时在拥有该表面的 overlay 上设置缩放光标。
-        setCursor(zone->cursor());
-        if (QWidget* topLevel = zone->window())
-            topLevel->setCursor(zone->cursor());
-        return QWidget::eventFilter(watched, event);
-    }
-    if (type == QEvent::Leave || type == QEvent::HoverLeave) {
-        unsetCursor();
-        if (QWidget* topLevel = zone->window())
-            topLevel->unsetCursor();
-        return QWidget::eventFilter(watched, event);
+    if (type == QEvent::Enter || type == QEvent::HoverEnter || type == QEvent::HoverMove || type == QEvent::MouseMove) {
+        m_hoverZone = zone;
+        updateResizeCursor();
+    } else if ((type == QEvent::Leave || type == QEvent::HoverLeave) && m_hoverZone == zone) {
+        m_hoverZone.clear();
+        updateResizeCursor();
     }
 
-    if (type != QEvent::MouseButtonPress && type != QEvent::MouseMove && type != QEvent::MouseButtonRelease) {
+    if (type != QEvent::MouseButtonPress && type != QEvent::MouseMove && type != QEvent::MouseButtonRelease)
         return QWidget::eventFilter(watched, event);
-    }
-
-    if (type == QEvent::MouseMove) {
-        setCursor(zone->cursor());
-        if (QWidget* topLevel = zone->window())
-            topLevel->setCursor(zone->cursor());
-    }
     if (!m_mouseEventHandler)
         return QWidget::eventFilter(watched, event);
 

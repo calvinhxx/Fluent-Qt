@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "components/foundation/private/ControlMetrics_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "NumberBox.h"
@@ -225,6 +226,8 @@ private:
 };
 
 } // namespace
+
+NumberBox::~NumberBox() = default;
 
 NumberBox::NumberBox(QWidget* parent)
     : LineEdit(parent), m_value(std::numeric_limits<double>::quiet_NaN()),
@@ -473,9 +476,11 @@ void NumberBox::setScrubbingEnabled(bool enabled)
     if (!guard)
         return;
     setMouseTracking(enabled);
-    if (!enabled)
-        unsetCursor();
     updateTextMarginsForChrome();
+    if (underMouse())
+        updatePointerCursor(mapFromGlobal(QCursor::pos()));
+    else
+        updateWidgetCursor(m_pointerCursor, this);
     update();
     emit scrubbingEnabledChanged(enabled);
 }
@@ -498,7 +503,7 @@ void NumberBox::cancelScrub()
     finishScrub(true);
 }
 
-void NumberBox::finishScrub(bool canceled)
+void NumberBox::finishScrub(bool canceled, bool overHandle)
 {
     if (!m_scrubbing)
         return;
@@ -515,7 +520,8 @@ void NumberBox::finishScrub(bool canceled)
         if (!guard)
             return;
     }
-    unsetCursor();
+    if (!overHandle)
+        updateWidgetCursor(m_pointerCursor, this);
     update();
     const double finalValue = m_value;
     emit scrubbingChanged(false);
@@ -523,16 +529,34 @@ void NumberBox::finishScrub(bool canceled)
         emit scrubFinished(initial, finalValue, canceled);
 }
 
+void NumberBox::updatePointerCursor(const QPoint& position)
+{
+    if (m_scrubbing || (isEnabled() && !isReadOnly() && scrubHandleRect().contains(position))) {
+        updateWidgetCursor(m_pointerCursor, this, Qt::SizeHorCursor);
+        return;
+    }
+    // Qt resolves the native cursor on the nearest enabled ancestor of a disabled button.
+    for (const auto* button : {m_spinUpButton, m_spinDownButton}) {
+        if (button && !button->isHidden() && !button->isEnabled() && button->geometry().contains(position)
+            && isEnabled()) {
+            updateWidgetCursor(m_pointerCursor, this, Qt::ArrowCursor);
+            return;
+        }
+    }
+    updateWidgetCursor(m_pointerCursor, this);
+}
+
 bool NumberBox::event(QEvent* event)
 {
-    if (event && m_scrubbing
-        && (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate
-            || event->type() == QEvent::UngrabMouse)) {
+    if (event && ::compatibility::detail::interruptsPointerGesture(event->type())) {
         const QPointer<NumberBox> guard(this);
         cancelScrub();
         if (!guard)
             return true;
+        updateWidgetCursor(m_pointerCursor, this);
     }
+    if (event && (event->type() == QEvent::HoverMove || event->type() == QEvent::HoverEnter))
+        updatePointerCursor(fluentHoverPos(static_cast<QHoverEvent*>(event)));
     return LineEdit::event(event);
 }
 
@@ -632,6 +656,8 @@ void NumberBox::enterEvent(FluentEnterEvent* event)
 void NumberBox::leaveEvent(QEvent* event)
 {
     m_hovered = false;
+    if (!m_scrubbing)
+        updateWidgetCursor(m_pointerCursor, this);
     LineEdit::leaveEvent(event);
     update();
 }
@@ -649,7 +675,7 @@ void NumberBox::mousePressEvent(QMouseEvent* event)
         m_scrubBase = std::isfinite(m_value) ? m_value : normalizedStepStart();
         m_scrubStart = fluentMouseGlobalPos(event);
         m_scrubbing = true;
-        setCursor(Qt::SizeHorCursor);
+        updateWidgetCursor(m_pointerCursor, this, Qt::SizeHorCursor);
         event->accept();
         emit scrubbingChanged(true);
         if (guard && m_scrubbing)
@@ -679,10 +705,7 @@ void NumberBox::mouseMoveEvent(QMouseEvent* event)
         setValueInternal(m_scrubBase, true, false);
         return;
     }
-    if (m_scrubbingEnabled && isEnabled() && !isReadOnly() && scrubHandleRect().contains(event->pos()))
-        setCursor(Qt::SizeHorCursor);
-    else if (m_scrubbingEnabled)
-        unsetCursor();
+    updatePointerCursor(event->pos());
     LineEdit::mouseMoveEvent(event);
 }
 
@@ -690,7 +713,7 @@ void NumberBox::mouseReleaseEvent(QMouseEvent* event)
 {
     if (m_scrubbing && event->button() == Qt::LeftButton) {
         event->accept();
-        finishScrub(false);
+        finishScrub(false, scrubHandleRect().contains(event->pos()));
         return;
     }
     if (m_pressed) {
@@ -833,6 +856,7 @@ void NumberBox::initializeSpinnerButtons()
     auto configureButton =
         [this](::fluent::basicinput::RepeatButton* button, const QString& glyph, const QString& objectName) {
             button->setObjectName(objectName);
+            button->setCursor(Qt::ArrowCursor);
             button->setFluentStyle(::fluent::basicinput::Button::Standard);
             button->setFluentLayout(::fluent::basicinput::Button::IconOnly);
             button->setFluentSize(::fluent::basicinput::Button::Small);
@@ -896,6 +920,8 @@ void NumberBox::updateChildGeometry()
     }
 
     setClearButtonOffset(QPoint(::Spacing::XSmall, inputTop() / 2));
+    if (underMouse())
+        updatePointerCursor(mapFromGlobal(QCursor::pos()));
 }
 
 void NumberBox::updateSpinnerState()

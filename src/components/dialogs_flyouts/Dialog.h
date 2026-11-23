@@ -19,6 +19,12 @@ class QPaintEvent;
 class QPainter;
 class QShowEvent;
 
+#include <memory>
+
+namespace compatibility::detail {
+class ScopedWidgetCursor;
+}
+
 namespace fluent::overlay {
 class OverlayCoordinator;
 }
@@ -161,6 +167,7 @@ signals:
     void closePolicyChanged(ClosePolicy policy);
 
 protected:
+    bool event(QEvent* event) override;
     bool isAnimating() const { return m_isAnimating; }
 
     /**
@@ -182,6 +189,7 @@ protected:
     void drawShadow(QPainter& painter, const QRect& contentRect);
 
 private:
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> m_pointerCursor;
     bool syncThemeOverrideFromSource();
     void attachToOwner();
     void prepareSurfaceSize();
@@ -196,6 +204,8 @@ private:
 
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnEscape);
     bool m_dragEnabled = true;
+    bool m_dragging = false;
+    void endDrag();
     QPoint m_dragOffset;
     QPointer<QWidget> m_originalParent;
     QPointer<QWidget> m_themeSource;

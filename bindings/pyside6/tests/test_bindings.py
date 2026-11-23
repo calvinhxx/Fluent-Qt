@@ -494,6 +494,52 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(shiboken6.isValid(editor))
         delete_qobject(panel)
 
+    def test_number_box_step_buttons_and_python_cursor_override(self):
+        from PySide6.QtGui import QCursor
+
+        box = fluentqt.NumberBox()
+        box.resize(240, box.sizeHint().height())
+        box.setRange(0, 10)
+        box.show()
+        self.addCleanup(box.close)
+        self.addCleanup(QCursor.setPos, QCursor.pos())
+        QApplication.processEvents()
+        placement = fluentqt.NumberBox.SpinButtonPlacementMode
+        for mode in (placement.Inline, placement.Compact):
+            with self.subTest(mode=mode):
+                box.setSpinButtonPlacementMode(mode)
+                box.setValue(9)
+                up = box.findChild(QPushButton, "NumberBoxSpinUpButton")
+                down = box.findChild(QPushButton, "NumberBoxSpinDownButton")
+                for button in (up, down):
+                    self.assertIsNotNone(button)
+                    self.assertIs(box.childAt(button.geometry().center()), button)
+                    self.assertEqual(button.cursor().shape(), Qt.CursorShape.ArrowCursor)
+                QTest.mouseClick(up, Qt.LeftButton)
+                self.assertEqual(box.value(), 10)
+                self.assertFalse(up.isEnabled())
+                QTest.mouseMove(box, QPoint(40, box.height() // 2))
+                QTest.mouseMove(box, up.geometry().center())
+                QApplication.processEvents()
+                self.assertEqual(box.cursor().shape(), Qt.CursorShape.ArrowCursor)
+                box.setScrubbingEnabled(True)
+                box.setScrubbingEnabled(False)
+                self.assertEqual(box.cursor().shape(), Qt.CursorShape.ArrowCursor)
+                QTest.mouseClick(down, Qt.LeftButton)
+                self.assertEqual(box.value(), 9)
+                self.assertTrue(up.isEnabled())
+
+        box.setScrubbingEnabled(True)
+        handle = box.scrubHandleRect().center()
+        QTest.mousePress(box, Qt.LeftButton, Qt.NoModifier, handle)
+        self.assertTrue(box.isScrubbing())
+        self.assertEqual(box.cursor().shape(), Qt.CursorShape.SizeHorCursor)
+        box.setCursor(Qt.CursorShape.CrossCursor)
+        QTest.keyClick(box, Qt.Key_Escape)
+        QTest.mouseRelease(box, Qt.LeftButton, Qt.NoModifier, handle)
+        self.assertFalse(box.isScrubbing())
+        self.assertEqual(box.cursor().shape(), Qt.CursorShape.CrossCursor)
+
     def test_chart_export_and_numeric_scrub_binding(self):
         box = fluentqt.NumberBox()
         box.resize(260, 32)

@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "compatibility/private/PointerEventCompat_p.h"
 #include "compatibility/private/WidgetPlatformCompat_p.h"
@@ -641,11 +642,11 @@ QString ImageViewer::percentText() const
 void ImageViewer::updateCursorShape()
 {
     if (m_dragging) {
-        setCursor(Qt::ClosedHandCursor);
+        updateWidgetCursor(m_pointerCursor, this, Qt::ClosedHandCursor);
     } else if (hasImage() && isEnabled() && (canPanHorizontally() || canPanVertically())) {
-        setCursor(Qt::OpenHandCursor);
+        updateWidgetCursor(m_pointerCursor, this, Qt::OpenHandCursor);
     } else {
-        unsetCursor();
+        updateWidgetCursor(m_pointerCursor, this);
     }
 }
 
@@ -699,6 +700,15 @@ void ImageViewer::paintEvent(QPaintEvent* event)
 
 bool ImageViewer::event(QEvent* event)
 {
+    if (m_dragging && ::compatibility::detail::interruptsPointerGesture(event->type())) {
+        m_dragging = false;
+        updateCursorShape();
+        updateChrome();
+    }
+    if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate)
+        updateWidgetCursor(m_pointerCursor, this);
+    else if (event->type() == QEvent::Show || event->type() == QEvent::WindowActivate)
+        updateCursorShape();
     if (event->type() == QEvent::Hide && m_pixmapCache)
         m_pixmapCache->clear();
     if (event->type() == QEvent::NativeGesture && handleNativeGesture(event))
@@ -734,6 +744,7 @@ void ImageViewer::enterEvent(FluentEnterEvent* event)
 {
     QWidget::enterEvent(event);
     m_hovered = true;
+    updateCursorShape();
     updateChrome();
 }
 
@@ -741,6 +752,8 @@ void ImageViewer::leaveEvent(QEvent* event)
 {
     QWidget::leaveEvent(event);
     m_hovered = false;
+    if (!m_dragging)
+        updateWidgetCursor(m_pointerCursor, this);
     updateChrome();
 }
 

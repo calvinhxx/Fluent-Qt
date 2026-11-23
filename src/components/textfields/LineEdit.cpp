@@ -37,6 +37,7 @@ LineEdit::LineEdit(QWidget* parent) : QLineEdit(parent)
 
     m_clearButton = new ::fluent::basicinput::Button(this);
     m_clearButton->setObjectName(QStringLiteral("fluentLineEditClearButton"));
+    m_clearButton->setCursor(Qt::ArrowCursor);
     m_clearButton->setAccessibleName(tr("Clear text"));
     m_clearButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);

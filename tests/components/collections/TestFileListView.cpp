@@ -1,3 +1,4 @@
+#include "compatibility/EventConstructionCompat.h"
 #include <QAbstractListModel>
 #include <QAccessible>
 #include <QApplication>
@@ -144,6 +145,27 @@ TEST(FileListViewTest, Contract_ModelRemainsCallerOwnedAndRequestsDoNotMutate)
     }
     EXPECT_FALSE(guarded.isNull());
     EXPECT_EQ(model.rowCount(), 1);
+}
+
+TEST(FileListViewTest, Contract_ActionCursorTracksAvailabilityUnderStationaryPointer)
+{
+    InspectableFileListView view;
+    QStandardItemModel model;
+    auto* item = addFile(model, QStringLiteral("file"));
+    view.setModel(&model);
+    showView(view);
+    view.viewport()->setCursor(Qt::CrossCursor);
+    const QPoint point = removePoint(view, item->index());
+    FLUENT_MAKE_MOUSE_EVENT(move, QEvent::MouseMove, view.viewport(), point, Qt::NoButton, Qt::NoButton,
+        Qt::NoModifier);
+    QApplication::sendEvent(view.viewport(), &move);
+    ASSERT_EQ(view.viewport()->cursor().shape(), Qt::PointingHandCursor);
+    item->setData(false, FileListView::RemovableRole);
+    EXPECT_EQ(view.viewport()->cursor().shape(), Qt::CrossCursor);
+    item->setData(true, FileListView::RemovableRole);
+    EXPECT_EQ(view.viewport()->cursor().shape(), Qt::PointingHandCursor);
+    view.setModel(nullptr);
+    EXPECT_EQ(view.viewport()->cursor().shape(), Qt::CrossCursor);
 }
 
 TEST(FileListViewTest, Contract_KeyboardCommandsRespectRolesAndEnabledState)

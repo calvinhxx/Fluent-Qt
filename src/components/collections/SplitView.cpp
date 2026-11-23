@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "SplitView.h"
 #include "private/SplitViewAccessibility_p.h"
@@ -549,6 +550,24 @@ void SplitView::enterEvent(FluentEnterEvent* event)
     setHoveredHandle(hitTestHandle(mapFromGlobal(QCursor::pos())));
 }
 
+bool SplitView::event(QEvent* event)
+{
+    if (::compatibility::detail::interruptsPointerGesture(event->type())
+        || (event->type() == QEvent::EnabledChange && !isEnabled())) {
+        m_hoveredHandle = -1;
+        if (m_resizing) {
+            const QPointer<SplitView> guard(this);
+            clearDragState();
+            if (!guard)
+                return true;
+            if (QWidget::mouseGrabber() == this)
+                releaseMouse();
+        }
+        updateWidgetCursor(m_pointerCursor, this);
+    }
+    return QWidget::event(event);
+}
+
 void SplitView::leaveEvent(QEvent* event)
 {
     QWidget::leaveEvent(event);
@@ -623,10 +642,8 @@ void SplitView::mouseMoveEvent(QMouseEvent* event)
 void SplitView::mouseReleaseEvent(QMouseEvent* event)
 {
     if (m_resizing && event->button() == Qt::LeftButton) {
-        releaseMouse();
-        setResizing(false);
-        m_pressedHandle = -1;
         clearDragState();
+        releaseMouse();
         setHoveredHandle(hitTestHandle(fluentMousePos(event)));
         event->accept();
         return;
@@ -811,9 +828,10 @@ void SplitView::updateLayout()
 void SplitView::updateCursorForHover()
 {
     if (m_hoveredHandle >= 0 || m_resizing)
-        setCursor(m_orientation == Qt::Horizontal ? Qt::SplitHCursor : Qt::SplitVCursor);
+        updateWidgetCursor(m_pointerCursor, this,
+            m_orientation == Qt::Horizontal ? Qt::SplitHCursor : Qt::SplitVCursor);
     else
-        unsetCursor();
+        updateWidgetCursor(m_pointerCursor, this);
 }
 
 int SplitView::hitTestHandle(const QPoint& position) const

@@ -16,6 +16,12 @@ class QPaintEvent;
 class QPainter;
 class QVariantAnimation;
 
+#include <memory>
+
+namespace compatibility::detail {
+class ScopedWidgetCursor;
+}
+
 namespace fluent::scrolling {
 
 namespace detail {
@@ -138,7 +144,7 @@ public:
     Q_ENUM(PipsPagerButtonVisibility)
 
     explicit PipsPager(QWidget* parent = nullptr);
-    ~PipsPager() override = default;
+    ~PipsPager() override;
 
     int numberOfPages() const { return m_numberOfPages; }
     void setNumberOfPages(int pages);
@@ -224,6 +230,7 @@ protected:
     void changeEvent(QEvent* event) override;
 
 private:
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> m_pointerCursor;
     friend class detail::PipsPagerAccessible;
 
     enum class HitKind { None, PreviousButton, NextButton, Pip };
@@ -268,6 +275,9 @@ private:
     void syncVisibleWindowOffset();
     void animateSelectedVisualOffset(qreal fromOffset, qreal toOffset);
     void animateVisibleWindowOffset(qreal fromOffset, qreal toOffset);
+    QPoint m_hoverPosition;
+    void refreshHoveredTarget(bool updateVisualHover = false);
+    void resizeEvent(QResizeEvent* event) override;
     void clearInteractionState();
     void updateAccessibleText();
 
