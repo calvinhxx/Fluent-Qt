@@ -379,7 +379,13 @@ jobs:
         shell: bash
         run: |
           python tools/site/generate_localized_site.py
-          python -c 'import sys; sys.path.insert(0, "tools/site"); from site_assets import ROOT, copy_assets; copy_assets(ROOT / "site")'
+          PYTHONPATH=tools/site python - <<'PYTHON'
+          from component_docs import site_icon
+          from site_assets import ROOT, copy_assets
+          site = ROOT / "site"
+          copy_assets(site)
+          (site / "assets/app-icon-64.png").write_bytes(site_icon())
+          PYTHON
           ln -s "$PWD/build/wasm/app" site/gallery
           python tools/site/test_studio_browser.py --site-root site --wasm
 
