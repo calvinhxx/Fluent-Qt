@@ -1,5 +1,6 @@
 """Refresh the standalone Designer catalog and fixed-size icons from the Gallery."""
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -110,6 +111,43 @@ def prepare_templates(check):
         raise SystemExit(f"Unregistered Designer templates: {entries ^ FORM_TEMPLATES}")
 
 
+def icon_fingerprint(recipe, source, png):
+    digest = recipe.copy()
+    digest.update(source.read_text(encoding="utf-8").encode("utf-8"))
+    digest.update(png.read_bytes())
+    return digest.hexdigest()
+
+
+def prepare_icons(records, directory, exporter, check):
+    from export_control_images import render_source
+
+    icons = directory / "icons"
+    stamp = directory / "artwork-fingerprints.json"
+    previous = json.loads(stamp.read_text(encoding="utf-8")) if stamp.is_file() else {}
+    # Pair each committed PNG with its SVG and render recipe. Qt rasterizers on
+    # different architectures and releases can round edge pixels differently.
+    recipe = hashlib.sha256(exporter.read_text(encoding="utf-8").encode("utf-8"))
+    current = {}
+    for record, source in records:
+        name = record["name"]
+        png = icons / (name + ".png")
+        digest = icon_fingerprint(recipe, source, png) if png.is_file() else None
+        if digest is None or digest != previous.get(name):
+            if check:
+                raise SystemExit(f"Stale Designer icon: {png}")
+            icons.mkdir(exist_ok=True)
+            if not render_source(source).save(str(png)):
+                raise SystemExit(f"Could not write {png}")
+            digest = icon_fingerprint(recipe, source, png)
+        current[name] = digest
+    if {p.stem for p in icons.glob("*.png")} != current.keys():
+        raise SystemExit("Designer icon inventory differs from the catalog")
+    if check and previous.keys() != current.keys():
+        raise SystemExit("Designer artwork fingerprints differ from the catalog")
+    if not check and previous != current:
+        stamp.write_text(json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def main():
     import sys
     parser = argparse.ArgumentParser(description=__doc__)
@@ -118,7 +156,7 @@ def main():
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from PySide6.QtGui import QGuiApplication
     sys.path.insert(0, str(ROOT / "tools/gallery"))
-    from export_control_images import matches_export, render_source
+    import export_control_images
     app = QGuiApplication.instance() or QGuiApplication([])
     gallery = json.loads(CATALOG.read_text(encoding="utf-8"))
     missing = (FORM_TEMPLATES | OVERLAYS.keys()) - {item["title"] for item in gallery["components"]}
@@ -131,24 +169,12 @@ def main():
     records = palette(gallery)
     data = "[\n" + ",\n".join("  " + json.dumps(r, ensure_ascii=False) for r, _ in records) + "\n]\n"
     path = HERE / "widgets.json"
-    icons = HERE / "icons"
     if args.check:
         if path.read_text(encoding="utf-8") != data:
             raise SystemExit("Designer catalog needs regeneration")
     else:
         path.write_text(data, encoding="utf-8")
-        icons.mkdir(exist_ok=True)
-    for record, source in records:
-        path = icons / (record["name"] + ".png")
-        image = render_source(source)
-        if args.check:
-            if not matches_export(path, image):
-                raise SystemExit(f"Stale Designer icon: {path}")
-        elif not image.save(str(path)):
-            raise SystemExit(f"Could not write {path}")
-    expected = {r["name"] for r, _ in records}
-    if {p.stem for p in icons.glob("*.png")} != expected:
-        raise SystemExit("Designer icon inventory differs from the catalog")
+    prepare_icons(records, HERE, Path(export_control_images.__file__), args.check)
     print(f"{len(records)} Designer controls, {len(FORM_TEMPLATES)} form templates")
 
 

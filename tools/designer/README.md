@@ -80,6 +80,6 @@ The toolbox includes the optional modules supplied by that installation. The for
 
 ## Updating the catalog
 
-Run `python tools/designer/prepare_catalog.py` with PySide6 to refresh the inventory and the 72 × 72 PNGs from the Gallery catalog and its [SVG artwork](../gallery/artwork). Both designers use PNGs because the Widget Box expects icons with declared pixel sizes. Run the same command with `--check` to verify the inventory and images, and to check the Python template resources against their editable forms.
+Run `python tools/designer/prepare_catalog.py` with PySide6 to refresh the inventory and the 72 × 72 PNGs from the Gallery catalog and its [SVG artwork](../gallery/artwork). Both designers use PNGs because the Widget Box expects icons with declared pixel sizes. The generator records a fingerprint of each SVG, the shared exporter and its PNG in `artwork-fingerprints.json`. It renders only stale icons. Run the same command with `--check` to verify the committed inputs and images across Qt versions and to check the Python template resources against their editable forms.
 
 With matching FluentQt bindings installed, run `python -m unittest discover -s tools/designer/tests` to load each available control and exercise the sample form connection.
