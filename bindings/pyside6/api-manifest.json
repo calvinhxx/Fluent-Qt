@@ -1980,6 +1980,8 @@
       "resetAll"
     ],
     "NumberBox": [
+      "isEmptyAllowed",
+      "setEmptyAllowed",
       "setScrubbingEnabled",
       "isScrubbingEnabled",
       "setScrubSensitivity",

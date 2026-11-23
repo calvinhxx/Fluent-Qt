@@ -494,6 +494,35 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(shiboken6.isValid(editor))
         delete_qobject(panel)
 
+    def test_number_box_required_quantity_and_split_buttons(self):
+        box = fluentqt.NumberBox()
+        self.assertTrue(box.isEmptyAllowed())
+        box.setRange(1, 9)
+        changes = QSignalSpy(box.emptyAllowedChanged)
+        box.setEmptyAllowed(False)
+        box.setEmptyAllowed(False)
+        self.assertEqual(changes.count(), 1)
+        self.assertEqual(box.value(), 1)
+        box.setSpinButtonPlacementMode(box.SpinButtonPlacementMode.Split)
+        box.resize(200, box.sizeHint().height())
+        box.show()
+        self.addCleanup(box.close)
+        QApplication.processEvents()
+        minus = box.findChild(QPushButton, "NumberBoxSpinDownButton")
+        plus = box.findChild(QPushButton, "NumberBoxSpinUpButton")
+        self.assertLess(minus.x(), plus.x())
+        self.assertFalse(minus.isEnabled())
+        QTest.mouseClick(plus, Qt.LeftButton)
+        self.assertEqual(box.value(), 2)
+        box.clear()
+        self.assertEqual(box.text(), "")
+        box.commitInput()
+        self.assertEqual((box.text(), box.value()), ("2", 2))
+        box.setEmptyAllowed(True)
+        box.clear()
+        box.commitInput()
+        self.assertTrue(math.isnan(box.value()))
+
     def test_number_box_step_buttons_and_python_cursor_override(self):
         from PySide6.QtGui import QCursor
 
