@@ -204,6 +204,7 @@ QWidget* TagInput::createTag(const QVariantMap& item)
         auto* button = new TagButton(QString(), this);
         button->setParent(tag);
         button->setObjectName(QStringLiteral("TagInputRemoveButton"));
+        button->setCursor(Qt::ArrowCursor);
         button->setProperty("tagKey", key);
         button->setFluentStyle(basicinput::Button::Subtle);
         button->setFluentSize(basicinput::Button::Small);

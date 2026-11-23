@@ -1350,6 +1350,7 @@ void AutoSuggestBox::initializeButtons()
 {
     m_queryButton = new ::fluent::basicinput::Button(this);
     m_queryButton->setObjectName("AutoSuggestBoxQueryButton");
+    m_queryButton->setCursor(Qt::ArrowCursor);
     m_queryButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_queryButton->setFluentLayout(::fluent::basicinput::Button::IconOnly);
     m_queryButton->setFluentSize(::fluent::basicinput::Button::Small);
@@ -1368,6 +1369,7 @@ void AutoSuggestBox::initializeButtons()
 
     m_clearButton = new ::fluent::basicinput::Button(this);
     m_clearButton->setObjectName("AutoSuggestBoxClearButton");
+    m_clearButton->setCursor(Qt::ArrowCursor);
     m_clearButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_clearButton->setFluentLayout(::fluent::basicinput::Button::IconOnly);
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);

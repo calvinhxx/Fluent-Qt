@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "Dialog.h"
 
@@ -123,6 +124,8 @@ void Dialog::setDragEnabled(bool enabled)
     if (m_dragEnabled == enabled)
         return;
     m_dragEnabled = enabled;
+    if (!enabled)
+        endDrag();
     emit dragEnabledChanged(m_dragEnabled);
 }
 
@@ -408,6 +411,7 @@ void Dialog::hideEvent(QHideEvent* event)
 void Dialog::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Escape) {
+        endDrag();
         if (m_closePolicy & CloseOnEscape)
             done(QDialog::Rejected);
         event->accept();
@@ -548,30 +552,51 @@ void Dialog::done(int result)
     ::fluent::detail::startMotionTransition(m_animation, anim.normal, m_animationEnabled);
 }
 
+void Dialog::endDrag()
+{
+    m_dragging = false;
+    updateWidgetCursor(m_pointerCursor, this);
+}
+
+bool Dialog::event(QEvent* event)
+{
+    if (::compatibility::detail::interruptsPointerGesture(event->type())
+        || (event->type() == QEvent::EnabledChange && !isEnabled())) {
+        endDrag();
+    }
+    return QDialog::event(event);
+}
+
 void Dialog::mousePressEvent(QMouseEvent* event)
 {
     if (m_dragEnabled && event->button() == Qt::LeftButton) {
         m_dragOffset = fluentMousePos(event);
-        setCursor(Qt::ClosedHandCursor);
+        m_dragging = true;
+        updateWidgetCursor(m_pointerCursor, this, Qt::ClosedHandCursor);
         event->accept();
+        return;
     }
     QDialog::mousePressEvent(event);
 }
 
 void Dialog::mouseMoveEvent(QMouseEvent* event)
 {
-    if (cursor().shape() == Qt::ClosedHandCursor && parentWidget()) {
+    if (m_dragging && event->buttons().testFlag(Qt::LeftButton) && parentWidget()) {
         const QPoint parentPos = parentWidget()->mapFromGlobal(fluentMouseGlobalPos(event));
         move(parentPos - m_dragOffset);
         event->accept();
+        return;
     }
     QDialog::mouseMoveEvent(event);
 }
 
 void Dialog::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (cursor().shape() == Qt::ClosedHandCursor)
-        unsetCursor();
+    if (m_dragging && event->button() == Qt::LeftButton) {
+        endDrag();
+        event->accept();
+        return;
+    }
     QDialog::mouseReleaseEvent(event);
 }
 

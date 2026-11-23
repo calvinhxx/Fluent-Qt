@@ -13,6 +13,12 @@ class QPaintEvent;
 class QPainter;
 class QResizeEvent;
 
+#include <memory>
+
+namespace compatibility::detail {
+class ScopedWidgetCursor;
+}
+
 namespace fluent::basicinput {
 class RepeatButton;
 }
@@ -145,6 +151,7 @@ public:
     Q_ENUM(SpinButtonPlacementMode)
 
     explicit NumberBox(QWidget* parent = nullptr);
+    ~NumberBox() override;
 
     double value() const { return m_value; }
     void setValue(double value);
@@ -267,6 +274,7 @@ protected:
     void paintFrame(QPainter& painter) override;
 
 private:
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> m_pointerCursor;
     QRect inputRect() const;
     int inputTop() const;
     int totalPreferredHeight() const;
@@ -290,7 +298,8 @@ private:
     bool hasSpinnerButtonsVisible() const;
     int inlineSpinnerWidth() const;
     int compactExpandedSpinnerWidth() const;
-    void finishScrub(bool canceled);
+    void finishScrub(bool canceled, bool overHandle = false);
+    void updatePointerCursor(const QPoint& position);
 
     bool m_scrubbingEnabled = false;
     bool m_scrubbing = false;

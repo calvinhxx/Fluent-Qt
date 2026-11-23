@@ -820,6 +820,13 @@ bool Window::event(QEvent* event)
     }
 
     const QEvent::Type type = event ? event->type() : QEvent::None;
+    if (::compatibility::detail::interruptsPointerGesture(type) && m_resizeSession->isActive()) {
+        m_resizeSession->finish();
+        if (m_frameEdgeOverlay)
+            m_frameEdgeOverlay->setResizeGesture(std::nullopt);
+        if (QWidget::mouseGrabber() == this)
+            releaseMouse();
+    }
     const bool handled = QWidget::event(event);
     if (type == QEvent::UpdateRequest)
         finishPendingBackdropChange();
@@ -1303,7 +1310,8 @@ bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event)
             m_resizeSession->finish();
             if (QWidget::mouseGrabber() == this)
                 releaseMouse();
-            unsetCursor();
+            if (m_frameEdgeOverlay)
+                m_frameEdgeOverlay->setResizeGesture(std::nullopt);
             updateChromeOptions();
             event->accept();
             return true;
@@ -1343,9 +1351,14 @@ bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event)
         return false;
 
     m_resizeSession->start(edges, globalPos, geometry());
-    setCursor(cursorShapeForResizeEdges(edges));
-    if (!QWidget::mouseGrabber())
-        grabMouse();
+    const auto shape = cursorShapeForResizeEdges(edges);
+    if (m_frameEdgeOverlay) {
+        m_frameEdgeOverlay->setResizeGesture(shape);
+        if (!QWidget::mouseGrabber())
+            grabMouse();
+    } else if (!QWidget::mouseGrabber()) {
+        grabMouse(QCursor(shape));
+    }
     event->accept();
     return true;
 }

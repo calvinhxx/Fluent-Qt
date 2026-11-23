@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "FlipView.h"
 #include "components/foundation/private/MotionPolicy_p.h"
@@ -574,8 +575,34 @@ void FlipView::updateMask()
     clearMask();
 }
 
+void FlipView::refreshNavigationHover()
+{
+    const bool available = isEnabled() && m_showNavButtons && m_isHovered && m_pages.size() > 1;
+    const bool prev = available && m_currentIndex > 0 && prevButtonRect().contains(m_hoverPosition);
+    const bool next = available && m_currentIndex + 1 < m_pages.size() && nextButtonRect().contains(m_hoverPosition);
+    if (prev == m_prevBtnHovered && next == m_nextBtnHovered)
+        return;
+    m_prevBtnHovered = prev;
+    m_nextBtnHovered = next;
+    if (prev || next)
+        updateWidgetCursor(m_pointerCursor, this, Qt::PointingHandCursor);
+    else
+        updateWidgetCursor(m_pointerCursor, this);
+    update();
+    if (m_overlay)
+        m_overlay->update();
+}
+
+void FlipView::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::EnabledChange)
+        refreshNavigationHover();
+}
+
 void FlipView::updateVisuals()
 {
+    refreshNavigationHover();
     update();
     // Update the overlay separately because opaque child pages can suppress parent repaints.
     if (m_overlay)
@@ -597,10 +624,12 @@ void FlipView::resizeEvent(QResizeEvent* event)
     }
     updateMask();
     layoutPages();
+    refreshNavigationHover();
 }
 
 void FlipView::enterEvent(FluentEnterEvent* event)
 {
+    m_hoverPosition = fluentEnterPos(event);
     m_isHovered = true;
     updateVisuals();
     QWidget::enterEvent(event);
@@ -609,8 +638,6 @@ void FlipView::enterEvent(FluentEnterEvent* event)
 void FlipView::leaveEvent(QEvent* event)
 {
     m_isHovered = false;
-    m_prevBtnHovered = false;
-    m_nextBtnHovered = false;
     m_prevBtnPressed = false;
     m_nextBtnPressed = false;
     updateVisuals();
@@ -663,26 +690,8 @@ void FlipView::mouseReleaseEvent(QMouseEvent* event)
 
 void FlipView::mouseMoveEvent(QMouseEvent* event)
 {
-    QPoint pos = event->pos();
-    bool prevHovered = false;
-    bool nextHovered = false;
-
-    if (m_showNavButtons && m_isHovered && m_pages.size() > 1) {
-        if (m_currentIndex > 0) {
-            prevHovered = prevButtonRect().contains(pos);
-        }
-        if (m_currentIndex < m_pages.size() - 1) {
-            nextHovered = nextButtonRect().contains(pos);
-        }
-    }
-
-    if (prevHovered != m_prevBtnHovered || nextHovered != m_nextBtnHovered) {
-        m_prevBtnHovered = prevHovered;
-        m_nextBtnHovered = nextHovered;
-        setCursor((prevHovered || nextHovered) ? Qt::PointingHandCursor : Qt::ArrowCursor);
-        updateVisuals();
-    }
-
+    m_hoverPosition = event->pos();
+    refreshNavigationHover();
     QWidget::mouseMoveEvent(event);
 }
 

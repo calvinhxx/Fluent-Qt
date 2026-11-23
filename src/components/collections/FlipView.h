@@ -12,6 +12,12 @@
 
 class QPropertyAnimation;
 
+#include <memory>
+
+namespace compatibility::detail {
+class ScopedWidgetCursor;
+}
+
 namespace fluent::collections {
 
 /**
@@ -125,6 +131,7 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -134,6 +141,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> m_pointerCursor;
     struct PageRecord {
         QWidget* identity = nullptr;
         QPointer<QWidget> page;
@@ -155,6 +163,8 @@ private:
     void drawPageIndicator(QPainter& p);
     void updateMask();
     void raiseOverlay();
+    QPoint m_hoverPosition;
+    void refreshNavigationHover();
     void updateVisuals();
     int indexOfPage(const QWidget* page) const;
     PageRecord extractPageRecord(int index);

@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "compatibility/PaintCompat.h"
 #include "ColorPicker.h"
 
@@ -17,14 +18,72 @@
 
 namespace fluent::basicinput {
 
-class ColorSpectrumWidget : public QWidget {
+class ColorPickSurface : public QWidget {
 public:
-    explicit ColorSpectrumWidget(ColorPicker* picker, QWidget* parent = nullptr) : QWidget(parent), m_picker(picker)
+    ColorPickSurface(QWidget* parent, Qt::CursorShape idle) : QWidget(parent)
     {
         setMouseTracking(true);
-        setCursor(Qt::CrossCursor);
+        setCursor(idle);
         setFocusPolicy(Qt::StrongFocus);
     }
+
+protected:
+    bool event(QEvent* event) override
+    {
+        if (::compatibility::detail::interruptsPointerGesture(event->type())
+            || (event->type() == QEvent::EnabledChange && !isEnabled())) {
+            finishPicking();
+        }
+        return QWidget::event(event);
+    }
+
+    void mousePressEvent(QMouseEvent* event) override
+    {
+        if (event->button() != Qt::LeftButton) {
+            QWidget::mousePressEvent(event);
+            return;
+        }
+        m_picking = true;
+        m_pointerCursor.apply(Qt::BlankCursor);
+        handlePos(event->pos());
+    }
+    void mouseMoveEvent(QMouseEvent* event) override
+    {
+        if (m_picking && event->buttons().testFlag(Qt::LeftButton))
+            handlePos(event->pos());
+    }
+    void mouseReleaseEvent(QMouseEvent* event) override
+    {
+        if (event->button() == Qt::LeftButton)
+            finishPicking();
+    }
+    void keyPressEvent(QKeyEvent* event) override
+    {
+        if (m_picking && event->key() == Qt::Key_Escape) {
+            finishPicking();
+            event->accept();
+            return;
+        }
+        QWidget::keyPressEvent(event);
+    }
+
+private:
+    virtual void handlePos(const QPoint& position) = 0;
+    void finishPicking()
+    {
+        m_picking = false;
+        m_pointerCursor.clear();
+    }
+
+    ::compatibility::detail::ScopedWidgetCursor m_pointerCursor{this};
+    bool m_picking = false;
+};
+
+class ColorSpectrumWidget : public ColorPickSurface {
+public:
+    explicit ColorSpectrumWidget(ColorPicker* picker, QWidget* parent = nullptr)
+        : ColorPickSurface(parent, Qt::CrossCursor), m_picker(picker)
+    {}
 
 protected:
     void paintEvent(QPaintEvent*) override
@@ -60,21 +119,10 @@ protected:
         p.drawEllipse(pos, 6, 6);
     }
 
-    void mousePressEvent(QMouseEvent* e) override
-    {
-        setCursor(Qt::BlankCursor);
-        handlePos(e->pos());
-    }
-    void mouseMoveEvent(QMouseEvent* e) override
-    {
-        if (e->buttons() & Qt::LeftButton)
-            handlePos(e->pos());
-    }
-    void mouseReleaseEvent(QMouseEvent*) override { setCursor(Qt::CrossCursor); }
     void keyPressEvent(QKeyEvent* event) override
     {
         if (!m_picker) {
-            QWidget::keyPressEvent(event);
+            ColorPickSurface::keyPressEvent(event);
             return;
         }
         const qreal step = event->modifiers().testFlag(Qt::ShiftModifier) ? 0.05 : 0.01;
@@ -94,7 +142,7 @@ protected:
             value -= step;
             break;
         default:
-            QWidget::keyPressEvent(event);
+            ColorPickSurface::keyPressEvent(event);
             return;
         }
         m_picker->setSVFromSpectrum(qBound(0.0, saturation, 1.0), qBound(0.0, value, 1.0));
@@ -102,7 +150,7 @@ protected:
     }
 
 private:
-    void handlePos(const QPoint& pnt)
+    void handlePos(const QPoint& pnt) override
     {
         if (!m_picker)
             return;
@@ -118,14 +166,11 @@ private:
     ColorPicker* m_picker = nullptr;
 };
 
-class HueBarWidget : public QWidget {
+class HueBarWidget : public ColorPickSurface {
 public:
-    explicit HueBarWidget(ColorPicker* picker, QWidget* parent = nullptr) : QWidget(parent), m_picker(picker)
-    {
-        setMouseTracking(true);
-        setCursor(Qt::ArrowCursor);
-        setFocusPolicy(Qt::StrongFocus);
-    }
+    explicit HueBarWidget(ColorPicker* picker, QWidget* parent = nullptr)
+        : ColorPickSurface(parent, Qt::ArrowCursor), m_picker(picker)
+    {}
 
 protected:
     void paintEvent(QPaintEvent*) override
@@ -153,21 +198,10 @@ protected:
         }
     }
 
-    void mousePressEvent(QMouseEvent* e) override
-    {
-        setCursor(Qt::BlankCursor);
-        handlePos(e->pos());
-    }
-    void mouseMoveEvent(QMouseEvent* e) override
-    {
-        if (e->buttons() & Qt::LeftButton)
-            handlePos(e->pos());
-    }
-    void mouseReleaseEvent(QMouseEvent*) override { setCursor(Qt::ArrowCursor); }
     void keyPressEvent(QKeyEvent* event) override
     {
         if (!m_picker) {
-            QWidget::keyPressEvent(event);
+            ColorPickSurface::keyPressEvent(event);
             return;
         }
         const qreal step = event->modifiers().testFlag(Qt::ShiftModifier) ? 10.0 / 359.0 : 1.0 / 359.0;
@@ -188,7 +222,7 @@ protected:
             hue = 1.0;
             break;
         default:
-            QWidget::keyPressEvent(event);
+            ColorPickSurface::keyPressEvent(event);
             return;
         }
         while (hue < 0.0)
@@ -200,7 +234,7 @@ protected:
     }
 
 private:
-    void handlePos(const QPoint& pnt)
+    void handlePos(const QPoint& pnt) override
     {
         if (!m_picker)
             return;

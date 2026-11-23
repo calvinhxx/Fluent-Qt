@@ -10,6 +10,8 @@
 
 #include <array>
 #include <functional>
+#include <memory>
+#include "compatibility/private/WidgetCursorCompat_p.h"
 
 #include "compatibility/WindowChromeCompat.h"
 #include "components/windowing/WindowBackdropMaterial.h"
@@ -72,6 +74,7 @@ public:
     void setFrameStroke(const QColor& stroke);
     void setResizeInputEnabled(bool enabled, int hitWidth);
     void setMouseEventHandler(MouseEventHandler handler);
+    void setResizeGesture(std::optional<Qt::CursorShape> shape);
 
 protected:
     bool event(QEvent* event) override;
@@ -81,6 +84,12 @@ protected:
 
 private:
     void syncHitZones();
+    void updateResizeCursor();
+
+    ::compatibility::detail::ScopedWidgetCursor m_overlayCursor{this};
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> m_hostCursor;
+    QPointer<QWidget> m_hoverZone;
+    std::optional<Qt::CursorShape> m_resizeGesture;
 
     QRect m_frameVisualRect;
     QColor m_frameStroke;

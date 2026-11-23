@@ -14,6 +14,12 @@ class QMouseEvent;
 class QPaintEvent;
 class QResizeEvent;
 
+#include <memory>
+
+namespace compatibility::detail {
+class ScopedWidgetCursor;
+}
+
 namespace fluent::collections {
 
 namespace detail {
@@ -197,6 +203,7 @@ signals:
     void paneSizeChanged(int index, int size);
 
 protected:
+    bool event(QEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
@@ -207,6 +214,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> m_pointerCursor;
     friend class detail::SplitViewHandle;
 
     struct PaneRecord {

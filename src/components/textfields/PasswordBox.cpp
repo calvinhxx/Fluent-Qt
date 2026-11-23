@@ -233,6 +233,7 @@ void PasswordBox::initializeRevealButton()
 
     m_revealButton = new ::fluent::basicinput::Button(this);
     m_revealButton->setObjectName("PasswordBoxRevealButton");
+    m_revealButton->setCursor(Qt::ArrowCursor);
     m_revealButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
     m_revealButton->setFluentLayout(::fluent::basicinput::Button::IconOnly);
     m_revealButton->setFluentSize(::fluent::basicinput::Button::Small);

@@ -16,6 +16,10 @@
 class QImage;
 class QVariantAnimation;
 
+namespace compatibility::detail {
+class ScopedWidgetCursor;
+}
+
 namespace fluent::scrolling {
 
 class ImageViewerZoomBar;
@@ -271,6 +275,7 @@ protected:
     void onThemeUpdated() override;
 
 private:
+    std::unique_ptr<::compatibility::detail::ScopedWidgetCursor> m_pointerCursor;
     enum class ChangeSource { Program, Input };
 
     struct ViewState {

@@ -1,3 +1,4 @@
+#include "compatibility/private/WidgetCursorCompat_p.h"
 #include "compatibility/InputEventCompat.h"
 #include "PipsPager.h"
 
@@ -37,6 +38,8 @@ int pressedDiameter(int restDiameter)
     return std::max(1, restDiameter - 1);
 }
 } // namespace
+
+PipsPager::~PipsPager() = default;
 
 PipsPager::PipsPager(QWidget* parent) : QWidget(parent)
 {
@@ -407,7 +410,9 @@ void PipsPager::paintEvent(QPaintEvent* event)
 
 void PipsPager::enterEvent(FluentEnterEvent* event)
 {
+    m_hoverPosition = fluentEnterPos(event);
     m_controlHovered = true;
+    refreshHoveredTarget();
     update();
     QWidget::enterEvent(event);
 }
@@ -416,29 +421,15 @@ void PipsPager::leaveEvent(QEvent* event)
 {
     m_controlHovered = false;
     m_hoveredTarget = HitTarget();
-    unsetCursor();
+    updateWidgetCursor(m_pointerCursor, this);
     update();
     QWidget::leaveEvent(event);
 }
 
 void PipsPager::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!isEnabled()) {
-        QWidget::mouseMoveEvent(event);
-        return;
-    }
-
-    const HitTarget target = hitTest(fluentMousePos(event));
-    if (m_hoveredTarget != target) {
-        m_hoveredTarget = target;
-        if (target.kind == HitKind::None) {
-            unsetCursor();
-        } else {
-            setCursor(Qt::PointingHandCursor);
-        }
-        update();
-    }
-
+    m_hoverPosition = fluentMousePos(event);
+    refreshHoveredTarget(true);
     QWidget::mouseMoveEvent(event);
 }
 
@@ -828,6 +819,7 @@ void PipsPager::setVisibleWindowOffset(qreal offset)
         return;
 
     m_visibleWindowOffset = normalizedOffset;
+    refreshHoveredTarget();
     update();
 }
 
@@ -912,11 +904,30 @@ void PipsPager::animateVisibleWindowOffset(qreal fromOffset, qreal toOffset)
         m_selectionAnimationEnabled);
 }
 
+void PipsPager::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    refreshHoveredTarget();
+}
+
+void PipsPager::refreshHoveredTarget(bool updateVisualHover)
+{
+    const HitTarget target = m_controlHovered && isEnabled() ? hitTest(m_hoverPosition) : HitTarget();
+    if (target.kind == HitKind::None)
+        updateWidgetCursor(m_pointerCursor, this);
+    else
+        updateWidgetCursor(m_pointerCursor, this, Qt::PointingHandCursor);
+    if (updateVisualHover && m_hoveredTarget != target) {
+        m_hoveredTarget = target;
+        update();
+    }
+}
+
 void PipsPager::clearInteractionState()
 {
     m_hoveredTarget = HitTarget();
     m_pressedTarget = HitTarget();
-    unsetCursor();
+    refreshHoveredTarget();
 }
 
 void PipsPager::updateAccessibleText()
