@@ -44,6 +44,7 @@ flowchart TD
 | [Spatial](spatial-view.md) | SpatialSession lifecycle, composition with SpatialView and SpatialItem, parameters, ownership, and native 2D fallback |
 | [Overlay behavior](overlay-behavior.md) | Popup, Flyout, Dialog, TeachingTip, dropdown, drawer, or another same-window transient surface |
 | [Window chrome](window-chrome.md) | Title bars, native move/resize, backdrops, hit testing, or platform window behavior |
+| [Mouse cursors in Widgets](pointer-cursors.md) · [Component audit](pointer-cursor-audit.md) | Text and button hit areas, drag feedback, cursor inheritance and restoration |
 | [Typography resolution](typography-resolution.md) | Fonts, inherited application typography, role resolution, or text scaling |
 | [Diagnostic sessions](diagnostic-session.md) | Bounded recent history, support bundles and application-owned storage and export |
 | [Inspector report](inspector-report.md) · [schema](inspector-report.schema.json) | Diagnostic rules, findings, generated workbenches, or report consumers |
