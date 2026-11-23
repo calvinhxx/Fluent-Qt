@@ -32,6 +32,17 @@ import {
   updateNodeProps,
   validateDocument,
 } from '../../site/studio/studio-core.mjs';
+import {
+  AI_PROVIDER_PRESETS,
+  AI_STYLE_PRESETS,
+  applyRefinedSubtree,
+  buildAiMessages,
+  buildCatalogSummary,
+  changeAiEndpoint,
+  extractJsonFromText,
+  generateStudioPageWithAi,
+  sanitizeAiDocument,
+} from '../../site/studio/studio-ai.mjs';
 
 test('catalog covers all 103 types across 13 official categories', () => {
   const categoryIds = new Set(STUDIO_CATEGORIES.map((c) => c.id));
@@ -464,4 +475,744 @@ test('shared documents validate typed properties and budget before import or exp
   assert.equal(decodeShareState('v1.' + 'A'.repeat(180000)).ok, false);
   node.props.text = title.repeat(16000);
   assert.throws(() => encodeShareState(doc), /too large/);
+});
+
+test('studio-ai catalog summary, JSON extraction, and sanitizer repair imperfect LLM output', () => {
+  const summary = buildCatalogSummary();
+  for (const type of Object.keys(STUDIO_CATALOG)) {
+    assert.ok(summary.includes(type), `Catalog summary missing ${type}`);
+  }
+
+  const wrapped = 'Here is your Fluent-Qt layout:\n```json\n{"root":{"id":"bad-id","type":"PushButton","props":{"text":"Save {ok}","fluentStyle":"accent","unknownProp":42},"children":[{"id":"ignored","type":"Label"}]}}\n```\nHope it helps!';
+  const extracted = extractJsonFromText(wrapped);
+  assert.equal(extracted.ok, true);
+  assert.equal(extracted.data.root.type, 'PushButton');
+  assert.equal(extractJsonFromText('not json at all').ok, false);
+
+  // Repair alias types, hyphenated duplicate IDs, Field >1 child, and coerced props
+  const messy = {
+    root: {
+      id: 'page-root',
+      type: 'Column',
+      props: { spacing: '16', padding: 20 },
+      children: [
+        { id: 'dup', type: 'Heading', props: { text: 'Settings', typography: 'title' } },
+        {
+          id: 'dup',
+          type: 'FormField',
+          props: { labelText: 'Port', required: 'true' },
+          children: [
+            { id: 'num-1', type: 'SpinBox', props: { value: '8080', minimum: 1, maximum: 65535 } },
+            { id: 'extra-child', type: 'Button', props: { text: 'Trimmed' } },
+          ],
+        },
+        { id: 'sw-1', type: 'Switch', props: { isOn: 'true' } },
+        { id: 'bad-widget', type: 'NonExistentWidget' },
+      ],
+    },
+  };
+  const sanitized = sanitizeAiDocument(messy);
+  assert.equal(sanitized.ok, true, sanitized.error);
+  assert.equal(sanitized.document.root.id, 'root');
+  assert.equal(sanitized.document.root.type, 'VBox');
+  assert.equal(sanitized.document.root.props.spacing, 16);
+  const label = sanitized.document.root.children[0];
+  assert.equal(label.type, 'Label');
+  assert.equal(label.props.typography, 'Title');
+  const field = sanitized.document.root.children[1];
+  assert.equal(field.type, 'Field');
+  assert.equal(field.props.required, true);
+  assert.equal(field.children.length, 1);
+  assert.equal(field.children[0].type, 'NumberBox');
+  assert.equal(field.children[0].props.value, 8080);
+  assert.equal(sanitized.document.root.children[2].type, 'ToggleSwitch');
+  assert.equal(validateDocument(sanitized.document).ok, true);
+
+  // Repair loose multi-child NavigationView into 1 VBox page and demote nested Card inside Card.
+  const navLoose = sanitizeAiDocument({
+    root: {
+      id: 'root',
+      type: 'VBox',
+      children: [
+        {
+          id: 'nav',
+          type: 'NavigationView',
+          props: { items: ['Overview', 'Logs'] },
+          children: [
+            { id: 't1', type: 'Label', props: { text: 'Dashboard' } },
+            {
+              id: 'outer_card',
+              type: 'Card',
+              children: [
+                { id: 'inner_card', type: 'Card', children: [{ id: 'b1', type: 'Button', props: { text: 'Run' } }] },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  });
+  assert.equal(navLoose.ok, true, navLoose.error);
+  const navNode = findNode(navLoose.document.root, 'nav');
+  assert.equal(navNode.children.length, 1);
+  assert.equal(navNode.children[0].type, 'VBox');
+  const outerCard = findNode(navLoose.document.root, 'outer_card');
+  assert.equal(outerCard.type, 'Card');
+  assert.equal(outerCard.children[0].type, 'VBox');
+
+  // Preserve properly wrapped multi-page NavigationView containers.
+  const navPaged = sanitizeAiDocument({
+    root: {
+      id: 'root',
+      type: 'VBox',
+      children: [
+        {
+          id: 'nav',
+          type: 'NavigationView',
+          props: { items: ['Page 1', 'Page 2'] },
+          children: [
+            { id: 'p0', type: 'VBox', children: [{ id: 'l0', type: 'Label', props: { text: 'One' } }] },
+            { id: 'p1', type: 'VBox', children: [{ id: 'l1', type: 'Label', props: { text: 'Two' } }] },
+          ],
+        },
+      ],
+    },
+  });
+  assert.equal(navPaged.ok, true);
+  assert.equal(findNode(navPaged.document.root, 'nav').children.length, 2);
+  assert.equal(findNode(navPaged.document.root, 'nav').children[0].id, 'p0');
+});
+
+test('studio-ai builds desktop architect prompt and presets cleanly', () => {
+  assert.ok(AI_PROVIDER_PRESETS.deepseek?.baseUrl);
+  assert.ok(AI_PROVIDER_PRESETS.ollama?.baseUrl);
+
+  const msgs = buildAiMessages({ prompt: 'Build a GPU monitor', lang: 'en' });
+  assert.equal(msgs.length, 2);
+  assert.equal(msgs[0].role, 'system');
+  assert.match(msgs[0].content, /NavigationView/);
+  assert.match(msgs[0].content, /SplitView/);
+  assert.match(msgs[0].content, /DataGrid\.modelData/);
+  assert.match(msgs[1].content, /create new desktop page/);
+  assert.match(msgs[1].content, /Build a GPU monitor/);
+});
+
+function makeSseStreamResponse(payloadStrings) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const item of payloadStrings) {
+        controller.enqueue(encoder.encode(`data: ${item}\n\n`));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { 'content-type': 'text/event-stream' },
+  });
+}
+
+function makeOpenAiResponsesSse({
+  text,
+  reasoning = '',
+  model = 'gpt-6-luna',
+  finishIncomplete = false,
+  usage = { input_tokens: 1800, output_tokens: 240, input_tokens_details: { cached_tokens: 1440 } },
+}) {
+  const events = [
+    JSON.stringify({
+      type: 'response.created',
+      response: { id: 'resp_1', created_at: 1700000000, model },
+    }),
+  ];
+  let outIdx = 0;
+  if (reasoning) {
+    events.push(JSON.stringify({
+      type: 'response.output_item.added',
+      output_index: outIdx,
+      item: { type: 'reasoning', id: 'rs_1' },
+    }));
+    events.push(JSON.stringify({
+      type: 'response.reasoning_summary_text.delta',
+      item_id: 'rs_1',
+      output_index: outIdx,
+      summary_index: 0,
+      delta: reasoning,
+    }));
+    events.push(JSON.stringify({
+      type: 'response.output_item.done',
+      output_index: outIdx,
+      item: { type: 'reasoning', id: 'rs_1' },
+    }));
+    outIdx++;
+  }
+  events.push(JSON.stringify({
+    type: 'response.output_item.added',
+    output_index: outIdx,
+    item: { type: 'message', id: 'msg_1' },
+  }));
+  const mid = Math.max(1, Math.floor(text.length / 2));
+  for (const part of [text.slice(0, mid), text.slice(mid)].filter(Boolean)) {
+    events.push(JSON.stringify({
+      type: 'response.output_text.delta',
+      item_id: 'msg_1',
+      output_index: outIdx,
+      delta: part,
+    }));
+  }
+  events.push(JSON.stringify({
+    type: 'response.output_item.done',
+    output_index: outIdx,
+    item: { type: 'message', id: 'msg_1' },
+  }));
+  events.push(JSON.stringify({
+    type: finishIncomplete ? 'response.incomplete' : 'response.completed',
+    response: {
+      ...(finishIncomplete ? { incomplete_details: { reason: 'max_output_tokens' } } : {}),
+      usage,
+    },
+  }));
+  return makeSseStreamResponse(events);
+}
+
+function makeChatSse({
+  text,
+  model = 'deepseek-chat',
+  finishReason = 'stop',
+  usage = { prompt_tokens: 1800, completion_tokens: 240, prompt_tokens_details: { cached_tokens: 1440 } },
+}) {
+  const mid = Math.max(1, Math.floor(text.length / 2));
+  const chunks = [text.slice(0, mid), text.slice(mid)].filter(Boolean);
+  const events = chunks.map((chunk, i) => JSON.stringify({
+    id: 'chatcmpl_1',
+    object: 'chat.completion.chunk',
+    model,
+    choices: [{
+      index: 0,
+      delta: i === 0 ? { role: 'assistant', content: chunk } : { content: chunk },
+      finish_reason: null,
+    }],
+  }));
+  events.push(JSON.stringify({
+    id: 'chatcmpl_1',
+    object: 'chat.completion.chunk',
+    model,
+    choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
+    ...(usage ? { usage } : {}),
+  }));
+  events.push('[DONE]');
+  return makeSseStreamResponse(events);
+}
+
+test('studio-ai generateStudioPageWithAi stays honest without config, retries custom JSON, and handles worker limits', async () => {
+  const unconfigured = await generateStudioPageWithAi({
+    prompt: 'Create a dashboard',
+    config: { provider: 'auto', workerUrl: '' },
+  });
+  assert.equal(unconfigured.ok, false);
+  assert.equal(unconfigured.needsConfig, true);
+
+  let customCalls = 0;
+  const seenChatUrls = [];
+  const customFetch = async (url) => {
+    seenChatUrls.push(url);
+    customCalls++;
+    const content = customCalls === 1
+      ? 'Not valid JSON'
+      : JSON.stringify({
+          schemaVersion: 1,
+          root: {
+            id: 'root',
+            type: 'VBox',
+            children: [
+              { id: 'title_1', type: 'Label', props: { text: 'Remote Custom Page' } },
+              { id: 'btn_1', type: 'Button', props: { text: 'Apply' } },
+            ],
+          },
+        });
+    return makeChatSse({ text: content, model: 'test-model' });
+  };
+  const customRes = await generateStudioPageWithAi({
+    prompt: 'Build a page',
+    config: { provider: 'custom', baseUrl: 'https://api.example.com/v1', model: 'test-model', apiKey: 'sk-test' },
+    fetchImpl: customFetch,
+  });
+  assert.equal(customRes.ok, true, customRes.error);
+  assert.equal(customCalls, 2);
+  assert.deepEqual(seenChatUrls, [
+    'https://api.example.com/v1/chat/completions',
+    'https://api.example.com/v1/chat/completions',
+  ]);
+  assert.equal(customRes.source, 'custom');
+  assert.equal(findNode(customRes.document.root, 'title_1').props.text, 'Remote Custom Page');
+
+  // Worker route success
+  const workerRes = await generateStudioPageWithAi({
+    prompt: 'Create login form',
+    config: { provider: 'auto', workerUrl: 'https://worker.example.dev' },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ok: true,
+        provider: 'cloudflare-workers-ai',
+        model: '@cf/meta/llama-3.1-8b-instruct',
+        content: '{"root":{"type":"VBox","children":[{"id":"l1","type":"Label","props":{"text":"Worker Login"}}]}}',
+      }),
+    }),
+  });
+  assert.equal(workerRes.ok, true);
+  assert.equal(workerRes.source, 'worker');
+  assert.equal(workerRes.document.root.children[0].props.text, 'Worker Login');
+
+  // Worker rate-limit reports explicit error rather than silently faking an AI response
+  const limitRes = await generateStudioPageWithAi({
+    prompt: 'Create a settings page',
+    config: { provider: 'auto', workerUrl: 'https://worker.example.dev' },
+    fetchImpl: async () => ({ ok: false, status: 429, json: async () => ({ error: 'Daily free quota reached.' }) }),
+  });
+  assert.equal(limitRes.ok, false);
+  assert.equal(limitRes.rateLimited, true);
+  assert.match(limitRes.error, /Daily free quota/);
+});
+
+test('studio-ai routes OpenAI Responses, Chat Completions, keyless Ollama, and formats SDK API errors', async () => {
+  const responsesDoc = {
+    schemaVersion: 1,
+    root: {
+      id: 'root',
+      type: 'VBox',
+      children: [
+        { id: 'editor_title', type: 'Label', props: { text: 'Markdown Notes' } },
+        { id: 'editor_area', type: 'TextEdit', props: { placeholderText: 'Write here...' } },
+      ],
+    },
+  };
+
+  // 1. Both https://api.openai.com/v1 and https://api.openai.com/v1/responses/ route cleanly to Responses API
+  for (const baseUrl of ['https://api.openai.com/v1', 'https://api.openai.com/v1/responses/']) {
+    let seenUrl = '';
+    let seenBody = null;
+    const progressEvents = [];
+    const res = await generateStudioPageWithAi({
+      prompt: '生成一个文本编辑器',
+      lang: 'zh',
+      config: {
+        provider: 'custom',
+        baseUrl,
+        model: 'gpt-6-luna',
+        apiKey: 'sk-openai-test',
+      },
+      fetchImpl: async (url, init) => {
+        seenUrl = url;
+        seenBody = JSON.parse(init.body);
+        return makeOpenAiResponsesSse({
+          reasoning: 'Planning layout',
+          text: JSON.stringify(responsesDoc),
+          usage: { input_tokens: 1920, output_tokens: 210, input_tokens_details: { cached_tokens: 1536 } },
+        });
+      },
+      onProgress: (evt) => progressEvents.push(evt),
+    });
+    assert.equal(res.ok, true, res.error);
+    assert.equal(seenUrl, 'https://api.openai.com/v1/responses');
+    assert.equal(seenBody.temperature, undefined);
+    assert.equal(seenBody.max_output_tokens, 8192);
+    assert.equal(seenBody.prompt_cache_key, 'fluentqt_studio_v1');
+    assert.equal(seenBody.reasoning?.effort, 'medium');
+    assert.equal(seenBody.reasoning?.summary, undefined);
+    assert.equal(seenBody.text?.format?.type, 'json_object');
+    assert.ok(progressEvents.some((e) => e.phase === 'thinking'));
+    assert.ok(progressEvents.some((e) => e.phase === 'generating' && e.widgets >= 2));
+    assert.deepEqual(res.usage, {
+      inputTokens: 1920,
+      outputTokens: 210,
+      cachedTokens: 1536,
+      cacheHitRate: 80,
+    });
+    assert.equal(findNode(res.document.root, 'editor_area').type, 'TextEdit');
+  }
+
+  // 2. Full /chat/completions URL & localhost keyless Ollama do not double-append paths
+  let seenChatUrl = '';
+  let seenChatBody = null;
+  const directChatRes = await generateStudioPageWithAi({
+    prompt: 'Create a text editor',
+    config: {
+      provider: 'custom',
+      baseUrl: 'https://api.example.com/v1/chat/completions',
+      model: 'gpt-4o-mini',
+      apiKey: 'sk-test',
+    },
+    fetchImpl: async (url, init) => {
+      seenChatUrl = url;
+      seenChatBody = JSON.parse(init.body);
+      return makeChatSse({ text: JSON.stringify(responsesDoc), model: 'gpt-4o-mini' });
+    },
+  });
+  assert.equal(directChatRes.ok, true, directChatRes.error);
+  assert.equal(seenChatUrl, 'https://api.example.com/v1/chat/completions');
+  assert.equal(seenChatBody.stream_options?.include_usage, true);
+
+  let seenOllamaUrl = '';
+  let ollamaAuthHeader;
+  const ollamaRes = await generateStudioPageWithAi({
+    prompt: 'Local page',
+    config: {
+      provider: 'custom',
+      baseUrl: 'http://localhost:11434/v1',
+      model: 'qwen2.5:7b',
+      apiKey: '',
+    },
+    fetchImpl: async (url, init) => {
+      seenOllamaUrl = url;
+      ollamaAuthHeader = init.headers?.authorization ?? init.headers?.Authorization;
+      return makeChatSse({ text: JSON.stringify(responsesDoc), model: 'qwen2.5:7b', usage: null });
+    },
+  });
+  assert.equal(ollamaRes.ok, true, ollamaRes.error);
+  assert.equal(seenOllamaUrl, 'http://localhost:11434/v1/chat/completions');
+  assert.equal(ollamaAuthHeader, undefined);
+
+  // 3. SDK APICallError 401 formats cleanly without retries
+  let authCalls = 0;
+  const authErrRes = await generateStudioPageWithAi({
+    prompt: 'Create a page',
+    config: {
+      provider: 'custom',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-4o-mini',
+      apiKey: 'sk-bad',
+    },
+    fetchImpl: async () => {
+      authCalls++;
+      return new Response(
+        JSON.stringify({ error: { message: 'Incorrect API key provided', type: 'invalid_request_error' } }),
+        { status: 401, headers: { 'content-type': 'application/json' } },
+      );
+    },
+  });
+  assert.equal(authCalls, 1);
+  assert.equal(authErrRes.ok, false);
+  assert.equal(authErrRes.error, 'HTTP 401: Incorrect API key provided');
+});
+
+test('studio-ai static system prompt maximizes cache hit rate, rescues stray braces, and skips truncated retries', async () => {
+  const mZh = buildAiMessages({ prompt: '做一个文本编辑器', lang: 'zh' });
+  const mEn = buildAiMessages({ prompt: 'Create a dashboard', lang: 'en' });
+  assert.equal(mZh[0].content, mEn[0].content);
+  assert.ok(mZh[0].content.length >= 4200 && mZh[0].content.length <= 9200, `Unexpected prompt length: ${mZh[0].content.length}`);
+  for (const type of Object.keys(STUDIO_CATALOG)) {
+    assert.ok(mZh[0].content.includes(type), `System prompt missing ${type}`);
+  }
+
+  // Design metadata, extended Button/FontIcon glyphs, DataGrid headers, and safe/unsafe SVG handling
+  const designPayload = JSON.stringify({
+    schemaVersion: 1,
+    design: { theme: 'dark', accentColor: '#8764b8' },
+    root: {
+      id: 'root',
+      type: 'VBox',
+      props: { spacing: 12, padding: 14 },
+      children: [
+        { id: 'btn_cam', type: 'Button', props: { text: 'Shot', icon: 'Camera', fluentStyle: 'Accent' } },
+        { id: 'fi_mus', type: 'FontIcon', props: { glyph: 'Music' } },
+        {
+          id: 'dg',
+          type: 'DataGrid',
+          props: { headers: ['Node', 'Status'], modelData: [['node-1', 'Online']] },
+        },
+        {
+          id: 'iv_ok',
+          type: 'ImageViewer',
+          props: { svg: '<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="80" fill="#8764B8"/></svg>' },
+        },
+        {
+          id: 'iv_xss',
+          type: 'ImageViewer',
+          props: {
+            svg: '<svg viewBox="0 0 10 10"><script>alert(1)</script></svg>',
+            imageUrl: 'https://evil.example.com/payload.png',
+            mediaTheme: 'Music',
+          },
+        },
+      ],
+    },
+  });
+  const cleaned = sanitizeAiDocument(designPayload);
+  assert.equal(cleaned.ok, true, cleaned.error);
+  assert.deepEqual(cleaned.document.design, { theme: 'dark', accentColor: '#8764B8' });
+  assert.equal(validateDocument(cleaned.document).ok, true);
+  const ivOk = findNode(cleaned.document.root, 'iv_ok');
+  const ivXss = findNode(cleaned.document.root, 'iv_xss');
+  assert.match(ivOk.props.svg, /^<svg\b/);
+  assert.equal(ivXss.props.svg, undefined);
+  assert.equal(ivXss.props.imageUrl, undefined);
+  assert.equal(ivXss.props.mediaTheme, 'Music');
+
+  const cppOut = generateCpp(cleaned.document);
+  const pyOut = generatePython(cleaned.document);
+  assert.match(cppOut, /setImage\(\w+\.read\(\)\)/);
+  assert.match(pyOut, /setImage\(\w+\.read\(\)\)/);
+  assert.ok(cppOut.includes('viewBox=\\"0 0 120 80\\"'));
+  assert.ok(pyOut.includes('viewBox=\\"0 0 120 80\\"'));
+  assert.match(cppOut, /fluent::UserTheme::applyAccentOverride\(QColor\(QStringLiteral\("#8764B8"\)\)\)/);
+  assert.match(cppOut, /setIconGlyph\(Typography::Icons::Camera\)/);
+  assert.match(cppOut, /setHorizontalHeaderLabels\(\{QStringLiteral\("Node"\), QStringLiteral\("Status"\)\}\)/);
+  assert.match(pyOut, /set_accent_color\(QColor\("#8764B8"\)\)/);
+  assert.match(pyOut, /setIconGlyph\(Typography\.Icons\.Camera\)/);
+  assert.match(pyOut, /setHorizontalHeaderLabels\(\["Node", "Status"\]\)/);
+
+  // Stray unclosed `{` in prose before valid JSON must not trigger Unclosed JSON failure
+  const strayText = 'Thinking note {draft layout:\n' + JSON.stringify({
+    root: { id: 'root', type: 'VBox', children: [{ id: 't1', type: 'Label', props: { text: 'Rescued' } }] },
+  });
+  const rescued = extractJsonFromText(strayText);
+  assert.equal(rescued.ok, true);
+  assert.equal(rescued.data.root.children[0].props.text, 'Rescued');
+
+  // Truncated Chat output (finish_reason: length) must NOT make a second costly retry request
+  let chatTruncCalls = 0;
+  const chatTruncRes = await generateStudioPageWithAi({
+    prompt: 'Build giant workspace',
+    lang: 'zh',
+    config: {
+      provider: 'custom',
+      baseUrl: 'https://api.deepseek.com/v1',
+      model: 'deepseek-chat',
+      apiKey: 'sk-test',
+    },
+    fetchImpl: async () => {
+      chatTruncCalls++;
+      return makeChatSse({
+        text: '{"root":{"id":"root","type":"VBox"',
+        finishReason: 'length',
+        usage: { prompt_tokens: 1500, completion_tokens: 4096 },
+      });
+    },
+  });
+  assert.equal(chatTruncCalls, 1);
+  assert.equal(chatTruncRes.ok, false);
+  assert.equal(chatTruncRes.truncated, true);
+
+  // Truncated Responses output (response.incomplete) must also skip second retry
+  let respTruncCalls = 0;
+  const respTruncRes = await generateStudioPageWithAi({
+    prompt: 'Build giant workspace',
+    lang: 'en',
+    config: {
+      provider: 'custom',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-6-luna',
+      apiKey: 'sk-openai-test',
+    },
+    fetchImpl: async () => {
+      respTruncCalls++;
+      return makeOpenAiResponsesSse({
+        text: '{"root":{"id":"root","type":"VBox"',
+        finishIncomplete: true,
+        usage: { input_tokens: 1600, output_tokens: 4096 },
+      });
+    },
+  });
+  assert.equal(respTruncCalls, 1);
+  assert.equal(respTruncRes.ok, false);
+  assert.equal(respTruncRes.truncated, true);
+});
+
+test('studio-ai conversational iteration, selected-node refine, and style presets keep static system prompt cached', async () => {
+  const baseDoc = {
+    schemaVersion: 1,
+    design: { theme: 'dark', accentColor: '#00B7C3' },
+    root: {
+      id: 'root',
+      type: 'VBox',
+      props: { spacing: 12, padding: 14 },
+      children: [
+        { id: 'hdr_lbl', type: 'Label', props: { text: 'Agent Workbench', typography: 'Title' } },
+        {
+          id: 'composer_card',
+          type: 'Card',
+          props: { padding: 12, spacing: 8 },
+          children: [
+            { id: 'composer_input', type: 'TextEdit', props: { placeholderText: 'Ask anything...' } },
+            { id: 'send_btn', type: 'Button', props: { text: 'Send', fluentStyle: 'Accent' } },
+          ],
+        },
+      ],
+    },
+  };
+
+  const baseSys = buildAiMessages({ prompt: 'a', lang: 'zh' })[0].content;
+  for (const mode of ['create', 'iterate', 'refine']) {
+    for (const preset of Object.keys(AI_STYLE_PRESETS)) {
+      const msgs = buildAiMessages({
+        prompt: 'Add clear button',
+        lang: mode === 'refine' ? 'en' : 'zh',
+        mode,
+        currentDoc: baseDoc,
+        targetNodeId: 'composer_card',
+        stylePreset: preset,
+      });
+      assert.equal(msgs[0].content, baseSys);
+    }
+  }
+
+  const refineMsgs = buildAiMessages({
+    prompt: 'Add an attachment button next to Send',
+    lang: 'en',
+    mode: 'refine',
+    currentDoc: baseDoc,
+    targetNodeId: 'composer_card',
+  });
+  assert.match(refineMsgs[1].content, /Mode: refine selected node subtree/);
+  assert.match(refineMsgs[1].content, /"id":"composer_card"/);
+
+  // applyRefinedSubtree replaces only the targeted node and preserves siblings + design
+  const refined = applyRefinedSubtree(baseDoc, 'composer_card', JSON.stringify({
+    id: 'composer_card',
+    type: 'Card',
+    props: { padding: 12, spacing: 8 },
+    children: [
+      { id: 'composer_input', type: 'TextEdit', props: { placeholderText: 'Ask or attach...' } },
+      {
+        id: 'composer_actions',
+        type: 'HBox',
+        props: { spacing: 8, align: 'Center' },
+        children: [
+          { id: 'attach_btn', type: 'Button', props: { text: 'Attach', icon: 'Link' } },
+          { id: 'send_btn', type: 'Button', props: { text: 'Send', icon: 'Send', fluentStyle: 'Accent' } },
+        ],
+      },
+    ],
+  }));
+  assert.equal(refined.ok, true, refined.error);
+  assert.equal(refined.focusNodeId, 'composer_card');
+  assert.deepEqual(refined.document.design, { theme: 'dark', accentColor: '#00B7C3' });
+  assert.equal(findNode(refined.document.root, 'hdr_lbl').props.text, 'Agent Workbench');
+  assert.equal(findNode(refined.document.root, 'attach_btn').props.icon, 'Link');
+
+  // Style preset applies default design when AI omits design in create mode
+  let seenIterateUser = '';
+  const iterateRes = await generateStudioPageWithAi({
+    prompt: 'Rename title to Ops Console',
+    lang: 'en',
+    mode: 'iterate',
+    currentDoc: baseDoc,
+    config: { provider: 'custom', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', apiKey: 'sk-test' },
+    fetchImpl: async (_url, init) => {
+      const body = JSON.parse(init.body);
+      seenIterateUser = body.messages[1].content;
+      const updated = structuredClone(baseDoc);
+      updated.root.children[0].props.text = 'Ops Console';
+      delete updated.design;
+      return new Response(
+        `data: ${JSON.stringify({ id: 'c1', model: 'deepseek-chat', choices: [{ index: 0, delta: { content: JSON.stringify(updated) }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n`,
+        { status: 200, headers: { 'content-type': 'text/event-stream' } },
+      );
+    },
+  });
+  assert.equal(iterateRes.ok, true, iterateRes.error);
+  assert.match(seenIterateUser, /Mode: iterate current desktop page/);
+  assert.deepEqual(iterateRes.document.design, { theme: 'dark', accentColor: '#00B7C3' });
+
+  const createPresetRes = await generateStudioPageWithAi({
+    prompt: 'Simple note card',
+    lang: 'zh',
+    mode: 'create',
+    stylePreset: 'editorial-coral',
+    config: { provider: 'custom', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', apiKey: 'sk-test' },
+    fetchImpl: async () => new Response(
+      `data: ${JSON.stringify({ id: 'c2', model: 'deepseek-chat', choices: [{ index: 0, delta: { content: JSON.stringify({ root: { id: 'root', type: 'VBox', children: [{ id: 'l1', type: 'Label', props: { text: '笔记' } }] } }) }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n`,
+      { status: 200, headers: { 'content-type': 'text/event-stream' } },
+    ),
+  });
+  assert.equal(createPresetRes.ok, true, createPresetRes.error);
+  assert.deepEqual(createPresetRes.document.design, { theme: 'light', accentColor: '#D84A38' });
+});
+
+test('Worker iteration includes the current document and refinement changes only the selected subtree', async () => {
+  const { default: worker } = await import('./studio-ai-worker/worker.js');
+  const original = { schemaVersion: 1, design: { theme: 'light' },
+    root: { id: 'root', type: 'VBox', children: [
+      { id: 'save', type: 'Button', props: { text: 'Save' } },
+      { id: 'heading', type: 'Label', props: { text: 'Original heading' } },
+    ] } };
+  const updated = structuredClone(original);
+  updated.root.children[0].props.text = 'Confirm';
+  updated.root.children.pop();
+  let userMessage;
+  const fetchImpl = (_url, init) => worker.fetch(new Request('https://worker.example', {
+    ...init, headers: { ...init.headers, Origin: 'https://studio.example' },
+  }), {
+    ALLOWED_ORIGINS: 'https://studio.example',
+    STUDIO_QUOTA: { idFromName: id => id, get: () => ({ fetch: () => new Response('') }) },
+    AI: { run: async (_model, { messages }) => {
+      userMessage = messages[1].content;
+      return { response: JSON.stringify(updated) };
+    } },
+  });
+  const options = { currentDoc: original, prompt: 'Rename the button', lang: 'en',
+    config: { provider: 'auto', workerUrl: 'https://worker.example' }, fetchImpl };
+  const iteration = await generateStudioPageWithAi({ ...options, mode: 'iterate' });
+  assert.ok(iteration.ok, iteration.error);
+  assert.match(userMessage, /Original heading/);
+  const refined = await generateStudioPageWithAi({ ...options, mode: 'refine', targetNodeId: 'save' });
+  assert.ok(refined.ok, refined.error);
+  assert.match(userMessage, /Target node id: "save"/);
+  assert.equal(refined.document.root.children[0].props.text, 'Confirm');
+  assert.deepEqual(refined.document.root.children[1], original.root.children[1]);
+  assert.deepEqual(refined.document.design, original.design);
+  assert.equal(applyRefinedSubtree(original, 'heading', updated).ok, false);
+});
+
+test('custom key belongs to its service origin', () => {
+  const config = { baseUrl: 'https://provider.example/v1', keyOrigin: 'https://provider.example', apiKey: 'test-key' };
+  changeAiEndpoint(config, 'https://provider.example/custom');
+  assert.equal(config.apiKey, 'test-key');
+  changeAiEndpoint(config, 'https://other.example/v1');
+  assert.equal(config.apiKey, '');
+  assert.equal(config.keyOrigin, 'https://other.example');
+});
+
+test('gateway quota survives a new instance and keeps rolling windows across UTC midnight', async (t) => {
+  const sqlite = process.getBuiltinModule?.('node:sqlite');
+  if (!sqlite) return t.skip('requires Node with built-in SQLite');
+
+  const { StudioQuota } = await import('./studio-ai-worker/worker.js');
+  const db = new sqlite.DatabaseSync(':memory:');
+  t.after(() => db.close());
+  const storage = {
+    sql: { exec: (query, ...args) => db.prepare(query).all(...args) },
+    transactionSync: (callback) => {
+      db.exec('BEGIN');
+      try {
+        const result = callback();
+        db.exec('COMMIT');
+        return result;
+      } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+      }
+    },
+  };
+  const limits = { RATE_LIMIT_PER_MIN: 1, RATE_LIMIT_PER_HOUR: 2, MAX_DAILY_REQUESTS: 2 };
+  let now = Date.UTC(2026, 0, 1, 23, 59, 30);
+  t.mock.method(Date, 'now', () => now);
+  let quota = new StudioQuota({ storage }, limits);
+  const admit = async (ip) => (await quota.fetch(new Request('https://quota.internal/admit', {
+    method: 'POST', body: ip,
+  }))).status;
+  assert.equal(await admit('a'), 200);
+  assert.equal(await admit('b'), 200);
+  quota = new StudioQuota({ storage }, limits);
+  assert.equal(await admit('c'), 429);
+  now += 30_000;
+  assert.equal(await admit('a'), 429);
+  now += 30_000;
+  assert.equal(await admit('a'), 200);
+  now += 60_000;
+  assert.equal(await admit('a'), 429);
+  assert.equal(await admit('c'), 200);
 });

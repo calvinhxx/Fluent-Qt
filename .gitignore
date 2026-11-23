@@ -29,6 +29,9 @@ CMakeUserPresets.json
 # mac
 .DS_Store
 
+# Node build helpers (pre-bundled artifacts only)
+node_modules/
+
 # codex
 tmp/
 
@@ -59,3 +62,4 @@ tmp/
 /site/assets/app-icon.png
 /site/assets/gallery-home.jpg
 /site/assets/gallery/gallery-hero-real.png
+/site/studio/studio-ai-sdk.mjs

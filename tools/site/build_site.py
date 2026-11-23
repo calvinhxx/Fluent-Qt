@@ -81,6 +81,10 @@ def verify(folder: Path, commit: str) -> None:
         "studio/studio.js",
         "studio/studio-core.mjs",
         "studio/studio-metadata.mjs",
+        "studio/studio-ai.mjs",
+        "studio/studio-ai-prompt.mjs",
+        "studio/studio-media.mjs",
+        "studio/studio-ai-sdk.mjs",
         "studio/studio.css",
         "assets/component-previews/manifest.json",
         *COPIED_ASSETS,
@@ -164,6 +168,7 @@ def main() -> None:
         raise ValueError("Checkout does not match the requested site commit")
     prepare_catalogs()
     run("tools/site/generate_localized_site.py")
+    run("tools/site/build_studio_ai_sdk.py")
     if not current_previews(args.gallery):
         if not args.gallery:
             parser.error("Preview inputs changed; build the native Gallery and pass --gallery")

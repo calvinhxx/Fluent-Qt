@@ -13,6 +13,7 @@ to create, integrate, redesign, or fix a C++ or PySide6 interface.
 |---|---|
 | Build a new app or add a GUI to an existing project | [Integration guide](add-gui-to-project.md), then the Skill's new-interface workflow |
 | Fix an existing application | The Skill's existing-interface workflow and the owning code/tests |
+| Generate a page layout in Page Studio | [Connect a Worker or use OpenAI directly](../../tools/site/studio-ai-worker/README.md#connect-to-page-studio) |
 | Maintain FluentQt components, Gallery, or bindings | Repository `AGENTS.md` and [maintainer gates](../../.agents/skills/build-fluentqt-gui/references/fluentqt-maintainer-gates.md) |
 | Edit docs, catalogs, or Skill guidance | [Documentation style](../development/documentation-style.md) and asset checks below |
 
