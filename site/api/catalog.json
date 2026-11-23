@@ -6020,7 +6020,7 @@
         },
         "preview": {
           "alt": {
-            "en": "NumberBox: Drag to adjust a value",
+            "en": "NumberBox: Quantity and precision",
             "zh": "数值输入框的真实 Gallery 示例"
           },
           "light": {

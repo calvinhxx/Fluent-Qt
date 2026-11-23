@@ -657,8 +657,10 @@
   "number-box": {
     "name": "数值输入框",
     "description": "支持步进调节、表达式计算与拖拽调值的数值框。",
-    "example": "拖动调整数值",
-    "usage": "调用 setScrubbingEnabled(true) 允许左右拖动数值；按住 Shift 可精细微调，按 Esc 取消本次拖动恢复原值。"
+    "sample": "number-box-spin-placement",
+    "example": "购买数量与小数位数",
+    "usage": "数量输入可用 Split 在数值两侧显示减号和加号。调用 setEmptyAllowed(false) 后，清空再提交会恢复上次的数值。用 setTrailingText() 显示单位。",
+    "usage_en": "Choose Split for minus and plus buttons on either side of a quantity. Use setEmptyAllowed(false) to restore the last value when a blank edit is committed. Use setTrailingText() to display a unit."
   },
   "password-box": {
     "name": "密码输入框",

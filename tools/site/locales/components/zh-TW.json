@@ -92,7 +92,7 @@
 "code-block":{"name":"程式碼區塊","description":"支援語法高亮度顯示、精確複製、摺疊與有限捲動的唯讀程式碼元件。","example":"閱讀與複製程式碼","usage":"使用 setLanguage() 指定 C++、Python 或 QML 語法高亮度顯示（其他語言以純文字顯示），並以 setCode() 傳入程式碼；標題列內含全部複製與摺疊按鈕。"},
 "label":{"name":"文字標籤","description":"支援 Fluent 預設字型樣式與文字省略顯示的靜態文字標籤。","example":"字型樣式","usage":"使用 setFluentTypography() 指定 Caption、Body、Subtitle 等預設字型樣式，切換佈景主題後仍保持一致。"},
 "line-edit":{"name":"單行輸入框","description":"具備 Fluent 樣式與清除按鈕的單行文字方塊。","example":"單位與行內操作","usage":"使用 setTrailingText() 顯示單位、setTrailingWidget() 加入行內操作，並為輸入框與清除按鈕設定無障礙名稱。"},
-"number-box":{"name":"數值輸入框","description":"支援微調按鈕、行內運算式計算與拖曳調值的數值輸入框。","example":"拖曳調整數值","usage":"呼叫 setScrubbingEnabled(true) 即可左右拖曳調整數值；按住 Shift 可精細微調，按 Esc 則還原為初始數值。"},
+"number-box":{"name":"數值輸入框","description":"支援微調按鈕、行內運算式計算與拖曳調值的數值輸入框。","example":"購買數量與小數位數","usage":"Split 會在數值兩側顯示減號和加號。呼叫 setEmptyAllowed(false) 後，清空欄位再確認時會恢復上次的數值。用 setTrailingText() 顯示單位。"},
 "password-box":{"name":"密碼輸入框","description":"可隱藏輸入內容並提供顯示按鈕的密碼文字方塊。","example":"讀取密碼","usage":"使用 setPassword() 設定密碼、password() 讀取密碼，並透過 passwordChanged 監聽輸入變化，顯示按鈕可切換遮罩或明文顯示。"},
 "text-edit":{"name":"多行輸入框","description":"適合較長內容輸入的多行文字方塊，支援依行數自動調整高度與捲動。","example":"依顯示行數自動調整高度","usage":"預設啟用高度自動調整：使用 setMinVisibleLines() 與 setMaxVisibleLines() 限制顯示行數範圍，超出部分會自動捲動。"},
 "title-bar":{"name":"標題列","description":"支援自訂內容、拖曳區域與主題外觀的視窗標題列。","example":"避開系統按鈕區域","usage":"使用 setSystemReservedLeadingWidth() 與 setSystemReservedTrailingWidth() 為系統視窗按鈕保留空間，並以 setContentWidget() 放入自訂控制項。"},
