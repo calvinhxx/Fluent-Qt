@@ -2459,7 +2459,7 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
         auto* layout = new AnchorLayout(box);
         const int pad = qBound(0, props.value(QStringLiteral("padding")).toInt(12), 48);
         if (children.isEmpty()) {
-            auto* hint = new Label(QStringLiteral("AnchorLayout · 锚点容器"), box);
+            auto* hint = new Label(QStringLiteral("AnchorLayout"), box);
             hint->setTextColorRole(Label::TextColorRole::Secondary);
             AnchorLayout::Anchors centerAnchors;
             centerAnchors.horizontalCenter = {box, AnchorLayout::Edge::HCenter, 0};
