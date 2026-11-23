@@ -1,3 +1,4 @@
+import { isSafeStudioSvg, isStudioPhotoUrl } from './studio-media.mjs';
 import { designerClasses, playgroundFields, qmlScenes } from './studio-metadata.mjs';
 
 export const STUDIO_SCHEMA_VERSION = 1;
@@ -509,6 +510,7 @@ export const STUDIO_CATALOG = {
     [
       { key: 'headerText', kind: 'text', label: { zh: '标题', en: 'Header' } },
       { key: 'items', kind: 'list', label: { zh: '条目', en: 'Items' } },
+      { key: 'mediaTheme', kind: 'select', options: ['None', 'Landscape', 'Coffee', 'Architecture', 'City', 'Portrait', 'Technology', 'Abstract', 'Music'], label: { zh: '摄影主题', en: 'Media Theme' } },
       { key: 'minHeight', kind: 'number', min: 120, max: 420, label: { zh: '最小高度', en: 'Min Height' } },
     ]),
   TreeView: def('TreeView', 'collections', '树形视图', 'TreeView', '<FluentQt/Collections.h>', 'fluent::collections::TreeView', 'fluentqt.collections', 'TreeView',
@@ -519,7 +521,10 @@ export const STUDIO_CATALOG = {
     ]),
   DataGrid: def('DataGrid', 'collections', '数据表格', 'DataGrid', '<FluentQt/Collections.h>', 'fluent::collections::DataGrid', 'fluentqt.collections', 'DataGrid',
     { minHeight: 190 },
-    [{ key: 'minHeight', kind: 'number', min: 140, max: 420, label: { zh: '最小高度', en: 'Min Height' } }]),
+    [
+      { key: 'headers', kind: 'list', label: { zh: '表头列名', en: 'Headers' } },
+      { key: 'minHeight', kind: 'number', min: 140, max: 420, label: { zh: '最小高度', en: 'Min Height' } },
+    ]),
   Timeline: def('Timeline', 'collections', '时间线', 'Timeline', '<FluentQt/Collections.h>', 'fluent::collections::Timeline', 'fluentqt.collections', 'Timeline',
     { items: ['Queued', 'Compiling WASM', 'Published'], minHeight: 200 },
     [
@@ -603,7 +608,12 @@ export const STUDIO_CATALOG = {
     [{ key: 'pages', kind: 'number', min: 2, max: 20, label: { zh: '总页数', en: 'Page Count' } }]),
   ImageViewer: def('ImageViewer', 'scrolling', '图片查看器', 'ImageViewer', '<FluentQt/Scrolling.h>', 'fluent::scrolling::ImageViewer', 'fluentqt.scrolling', 'ImageViewer',
     { minHeight: 180 },
-    [{ key: 'minHeight', kind: 'number', min: 140, max: 420, label: { zh: '最小高度', en: 'Min Height' } }]),
+    [
+      { key: 'minHeight', kind: 'number', min: 140, max: 420, label: { zh: '最小高度', en: 'Min Height' } },
+      { key: 'mediaTheme', kind: 'select', options: ['Landscape', 'Coffee', 'Architecture', 'City', 'Portrait', 'Technology', 'Abstract', 'Music'], label: { zh: '摄影主题', en: 'Media Theme' } },
+      { key: 'svg', kind: 'textarea', label: { zh: '矢量插画 SVG', en: 'Inline SVG' } },
+      { key: 'imageUrl', kind: 'text', label: { zh: '图片链接', en: 'Image URL' } },
+    ]),
   ScrollBar: def('ScrollBar', 'scrolling', '滚动条', 'ScrollBar', '<FluentQt/Scrolling.h>', 'fluent::scrolling::ScrollBar', 'fluentqt.scrolling', 'ScrollBar',
     { orientation: 'Horizontal' },
     [{ key: 'orientation', kind: 'select', options: ['Horizontal', 'Vertical'], label: { zh: '方向', en: 'Orientation' } }]),
@@ -1001,6 +1011,8 @@ const safeKey = key => /^[A-Za-z_][A-Za-z_0-9]*$/.test(key) && !Object.hasOwn(Ob
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const validText = value => typeof value === 'string' && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value);
 
+const VALID_DESIGN_THEMES = new Set(['light', 'dark']);
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 function validProperty(meta, key, value) {
   if (!safeKey(key)) return false;
   const field = meta.propSchema.find(f => f.key === key) || ANCHOR_CHILD_SCHEMA.find(f => f.key === key);
@@ -1008,10 +1020,19 @@ function validProperty(meta, key, value) {
   const kind = field?.kind || extra?.type || typeof meta.defaultProps[key];
   const options = field?.options || extra?.options;
   if (value === null) return Boolean(extra?.nullable || key === 'cornerRadius');
+  if (meta.type === 'ImageViewer' && key === 'svg') {
+    return value === '' || isSafeStudioSvg(value);
+  }
+  if (meta.type === 'ImageViewer' && key === 'imageUrl') {
+    return validText(value) && value.length <= 512 && (value === '' || isStudioPhotoUrl(value));
+  }
   switch (kind) {
     case 'number': return Number.isFinite(value);
     case 'boolean': return typeof value === 'boolean';
     case 'select': case 'enum':
+      if (key === 'icon' || key === 'glyph') {
+        return typeof value === 'string' && value.length <= 80 && safeKey(value);
+      }
       return typeof value === 'string' && (options ? options.includes(value) : safeKey(value));
     case 'numlist': return Array.isArray(value) && value.every(Number.isFinite);
     case 'multi-enum': return Array.isArray(value) && value.every(v => options?.includes(v));
@@ -1035,6 +1056,22 @@ export function validateDocument(doc) {
   }
   if (doc.schemaVersion !== undefined && doc.schemaVersion !== STUDIO_SCHEMA_VERSION) {
     return { ok: false, error: `Unsupported schemaVersion: ${doc.schemaVersion}` };
+  }
+  if (doc.design !== undefined) {
+    if (!record(doc.design)) {
+      return { ok: false, error: 'Document design must be an object.' };
+    }
+    for (const [dk, dv] of Object.entries(doc.design)) {
+      if (!['theme', 'accentColor'].includes(dk)) {
+        return { ok: false, error: `Unsupported design property: ${dk}` };
+      }
+      if (dk === 'theme' && (typeof dv !== 'string' || !VALID_DESIGN_THEMES.has(dv))) {
+        return { ok: false, error: 'Document design.theme must be "light" or "dark".' };
+      }
+      if (dk === 'accentColor' && (typeof dv !== 'string' || !HEX_COLOR_RE.test(dv))) {
+        return { ok: false, error: 'Document design.accentColor must be a #RRGGBB hex color.' };
+      }
+    }
   }
   const seen = new Set();
   let count = 0;
@@ -1316,6 +1353,14 @@ function cppStr(str) {
   return `QStringLiteral("${escaped}")`;
 }
 
+function cppIconExpr(name) {
+  return /^[A-Z]/.test(name) ? `Typography::Icons::${name}` : `Typography::Icons::glyph(${cppStr(name)})`;
+}
+
+function pyIconExpr(name) {
+  return /^[A-Z]/.test(name) ? `Typography.Icons.${name}` : `Typography.Icons.glyph(${pyStr(name)})`;
+}
+
 function safeIdent(id, usedVars) {
   const clean = String(id || 'item').replace(/[^a-zA-Z0-9_]/g, '_').replace(/^([0-9])/, '_$1');
   let name = clean || 'item';
@@ -1432,7 +1477,7 @@ export function generateCpp(doc, extraSchemas = {}) {
       if (id === 'icon') {
         if (typeof val === 'string' && safeKey(val) && val !== 'None') {
           headers.add('<FluentQt/Design.h>');
-          lines.push(`${v}->setIconGlyph(Typography::Icons::${val});`);
+          lines.push(`${v}->setIconGlyph(${cppIconExpr(val)});`);
         }
         continue;
       }
@@ -1451,7 +1496,7 @@ export function generateCpp(doc, extraSchemas = {}) {
       if (field.glyphEnum) {
         if (typeof val === 'string' && safeKey(val) && val !== 'None') {
           headers.add('<FluentQt/Design.h>');
-          lines.push(`${v}->${setter}(Typography::Icons::${val});`);
+          lines.push(`${v}->${setter}(${cppIconExpr(val)});`);
         }
       } else if (field.type === 'enum') {
         const prefix = resolveCppEnumPrefix(field.cppPrefix || '');
@@ -1796,6 +1841,9 @@ export function generateCpp(doc, extraSchemas = {}) {
         scanAndEmit(child, cv, { parentArg: v });
         if (node.type === 'NavigationView') lines.push(`${v}->contentHost()->insertPage(${idx}, ${cv}, fluent::WidgetOwnership::Owned);`);
       });
+      if (node.type === 'NavigationView' && (node.children || []).length > 0) {
+        lines.push(`${v}->contentHost()->setCurrentIndex(0, 0, false);`);
+      }
       return v;
     }
 
@@ -1837,8 +1885,13 @@ export function generateCpp(doc, extraSchemas = {}) {
         emitted.add('text');
         if (node.type === 'Button' && p.fluentStyle && p.fluentStyle !== 'Standard') lines.push(`${v}->setFluentStyle(Button::${p.fluentStyle});`);
         if (node.type === 'Button' && p.fluentSize && p.fluentSize !== 'StandardSize') lines.push(`${v}->setFluentSize(Button::${p.fluentSize});`);
+        if (node.type === 'Button' && typeof p.icon === 'string' && safeKey(p.icon) && p.icon !== 'None') {
+          headers.add('<FluentQt/Design.h>');
+          lines.push(`${v}->setIconGlyph(${cppIconExpr(p.icon)});`);
+        }
         emitted.add('fluentStyle');
         emitted.add('fluentSize');
+        emitted.add('icon');
         if (node.type === 'ToggleButton') {
           if (p.checked) lines.push(`${v}->setChecked(true);`);
           emitted.add('checked');
@@ -2061,11 +2114,50 @@ export function generateCpp(doc, extraSchemas = {}) {
         for (const item of p.items || ['New', 'Save']) lines.push(`${v}->addPrimaryAction(new QAction(${cppStr(item)}, ${v}));`);
         emitted.add('items');
         break;
+      case 'ImageViewer': {
+        lines.push(`auto* ${v} = new ImageViewer(${parentArg});`);
+        if (p.svg) {
+          headers.add('<QBuffer>');
+          headers.add('<QImageReader>');
+          const buffer = safeIdent(`${v}Svg`, usedVars);
+          const reader = safeIdent(`${v}Reader`, usedVars);
+          lines.push(`QBuffer ${buffer};`,
+            `${buffer}.setData(${cppStr(p.svg)}.toUtf8());`,
+            `${buffer}.open(QIODevice::ReadOnly);`,
+            `QImageReader ${reader}(&${buffer}, "svg");`,
+            `${reader}.setScaledSize(${reader}.size().scaled(QSize(640, 380), Qt::KeepAspectRatio));`,
+            `${v}->setImage(${reader}.read());`);
+        }
+        break;
+      }
+      case 'DataGrid': {
+        headers.add('<QStandardItemModel>');
+        headers.add('<QStandardItem>');
+        const mv = `${v}Model`;
+        lines.push(`auto* ${v} = new DataGrid(${parentArg});`);
+        lines.push(`auto* ${mv} = new QStandardItemModel(${v});`);
+        if (Array.isArray(p.headers) && p.headers.length) {
+          lines.push(`${mv}->setHorizontalHeaderLabels({${p.headers.map(cppStr).join(', ')}});`);
+        }
+        if (Array.isArray(p.modelData) && p.modelData.length) {
+          headers.add('<QList>');
+          for (const row of p.modelData) {
+            const cells = (Array.isArray(row) ? row : [row]).map(c => `new QStandardItem(${cppStr(c ?? '')})`).join(', ');
+            lines.push(`${mv}->appendRow(QList<QStandardItem*>{${cells}});`);
+          }
+        } else {
+          for (const item of p.items || ['Row 1', 'Row 2']) lines.push(`${mv}->appendRow(new QStandardItem(${cppStr(item)}));`);
+        }
+        lines.push(`${v}->setModel(${mv});`);
+        emitted.add('headers');
+        emitted.add('modelData');
+        emitted.add('items');
+        break;
+      }
       case 'ListView':
       case 'GridView':
       case 'FlowView':
       case 'TreeView':
-      case 'DataGrid':
       case 'Timeline':
       case 'Transfer':
       case 'FileListView':
@@ -2090,7 +2182,7 @@ export function generateCpp(doc, extraSchemas = {}) {
         break;
       case 'FontIcon':
         headers.add('<FluentQt/Design.h>');
-        lines.push(`auto* ${v} = new FontIcon(Typography::Icons::${p.glyph || 'Settings'}, ${parentArg});`);
+        lines.push(`auto* ${v} = new FontIcon(${cppIconExpr(p.glyph || 'Settings')}, ${parentArg});`);
         lines.push(`${v}->setIconSize(${p.iconSize ?? 24});`);
         emitted.add('glyph');
         emitted.add('iconSize');
@@ -2124,6 +2216,11 @@ export function generateCpp(doc, extraSchemas = {}) {
     return v;
   }
 
+  if (doc.design?.accentColor && HEX_COLOR_RE.test(doc.design.accentColor)) {
+    headers.add('<FluentQt/Foundation.h>');
+    headers.add('<QColor>');
+    lines.push(`fluent::UserTheme::applyAccentOverride(QColor(${cppStr(doc.design.accentColor)}));`);
+  }
   const rootVar = scanAndEmit(doc.root, 'root', null);
   const sortedHeaders = [...headers].sort();
   const usingLines = [...namespaces].sort().map((ns) => `using namespace ${ns};`);
@@ -2214,7 +2311,7 @@ export function generatePython(doc, extraSchemas = {}) {
       if (id === 'icon') {
         if (typeof val === 'string' && safeKey(val) && val !== 'None') {
           needFluent('fluentqt.design', 'Typography');
-          lines.push(`${v}.setIconGlyph(Typography.Icons.${val})`);
+          lines.push(`${v}.setIconGlyph(${pyIconExpr(val)})`);
         }
         continue;
       }
@@ -2233,7 +2330,7 @@ export function generatePython(doc, extraSchemas = {}) {
       if (field.glyphEnum) {
         if (typeof val === 'string' && safeKey(val) && val !== 'None') {
           needFluent('fluentqt.design', 'Typography');
-          lines.push(`${v}.${setter}(Typography.Icons.${val})`);
+          lines.push(`${v}.${setter}(${pyIconExpr(val)})`);
         }
       } else if (field.type === 'enum') {
         const prefix = resolvePythonEnumPrefix(field.pythonPrefix || '');
@@ -2560,8 +2657,13 @@ export function generatePython(doc, extraSchemas = {}) {
         pyEmitted.add('text');
         if (node.type === 'Button' && p.fluentStyle && p.fluentStyle !== 'Standard') lines.push(`${v}.setFluentStyle(Button.ButtonStyle.${p.fluentStyle})`);
         if (node.type === 'Button' && p.fluentSize && p.fluentSize !== 'StandardSize') lines.push(`${v}.setFluentSize(Button.ButtonSize.${p.fluentSize})`);
+        if (node.type === 'Button' && typeof p.icon === 'string' && safeKey(p.icon) && p.icon !== 'None') {
+          needFluent('fluentqt.design', 'Typography');
+          lines.push(`${v}.setIconGlyph(${pyIconExpr(p.icon)})`);
+        }
         pyEmitted.add('fluentStyle');
         pyEmitted.add('fluentSize');
+        pyEmitted.add('icon');
         if (node.type === 'CheckBox') {
           if (p.checkState && p.checkState !== 'Unchecked') {
             qtCore.add('Qt');
@@ -2632,11 +2734,52 @@ export function generatePython(doc, extraSchemas = {}) {
         pyEmitted.add('maximum');
         pyEmitted.add('value');
         break;
+      case 'ImageViewer': {
+        lines.push(`${v} = ImageViewer(${parentArg})`);
+        if (p.svg) {
+          qtCore.add('QBuffer');
+          qtCore.add('QIODevice');
+          qtCore.add('QSize');
+          qtCore.add('Qt');
+          qtGui.add('QImageReader');
+          const buffer = safeIdent(`${v}_svg`, usedVars);
+          const reader = safeIdent(`${v}_reader`, usedVars);
+          lines.push(`${buffer} = QBuffer()`,
+            `${buffer}.setData(${pyStr(p.svg)}.encode("utf-8"))`,
+            `${buffer}.open(QIODevice.OpenModeFlag.ReadOnly)`,
+            `${reader} = QImageReader(${buffer}, b"svg")`,
+            `${reader}.setScaledSize(${reader}.size().scaled(QSize(640, 380), Qt.AspectRatioMode.KeepAspectRatio))`,
+            `${v}.setImage(${reader}.read())`);
+        }
+        break;
+      }
+      case 'DataGrid': {
+        qtGui.add('QStandardItemModel');
+        qtGui.add('QStandardItem');
+        const mv = `${v}_model`;
+        lines.push(`${v} = DataGrid(${parentArg})`);
+        lines.push(`${mv} = QStandardItemModel(${v})`);
+        if (Array.isArray(p.headers) && p.headers.length) {
+          lines.push(`${mv}.setHorizontalHeaderLabels([${p.headers.map(pyStr).join(', ')}])`);
+        }
+        if (Array.isArray(p.modelData) && p.modelData.length) {
+          for (const row of p.modelData) {
+            const cells = (Array.isArray(row) ? row : [row]).map(c => `QStandardItem(${pyStr(c ?? '')})`).join(', ');
+            lines.push(`${mv}.appendRow([${cells}])`);
+          }
+        } else {
+          for (const item of p.items || ['Row 1', 'Row 2']) lines.push(`${mv}.appendRow(QStandardItem(${pyStr(item)}))`);
+        }
+        lines.push(`${v}.setModel(${mv})`);
+        pyEmitted.add('headers');
+        pyEmitted.add('modelData');
+        pyEmitted.add('items');
+        break;
+      }
       case 'ListView':
       case 'GridView':
       case 'FlowView':
       case 'TreeView':
-      case 'DataGrid':
       case 'Timeline':
       case 'Transfer':
       case 'FileListView':
@@ -2654,7 +2797,7 @@ export function generatePython(doc, extraSchemas = {}) {
       }
       case 'FontIcon':
         needFluent('fluentqt.design', 'Typography');
-        lines.push(`${v} = FontIcon(Typography.Icons.${p.glyph || 'Settings'}${parentComma})`);
+        lines.push(`${v} = FontIcon(${pyIconExpr(p.glyph || 'Settings')}${parentComma})`);
         lines.push(`${v}.setIconSize(${p.iconSize ?? 24})`);
         pyEmitted.add('glyph');
         pyEmitted.add('iconSize');
@@ -2711,6 +2854,11 @@ export function generatePython(doc, extraSchemas = {}) {
     return v;
   }
 
+  if (doc.design?.accentColor && HEX_COLOR_RE.test(doc.design.accentColor)) {
+    needFluent('fluentqt.foundation', 'set_accent_color');
+    qtGui.add('QColor');
+    lines.push(`set_accent_color(QColor(${pyStr(doc.design.accentColor)}))`);
+  }
   const rootVar = emitNode(doc.root, 'root', 'parent');
   const importLines = [];
   if (qtCore.size) importLines.push(`from PySide6.QtCore import ${[...qtCore].sort().join(', ')}`);
@@ -2839,6 +2987,9 @@ export function generateDesignerUi(doc) {
       }
     }
     if (node.type === 'InfoBar') property('isOpen', true, indent);
+    if (node.type === 'ImageViewer' && p.svg) {
+      lines.push(`${indent} <!-- To display the illustration in Designer, add the SVG to a .qrc and set the pixmap property. -->`);
+    }
     if (node.type === 'ComboBox') {
       for (const item of p.items || []) lines.push(`${indent} <item>${xmlProp('text','string',item,'')}</item>`);
     }

@@ -14,6 +14,7 @@
 #include <functional>
 #include <memory>
 
+class QNetworkAccessManager;
 class QPaintEvent;
 class QResizeEvent;
 class QVBoxLayout;
@@ -116,6 +117,7 @@ private:
         QVector<NodeEntry>& built);
     QWidget* buildControl(const QString& id, const QString& type, const QJsonObject& props, QWidget* parentWidget);
 
+    void fetchPhoto(const QUrl& url, QObject* lifetimeGuard, std::function<void(const QPixmap&)> onReady);
     void scheduleLayoutSnapshot();
     void emitLayoutSnapshot();
     void applyResponsiveLayout(int viewportWidth);
@@ -134,9 +136,11 @@ private:
     int m_lastLayoutWidth = -1;
     std::unique_ptr<ResponsiveBindings> m_responsive;
     ResponsiveBindings* m_stagingResponsive = nullptr;
+    QNetworkAccessManager* m_network = nullptr;
     int m_revision = 0;
     bool m_snapshotScheduled = false;
     bool m_rootIsAnchorBox = false;
+    bool m_hasAccentOverride = false;
 };
 
 } // namespace fluent::gallery
