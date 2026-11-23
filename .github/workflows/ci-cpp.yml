@@ -1059,13 +1059,14 @@ jobs:
             -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt"
           cmake --build build/integration-designer --parallel 4
 
-      - name: Compile Studio template exports against the installed SDK
+      - name: Build and run Studio template exports against the installed SDK
         shell: bash
         run: |
           node tools/site/studio-check/export.mjs "$RUNNER_TEMP/studio-exports"
           cmake -S tools/site/studio-check -B build/studio-exports -DCMAKE_BUILD_TYPE=Release \
             -DEXPORT_DIR="$RUNNER_TEMP/studio-exports" -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt"
           cmake --build build/studio-exports --parallel 4
+          ctest --test-dir build/studio-exports --no-tests=error --output-on-failure
 
       - name: Record installed C++ first-window trial
         shell: bash
