@@ -306,6 +306,14 @@ TEST_F(NumberBoxTest, Contract_ScrubbingCommitCancelAndTextSelection)
     ASSERT_EQ(finished.count(), 2);
     EXPECT_TRUE(finished.at(1).at(2).toBool());
     QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    // A quick second drag arrives as MouseButtonDblClick after the canceled drag.
+    QTest::mouseDClick(&box, Qt::LeftButton, Qt::NoModifier, handle);
+    ASSERT_TRUE(box.isScrubbing());
+    moveScrubPointer(&box, handle + QPoint(20, 0));
+    QTest::mouseRelease(&box, Qt::LeftButton, Qt::NoModifier, handle + QPoint(20, 0));
+    EXPECT_DOUBLE_EQ(box.value(), 50);
+    ASSERT_EQ(finished.count(), 3);
+    EXPECT_FALSE(finished.at(2).at(2).toBool());
     QTest::mouseClick(&box, Qt::LeftButton, Qt::NoModifier, QPoint(120, 16));
     EXPECT_FALSE(box.isScrubbing());
     box.selectAll();

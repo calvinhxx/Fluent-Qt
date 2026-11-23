@@ -275,6 +275,7 @@ protected:
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
@@ -307,6 +308,7 @@ private:
     bool hasSpinnerButtonsVisible() const;
     int inlineSpinnerWidth() const;
     int compactExpandedSpinnerWidth() const;
+    bool tryBeginScrub(QMouseEvent* event);
     void finishScrub(bool canceled, bool overHandle = false);
     void updatePointerCursor(const QPoint& position);
 
