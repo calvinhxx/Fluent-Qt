@@ -896,6 +896,12 @@ if(BUILD_TESTING)
         LABELS "pyside;unit;ci_fast"
         TIMEOUT 60)
 
+    add_test(NAME test_pyside6_designer_forms
+        COMMAND "${Python_EXECUTABLE}" -m unittest discover -s "${PROJECT_SOURCE_DIR}/tools/designer/tests")
+    set_tests_properties(test_pyside6_designer_forms PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;integration;ci_fast" TIMEOUT 60)
+
     add_test(
         NAME test_pyside6_onboarding_workbench_inspector
         COMMAND "${Python_EXECUTABLE}"

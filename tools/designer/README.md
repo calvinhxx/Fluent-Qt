@@ -49,12 +49,24 @@ For generated Python forms, call `make_form_host(body, owner=None)` and `show_fo
 
 ## C++ with Qt Creator
 
-Use a FluentQt SDK and a Qt kit compatible with the editor. Run these commands from the repository or extracted source archive root on macOS or Linux:
+Use a FluentQt SDK and a Qt kit compatible with the editor. Configure and build from the repository or extracted source archive root.
 
 ```sh
 cmake -S tools/designer -B build/designer -DCMAKE_PREFIX_PATH="/path/to/FluentQt;/path/to/Qt"
 cmake --build build/designer --config Release
+```
+
+On macOS or Linux, launch Qt Creator from the same directory.
+
+```sh
 QT_PLUGIN_PATH="$PWD/build/designer/plugins" qtcreator tools/designer/preview.ui
+```
+
+In a Windows Qt kit shell, launch Designer with the plugin directory set for this PowerShell session.
+
+```powershell
+$env:QT_PLUGIN_PATH = (Resolve-Path build/designer/plugins).Path
+designer tools/designer/preview.ui
 ```
 
 To include optional controls, add `-DFLUENTQT_DESIGNER_EXTENSIONS="Particles;Spatial;QmlBridge"` when configuring. Request only components installed with the SDK. Configuration uses Python 3.9+ with its standard library.
@@ -70,13 +82,28 @@ For C++ applications using AUTOUIC, add this directory with `add_subdirectory()`
 In a Python environment with PySide6 and matching FluentQt bindings, run the following from the repository or extracted source archive root on macOS or Linux:
 
 ```sh
-PYSIDE_DESIGNER_PLUGINS="$PWD/tools/designer" PYTHONPATH="$PWD/tools/designer" \
+PYSIDE_DESIGNER_PLUGINS="$PWD/tools/designer" \
+  PYTHONPATH="$PWD/tools/designer:$(python -c 'import os, site; print(os.pathsep.join(site.getsitepackages()))')" \
   pyside6-designer tools/designer/preview.ui
 python tools/designer/preview.py tools/designer/preview.ui
 python tools/designer/preview.py tools/designer/templates/ContentDialog.ui
 ```
 
-The toolbox includes the optional modules supplied by that installation. The form runner loads the classes used in the form. Generated Python from `pyside6-uic` also works: put the `tools/designer` directory on the application's import path.
+Including the active environment's site-packages lets older Linux Designer hosts find the installed bindings. In an activated Windows PowerShell environment, run the following commands.
+
+```powershell
+$env:PYSIDE_DESIGNER_PLUGINS = (Resolve-Path tools/designer).Path
+$env:PYTHONPATH = $env:PYSIDE_DESIGNER_PLUGINS
+pyside6-designer tools/designer/preview.ui
+```
+
+The toolbox includes the optional modules supplied by that installation. The form runner loads the classes used in the form. To generate a Python module, put `tools/designer` on the application's import path and run:
+
+```sh
+python tools/designer/compile_ui.py tools/designer/preview.ui -o ui_preview.py
+```
+
+This uses the active environment's `pyside6-uic`. Qt 6.2's Python generator emits C++ expressions for string lists such as chart series and action labels. The helper converts those expressions to Python lists and preserves the generated translations.
 
 ## Updating the catalog
 

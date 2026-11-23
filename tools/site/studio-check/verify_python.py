@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import runpy
 import signal
+import site
 import subprocess
 import sys
 import tempfile
@@ -17,12 +18,14 @@ parser.add_argument("directory", type=Path)
 parser.add_argument("--designer-tools", type=Path, required=True)
 args = parser.parse_args()
 directory = args.directory.resolve()
-names = sorted(json.loads((directory / "templates.json").read_text()))
+names = sorted(json.loads((directory / "templates.json").read_text(encoding="utf-8")))
 app = QApplication([])
 initialize_resources()
 sys.path.insert(0, str(args.designer_tools.resolve()))
+from compile_ui import compile_form
+
 for name in names:
-    generated = subprocess.check_output([Path(sys.executable).with_name("pyside6-uic"), directory / (name + ".ui")])
+    generated = compile_form(directory / (name + ".ui"))
     namespace = {}
     exec(compile(generated, name + "_ui.py", "exec"), namespace)
     form = QWidget()
@@ -38,16 +41,19 @@ inspector = Path(__file__).resolve().parent
 tool = Path(sys.executable).with_name("pyside6-designer")
 with tempfile.TemporaryDirectory(prefix="studio-designer-") as settings:
     env = dict(os.environ, STUDIO_EXPORT_DIR=str(directory), XDG_CONFIG_HOME=settings,
-               PYTHONPATH=os.pathsep.join(map(str, [args.designer_tools.resolve(), inspector])),
+               PYTHONPATH=os.pathsep.join(map(str, [args.designer_tools.resolve(), inspector, *site.getsitepackages()])),
                PYSIDE_DESIGNER_PLUGINS=os.pathsep.join(map(str, [args.designer_tools.resolve(), inspector])))
     receipt = directory / "designer-verified.json"
     receipt.unlink(missing_ok=True)
     proc = subprocess.Popen([tool, "-style", "fusion", *(directory / (name + ".ui") for name in names)],
                             env=env, start_new_session=True)
     try:
-        if proc.wait(timeout=60) != 0 or json.loads(receipt.read_text()) != names:
+        if proc.wait(timeout=60) != 0 or json.loads(receipt.read_text(encoding="utf-8")) != names:
             raise RuntimeError("Qt Designer did not verify all generated forms")
     finally:
         if proc.poll() is None:
-            os.killpg(proc.pid, signal.SIGTERM)
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/pid", str(proc.pid), "/t", "/f"], check=False)
+            else:
+                os.killpg(proc.pid, signal.SIGTERM)
             proc.wait()
