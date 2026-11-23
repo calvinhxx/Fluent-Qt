@@ -1,0 +1,23 @@
+name = "fluentqt-studio-ai"
+main = "worker.js"
+compatibility_date = "2025-10-01"
+
+[ai]
+binding = "AI"
+
+[vars]
+ALLOWED_ORIGINS = "https://calvinhxx.github.io"
+CF_AI_MODEL = "@cf/meta/llama-3.1-8b-instruct"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+RATE_LIMIT_PER_MIN = "6"
+RATE_LIMIT_PER_HOUR = "20"
+MAX_DAILY_REQUESTS = "800"
+
+[[durable_objects.bindings]]
+name = "STUDIO_QUOTA"
+class_name = "StudioQuota"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["StudioQuota"]
