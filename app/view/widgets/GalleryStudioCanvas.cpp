@@ -20,6 +20,7 @@
 #include <QAbstractButton>
 #include <QAbstractItemModel>
 #include <QAction>
+#include <QBitmap>
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QColor>
@@ -3925,7 +3926,7 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
         for (const QStringList& r : std::as_const(rows))
             colCount = qMax(colCount, r.size());
         if (rows.isEmpty() && headers.isEmpty()) {
-            headers = {QStringLiteral("Module"), QStringLiteral("Qt Target"), QStringLiteral("Status")};
+            headers = QStringList{QStringLiteral("Module"), QStringLiteral("Qt Target"), QStringLiteral("Status")};
             rows = {
                 {QStringLiteral("BasicInput"), QStringLiteral("Qt 6.9"), QStringLiteral("Ready")},
                 {QStringLiteral("Charts"), QStringLiteral("Qt 6.9"), QStringLiteral("Verified")},
