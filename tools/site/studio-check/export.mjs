@@ -4,10 +4,25 @@ import { STUDIO_TEMPLATES, generateCpp, generatePython, generateDesignerUi } fro
 
 const directory = process.argv[2];
 mkdirSync(directory, { recursive: true });
-for (const [id, { document }] of Object.entries(STUDIO_TEMPLATES)) {
+const roots = {};
+
+function exportPage(id, document) {
   for (const [ext, generate] of Object.entries({ cpp: generateCpp, py: generatePython, ui: generateDesignerUi })) {
     writeFileSync(join(directory, `${id}.${ext}`), generate(document) + '\n');
   }
+  roots[id] = document.root;
 }
-writeFileSync(join(directory, 'templates.json'), JSON.stringify(Object.fromEntries(
-  Object.entries(STUDIO_TEMPLATES).map(([id, template]) => [id, template.document.root]))));
+
+for (const [id, { document }] of Object.entries(STUDIO_TEMPLATES)) exportPage(id, document);
+
+// The C++ exporter places a stretch alongside the row's two direct widgets.
+exportPage('aligned-row', {
+  root: {
+    id: 'root', type: 'HBox', props: { align: 'Center' },
+    children: [
+      { id: 'caption', type: 'Label', props: { text: 'Name' } },
+      { id: 'actions', type: 'VBox', children: [{ id: 'apply', type: 'Button', props: { text: 'Apply' } }] },
+    ],
+  },
+});
+writeFileSync(join(directory, 'templates.json'), JSON.stringify(roots));
