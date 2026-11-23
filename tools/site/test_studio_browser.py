@@ -693,6 +693,8 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
         raise RuntimeError("Missing schematic starter geometry")
     if abs((sch_btn_box["x"] + sch_btn_box["width"] / 2) - (shell_box["x"] + shell_box["width"] / 2)) > 16:
         raise RuntimeError(f"Expected schematic starter button_1 centered horizontally: shell={shell_box}, btn={sch_btn_box}")
+    if not page.locator("#tour-layer").is_visible():
+        raise RuntimeError("Expected first-visit #tour-layer to appear directly on clean starter canvas")
 
     # Test Figma live WYSIWYG pointer drag-and-drop in schematic mode (including mid-drag preview + drag_to)
     ensure_palette_category_open(page, "basic-input")
@@ -752,6 +754,140 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
         timeout=5000,
     )
     page.locator('.viewport-group [data-width="860"]').click()
+
+    # Changing the artboard theme must leave the surrounding site theme alone.
+    page.goto(base_url + "studio/?lang=zh&renderer=schematic", wait_until="domcontentloaded")
+    page.wait_for_selector('#schematic-stage > .sch-anchor-box [data-sch-id="button_1"]', timeout=10000)
+    page.locator("#artboard-bar").wait_for(state="visible", timeout=5000)
+    initial_outer_theme = page.evaluate("() => document.documentElement.dataset.theme")
+    page.locator("#artboard-theme-dark").click()
+    page.wait_for_function(
+        "() => document.querySelector('#canvas-shell')?.dataset.canvasTheme === 'dark'",
+        timeout=5000,
+    )
+    if page.evaluate("() => document.documentElement.dataset.theme") != initial_outer_theme:
+        raise RuntimeError("Artboard dark toggle leaked into outer document theme")
+    page.locator("#artboard-theme-light").click()
+    page.wait_for_function(
+        "() => document.querySelector('#canvas-shell')?.dataset.canvasTheme === 'light'",
+        timeout=5000,
+    )
+    page.locator('[data-canvas-node="button_1"]').click()
+    page.locator("#sel-ai-refine").wait_for(state="visible", timeout=5000)
+    page.locator("#sel-ai-refine").click()
+    page.wait_for_selector("#ai-modal:not([hidden])", timeout=5000)
+    if page.locator('.ai-mode-group [data-ai-mode="refine"]').get_attribute("aria-pressed") != "true":
+        raise RuntimeError("Expected #sel-ai-refine to open AI modal directly in refine mode")
+    page.locator('.ai-mode-group [data-ai-mode="create"]').click()
+    if page.locator("#ai-settings-details").evaluate("el => el.open"):
+        raise RuntimeError("Expected AI Config disclosure to start collapsed")
+    page.screenshot(path=str(output_dir / "studio-ai-modal.png"))
+
+    # Without Worker/Key configured, clicking Generate prompts user & auto-expands AI Config
+    page.locator("#ai-prompt-input").fill("创建一个带左侧导航、延迟趋势图和节点状态表的云端监控台")
+    page.locator("#btn-ai-run").click()
+    page.wait_for_function(
+        "() => document.querySelector('#ai-status')?.dataset.tone === 'info' && document.querySelector('#ai-settings-details')?.open",
+        timeout=5000,
+    )
+    page.screenshot(path=str(output_dir / "studio-ai-modal-settings.png"))
+
+    # Switch to Custom API, quick-fill DeepSeek preset, and mock OpenAI-compatible response
+    page.locator('[data-ai-provider="custom"]').click()
+    page.locator('[data-ai-preset="deepseek"]').click()
+    page.locator("#ai-api-key").fill("sk-test-local-only")
+    # One streamed page exercises navigation, charts, tables and editor controls.
+    document = {
+        "design": {"theme": "dark", "accentColor": "#00B7C3"},
+        "root": {"id": "root", "type": "NavigationView", "children": [
+            {"id": "overview", "type": "VBox", "children": [
+                {"id": "areachart", "type": "AreaChart", "props": {"values": [38, 41, 36]}},
+                {"id": "datagrid", "type": "DataGrid", "props": {"modelData": [["api-gateway-us", "Healthy"]]}},
+                {"id": "tabs", "type": "TabView", "props": {"items": ["main.cpp", "README.md"]}},
+                {"id": "files", "type": "TreeView", "props": {"items": ["src/", "  main.cpp"]}},
+                {"id": "editor", "type": "TextEdit", "props": {"plainText": "int main() {}"}},
+            ]},
+        ]},
+    }
+    chunk = {
+        "id": "studio-test", "object": "chat.completion.chunk", "model": "deepseek-chat",
+        "choices": [{"index": 0, "delta": {"content": json.dumps(document)}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 20, "prompt_tokens_details": {"cached_tokens": 80}},
+    }
+    page.route("https://api.deepseek.com/v1/chat/completions", lambda route: route.fulfill(
+        content_type="text/event-stream", body=f"data: {json.dumps(chunk)}\n\ndata: [DONE]\n\n",
+    ))
+    page.locator("#btn-ai-run").click()
+    page.wait_for_function("() => document.querySelector('#ai-modal')?.hidden", timeout=5000)
+    page.wait_for_selector('#schematic-stage .sch-navview', timeout=5000)
+    page.wait_for_function(
+        "() => document.querySelector('#canvas-shell')?.dataset.canvasTheme === 'dark'",
+        timeout=5000,
+    )
+    if page.evaluate("() => document.documentElement.dataset.theme") != initial_outer_theme:
+        raise RuntimeError("AI-generated dark design leaked into outer website theme")
+    page.wait_for_selector('#schematic-stage .sch-status-pill.is-ok', timeout=5000)
+    page.wait_for_selector('#schematic-stage [data-sch-id="areachart"] polygon', timeout=5000)
+    grid_text = page.locator('#schematic-stage [data-sch-id="datagrid"] .sch-table').inner_text()
+    if "api-gateway-us" not in grid_text or "BasicInput" in grid_text:
+        raise RuntimeError(f"Expected DataGrid to render real custom modelData rows, got: {grid_text!r}")
+    event_text = page.locator("#event-pill").inner_text()
+    if "80%" not in event_text:
+        raise RuntimeError(f"Expected cache hit rate telemetry in event pill, got: {event_text!r}")
+    for selector in (".sch-tree", ".sch-textedit", ".sch-tabbar"):
+        page.locator(f"#schematic-stage {selector}").wait_for(state="attached")
+    page.screenshot(path=str(output_dir / "studio-ai-generated.png"))
+
+    # Undo cleanly restores starter canvas (root + button_1)
+    page.locator("#btn-undo").click()
+    page.wait_for_selector('#schematic-stage > .sch-anchor-box [data-sch-id="button_1"]', timeout=5000)
+
+    # Verify direct First-Time 4-step Spotlight Tour (no redundant welcome card), persistence, and header replay
+    page.evaluate("() => { localStorage.removeItem('fluent-qt-studio-intro-v1'); localStorage.setItem('fluent-qt-theme', 'light'); }")
+    page.goto(base_url + "studio/?lang=zh&renderer=schematic", wait_until="domcontentloaded")
+    page.wait_for_selector("#tour-layer:not([hidden])", timeout=5000)
+    if page.locator("#studio-intro-card").count() != 0:
+        raise RuntimeError("Expected redundant #studio-intro-card to be removed")
+    if page.locator("#tour-step-badge").inner_text().strip() != "1 / 4":
+        raise RuntimeError(f"Expected tour step 1 / 4 on first visit, got {page.locator('#tour-step-badge').inner_text()!r}")
+    page.wait_for_timeout(280)
+    page.screenshot(path=str(output_dir / "intro-tour-step1-light.png"))
+
+    page.locator("#btn-tour-next").click()
+    if page.locator("#tour-step-badge").inner_text().strip() != "2 / 4":
+        raise RuntimeError("Expected tour step 2 / 4 after clicking Next")
+    page.wait_for_timeout(280)
+    page.screenshot(path=str(output_dir / "intro-tour-step2.png"))
+    page.locator("#btn-tour-next").click()
+    if page.locator("#tour-step-badge").inner_text().strip() != "3 / 4":
+        raise RuntimeError("Expected tour step 3 / 4")
+    page.locator("#btn-tour-next").click()
+    if page.locator("#tour-step-badge").inner_text().strip() != "4 / 4":
+        raise RuntimeError("Expected tour step 4 / 4")
+    page.locator("#btn-tour-next").click()
+    page.wait_for_function("() => document.querySelector('#tour-layer')?.hidden", timeout=5000)
+    if page.evaluate("() => localStorage.getItem('fluent-qt-studio-intro-v1')") != "seen":
+        raise RuntimeError("Finishing tour did not persist fluent-qt-studio-intro-v1 = 'seen'")
+
+    # Reloading after 'seen' keeps tour hidden, while header #btn-intro replays the tour
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_selector('#schematic-stage > .sch-anchor-box [data-sch-id="button_1"]', timeout=5000)
+    if not page.locator("#tour-layer").is_hidden():
+        raise RuntimeError("Expected #tour-layer to remain hidden on returning visit")
+    page.locator("#btn-intro").click()
+    page.wait_for_selector("#tour-layer:not([hidden])", timeout=5000)
+    page.keyboard.press("Escape")
+    page.wait_for_function("() => document.querySelector('#tour-layer')?.hidden", timeout=5000)
+
+    # Dark theme + ?intro=1 directly enters Spotlight Tour Step 1 / 4
+    page.evaluate("() => localStorage.setItem('fluent-qt-theme', 'dark')")
+    page.goto(base_url + "studio/?lang=zh&renderer=schematic&intro=1", wait_until="domcontentloaded")
+    page.wait_for_selector("#tour-layer:not([hidden])", timeout=5000)
+    page.wait_for_timeout(280)
+    page.screenshot(path=str(output_dir / "intro-tour-step1-dark.png"))
+    page.keyboard.press("Escape")
+    page.wait_for_function("() => document.querySelector('#tour-layer')?.hidden", timeout=5000)
+    page.evaluate("() => localStorage.setItem('fluent-qt-theme', 'light')")
 
 
 def main() -> int:
