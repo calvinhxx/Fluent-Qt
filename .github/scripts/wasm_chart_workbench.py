@@ -92,6 +92,23 @@ def run_chart_workbench_contract(browser: object, base_url: str, artifact_dir: P
             arg=expected, timeout=10_000,
         )
 
+    def drag_maximum() -> None:
+        # Changing the value shows or hides Reset and can move the property row.
+        editor = control("propertyEditor_maximum")
+        editor.scroll_into_view_if_needed()
+        bounds = qt_widget_rect(editor)
+        x, y = bounds["x"] + 16, bounds["y"] + bounds["height"] / 2
+        page.mouse.move(x, y)
+        page.wait_for_function(
+            """([x, y]) => {
+                const hit = document.querySelector('#qt-shadow-container').shadowRoot.elementFromPoint(x, y);
+                return hit && getComputedStyle(hit).cursor === 'ew-resize';
+            }""", arg=[x, y], timeout=10_000,
+        )
+        page.mouse.down()
+        page.mouse.move(x + 40, y, steps=5)
+        number("100")
+
     def download(button: str, name: str) -> bytes:
         with page.expect_download() as event:
             click(button)
@@ -148,20 +165,12 @@ def run_chart_workbench_contract(browser: object, base_url: str, artifact_dir: P
                          reset_bounds["y"] + reset_bounds["height"] / 2)
         document_title_is("Quarterly report")
         number("80")
-        bounds = control("propertyEditor_maximum").bounding_box()
-        if not bounds:
-            raise RuntimeError("Missing NumberBox geometry")
-        x, y = bounds["x"] + 16, bounds["y"] + 16
-        page.mouse.move(x, y)
-        page.mouse.down()
-        page.mouse.move(x + 40, y, steps=5)
-        number("100")
+        drag_maximum()
         page.keyboard.press("Escape")
         page.mouse.up()
         number("80")
-        page.mouse.move(x, y)
-        page.mouse.down()
-        page.mouse.move(x + 40, y, steps=5)
+        expect(control("propertyReset_maximum")).not_to_be_visible()
+        drag_maximum()
         page.mouse.up()
         number("100")
         click("propertyReset_maximum")
