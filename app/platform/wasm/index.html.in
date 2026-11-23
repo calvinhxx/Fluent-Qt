@@ -406,7 +406,8 @@
       if (!window.fluentQtInteractivePlayground) return;
       const focused = document.hasFocus();
       const editor = !focused && window.parent.document.activeElement;
-      wasmInstance?._fluentQtGalleryPlaygroundBrowserFocus?.(focused ? 1 : 0);
+      const missingKeyTarget = focused && document.activeElement === document.body;
+      wasmInstance?._fluentQtGalleryPlaygroundBrowserFocus?.(focused ? 1 : 0, missingKeyTarget ? 1 : 0);
       // Qt can refocus its DOM surface while clearing a widget's input context.
       // Preserve the HTML control the user actually moved to.
       if (editor?.isConnected && editor !== window.frameElement)
@@ -420,6 +421,8 @@
         window.focus();
         const surface = event.composedPath().find(node => node instanceof HTMLElement && node.tabIndex >= 0);
         surface?.focus({preventScroll: true});
+        // Let Qt dispatch this pointer before reconciling its editor with browser focus.
+        if (document.activeElement === document.body) setTimeout(syncPlaygroundFocus, 0);
       }
       if (componentPreview) notifyHost('component-pointer');
     }, true);

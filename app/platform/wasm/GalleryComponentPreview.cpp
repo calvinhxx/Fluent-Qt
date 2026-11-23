@@ -15,6 +15,7 @@
 #include <QWindow>
 #include <QDialog>
 #include <QEvent>
+#include <QInputMethod>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -550,7 +551,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int fluentQtGalleryPlaygroundApply()
     return accepted ? 1 : 0;
 }
 
-extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryPlaygroundBrowserFocus(int focused)
+extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryPlaygroundBrowserFocus(int focused, int missingKeyTarget)
 {
     if (!interactiveRuntime || !playgroundHost || !playground)
         return;
@@ -574,8 +575,12 @@ extern "C" EMSCRIPTEN_KEEPALIVE void fluentQtGalleryPlaygroundBrowserFocus(int f
                 }
             }
         }
-    } else
+    } else {
+        // Returning to the same editor can leave Qt focused while the browser sends keys to the document body.
+        if (missingKeyTarget && QInputMethod::queryFocusObject(Qt::ImEnabled, {}).toBool())
+            QGuiApplication::inputMethod()->show();
         return;
+    }
     publishPlayground();
 }
 

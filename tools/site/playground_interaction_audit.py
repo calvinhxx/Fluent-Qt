@@ -121,6 +121,13 @@ def run(browser, base_url, output, screenshots=False, routes=None, exhaustive=Tr
                     edit('tabChangesFocus',False);click(.35,.55);page.keyboard.press('ControlOrMeta+End');page.keyboard.press('Tab')
                     wait_value(name,'真实输入 Abc\t');remember('native-tab-inserts-text')
                     page.keyboard.press('Backspace');wait_value(name,'真实输入 Abc')
+                    # Chromium can lose its DOM key target while the Qt editor still has focus.
+                    frame.evaluate('document.activeElement.blur()')
+                    click(.35,.55)
+                    page.keyboard.press('ControlOrMeta+End')
+                    page.keyboard.insert_text('文')
+                    wait_value(name,'真实输入 Abc文');remember('native-editor-refocus-input')
+                    page.keyboard.press('Backspace');wait_value(name,'真实输入 Abc')
                     page.keyboard.press('Control+Tab');page.wait_for_timeout(100)
                     assert page.evaluate('document.activeElement !== document.querySelector(".playground-live-frame")')
                     remember('native-editor-control-tab-exits')
