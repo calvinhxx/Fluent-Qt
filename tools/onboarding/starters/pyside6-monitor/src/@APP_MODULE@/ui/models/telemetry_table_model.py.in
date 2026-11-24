@@ -11,6 +11,8 @@ class TelemetryTableModel(QAbstractTableModel):
         self._events: tuple[TelemetryEvent, ...] = ()
 
     def set_events(self, events: tuple[TelemetryEvent, ...]) -> None:
+        if self._events == events:
+            return
         self.beginResetModel()
         self._events = events
         self.endResetModel()
