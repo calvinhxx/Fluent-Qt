@@ -56,6 +56,11 @@ def main() -> int:
                 output = output_root / relative
                 output.parent.mkdir(parents=True, exist_ok=True)
                 with Image.open(BytesIO(png)) as screenshot:
+                    if selector == "#social":
+                        # Round RGB channels to even levels, preserving pure white.
+                        # This changes each channel by at most one level and improves PNG compression.
+                        levels = [value if value == 255 else value & ~1 for value in range(256)]
+                        screenshot = screenshot.convert("RGB").point(levels * 3)
                     screenshot.save(output, optimize=True)
                 print(output)
         finally:
