@@ -155,8 +155,7 @@ class MonitorPage(QWidget):
         chart_layout.setSpacing(8)
 
         self._chart = LineChart(chart_card)
-        self._chart.setMinimumHeight(210)
-        self._chart.setMaximumHeight(225)
+        self._chart.setMinimumHeight(320)
         self._chart.setTitle("Response latency")
         self._chart.setSubtitle("Milliseconds · p95 vs baseline")
         self._chart.setValueSuffix(" ms")

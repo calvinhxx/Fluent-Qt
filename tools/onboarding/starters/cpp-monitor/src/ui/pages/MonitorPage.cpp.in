@@ -191,8 +191,7 @@ MonitorPage::MonitorPage(QWidget* parent)
     chartLayout->setSpacing(8);
 
     m_chart = new fluent::charts::LineChart(chartCard);
-    m_chart->setMinimumHeight(210);
-    m_chart->setMaximumHeight(225);
+    m_chart->setMinimumHeight(320);
     m_chart->setTitle(QStringLiteral("Response latency"));
     m_chart->setSubtitle(QStringLiteral("Milliseconds · p95 vs baseline"));
     m_chart->setValueSuffix(QStringLiteral(" ms"));
