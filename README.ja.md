@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  Qt Widgets 向けのクロスプラットフォーム Fluent UI コンポーネントライブラリ（ネイティブ C++17 &amp; PySide6 対応・MIT ライセンス）。
+  MIT ライセンスの Qt Widgets 向けネイティブ Fluent UI コンポーネントライブラリ — 単一の C++17 実装で C++、PySide6、WebAssembly に対応。
 </p>
 
 <p align="center">
@@ -44,9 +44,13 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/ja/#support">プロジェクトを支援</a>
 </p>
 
-Fluent-Qt（FluentQt）は MIT ライセンスの Qt Widgets ライブラリです。C++17 と PySide6 で同じ実装を使えます。Gallery には `DataGrid`、[チャート](docs/architecture/charts.md)、ダイアログ、ウィンドウなど 99 項目を収録しています。
+Fluent-Qt（FluentQt）は、単一のネイティブ C++17 コードベースから C++、PySide6、WebAssembly に Fluent UI を提供するライブラリです：
 
-Windows、macOS、Linux、WebAssembly 上で動作し、ライト、ダーク、ハイコントラストのテーマと設定可能なアニメーションモードを備えています。**Page Studio** と **Qt Designer**（C++・Python 間で `.ui` ファイルを共有）によるビジュアル設計に加え、CPU 描画のパーティクル背景（[Particles](docs/architecture/particles.md)）、3D パース表示（[Spatial](docs/architecture/spatial-view.md)）、埋め込み QML ページ（[QmlBridge](docs/architecture/qml-bridge.md)）のオプションモジュールも利用できます。
+- **商用・OSS ともに安心の MIT ライセンス** — C++17 ライブラリ、PySide6 バインディング、Qt Designer プラグイン、スターターテンプレートすべてに MIT ライセンスを適用しています。
+- **C++ / Python / WASM で共通のネイティブ C++17 実装** — QSS のみのテーマではなく、Gallery に収録された `DataGrid`、[チャート](docs/architecture/charts.md)、ナビゲーション、オーバーレイ、ダイアログ、ウィンドウなど 99 項目が `Qt 5.15+`/`6.2+`、`PySide6`、`WebAssembly` で同一の C++17 ウィジェットとして動作します。
+- **Page Studio と Qt Designer のビジュアル設計** — ブラウザ上の **Page Studio** から C++・PySide6・`.ui` へ書き出せるほか、**Qt Creator** や `pyside6-designer` で 95 個のウィジェットと 4 種類のフォームテンプレートを利用できます。
+- **アプリスターター CLI と AI GUI スキル** — `python3 tools/onboarding/fluentqt` でレイヤー設計済みの `monitor`・`workbench`・`existing-qt` プロジェクトを生成でき、[`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) スキルによる AI UI 構築にも対応しています。
+- **必要な拡張機能だけを有効化** — 通常の 2D アプリは `Qt Widgets` のみに依存し、CPU パーティクル背景（[Particles](docs/architecture/particles.md)）、3D パース表示（[Spatial](docs/architecture/spatial-view.md)）、QML 埋め込み（[QmlBridge](docs/architecture/qml-bridge.md)）は必要なときだけリンクできます。
 
 ## 🧩 ライブラリモジュール
 
@@ -107,7 +111,12 @@ python -m fluentqt_gallery
 
 ## 🤖 AI で UI を構築
 
-**AI スキル＆プロジェクト生成 CLI**：Codex、Claude Code、Cursor で [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) スキルを使い（[実例を見る](https://calvinhxx.github.io/Fluent-Qt/ja/#ai-build) · [導入と使い方](docs/ai/README.md)）、`python3 tools/onboarding/fluentqt`（[オンボーディングツール](tools/onboarding/README.md)）で環境確認や C++ / PySide6 スターターの生成を行えます。Gallery サンプルを調整する際は、Live Scene で保存済みの変更をプレビューしてからコンパイル済み C++ サンプルで確認してください（[仕組み](docs/development/gallery-preview-workflow.md)）。
+**AI スキル＆プロジェクト生成 CLI**：Codex、Claude Code、Cursor で [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) スキルを使い（[実例を見る](https://calvinhxx.github.io/Fluent-Qt/ja/#ai-build) · [導入と使い方](docs/ai/README.md)）、`python3 tools/onboarding/fluentqt`（[オンボーディングツール](tools/onboarding/README.md)）で環境確認やレイヤー構成済みの C++ / PySide6 スターター（`monitor`、`workbench`、`existing-qt`）を生成できます。Gallery サンプルを調整する際は、Live Scene で保存済みの変更をプレビューしてからコンパイル済み C++ サンプルで確認してください（[仕組み](docs/development/gallery-preview-workflow.md)）。
+
+```bash
+python3 tools/onboarding/fluentqt create my-monitor --language cpp --starter monitor
+python3 tools/onboarding/fluentqt create my-py-monitor --language pyside6 --starter monitor
+```
 
 ## 🚀 クイックスタート
 

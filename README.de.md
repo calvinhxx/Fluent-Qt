@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  Plattformübergreifende Fluent-UI-Komponentenbibliothek für Qt Widgets — natives C++17 und PySide6 unter MIT-Lizenz.
+  MIT-lizenzierte native Fluent-UI-Komponentenbibliothek für Qt Widgets — eine gemeinsame C++17-Implementierung für C++, PySide6 und WebAssembly.
 </p>
 
 <p align="center">
@@ -44,9 +44,13 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/de/#support">Projekt unterstützen</a>
 </p>
 
-Fluent-Qt (FluentQt) ist eine MIT-lizenzierte Bibliothek für Qt Widgets. C++17 und PySide6 nutzen dieselbe Implementierung. Die Gallery enthält 99 Einträge, darunter `DataGrid`, [Diagramme](docs/architecture/charts.md), Dialoge und Fenster.
+Fluent-Qt (FluentQt) bringt Fluent UI über eine einzige native C++17-Codebasis auf Qt Widgets für C++, PySide6 und WebAssembly:
 
-Anwendungen laufen unter Windows, macOS, Linux und WebAssembly mit den Themes Light, Dark und High Contrast sowie konfigurierbaren Animationsmodi. Visuelles UI-Design läuft über **Page Studio** und **Qt Designer** (gemeinsame `.ui`-Dateien für C++ und Python), ergänzt durch optionale Module für CPU-Partikel-Hintergründe ([Particles](docs/architecture/particles.md)), 3D-Perspektivansichten ([Spatial](docs/architecture/spatial-view.md)) und eingebettete QML-Seiten ([QmlBridge](docs/architecture/qml-bridge.md)).
+- **MIT-Lizenz für kommerzielle und Open-Source-Apps** — die C++17-Bibliothek, die PySide6-Bindings, das Qt-Designer-Plugin und die Projektstarter stehen unter der MIT-Lizenz.
+- **Eine native C++17-Implementierung** — 99 Gallery-Einträge wie `DataGrid`, [Diagramme](docs/architecture/charts.md), Navigation, Overlays, Dialoge und Fenster nutzen dieselben C++17-Widgets in C++ (`Qt 5.15+` / `6.2+`), `PySide6` und `WebAssembly` statt reiner Stylesheet-Skins.
+- **Visuelles Design & gemeinsame `.ui`-Formulare** — Oberflächen im Browser mit **Page Studio** gestalten (Export als C++, PySide6 oder `.ui`) oder direkt in **Qt Creator** und `pyside6-designer` mit 95 Widget-Box-Einträgen und 4 Vorlagen arbeiten.
+- **App-Starter & KI-GUI-Skill** — geschichtete `monitor`-, `workbench`- und `existing-qt`-Projekte per `python3 tools/onboarding/fluentqt` erzeugen oder Benutzeroberflächen mit [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) erstellen.
+- **Optionale Erweiterungsmodule** — gewöhnliche 2D-Apps hängen nur von `Qt Widgets` ab; CPU-Partikelhintergründe ([Particles](docs/architecture/particles.md)), 3D-Perspektivansichten ([Spatial](docs/architecture/spatial-view.md)) und eingebettete QML-Seiten ([QmlBridge](docs/architecture/qml-bridge.md)) werden nur bei Bedarf aktiviert.
 
 ## 🧩 Bibliotheksmodule
 
@@ -107,7 +111,12 @@ Mit allen Modulen bieten Qt Creator und `pyside6-designer` 95 Einträge in der W
 
 ## 🤖 Bauen mit KI
 
-**KI-Skill & Onboarding-CLI**: Nutze den Skill [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code oder Cursor ([Beispiel](https://calvinhxx.github.io/Fluent-Qt/de/#ai-build) · [Installation & Nutzung](docs/ai/README.md)) und prüfe Umgebungen oder erstelle C++-/PySide6-Starter per `python3 tools/onboarding/fluentqt` ([Onboarding-Tools](tools/onboarding/README.md)). Wenn du ein Gallery-Beispiel anpasst, prüfe gespeicherte Änderungen zuerst in der Live Scene, bevor du das kompilierte C++-Beispiel verifizierst ([Funktionsweise](docs/development/gallery-preview-workflow.md)).
+**KI-Skill & Onboarding-CLI**: Nutze den Skill [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code oder Cursor ([Beispiel](https://calvinhxx.github.io/Fluent-Qt/de/#ai-build) · [Installation & Nutzung](docs/ai/README.md)) und prüfe Umgebungen oder erstelle geschichtete C++-/PySide6-Starter (`monitor`, `workbench`, `existing-qt`) per `python3 tools/onboarding/fluentqt` ([Onboarding-Tools](tools/onboarding/README.md)). Wenn du ein Gallery-Beispiel anpasst, prüfe gespeicherte Änderungen zuerst in der Live Scene, bevor du das kompilierte C++-Beispiel verifizierst ([Funktionsweise](docs/development/gallery-preview-workflow.md)).
+
+```bash
+python3 tools/onboarding/fluentqt create my-monitor --language cpp --starter monitor
+python3 tools/onboarding/fluentqt create my-py-monitor --language pyside6 --starter monitor
+```
 
 ## 🚀 Schnelleinstieg
 

@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  Qt Widgets를 위한 크로스 플랫폼 네이티브 Fluent UI 컴포넌트 라이브러리 — C++17 및 PySide6 지원 (MIT 라이선스).
+  MIT 라이선스의 Qt Widgets용 네이티브 Fluent UI 컴포넌트 라이브러리 — 단일 C++17 구현으로 C++, PySide6, WebAssembly 지원.
 </p>
 
 <p align="center">
@@ -44,9 +44,13 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/ko/#support">프로젝트 후원</a>
 </p>
 
-Fluent-Qt(FluentQt)는 MIT 라이선스의 Qt Widgets 라이브러리입니다. C++17과 PySide6가 같은 구현을 사용합니다. Gallery에는 `DataGrid`, [차트](docs/architecture/charts.md), 대화 상자, 창 등 99개 항목이 있습니다.
+Fluent-Qt(FluentQt)는 단일 네이티브 C++17 코드베이스로 C++, PySide6, WebAssembly에 Fluent UI를 제공합니다:
 
-애플리케이션은 라이트, 다크, 고대비 테마와 설정 가능한 애니메이션 모드와 함께 Windows, macOS, Linux 및 WebAssembly에서 실행됩니다. **Page Studio**와 **Qt Designer**(C++와 Python 간 `.ui` 파일 공유)를 통한 시각적 UI 설계를 지원하며, 선택적 모듈을 활성화하면 CPU 파티클 배경([Particles](docs/architecture/particles.md)), 3D 원근 뷰([Spatial](docs/architecture/spatial-view.md)), 임베디드 QML 페이지([QmlBridge](docs/architecture/qml-bridge.md))를 추가할 수 있습니다.
+- **상용 및 오픈소스 모두 자유로운 MIT 라이선스** — C++17 라이브러리, PySide6 바인딩, Qt Designer 플러그인, 앱 스타터 모두 MIT 라이선스를 따릅니다.
+- **하나의 네이티브 C++17 구현** — 단순 스타일시트가 아니라 `DataGrid`, [차트](docs/architecture/charts.md), 내비게이션, 오버레이, 대화 상자, 창 등 99개 Gallery 항목이 `Qt 5.15+`/`6.2+`, `PySide6`, `WebAssembly`에서 동일한 C++17 위젯으로 동작합니다.
+- **Page Studio 및 Qt Designer 시각적 설계** — 브라우저 **Page Studio**에서 C++, PySide6, `.ui` 파일로 내보내거나 **Qt Creator** 및 `pyside6-designer`에서 95개 위젯 항목과 4개 폼 템플릿을 바로 사용할 수 있습니다.
+- **앱 스타터 CLI 및 AI GUI 스킬** — `python3 tools/onboarding/fluentqt`로 계층화된 `monitor`, `workbench`, `existing-qt` 앱을 생성하고 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) 스킬로 UI를 구축할 수 있습니다.
+- **선택형 확장 모듈** — 기본 2D 앱은 `Qt Widgets`에만 의존하며 CPU 파티클 배경([Particles](docs/architecture/particles.md)), 3D 원근 뷰([Spatial](docs/architecture/spatial-view.md)), 임베디드 QML 페이지([QmlBridge](docs/architecture/qml-bridge.md))는 필요할 때만 활성화합니다.
 
 ## 🧩 라이브러리 모듈
 
@@ -107,7 +111,12 @@ python -m fluentqt_gallery
 
 ## 🤖 AI로 GUI 구축하기
 
-**AI 스킬 및 온보딩 CLI**: Codex, Claude Code 또는 Cursor에서 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) 스킬을 사용하고([예제 보기](https://calvinhxx.github.io/Fluent-Qt/ko/#ai-build) · [설치 및 사용법](docs/ai/README.md)), `python3 tools/onboarding/fluentqt`([온보딩 도구](tools/onboarding/README.md))로 환경 점검과 C++ / PySide6 스타터 생성을 진행할 수 있습니다. Gallery 예제를 다듬을 때는 저장된 변경 사항을 Live Scene에서 먼저 미리 본 뒤 컴파일된 C++ 예제로 확인하세요([작동 원리](docs/development/gallery-preview-workflow.md)).
+**AI 스킬 및 온보딩 CLI**: Codex, Claude Code 또는 Cursor에서 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) 스킬을 사용하고([예제 보기](https://calvinhxx.github.io/Fluent-Qt/ko/#ai-build) · [설치 및 사용법](docs/ai/README.md)), `python3 tools/onboarding/fluentqt`([온보딩 도구](tools/onboarding/README.md))로 환경 점검과 계층형 C++ / PySide6 스타터(`monitor`, `workbench`, `existing-qt`) 생성을 진행할 수 있습니다. Gallery 예제를 다듬을 때는 저장된 변경 사항을 Live Scene에서 먼저 미리 본 뒤 컴파일된 C++ 예제로 확인하세요([작동 원리](docs/development/gallery-preview-workflow.md)).
+
+```bash
+python3 tools/onboarding/fluentqt create my-monitor --language cpp --starter monitor
+python3 tools/onboarding/fluentqt create my-py-monitor --language pyside6 --starter monitor
+```
 
 ## 🚀 빠른 시작
 
