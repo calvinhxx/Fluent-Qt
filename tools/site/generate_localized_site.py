@@ -305,7 +305,7 @@ def structured_data(locale: Locale, values: dict[str, str], version: str) -> str
                 "url": locale.canonical_url(BASE_URL),
                 "description": values["meta.description"],
                 "codeRepository": REPOSITORY_URL,
-                "programmingLanguage": "C++",
+                "programmingLanguage": ["C++", "Python"],
                 "runtimePlatform": ["Qt 5.15+", "Qt 6.2+"],
                 "version": version,
                 "license": f"{REPOSITORY_URL}/blob/main/LICENSE",
