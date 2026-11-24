@@ -7,10 +7,10 @@ from __future__ import annotations
 import argparse
 import copy
 import json
-import os
 from pathlib import Path
 import re
 import tempfile
+import time
 from typing import Iterable, Mapping
 
 
@@ -197,6 +197,22 @@ def _planned_files(
     )
 
 
+def _publish_project(stage: Path, destination: Path) -> None:
+    # Windows can temporarily deny a directory rename while a reader holds it open.
+    for delay in (0.05, 0.15, 0.35, None):
+        if destination.exists():
+            raise CreateError(f"Target already exists: {destination}")
+        try:
+            stage.rename(destination)
+            return
+        except OSError as error:
+            if destination.exists():
+                raise CreateError(f"Target already exists: {destination}") from error
+            if delay is None or getattr(error, "winerror", None) not in (5, 32, 33):
+                raise CreateError(f"Could not create {destination}: {error}") from error
+            time.sleep(delay)
+
+
 def create_project(
     *,
     target: Path,
@@ -294,7 +310,7 @@ def create_project(
             json.dumps(architecture, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        os.replace(stage, destination)
+        _publish_project(stage, destination)
     return report
 
 
@@ -355,7 +371,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             accent=args.accent,
             dry_run=args.dry_run,
         )
-    except CreateError as error:
+    except (CreateError, OSError) as error:
         if args.format == "json":
             print(json.dumps({"schema_version": 1, "error": str(error)}, indent=2))
         else:
