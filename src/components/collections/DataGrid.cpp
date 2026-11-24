@@ -199,13 +199,25 @@ public:
 protected:
     void paintEvent(QPaintEvent* event) override
     {
-        if (!m_grid)
-            return QHeaderView::paintEvent(event);
-
-        QPainter background(viewport());
-        background.fillRect(viewport()->rect(), m_grid->themeColorsRef().bgLayer);
-        background.end();
         QHeaderView::paintEvent(event);
+        // Native styles can paint their own color beyond the last section.
+        const bool horizontal = orientation() == Qt::Horizontal;
+        const QRect bounds = viewport()->rect();
+        const int used = qMax(0, length() - offset());
+        if (used >= (horizontal ? bounds.width() : bounds.height()))
+            return;
+        QRect empty = bounds;
+        if (horizontal) {
+            empty.setLeft(used);
+            empty = QStyle::visualRect(layoutDirection(), bounds, empty);
+        } else {
+            empty.setTop(used);
+        }
+        empty = empty.intersected(event->rect());
+        if (!empty.isEmpty()) {
+            QPainter painter(viewport());
+            painter.fillRect(empty, palette().brush(QPalette::Button));
+        }
     }
 
     void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const override
@@ -220,7 +232,7 @@ protected:
 
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing);
-        painter->fillRect(rect, colors.bgLayer);
+        painter->fillRect(rect, palette().brush(QPalette::Button));
         if (pressed)
             painter->fillRect(rect, colors.subtleTertiary);
         else if (hovered)
@@ -864,6 +876,25 @@ void DataGrid::setScrollChainingEnabled(bool enabled)
     emit scrollChainingEnabledChanged();
 }
 
+QColor DataGrid::effectiveHeaderBackground() const
+{
+    QColor color = m_headerBackground.isValid() ? m_headerBackground : themeColorsRef().bgLayer;
+    color.setAlpha(255);
+    return color;
+}
+
+void DataGrid::setHeaderBackground(const QColor& color)
+{
+    QColor solid = color;
+    if (solid.isValid())
+        solid.setAlpha(255);
+    if (m_headerBackground == solid)
+        return;
+    m_headerBackground = solid;
+    updateHeaderSurfaces();
+    emit headerBackgroundChanged();
+}
+
 void DataGrid::onThemeUpdated()
 {
     applyThemePalette();
@@ -905,6 +936,22 @@ void DataGrid::paintEvent(QPaintEvent* event)
         placeholder.drawText(viewport()->rect().adjusted(32, 32, -32, -32), Qt::AlignCenter | Qt::TextWordWrap,
             m_placeholderText);
     }
+}
+
+bool DataGrid::event(QEvent* event)
+{
+    const bool handled = QTableView::event(event);
+    if (event->type() == QEvent::Paint) {
+        // A replacement header may only draw labels or controls. Supply its
+        // backdrop on the frame without changing the caller's paint or palette.
+        for (const auto* header : {horizontalHeader(), verticalHeader()}) {
+            if (header && header->isVisible() && !dynamic_cast<const detail::DataGridHeaderView*>(header)) {
+                QPainter painter(this);
+                painter.fillRect(header->geometry(), effectiveHeaderBackground());
+            }
+        }
+    }
+    return handled;
 }
 
 void DataGrid::resizeEvent(QResizeEvent* event)
@@ -1024,11 +1071,7 @@ void DataGrid::applyThemePalette()
     setPalette(viewPalette);
     viewport()->setPalette(viewPalette);
 
-    QPalette headerPalette = viewPalette;
-    headerPalette.setColor(QPalette::Button, colors.bgLayerAlt);
-    headerPalette.setColor(QPalette::ButtonText, colors.textSecondary);
-    horizontalHeader()->setPalette(headerPalette);
-    verticalHeader()->setPalette(headerPalette);
+    updateHeaderSurfaces();
 
     setFont(themeFont(Typography::FontRole::Body).toQFont());
     QFont headerFont = themeFont(Typography::FontRole::Caption).toQFont();
@@ -1042,10 +1085,22 @@ void DataGrid::applyThemePalette()
         m_pinnedView->setPalette(viewPalette);
         m_pinnedView->viewport()->setPalette(viewPalette);
         m_pinnedView->viewport()->update();
-        m_pinnedView->horizontalHeader()->setPalette(headerPalette);
-        m_pinnedView->horizontalHeader()->viewport()->update();
         m_pinnedView->setFont(font());
         m_pinnedView->horizontalHeader()->setFont(headerFont);
+    }
+}
+
+void DataGrid::updateHeaderSurfaces()
+{
+    QPalette headerPalette = palette();
+    headerPalette.setColor(QPalette::Button, effectiveHeaderBackground());
+    headerPalette.setColor(QPalette::ButtonText, themeColorsRef().textSecondary);
+    for (auto* header :
+        {horizontalHeader(), verticalHeader(), m_pinnedView ? m_pinnedView->horizontalHeader() : nullptr}) {
+        if (dynamic_cast<detail::DataGridHeaderView*>(header))
+            header->setPalette(headerPalette);
+        else if (header)
+            update(header->geometry());
     }
 }
 
@@ -1375,6 +1430,7 @@ void DataGrid::ensurePinnedView()
     m_pinnedView->setShowGrid(false);
     m_pinnedView->setHorizontalHeader(new detail::DataGridHeaderView(Qt::Horizontal, this));
     m_pinnedView->horizontalHeader()->setParent(m_pinnedView);
+    updateHeaderSurfaces();
     m_pinnedView->horizontalHeader()->setFixedHeight(kHeaderHeight);
     m_pinnedView->horizontalHeader()->setSectionsClickable(true);
     m_pinnedView->horizontalHeader()->setMinimumSectionSize(horizontalHeader()->minimumSectionSize());

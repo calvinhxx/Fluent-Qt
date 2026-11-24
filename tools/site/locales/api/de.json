@@ -1,4 +1,7 @@
 {
+"a2f327c6":"Überschreibt die Hintergrundfarbe der Tabellenköpfe. Bei einer ungültigen Farbe gilt die Ebenenfarbe des Designs.",
+"c719e008":"Legt die deckende Hintergrundfarbe für Zeilen-, Spalten- und fixierte Spaltenköpfe fest. Der Alphawert wird ignoriert.",
+"15203301":"Stellt die Hintergrundfarbe der Tabellenköpfe aus dem Design wieder her.",
 "f0ea2c77":"--- Hintergründe ---",
 "6a4a35f0":"--- Diagrammfarben ---",
 "2717404c":"--- Neutrale Palette ---",

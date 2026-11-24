@@ -28,6 +28,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/collections/DataGrid.h"
+#include "components/dialogs_flyouts/Dialog.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/LineEdit.h"
@@ -2261,6 +2262,91 @@ TEST_F(DataGridTest, Contract_HeaderDividersFollowVisibleColumnBoundaries)
             }
         }
     }
+}
+
+TEST_F(DataGridTest, Contract_DialogHeadersHaveASolidSurfaceBeforeHover)
+{
+    QWidget host;
+    host.setAttribute(Qt::WA_DontShowOnScreen);
+    host.resize(600, 400);
+    fluent::dialogs_flyouts::Dialog dialog(&host);
+    dialog.setAnimationEnabled(false);
+    dialog.resize(440, 240);
+    QWidget canvas(&dialog);
+    canvas.setGeometry(24, 24, 390, 180);
+    QPalette contrast = canvas.palette();
+    const QColor backdrop("#cf247c");
+    contrast.setColor(QPalette::Window, backdrop);
+    canvas.setPalette(contrast);
+    canvas.setAutoFillBackground(true);
+    QStandardItemModel model(2, 2);
+    DataGrid grid(&canvas);
+    grid.resize(canvas.size());
+    grid.setModel(&model);
+    grid.setBackgroundVisible(false);
+    grid.verticalHeader()->show();
+    grid.setSortingEnabled(true);
+    QSignalSpy changed(&grid, &DataGrid::headerBackgroundChanged);
+    const QColor color("#247869");
+    grid.setHeaderBackground(color);
+    grid.setHeaderBackground(QColor(36, 120, 105, 64));
+    EXPECT_EQ(changed.count(), 1);
+    grid.setColumnPinned(0, true);
+    const auto* pinned = grid.findChild<QTableView*>("fluentDataGridPinnedColumns");
+    ASSERT_NE(pinned, nullptr);
+    host.show();
+    dialog.open();
+    processEvents();
+    const auto sample = [&](QWidget* widget, QPoint point) {
+        const QImage image = host.grab().toImage();
+        return image.pixelColor(widget->mapTo(&host, point) * image.devicePixelRatio());
+    };
+    auto* column = grid.horizontalHeader()->viewport();
+    auto* row = grid.verticalHeader()->viewport();
+    auto* frozen = pinned->horizontalHeader()->viewport();
+    for (const auto theme :
+        {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
+        fluent::FluentElement::setTheme(theme);
+        processEvents();
+        EXPECT_EQ(sample(column, {160, 4}), color);
+        EXPECT_EQ(sample(column, {column->width() - 6, 4}), color);
+        EXPECT_EQ(sample(row, {4, 12}), color);
+        EXPECT_EQ(sample(frozen, {12, 4}), color);
+    }
+    grid.sortByColumn(0, Qt::DescendingOrder);
+    QTest::mouseClick(frozen, Qt::LeftButton, Qt::NoModifier, {24, 12});
+    EXPECT_EQ(grid.horizontalHeader()->sortIndicatorSection(), 0);
+    EXPECT_EQ(grid.horizontalHeader()->sortIndicatorOrder(), Qt::AscendingOrder);
+    grid.setColumnPinned(0, false);
+    grid.setLayoutDirection(Qt::RightToLeft);
+    processEvents();
+    EXPECT_EQ(sample(column, {6, 4}), color);
+    grid.setLayoutDirection(Qt::LeftToRight);
+
+    class LabelOnlyHeader final : public QHeaderView {
+    public:
+        using QHeaderView::QHeaderView;
+        void paintSection(QPainter* painter, const QRect& rect, int) const override
+        {
+            painter->fillRect(rect.adjusted(0, 0, -12, 0), Qt::green);
+        }
+    };
+    auto* custom = new LabelOnlyHeader(Qt::Horizontal);
+    custom->viewport()->setAutoFillBackground(false);
+    grid.setHorizontalHeader(custom);
+    custom->show();
+    processEvents();
+    ASSERT_TRUE(custom->isVisibleTo(&dialog));
+    const QPoint gap(custom->sectionSize(0) - 5, 5);
+    EXPECT_EQ(sample(custom->viewport(), {10, 5}), QColor(Qt::green));
+    EXPECT_EQ(sample(custom->viewport(), gap), color);
+    grid.resetHeaderBackground();
+    grid.resetHeaderBackground();
+    processEvents();
+    EXPECT_EQ(changed.count(), 2);
+    EXPECT_FALSE(grid.headerBackground().isValid());
+    EXPECT_EQ(sample(custom->viewport(), gap), grid.themeColorsRef().bgLayer);
+    EXPECT_EQ(sample(grid.viewport(), {180, grid.viewport()->height() - 6}), backdrop);
 }
 
 TEST_F(DataGridTest, Contract_RoundedSurfaceClipsFrozenHeadersAndEmptyArea)

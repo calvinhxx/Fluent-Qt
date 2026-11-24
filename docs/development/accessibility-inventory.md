@@ -258,6 +258,9 @@ accessibility tree. The private table compatibility adapter refreshes changed
 visible cells when Qt's WASM backend omits the standard model-data notification;
 native backends retain their existing notification path.
 
+DataGrid's shared header background keeps the built-in sort controls and
+accessible column headers when an application customizes the color. The
+default follows the theme, including High Contrast.
 DataGrid's pinned surface shares the logical table selection and model. DataGrid rows and
 MultiSelectComboBox triggers retain logical mouse focus but show the extra focus
 outline only for keyboard navigation. Row outlines close at the visible column

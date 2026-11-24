@@ -3,6 +3,7 @@
 
 #include <QMetaObject>
 #include <QByteArray>
+#include <QColor>
 #include <QHash>
 #include <QPersistentModelIndex>
 #include <QSet>
@@ -50,6 +51,11 @@ class DataGrid : public QTableView, public FluentElement, public QMLPlus {
         READ isBackgroundVisible
         WRITE setBackgroundVisible
         NOTIFY backgroundVisibleChanged)
+    Q_PROPERTY(QColor headerBackground
+        READ headerBackground
+        WRITE setHeaderBackground
+        RESET resetHeaderBackground
+        NOTIFY headerBackgroundChanged)
     Q_PROPERTY(bool scrollChainingEnabled
         READ isScrollChainingEnabled
         WRITE setScrollChainingEnabled
@@ -87,6 +93,17 @@ public:
 
     bool isBackgroundVisible() const { return m_backgroundVisible; }
     void setBackgroundVisible(bool visible);
+
+    /** @brief Header color override. An invalid color follows the theme's layer surface.
+     * zh_CN: 表头底色覆盖值。无效颜色表示跟随主题的层背景色。
+     */
+    QColor headerBackground() const { return m_headerBackground; }
+    /** @brief Sets the solid background of row, column and pinned headers. Alpha is ignored.
+     * zh_CN: 设置行、列和固定列表头的实色背景；忽略透明度。
+     */
+    void setHeaderBackground(const QColor& color);
+    /** @brief Restores the theme header background. zh_CN: 恢复跟随主题的表头底色。 */
+    void resetHeaderBackground() { setHeaderBackground(QColor()); }
 
     bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
     void setScrollChainingEnabled(bool enabled);
@@ -145,12 +162,14 @@ signals:
     void placeholderTextChanged();
     void borderVisibleChanged();
     void backgroundVisibleChanged();
+    void headerBackgroundChanged();
     void scrollChainingEnabledChanged();
     void animationEnabledChanged();
     void columnLayoutChanged();
     void modelChanged(QAbstractItemModel* model);
 
 protected:
+    bool event(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -171,6 +190,8 @@ private:
     friend class detail::DataGridPinnedView;
 
     void applyThemePalette();
+    void updateHeaderSurfaces();
+    QColor effectiveHeaderBackground() const;
     void connectModelSignals(QAbstractItemModel* model);
     void refreshModelPresentation();
     void syncFluentScrollBars();
@@ -184,6 +205,7 @@ private:
 
     SelectionMode m_selectionMode = SelectionMode::Single;
     QString m_placeholderText;
+    QColor m_headerBackground;
     QString m_automaticAccessibleDescription;
     bool m_borderVisible = true;
     bool m_backgroundVisible = true;
