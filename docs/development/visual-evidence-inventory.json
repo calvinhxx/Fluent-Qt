@@ -1224,8 +1224,7 @@
       "manual_evidence": {
         "status": "manual-required",
         "coverage": "all-required-states",
-        "surface": "visual-check",
-        "test_case": "NavigationViewTest.VisualCheck"
+        "surface": "gallery"
       }
     },
     {

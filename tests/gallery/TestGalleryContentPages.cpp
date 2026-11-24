@@ -86,6 +86,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/MotionPolicy.h"
 #include "components/navigation/NavigationView.h"
+#include "components/navigation/StackContentHost.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -4347,7 +4348,7 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonUpdatesTreeViewPreviewTheme)
     EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
 }
 
-TEST_F(GalleryContentPagesTest, NavigationViewSampleModeChangesKeepInlineBackground)
+TEST_F(GalleryContentPagesTest, NavigationViewSampleModesKeepPaneInlineAndToggleSelectionIndicator)
 {
     using fluent::navigation::NavigationView;
     fluent::MotionPolicy::instance().setMode(fluent::MotionPolicy::Mode::Full);
@@ -4364,6 +4365,25 @@ TEST_F(GalleryContentPagesTest, NavigationViewSampleModeChangesKeepInlineBackgro
             ASSERT_NE(nav, nullptr);
             auto* animation = nav->findChild<QPropertyAnimation*>();
             ASSERT_NE(animation, nullptr);
+            auto* mainPane = nav->mainChromeWidget();
+            ASSERT_NE(mainPane, nullptr);
+            ASSERT_NE(mainPane->layout(), nullptr);
+            ASSERT_GT(mainPane->layout()->count(), 0);
+            auto* homeRow = mainPane->layout()->itemAt(0)->widget();
+            ASSERT_NE(homeRow, nullptr);
+            const auto expectHomeIndicator = [&](bool visible) {
+                ASSERT_TRUE(homeRow->isVisibleTo(preview.get()));
+                EXPECT_EQ(nav->contentHost()->currentIndex(), 0);
+                // Sample the leading gutter at mid-height, away from the icon and text.
+                const auto gutter = homeRow->grab(QRect(0, homeRow->height() / 2, 12, 1)).toImage();
+                ASSERT_FALSE(gutter.isNull());
+                const QRgb accent = nav->themeColorsRef().accentDefault.rgb();
+                bool painted = false;
+                for (int x = 0; x < gutter.width(); ++x)
+                    painted |= gutter.pixel(x, 0) == accent;
+                EXPECT_EQ(painted, visible);
+            };
+            expectHomeIndicator(true);
             for (const auto& mode : {"Minimal", "Compact", "Left", "Compact", "Minimal", "Top", "Minimal"}) {
                 SCOPED_TRACE(::testing::Message() << "theme=" << int(theme) << " width=" << width << " mode=" << mode);
                 nav->setAnimationEnabled(false);
@@ -4381,6 +4401,10 @@ TEST_F(GalleryContentPagesTest, NavigationViewSampleModeChangesKeepInlineBackgro
                         EXPECT_FALSE(pane->property("fluentNavPaneFloating").toBool());
                     }
                 }
+                if (qstrcmp(mode, "Compact") == 0)
+                    expectHomeIndicator(false);
+                else if (qstrcmp(mode, "Left") == 0)
+                    expectHomeIndicator(true);
             }
         }
     }
