@@ -170,19 +170,31 @@ def _architecture_manifest(
 
 
 def _planned_files(
-    *, template_root: Path, replacements: Mapping[str, str]
+    *, template_roots: Iterable[Path], replacements: Mapping[str, str]
 ) -> list[tuple[Path, Path]]:
-    files: list[tuple[Path, Path]] = []
-    for source in sorted(template_root.rglob("*")):
-        if source.is_symlink():
-            raise CreateError(f"Starter templates cannot contain symlinks: {source}")
-        if not source.is_file():
-            continue
-        relative = source.relative_to(template_root)
-        files.append((source, _render_relative_path(relative, replacements)))
-    if not files:
-        raise CreateError(f"Starter template is empty: {template_root}")
-    return files
+    planned: dict[Path, Path] = {}
+    for template_root in template_roots:
+        if template_root.is_symlink():
+            raise CreateError(f"Starter templates cannot contain symlinks: {template_root}")
+        if not template_root.is_dir():
+            raise CreateError(f"Missing starter template directory: {template_root}")
+        has_files = False
+        for source in sorted(template_root.rglob("*")):
+            if source.is_symlink():
+                raise CreateError(f"Starter templates cannot contain symlinks: {source}")
+            if not source.is_file():
+                continue
+            has_files = True
+            relative = _render_relative_path(
+                source.relative_to(template_root), replacements
+            )
+            planned[relative] = source
+        if not has_files:
+            raise CreateError(f"Empty starter template directory: {template_root}")
+    return sorted(
+        ((source, relative) for relative, source in planned.items()),
+        key=lambda item: item[1],
+    )
 
 
 def create_project(
@@ -220,8 +232,14 @@ def create_project(
     )
     if "cpp_ci_tag" in manifest:
         replacements["@FLUENTQT_CI_TAG@"] = manifest["cpp_ci_tag"]
-    template_root = starters_root / definition["directory"]
-    files = _planned_files(template_root=template_root, replacements=replacements)
+    template_roots = [
+        starters_root / shared
+        for shared in definition.get("shared_directories", ())
+    ]
+    template_roots.append(starters_root / definition["directory"])
+    files = _planned_files(
+        template_roots=template_roots, replacements=replacements
+    )
     module = replacements["@APP_MODULE@"]
     architecture, source_directories, test_directories = _architecture_manifest(
         application=display_name,

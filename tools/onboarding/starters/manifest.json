@@ -18,6 +18,9 @@
     },
     "cpp-workbench": {
       "description": "A responsive native C++ workbench with a maintained shell, replaceable primary page, application layers, tests, and CI.",
+      "shared_directories": [
+        "cpp-common"
+      ],
       "directory": "cpp-workbench",
       "profile": "full",
       "shell_files": [
@@ -45,6 +48,9 @@
     },
     "pyside6-workbench": {
       "description": "A responsive PySide6 workbench with the same maintained shell, replaceable primary page, and product boundaries.",
+      "shared_directories": [
+        "pyside6-common"
+      ],
       "directory": "pyside6-workbench",
       "profile": "full",
       "shell_files": [

@@ -141,6 +141,30 @@ class FluentQtCreateTest(unittest.TestCase):
                 workflow = (target / ".github/workflows/ci.yml").read_text(encoding="utf-8")
                 self.assertIn(f"repository: calvinhxx/Fluent-Qt\n          ref: '{tag}'\n", workflow)
 
+    def test_missing_or_empty_shared_directory_fails_before_creation(self):
+        starters = self.root / "starters"
+        workbench = starters / "cpp-workbench"
+        workbench.mkdir(parents=True)
+        (workbench / "README.md.in").write_text("Workbench", encoding="utf-8")
+        shared = starters / "cpp-common"
+        target = self.root / "sample"
+        for problem in ("Missing", "Empty"):
+            with self.subTest(problem=problem):
+                if problem == "Empty":
+                    shared.mkdir()
+                with self.assertRaises(MODULE.CreateError) as failure:
+                    MODULE.create_project(
+                        target=target,
+                        application="Sample",
+                        identifier="sample",
+                        language="cpp",
+                        starter="workbench",
+                        accent="#2457D6",
+                        starters_root=starters,
+                    )
+                self.assertEqual(str(failure.exception), f"{problem} starter template directory: {shared}")
+                self.assertFalse(target.exists())
+
     def test_existing_target_is_never_overwritten(self):
         target = self.root / "existing"
         target.mkdir()

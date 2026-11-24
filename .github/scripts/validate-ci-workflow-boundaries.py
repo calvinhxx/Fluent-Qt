@@ -26,10 +26,10 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 MAX_ORCHESTRATOR_ACTIVE_LINES = 320
 EMSDK_REPOSITORY_REVISION = "2514ec738de72cebbba7f4fdba0cf2fabcb779a5"
 ACTION_TEMPLATE_PATHS = (
+    ROOT / "tools/onboarding/starters/cpp-common/.github/workflows/ci.yml.in",
     ROOT / "tools/onboarding/starters/cpp-existing-qt/.github/workflows/ci.yml.in",
-    ROOT / "tools/onboarding/starters/cpp-workbench/.github/workflows/ci.yml.in",
+    ROOT / "tools/onboarding/starters/pyside6-common/.github/workflows/ci.yml.in",
     ROOT / "tools/onboarding/starters/pyside6-existing-qt/.github/workflows/ci.yml.in",
-    ROOT / "tools/onboarding/starters/pyside6-workbench/.github/workflows/ci.yml.in",
 )
 CANONICAL_WORKFLOW_LEVEL_ENTRY = re.compile(
     r"^(?P<name>[a-z][a-z0-9-]*):(?P<value>.*)$"
