@@ -90,7 +90,8 @@ the interface.
 
 `fluentqt trial` runs the same `doctor` and `create` commands a new user sees,
 then configures, builds, tests, and enters the generated application's real
-window show path. It makes no network requests and removes its temporary project
+window show path. A C++ test or window step fails if its CTest filter matches
+no tests. The trial makes no network requests and removes its temporary project
 unless `--target` is supplied.
 
 From a checkout, measure the C++ Workbench against that source tree:

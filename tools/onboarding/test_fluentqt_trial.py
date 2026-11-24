@@ -98,6 +98,8 @@ class FluentQtTrialTest(unittest.TestCase):
         self.assertEqual(cpp_report["status"], "passed")
         self.assertIn("_(application_test|quality_report)$", cpp_runner.commands[-2])
         self.assertIn("_ui_smoke$", cpp_runner.commands[-1])
+        for command in cpp_runner.commands[-2:]:
+            self.assertIn("--no-tests=error", command)
 
         py_runner = RecordingRunner()
         py_report = MODULE.run_trial(
