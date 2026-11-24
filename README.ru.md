@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  Кроссплатформенная нативная библиотека Fluent UI для Qt Widgets — C++17 и PySide6 под лицензией MIT.
+  Нативная библиотека Fluent UI для Qt Widgets под лицензией MIT — единая реализация на C++17 для C++, PySide6 и WebAssembly.
 </p>
 
 <p align="center">
@@ -44,9 +44,13 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/ru/#support">Поддержать проект</a>
 </p>
 
-Fluent-Qt (FluentQt) — библиотека Qt Widgets под лицензией MIT. C++17 и PySide6 используют общую реализацию. В Gallery представлены 99 компонентов и инструментов, включая `DataGrid`, [графики](docs/architecture/charts.md), диалоги и окна.
+Fluent-Qt (FluentQt) добавляет Fluent UI в Qt Widgets из единой нативной кодовой базы на C++17 для C++, PySide6 и WebAssembly:
 
-Приложения работают на Windows, macOS, Linux и WebAssembly со светлой, тёмной и высококонтрастной темами, а также с настраиваемыми режимами анимации. Визуальное проектирование поддерживается через **Page Studio** и **Qt Designer** (общие файлы `.ui` для C++ и Python), а дополнительные модули добавляют фоны с частицами на CPU ([Particles](docs/architecture/particles.md)), виды с 3D-перспективой ([Spatial](docs/architecture/spatial-view.md)) и встроенные страницы QML ([QmlBridge](docs/architecture/qml-bridge.md)).
+- **Лицензия MIT для коммерческих и открытых проектов** — библиотека на C++17, привязки PySide6, плагин Qt Designer и стартовые шаблоны распространяются по лицензии MIT.
+- **Единая нативная реализация на C++17** — Gallery включает 99 позиций (в том числе `DataGrid`, [графики](docs/architecture/charts.md), навигацию, всплывающие слои, диалоги и окна) с общими виджетами C++17 в C++ (`Qt 5.15+` / `6.2+`), `PySide6` и `WebAssembly`, а не просто таблицы стилей QSS.
+- **Визуальное проектирование и общие `.ui`-формы** — собирайте экраны в браузерном **Page Studio** (экспорт в C++, PySide6 или `.ui`) или в **Qt Creator** и `pyside6-designer` (95 элементов палитры и 4 шаблона форм).
+- **Стартовые шаблоны приложений и ИИ-навык** — создавайте многослойные проекты `monitor`, `workbench` и `existing-qt` через `python3 tools/onboarding/fluentqt` или проектируйте интерфейсы с [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md).
+- **Подключаемые модули расширения** — базовым 2D-приложениям нужен только `Qt Widgets`; фоны с частицами на CPU ([Particles](docs/architecture/particles.md)), виды с 3D-перспективой ([Spatial](docs/architecture/spatial-view.md)) и встроенный QML ([QmlBridge](docs/architecture/qml-bridge.md)) подключаются по требованию.
 
 ## 🧩 Модули библиотеки
 
@@ -107,7 +111,12 @@ python -m fluentqt_gallery
 
 ## 🤖 Разработка с ИИ
 
-**ИИ-навык и CLI онбординга**: используйте навык [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) в Codex, Claude Code или Cursor ([Пример](https://calvinhxx.github.io/Fluent-Qt/ru/#ai-build) · [Установка и использование](docs/ai/README.md)) и запускайте `python3 tools/onboarding/fluentqt` ([Инструменты онбординга](tools/onboarding/README.md)) для проверки окружения и генерации шаблонов C++ / PySide6. При доработке примера в Gallery сначала посмотрите сохранённые правки в Live Scene, а затем проверьте скомпилированный пример на C++ ([Как это работает](docs/development/gallery-preview-workflow.md)).
+**ИИ-навык и CLI онбординга**: используйте навык [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) в Codex, Claude Code или Cursor ([Пример](https://calvinhxx.github.io/Fluent-Qt/ru/#ai-build) · [Установка и использование](docs/ai/README.md)) и запускайте `python3 tools/onboarding/fluentqt` ([Инструменты онбординга](tools/onboarding/README.md)) для проверки окружения и генерации многослойных шаблонов C++ / PySide6 (`monitor`, `workbench`, `existing-qt`). При доработке примера в Gallery сначала посмотрите сохранённые правки в Live Scene, а затем проверьте скомпилированный пример на C++ ([Как это работает](docs/development/gallery-preview-workflow.md)).
+
+```bash
+python3 tools/onboarding/fluentqt create my-monitor --language cpp --starter monitor
+python3 tools/onboarding/fluentqt create my-py-monitor --language pyside6 --starter monitor
+```
 
 ## 🚀 Быстрый старт
 

@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  面向 Qt Widgets 的跨平台原生 Fluent UI 组件库，支持 C++17 与 PySide6（MIT 开源）。
+  MIT 开源协议的 Qt Widgets 原生 Fluent UI 组件库——一套 C++17 内核同时驱动 C++、PySide6 与 WebAssembly。
 </p>
 
 <p align="center">
@@ -44,9 +44,13 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#support">支持项目</a>
 </p>
 
-Fluent-Qt（FluentQt）是采用 MIT 许可证的 Qt Widgets 组件库。C++17 和 PySide6 共用一套实现。Gallery 收录 99 项，包含 `DataGrid`、[图表](docs/architecture/charts.md)、对话框和窗口。
+Fluent-Qt（FluentQt）用同一套原生 C++17 实现为 C++、PySide6 与 WebAssembly 提供 Fluent UI 桌面与浏览器控件：
 
-支持 Windows、macOS、Linux 和 WebAssembly，内置浅色、深色和高对比度主题，动画支持减弱或关闭。提供网页端 **Page Studio** 与 **Qt Designer** 可视化设计（C++ 与 Python 共用 `.ui` 文件），并支持按需启用 CPU 粒子背景（[Particles](docs/architecture/particles.md)）、3D 透视视图（[Spatial](docs/architecture/spatial-view.md)）和嵌入 QML 页面（[QmlBridge](docs/architecture/qml-bridge.md)）。
+- **MIT 协议免费商用** — C++17 基础库、PySide6 绑定、Qt Designer 插件与项目模板均采用 MIT 许可证，个人与商业闭源项目可放心集成。
+- **C++ / Python / WASM 同源原生内核** — Gallery 收录 99 项（含 `DataGrid`、[图表](docs/architecture/charts.md)、导航、浮层、对话框与窗口），并非单纯 QSS 换肤，同一份 C++17 控件代码支持 `Qt 5.15+`/`6.2+`、`PySide6` 与 `WebAssembly`。
+- **Page Studio + Qt Designer 可视化设计** — 可在浏览器 **Page Studio** 中实时预览并导出 C++、PySide6 或 `.ui` 文件，也支持在 **Qt Creator** 与 `pyside6-designer` 中拖拽 95 项控件与 4 套表单模板。
+- **开箱即用的应用脚手架与 AI Skill** — 通过 `python3 tools/onboarding/fluentqt` 一键生成分层清晰的 `monitor`、`workbench` 或 `existing-qt` 工程，并配套 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill 辅助界面开发。
+- **按需启用扩展能力** — 普通 2D 应用仅依赖 `Qt Widgets`；可按需链接 CPU 粒子背景（[Particles](docs/architecture/particles.md)）、3D 透视视图（[Spatial](docs/architecture/spatial-view.md)）或 QML 混排宿主（[QmlBridge](docs/architecture/qml-bridge.md)）。
 
 ## 🧩 模块概览
 
@@ -107,7 +111,12 @@ python -m fluentqt_gallery
 
 ## 🤖 AI 辅助开发
 
-**AI Skill 与项目脚手架**：在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill（[查看示例](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)），并可通过 `python3 tools/onboarding/fluentqt`（[环境检查与项目模板](tools/onboarding/README.md)）一键检测环境与生成 C++ / PySide6 起步工程。调整 Gallery 示例时，可先在 Live Scene 保存即预览再用编译后的 C++ 程序确认（[工作原理](docs/development/gallery-preview-workflow.md)）。
+**AI Skill 与项目脚手架**：在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill（[查看示例](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)），并可通过 `python3 tools/onboarding/fluentqt`（[环境检查与项目模板](tools/onboarding/README.md)）一键检测环境与生成分层的 C++ / PySide6 起步工程（`monitor`、`workbench`、`existing-qt`）。调整 Gallery 示例时，可先在 Live Scene 保存即预览再用编译后的 C++ 程序确认（[工作原理](docs/development/gallery-preview-workflow.md)）。
+
+```bash
+python3 tools/onboarding/fluentqt create my-monitor --language cpp --starter monitor
+python3 tools/onboarding/fluentqt create my-py-monitor --language pyside6 --starter monitor
+```
 
 ## 🚀 快速开始
 

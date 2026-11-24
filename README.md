@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  Cross-platform Fluent UI component library for Qt Widgets — native C++17 and PySide6, MIT-licensed.
+  MIT-licensed native Fluent UI component library for Qt Widgets — one C++17 implementation for C++, PySide6, and WebAssembly.
 </p>
 
 <p align="center">
@@ -44,9 +44,13 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/#support">Support the project</a>
 </p>
 
-Fluent-Qt (FluentQt) is an MIT-licensed Qt Widgets library. C++17 and PySide6 share the same implementation. The Gallery covers 99 entries, including `DataGrid`, [charts](docs/architecture/charts.md), dialogs and windows.
+Fluent-Qt (FluentQt) brings Fluent UI to Qt Widgets across C++17, PySide6, and WebAssembly from one native codebase:
 
-Applications run on Windows, macOS, Linux, and WebAssembly with Light, Dark, and High Contrast themes plus configurable animation modes. Visual authoring works through **Page Studio** and **Qt Designer** (shared `.ui` files across C++ and Python), alongside optional modules for CPU particle backgrounds ([Particles](docs/architecture/particles.md)), 3D perspective views ([Spatial](docs/architecture/spatial-view.md)), and embedded QML pages ([QmlBridge](docs/architecture/qml-bridge.md)).
+- **MIT-licensed for commercial and open-source apps** — the C++17 library, PySide6 bindings, Qt Designer plugin, and application starters all use the MIT license.
+- **One native C++17 implementation** — 99 Gallery entries including `DataGrid`, [charts](docs/architecture/charts.md), navigation, overlays, dialogs, and windows run the same C++17 widgets in C++ (`Qt 5.15+` / `6.2+`), `PySide6`, and `WebAssembly`, rather than stylesheet-only skins.
+- **Visual design and shared `.ui` forms** — arrange controls in browser **Page Studio** (exporting C++, PySide6, or `.ui`) or design directly in **Qt Creator** and `pyside6-designer` (95 Widget Box entries and 4 form templates).
+- **Application starters and AI GUI skill** — scaffold layered `monitor`, `workbench`, and `existing-qt` apps via `python3 tools/onboarding/fluentqt`, or build interfaces with [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md).
+- **Opt-in extension modules** — core apps depend only on `Qt Widgets`; enable CPU particle backgrounds ([Particles](docs/architecture/particles.md)), 3D perspective views ([Spatial](docs/architecture/spatial-view.md)), or embedded QML pages ([QmlBridge](docs/architecture/qml-bridge.md)) only when needed.
 
 ## 🧩 Library modules
 
@@ -107,7 +111,12 @@ With all modules installed, Qt Creator and `pyside6-designer` share 95 Widget Bo
 
 ## 🤖 Build with AI
 
-**AI Skill & Onboarding CLI**: Use the [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) skill in Codex, Claude Code, or Cursor ([Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)), and run `python3 tools/onboarding/fluentqt` ([Onboarding tools](tools/onboarding/README.md)) to check environments and scaffold C++ or PySide6 apps. When tuning Gallery samples, preview saved edits in Live Scene before verifying the compiled C++ sample ([How it works](docs/development/gallery-preview-workflow.md)).
+**AI Skill & Onboarding CLI**: Use the [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) skill in Codex, Claude Code, or Cursor ([Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)), and run `python3 tools/onboarding/fluentqt` ([Onboarding tools](tools/onboarding/README.md)) to check environments and scaffold layered C++ or PySide6 apps (`monitor`, `workbench`, or `existing-qt`). When tuning Gallery samples, preview saved edits in Live Scene before verifying the compiled C++ sample ([How it works](docs/development/gallery-preview-workflow.md)).
+
+```bash
+python3 tools/onboarding/fluentqt create my-monitor --language cpp --starter monitor
+python3 tools/onboarding/fluentqt create my-py-monitor --language pyside6 --starter monitor
+```
 
 ## 🚀 Quick Start
 

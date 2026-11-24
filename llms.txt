@@ -1,6 +1,6 @@
 # FluentQt
 
-> FluentQt is a C++17 Qt Widgets component library with optional PySide6 bindings. This index routes coding agents to public APIs, machine-readable UI guidance, executable samples, and validation contracts.
+> FluentQt (Fluent-Qt) is an MIT-licensed C++17 Qt Widgets component library sharing one native implementation across C++, PySide6, and WebAssembly, with Page Studio, Qt Designer `.ui` forms, and application starters (`monitor`, `workbench`, `existing-qt`). This index routes coding agents to public APIs, machine-readable UI guidance, executable samples, and validation contracts.
 
 ## AI-assisted GUI development
 
