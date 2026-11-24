@@ -1,12 +1,27 @@
 #include "application/WorkspaceSummary.h"
 
-#include <cassert>
+#include <cstdlib>
+#include <iostream>
+
+namespace {
+
+void require(bool condition, const char* expression, int line)
+{
+    if (!condition) {
+        std::cerr << "Check failed at line " << line << ": " << expression << '\n';
+        std::exit(1);
+    }
+}
+
+#define CHECK(expr) require(static_cast<bool>(expr), #expr, __LINE__)
+
+} // namespace
 
 int main()
 {
     using @APP_NAMESPACE@::application::WorkspaceSummary;
     using @APP_NAMESPACE@::application::workspaceTitle;
-    assert(workspaceTitle(WorkspaceSummary{"FluentQt", {}}) == "FluentQt");
-    assert(workspaceTitle(WorkspaceSummary{{}, {}}) == "Untitled workspace");
+    CHECK(workspaceTitle(WorkspaceSummary{"FluentQt", {}}) == "FluentQt");
+    CHECK(workspaceTitle(WorkspaceSummary{{}, {}}) == "Untitled workspace");
     return 0;
 }
