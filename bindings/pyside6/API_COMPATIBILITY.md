@@ -150,6 +150,9 @@ retains Python wrappers for the caller-supplied model, selection model, and
 delegate while Qt remains the native object owner; replacement and garbage-
 collection tests guard that boundary. Its Python Gallery routes use the same
 read-only, selection/column, editing/validation, and filter-workspace scenarios as C++.
+Use `grid.setHeaderBackground(QColor("#e4edf3"))` to color the existing
+headers, including pinned columns. `grid.resetHeaderBackground()` restores
+the theme color.
 
 ## Gates
 
