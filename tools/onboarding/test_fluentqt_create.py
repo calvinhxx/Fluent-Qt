@@ -133,6 +133,34 @@ class FluentQtCreateTest(unittest.TestCase):
                 )
                 self.assertIn("1.7.2", dependency_file.read_text(encoding="utf-8"))
 
+    def test_quoted_application_name_generates_valid_toml_and_sources(self):
+        app_name = 'Ops "North" \\ Lab'
+        for language in ("cpp", "pyside6"):
+            for starter in ("existing-qt", "workbench"):
+                with self.subTest(language=language, starter=starter):
+                    target = self.root / f"quoted-{language}-{starter}"
+                    MODULE.create_project(
+                        target=target,
+                        application=app_name,
+                        identifier=f"quoted-{language.replace('pyside6', 'py')}-{starter}",
+                        language=language,
+                        starter=starter,
+                        accent="#2457D6",
+                    )
+                    self.assert_structure_passes(target)
+                    if language == "pyside6":
+                        metadata = (target / "pyproject.toml").read_text(encoding="utf-8")
+                        self.assertNotIn(app_name, metadata)
+                        if sys.version_info >= (3, 11):
+                            import tomllib
+
+                            self.assertIn("project", tomllib.loads(metadata))
+                        self.assertTrue(compileall.compile_dir(target / "src", quiet=1))
+                        self.assertTrue(compileall.compile_dir(target / "tests", quiet=1))
+                    else:
+                        main_cpp = (target / "src/app/main.cpp").read_text(encoding="utf-8")
+                        self.assertIn('Ops \\"North\\" \\\\ Lab', main_cpp)
+
     def test_cpp_starter_ci_uses_the_manifest_tag(self):
         tag = json.loads(MODULE.STARTER_MANIFEST.read_text(encoding="utf-8"))["cpp_ci_tag"]
         for starter in ("existing-qt", "workbench"):
