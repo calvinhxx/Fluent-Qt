@@ -16,6 +16,23 @@
         "ctest --test-dir build --output-on-failure"
       ]
     },
+    "cpp-monitor": {
+      "description": "A native C++ operations monitor with KPI cards, a LineChart latency view, a filterable DataGrid, and explicit application boundaries.",
+      "shared_directories": [
+        "cpp-common"
+      ],
+      "directory": "cpp-monitor",
+      "profile": "full",
+      "shell_files": [
+        "ui/shell/MainWindow.h",
+        "ui/shell/MainWindow.cpp"
+      ],
+      "next_steps": [
+        "cmake -S . -B build",
+        "cmake --build build --parallel",
+        "ctest --test-dir build --output-on-failure"
+      ]
+    },
     "cpp-workbench": {
       "description": "A responsive native C++ workbench with a maintained shell, replaceable primary page, application layers, tests, and CI.",
       "shared_directories": [
@@ -39,6 +56,22 @@
       "profile": "lite",
       "shell_files": [
         "ui/workspace_panel.py"
+      ],
+      "next_steps": [
+        "python -m venv .venv",
+        "python -m pip install -e .",
+        "python -m unittest discover -s tests"
+      ]
+    },
+    "pyside6-monitor": {
+      "description": "A PySide6 operations monitor with KPI cards, a LineChart latency view, a filterable DataGrid, and the same product boundaries as C++.",
+      "shared_directories": [
+        "pyside6-common"
+      ],
+      "directory": "pyside6-monitor",
+      "profile": "full",
+      "shell_files": [
+        "ui/shell/main_window.py"
       ],
       "next_steps": [
         "python -m venv .venv",

@@ -1,0 +1,80 @@
+from dataclasses import dataclass, replace
+from typing import Protocol
+
+from @APP_MODULE@.domain.telemetry import MetricPoint, TelemetryEvent, TelemetrySnapshot
+
+
+class TelemetryRepository(Protocol):
+    def next_snapshot(self) -> TelemetrySnapshot: ...
+
+
+@dataclass(frozen=True)
+class MonitorViewState:
+    workspace: str
+    active_channels: int = 0
+    p95_latency_ms: int = 0
+    healthy: bool = True
+    dark_theme: bool = False
+    filter_query: str = ""
+    labels: tuple[str, ...] = ()
+    p95_series: tuple[MetricPoint, ...] = ()
+    p50_series: tuple[MetricPoint, ...] = ()
+    filtered_events: tuple[TelemetryEvent, ...] = ()
+
+
+class MonitorController:
+    def __init__(self, repository: TelemetryRepository) -> None:
+        self._repository = repository
+        self._snapshot = TelemetrySnapshot("", (), (), (), ())
+        self._state = MonitorViewState("")
+        self.refresh()
+
+    @property
+    def state(self) -> MonitorViewState:
+        return self._state
+
+    def refresh(self) -> None:
+        self._snapshot = self._repository.next_snapshot()
+        events = self._snapshot.events
+        healthy = bool(events) and all(
+            event.status == "Healthy" for event in events
+        )
+        if self._snapshot.p95_series:
+            p95_latency_ms = round(self._snapshot.p95_series[-1].value)
+        elif events:
+            p95_latency_ms = max(event.latency_ms for event in events)
+        else:
+            p95_latency_ms = 0
+        self._state = replace(
+            self._state,
+            workspace=self._snapshot.workspace,
+            active_channels=len(events),
+            p95_latency_ms=p95_latency_ms,
+            healthy=healthy,
+            labels=self._snapshot.labels,
+            p95_series=self._snapshot.p95_series,
+            p50_series=self._snapshot.p50_series,
+            filtered_events=self._filter_events(self._state.filter_query),
+        )
+
+    def set_filter(self, query: str) -> None:
+        self._state = replace(
+            self._state,
+            filter_query=query,
+            filtered_events=self._filter_events(query),
+        )
+
+    def toggle_theme(self) -> None:
+        self._state = replace(self._state, dark_theme=not self._state.dark_theme)
+
+    def _filter_events(self, query: str) -> tuple[TelemetryEvent, ...]:
+        needle = query.lower()
+        if not needle:
+            return self._snapshot.events
+        return tuple(
+            event
+            for event in self._snapshot.events
+            if needle in event.channel.lower()
+            or needle in event.region.lower()
+            or needle in event.status.lower()
+        )

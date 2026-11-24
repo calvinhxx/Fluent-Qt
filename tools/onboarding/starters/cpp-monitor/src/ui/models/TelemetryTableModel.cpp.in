@@ -1,0 +1,81 @@
+#include "ui/models/TelemetryTableModel.h"
+
+#include <utility>
+
+namespace @APP_NAMESPACE@::ui {
+
+TelemetryTableModel::TelemetryTableModel(QObject* parent)
+    : QAbstractTableModel(parent)
+{
+}
+
+void TelemetryTableModel::setEvents(std::vector<domain::TelemetryEvent> events)
+{
+    beginResetModel();
+    m_events = std::move(events);
+    endResetModel();
+}
+
+int TelemetryTableModel::rowCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+        return 0;
+    return static_cast<int>(m_events.size());
+}
+
+int TelemetryTableModel::columnCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+        return 0;
+    return 4;
+}
+
+QVariant TelemetryTableModel::data(const QModelIndex& index, int role) const
+{
+    if (!index.isValid() || index.row() < 0
+        || index.row() >= static_cast<int>(m_events.size())) {
+        return {};
+    }
+    if (role != Qt::DisplayRole)
+        return {};
+
+    const auto& event = m_events[static_cast<std::size_t>(index.row())];
+    switch (index.column()) {
+    case 0:
+        return QString::fromUtf8(event.channel.data(),
+                                 static_cast<int>(event.channel.size()));
+    case 1:
+        return QString::fromUtf8(event.region.data(),
+                                 static_cast<int>(event.region.size()));
+    case 2:
+        return QStringLiteral("%1 ms").arg(event.latencyMs);
+    case 3:
+        return QString::fromUtf8(event.status.data(),
+                                 static_cast<int>(event.status.size()));
+    default:
+        return {};
+    }
+}
+
+QVariant TelemetryTableModel::headerData(int section,
+                                         Qt::Orientation orientation,
+                                         int role) const
+{
+    if (role != Qt::DisplayRole || orientation != Qt::Horizontal)
+        return {};
+
+    switch (section) {
+    case 0:
+        return QStringLiteral("Channel");
+    case 1:
+        return QStringLiteral("Region");
+    case 2:
+        return QStringLiteral("Latency");
+    case 3:
+        return QStringLiteral("Status");
+    default:
+        return {};
+    }
+}
+
+} // namespace @APP_NAMESPACE@::ui

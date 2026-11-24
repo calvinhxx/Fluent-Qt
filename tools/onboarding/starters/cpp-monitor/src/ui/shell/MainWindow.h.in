@@ -1,0 +1,29 @@
+#pragma once
+
+#include <FluentQt/Windowing.h>
+
+namespace fluent::textfields {
+class Label;
+}
+namespace @APP_NAMESPACE@::application {
+class MonitorController;
+struct MonitorViewState;
+}
+namespace @APP_NAMESPACE@::ui {
+class MonitorPage;
+
+class MainWindow final : public fluent::windowing::Window {
+public:
+    explicit MainWindow(application::MonitorController& controller);
+
+private:
+    void renderSnapshot(const application::MonitorViewState& state);
+    void renderFilterSummary(const application::MonitorViewState& state);
+
+    application::MonitorController& m_controller;
+    MonitorPage* m_page = nullptr;
+    fluent::textfields::Label* m_navigationTitle = nullptr;
+    fluent::textfields::Label* m_navigationSummary = nullptr;
+};
+
+} // namespace @APP_NAMESPACE@::ui

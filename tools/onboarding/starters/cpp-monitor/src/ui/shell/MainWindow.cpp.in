@@ -1,0 +1,117 @@
+#include "ui/shell/MainWindow.h"
+
+#include <FluentQt/FluentQt.h>
+
+#include <QString>
+#include <QVBoxLayout>
+
+#include "application/MonitorController.h"
+#include "ui/components/WorkbenchShell.h"
+#include "ui/pages/MonitorPage.h"
+#include "ui/theme/BrandTheme.h"
+
+namespace @APP_NAMESPACE@::ui {
+namespace {
+
+QString text(const std::string& value)
+{
+    return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
+}
+
+} // namespace
+
+MainWindow::MainWindow(application::MonitorController& controller)
+    : m_controller(controller)
+{
+    setWindowTitle(QStringLiteral("@APP_NAME_CPP@"));
+    setMinimumSize(720, 560);
+    resize(1120, 760);
+
+    auto* shell = new WorkbenchShell;
+
+    auto* navigation = new QWidget(shell);
+    auto* navigationLayout = new QVBoxLayout(navigation);
+    navigationLayout->setContentsMargins(20, 20, 20, 20);
+    navigationLayout->setSpacing(8);
+
+    auto* appName = new fluent::textfields::Label(
+        QStringLiteral("@APP_NAME_CPP@"), navigation);
+    appName->setFluentTypography(Typography::FontRole::Subtitle);
+    appName->setTextElideMode(Qt::ElideRight);
+    navigationLayout->addWidget(appName);
+
+    auto* section = new fluent::textfields::Label(
+        QStringLiteral("Telemetry"), navigation);
+    section->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    navigationLayout->addWidget(section);
+    navigationLayout->addSpacing(8);
+
+    auto* summaryCard = new fluent::layout::Card(navigation);
+    summaryCard->setAppearance(fluent::layout::Card::Canvas);
+    auto* summaryLayout = new QVBoxLayout(summaryCard);
+    summaryLayout->setContentsMargins(16, 16, 16, 16);
+    summaryLayout->setSpacing(4);
+    m_navigationTitle = new fluent::textfields::Label(summaryCard);
+    m_navigationTitle->setFluentTypography(Typography::FontRole::BodyStrong);
+    summaryLayout->addWidget(m_navigationTitle);
+    m_navigationSummary = new fluent::textfields::Label(summaryCard);
+    m_navigationSummary->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    m_navigationSummary->setWordWrap(true);
+    summaryLayout->addWidget(m_navigationSummary);
+    navigationLayout->addWidget(summaryCard);
+    navigationLayout->addStretch();
+
+    auto* hint = new fluent::textfields::Label(
+        QStringLiteral("FluentQt monitor"), navigation);
+    hint->setFluentTypography(Typography::FontRole::Caption);
+    hint->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Tertiary);
+    navigationLayout->addWidget(hint);
+
+    m_page = new MonitorPage(shell);
+    shell->setNavigationWidget(navigation);
+    shell->setPrimaryWidget(m_page);
+    setContentWidget(shell);
+
+    connect(m_page->refreshButton(), &fluent::basicinput::Button::clicked,
+            this, [this] {
+                m_controller.refresh();
+                renderSnapshot(m_controller.state());
+            });
+    connect(m_page->themeButton(), &fluent::basicinput::Button::clicked,
+            this, [this] {
+                m_controller.toggleTheme();
+                const bool darkTheme = m_controller.state().darkTheme;
+                theme::applyBrandTheme(darkTheme);
+                m_page->renderTheme(darkTheme);
+            });
+    connect(m_page->filterInput(), &fluent::textfields::LineEdit::textChanged,
+            this, [this](const QString& query) {
+                m_controller.setFilter(query.toUtf8().toStdString());
+                const auto& state = m_controller.state();
+                renderFilterSummary(state);
+                m_page->renderFilter(state);
+            });
+
+    renderSnapshot(m_controller.state());
+}
+
+void MainWindow::renderSnapshot(const application::MonitorViewState& state)
+{
+    m_navigationTitle->setText(text(state.workspace));
+    renderFilterSummary(state);
+    m_page->renderSnapshot(state);
+}
+
+void MainWindow::renderFilterSummary(
+    const application::MonitorViewState& state)
+{
+    m_navigationSummary->setText(
+        QStringLiteral("%1 channels · %2 visible")
+            .arg(state.activeChannels)
+            .arg(static_cast<int>(state.filteredEvents.size())));
+}
+
+} // namespace @APP_NAMESPACE@::ui

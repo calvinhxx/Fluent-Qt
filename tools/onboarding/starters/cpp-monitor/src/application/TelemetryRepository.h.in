@@ -1,0 +1,13 @@
+#pragma once
+
+#include "domain/Telemetry.h"
+
+namespace @APP_NAMESPACE@::application {
+
+class TelemetryRepository {
+public:
+    virtual ~TelemetryRepository() = default;
+    virtual domain::TelemetrySnapshot nextSnapshot() = 0;
+};
+
+} // namespace @APP_NAMESPACE@::application

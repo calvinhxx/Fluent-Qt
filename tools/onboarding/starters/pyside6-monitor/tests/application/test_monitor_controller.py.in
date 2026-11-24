@@ -1,0 +1,72 @@
+import unittest
+
+from @APP_MODULE@.application.monitor_controller import MonitorController
+from @APP_MODULE@.domain.telemetry import (
+    MetricPoint,
+    TelemetryEvent,
+    TelemetrySnapshot,
+)
+
+
+class StubTelemetryRepository:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def next_snapshot(self) -> TelemetrySnapshot:
+        self.calls += 1
+        if self.calls == 1:
+            return TelemetrySnapshot(
+                workspace="Ops Console",
+                labels=("09:00", "09:10"),
+                p95_series=(MetricPoint(0, 32), MetricPoint(1, 38)),
+                p50_series=(MetricPoint(0, 16), MetricPoint(1, 19)),
+                events=(
+                    TelemetryEvent("gw-edge-01", "us-west", 24, "Healthy"),
+                    TelemetryEvent("ingest-api", "eu-central", 38, "Healthy"),
+                    TelemetryEvent("alert-worker", "eu-west", 31, "Healthy"),
+                ),
+            )
+        return TelemetrySnapshot(
+            workspace="Ops Console",
+            labels=("09:10", "09:20"),
+            p95_series=(MetricPoint(0, 41), MetricPoint(1, 52)),
+            p50_series=(MetricPoint(0, 20), MetricPoint(1, 25)),
+            events=(
+                TelemetryEvent("gw-edge-01", "us-west", 28, "Healthy"),
+                TelemetryEvent("ingest-api", "eu-central", 48, "Degraded"),
+                TelemetryEvent("alert-worker", "eu-west", 44, "Degraded"),
+            ),
+        )
+
+
+class MonitorControllerTest(unittest.TestCase):
+    def test_refresh_filter_and_theme_state(self) -> None:
+        controller = MonitorController(StubTelemetryRepository())
+        self.assertEqual(controller.state.workspace, "Ops Console")
+        self.assertEqual(controller.state.active_channels, 3)
+        self.assertEqual(controller.state.p95_latency_ms, 38)
+        self.assertTrue(controller.state.healthy)
+        self.assertEqual(len(controller.state.filtered_events), 3)
+        self.assertFalse(controller.state.dark_theme)
+
+        controller.set_filter("EU-CENTRAL")
+        self.assertEqual(len(controller.state.filtered_events), 1)
+        self.assertEqual(controller.state.filtered_events[0].channel, "ingest-api")
+
+        controller.set_filter("nonexistent")
+        self.assertEqual(len(controller.state.filtered_events), 0)
+
+        controller.set_filter("")
+        controller.refresh()
+        self.assertEqual(controller.state.p95_latency_ms, 52)
+        self.assertFalse(controller.state.healthy)
+
+        controller.set_filter("Degraded")
+        self.assertEqual(len(controller.state.filtered_events), 2)
+
+        controller.toggle_theme()
+        self.assertTrue(controller.state.dark_theme)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -61,13 +61,17 @@ python3 tools/onboarding/fluentqt create my-app \
 ```
 
 Choose `existing-qt` for a bounded panel that can be added to an existing
-application. Choose `workbench` for an app with domain, application,
-infrastructure, UI, tests, and CI boundaries. Both starters are available for
-`cpp` and `pyside6`; C++ is the canonical implementation.
+application. Choose `workbench` for an app shell with domain, application,
+infrastructure, UI, tests, and CI boundaries, or `monitor` for an operations
+telemetry console with KPI cards, a `LineChart`, and a filterable `DataGrid`.
+All three starters are available for `cpp` and `pyside6`; C++ is the canonical
+implementation.
 
 ```bash
 python3 tools/onboarding/fluentqt create my-panel \
   --language cpp --starter existing-qt --dry-run
+python3 tools/onboarding/fluentqt create my-monitor \
+  --language cpp --starter monitor
 python3 tools/onboarding/fluentqt create my-python-app \
   --language pyside6 --starter workbench --format json
 ```
@@ -77,7 +81,7 @@ report follows [create-report.schema.json](create-report.schema.json). Every
 project includes `.fluentqt/architecture.json`, which can be checked with the
 Skill's project-structure validator.
 
-Both Workbench starters expose `--quality-report`. It lays out the generated
+Both `workbench` and `monitor` starters expose `--quality-report`. It lays out the generated
 window, prints a versioned FluentQt Inspector report, and exits without changing
 the interface.
 

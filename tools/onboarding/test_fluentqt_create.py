@@ -66,7 +66,7 @@ class FluentQtCreateTest(unittest.TestCase):
 
     def test_all_starters_render_without_placeholders_or_absolute_paths(self):
         for language in ("cpp", "pyside6"):
-            for starter in ("existing-qt", "workbench"):
+            for starter in ("existing-qt", "monitor", "workbench"):
                 with self.subTest(language=language, starter=starter):
                     target, report = self.create(language, starter)
                     self.assertEqual(report["status"], "created")
@@ -80,7 +80,7 @@ class FluentQtCreateTest(unittest.TestCase):
                     self.assert_structure_passes(target)
 
     def test_python_starters_compile_and_run_application_tests(self):
-        for starter in ("existing-qt", "workbench"):
+        for starter in ("existing-qt", "monitor", "workbench"):
             with self.subTest(starter=starter):
                 target, _ = self.create("pyside6", starter)
                 self.assertTrue(compileall.compile_dir(target / "src", quiet=1))
@@ -104,39 +104,66 @@ class FluentQtCreateTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn("Ran 1 test", result.stdout + result.stderr)
 
-    def test_workbench_starters_separate_shell_from_product_page(self):
+    def test_full_starters_separate_shell_from_product_page(self):
         expectations = {
-            "cpp": (
+            ("cpp", "workbench"): (
                 "src/ui/components/WorkbenchShell.cpp",
                 "src/ui/pages/WorkspacePage.cpp",
+                "WorkspacePage",
                 "setMaximumWidth(1320)",
             ),
-            "pyside6": (
+            ("pyside6", "workbench"): (
                 "src/sample_python/ui/components/workbench_shell.py",
                 "src/sample_python/ui/pages/workspace_page.py",
+                "WorkspacePage",
+                "setMaximumWidth(1320)",
+            ),
+            ("cpp", "monitor"): (
+                "src/ui/components/WorkbenchShell.cpp",
+                "src/ui/pages/MonitorPage.cpp",
+                "MonitorPage",
+                "setMaximumWidth(1320)",
+            ),
+            ("pyside6", "monitor"): (
+                "src/sample_python/ui/components/workbench_shell.py",
+                "src/sample_python/ui/pages/monitor_page.py",
+                "MonitorPage",
                 "setMaximumWidth(1320)",
             ),
         }
-        for language, (shell_path, page_path, invariant) in expectations.items():
-            with self.subTest(language=language):
-                target, _ = self.create(language, "workbench")
+        for (language, starter), (shell_path, page_path, page_symbol, invariant) in expectations.items():
+            with self.subTest(language=language, starter=starter):
+                target, _ = self.create(language, starter)
                 shell = target / shell_path
                 page = target / page_path
                 self.assertTrue(shell.is_file())
                 self.assertTrue(page.is_file())
                 self.assertIn(invariant, shell.read_text(encoding="utf-8"))
-                self.assertNotIn("WorkspacePage", shell.read_text(encoding="utf-8"))
+                self.assertNotIn(page_symbol, shell.read_text(encoding="utf-8"))
                 dependency_file = (
                     target / "CMakeLists.txt"
                     if language == "cpp"
                     else target / "pyproject.toml"
                 )
-                self.assertIn("1.7.2", dependency_file.read_text(encoding="utf-8"))
+                expected_version = "1.8.5" if starter == "monitor" else "1.7.2"
+                self.assertIn(expected_version, dependency_file.read_text(encoding="utf-8"))
+
+    def test_existing_qt_preserves_original_minimum_versions(self):
+        cpp_target, _ = self.create("cpp", "existing-qt")
+        self.assertIn(
+            "find_package(FluentQt 1.7 CONFIG REQUIRED)",
+            (cpp_target / "CMakeLists.txt").read_text(encoding="utf-8"),
+        )
+        py_target, _ = self.create("pyside6", "existing-qt")
+        self.assertIn(
+            '"FluentQt>=1.7,<2"',
+            (py_target / "pyproject.toml").read_text(encoding="utf-8"),
+        )
 
     def test_quoted_application_name_generates_valid_toml_and_sources(self):
         app_name = 'Ops "North" \\ Lab'
         for language in ("cpp", "pyside6"):
-            for starter in ("existing-qt", "workbench"):
+            for starter in ("existing-qt", "monitor", "workbench"):
                 with self.subTest(language=language, starter=starter):
                     target = self.root / f"quoted-{language}-{starter}"
                     MODULE.create_project(
@@ -163,7 +190,7 @@ class FluentQtCreateTest(unittest.TestCase):
 
     def test_cpp_starter_ci_uses_the_manifest_tag(self):
         tag = json.loads(MODULE.STARTER_MANIFEST.read_text(encoding="utf-8"))["cpp_ci_tag"]
-        for starter in ("existing-qt", "workbench"):
+        for starter in ("existing-qt", "monitor", "workbench"):
             with self.subTest(starter=starter):
                 target, _ = self.create("cpp", starter)
                 workflow = (target / ".github/workflows/ci.yml").read_text(encoding="utf-8")

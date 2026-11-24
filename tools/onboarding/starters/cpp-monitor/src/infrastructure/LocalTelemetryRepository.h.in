@@ -1,0 +1,15 @@
+#pragma once
+
+#include "application/TelemetryRepository.h"
+
+namespace @APP_NAMESPACE@::infrastructure {
+
+class LocalTelemetryRepository final : public application::TelemetryRepository {
+public:
+    domain::TelemetrySnapshot nextSnapshot() override;
+
+private:
+    int m_cycle = 0;
+};
+
+} // namespace @APP_NAMESPACE@::infrastructure

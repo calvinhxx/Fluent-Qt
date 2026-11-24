@@ -1,0 +1,56 @@
+#include "infrastructure/LocalTelemetryRepository.h"
+
+namespace @APP_NAMESPACE@::infrastructure {
+
+domain::TelemetrySnapshot LocalTelemetryRepository::nextSnapshot()
+{
+    const bool alternate = (m_cycle % 2) == 1;
+    ++m_cycle;
+
+    const std::vector<std::string> labels = {
+        "09:00", "09:10", "09:20", "09:30", "09:40", "09:50",
+        "10:00", "10:10", "10:20", "10:30", "10:40", "10:50"
+    };
+
+    if (!alternate) {
+        return {
+            "@APP_NAME_CPP@",
+            labels,
+            {{0, 32}, {1, 35}, {2, 31}, {3, 38}, {4, 42}, {5, 39},
+             {6, 44}, {7, 41}, {8, 46}, {9, 43}, {10, 40}, {11, 38}},
+            {{0, 16}, {1, 18}, {2, 17}, {3, 19}, {4, 21}, {5, 20},
+             {6, 22}, {7, 21}, {8, 24}, {9, 22}, {10, 20}, {11, 19}},
+            {
+                {"gw-edge-01", "us-west", 24, "Healthy"},
+                {"gw-edge-02", "us-east", 29, "Healthy"},
+                {"ingest-api", "eu-central", 38, "Healthy"},
+                {"stream-bus", "ap-east", 34, "Healthy"},
+                {"serial-plc-4", "cn-north", 19, "Healthy"},
+                {"telemetry-db", "us-west", 27, "Healthy"},
+                {"alert-worker", "eu-west", 31, "Healthy"},
+                {"sync-relay", "ap-south", 26, "Healthy"}
+            }
+        };
+    }
+
+    return {
+        "@APP_NAME_CPP@",
+        labels,
+        {{0, 35}, {1, 38}, {2, 41}, {3, 47}, {4, 52}, {5, 49},
+         {6, 58}, {7, 54}, {8, 61}, {9, 57}, {10, 53}, {11, 48}},
+        {{0, 18}, {1, 20}, {2, 21}, {3, 23}, {4, 25}, {5, 24},
+         {6, 28}, {7, 27}, {8, 30}, {9, 28}, {10, 26}, {11, 24}},
+        {
+            {"gw-edge-01", "us-west", 28, "Healthy"},
+            {"gw-edge-02", "us-east", 33, "Healthy"},
+            {"ingest-api", "eu-central", 48, "Degraded"},
+            {"stream-bus", "ap-east", 42, "Healthy"},
+            {"serial-plc-4", "cn-north", 22, "Healthy"},
+            {"telemetry-db", "us-west", 31, "Healthy"},
+            {"alert-worker", "eu-west", 44, "Degraded"},
+            {"sync-relay", "ap-south", 29, "Healthy"}
+        }
+    };
+}
+
+} // namespace @APP_NAMESPACE@::infrastructure

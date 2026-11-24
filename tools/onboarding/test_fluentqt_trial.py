@@ -86,6 +86,29 @@ class FluentQtTrialTest(unittest.TestCase):
         self.assertIn("_(application_test|quality_report)$", runner.commands[-2])
         self.assertIn("_ui_smoke$", runner.commands[-1])
 
+    def test_monitor_starter_uses_full_app_smoke_and_quality_report(self):
+        cpp_runner = RecordingRunner()
+        cpp_report = MODULE.run_trial(
+            profile="cpp",
+            starter="monitor",
+            target=self.root / "cpp-monitor",
+            fluentqt_source=self.root / "Fluent-QT",
+            runner=cpp_runner,
+        )
+        self.assertEqual(cpp_report["status"], "passed")
+        self.assertIn("_(application_test|quality_report)$", cpp_runner.commands[-2])
+        self.assertIn("_ui_smoke$", cpp_runner.commands[-1])
+
+        py_runner = RecordingRunner()
+        py_report = MODULE.run_trial(
+            profile="python",
+            starter="monitor",
+            target=self.root / "py-monitor",
+            runner=py_runner,
+        )
+        self.assertEqual(py_report["status"], "passed")
+        self.assertIn("first_window_trial.app.main", py_runner.commands[-1])
+
     def test_python_existing_qt_uses_demo_window(self):
         runner = RecordingRunner()
         report = MODULE.run_trial(

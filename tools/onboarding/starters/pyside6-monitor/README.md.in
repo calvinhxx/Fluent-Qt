@@ -1,0 +1,31 @@
+# @APP_NAME@
+
+PySide6 operations monitor with a responsive shell, KPI cards, live
+`LineChart`, filterable `DataGrid`, native FluentQt components, and explicit
+domain, application, infrastructure, and UI boundaries.
+
+```bash
+python -m venv .venv
+python -m pip install -e .
+python -m unittest discover -s tests
+@APP_ID@
+```
+
+The app package composes dependencies. Domain and application modules remain
+independent of Qt, infrastructure owns telemetry sources, and UI modules only
+render application state and publish user intent.
+
+`ui/components/workbench_shell.py` owns wide/narrow shell geometry. Adapt
+`ui/pages/monitor_page.py` and `infrastructure/local_telemetry_repository.py`
+for your own device metrics, serial streams, or service endpoints.
+
+## Quality report
+
+After the window starts cleanly, emit the same native Inspector report as the
+C++ starter:
+
+```bash
+@APP_ID@ --quality-report
+```
+
+The command prints versioned JSON and exits. It does not change the interface.

@@ -1,0 +1,98 @@
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QVBoxLayout, QWidget
+
+import fluentqt
+from fluentqt.layout import Card
+from fluentqt.textfields import Label
+from fluentqt.windowing import Window
+
+from @APP_MODULE@.application.monitor_controller import (
+    MonitorController,
+    MonitorViewState,
+)
+from @APP_MODULE@.ui.components.workbench_shell import WorkbenchShell
+from @APP_MODULE@.ui.pages.monitor_page import MonitorPage
+from @APP_MODULE@.ui.theme.brand_theme import apply_brand_theme
+
+
+class MainWindow(Window):
+    def __init__(self, controller: MonitorController) -> None:
+        super().__init__()
+        self._controller = controller
+        self.setWindowTitle(@APP_NAME_PY@)
+        self.setMinimumSize(720, 560)
+        self.resize(1120, 760)
+
+        shell = WorkbenchShell()
+        navigation = QWidget(shell)
+        navigation_layout = QVBoxLayout(navigation)
+        navigation_layout.setContentsMargins(20, 20, 20, 20)
+        navigation_layout.setSpacing(8)
+
+        app_name = Label(@APP_NAME_PY@, navigation)
+        app_name.setFluentTypography(fluentqt.FontRole.Subtitle)
+        app_name.setTextElideMode(Qt.TextElideMode.ElideRight)
+        navigation_layout.addWidget(app_name)
+        section = Label("Telemetry", navigation)
+        section.setTextColorRole(Label.TextColorRole.Secondary)
+        navigation_layout.addWidget(section)
+        navigation_layout.addSpacing(8)
+
+        summary_card = Card(navigation)
+        summary_card.setAppearance(Card.Appearance.Canvas)
+        summary_layout = QVBoxLayout(summary_card)
+        summary_layout.setContentsMargins(16, 16, 16, 16)
+        summary_layout.setSpacing(4)
+        self._navigation_title = Label(summary_card)
+        self._navigation_title.setFluentTypography(
+            fluentqt.FontRole.BodyStrong
+        )
+        summary_layout.addWidget(self._navigation_title)
+        self._navigation_summary = Label(summary_card)
+        self._navigation_summary.setTextColorRole(Label.TextColorRole.Secondary)
+        self._navigation_summary.setWordWrap(True)
+        summary_layout.addWidget(self._navigation_summary)
+        navigation_layout.addWidget(summary_card)
+        navigation_layout.addStretch()
+
+        hint = Label("FluentQt monitor", navigation)
+        hint.setFluentTypography(fluentqt.FontRole.Caption)
+        hint.setTextColorRole(Label.TextColorRole.Tertiary)
+        navigation_layout.addWidget(hint)
+
+        self._page = MonitorPage(shell)
+        shell.set_navigation_widget(navigation)
+        shell.set_primary_widget(self._page)
+        self.setContentWidget(shell)
+
+        self._page.refresh_button.clicked.connect(self._refresh)
+        self._page.theme_button.clicked.connect(self._toggle_theme)
+        self._page.filter_input.textChanged.connect(self._filter_changed)
+        self._render_snapshot(controller.state)
+
+    def _refresh(self) -> None:
+        self._controller.refresh()
+        self._render_snapshot(self._controller.state)
+
+    def _toggle_theme(self) -> None:
+        self._controller.toggle_theme()
+        dark_theme = self._controller.state.dark_theme
+        apply_brand_theme(dark_theme)
+        self._page.render_theme(dark_theme)
+
+    def _filter_changed(self, query: str) -> None:
+        self._controller.set_filter(query)
+        state = self._controller.state
+        self._render_filter_summary(state)
+        self._page.render_filter(state)
+
+    def _render_snapshot(self, state: MonitorViewState) -> None:
+        self._navigation_title.setText(state.workspace)
+        self._render_filter_summary(state)
+        self._page.render_snapshot(state)
+
+    def _render_filter_summary(self, state: MonitorViewState) -> None:
+        self._navigation_summary.setText(
+            f"{state.active_channels} channels · "
+            f"{len(state.filtered_events)} visible"
+        )

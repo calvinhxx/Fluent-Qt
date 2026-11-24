@@ -1,0 +1,89 @@
+#include "application/MonitorController.h"
+#include "application/TelemetryRepository.h"
+
+#include <cstdlib>
+#include <iostream>
+#include <string>
+
+namespace {
+
+void require(bool condition, const char* expression, int line)
+{
+    if (!condition) {
+        std::cerr << "Check failed at line " << line << ": " << expression << '\n';
+        std::exit(1);
+    }
+}
+
+#define CHECK(expr) require(static_cast<bool>(expr), #expr, __LINE__)
+
+class StubTelemetryRepository final
+    : public @APP_NAMESPACE@::application::TelemetryRepository {
+public:
+    @APP_NAMESPACE@::domain::TelemetrySnapshot nextSnapshot() override
+    {
+        ++m_calls;
+        if (m_calls == 1) {
+            return {
+                "Ops Console",
+                {"09:00", "09:10"},
+                {{0, 32}, {1, 38}},
+                {{0, 16}, {1, 19}},
+                {
+                    {"gw-edge-01", "us-west", 24, "Healthy"},
+                    {"ingest-api", "eu-central", 38, "Healthy"},
+                    {"alert-worker", "eu-west", 31, "Healthy"}
+                }
+            };
+        }
+        return {
+            "Ops Console",
+            {"09:10", "09:20"},
+            {{0, 41}, {1, 52}},
+            {{0, 20}, {1, 25}},
+            {
+                {"gw-edge-01", "us-west", 28, "Healthy"},
+                {"ingest-api", "eu-central", 48, "Degraded"},
+                {"alert-worker", "eu-west", 44, "Degraded"}
+            }
+        };
+    }
+
+private:
+    int m_calls = 0;
+};
+
+} // namespace
+
+int main()
+{
+    StubTelemetryRepository repository;
+    @APP_NAMESPACE@::application::MonitorController controller(repository);
+
+    CHECK(controller.state().workspace == "Ops Console");
+    CHECK(controller.state().activeChannels == 3);
+    CHECK(controller.state().p95LatencyMs == 38);
+    CHECK(controller.state().healthy);
+    CHECK(controller.state().filteredEvents.size() == 3);
+    CHECK(!controller.state().darkTheme);
+
+    controller.setFilter("EU-CENTRAL");
+    CHECK(controller.state().filteredEvents.size() == 1);
+    CHECK(controller.state().filteredEvents[0].channel == "ingest-api");
+
+    controller.setFilter("nonexistent");
+    CHECK(controller.state().filteredEvents.empty());
+
+    controller.setFilter("");
+    controller.refresh();
+    CHECK(controller.state().p95LatencyMs == 52);
+    CHECK(!controller.state().healthy);
+    CHECK(controller.state().filteredEvents.size() == 3);
+
+    controller.setFilter("Degraded");
+    CHECK(controller.state().filteredEvents.size() == 2);
+
+    controller.toggleTheme();
+    CHECK(controller.state().darkTheme);
+    return 0;
+}

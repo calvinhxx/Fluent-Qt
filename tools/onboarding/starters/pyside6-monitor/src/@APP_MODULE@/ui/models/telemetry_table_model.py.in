@@ -1,0 +1,59 @@
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+
+from @APP_MODULE@.domain.telemetry import TelemetryEvent
+
+
+class TelemetryTableModel(QAbstractTableModel):
+    _HEADERS = ("Channel", "Region", "Latency", "Status")
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._events: tuple[TelemetryEvent, ...] = ()
+
+    def set_events(self, events: tuple[TelemetryEvent, ...]) -> None:
+        self.beginResetModel()
+        self._events = events
+        self.endResetModel()
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+        return len(self._events)
+
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+        return len(self._HEADERS)
+
+    def data(
+        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
+    ):
+        if not index.isValid() or not (0 <= index.row() < len(self._events)):
+            return None
+        if role != Qt.ItemDataRole.DisplayRole:
+            return None
+        event = self._events[index.row()]
+        column = index.column()
+        if column == 0:
+            return event.channel
+        if column == 1:
+            return event.region
+        if column == 2:
+            return f"{event.latency_ms} ms"
+        if column == 3:
+            return event.status
+        return None
+
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ):
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+            and 0 <= section < len(self._HEADERS)
+        ):
+            return self._HEADERS[section]
+        return None

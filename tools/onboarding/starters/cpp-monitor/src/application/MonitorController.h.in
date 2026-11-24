@@ -1,0 +1,40 @@
+#pragma once
+
+#include <string>
+#include <vector>
+
+#include "application/TelemetryRepository.h"
+
+namespace @APP_NAMESPACE@::application {
+
+struct MonitorViewState {
+    std::string workspace;
+    int activeChannels = 0;
+    int p95LatencyMs = 0;
+    bool healthy = true;
+    bool darkTheme = false;
+    std::string filterQuery;
+    std::vector<std::string> labels;
+    std::vector<domain::MetricPoint> p95Series;
+    std::vector<domain::MetricPoint> p50Series;
+    std::vector<domain::TelemetryEvent> filteredEvents;
+};
+
+class MonitorController {
+public:
+    explicit MonitorController(TelemetryRepository& repository);
+
+    const MonitorViewState& state() const;
+    void refresh();
+    void setFilter(std::string query);
+    void toggleTheme();
+
+private:
+    void rebuildFilteredEvents();
+
+    TelemetryRepository& m_repository;
+    domain::TelemetrySnapshot m_snapshot;
+    MonitorViewState m_state;
+};
+
+} // namespace @APP_NAMESPACE@::application
