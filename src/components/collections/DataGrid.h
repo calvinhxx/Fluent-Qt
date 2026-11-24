@@ -6,6 +6,7 @@
 #include <QColor>
 #include <QHash>
 #include <QPersistentModelIndex>
+#include <QPointer>
 #include <QSet>
 #include <QString>
 #include <QTableView>
@@ -15,6 +16,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 
+class QAbstractButton;
 class QAbstractItemModel;
 class QEvent;
 class QFocusEvent;
@@ -206,6 +208,7 @@ private:
     SelectionMode m_selectionMode = SelectionMode::Single;
     QString m_placeholderText;
     QColor m_headerBackground;
+    QPointer<QAbstractButton> m_headerCorner;
     QString m_automaticAccessibleDescription;
     bool m_borderVisible = true;
     bool m_backgroundVisible = true;

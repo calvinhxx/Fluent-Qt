@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QAbstractButton>
 #include <QAbstractItemView>
 #include <QAccessible>
 #include <QHeaderView>
@@ -9,6 +10,16 @@
 #include <QTableView>
 
 namespace compatibility::detail {
+
+// QTableView exposes the select-all button's enabled state, but has no accessor for the button.
+inline QAbstractButton* tableSelectAllButton(const QTableView& view)
+{
+    for (QObject* child : view.children()) {
+        if (child->inherits("QTableCornerButton"))
+            return qobject_cast<QAbstractButton*>(child);
+    }
+    return nullptr;
+}
 
 // A secondary table shares selection and headers without QTableView's automatic
 // currentRowChanged -> model.submit connection. The primary view owns submission.
