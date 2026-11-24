@@ -150,10 +150,10 @@ def _cpp_commands(
 
     test_pattern = (
         "_(application_test|quality_report)$"
-        if starter == "workbench"
+        if starter in ("workbench", "monitor")
         else "_summary_test$"
     )
-    window_suffix = "ui_smoke" if starter == "workbench" else "panel_smoke"
+    window_suffix = "ui_smoke" if starter in ("workbench", "monitor") else "panel_smoke"
     common_ctest = [
         "ctest",
         "--test-dir",
@@ -188,7 +188,7 @@ def _python_commands(
 ) -> list[tuple[str, list[str], Path | None, Mapping[str, str] | None]]:
     environment = _python_environment(target)
     module = "first_window_trial"
-    entry = "main" if starter == "workbench" else "demo"
+    entry = "main" if starter in ("workbench", "monitor") else "demo"
     return [
         (
             "tests",
@@ -384,7 +384,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=("cpp", "python"), default="cpp")
     parser.add_argument(
-        "--starter", choices=("existing-qt", "workbench"), default="workbench"
+        "--starter", choices=("existing-qt", "monitor", "workbench"), default="workbench"
     )
     parser.add_argument(
         "--target", type=Path, help="Keep the generated project at this new path."

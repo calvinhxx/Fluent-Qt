@@ -1,0 +1,73 @@
+#pragma once
+
+#include <QWidget>
+
+class QBoxLayout;
+class QResizeEvent;
+class QVBoxLayout;
+
+namespace fluent::basicinput {
+class Button;
+}
+namespace fluent::charts {
+class ChartModel;
+class LineChart;
+}
+namespace fluent::collections {
+class DataGrid;
+}
+namespace fluent::scrolling {
+class ScrollView;
+}
+namespace fluent::status_info {
+class InfoBadge;
+}
+namespace fluent::textfields {
+class Label;
+class LineEdit;
+}
+namespace @APP_NAMESPACE@::application {
+struct MonitorViewState;
+}
+
+namespace @APP_NAMESPACE@::ui {
+
+class TelemetryTableModel;
+
+class MonitorPage final : public QWidget {
+public:
+    explicit MonitorPage(QWidget* parent = nullptr);
+
+    fluent::textfields::LineEdit* filterInput() const;
+    fluent::basicinput::Button* refreshButton() const;
+    fluent::basicinput::Button* themeButton() const;
+    void renderSnapshot(const application::MonitorViewState& state);
+    void renderFilter(const application::MonitorViewState& state);
+    void renderTheme(bool darkTheme);
+
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
+private:
+    void updateResponsiveLayout();
+
+    fluent::scrolling::ScrollView* m_scrollView = nullptr;
+    QVBoxLayout* m_contentLayout = nullptr;
+    QBoxLayout* m_headerLayout = nullptr;
+    QBoxLayout* m_kpiLayout = nullptr;
+    fluent::textfields::LineEdit* m_filterInput = nullptr;
+    fluent::basicinput::Button* m_refreshButton = nullptr;
+    fluent::basicinput::Button* m_themeButton = nullptr;
+    fluent::textfields::Label* m_channelsValue = nullptr;
+    fluent::textfields::Label* m_latencyValue = nullptr;
+    fluent::textfields::Label* m_healthLabel = nullptr;
+    fluent::textfields::Label* m_themeValue = nullptr;
+    fluent::status_info::InfoBadge* m_healthBadge = nullptr;
+    fluent::charts::LineChart* m_chart = nullptr;
+    fluent::charts::ChartModel* m_p95Model = nullptr;
+    fluent::charts::ChartModel* m_p50Model = nullptr;
+    fluent::collections::DataGrid* m_grid = nullptr;
+    TelemetryTableModel* m_tableModel = nullptr;
+};
+
+} // namespace @APP_NAMESPACE@::ui

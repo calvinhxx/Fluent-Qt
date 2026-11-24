@@ -319,7 +319,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         "--language", choices=("cpp", "pyside6"), default="cpp"
     )
     parser.add_argument(
-        "--starter", choices=("existing-qt", "workbench"), default="workbench"
+        "--starter", choices=("existing-qt", "monitor", "workbench"), default="workbench"
     )
     parser.add_argument("--accent", default="#3A63E8")
     parser.add_argument("--dry-run", action="store_true")

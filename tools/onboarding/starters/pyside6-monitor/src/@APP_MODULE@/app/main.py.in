@@ -1,0 +1,52 @@
+from __future__ import annotations
+
+import json
+import sys
+
+import fluentqt
+
+fluentqt.prepare_high_dpi_application()
+
+from PySide6.QtCore import QEvent, QTimer
+from PySide6.QtWidgets import QApplication
+
+from @APP_MODULE@.application.monitor_controller import MonitorController
+from @APP_MODULE@.infrastructure.local_telemetry_repository import (
+    LocalTelemetryRepository,
+)
+from @APP_MODULE@.ui.shell.main_window import MainWindow
+from @APP_MODULE@.ui.theme.brand_theme import apply_brand_theme
+
+
+def main(argv: list[str] | None = None) -> int:
+    arguments = list(sys.argv if argv is None else argv)
+    application = QApplication(arguments)
+    application.setApplicationName(@APP_NAME_PY@)
+    fluentqt.initialize_resources()
+    apply_brand_theme(False)
+
+    controller = MonitorController(LocalTelemetryRepository())
+    window = MainWindow(controller)
+    window.show()
+
+    if "--quality-report" in arguments:
+        def write_quality_report() -> None:
+            try:
+                QApplication.sendPostedEvents(None, QEvent.Type.LayoutRequest)
+                application.processEvents()
+                report = fluentqt.inspect_widget(window.contentWidget())
+                print(json.dumps(report, separators=(",", ":"), sort_keys=True))
+            except Exception as error:
+                print(f"quality report failed: {error}", file=sys.stderr)
+                application.exit(2)
+                return
+            application.quit()
+
+        QTimer.singleShot(0, write_quality_report)
+    elif "--smoke-test" in arguments:
+        QTimer.singleShot(0, application.quit)
+    return application.exec()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

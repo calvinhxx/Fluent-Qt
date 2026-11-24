@@ -1,0 +1,88 @@
+#include "application/MonitorController.h"
+
+#include <algorithm>
+#include <cctype>
+#include <utility>
+
+namespace @APP_NAMESPACE@::application {
+namespace {
+
+std::string toLowerAscii(std::string text)
+{
+    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return text;
+}
+
+bool containsCaseInsensitive(const std::string& haystack,
+                             const std::string& lowerNeedle)
+{
+    if (lowerNeedle.empty())
+        return true;
+    return toLowerAscii(haystack).find(lowerNeedle) != std::string::npos;
+}
+
+} // namespace
+
+MonitorController::MonitorController(TelemetryRepository& repository)
+    : m_repository(repository)
+{
+    refresh();
+}
+
+const MonitorViewState& MonitorController::state() const
+{
+    return m_state;
+}
+
+void MonitorController::refresh()
+{
+    m_snapshot = m_repository.nextSnapshot();
+    m_state.workspace = m_snapshot.workspace;
+    m_state.activeChannels = static_cast<int>(m_snapshot.events.size());
+    int maxLatency = 0;
+    bool allHealthy = !m_snapshot.events.empty();
+    for (const auto& event : m_snapshot.events) {
+        if (event.latencyMs > maxLatency)
+            maxLatency = event.latencyMs;
+        if (event.status != "Healthy")
+            allHealthy = false;
+    }
+    if (!m_snapshot.p95Series.empty()) {
+        maxLatency = static_cast<int>(m_snapshot.p95Series.back().value + 0.5);
+    }
+    m_state.p95LatencyMs = maxLatency;
+    m_state.healthy = allHealthy;
+    m_state.labels = m_snapshot.labels;
+    m_state.p95Series = m_snapshot.p95Series;
+    m_state.p50Series = m_snapshot.p50Series;
+    rebuildFilteredEvents();
+}
+
+void MonitorController::setFilter(std::string query)
+{
+    m_state.filterQuery = std::move(query);
+    rebuildFilteredEvents();
+}
+
+void MonitorController::toggleTheme()
+{
+    m_state.darkTheme = !m_state.darkTheme;
+}
+
+void MonitorController::rebuildFilteredEvents()
+{
+    const std::string needle = toLowerAscii(m_state.filterQuery);
+    m_state.filteredEvents.clear();
+    for (const auto& event : m_snapshot.events) {
+        if (needle.empty()
+            || containsCaseInsensitive(event.channel, needle)
+            || containsCaseInsensitive(event.region, needle)
+            || containsCaseInsensitive(event.status, needle)) {
+            m_state.filteredEvents.push_back(event);
+        }
+    }
+}
+
+} // namespace @APP_NAMESPACE@::application

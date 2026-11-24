@@ -1,0 +1,28 @@
+#pragma once
+
+#include <string>
+#include <vector>
+
+namespace @APP_NAMESPACE@::domain {
+
+struct MetricPoint {
+    int step = 0;
+    double value = 0.0;
+};
+
+struct TelemetryEvent {
+    std::string channel;
+    std::string region;
+    int latencyMs = 0;
+    std::string status;
+};
+
+struct TelemetrySnapshot {
+    std::string workspace;
+    std::vector<std::string> labels;
+    std::vector<MetricPoint> p95Series;
+    std::vector<MetricPoint> p50Series;
+    std::vector<TelemetryEvent> events;
+};
+
+} // namespace @APP_NAMESPACE@::domain

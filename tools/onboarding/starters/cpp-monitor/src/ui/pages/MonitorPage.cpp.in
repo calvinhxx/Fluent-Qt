@@ -1,0 +1,294 @@
+#include "ui/pages/MonitorPage.h"
+
+#include <FluentQt/FluentQt.h>
+
+#include <QBoxLayout>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QPointF>
+#include <QResizeEvent>
+#include <QStringList>
+#include <QVBoxLayout>
+
+#include "application/MonitorController.h"
+#include "ui/models/TelemetryTableModel.h"
+
+namespace @APP_NAMESPACE@::ui {
+namespace {
+
+constexpr int CompactPageBreakpoint = 760;
+
+QString text(const std::string& value)
+{
+    return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
+}
+
+fluent::layout::Card* metricCard(const QString& title, QWidget* parent,
+                                 QVBoxLayout*& content)
+{
+    auto* card = new fluent::layout::Card(parent);
+    card->setAppearance(fluent::layout::Card::LayerAlt);
+    content = new QVBoxLayout(card);
+    content->setContentsMargins(14, 12, 14, 12);
+    content->setSpacing(4);
+    auto* heading = new fluent::textfields::Label(title, card);
+    heading->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    content->addWidget(heading);
+    return card;
+}
+
+QVector<QPointF> toChartPoints(const std::vector<domain::MetricPoint>& points)
+{
+    QVector<QPointF> result;
+    result.reserve(static_cast<int>(points.size()));
+    for (const auto& point : points) {
+        result.append(QPointF(static_cast<qreal>(point.step),
+                              static_cast<qreal>(point.value)));
+    }
+    return result;
+}
+
+QStringList toChartLabels(const std::vector<std::string>& labels)
+{
+    QStringList result;
+    result.reserve(static_cast<int>(labels.size()));
+    for (const auto& label : labels)
+        result.append(text(label));
+    return result;
+}
+
+} // namespace
+
+MonitorPage::MonitorPage(QWidget* parent)
+    : QWidget(parent)
+{
+    auto* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    m_scrollView = new fluent::scrolling::ScrollView(this);
+    m_scrollView->setHorizontalScrollMode(
+        fluent::scrolling::ScrollView::ScrollMode::Disabled);
+    m_scrollView->setWidgetResizable(true);
+    outer->addWidget(m_scrollView);
+
+    auto* content = new QWidget(m_scrollView);
+    m_contentLayout = new QVBoxLayout(content);
+    m_contentLayout->setContentsMargins(24, 14, 24, 14);
+    m_contentLayout->setSpacing(10);
+
+    m_headerLayout = new QBoxLayout(QBoxLayout::LeftToRight);
+    m_headerLayout->setContentsMargins(0, 0, 0, 0);
+    m_headerLayout->setSpacing(12);
+
+    auto* titleStack = new QVBoxLayout;
+    titleStack->setSpacing(2);
+    auto* title = new fluent::textfields::Label(
+        QStringLiteral("Operations Monitor"), content);
+    title->setFluentTypography(Typography::FontRole::Title);
+    titleStack->addWidget(title);
+
+    auto* subtitle = new fluent::textfields::Label(
+        QStringLiteral("Live gateway latency and channel status"), content);
+    subtitle->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    subtitle->setWordWrap(true);
+    titleStack->addWidget(subtitle);
+    m_headerLayout->addLayout(titleStack, 1);
+
+    auto* controlsRow = new QHBoxLayout;
+    controlsRow->setContentsMargins(0, 0, 0, 0);
+    controlsRow->setSpacing(8);
+
+    m_filterInput = new fluent::textfields::LineEdit(content);
+    m_filterInput->setMinimumWidth(220);
+    m_filterInput->setPlaceholderText(
+        QStringLiteral("Filter channels, regions, or status"));
+    m_filterInput->setClearButtonEnabled(true);
+    m_filterInput->setAccessibleName(
+        QStringLiteral("Filter telemetry events"));
+    controlsRow->addWidget(m_filterInput, 1);
+
+    m_refreshButton = new fluent::basicinput::Button(
+        QStringLiteral("Refresh"), content);
+    m_refreshButton->setFluentStyle(fluent::basicinput::Button::Accent);
+    m_refreshButton->setAccessibleName(QStringLiteral("Refresh telemetry"));
+    controlsRow->addWidget(m_refreshButton, 0, Qt::AlignVCenter);
+    m_headerLayout->addLayout(controlsRow);
+    m_contentLayout->addLayout(m_headerLayout);
+
+    m_contentLayout->addWidget(
+        new fluent::layout::Divider(Qt::Horizontal, content));
+
+    m_kpiLayout = new QBoxLayout(QBoxLayout::LeftToRight);
+    m_kpiLayout->setContentsMargins(0, 0, 0, 0);
+    m_kpiLayout->setSpacing(12);
+
+    QVBoxLayout* channelsLayout = nullptr;
+    auto* channelsCard = metricCard(QStringLiteral("Active channels"), content,
+                                    channelsLayout);
+    m_channelsValue = new fluent::textfields::Label(channelsCard);
+    m_channelsValue->setFluentTypography(Typography::FontRole::Title);
+    channelsLayout->addWidget(m_channelsValue);
+    auto* channelsNote = new fluent::textfields::Label(
+        QStringLiteral("Monitored edge & pipeline endpoints"), channelsCard);
+    channelsNote->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    channelsNote->setWordWrap(true);
+    channelsLayout->addWidget(channelsNote);
+    m_kpiLayout->addWidget(channelsCard, 1);
+
+    QVBoxLayout* latencyLayout = nullptr;
+    auto* latencyCard = metricCard(QStringLiteral("P95 latency"), content,
+                                   latencyLayout);
+    m_latencyValue = new fluent::textfields::Label(latencyCard);
+    m_latencyValue->setFluentTypography(Typography::FontRole::Title);
+    latencyLayout->addWidget(m_latencyValue);
+    auto* latencyNote = new fluent::textfields::Label(
+        QStringLiteral("Current rolling sample window"), latencyCard);
+    latencyNote->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    latencyNote->setWordWrap(true);
+    latencyLayout->addWidget(latencyNote);
+    m_kpiLayout->addWidget(latencyCard, 1);
+
+    QVBoxLayout* healthLayout = nullptr;
+    auto* healthCard = metricCard(QStringLiteral("Service health"), content,
+                                  healthLayout);
+    auto* healthRow = new QHBoxLayout;
+    healthRow->setContentsMargins(0, 0, 0, 0);
+    healthRow->setSpacing(8);
+    m_healthBadge = new fluent::status_info::InfoBadge(healthCard);
+    m_healthBadge->setDisplayMode(
+        fluent::status_info::InfoBadge::InfoBadgeDisplayMode::Dot);
+    healthRow->addWidget(m_healthBadge, 0, Qt::AlignVCenter);
+    m_healthLabel = new fluent::textfields::Label(healthCard);
+    m_healthLabel->setFluentTypography(Typography::FontRole::Subtitle);
+    healthRow->addWidget(m_healthLabel);
+    healthRow->addStretch();
+    healthLayout->addLayout(healthRow);
+
+    auto* themeRow = new QHBoxLayout;
+    themeRow->setContentsMargins(0, 0, 0, 0);
+    themeRow->setSpacing(8);
+    m_themeValue = new fluent::textfields::Label(healthCard);
+    m_themeValue->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    themeRow->addWidget(m_themeValue);
+    themeRow->addStretch();
+    m_themeButton = new fluent::basicinput::Button(healthCard);
+    m_themeButton->setAccessibleName(QStringLiteral("Change color theme"));
+    themeRow->addWidget(m_themeButton);
+    healthLayout->addLayout(themeRow);
+    m_kpiLayout->addWidget(healthCard, 1);
+    m_contentLayout->addLayout(m_kpiLayout);
+
+    auto* chartCard = new fluent::layout::Card(content);
+    chartCard->setAppearance(fluent::layout::Card::Canvas);
+    auto* chartLayout = new QVBoxLayout(chartCard);
+    chartLayout->setContentsMargins(12, 10, 12, 10);
+    chartLayout->setSpacing(8);
+
+    m_chart = new fluent::charts::LineChart(chartCard);
+    m_chart->setMinimumHeight(210);
+    m_chart->setMaximumHeight(225);
+    m_chart->setTitle(QStringLiteral("Response latency"));
+    m_chart->setSubtitle(QStringLiteral("Milliseconds · p95 vs baseline"));
+    m_chart->setValueSuffix(QStringLiteral(" ms"));
+    m_chart->setYRange(0, 80);
+    m_chart->setAccessibleName(QStringLiteral("Response latency chart"));
+
+    m_p95Model = new fluent::charts::ChartModel(m_chart);
+    m_p95Model->setName(QStringLiteral("P95 latency"));
+    m_chart->setModel(m_p95Model);
+
+    m_p50Model = new fluent::charts::ChartModel(m_chart);
+    m_p50Model->setName(QStringLiteral("Baseline"));
+    m_chart->addSeries(m_p50Model);
+
+    chartLayout->addWidget(m_chart);
+    m_contentLayout->addWidget(chartCard, 1);
+
+    m_tableModel = new TelemetryTableModel(this);
+    m_grid = new fluent::collections::DataGrid(content);
+    m_grid->setModel(m_tableModel);
+    m_grid->setSelectionMode(fluent::collections::SelectionMode::Single);
+    m_grid->setScrollChainingEnabled(false);
+    m_grid->setPlaceholderText(QStringLiteral("No matching telemetry events"));
+    m_grid->setAccessibleName(QStringLiteral("Telemetry events"));
+    m_grid->setMinimumHeight(190);
+    m_grid->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_contentLayout->addWidget(m_grid, 1);
+
+    m_scrollView->setWidget(content);
+}
+
+fluent::textfields::LineEdit* MonitorPage::filterInput() const
+{
+    return m_filterInput;
+}
+
+fluent::basicinput::Button* MonitorPage::refreshButton() const
+{
+    return m_refreshButton;
+}
+
+fluent::basicinput::Button* MonitorPage::themeButton() const
+{
+    return m_themeButton;
+}
+
+void MonitorPage::renderSnapshot(const application::MonitorViewState& state)
+{
+    m_channelsValue->setText(QString::number(state.activeChannels));
+    m_latencyValue->setText(QStringLiteral("%1 ms").arg(state.p95LatencyMs));
+    m_healthLabel->setText(
+        state.healthy ? QStringLiteral("All healthy")
+                      : QStringLiteral("Attention needed"));
+    m_healthBadge->setStatus(
+        state.healthy
+            ? fluent::status_info::InfoBadge::InfoBadgeStatus::Success
+            : fluent::status_info::InfoBadge::InfoBadgeStatus::Caution);
+    renderTheme(state.darkTheme);
+
+    const QStringList labels = toChartLabels(state.labels);
+    m_p95Model->setPoints(toChartPoints(state.p95Series), labels);
+    m_p50Model->setPoints(toChartPoints(state.p50Series), labels);
+    m_tableModel->setEvents(state.filteredEvents);
+}
+
+void MonitorPage::renderFilter(const application::MonitorViewState& state)
+{
+    m_tableModel->setEvents(state.filteredEvents);
+}
+
+void MonitorPage::renderTheme(bool darkTheme)
+{
+    m_themeValue->setText(
+        darkTheme ? QStringLiteral("Dark theme")
+                  : QStringLiteral("Light theme"));
+    m_themeButton->setText(
+        darkTheme ? QStringLiteral("Use light theme")
+                  : QStringLiteral("Use dark theme"));
+}
+
+void MonitorPage::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    updateResponsiveLayout();
+}
+
+void MonitorPage::updateResponsiveLayout()
+{
+    const bool compact = width() < CompactPageBreakpoint;
+    m_headerLayout->setDirection(
+        compact ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+    m_kpiLayout->setDirection(
+        compact ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+    m_contentLayout->setContentsMargins(
+        compact ? 16 : 24, compact ? 12 : 14, compact ? 16 : 24,
+        compact ? 12 : 14);
+}
+
+} // namespace @APP_NAMESPACE@::ui

@@ -1,0 +1,24 @@
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class MetricPoint:
+    step: int
+    value: float
+
+
+@dataclass(frozen=True)
+class TelemetryEvent:
+    channel: str
+    region: str
+    latency_ms: int
+    status: str
+
+
+@dataclass(frozen=True)
+class TelemetrySnapshot:
+    workspace: str
+    labels: tuple[str, ...]
+    p95_series: tuple[MetricPoint, ...]
+    p50_series: tuple[MetricPoint, ...]
+    events: tuple[TelemetryEvent, ...]

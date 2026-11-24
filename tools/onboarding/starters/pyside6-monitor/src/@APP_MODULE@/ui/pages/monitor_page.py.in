@@ -1,0 +1,239 @@
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtWidgets import (
+    QBoxLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QVBoxLayout,
+    QWidget,
+)
+
+import fluentqt
+from fluentqt.basicinput import Button
+from fluentqt.charts import ChartModel, LineChart
+from fluentqt.collections import DataGrid, SelectionMode
+from fluentqt.layout import Card, Divider
+from fluentqt.scrolling import ScrollView
+from fluentqt.status_info import InfoBadge
+from fluentqt.textfields import Label, LineEdit
+
+from @APP_MODULE@.application.monitor_controller import MonitorViewState
+from @APP_MODULE@.ui.models.telemetry_table_model import TelemetryTableModel
+
+_COMPACT_PAGE_BREAKPOINT = 760
+
+
+def _metric_card(title: str, parent: QWidget) -> tuple[Card, QVBoxLayout]:
+    card = Card(parent)
+    card.setAppearance(Card.Appearance.LayerAlt)
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(14, 12, 14, 12)
+    layout.setSpacing(4)
+    heading = Label(title, card)
+    heading.setTextColorRole(Label.TextColorRole.Secondary)
+    layout.addWidget(heading)
+    return card, layout
+
+
+class MonitorPage(QWidget):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self._scroll_view = ScrollView(self)
+        self._scroll_view.setHorizontalScrollMode(ScrollView.ScrollMode.Disabled)
+        self._scroll_view.setWidgetResizable(True)
+        outer.addWidget(self._scroll_view)
+
+        content = QWidget(self._scroll_view)
+        self._content_layout = QVBoxLayout(content)
+        self._content_layout.setContentsMargins(24, 14, 24, 14)
+        self._content_layout.setSpacing(10)
+
+        self._header = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._header.setContentsMargins(0, 0, 0, 0)
+        self._header.setSpacing(12)
+
+        title_stack = QVBoxLayout()
+        title_stack.setSpacing(2)
+        title = Label("Operations Monitor", content)
+        title.setFluentTypography(fluentqt.FontRole.Title)
+        title_stack.addWidget(title)
+        subtitle = Label("Live gateway latency and channel status", content)
+        subtitle.setTextColorRole(Label.TextColorRole.Secondary)
+        subtitle.setWordWrap(True)
+        title_stack.addWidget(subtitle)
+        self._header.addLayout(title_stack, 1)
+
+        controls_row = QHBoxLayout()
+        controls_row.setContentsMargins(0, 0, 0, 0)
+        controls_row.setSpacing(8)
+
+        self.filter_input = LineEdit(content)
+        self.filter_input.setMinimumWidth(220)
+        self.filter_input.setPlaceholderText(
+            "Filter channels, regions, or status"
+        )
+        self.filter_input.setClearButtonEnabled(True)
+        self.filter_input.setAccessibleName("Filter telemetry events")
+        controls_row.addWidget(self.filter_input, 1)
+
+        self.refresh_button = Button("Refresh", content)
+        self.refresh_button.setFluentStyle(Button.ButtonStyle.Accent)
+        self.refresh_button.setAccessibleName("Refresh telemetry")
+        controls_row.addWidget(
+            self.refresh_button, 0, Qt.AlignmentFlag.AlignVCenter
+        )
+        self._header.addLayout(controls_row)
+        self._content_layout.addLayout(self._header)
+        self._content_layout.addWidget(
+            Divider(Qt.Orientation.Horizontal, content)
+        )
+
+        self._kpi_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._kpi_layout.setContentsMargins(0, 0, 0, 0)
+        self._kpi_layout.setSpacing(12)
+
+        channels_card, channels_layout = _metric_card(
+            "Active channels", content
+        )
+        self._channels_value = Label(channels_card)
+        self._channels_value.setFluentTypography(fluentqt.FontRole.Title)
+        channels_layout.addWidget(self._channels_value)
+        channels_note = Label(
+            "Monitored edge & pipeline endpoints", channels_card
+        )
+        channels_note.setTextColorRole(Label.TextColorRole.Secondary)
+        channels_note.setWordWrap(True)
+        channels_layout.addWidget(channels_note)
+        self._kpi_layout.addWidget(channels_card, 1)
+
+        latency_card, latency_layout = _metric_card("P95 latency", content)
+        self._latency_value = Label(latency_card)
+        self._latency_value.setFluentTypography(fluentqt.FontRole.Title)
+        latency_layout.addWidget(self._latency_value)
+        latency_note = Label("Current rolling sample window", latency_card)
+        latency_note.setTextColorRole(Label.TextColorRole.Secondary)
+        latency_note.setWordWrap(True)
+        latency_layout.addWidget(latency_note)
+        self._kpi_layout.addWidget(latency_card, 1)
+
+        health_card, health_layout = _metric_card("Service health", content)
+        health_row = QHBoxLayout()
+        health_row.setContentsMargins(0, 0, 0, 0)
+        health_row.setSpacing(8)
+        self._health_badge = InfoBadge(health_card)
+        self._health_badge.setDisplayMode(InfoBadge.InfoBadgeDisplayMode.Dot)
+        health_row.addWidget(
+            self._health_badge, 0, Qt.AlignmentFlag.AlignVCenter
+        )
+        self._health_label = Label(health_card)
+        self._health_label.setFluentTypography(fluentqt.FontRole.Subtitle)
+        health_row.addWidget(self._health_label)
+        health_row.addStretch()
+        health_layout.addLayout(health_row)
+
+        theme_row = QHBoxLayout()
+        theme_row.setContentsMargins(0, 0, 0, 0)
+        theme_row.setSpacing(8)
+        self._theme_value = Label(health_card)
+        self._theme_value.setTextColorRole(Label.TextColorRole.Secondary)
+        theme_row.addWidget(self._theme_value)
+        theme_row.addStretch()
+        self.theme_button = Button(health_card)
+        self.theme_button.setAccessibleName("Change color theme")
+        theme_row.addWidget(self.theme_button)
+        health_layout.addLayout(theme_row)
+        self._kpi_layout.addWidget(health_card, 1)
+        self._content_layout.addLayout(self._kpi_layout)
+
+        chart_card = Card(content)
+        chart_card.setAppearance(Card.Appearance.Canvas)
+        chart_layout = QVBoxLayout(chart_card)
+        chart_layout.setContentsMargins(12, 10, 12, 10)
+        chart_layout.setSpacing(8)
+
+        self._chart = LineChart(chart_card)
+        self._chart.setMinimumHeight(210)
+        self._chart.setMaximumHeight(225)
+        self._chart.setTitle("Response latency")
+        self._chart.setSubtitle("Milliseconds · p95 vs baseline")
+        self._chart.setValueSuffix(" ms")
+        self._chart.setYRange(0, 80)
+        self._chart.setAccessibleName("Response latency chart")
+
+        self._p95_model = ChartModel(self._chart)
+        self._p95_model.setName("P95 latency")
+        self._chart.setModel(self._p95_model)
+
+        self._p50_model = ChartModel(self._chart)
+        self._p50_model.setName("Baseline")
+        self._chart.addSeries(self._p50_model)
+
+        chart_layout.addWidget(self._chart)
+        self._content_layout.addWidget(chart_card, 1)
+
+        self._table_model = TelemetryTableModel(self)
+        self._grid = DataGrid(content)
+        self._grid.setModel(self._table_model)
+        self._grid.setSelectionMode(SelectionMode.Single)
+        self._grid.setScrollChainingEnabled(False)
+        self._grid.setPlaceholderText("No matching telemetry events")
+        self._grid.setAccessibleName("Telemetry events")
+        self._grid.setMinimumHeight(190)
+        self._grid.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self._content_layout.addWidget(self._grid, 1)
+
+        self._scroll_view.setWidget(content)
+
+    def render_snapshot(self, state: MonitorViewState) -> None:
+        self._channels_value.setText(str(state.active_channels))
+        self._latency_value.setText(f"{state.p95_latency_ms} ms")
+        self._health_label.setText(
+            "All healthy" if state.healthy else "Attention needed"
+        )
+        self._health_badge.setStatus(
+            InfoBadge.InfoBadgeStatus.Success
+            if state.healthy
+            else InfoBadge.InfoBadgeStatus.Caution
+        )
+        self.render_theme(state.dark_theme)
+
+        labels = list(state.labels)
+        self._p95_model.setPoints(
+            [QPointF(point.step, point.value) for point in state.p95_series],
+            labels,
+        )
+        self._p50_model.setPoints(
+            [QPointF(point.step, point.value) for point in state.p50_series],
+            labels,
+        )
+        self._table_model.set_events(state.filtered_events)
+
+    def render_filter(self, state: MonitorViewState) -> None:
+        self._table_model.set_events(state.filtered_events)
+
+    def render_theme(self, dark_theme: bool) -> None:
+        self._theme_value.setText(
+            "Dark theme" if dark_theme else "Light theme"
+        )
+        self.theme_button.setText(
+            "Use light theme" if dark_theme else "Use dark theme"
+        )
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        compact = self.width() < _COMPACT_PAGE_BREAKPOINT
+        direction = (
+            QBoxLayout.Direction.TopToBottom
+            if compact
+            else QBoxLayout.Direction.LeftToRight
+        )
+        self._header.setDirection(direction)
+        self._kpi_layout.setDirection(direction)
+        side = 16 if compact else 24
+        top = 12 if compact else 14
+        self._content_layout.setContentsMargins(side, top, side, top)

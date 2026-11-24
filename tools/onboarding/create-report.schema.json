@@ -24,8 +24,10 @@
     "template": {
       "enum": [
         "cpp-existing-qt",
+        "cpp-monitor",
         "cpp-workbench",
         "pyside6-existing-qt",
+        "pyside6-monitor",
         "pyside6-workbench"
       ]
     },

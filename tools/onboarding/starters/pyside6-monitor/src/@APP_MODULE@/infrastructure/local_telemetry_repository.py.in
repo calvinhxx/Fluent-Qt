@@ -1,0 +1,84 @@
+from @APP_MODULE@.domain.telemetry import (
+    MetricPoint,
+    TelemetryEvent,
+    TelemetrySnapshot,
+)
+
+
+_LABELS = (
+    "09:00",
+    "09:10",
+    "09:20",
+    "09:30",
+    "09:40",
+    "09:50",
+    "10:00",
+    "10:10",
+    "10:20",
+    "10:30",
+    "10:40",
+    "10:50",
+)
+
+
+class LocalTelemetryRepository:
+    def __init__(self) -> None:
+        self._cycle = 0
+
+    def next_snapshot(self) -> TelemetrySnapshot:
+        alternate = (self._cycle % 2) == 1
+        self._cycle += 1
+        if not alternate:
+            return TelemetrySnapshot(
+                workspace=@APP_NAME_PY@,
+                labels=_LABELS,
+                p95_series=tuple(
+                    MetricPoint(step, value)
+                    for step, value in enumerate(
+                        (32, 35, 31, 38, 42, 39, 44, 41, 46, 43, 40, 38)
+                    )
+                ),
+                p50_series=tuple(
+                    MetricPoint(step, value)
+                    for step, value in enumerate(
+                        (16, 18, 17, 19, 21, 20, 22, 21, 24, 22, 20, 19)
+                    )
+                ),
+                events=(
+                    TelemetryEvent("gw-edge-01", "us-west", 24, "Healthy"),
+                    TelemetryEvent("gw-edge-02", "us-east", 29, "Healthy"),
+                    TelemetryEvent("ingest-api", "eu-central", 38, "Healthy"),
+                    TelemetryEvent("stream-bus", "ap-east", 34, "Healthy"),
+                    TelemetryEvent("serial-plc-4", "cn-north", 19, "Healthy"),
+                    TelemetryEvent("telemetry-db", "us-west", 27, "Healthy"),
+                    TelemetryEvent("alert-worker", "eu-west", 31, "Healthy"),
+                    TelemetryEvent("sync-relay", "ap-south", 26, "Healthy"),
+                ),
+            )
+
+        return TelemetrySnapshot(
+            workspace=@APP_NAME_PY@,
+            labels=_LABELS,
+            p95_series=tuple(
+                MetricPoint(step, value)
+                for step, value in enumerate(
+                    (35, 38, 41, 47, 52, 49, 58, 54, 61, 57, 53, 48)
+                )
+            ),
+            p50_series=tuple(
+                MetricPoint(step, value)
+                for step, value in enumerate(
+                    (18, 20, 21, 23, 25, 24, 28, 27, 30, 28, 26, 24)
+                )
+            ),
+            events=(
+                TelemetryEvent("gw-edge-01", "us-west", 28, "Healthy"),
+                TelemetryEvent("gw-edge-02", "us-east", 33, "Healthy"),
+                TelemetryEvent("ingest-api", "eu-central", 48, "Degraded"),
+                TelemetryEvent("stream-bus", "ap-east", 42, "Healthy"),
+                TelemetryEvent("serial-plc-4", "cn-north", 22, "Healthy"),
+                TelemetryEvent("telemetry-db", "us-west", 31, "Healthy"),
+                TelemetryEvent("alert-worker", "eu-west", 44, "Degraded"),
+                TelemetryEvent("sync-relay", "ap-south", 29, "Healthy"),
+            ),
+        )
