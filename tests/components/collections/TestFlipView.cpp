@@ -1,6 +1,5 @@
 #include "compatibility/QtCompat.h"
 #include "components/collections/FlipView.h"
-#include "components/foundation/FluentElement.h"
 #include <QApplication>
 #include <QImage>
 #include <QPropertyAnimation>
@@ -12,38 +11,9 @@
 
 using namespace fluent::collections;
 
-// ── 测试窗口 ─────────────────────────────────────────────────────────────────
-
-class FlipViewTestWindow : public QWidget, public fluent::FluentElement {
-public:
-    using QWidget::QWidget;
-    void onThemeUpdated() override
-    {
-        const auto& c = themeColors();
-        setStyleSheet(QString("background-color: %1;").arg(c.bgCanvas.name()));
-    }
-};
-
-// ── 测试类 ───────────────────────────────────────────────────────────────────
-
-class FlipViewTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        window = new FlipViewTestWindow();
-        window->setFixedSize(640, 700);
-        window->setWindowTitle("Fluent FlipView Visual Test");
-        window->onThemeUpdated();
-    }
-
-    void TearDown() override { delete window; }
-
-    FlipViewTestWindow* window = nullptr;
-};
-
 // ── 默认属性 ─────────────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, DefaultPropertyValues)
+TEST(FlipViewTest, DefaultPropertyValues)
 {
     FlipView fv;
     EXPECT_EQ(fv.currentIndex(), -1);
@@ -57,78 +27,43 @@ TEST_F(FlipViewTest, DefaultPropertyValues)
 
 // ── 页面管理 ─────────────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, AddPageUpdatesCountAndIndex)
+TEST(FlipViewTest, EditingPagesPreservesTheCurrentPageUntilItIsRemoved)
 {
-    FlipView fv;
-    auto* p1 = new QWidget;
-    fv.addPage(p1);
-    EXPECT_EQ(fv.pageCount(), 1);
-    EXPECT_EQ(fv.currentIndex(), 0);
-    EXPECT_EQ(fv.pageAt(0), p1);
+    FlipView view;
+    QWidget first, middle, last;
+    EXPECT_EQ(view.pageAt(-1), nullptr);
+    EXPECT_EQ(view.pageAt(0), nullptr);
+    view.addPage(&middle);
+    EXPECT_EQ(view.pageCount(), 1);
+    EXPECT_EQ(view.currentIndex(), 0);
+    EXPECT_EQ(view.pageAt(0), &middle);
+    view.addPage(&last);
+    EXPECT_EQ(view.currentIndex(), 0);
+    view.insertPage(0, &first);
+    EXPECT_EQ(view.pageCount(), 3);
+    EXPECT_EQ(view.pageAt(0), &first);
+    EXPECT_EQ(view.pageAt(1), &middle);
+    EXPECT_EQ(view.pageAt(2), &last);
+    EXPECT_EQ(view.pageAt(5), nullptr);
+    EXPECT_EQ(view.currentIndex(), 1);
+
+    view.setCurrentIndex(2);
+    view.removePage(0);
+    EXPECT_EQ(first.parentWidget(), nullptr);
+    EXPECT_EQ(view.pageCount(), 2);
+    EXPECT_EQ(view.currentIndex(), 1);
+    EXPECT_EQ(view.pageAt(1), &last);
+    view.removePage(1);
+    EXPECT_EQ(last.parentWidget(), nullptr);
+    EXPECT_EQ(view.pageAt(0), &middle);
+    EXPECT_EQ(view.currentIndex(), 0);
+    view.removePage(0);
+    EXPECT_EQ(middle.parentWidget(), nullptr);
+    EXPECT_EQ(view.pageCount(), 0);
+    EXPECT_EQ(view.currentIndex(), -1);
 }
 
-TEST_F(FlipViewTest, AddMultiplePages)
-{
-    FlipView fv;
-    auto* p1 = new QWidget;
-    auto* p2 = new QWidget;
-    auto* p3 = new QWidget;
-    fv.addPage(p1);
-    fv.addPage(p2);
-    fv.addPage(p3);
-    EXPECT_EQ(fv.pageCount(), 3);
-    EXPECT_EQ(fv.currentIndex(), 0);
-    EXPECT_EQ(fv.pageAt(2), p3);
-}
-
-TEST_F(FlipViewTest, InsertPageAtBeginning)
-{
-    FlipView fv;
-    auto* p1 = new QWidget;
-    auto* p2 = new QWidget;
-    fv.addPage(p1);
-    fv.insertPage(0, p2);
-    EXPECT_EQ(fv.pageCount(), 2);
-    EXPECT_EQ(fv.pageAt(0), p2);
-    EXPECT_EQ(fv.pageAt(1), p1);
-    EXPECT_EQ(fv.currentIndex(), 1);
-}
-
-TEST_F(FlipViewTest, RemovePageUpdatesCount)
-{
-    FlipView fv;
-    auto* p1 = new QWidget;
-    auto* p2 = new QWidget;
-    fv.addPage(p1);
-    fv.addPage(p2);
-    fv.removePage(0);
-    EXPECT_EQ(fv.pageCount(), 1);
-    EXPECT_EQ(fv.pageAt(0), p2);
-    EXPECT_EQ(p1->parentWidget(), nullptr);
-    delete p1;
-}
-
-TEST_F(FlipViewTest, RemoveLastPageResetsIndex)
-{
-    FlipView fv;
-    auto* p1 = new QWidget;
-    fv.addPage(p1);
-    fv.removePage(0);
-    EXPECT_EQ(fv.pageCount(), 0);
-    EXPECT_EQ(fv.currentIndex(), -1);
-    EXPECT_EQ(p1->parentWidget(), nullptr);
-    delete p1;
-}
-
-TEST_F(FlipViewTest, PageAtOutOfBoundsReturnsNull)
-{
-    FlipView fv;
-    EXPECT_EQ(fv.pageAt(-1), nullptr);
-    EXPECT_EQ(fv.pageAt(0), nullptr);
-    EXPECT_EQ(fv.pageAt(5), nullptr);
-}
-
-TEST_F(FlipViewTest, ExplicitOwnershipReleaseAppliesConfiguredPolicy)
+TEST(FlipViewTest, ExplicitOwnershipReleaseAppliesConfiguredPolicy)
 {
     FlipView fv;
 
@@ -155,7 +90,7 @@ TEST_F(FlipViewTest, ExplicitOwnershipReleaseAppliesConfiguredPolicy)
     EXPECT_FALSE(fv.releasePage(0));
 }
 
-TEST_F(FlipViewTest, HostDestructionHonorsExplicitOwnership)
+TEST(FlipViewTest, HostDestructionHonorsExplicitOwnership)
 {
     QWidget originalParent;
     QPointer<QWidget> owned = new QWidget;
@@ -175,7 +110,7 @@ TEST_F(FlipViewTest, HostDestructionHonorsExplicitOwnership)
     delete borrowed;
 }
 
-TEST_F(FlipViewTest, TakePageTransfersWithoutApplyingOwnership)
+TEST(FlipViewTest, TakePageTransfersWithoutApplyingOwnership)
 {
     QWidget originalParent;
     auto* page = new QWidget(&originalParent);
@@ -191,7 +126,7 @@ TEST_F(FlipViewTest, TakePageTransfersWithoutApplyingOwnership)
     delete taken;
 }
 
-TEST_F(FlipViewTest, RejectsInvalidPagesAndTracksExternalDestruction)
+TEST(FlipViewTest, RejectsInvalidPagesAndTracksExternalDestruction)
 {
     FlipView fv;
     auto* page = new QWidget;
@@ -213,43 +148,27 @@ TEST_F(FlipViewTest, RejectsInvalidPagesAndTracksExternalDestruction)
 
 // ── currentIndex ─────────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, SetCurrentIndexEmitsSignal)
+TEST(FlipViewTest, CurrentIndexClampsAndNotifiesOnlyOnChange)
 {
-    FlipView fv;
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    QSignalSpy spy(&fv, &FlipView::currentIndexChanged);
-    fv.setCurrentIndex(2);
-    ASSERT_GE(spy.count(), 1);
-    EXPECT_EQ(fv.currentIndex(), 2);
-}
-
-TEST_F(FlipViewTest, SetCurrentIndexClampsToRange)
-{
-    FlipView fv;
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.setCurrentIndex(100);
-    EXPECT_EQ(fv.currentIndex(), 1);
-    fv.setCurrentIndex(-5);
-    EXPECT_EQ(fv.currentIndex(), 0);
-}
-
-TEST_F(FlipViewTest, SetSameIndexNoSignal)
-{
-    FlipView fv;
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.setCurrentIndex(1);
-    QSignalSpy spy(&fv, &FlipView::currentIndexChanged);
-    fv.setCurrentIndex(1);
-    EXPECT_EQ(spy.count(), 0);
+    FlipView view;
+    for (int i = 0; i < 3; ++i)
+        view.addPage(new QWidget);
+    QSignalSpy changes(&view, &FlipView::currentIndexChanged);
+    view.setCurrentIndex(1);
+    view.setCurrentIndex(1);
+    view.setCurrentIndex(100);
+    EXPECT_EQ(view.currentIndex(), 2);
+    view.setCurrentIndex(-5);
+    EXPECT_EQ(view.currentIndex(), 0);
+    ASSERT_EQ(changes.count(), 3);
+    EXPECT_EQ(changes.at(0).first().toInt(), 1);
+    EXPECT_EQ(changes.at(1).first().toInt(), 2);
+    EXPECT_EQ(changes.at(2).first().toInt(), 0);
 }
 
 // ── 导航 ─────────────────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, GoNextIncrementsIndex)
+TEST(FlipViewTest, NavigationStopsAtBothEnds)
 {
     FlipView fv;
     fv.addPage(new QWidget);
@@ -260,60 +179,32 @@ TEST_F(FlipViewTest, GoNextIncrementsIndex)
     EXPECT_EQ(fv.currentIndex(), 1);
     fv.goNext();
     EXPECT_EQ(fv.currentIndex(), 2);
-}
-
-TEST_F(FlipViewTest, GoNextAtEndDoesNothing)
-{
-    FlipView fv;
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.setCurrentIndex(1);
     fv.goNext();
-    EXPECT_EQ(fv.currentIndex(), 1);
-}
-
-TEST_F(FlipViewTest, GoPreviousDecrementsIndex)
-{
-    FlipView fv;
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.setCurrentIndex(2);
+    EXPECT_EQ(fv.currentIndex(), 2);
     fv.goPrevious();
     EXPECT_EQ(fv.currentIndex(), 1);
-}
-
-TEST_F(FlipViewTest, GoPreviousAtStartDoesNothing)
-{
-    FlipView fv;
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
+    fv.goPrevious();
+    EXPECT_EQ(fv.currentIndex(), 0);
     fv.goPrevious();
     EXPECT_EQ(fv.currentIndex(), 0);
 }
 
 // ── 方向 ─────────────────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, SetOrientationEmitsSignal)
-{
-    FlipView fv;
-    QSignalSpy spy(&fv, &FlipView::orientationChanged);
-    fv.setOrientation(Qt::Vertical);
-    ASSERT_EQ(spy.count(), 1);
-    EXPECT_EQ(fv.orientation(), Qt::Vertical);
-}
-
-TEST_F(FlipViewTest, SetSameOrientationNoSignal)
+TEST(FlipViewTest, SetOrientationEmitsSignal)
 {
     FlipView fv;
     QSignalSpy spy(&fv, &FlipView::orientationChanged);
     fv.setOrientation(Qt::Horizontal);
     EXPECT_EQ(spy.count(), 0);
+    fv.setOrientation(Qt::Vertical);
+    ASSERT_EQ(spy.count(), 1);
+    EXPECT_EQ(fv.orientation(), Qt::Vertical);
 }
 
 // ── ShowNavigationButtons ────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, ToggleNavigationButtons)
+TEST(FlipViewTest, ToggleNavigationButtons)
 {
     FlipView fv;
     QSignalSpy spy(&fv, &FlipView::showNavigationButtonsChanged);
@@ -325,7 +216,7 @@ TEST_F(FlipViewTest, ToggleNavigationButtons)
 
 // ── ShowPageIndicator ────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, TogglePageIndicator)
+TEST(FlipViewTest, TogglePageIndicator)
 {
     FlipView fv;
     QSignalSpy spy(&fv, &FlipView::showPageIndicatorChanged);
@@ -337,44 +228,16 @@ TEST_F(FlipViewTest, TogglePageIndicator)
 
 // ── SizeHint ─────────────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, SizeHint)
+TEST(FlipViewTest, SizeHint)
 {
     FlipView fv;
     EXPECT_EQ(fv.sizeHint(), QSize(400, 270));
     EXPECT_EQ(fv.minimumSizeHint(), QSize(100, 60));
 }
 
-// ── 移除页面后索引调整 ──────────────────────────────────────────────────────
-
-TEST_F(FlipViewTest, RemoveCurrentPageAdjustsIndex)
-{
-    FlipView fv;
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.addPage(new QWidget);
-    fv.setCurrentIndex(2);
-    fv.removePage(2);
-    EXPECT_EQ(fv.currentIndex(), 1);
-}
-
-TEST_F(FlipViewTest, RemoveBeforeCurrentAdjustsIndex)
-{
-    FlipView fv;
-    auto* p1 = new QWidget;
-    auto* p2 = new QWidget;
-    auto* p3 = new QWidget;
-    fv.addPage(p1);
-    fv.addPage(p2);
-    fv.addPage(p3);
-    fv.setCurrentIndex(2);
-    fv.removePage(0);
-    EXPECT_EQ(fv.currentIndex(), 1);
-    EXPECT_EQ(fv.pageAt(1), p3);
-}
-
 // ── 滚轮/触控板输入 ─────────────────────────────────────────────────────────
 
-TEST_F(FlipViewTest, MouseWheelDiscreteFlipsImmediately)
+TEST(FlipViewTest, MouseWheelDiscreteFlipsImmediately)
 {
     // 鼠标滚轮单次 angleDelta=±120 应立即翻页
     FlipView fv;
@@ -408,7 +271,7 @@ TEST_F(FlipViewTest, MouseWheelDiscreteFlipsImmediately)
     EXPECT_EQ(fv.currentIndex(), 0);
 }
 
-TEST_F(FlipViewTest, WindowsTouchpadHighFreqFlipsOnce)
+TEST(FlipViewTest, WindowsTouchpadHighFreqFlipsOnce)
 {
     // 模拟 Windows 触控板：高频 NoScrollPhase 事件（间隔 10ms, angleDelta=30）
     // 整组手势应只翻一页
@@ -432,7 +295,7 @@ TEST_F(FlipViewTest, WindowsTouchpadHighFreqFlipsOnce)
     EXPECT_EQ(fv.currentIndex(), 1);
 }
 
-TEST_F(FlipViewTest, RdpTouchpadHighFreq120FlipsOnce)
+TEST(FlipViewTest, RdpTouchpadHighFreq120FlipsOnce)
 {
     // 模拟 Mac RDP → Windows：触控板事件映射为 WM_MOUSEWHEEL
     // angleDelta=±120 per event, 高频连续到达, NoScrollPhase
@@ -458,7 +321,7 @@ TEST_F(FlipViewTest, RdpTouchpadHighFreq120FlipsOnce)
     EXPECT_EQ(fv.currentIndex(), 1);
 }
 
-TEST_F(FlipViewTest, NoScrollPhaseNoPendingDuringAnimation)
+TEST(FlipViewTest, NoScrollPhaseNoPendingDuringAnimation)
 {
     // NoScrollPhase 事件在动画期间不设置 pending（防止 RDP 链式翻页）
     // 动画结束后用户可再次操作翻页
@@ -494,7 +357,7 @@ TEST_F(FlipViewTest, NoScrollPhaseNoPendingDuringAnimation)
     EXPECT_EQ(fv.currentIndex(), 2);
 }
 
-TEST_F(FlipViewTest, DisabledStateRendersDistinctly)
+TEST(FlipViewTest, DisabledStateRendersDistinctly)
 {
     FlipView fv;
     fv.addPage(new QWidget());
@@ -527,9 +390,11 @@ public:
 };
 } // namespace
 
-TEST_F(FlipViewTest, ChromeRepaintsAboveOpaquePagesWhenInteractionChanges)
+TEST(FlipViewTest, ChromeRepaintsAboveOpaquePagesWhenInteractionChanges)
 {
-    FlipView view(window);
+    QWidget window;
+    window.resize(640, 700);
+    FlipView view(&window);
     view.setGeometry(20, 20, 320, 180);
     for (int i = 0; i < 3; ++i) {
         auto* page = new QWidget;
@@ -544,7 +409,7 @@ TEST_F(FlipViewTest, ChromeRepaintsAboveOpaquePagesWhenInteractionChanges)
     ASSERT_NE(chrome, nullptr);
     FlipChromePaintCounter counter;
     chrome->installEventFilter(&counter);
-    window->show();
+    window.show();
     QTest::qWait(50);
     const auto expectPaint = [&](const std::function<void()>& change) {
         counter.paints = 0;

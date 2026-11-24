@@ -898,7 +898,7 @@
       "automated_evidence": [
         {
           "kind": "interaction",
-          "test_case": "FlipViewTest.GoNextIncrementsIndex",
+          "test_case": "FlipViewTest.NavigationStopsAtBothEnds",
           "states": [
             "selection"
           ],
