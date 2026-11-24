@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/ko/#gallery"><img src="docs/assets/readme/hero.png" alt="Windows Mica 환경에서 3D 모드로 실행 중인 Fluent-Qt Gallery Home"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/ko/#gallery"><img src="site/assets/gallery/hero-showcase.webp" width="830" alt="Fluent-Qt 애니메이션 데모: Light/Dark Mica Gallery, Page Studio 실시간 C++ WASM 편집, C++/PySide6/.ui 내보내기, SpatialView 3D"></a>
 </p>
 
 <p align="center">

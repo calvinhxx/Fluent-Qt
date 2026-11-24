@@ -22,6 +22,7 @@ from serve import SiteHandler
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WASM_ROOT = ROOT / "build/wasm/app"
 DEFAULT_OUTPUT = ROOT / "build/readme-showcase/hero-showcase.webp"
+SITE_SHOWCASE_MAX_BYTES = 190_000
 FONT_PATH = ROOT / "res/fonts/FluentQtUIDisplay-Semibold.ttf"
 
 CANVAS_WIDTH = 1280
@@ -202,20 +203,6 @@ def compose_frame(
     return frame.convert("RGB")
 
 
-def add_crossfade(
-    frames: list[Image.Image],
-    durations: list[int],
-    start_img: Image.Image,
-    end_img: Image.Image,
-    steps: int = 4,
-    step_ms: int = 80,
-) -> None:
-    for i in range(1, steps + 1):
-        alpha = i / (steps + 1)
-        frames.append(Image.blend(start_img, end_img, alpha))
-        durations.append(step_ms)
-
-
 def capture_raw_scenes(base_url: str) -> dict[str, object]:
     """Drive Page Studio and SpatialView in headless Chromium and return raw PIL captures."""
     with sync_playwright() as playwright:
@@ -267,13 +254,13 @@ def capture_raw_scenes(base_url: str) -> dict[str, object]:
             spatial_page.wait_for_timeout(450)
 
             spatial_frames: list[Image.Image] = []
-            steps = 12
+            steps = 6
             for idx in range(steps):
                 t = idx / max(1, steps - 1)
                 x = 280 + (1160 - 280) * t
                 y = 450 - math.sin(t * math.pi) * 180
                 spatial_page.mouse.move(x, y)
-                spatial_page.wait_for_timeout(90)
+                spatial_page.wait_for_timeout(120)
                 spatial_frames.append(resize_capture(Image.open(BytesIO(spatial_page.screenshot()))))
 
             spatial_page.close()
@@ -290,18 +277,38 @@ def capture_raw_scenes(base_url: str) -> dict[str, object]:
     }
 
 
+def default_max_bytes(output: Path, budget: dict[str, object]) -> int:
+    resolved = output.resolve()
+    for tracked_dir in (ROOT / "site", ROOT / "docs"):
+        try:
+            resolved.relative_to(tracked_dir.resolve())
+            return SITE_SHOWCASE_MAX_BYTES
+        except ValueError:
+            continue
+    return int(budget["max_file_bytes"])
+
+
 def save_animated_webp(frames: list[Image.Image], durations: list[int], output: Path, max_bytes: int) -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
+    scales = (1.0, 0.88, 0.75, 0.70, 0.65) if max_bytes >= 500_000 else (0.75, 0.70, 0.65)
     with TemporaryDirectory(dir=output.parent) as directory:
         candidate = Path(directory) / "showcase.webp"
-        for scale in (1, 0.88):
+        for scale in scales:
             images = frames
             if scale < 1:
                 dimensions = tuple(max(1, round(n * scale)) for n in frames[0].size)
                 images = [frame.resize(dimensions, Image.Resampling.LANCZOS) for frame in frames]
-            for quality in (82, 74, 66):
-                images[0].save(candidate, save_all=True, append_images=images[1:],
-                               duration=durations, loop=0, quality=quality, method=4)
+            for quality in (76, 68, 60):
+                images[0].save(
+                    candidate,
+                    save_all=True,
+                    append_images=images[1:],
+                    duration=durations,
+                    loop=0,
+                    quality=quality,
+                    method=6,
+                    minimize_size=True,
+                )
                 size = candidate.stat().st_size
                 if size <= max_bytes:
                     with Image.open(candidate) as encoded:
@@ -316,6 +323,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wasm-root", type=Path, default=DEFAULT_WASM_ROOT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--max-bytes", type=int, default=None)
     args = parser.parse_args()
 
     wasm_root = args.wasm_root.resolve()
@@ -359,39 +367,25 @@ def main() -> int:
     durations: list[int] = []
 
     # Scene 1: Gallery Light -> Dark Mica (~2.2s)
-    frames.append(frame_gallery_light)
-    durations.append(950)
-    add_crossfade(frames, durations, frame_gallery_light, frame_gallery_dark, steps=4, step_ms=75)
-    frames.append(frame_gallery_dark)
-    durations.append(950)
+    frames.extend((frame_gallery_light, frame_gallery_dark))
+    durations.extend((1100, 1100))
 
-    # Scene 2: Page Studio Live C++ WASM (~2.6s)
-    add_crossfade(frames, durations, frame_gallery_dark, frame_studio_light, steps=3, step_ms=75)
-    frames.append(frame_studio_light)
-    durations.append(850)
-    frames.append(frame_studio_selected)
-    durations.append(750)
-    add_crossfade(frames, durations, frame_studio_selected, frame_studio_dark, steps=3, step_ms=75)
-    frames.append(frame_studio_dark)
-    durations.append(850)
+    # Scene 2: Page Studio Live C++ WASM (~2.9s)
+    frames.extend((frame_studio_light, frame_studio_selected, frame_studio_dark))
+    durations.extend((1000, 900, 1000))
 
-    # Scene 3: 1-Click Export C++17 -> PySide6 -> .ui (~2.2s)
-    frames.append(frame_export_cpp)
-    durations.append(700)
-    frames.append(frame_export_python)
-    durations.append(850)
-    frames.append(frame_export_ui)
-    durations.append(700)
+    # Scene 3: 1-Click Export C++17 -> PySide6 -> .ui (~2.65s)
+    frames.extend((frame_export_cpp, frame_export_python, frame_export_ui))
+    durations.extend((850, 950, 850))
 
-    # Scene 4: Live 3D SpatialView (~2.2s) & seamless loop back to Scene 1
-    add_crossfade(frames, durations, frame_export_ui, frames_spatial[0], steps=3, step_ms=75)
+    # Scene 4: Live 3D SpatialView (~1.3s) & clean loop back to Scene 1
     for idx, spatial_frame in enumerate(frames_spatial):
         frames.append(spatial_frame)
-        durations.append(450 if idx == len(frames_spatial) - 1 else 90)
-    add_crossfade(frames, durations, frames_spatial[-1], frame_gallery_light, steps=4, step_ms=75)
+        durations.append(500 if idx == len(frames_spatial) - 1 else 160)
 
     budget = json.loads((ROOT / "tools/dev/repository-size-budget.json").read_text(encoding="utf-8"))
-    byte_size = save_animated_webp(frames, durations, args.output, budget["max_file_bytes"])
+    max_bytes = args.max_bytes if args.max_bytes is not None else default_max_bytes(args.output, budget)
+    byte_size = save_animated_webp(frames, durations, args.output, max_bytes)
     with Image.open(args.output) as verify_img:
         print(
             f"Generated {args.output}: {verify_img.size[0]}x{verify_img.size[1]}, "

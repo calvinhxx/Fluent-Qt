@@ -428,20 +428,27 @@ artwork as well as its placement on the site. Run `generate_localized_site.py`
 after rendering: it versions Gallery and sharing image URLs from their content,
 so browsers and sharing previews fetch the updated assets.
 
-All nine READMEs link the static Gallery cover to the interactive demo. The
+The root READMEs link the animated showcase at
+`site/assets/gallery/hero-showcase.webp` (published with the site to
+`assets/gallery/hero-showcase.webp`) to the interactive demo, while
+`docs/assets/readme/hero.png` remains the Gallery loading poster. The
 sharing-card renderer rounds each RGB channel by at most one level before PNG
 compression. Keep the existing cover when regenerating only the sharing card.
 
-To record a separate animated demo, build the WASM Gallery and run:
+To regenerate the animated README and site showcase, build the WASM Gallery
+and run:
 
 ```bash
-python3 tools/site/capture_readme_showcase.py --wasm-root build/wasm/app
+python3 tools/site/capture_readme_showcase.py \
+  --wasm-root build/wasm/app \
+  --output site/assets/gallery/hero-showcase.webp
 ```
 
 The script combines native Gallery screenshots with live Studio and SpatialView
-captures. It writes `build/readme-showcase/hero-showcase.webp` for sharing.
-Use `--output` for another destination. The recording must fit the repository's
-default per-file budget before it replaces an existing file.
+captures within a compact asset budget (defaulting to 190,000 bytes inside
+`site/` or `docs/`, or `repository-size-budget.json`'s `max_file_bytes`
+elsewhere, overridable via `--max-bytes`). Omit `--output` to write
+`build/readme-showcase/hero-showcase.webp` for standalone sharing.
 
 ## Validation
 

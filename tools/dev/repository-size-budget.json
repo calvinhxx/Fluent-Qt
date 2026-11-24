@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "max_total_bytes": 42000000,
+  "max_total_bytes": 42500000,
   "max_file_bytes": 1000000,
   "large_files": {
     "res/icons/FluentQtIcons.ttf": {"max_bytes": 2850000, "reason": "Complete public icon catalog and optical variants"},

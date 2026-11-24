@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery"><img src="docs/assets/readme/hero.png" alt="Windows Mica 效果下开启 3D 模式的 Fluent-Qt Gallery Home 首页"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery"><img src="site/assets/gallery/hero-showcase.webp" width="830" alt="Fluent-Qt 动图演示：浅/深色 Mica Gallery、Page Studio 在线实时 C++ WASM 编辑、一键导出 C++/PySide6/.ui 与 SpatialView 3D 视图"></a>
 </p>
 
 <p align="center">

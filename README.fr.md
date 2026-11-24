@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/fr/#gallery"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery Home en mode 3D sous Windows avec Mica"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/fr/#gallery"><img src="site/assets/gallery/hero-showcase.webp" width="830" alt="Aperçu animé de Fluent-Qt : Gallery avec Mica clair/sombre, Page Studio en direct C++ WASM, export C++/PySide6/.ui et SpatialView 3D"></a>
 </p>
 
 <p align="center">
