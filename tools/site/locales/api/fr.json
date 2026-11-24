@@ -1,4 +1,7 @@
 {
+"a2f327c6":"Remplace la couleur de fond des en-têtes. Une couleur non valide rétablit la couleur de fond de la couche du thème.",
+"c719e008":"Définit un fond opaque pour les en-têtes de lignes, de colonnes et de colonnes épinglées. Le canal alpha est ignoré.",
+"15203301":"Rétablit la couleur de fond des en-têtes du thème.",
 "f0ea2c77":"--- Arrière-plans ---",
 "6a4a35f0":"--- Couleurs de graphiques ---",
 "2717404c":"--- Palette neutre ---",

@@ -1,4 +1,7 @@
 {
+"a2f327c6":"Sustituye el color de fondo de las cabeceras. Si el color no es válido, se usa el color de la capa del tema.",
+"c719e008":"Define un fondo opaco para las cabeceras de filas, columnas y columnas fijadas. Se ignora el canal alfa.",
+"15203301":"Restablece el color de fondo de las cabeceras del tema.",
 "f0ea2c77":"--- Fondos ---",
 "6a4a35f0":"--- Colores de gráficos ---",
 "2717404c":"--- Paleta neutra ---",
