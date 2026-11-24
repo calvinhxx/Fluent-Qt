@@ -216,7 +216,8 @@
     "name": "数据表格",
     "description": "显示、选择和编辑表格数据。",
     "example": "固定列与编辑",
-    "usage": "setColumnPinned(0, true) 固定第一列，横向滚动时它保持可见；双击单元格或按 F2 编辑。"
+    "usage": "setColumnPinned(0, true) 固定第一列。双击单元格或按 F2 编辑。用 setHeaderBackground() 设置表头及固定列表头的底色，保留内置排序交互。resetHeaderBackground() 恢复主题色。",
+    "usage_en": "Pin the first column with setColumnPinned(0, true). Double-click a cell or press F2 to edit. Use setHeaderBackground() to color the headers, including pinned columns, while keeping built-in sorting. Call resetHeaderBackground() to follow the theme again."
   },
   "drawer-view": {
     "name": "抽屉视图",

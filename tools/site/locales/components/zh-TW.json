@@ -27,7 +27,7 @@
 "donut-chart":{"name":"環圈圖","description":"用圓環顯示各部分佔比，中心區域可顯示總量或摘要說明。","example":"流量來源與總量","usage":"扇區規則與 PieChart 相同。可用 setCenterText() 和 setCenterCaption() 設定圓環中心的文字（例如摘要值或副標題）。"},
 "scatter-chart":{"name":"散佈圖","description":"用散點顯示兩個數值之間的關係。","example":"請求分佈","usage":"setXRange() 和 setYRange() 設定座標範圍，每個資料點繪製成一個點；addSeries() 新增第二組資料。"},
 "sparkline":{"name":"迷你趨勢圖","description":"不帶座標軸的小型趨勢線，適合嵌入卡片或表格。","example":"近期趨勢","usage":"搭配較小的固定尺寸並透過 setModel() 繫結資料。由於沒有可見文字標籤，建議以 setAccessibleName() 設定無障礙名稱。"},
-"data-grid":{"name":"資料表格","description":"以模型資料呈現大型表格，支援標題列、排序、選取與 delegate 編輯。","example":"固定欄與編輯","usage":"setColumnPinned(0, true) 固定第一欄，橫向捲動時仍保持可見；按兩下儲存格或按 F2 即可編輯。"},
+"data-grid":{"name":"資料表格","description":"以模型資料呈現大型表格，支援標題列、排序、選取與 delegate 編輯。","example":"固定欄與編輯","usage":"setColumnPinned(0, true) 固定第一欄，橫向捲動時仍保持可見；按兩下儲存格或按 F2 即可編輯。使用 setHeaderBackground() 可調整表頭底色，resetHeaderBackground() 可還原主題色。"},
 "drawer-view":{"name":"抽屜檢視","description":"從視窗邊緣滑出的面板。","example":"右側抽屜","usage":"用 setEdge() 選擇滑出邊緣，setDrawerLength() 設定抽屜寬度或高度，呼叫 open() 展開（預設點擊外部或按 Esc 鍵關閉）。"},
 "file-list-view":{"name":"檔案清單","description":"顯示檔案清單、傳輸進度與處理狀態。","example":"檔案與進度","usage":"透過模型角色提供每個檔案的說明、狀態與進度；以 retryRequested 和 removeRequested 回應重試與移除操作。"},
 "flip-view":{"name":"翻頁檢視","description":"一次顯示一頁，逐頁瀏覽圖片或其他內容。","example":"翻看照片","usage":"addPage() 新增頁面，setShowPageIndicator(true) 顯示頁碼圓點；滑鼠懸停時會顯示可用方向的翻頁箭頭，也可透過滑動或鍵盤導覽翻頁。"},
