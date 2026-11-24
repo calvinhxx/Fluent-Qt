@@ -28,38 +28,23 @@ TEST(RatingControlTest, DefaultPropertyValues)
 
 // ── Value 属性 ───────────────────────────────────────────────────────────────
 
-TEST(RatingControlTest, ValueEmitsOnlyWhenChanged)
+TEST(RatingControlTest, ValueClampsAndNotifiesOnlyOnChange)
 {
-    RatingControl rc;
-    QSignalSpy spy(&rc, &RatingControl::valueChanged);
-    rc.setValue(3.0);
-    ASSERT_EQ(spy.count(), 1);
-    EXPECT_DOUBLE_EQ(spy.first().first().toDouble(), 3.0);
-    EXPECT_DOUBLE_EQ(rc.value(), 3.0);
-    rc.setValue(3.0);
-    EXPECT_EQ(spy.count(), 1);
-}
-
-TEST(RatingControlTest, ValueClampedToMaxRating)
-{
-    RatingControl rc;
-    rc.setMaxRating(5);
-    rc.setValue(10.0);
-    EXPECT_DOUBLE_EQ(rc.value(), 5.0);
-}
-
-TEST(RatingControlTest, ValueClampedToMinusOne)
-{
-    RatingControl rc;
-    rc.setValue(-5.0);
-    EXPECT_DOUBLE_EQ(rc.value(), -1.0);
-}
-
-TEST(RatingControlTest, HalfStarValue)
-{
-    RatingControl rc;
-    rc.setValue(3.5);
-    EXPECT_DOUBLE_EQ(rc.value(), 3.5);
+    RatingControl rating;
+    QSignalSpy changed(&rating, &RatingControl::valueChanged);
+    rating.setValue(-5.0);
+    EXPECT_EQ(changed.count(), 0);
+    rating.setValue(3.5);
+    rating.setValue(3.5);
+    EXPECT_DOUBLE_EQ(rating.value(), 3.5);
+    rating.setValue(10.0);
+    EXPECT_DOUBLE_EQ(rating.value(), 5.0);
+    rating.setValue(-5.0);
+    EXPECT_DOUBLE_EQ(rating.value(), -1.0);
+    ASSERT_EQ(changed.count(), 3);
+    EXPECT_DOUBLE_EQ(changed.at(0).first().toDouble(), 3.5);
+    EXPECT_DOUBLE_EQ(changed.at(1).first().toDouble(), 5.0);
+    EXPECT_DOUBLE_EQ(changed.at(2).first().toDouble(), -1.0);
 }
 
 // ── PlaceholderValue 属性 ────────────────────────────────────────────────────
@@ -68,16 +53,12 @@ TEST(RatingControlTest, SetPlaceholderValueEmitsSignal)
 {
     RatingControl rc;
     QSignalSpy spy(&rc, &RatingControl::placeholderValueChanged);
+    rc.setPlaceholderValue(-1.0);
+    EXPECT_DOUBLE_EQ(rc.placeholderValue(), 0.0);
+    EXPECT_EQ(spy.count(), 0);
     rc.setPlaceholderValue(2.5);
     ASSERT_EQ(spy.count(), 1);
     EXPECT_DOUBLE_EQ(spy.first().first().toDouble(), 2.5);
-}
-
-TEST(RatingControlTest, PlaceholderValueClampedToZero)
-{
-    RatingControl rc;
-    rc.setPlaceholderValue(-1.0);
-    EXPECT_DOUBLE_EQ(rc.placeholderValue(), 0.0);
 }
 
 // ── Caption 属性 ─────────────────────────────────────────────────────────────
@@ -124,12 +105,6 @@ TEST(RatingControlTest, SetIsReadOnlyEmitsSignal)
     rc.setIsReadOnly(true);
     ASSERT_EQ(spy.count(), 1);
     EXPECT_TRUE(rc.isReadOnly());
-}
-
-TEST(RatingControlTest, ReadOnlyCursorIsArrow)
-{
-    RatingControl rc;
-    rc.setIsReadOnly(true);
     EXPECT_EQ(rc.cursor().shape(), Qt::ArrowCursor);
 }
 
@@ -187,28 +162,15 @@ TEST(RatingControlTest, MouseActivationTakesFocus)
 
 // ── MaxRating 属性 ───────────────────────────────────────────────────────────
 
-TEST(RatingControlTest, SetMaxRatingEmitsSignal)
-{
-    RatingControl rc;
-    QSignalSpy spy(&rc, &RatingControl::maxRatingChanged);
-    rc.setMaxRating(10);
-    ASSERT_EQ(spy.count(), 1);
-    EXPECT_EQ(rc.maxRating(), 10);
-}
-
 TEST(RatingControlTest, MaxRatingClampsExistingValue)
 {
     RatingControl rc;
     rc.setValue(5.0);
     rc.setMaxRating(3);
     EXPECT_DOUBLE_EQ(rc.value(), 3.0);
-}
-
-TEST(RatingControlTest, MaxRatingMinIsOne)
-{
-    RatingControl rc;
     rc.setMaxRating(0);
     EXPECT_EQ(rc.maxRating(), 1);
+    EXPECT_DOUBLE_EQ(rc.value(), 1.0);
 }
 
 // ── StarSize 属性 ────────────────────────────────────────────────────────────
@@ -228,7 +190,10 @@ TEST(RatingControlTest, SizeHintReflectsMaxRating)
 {
     RatingControl rc;
     QSize hint5 = rc.sizeHint();
+    QSignalSpy spy(&rc, &RatingControl::maxRatingChanged);
     rc.setMaxRating(10);
+    EXPECT_EQ(rc.maxRating(), 10);
+    EXPECT_EQ(spy.count(), 1);
     QSize hint10 = rc.sizeHint();
     EXPECT_GT(hint10.width(), hint5.width());
 }

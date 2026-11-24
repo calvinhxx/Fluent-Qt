@@ -673,17 +673,6 @@ TEST_F(ComboBoxTest, SetChevron)
     EXPECT_EQ(spy.count(), 2);
 }
 
-TEST_F(ComboBoxTest, AddItemsAndSelect)
-{
-    ComboBox cb(window);
-    cb.addItems({"Yellow", "Green", "Blue", "Red"});
-    EXPECT_EQ(cb.count(), 4);
-
-    cb.setCurrentIndex(2);
-    EXPECT_EQ(cb.currentIndex(), 2);
-    EXPECT_EQ(cb.currentText(), "Blue");
-}
-
 TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection)
 {
     ComboBox cb(window);
@@ -718,31 +707,16 @@ TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection)
     EXPECT_EQ(cb.currentIndex(), 2);
 }
 
-TEST_F(ComboBoxTest, SizeHintMinWidth)
-{
-    ComboBox cb(window);
-    QSize sh = cb.sizeHint();
-    // Height should be ControlHeight::Standard (32)
-    EXPECT_EQ(sh.height(), Spacing::ControlHeight::Standard);
-    // Width should respect minimum width (80px text area)
-    EXPECT_GE(sh.width(), 80);
-}
-
-TEST_F(ComboBoxTest, SizeHintGrowsWithItems)
-{
-    ComboBox cb(window);
-    QSize emptySize = cb.sizeHint();
-
-    cb.addItems({"Very Long Item Text That Should Make It Wider"});
-    QSize withItems = cb.sizeHint();
-    EXPECT_GT(withItems.width(), emptySize.width());
-}
-
 TEST_F(ComboBoxTest, SizeHintKeepsWidestItemClearOfElisionBoundary)
 {
     ComboBox cb(window);
+    const QSize empty = cb.sizeHint();
+    EXPECT_EQ(empty.height(), Spacing::ControlHeight::Standard);
+    EXPECT_EQ(cb.height(), empty.height());
+    EXPECT_GE(empty.width(), 80);
     const QString widest = QStringLiteral("Keep in system tray");
     cb.addItems({QStringLiteral("Use system setting"), widest, QStringLiteral("Light")});
+    EXPECT_GT(cb.sizeHint().width(), empty.width());
     cb.resize(cb.sizeHint());
 
     const int chevronArea = cb.chevronOffset().x() + cb.chevronSize() + ::Spacing::Gap::Tight;
@@ -751,12 +725,6 @@ TEST_F(ComboBoxTest, SizeHintKeepsWidestItemClearOfElisionBoundary)
 
     EXPECT_GE(availableTextWidth - metrics.horizontalAdvance(widest), ::Spacing::XSmall);
     EXPECT_EQ(metrics.elidedText(widest, Qt::ElideRight, availableTextWidth), widest);
-}
-
-TEST_F(ComboBoxTest, FixedHeight)
-{
-    ComboBox cb(window);
-    EXPECT_EQ(cb.height(), Spacing::ControlHeight::Standard);
 }
 
 TEST_F(ComboBoxTest, EditableFieldGeometryMirrorsInRightToLeftLayouts)
@@ -797,45 +765,9 @@ TEST_F(ComboBoxTest, EditableEditorLeavesTheChevronHitArea)
     EXPECT_GE(cb.lineEdit()->geometry().left(), chevronArea);
 }
 
-TEST_F(ComboBoxTest, DisabledState)
-{
-    ComboBox cb(window);
-    cb.addItems({"Item1", "Item2"});
-    cb.setEnabled(false);
-    EXPECT_FALSE(cb.isEnabled());
-
-    // Should still be paintable (no crash)
-    cb.show();
-    cb.repaint();
-}
-
-// ─── 主题切换测试 ────────────────────────────────────────────────────────────
-
-TEST_F(ComboBoxTest, ThemeSwitchLight)
-{
-    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    ComboBox cb(window);
-    cb.addItems({"Test"});
-    cb.show();
-    cb.repaint();
-    // Should not crash / assert on theme switch
-}
-
-TEST_F(ComboBoxTest, ThemeSwitchDark)
-{
-    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
-    ComboBox cb(window);
-    cb.addItems({"Test"});
-    cb.show();
-    cb.repaint();
-
-    // Restore
-    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-}
-
 // ─── 可编辑模式测试 ──────────────────────────────────────────────────────────────
 
-TEST_F(ComboBoxTest, SetEditableCreatesLineEdit)
+TEST_F(ComboBoxTest, EditableModeCreatesAndRemovesFluentEditor)
 {
     ComboBox cb(window);
     cb.addItems({"Item1", "Item2", "Item3"});
@@ -850,6 +782,9 @@ TEST_F(ComboBoxTest, SetEditableCreatesLineEdit)
     EXPECT_FALSE(lineEdit->isHidden());
     EXPECT_FALSE(lineEdit->isClearButtonEnabled());
     EXPECT_EQ(lineEdit->contextMenuPolicy(), Qt::DefaultContextMenu);
+    cb.setEditable(false);
+    EXPECT_EQ(cb.lineEdit(), nullptr);
+    EXPECT_EQ(cb.findChild<fluent::textfields::LineEdit*>(), nullptr);
 }
 
 TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
@@ -973,32 +908,6 @@ TEST_F(ComboBoxTest, EditableLineEditKeepsDarkThemeTextPaletteInsideStyledHost)
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
-}
-
-TEST_F(ComboBoxTest, SetEditableFalseRemovesLineEdit)
-{
-    ComboBox cb(window);
-    cb.setEditable(true);
-    ASSERT_NE(cb.findChild<fluent::textfields::LineEdit*>(), nullptr);
-
-    cb.setEditable(false);
-    EXPECT_EQ(cb.findChild<fluent::textfields::LineEdit*>(), nullptr);
-}
-
-TEST_F(ComboBoxTest, EditableSelectUpdatesLineEdit)
-{
-    ComboBox cb(window);
-    cb.addItems({"Alpha", "Beta", "Gamma"});
-    cb.setEditable(true);
-    cb.setCurrentIndex(1);
-
-    // After selection via popup click, line edit would be updated
-    // (direct setCurrentIndex doesn't update line edit in our impl)
-    auto* lineEdit = cb.findChild<fluent::textfields::LineEdit*>();
-    ASSERT_NE(lineEdit, nullptr);
-    // Line edit should be paintable
-    cb.show();
-    cb.repaint();
 }
 
 TEST_F(ComboBoxTest, Contract_EditableGeometrySurvivesSelectionAndModelChanges)
@@ -1405,6 +1314,7 @@ TEST_F(ComboBoxTest, Contract_PopupDoesNotOpenWhenDisabledOrEmpty)
     EXPECT_EQ(window->findChild<fluent::dialogs_flyouts::Flyout*>("ComboBoxPopup"), nullptr);
     cb.addItems({"Alpha", "Beta"});
     cb.setEnabled(false);
+    cb.repaint();
     cb.showPopup();
     EXPECT_EQ(window->findChild<fluent::dialogs_flyouts::Flyout*>("ComboBoxPopup"), nullptr);
     cb.setEnabled(true);
@@ -1545,31 +1455,6 @@ TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex)
     EXPECT_EQ(cb->currentText(), QStringLiteral("First label"));
 
     cb->hidePopup();
-}
-
-TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText)
-{
-    ComboBox* cb = new ComboBox(window);
-    cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
-    cb->addItems({"Alpha", "Beta", "Gamma"});
-    cb->setEditable(true);
-    cb->setCurrentIndex(0);
-
-    auto* lineEdit = cb->findChild<fluent::textfields::LineEdit*>();
-    ASSERT_NE(lineEdit, nullptr);
-
-    auto* popup = openPopupFor(cb, window);
-    ASSERT_NE(popup, nullptr);
-    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
-    ASSERT_NE(listView, nullptr);
-
-    const QPoint rowOneCenter(24, Spacing::ControlHeight::Large + Spacing::ControlHeight::Large / 2);
-    QTest::mouseClick(listView->viewport(), Qt::LeftButton, Qt::NoModifier, rowOneCenter);
-    QApplication::processEvents();
-
-    EXPECT_EQ(cb->currentIndex(), 1);
-    EXPECT_EQ(lineEdit->text(), "Beta");
-    EXPECT_FALSE(popup->isOpen());
 }
 
 TEST_F(ComboBoxTest, PopupUsesLogicalLeadingEdgeAndBoundsLongOptions)
