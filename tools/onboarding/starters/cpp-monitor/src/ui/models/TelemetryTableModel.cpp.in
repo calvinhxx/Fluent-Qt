@@ -1,7 +1,5 @@
 #include "ui/models/TelemetryTableModel.h"
 
-#include <utility>
-
 namespace @APP_NAMESPACE@::ui {
 
 TelemetryTableModel::TelemetryTableModel(QObject* parent)
@@ -9,10 +7,14 @@ TelemetryTableModel::TelemetryTableModel(QObject* parent)
 {
 }
 
-void TelemetryTableModel::setEvents(std::vector<domain::TelemetryEvent> events)
+void TelemetryTableModel::setEvents(const std::vector<domain::TelemetryEvent>& events)
 {
+    if (m_events == events)
+        return;
+
+    auto replacement = events;
     beginResetModel();
-    m_events = std::move(events);
+    m_events.swap(replacement);
     endResetModel();
 }
 

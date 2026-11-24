@@ -52,3 +52,11 @@ target_include_directories(test_onboarding_workbench_objects PRIVATE
     "${_fluent_qt_workbench_generated_root}/src")
 target_compile_definitions(test_onboarding_workbench_objects PRIVATE
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")
+
+set(APP_NAMESPACE fluentqt_test_monitor)
+set(_monitor_src "${CMAKE_CURRENT_BINARY_DIR}/generated-monitor/src")
+foreach(_file domain/Telemetry.h ui/models/TelemetryTableModel.h ui/models/TelemetryTableModel.cpp)
+    configure_file("${_fluent_qt_starters}/cpp-monitor/src/${_file}.in" "${_monitor_src}/${_file}" @ONLY)
+endforeach()
+add_qt_test_module(test_onboarding_monitor TestGeneratedMonitorModel.cpp "${_monitor_src}/ui/models/TelemetryTableModel.cpp")
+target_include_directories(test_onboarding_monitor_objects PRIVATE "${_monitor_src}")

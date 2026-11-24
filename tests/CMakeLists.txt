@@ -61,6 +61,7 @@ set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_line_edit
     test_password_box
     test_text_edit
+    test_onboarding_monitor
     test_onboarding_workbench
 )
 

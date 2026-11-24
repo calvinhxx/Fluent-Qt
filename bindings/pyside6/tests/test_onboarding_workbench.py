@@ -12,12 +12,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 class PySide6WorkbenchInspectorTest(unittest.TestCase):
     project_root: Path
 
-    def generate_workbench(self, root: Path) -> Path:
+    def generate_starter(self, root: Path, starter: str = "workbench") -> Path:
         create_script = self.project_root / "tools/onboarding/fluentqt_create.py"
         specification = importlib.util.spec_from_file_location(
             "fluentqt_create_for_pyside_test", create_script
@@ -28,13 +29,13 @@ class PySide6WorkbenchInspectorTest(unittest.TestCase):
         sys.modules[specification.name] = module
         specification.loader.exec_module(module)
 
-        target = root / "generated-pyside-workbench"
+        target = root / f"generated-pyside-{starter}"
         report = module.create_project(
             target=target,
-            application="Inspector Workbench",
-            identifier="inspector-workbench",
+            application=f"Inspector {starter.title()}",
+            identifier=f"inspector-{starter}",
             language="pyside6",
-            starter="workbench",
+            starter=starter,
             accent="#2457D6",
         )
         self.assertEqual(report["status"], "created")
@@ -42,7 +43,7 @@ class PySide6WorkbenchInspectorTest(unittest.TestCase):
 
     def test_generated_workbench_emits_native_inspector_report(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            target = self.generate_workbench(Path(temporary))
+            target = self.generate_starter(Path(temporary))
 
             environment = dict(os.environ)
             package_paths = [str(target / "src")]
@@ -70,6 +71,31 @@ class PySide6WorkbenchInspectorTest(unittest.TestCase):
             self.assertEqual(quality_report["tool"], "FluentQt Inspector")
             self.assertEqual(quality_report["summary"]["findings"], 0)
 
+    def test_equal_monitor_filter_results_keep_the_selected_cell(self) -> None:
+        from PySide6.QtCore import QItemSelectionModel, QPersistentModelIndex
+
+        with tempfile.TemporaryDirectory() as temporary:
+            target = self.generate_starter(Path(temporary), "monitor")
+            with patch.object(sys, "path", [str(target / "src"), *sys.path]), patch.dict(sys.modules):
+                from inspector_monitor.domain.telemetry import TelemetryEvent
+                from inspector_monitor.ui.models.telemetry_table_model import TelemetryTableModel
+
+                model = TelemetryTableModel()
+                model.set_events((TelemetryEvent("gateway", "eu", 25, "Healthy"),))
+                selection = QItemSelectionModel(model)
+                cell = model.index(0, 0)
+                selection.setCurrentIndex(cell, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+                selected = QPersistentModelIndex(cell)
+
+                model.set_events((TelemetryEvent("gateway", "eu", 25, "Healthy"),))
+                self.assertTrue(selected.isValid())
+                self.assertEqual(selection.currentIndex(), cell)
+                self.assertTrue(selection.isSelected(cell))
+                model.set_events((TelemetryEvent("gateway", "eu", 47, "Healthy"),))
+                self.assertEqual(model.index(0, 2).data(), "47 ms")
+                model.set_events(())
+                self.assertEqual(model.rowCount(), 0)
+
     def test_generated_workbench_passes_application_scenes(self) -> None:
         import fluentqt
         from PySide6.QtCore import QEvent, QEventLoop, QTimer
@@ -89,7 +115,7 @@ class PySide6WorkbenchInspectorTest(unittest.TestCase):
         self.assertEqual(len(scenes), 3)
 
         with tempfile.TemporaryDirectory() as temporary:
-            target = self.generate_workbench(Path(temporary))
+            target = self.generate_starter(Path(temporary))
             source_path = str(target / "src")
             sys.path.insert(0, source_path)
             try:

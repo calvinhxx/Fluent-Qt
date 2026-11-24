@@ -15,6 +15,12 @@ struct TelemetryEvent {
     std::string region;
     int latencyMs = 0;
     std::string status;
+
+    bool operator==(const TelemetryEvent& other) const
+    {
+        return channel == other.channel && region == other.region
+            && latencyMs == other.latencyMs && status == other.status;
+    }
 };
 
 struct TelemetrySnapshot {
