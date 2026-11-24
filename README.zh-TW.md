@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  面向 Qt Widgets 的跨平台 Fluent 風格 C++ UI 元件庫。
+  面向 Qt Widgets 的跨平台原生 Fluent UI 元件庫，支援 C++17 與 PySide6（MIT 開源）。
 </p>
 
 <p align="center">
@@ -20,15 +20,18 @@
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
+  <a href="bindings/pyside6/README.md"><img alt="PySide6" src="https://img.shields.io/badge/PySide6-6.2.4%2B-3776AB.svg"></a>
   <a href="https://pypi.org/project/FluentQt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/FluentQt?color=3776AB"></a>
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-TW/#top"><img src="docs/assets/readme/hero.png" alt="Windows Mica 效果下啟用 3D 模式的 Fluent-Qt Gallery Home 首頁"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-TW/#gallery"><img src="docs/assets/readme/hero.png" alt="Windows Mica 效果下啟用 3D 模式的 Fluent-Qt Gallery Home 首頁"></a>
 </p>
 
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-TW/#gallery">線上體驗 C++ Web Gallery</a></strong>
+  ·
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/studio/?lang=zh">Page Studio</a></strong>
   ·
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-TW/api/checkbox/?playground=1">屬性動態預覽</a></strong>
   ·
@@ -41,9 +44,9 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-TW/#support">支持專案</a>
 </p>
 
-Fluent-Qt（FluentQt）為 Qt Widgets 提供一套 Fluent 風格控制項，涵蓋輸入、導覽、清單與樹狀檢視、資料表、[圖表](docs/architecture/charts.md)、對話方塊、浮層與視窗。以 C++17 開發，可透過 CMake 整合至現有 Qt 專案，並提供選用的 PySide6 繫結。
+Fluent-Qt（FluentQt）是採用 MIT 授權的 Qt Widgets 元件庫。C++17 與 PySide6 共用同一套實作。Gallery 收錄 99 項，包含 `DataGrid`、[圖表](docs/architecture/charts.md)、對話方塊與視窗。
 
-支援 Windows、macOS、Linux 與 WebAssembly，內建淺色、深色與高對比主題，並可設定動畫減弱或停用模式。按需啟用選用模組即可加入粒子背景（[Particles](docs/architecture/particles.md)）、3D 透視檢視（[Spatial](docs/architecture/spatial-view.md)）或嵌入 QML 頁面（[QmlBridge](docs/architecture/qml-bridge.md)）。
+支援 Windows、macOS、Linux 與 WebAssembly，內建淺色、深色與高對比主題，並可設定動畫減弱或停用模式。提供網頁端 **Page Studio** 與 **Qt Designer** 視覺化設計（C++ 與 Python 共用 `.ui` 檔案），並可按需啟用 CPU 粒子背景（[Particles](docs/architecture/particles.md)）、3D 透視檢視（[Spatial](docs/architecture/spatial-view.md)）與嵌入 QML 頁面（[QmlBridge](docs/architecture/qml-bridge.md)）。
 
 ## 🧩 模組概覽
 
@@ -88,17 +91,67 @@ python -m pip install FluentQt-Gallery
 python -m fluentqt_gallery
 ```
 
+## 🎨 視覺化設計
+
+- **Page Studio（網頁端）**：在瀏覽器中使用 [Page Studio](https://calvinhxx.github.io/Fluent-Qt/studio/?lang=zh) 拖曳編排 Fluent-Qt 控制項，從範本或 AI 輔助版面出發即時預覽互動，並匯出 C++、PySide6 或 Qt Designer `.ui` 檔案。
+
+### Qt Designer
+
+安裝所有模組後，Qt Creator 和 `pyside6-designer` 的工具箱有 95 項，另有 4 個範本可從「新增表單」選取。僅安裝核心模組時，分別為 92 項與 3 個範本。請參閱 [Designer 安裝指南](tools/designer/README.md)。
+
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer 中的 FluentQt 控制項工具箱、表單畫布與 FluentButton 屬性編輯器">
+  </a>
+</p>
+
 ## 🤖 用 AI 建置介面
 
-在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill，可建立桌面應用程式、為現有專案加上 GUI，或最佳化現有介面。[查看範例](https://calvinhxx.github.io/Fluent-Qt/zh-TW/#ai-build) · [安裝與用法](docs/ai/README.md)
-
-調整 Gallery 範例時，請先在 Live Scene 即時預覽存檔後的修改，再編譯 C++ 範例驗證實際效果。[運作原理](docs/development/gallery-preview-workflow.md)
+**AI Skill 與專案腳手架**：在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill（[查看範例](https://calvinhxx.github.io/Fluent-Qt/zh-TW/#ai-build) · [安裝與用法](docs/ai/README.md)），並透過 `python3 tools/onboarding/fluentqt`（[新手入門工具](tools/onboarding/README.md)）檢查環境與建立 C++ / PySide6 起手專案。調整 Gallery 範例時，請先在 Live Scene 即時預覽存檔後的修改，再編譯 C++ 範例驗證實際效果（[運作原理](docs/development/gallery-preview-workflow.md)）。
 
 ## 🚀 快速開始
 
-C++ 整合需要 C++17、CMake 3.16+ 與 Qt Widgets 5.15+ 或 6.2+。新專案建議使用 `FetchContent`。
+Fluent-Qt 同時為 **Python（PySide6）** 與 **C++17（CMake）** 原生提供同一套控制項。
+
+### Python (PySide6)
+
+Qt/PySide6 6.9.3 的預先編譯套件支援 CPython 3.11–3.13。Linux ARM64 需要 CPython 3.12–3.13 與 glibc 2.39 以上版本。
+
+```bash
+python -m pip install FluentQt
+```
+
+`main.py`：
+
+```python
+import sys
+import fluentqt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from fluentqt.basicinput import Button
+from fluentqt.windowing import Window
+
+fluentqt.prepare_high_dpi_application()
+app = QApplication(sys.argv)
+fluentqt.initialize_resources()
+app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+
+window = Window()
+window.resize(480, 320)
+content = QWidget()
+button = Button("Hello from FluentQt", content)
+button.setFluentStyle(Button.ButtonStyle.Accent)
+QVBoxLayout(content).addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
+window.setContentWidget(content)
+window.show()
+sys.exit(app.exec())
+```
+
+[Python 指南](bindings/pyside6/README.md) · [Hello World](bindings/pyside6/examples/hello_world/main.py)
 
 ### C++ 設定
+
+C++ 整合需要 C++17、CMake 3.16+ 與 Qt Widgets 5.15+ 或 6.2+。新專案建議使用 `FetchContent`。
 
 #### `FetchContent` 整合
 
@@ -142,7 +195,7 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 若 FluentQt 不在系統搜尋路徑中，請在設定時加上 `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`。
 
-### C++ 最小範例
+#### C++ 最小範例
 
 `main.cpp`：
 
@@ -182,26 +235,6 @@ int main(int argc, char* argv[])
 ```
 
 完整專案見 [`examples/hello_world`](examples/hello_world/)，也可直接在 IDE 中執行 `fluentqt_hello_world` 目標。
-
-### Python (PySide6)
-
-透過 PyPI 安裝 PySide6 繫結（基於 Shiboken6）：
-
-```bash
-python -m pip install FluentQt
-```
-
-範例、相容性資訊與原始碼建置說明請參閱 [Python 指南](bindings/pyside6/README.md)。
-
-### Qt Designer
-
-支援在 Qt Creator（C++）與 pyside6-designer（Python）中拖放控制項與表單範本，兩端共用 `.ui` 檔案。安裝與用法請參閱 [Qt Designer 指南](tools/designer/README.md)。
-
-<p>
-  <a href="tools/designer/README.md">
-    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer 中的 FluentQt 控制項工具箱、表單畫布與 FluentButton 屬性編輯器">
-  </a>
-</p>
 
 ## 🛠 建置
 
@@ -292,7 +325,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 | 目標 | 入口 |
 |---|---|
 | 瀏覽控制項與 API | [元件文件與 API](https://calvinhxx.github.io/Fluent-Qt/zh-TW/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/zh-TW/#gallery) |
-| 建置應用程式 | [AI 輔助開發](docs/ai/README.md) · [新手入門工具](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
+| 建置應用程式 | [Qt Designer](tools/designer/README.md) · [AI 輔助開發](docs/ai/README.md) · [新手入門工具](tools/onboarding/README.md) |
 | 參與 FluentQt 開發 | [開發指南](docs/development/README.md) · [架構說明](docs/architecture/README.md) · [Fluent 設計規範](docs/design-languages/README.md) |
 | 打包與發布 | [打包流程](docs/development/packaging-workflow.md) · [發布規範](docs/development/release-governance.md) · [版本紀錄](docs/releases/README.md) |
 | 尋求協助或回報問題 | [社群入口](docs/community/README.md) · [支持說明](SUPPORT.md) · [安全性政策](SECURITY.md) |
