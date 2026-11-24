@@ -144,29 +144,6 @@ TEST_F(ContentDialogTest, SetTitle)
     EXPECT_TRUE(dialog.title().isEmpty());
 }
 
-// --- Button text ---
-
-TEST_F(ContentDialogTest, SetPrimaryButtonText)
-{
-    ContentDialog dialog(window);
-    dialog.setPrimaryButtonText("Save");
-    EXPECT_EQ(dialog.primaryButtonText(), "Save");
-}
-
-TEST_F(ContentDialogTest, SetSecondaryButtonText)
-{
-    ContentDialog dialog(window);
-    dialog.setSecondaryButtonText("Don't Save");
-    EXPECT_EQ(dialog.secondaryButtonText(), "Don't Save");
-}
-
-TEST_F(ContentDialogTest, SetCloseButtonText)
-{
-    ContentDialog dialog(window);
-    dialog.setCloseButtonText("Cancel");
-    EXPECT_EQ(dialog.closeButtonText(), "Cancel");
-}
-
 // --- DefaultButton ---
 
 TEST_F(ContentDialogTest, DefaultButtonEnum)
@@ -244,26 +221,40 @@ TEST_F(ContentDialogTest, ResultConstants)
 
 // --- 按钮点击信号 + done() 结果（无需 exec()，不弹窗） ---
 
-TEST_F(ContentDialogTest, PrimaryButtonSignalAndResult)
+TEST_F(ContentDialogTest, ActionButtonsEmitTheirSignalAndFinishWithTheMatchingResult)
 {
-    ContentDialog dialog(window);
-    dialog.setAnimationEnabled(false);
-    dialog.setPrimaryButtonText("OK");
-
-    QSignalSpy clickSpy(&dialog, &ContentDialog::primaryButtonClicked);
-    QSignalSpy finishSpy(&dialog, &QDialog::finished);
-
-    auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
-    for (auto* btn : buttons) {
-        if (btn->text() == "OK") {
-            btn->click();
-            break;
-        }
+    struct Action {
+        const char* caption;
+        void (ContentDialog::*setText)(const QString&);
+        void (ContentDialog::*clicked)();
+        int result;
+    };
+    const Action actions[] = {
+        {"Save", &ContentDialog::setPrimaryButtonText, &ContentDialog::primaryButtonClicked,
+            ContentDialog::ResultPrimary},
+        {"Discard", &ContentDialog::setSecondaryButtonText, &ContentDialog::secondaryButtonClicked,
+            ContentDialog::ResultSecondary},
+        {"Cancel", &ContentDialog::setCloseButtonText, &ContentDialog::closeButtonClicked, ContentDialog::ResultNone},
+    };
+    for (const auto& action : actions) {
+        SCOPED_TRACE(action.caption);
+        ContentDialog dialog(window);
+        dialog.setAnimationEnabled(false);
+        const auto caption = QString::fromLatin1(action.caption);
+        (dialog.*action.setText)(caption);
+        QSignalSpy clicked(&dialog, action.clicked);
+        QSignalSpy finished(&dialog, &QDialog::finished);
+        const auto buttons = dialog.findChildren<Button*>();
+        const auto button = std::find_if(buttons.cbegin(), buttons.cend(), [&](const Button* b) {
+            return b->text() == caption;
+        });
+        ASSERT_NE(button, buttons.cend());
+        (*button)->click();
+        EXPECT_EQ(clicked.count(), 1);
+        ASSERT_EQ(finished.count(), 1);
+        EXPECT_EQ(finished.first().first().toInt(), action.result);
+        EXPECT_EQ(dialog.result(), action.result);
     }
-
-    EXPECT_EQ(clickSpy.count(), 1);
-    EXPECT_EQ(finishSpy.count(), 1);
-    EXPECT_EQ(dialog.result(), ContentDialog::ResultPrimary);
 }
 
 TEST_F(ContentDialogTest, PrimarySignalCanSynchronouslyDeleteDialog)
@@ -282,50 +273,6 @@ TEST_F(ContentDialogTest, PrimarySignalCanSynchronouslyDeleteDialog)
     (*primary)->click();
 
     EXPECT_TRUE(guard.isNull());
-}
-
-TEST_F(ContentDialogTest, SecondaryButtonSignalAndResult)
-{
-    ContentDialog dialog(window);
-    dialog.setAnimationEnabled(false);
-    dialog.setSecondaryButtonText("Don't Save");
-
-    QSignalSpy clickSpy(&dialog, &ContentDialog::secondaryButtonClicked);
-    QSignalSpy finishSpy(&dialog, &QDialog::finished);
-
-    auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
-    for (auto* btn : buttons) {
-        if (btn->text() == "Don't Save") {
-            btn->click();
-            break;
-        }
-    }
-
-    EXPECT_EQ(clickSpy.count(), 1);
-    EXPECT_EQ(finishSpy.count(), 1);
-    EXPECT_EQ(dialog.result(), ContentDialog::ResultSecondary);
-}
-
-TEST_F(ContentDialogTest, CloseButtonSignalAndResult)
-{
-    ContentDialog dialog(window);
-    dialog.setAnimationEnabled(false);
-    dialog.setCloseButtonText("Cancel");
-
-    QSignalSpy clickSpy(&dialog, &ContentDialog::closeButtonClicked);
-    QSignalSpy finishSpy(&dialog, &QDialog::finished);
-
-    auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
-    for (auto* btn : buttons) {
-        if (btn->text() == "Cancel") {
-            btn->click();
-            break;
-        }
-    }
-
-    EXPECT_EQ(clickSpy.count(), 1);
-    EXPECT_EQ(finishSpy.count(), 1);
-    EXPECT_EQ(dialog.result(), ContentDialog::ResultNone);
 }
 
 // --- Min width ---

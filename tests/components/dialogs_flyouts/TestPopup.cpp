@@ -125,32 +125,6 @@ TEST_F(PopupTest, DefaultProperties)
 // 2. open/close 信号顺序
 // ══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(PopupTest, OpenCloseSignals_AnimationDisabled)
-{
-    Popup p(window);
-    p.setAnimationEnabled(false);
-
-    QSignalSpy aboutToShow(&p, &Popup::aboutToShow);
-    QSignalSpy opened(&p, &Popup::opened);
-    QSignalSpy openedChanged(&p, &Popup::isOpenChanged);
-
-    p.open();
-
-    EXPECT_EQ(aboutToShow.count(), 1);
-    EXPECT_EQ(opened.count(), 1);
-    EXPECT_EQ(openedChanged.count(), 1);
-    EXPECT_TRUE(p.isOpen());
-
-    QSignalSpy aboutToHide(&p, &Popup::aboutToHide);
-    QSignalSpy closed(&p, &Popup::closed);
-
-    p.close();
-
-    EXPECT_EQ(aboutToHide.count(), 1);
-    EXPECT_EQ(closed.count(), 1);
-    EXPECT_FALSE(p.isOpen());
-}
-
 TEST_F(PopupTest, ReentrantOpenDuringAboutToShowIsIgnored)
 {
     Popup p(window);
@@ -215,22 +189,6 @@ TEST_F(PopupTest, ProgressHandlerCanSynchronouslyDeletePopup)
     popup->open();
 
     EXPECT_TRUE(guard.isNull());
-}
-
-TEST_F(PopupTest, SetIsOpen_DelegatesToOpenClose)
-{
-    Popup p(window);
-    p.setAnimationEnabled(false);
-
-    QSignalSpy opened(&p, &Popup::opened);
-    p.setIsOpen(true);
-    EXPECT_EQ(opened.count(), 1);
-    EXPECT_TRUE(p.isOpen());
-
-    QSignalSpy closed(&p, &Popup::closed);
-    p.setIsOpen(false);
-    EXPECT_EQ(closed.count(), 1);
-    EXPECT_FALSE(p.isOpen());
 }
 
 TEST_F(PopupTest, Contract_IsOpenIsLogicalRequestedState)
@@ -301,7 +259,7 @@ TEST_F(PopupTest, Contract_AnimationDisabledSyncSettlesOpenState)
         order << QStringLiteral("closed");
     });
 
-    p.open();
+    p.setIsOpen(true);
     EXPECT_TRUE(p.isOpen());
     EXPECT_TRUE(p.isVisible());
     EXPECT_DOUBLE_EQ(p.popupProgress(), 1.0);
@@ -313,7 +271,7 @@ TEST_F(PopupTest, Contract_AnimationDisabledSyncSettlesOpenState)
             QStringLiteral("opened"),
         }));
 
-    p.close();
+    p.setIsOpen(false);
     EXPECT_FALSE(p.isOpen());
     EXPECT_FALSE(p.isVisible());
     EXPECT_DOUBLE_EQ(p.popupProgress(), 0.0);
@@ -891,19 +849,6 @@ TEST_F(PopupTest, Contract_ModalInputIsScopedToOwningWindow)
     popup.close();
 }
 
-TEST_F(PopupTest, EscapeClosesPopupWhenPolicySet)
-{
-    Popup p(window);
-    p.setAnimationEnabled(false);
-    p.open();
-    ASSERT_TRUE(p.isOpen());
-
-    QKeyEvent ev(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
-    QApplication::sendEvent(&p, &ev);
-
-    EXPECT_FALSE(p.isOpen());
-}
-
 TEST_F(PopupTest, Contract_TriggerDismissalExclusionPreservesClicksAndModalBlocking)
 {
     Button trigger(QStringLiteral("Toggle"), window);
@@ -1084,16 +1029,6 @@ TEST_F(PopupTest, ParentDestructionDeletesOwnedPopupSafely)
 // ══════════════════════════════════════════════════════════════════════════════
 // 7. 动画
 // ══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(PopupTest, AnimationDisabled_OpenedEmittedSynchronously)
-{
-    Popup p(window);
-    p.setAnimationEnabled(false);
-
-    QSignalSpy spy(&p, &Popup::opened);
-    p.open();
-    EXPECT_EQ(spy.count(), 1);
-}
 
 TEST_F(PopupTest, MotionPolicyDisabledSettlesOpenAndCloseSynchronously)
 {
