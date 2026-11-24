@@ -160,6 +160,7 @@ def _cpp_commands(
         str(build),
         "-C",
         configuration,
+        "--no-tests=error",
         "--output-on-failure",
     ]
     return [
