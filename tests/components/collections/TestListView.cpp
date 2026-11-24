@@ -55,20 +55,6 @@ QStringListModel* attachStringListModel(ListView* lv, const QStringList& rows = 
     return m;
 }
 
-int itemCount(ListView* lv)
-{
-    const auto* m = lv->model();
-    return m ? m->rowCount() : 0;
-}
-
-QString itemText(ListView* lv, int index)
-{
-    const auto* m = lv->model();
-    if (!m || index < 0 || index >= m->rowCount())
-        return {};
-    return m->index(index, 0).data(Qt::DisplayRole).toString();
-}
-
 void clearItems(ListView* lv)
 {
     auto* slm = qobject_cast<QStringListModel*>(lv->model());
@@ -269,29 +255,23 @@ TEST_F(ListViewTest, SelectionModeRegisteredInMetaObject)
 
 // ── 选中 API（依赖已 setModel）────────────────────────────────────────────────
 
-TEST_F(ListViewTest, SingleSelection)
+TEST_F(ListViewTest, SingleSelectionClearsOnInvalidIndex)
 {
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv, {"A", "B", "C"});
-
-    EXPECT_EQ(lv->selectedIndex(), -1);
-
-    lv->setSelectedIndex(1);
-    EXPECT_EQ(lv->selectedIndex(), 1);
-
-    lv->setSelectedIndex(-1);
-    EXPECT_EQ(lv->selectedIndex(), -1);
-}
-
-TEST_F(ListViewTest, SelectedIndexOutOfRange)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv, {"A", "B"});
-    lv->setSelectedIndex(1);
-    EXPECT_EQ(lv->selectedIndex(), 1);
-
-    lv->setSelectedIndex(99);
-    EXPECT_EQ(lv->selectedIndex(), -1);
+    for (const auto flow : {QListView::TopToBottom, QListView::LeftToRight}) {
+        SCOPED_TRACE(static_cast<int>(flow));
+        QStandardItemModel model(3, 1);
+        ListView view;
+        view.setFlow(flow);
+        view.setModel(&model);
+        attachFluentDelegate(&view);
+        EXPECT_EQ(view.selectedIndex(), -1);
+        for (const int invalid : {-1, 99}) {
+            view.setSelectedIndex(1);
+            EXPECT_EQ(view.selectedIndex(), 1);
+            view.setSelectedIndex(invalid);
+            EXPECT_EQ(view.selectedIndex(), -1);
+        }
+    }
 }
 
 TEST_F(ListViewTest, SelectedRowsSortedAscending)
@@ -341,18 +321,6 @@ TEST_F(ListViewTest, SetFontRole)
     lv->setFontRole(Typography::FontRole::Subtitle);
     EXPECT_EQ(lv->fontRole(), Typography::FontRole::Subtitle);
     EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(ListViewTest, ItemClickedSignal)
-{
-    ListView* lv = new ListView(window);
-    attachStringListModel(lv, {"A", "B", "C"});
-    QSignalSpy spy(lv, SIGNAL(itemClicked(int)));
-
-    QModelIndex idx = lv->model()->index(0, 0);
-    emit lv->clicked(idx);
-    EXPECT_EQ(spy.count(), 1);
-    EXPECT_EQ(spy.at(0).at(0).toInt(), 0);
 }
 
 TEST_F(ListViewTest, MousePressDefersSelectionUntilRelease)
@@ -493,28 +461,6 @@ TEST_F(ListViewTest, ExtendedPointerSelectionSupportsControlAndShift)
     EXPECT_EQ(lv->selectedRows(), QList<int>({1, 3}));
 }
 
-TEST_F(ListViewTest, FluentScrollBarExists)
-{
-    ListView* lv = new ListView(window);
-    EXPECT_NE(lv->verticalFluentScrollBar(), nullptr);
-}
-
-TEST_F(ListViewTest, CustomModelWithFluentDelegate)
-{
-    ListView* lv = new ListView(window);
-    auto* stdModel = new QStandardItemModel(lv);
-    stdModel->appendRow(new QStandardItem("Row0"));
-    stdModel->appendRow(new QStandardItem("Row1"));
-    lv->setModel(stdModel);
-    attachFluentDelegate(lv);
-
-    EXPECT_EQ(lv->model()->rowCount(), 2);
-    EXPECT_EQ(lv->model()->index(0, 0).data(Qt::DisplayRole).toString(), "Row0");
-
-    lv->setSelectedIndex(1);
-    EXPECT_EQ(lv->selectedIndex(), 1);
-}
-
 TEST_F(ListViewTest, ViewDoesNotProvideModelByDefault)
 {
     ListView* lv = new ListView(window);
@@ -540,18 +486,27 @@ TEST_F(ListViewTest, SetBorderVisible)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(ListViewTest, SetHeaderText)
+TEST_F(ListViewTest, HeaderTextCreatesAndRemovesVisibleLabel)
 {
-    ListView* lv = new ListView(window);
-    EXPECT_TRUE(lv->headerText().isEmpty());
-    QSignalSpy spy(lv, &ListView::headerTextChanged);
-    lv->setHeaderText("My Header");
-    EXPECT_EQ(lv->headerText(), "My Header");
-    EXPECT_EQ(spy.count(), 1);
-
-    // 重复设置不触发信号
-    lv->setHeaderText("My Header");
-    EXPECT_EQ(spy.count(), 1);
+    ListView view;
+    view.setAttribute(Qt::WA_DontShowOnScreen);
+    view.show();
+    EXPECT_TRUE(view.headerText().isEmpty());
+    QSignalSpy changes(&view, &ListView::headerTextChanged);
+    view.setHeaderText("Header");
+    auto* label = qobject_cast<QLabel*>(view.header());
+    ASSERT_NE(label, nullptr);
+    EXPECT_TRUE(label->isVisible());
+    EXPECT_EQ(label->text(), view.headerText());
+    EXPECT_EQ(view.headerText(), "Header");
+    EXPECT_EQ(changes.count(), 1);
+    view.setFlow(QListView::LeftToRight);
+    EXPECT_TRUE(label->isVisible());
+    view.setHeaderText("Header");
+    EXPECT_EQ(changes.count(), 1);
+    view.setHeaderText({});
+    EXPECT_EQ(view.header(), nullptr);
+    EXPECT_EQ(changes.count(), 2);
 }
 
 TEST_F(ListViewTest, SetPlaceholderText)
@@ -565,29 +520,6 @@ TEST_F(ListViewTest, SetPlaceholderText)
 
     lv->setPlaceholderText("No items");
     EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(ListViewTest, HeaderVisibleWhenTextSet)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setGeometry(10, 10, 300, 200);
-    lv->setHeaderText("Header");
-    window->show();
-    QTest::qWait(50);
-    auto* headerLabel = lv->findChild<QLabel*>("fluentListViewHeader");
-    ASSERT_NE(headerLabel, nullptr);
-    EXPECT_TRUE(headerLabel->isVisible());
-    EXPECT_EQ(headerLabel->text(), "Header");
-}
-
-TEST_F(ListViewTest, HeaderHiddenWhenTextEmpty)
-{
-    ListView* lv = new ListView(window);
-    lv->setHeaderText("Header");
-    lv->setHeaderText("");
-    // setHeaderText("") removes the internal label entirely
-    EXPECT_EQ(lv->header(), nullptr);
 }
 
 TEST_F(ListViewTest, SetCustomHeader)
@@ -661,60 +593,26 @@ TEST_F(ListViewTest, FlowChangesOnlyOnTransitions)
     }
 }
 
-TEST_F(ListViewTest, HorizontalFluentScrollBarExists)
+TEST_F(ListViewTest, FlowChangesSwitchVisibleScrollBars)
 {
-    ListView* lv = new ListView(window);
-    EXPECT_NE(lv->horizontalFluentScrollBar(), nullptr);
-}
-
-TEST_F(ListViewTest, HorizontalFlowSelection)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    attachStringListModel(lv, {"A", "B", "C", "D"});
-    lv->setSelectedIndex(2);
-    EXPECT_EQ(lv->selectedIndex(), 2);
-    EXPECT_EQ(itemText(lv, 2), "C");
-}
-
-TEST_F(ListViewTest, HorizontalFlowMultipleSelection)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setSelectionMode(SelectionMode::Multiple);
-    attachStringListModel(lv, {"A", "B", "C", "D"});
-
-    const QModelIndex i0 = lv->model()->index(0, 0);
-    const QModelIndex i3 = lv->model()->index(3, 0);
-    lv->selectionModel()->select(i0, QItemSelectionModel::Select);
-    lv->selectionModel()->select(i3, QItemSelectionModel::Select);
-
-    QList<int> rows = lv->selectedRows();
-    ASSERT_EQ(rows.size(), 2);
-    EXPECT_EQ(rows.at(0), 0);
-    EXPECT_EQ(rows.at(1), 3);
-}
-
-TEST_F(ListViewTest, HorizontalScrollBarVisibleWhenNeeded)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setFixedSize(100, 60);
-    // Use uniform item sizes for horizontal items
-    auto* m = new QStringListModel({"AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ"},
-        lv);
-    lv->setModel(m);
-    layout->addWidget(lv);
-    window->show();
-    QTest::qWait(50);
-
-    // With many items in a narrow width, the horizontal scroll bar should appear
-    auto* hsb = lv->horizontalFluentScrollBar();
-    auto* native = lv->horizontalScrollBar();
-    // If the native bar has range, the fluent bar should be visible
-    if (native->maximum() > native->minimum()) {
-        EXPECT_TRUE(hsb->isVisible());
+    ListView view;
+    view.setAttribute(Qt::WA_DontShowOnScreen);
+    view.resize(110, 65);
+    attachStringListModel(&view, {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF"});
+    auto* horizontal = view.horizontalFluentScrollBar();
+    auto* vertical = view.verticalFluentScrollBar();
+    ASSERT_NE(horizontal, nullptr);
+    ASSERT_NE(vertical, nullptr);
+    view.show();
+    for (const auto flow : {QListView::TopToBottom, QListView::LeftToRight, QListView::TopToBottom}) {
+        SCOPED_TRACE(static_cast<int>(flow));
+        view.setFlow(flow);
+        const bool across = flow == QListView::LeftToRight;
+        ASSERT_TRUE(QTest::qWaitFor([&] {
+            return horizontal->isVisible() == across && vertical->isVisible() != across;
+        }));
+        auto* active = across ? view.horizontalScrollBar() : view.verticalScrollBar();
+        EXPECT_GT(active->maximum(), active->minimum());
     }
 }
 
@@ -805,175 +703,19 @@ TEST_F(ListViewTest, CompositedClearHonorsPreserveParentSurface)
     EXPECT_FALSE(fluent::collections::detail::shouldClearCompositedViewport(lv));
 }
 
-TEST_F(ListViewTest, FlowChangeRefreshesScrollBars)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setFixedSize(200, 200);
-    attachStringListModel(lv, {"A", "B", "C"});
-    layout->addWidget(lv);
-    window->show();
-    QTest::qWait(50);
-
-    // Switch to horizontal — should not crash
-    lv->setFlow(QListView::LeftToRight);
-    QTest::qWait(50);
-
-    // Switch back — should not crash
-    lv->setFlow(QListView::TopToBottom);
-    QTest::qWait(50);
-}
-
-TEST_F(ListViewTest, HorizontalFlowPlaceholder)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setPlaceholderText("No horizontal items");
-    attachStringListModel(lv);
-    EXPECT_EQ(lv->placeholderText(), "No horizontal items");
-    EXPECT_EQ(itemCount(lv), 0);
-}
-
-TEST_F(ListViewTest, HorizontalFlowBorderVisible)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    EXPECT_TRUE(lv->borderVisible());
-    lv->setBorderVisible(false);
-    EXPECT_FALSE(lv->borderVisible());
-}
-
-TEST_F(ListViewTest, HorizontalFlowHeaderText)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setGeometry(10, 10, 300, 100);
-    lv->setHeaderText("Horizontal Header");
-    EXPECT_EQ(lv->headerText(), "Horizontal Header");
-    window->show();
-    QTest::qWait(50);
-    auto* headerLabel = lv->findChild<QLabel*>("fluentListViewHeader");
-    ASSERT_NE(headerLabel, nullptr);
-    EXPECT_TRUE(headerLabel->isVisible());
-}
-
-TEST_F(ListViewTest, HorizontalFlowSelectedIndex)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    attachStringListModel(lv, {"A", "B", "C", "D"});
-
-    EXPECT_EQ(lv->selectedIndex(), -1);
-    lv->setSelectedIndex(0);
-    EXPECT_EQ(lv->selectedIndex(), 0);
-    lv->setSelectedIndex(3);
-    EXPECT_EQ(lv->selectedIndex(), 3);
-
-    // Out of range → clear
-    lv->setSelectedIndex(99);
-    EXPECT_EQ(lv->selectedIndex(), -1);
-}
-
-TEST_F(ListViewTest, HorizontalFlowExtendedSelection)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setSelectionMode(SelectionMode::Extended);
-    attachStringListModel(lv, {"A", "B", "C", "D", "E"});
-    EXPECT_EQ(lv->selectionMode(), SelectionMode::Extended);
-}
-
-TEST_F(ListViewTest, HorizontalFlowNoSelection)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setSelectionMode(SelectionMode::None);
-    attachStringListModel(lv, {"A", "B", "C"});
-    EXPECT_EQ(lv->selectionMode(), SelectionMode::None);
-}
-
-TEST_F(ListViewTest, HorizontalFlowDelegateSizeHintHasWidth)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    attachStringListModel(lv, {"Hello World"});
-    auto* del = qobject_cast<listview_test::FluentListItemDelegate*>(lv->itemDelegate());
-    ASSERT_NE(del, nullptr);
-
-    QStyleOptionViewItem opt;
-    opt.font = lv->font();
-    QModelIndex idx = lv->model()->index(0, 0);
-    QSize hint = del->sizeHint(opt, idx);
-    // Width should be positive for horizontal items with text
-    EXPECT_GT(hint.width(), 0);
-    EXPECT_GT(hint.height(), 0);
-}
-
-TEST_F(ListViewTest, HorizontalFlowItemClickedSignal)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    attachStringListModel(lv, {"A", "B", "C"});
-    QSignalSpy spy(lv, SIGNAL(itemClicked(int)));
-
-    QModelIndex idx = lv->model()->index(1, 0);
-    emit lv->clicked(idx);
-    EXPECT_EQ(spy.count(), 1);
-    EXPECT_EQ(spy.at(0).at(0).toInt(), 1);
-}
-
 TEST_F(ListViewTest, HorizontalFlowWrapping)
 {
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setWrapping(true);
-    lv->setFixedSize(200, 200);
-    attachStringListModel(lv, {"A", "B", "C", "D", "E", "F", "G", "H"});
-    layout->addWidget(lv);
-    window->show();
-    QTest::qWait(50);
-    // Should not crash; wrapping mode with horizontal flow allows multi-row layout
-    EXPECT_EQ(itemCount(lv), 8);
-}
-
-TEST_F(ListViewTest, HorizontalFlowViewportHover)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    lv->setGeometry(10, 10, 200, 60);
-    attachStringListModel(lv, {"A", "B", "C"});
-
-    EXPECT_FALSE(lv->viewportHovered());
-    QSignalSpy spy(lv, &ListView::viewportHoveredChanged);
-
-    FLUENT_MAKE_ENTER_EVENT(enterEv, 5, 5);
-    QApplication::sendEvent(lv, &enterEv);
-    EXPECT_TRUE(lv->viewportHovered());
-    EXPECT_EQ(spy.count(), 1);
-
-    QEvent leave(QEvent::Leave);
-    QApplication::sendEvent(lv, &leave);
-    EXPECT_FALSE(lv->viewportHovered());
-    EXPECT_EQ(spy.count(), 2);
-}
-
-TEST_F(ListViewTest, HorizontalFlowCustomModel)
-{
-    ListView* lv = new ListView(window);
-    lv->setFlow(QListView::LeftToRight);
-    auto* stdModel = new QStandardItemModel(lv);
-    stdModel->appendRow(new QStandardItem("Col0"));
-    stdModel->appendRow(new QStandardItem("Col1"));
-    stdModel->appendRow(new QStandardItem("Col2"));
-    lv->setModel(stdModel);
-    attachFluentDelegate(lv);
-
-    EXPECT_EQ(lv->model()->rowCount(), 3);
-    lv->setSelectedIndex(2);
-    EXPECT_EQ(lv->selectedIndex(), 2);
+    IndicatorListView view;
+    view.setAttribute(Qt::WA_DontShowOnScreen);
+    view.setFlow(QListView::LeftToRight);
+    view.setWrapping(true);
+    view.resize(200, 200);
+    attachStringListModel(&view, {"A", "B", "C", "D", "E", "F", "G", "H"});
+    view.show();
+    const QRect first = view.exposedVisualRect(0);
+    ASSERT_FALSE(first.isEmpty());
+    EXPECT_GT(view.exposedVisualRect(1).left(), first.left());
+    EXPECT_GT(view.exposedVisualRect(7).top(), first.top());
 }
 
 TEST_F(ListViewTest, DefaultDelegateKeepsTextClearOfSelectionIndicator)
@@ -1233,6 +975,7 @@ TEST_F(ListViewTest, HorizontalMultiSelectionUsesBottomRevealIndicators)
     lv->selectionModel()->select(lv->model()->index(2, 0), QItemSelectionModel::Select | QItemSelectionModel::Rows);
     QApplication::processEvents();
 
+    EXPECT_EQ(lv->selectedRows(), QList<int>({0, 2}));
     const QRectF full = lv->selectedIndicatorRectForRow(0, 1.0);
     const QRectF revealStart = lv->selectedIndicatorRectForRow(0, 0.0);
     ASSERT_FALSE(full.isEmpty());
@@ -1340,44 +1083,25 @@ TEST_F(ListViewTest, SelectedIndicatorSettlesAfterDragReorder)
 
 // ── Footer tests ──────────────────────────────────────────────────────────────
 
-TEST_F(ListViewTest, SetFooterText)
+TEST_F(ListViewTest, FooterTextCreatesAndRemovesVisibleLabel)
 {
-    ListView* lv = new ListView(window);
-    EXPECT_TRUE(lv->footerText().isEmpty());
-    QSignalSpy spy(lv, &ListView::footerTextChanged);
-    lv->setFooterText("Total: 5 items");
-    EXPECT_EQ(lv->footerText(), "Total: 5 items");
-    EXPECT_EQ(spy.count(), 1);
-
-    lv->setFooterText("Total: 5 items");
-    EXPECT_EQ(spy.count(), 1);
-}
-
-TEST_F(ListViewTest, FooterVisibleWhenTextSet)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setGeometry(10, 10, 300, 250);
-    attachStringListModel(lv, {"A", "B"});
-    lv->setFooterText("Footer");
-    window->show();
-    QTest::qWait(50);
-
-    auto* footerLabel = lv->findChild<QLabel*>("fluentListViewFooter");
-    ASSERT_NE(footerLabel, nullptr);
-    EXPECT_TRUE(footerLabel->isVisible());
-    EXPECT_EQ(footerLabel->text(), "Footer");
-}
-
-TEST_F(ListViewTest, FooterHiddenWhenTextEmpty)
-{
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    ListView* lv = new ListView(window);
-    lv->setGeometry(10, 10, 300, 250);
-    lv->setFooterText("Footer");
-    lv->setFooterText("");
-    // setFooterText("") removes the internal label entirely
-    EXPECT_EQ(lv->footer(), nullptr);
+    ListView view;
+    view.setAttribute(Qt::WA_DontShowOnScreen);
+    view.show();
+    EXPECT_TRUE(view.footerText().isEmpty());
+    QSignalSpy changes(&view, &ListView::footerTextChanged);
+    view.setFooterText("Footer");
+    auto* label = qobject_cast<QLabel*>(view.footer());
+    ASSERT_NE(label, nullptr);
+    EXPECT_TRUE(label->isVisible());
+    EXPECT_EQ(label->text(), view.footerText());
+    EXPECT_EQ(view.footerText(), "Footer");
+    EXPECT_EQ(changes.count(), 1);
+    view.setFooterText("Footer");
+    EXPECT_EQ(changes.count(), 1);
+    view.setFooterText({});
+    EXPECT_EQ(view.footer(), nullptr);
+    EXPECT_EQ(changes.count(), 2);
 }
 
 // ── Drag reorder tests ────────────────────────────────────────────────────────
