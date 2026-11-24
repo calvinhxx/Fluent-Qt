@@ -1,9 +1,20 @@
 #include "application/WorkspaceController.h"
 #include "application/WorkspaceRepository.h"
 
-#include <cassert>
+#include <cstdlib>
+#include <iostream>
 
 namespace {
+
+void require(bool condition, const char* expression, int line)
+{
+    if (!condition) {
+        std::cerr << "Check failed at line " << line << ": " << expression << '\n';
+        std::exit(1);
+    }
+}
+
+#define CHECK(expr) require(static_cast<bool>(expr), #expr, __LINE__)
 
 class Repository final : public @APP_NAMESPACE@::application::WorkspaceRepository {
 public:
@@ -25,14 +36,14 @@ int main()
 {
     Repository repository;
     @APP_NAMESPACE@::application::WorkspaceController controller(repository);
-    assert(!controller.state().hasWorkspace);
-    assert(controller.state().title == "No workspace");
-    assert(controller.state().status == "Unavailable");
+    CHECK(!controller.state().hasWorkspace);
+    CHECK(controller.state().title == "No workspace");
+    CHECK(controller.state().status == "Unavailable");
     controller.refresh();
-    assert(controller.state().hasWorkspace);
-    assert(controller.state().title == "FluentQt");
-    assert(!controller.state().darkTheme);
+    CHECK(controller.state().hasWorkspace);
+    CHECK(controller.state().title == "FluentQt");
+    CHECK(!controller.state().darkTheme);
     controller.toggleTheme();
-    assert(controller.state().darkTheme);
+    CHECK(controller.state().darkTheme);
     return 0;
 }
