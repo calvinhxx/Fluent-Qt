@@ -27,7 +27,7 @@
 "donut-chart":{"name":"도넛형 차트","description":"전체 대비 각 부분의 비율을 고리 형태로 표시하며, 중앙에 요약 정보를 넣을 수 있습니다.","example":"트래픽 소스","usage":"PieChart와 동일한 분할 규칙을 사용합니다. setCenterText()와 setCenterCaption()으로 중앙 레이블과 캡션을 설정합니다."},
 "scatter-chart":{"name":"분산형 차트","description":"두 값 사이의 관계를 점으로 표시합니다.","example":"요청 분포","usage":"setXRange()와 setYRange()로 축 범위를 설정하며, 각 데이터 포인트는 점으로 그려지고 addSeries()로 두 번째 그룹을 추가합니다."},
 "sparkline":{"name":"스파크라인","description":"축이 없는 소형 추세선으로 카드나 테이블에 적합합니다.","example":"최근 추세","usage":"작은 고정 크기로 사용하고 setModel()로 데이터를 바인딩합니다. 보이는 텍스트 레이블이 없으므로 setAccessibleName()으로 접근성 이름을 설정하세요."},
-"data-grid":{"name":"데이터 그리드","description":"모델 기반의 대량 행과 열을 헤더, 정렬, 선택 및 delegate 편집과 함께 표시합니다.","example":"고정 열과 편집","usage":"가로로 스크롤해도 Project 열이 계속 표시됩니다. 셀을 더블클릭하거나 F2 키를 눌러 편집하세요."},
+"data-grid":{"name":"데이터 그리드","description":"모델 기반의 대량 행과 열을 헤더, 정렬, 선택 및 delegate 편집과 함께 표시합니다.","example":"고정 열과 편집","usage":"가로로 스크롤해도 Project 열이 계속 표시됩니다. 셀을 더블클릭하거나 F2 키를 눌러 편집하세요. setHeaderBackground()로 머리글 배경색을 설정하고 resetHeaderBackground()로 테마 색을 복원할 수 있습니다."},
 "drawer-view":{"name":"드로어 뷰","description":"창 가장자리에서 콘텐츠 위로 슬라이드되어 나타나는 패널입니다.","example":"오른쪽 가장자리 드로어","usage":"setEdge()로 가장자리를 선택하고 setDrawerLength()로 너비/높이를 설정한 뒤 open()을 호출합니다 (기본값으로 바깥쪽 클릭 또는 Escape 키로 닫힙니다)."},
 "file-list-view":{"name":"파일 목록","description":"전체 파일 이름, 전송 진행률 및 복구 작업을 제공하는 모델 기반 파일 목록입니다.","example":"파일과 진행률","usage":"전송 상태 예제입니다. 파일을 제거하거나 실패한 전송을 다시 시도하거나 진행률을 진행해 보세요."},
 "flip-view":{"name":"플립 뷰","description":"여러 페이지를 한 번에 한 페이지씩 넘기며 볼 수 있습니다.","example":"FlipView 사진 갤러리","usage":"addPage()로 페이지를 추가하고 setShowPageIndicator(true)로 페이지 점을 표시합니다. 마우스 오버 시 이동 가능한 방향 화살표가 나타나며, 스와이프나 키보드 탐색으로도 페이지를 전환할 수 있습니다."},

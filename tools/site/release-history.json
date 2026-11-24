@@ -1617,6 +1617,18 @@
   ],
   "unreleased": {
     "after": "1.12.2",
-    "groups": []
+    "groups": [
+      {
+        "scope": "uilib",
+        "summary": {
+          "en": "`DataGrid` headers in dialogs have a solid background. Use `setHeaderBackground()` to change the color while keeping sorting and pinned columns.",
+          "zh": "弹窗中的 `DataGrid` 表头使用实色底层。可用 `setHeaderBackground()` 调整底色，保留排序和固定列。"
+        },
+        "changes": [],
+        "migrations": [],
+        "related": ["data-grid"],
+        "headers": ["src/components/collections/DataGrid.h"]
+      }
+    ]
   }
 }
