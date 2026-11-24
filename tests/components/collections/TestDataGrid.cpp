@@ -49,10 +49,11 @@ struct AccessibleModelEventRecord {
 };
 
 QVector<AccessibleModelEventRecord> g_accessibleModelEvents;
+const QObject* g_observedTable = nullptr;
 
 void captureAccessibleModelEvent(QAccessibleEvent* event)
 {
-    if (!event || event->type() != QAccessible::TableModelChanged)
+    if (!event || event->type() != QAccessible::TableModelChanged || event->object() != g_observedTable)
         return;
 
     auto* modelEvent = static_cast<QAccessibleTableModelChangeEvent*>(event);
@@ -64,8 +65,9 @@ void captureAccessibleModelEvent(QAccessibleEvent* event)
 }
 
 struct ScopedAccessibleModelEventCapture {
-    ScopedAccessibleModelEventCapture()
+    explicit ScopedAccessibleModelEventCapture(const DataGrid& view)
     {
+        g_observedTable = &view;
         previous = QAccessible::installUpdateHandler(captureAccessibleModelEvent);
         g_accessibleModelEvents.clear();
     }
@@ -73,6 +75,7 @@ struct ScopedAccessibleModelEventCapture {
     ~ScopedAccessibleModelEventCapture()
     {
         QAccessible::installUpdateHandler(previous);
+        g_observedTable = nullptr;
         g_accessibleModelEvents.clear();
     }
 
@@ -1544,7 +1547,7 @@ TEST_F(DataGridTest, Contract_AccessibilityModelReplacementEmitsOneReset)
     ASSERT_NE(root->tableInterface()->cellAt(0, 0), nullptr);
 
     FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
-    ScopedAccessibleModelEventCapture capture;
+    ScopedAccessibleModelEventCapture capture(view);
     view.setModel(&replacement);
     processEvents();
 
@@ -1578,7 +1581,7 @@ TEST_F(DataGridTest, Contract_SortingRefreshesAccessibleCellOrder)
     ASSERT_NE(previous, nullptr);
     const auto previousId = QAccessible::uniqueId(previous);
     FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
-    ScopedAccessibleModelEventCapture capture;
+    ScopedAccessibleModelEventCapture capture(view);
     model.sort(0, Qt::DescendingOrder);
     processEvents();
     EXPECT_EQ(g_accessibleModelEvents.size(), 1);
