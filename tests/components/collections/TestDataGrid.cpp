@@ -2304,6 +2304,9 @@ TEST_F(DataGridTest, Contract_DialogHeadersHaveASolidSurfaceBeforeHover)
     auto* column = grid.horizontalHeader()->viewport();
     auto* row = grid.verticalHeader()->viewport();
     auto* frozen = pinned->horizontalHeader()->viewport();
+    const auto headerIntersection = [&] {
+        return QPoint(grid.verticalHeader()->geometry().center().x(), grid.horizontalHeader()->geometry().center().y());
+    };
     for (const auto theme :
         {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
         fluent::FluentElement::setTheme(theme);
@@ -2312,6 +2315,7 @@ TEST_F(DataGridTest, Contract_DialogHeadersHaveASolidSurfaceBeforeHover)
         EXPECT_EQ(sample(column, {column->width() - 6, 4}), color);
         EXPECT_EQ(sample(row, {4, 12}), color);
         EXPECT_EQ(sample(frozen, {12, 4}), color);
+        EXPECT_EQ(sample(&grid, headerIntersection()), color);
     }
     grid.sortByColumn(0, Qt::DescendingOrder);
     QTest::mouseClick(frozen, Qt::LeftButton, Qt::NoModifier, {24, 12});
@@ -2321,6 +2325,15 @@ TEST_F(DataGridTest, Contract_DialogHeadersHaveASolidSurfaceBeforeHover)
     grid.setLayoutDirection(Qt::RightToLeft);
     processEvents();
     EXPECT_EQ(sample(column, {6, 4}), color);
+    EXPECT_EQ(sample(&grid, headerIntersection()), color);
+    EXPECT_FALSE(grid.isCornerButtonEnabled());
+    grid.setSelectionMode(DataGrid::SelectionMode::Extended);
+    grid.setCornerButtonEnabled(true);
+    auto* corner = grid.childAt(headerIntersection());
+    ASSERT_NE(corner, nullptr);
+    grid.clearSelection();
+    QTest::mouseClick(corner, Qt::LeftButton, Qt::NoModifier, corner->mapFrom(&grid, headerIntersection()));
+    EXPECT_EQ(grid.selectionModel()->selectedIndexes().size(), model.rowCount() * model.columnCount());
     grid.setLayoutDirection(Qt::LeftToRight);
 
     class LabelOnlyHeader final : public QHeaderView {
@@ -2346,6 +2359,7 @@ TEST_F(DataGridTest, Contract_DialogHeadersHaveASolidSurfaceBeforeHover)
     EXPECT_EQ(changed.count(), 2);
     EXPECT_FALSE(grid.headerBackground().isValid());
     EXPECT_EQ(sample(custom->viewport(), gap), grid.themeColorsRef().bgLayer);
+    EXPECT_EQ(sample(&grid, headerIntersection()), grid.themeColorsRef().bgLayer);
     EXPECT_EQ(sample(grid.viewport(), {180, grid.viewport()->height() - 6}), backdrop);
 }
 

@@ -624,6 +624,9 @@ DataGrid::DataGrid(QWidget* parent) : QTableView(parent)
     setFrameStyle(QFrame::NoFrame);
     setAlternatingRowColors(false);
     setCornerButtonEnabled(false);
+    m_headerCorner = compatibility::detail::tableSelectAllButton(*this);
+    if (m_headerCorner)
+        m_headerCorner->installEventFilter(this);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -1092,6 +1095,8 @@ void DataGrid::applyThemePalette()
 
 void DataGrid::updateHeaderSurfaces()
 {
+    if (m_headerCorner)
+        m_headerCorner->update();
     QPalette headerPalette = palette();
     headerPalette.setColor(QPalette::Button, effectiveHeaderBackground());
     headerPalette.setColor(QPalette::ButtonText, themeColorsRef().textSecondary);
@@ -1589,6 +1594,13 @@ void DataGrid::syncPinnedColumns()
 
 bool DataGrid::eventFilter(QObject* watched, QEvent* event)
 {
+    if (watched == m_headerCorner && event->type() == QEvent::Paint) {
+        QPainter painter(m_headerCorner);
+        painter.fillRect(m_headerCorner->rect(), effectiveHeaderBackground());
+        if (m_headerCorner->isDown())
+            painter.fillRect(m_headerCorner->rect(), themeColorsRef().subtleTertiary);
+        return true;
+    }
     if (m_pinnedView && watched == m_pinnedView->viewport()) {
         if (event->type() == QEvent::Wheel) {
             wheelEvent(static_cast<QWheelEvent*>(event));

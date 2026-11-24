@@ -27,7 +27,7 @@
 "donut-chart":{"name":"ドーナツグラフ","description":"全体に対する各要素の割合をリング状に表示し、中央に概要を表示できます。","example":"トラフィックソース","usage":"PieChart と同じ分割ルールを使用します。中央のラベルとキャプションは setCenterText() と setCenterCaption() で設定します。"},
 "scatter-chart":{"name":"散布図","description":"2 つの数値の関係を点として表示します。","example":"リクエスト分布","usage":"setXRange() と setYRange() で軸の範囲を設定し、各データ点を点として描画します。addSeries() で 2 つ目のグループを追加できます。"},
 "sparkline":{"name":"スパークライン","description":"軸のないコンパクトなトレンドラインで、カードやテーブルへの埋め込みに最適です。","example":"最近の傾向","usage":"小さめの固定サイズで使用し、setModel() でデータをバインドします。表示テキストのラベルがないため、setAccessibleName() でアクセシブル名を設定してください。"},
-"data-grid":{"name":"データグリッド","description":"ヘッダー、並び替え、選択、デリゲート編集を備えた大規模なモデル駆動の行と列を表示します。","example":"列の固定と編集","usage":"Project 列を表示したまま横方向にスクロールできます。セルをダブルクリックするか F2 キーを押して編集します。setHeaderBackground() でヘッダーの背景色を変更し、resetHeaderBackground() でテーマの色に戻せます。"},
+"data-grid":{"name":"データグリッド","description":"ヘッダー、並び替え、選択、デリゲート編集を備えた大規模なモデル駆動の行と列を表示します。","example":"列の固定と編集","usage":"Project 列を表示したまま横方向にスクロールできます。セルをダブルクリックするか F2 キーを押して編集します。setHeaderBackground() で行と列のヘッダー、その交点、固定列のヘッダーの背景色を変更し、resetHeaderBackground() でテーマの色に戻せます。"},
 "drawer-view":{"name":"ドロワービュー","description":"ウィンドウの端からコンテンツの上にスライドインするパネルです。","example":"右端のドロワー","usage":"setEdge() で端を選択し、setDrawerLength() で幅または高さを設定して open() を呼び出します（デフォルトでは外側をクリックするか Escape キーで閉じます）。"},
 "file-list-view":{"name":"ファイルリスト","description":"完全なファイル名、転送の進行状況、リカバリアクションを備えたモデル駆動のファイルリストです。","example":"ファイルと進行状況","usage":"転送状態の例です。ファイルの削除、失敗した転送の再試行、進行状況の更新を行えます。"},
 "flip-view":{"name":"フリップビュー","description":"ページのコレクションを 1 ページずつめくって表示できます。","example":"FlipView フォトギャラリー","usage":"addPage() でページを追加し、setShowPageIndicator(true) でページインジケーターのドットを表示します。ホバーすると移動可能な方向の矢印が表示され、スワイプやキーボード操作でもページを切り替えられます。"},
