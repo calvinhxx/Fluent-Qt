@@ -1,4 +1,5 @@
 {
+"727953d3":"Le modèle `monitor` génère une application de supervision en C++ ou PySide6 avec un graphique de latence et un tableau filtrable.",
 "6251624d":"Dans les boîtes de dialogue, les en-têtes de `DataGrid` ont un fond opaque. Utilisez `setHeaderBackground()` pour changer leur couleur tout en conservant le tri et les colonnes épinglées.",
 "0b980ca9":"`NumberBox` peut exiger une valeur et placer les boutons moins et plus de part et d’autre du nombre. Après un glisser ou un prélèvement de couleur, les contrôles rétablissent le curseur de l’application.",
 "0ca130e3":"Les paquets de Gallery pour le bureau et Python comprennent désormais les 99 entrées, dont `QmlView`.",

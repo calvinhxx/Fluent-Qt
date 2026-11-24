@@ -1,4 +1,5 @@
 {
+"727953d3":"La plantilla `monitor` genera una aplicación de monitorización en C++ o PySide6 con un gráfico de latencia y una tabla filtrable.",
 "6251624d":"Las cabeceras de `DataGrid` tienen un fondo opaco en los cuadros de diálogo. Usa `setHeaderBackground()` para cambiar el color y conservar la ordenación y las columnas fijadas.",
 "0b980ca9":"`NumberBox` puede exigir un valor y colocar los botones menos y más a cada lado. Al terminar de arrastrar o elegir un color, los controles restauran el cursor de la aplicación.",
 "0ca130e3":"Los paquetes de Gallery para escritorio y Python incluyen las 99 entradas, entre ellas `QmlView`.",
