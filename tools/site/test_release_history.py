@@ -33,6 +33,10 @@ class ReleaseHistoryTest(unittest.TestCase):
             self.data['unreleased']['groups'] = [{'scope': 'uilib', 'changes': []}]
         return self.data['unreleased']['groups'][0]
 
+    def two_scope_groups(self):
+        summary = {'en': 'Update the application.', 'zh': '更新应用。'}
+        return [{'scope': scope, 'summary': summary} for scope in ('uilib', 'gallery')]
+
     def test_each_release_has_a_reviewed_translation_and_real_publication_state(self):
         data = history.load_history(self.root)
         self.assertEqual(next(v for v in data['versions'] if v['version'] == data['latest'])['status'], 'published')
@@ -42,6 +46,7 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_scope_groups_are_explicit_unique_and_nonempty(self):
         baseline = copy.deepcopy(self.data)
+        baseline['versions'][0]['groups'] = self.two_scope_groups()
         for scope in (None, 'unknown', 'gallery'):
             with self.subTest(scope=scope):
                 self.data = copy.deepcopy(baseline)
@@ -62,6 +67,7 @@ class ReleaseHistoryTest(unittest.TestCase):
 
     def test_bullet_budget_applies_across_scope_groups(self):
         entry = self.data['versions'][0]
+        entry['groups'] = self.two_scope_groups()
         entry['groups'][0]['changes'] = [{'en': f'Item {i}.', 'zh': f'第 {i} 项。'} for i in range(4)]
         entry['groups'][1]['changes'] = [{'en': f'Item {i}.', 'zh': f'第 {i} 项。'} for i in range(3)]
         self.write()
