@@ -8629,8 +8629,12 @@ class FluentQtBindingTest(unittest.TestCase):
             placeholderText="No rows",
             borderVisible=False,
             backgroundVisible=False,
+            headerBackground=QColor("#247869"),
             scrollChainingEnabled=True,
         )
+        self.assertEqual(view.headerBackground(), QColor("#247869"))
+        view.resetHeaderBackground()
+        self.assertFalse(view.headerBackground().isValid())
         self.assertEqual(
             view.selectionMode(),
             fluentqt.SelectionMode.Extended,

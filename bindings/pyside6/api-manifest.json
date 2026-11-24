@@ -415,6 +415,7 @@
       "visibleMonth"
     ],
     "DataGrid": [
+      "headerBackground",
       "horizontalFluentScrollBar",
       "isAnimationEnabled",
       "isBackgroundVisible",
@@ -427,6 +428,7 @@
       "model",
       "pinnedColumns",
       "placeholderText",
+      "resetHeaderBackground",
       "restoreColumnState",
       "saveColumnState",
       "selectionMode",
@@ -436,6 +438,7 @@
       "setBorderVisible",
       "setColumnPinned",
       "setColumnVisible",
+      "setHeaderBackground",
       "setItemDelegate",
       "setModel",
       "setPlaceholderText",
