@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  Qt Widgets 向けのクロスプラットフォーム Fluent スタイル C++ UI コンポーネントライブラリ。
+  Qt Widgets 向けのクロスプラットフォーム Fluent UI コンポーネントライブラリ（ネイティブ C++17 &amp; PySide6 対応・MIT ライセンス）。
 </p>
 
 <p align="center">
@@ -20,15 +20,18 @@
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
+  <a href="bindings/pyside6/README.md"><img alt="PySide6" src="https://img.shields.io/badge/PySide6-6.2.4%2B-3776AB.svg"></a>
   <a href="https://pypi.org/project/FluentQt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/FluentQt?color=3776AB"></a>
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/ja/#top"><img src="docs/assets/readme/hero.png" alt="Windows で Mica と 3D モードを有効にした Fluent-Qt Gallery Home"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/ja/#gallery"><img src="docs/assets/readme/hero.png" alt="Windows で Mica と 3D モードを有効にした Fluent-Qt Gallery Home"></a>
 </p>
 
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/ja/#gallery">C++ Web Gallery をライブ体験</a></strong>
+  ·
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/studio/?lang=en">Page Studio</a></strong>
   ·
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/ja/api/checkbox/?playground=1">プロパティプレビュー</a></strong>
   ·
@@ -41,9 +44,9 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/ja/#support">プロジェクトを支援</a>
 </p>
 
-Fluent-Qt（FluentQt）は Qt Widgets 向けの Fluent スタイル UI コントロール群を提供し、入力、ナビゲーション、コレクション、データグリッド、[チャート](docs/architecture/charts.md)、ダイアログ、ポップアップ、ウィンドウをカバーします。C++17 で書かれており、CMake 経由で既存の Qt プロジェクトに組み込めるほか、オプションで PySide6 バインディングも利用できます。
+Fluent-Qt（FluentQt）は MIT ライセンスの Qt Widgets ライブラリです。C++17 と PySide6 で同じ実装を使えます。Gallery には `DataGrid`、[チャート](docs/architecture/charts.md)、ダイアログ、ウィンドウなど 99 項目を収録しています。
 
-Windows、macOS、Linux、WebAssembly 上で動作し、ライト、ダーク、ハイコントラストのテーマと設定可能なアニメーションモードを備えています。オプションモジュールを有効にすると、パーティクル背景（[Particles](docs/architecture/particles.md)）、3D パース表示（[Spatial](docs/architecture/spatial-view.md)）、埋め込み QML ページ（[QmlBridge](docs/architecture/qml-bridge.md)）を追加できます。
+Windows、macOS、Linux、WebAssembly 上で動作し、ライト、ダーク、ハイコントラストのテーマと設定可能なアニメーションモードを備えています。**Page Studio** と **Qt Designer**（C++・Python 間で `.ui` ファイルを共有）によるビジュアル設計に加え、CPU 描画のパーティクル背景（[Particles](docs/architecture/particles.md)）、3D パース表示（[Spatial](docs/architecture/spatial-view.md)）、埋め込み QML ページ（[QmlBridge](docs/architecture/qml-bridge.md)）のオプションモジュールも利用できます。
 
 ## 🧩 ライブラリモジュール
 
@@ -88,17 +91,67 @@ python -m pip install FluentQt-Gallery
 python -m fluentqt_gallery
 ```
 
+## 🎨 ビジュアル設計
+
+- **Page Studio（Web）**：ブラウザ上の [Page Studio](https://calvinhxx.github.io/Fluent-Qt/studio/?lang=en) で Fluent-Qt のコントロールを配置し、テンプレートや AI レイアウト生成からライブプレビューして C++、PySide6、Qt Designer `.ui` ファイルに出力できます。
+
+### Qt Designer
+
+全モジュールを導入すると、Qt Creator と `pyside6-designer` のウィジェットボックスに 95 項目が表示されます。フォームの新規作成時には 4 種類のテンプレートを選べます。コアのみの場合は 92 項目と 3 種類です。[Designer の設定](tools/designer/README.md)。
+
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="FluentQt ウィジェットボックス、フォームキャンバス、FluentButton プロパティエディタを表示する Qt Designer">
+  </a>
+</p>
+
 ## 🤖 AI で UI を構築
 
-Codex、Claude Code、Cursor で [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) スキルを使うと、デスクトップアプリの新規作成、既存プロジェクトへの GUI 追加、UI の改善を行えます。[実例を見る](https://calvinhxx.github.io/Fluent-Qt/ja/#ai-build) · [導入と使い方](docs/ai/README.md)
-
-Gallery サンプルを調整する際は、Live Scene で保存済みの変更をプレビューしてから、コンパイル済み C++ サンプルで最終確認してください。[仕組み](docs/development/gallery-preview-workflow.md)
+**AI スキル＆プロジェクト生成 CLI**：Codex、Claude Code、Cursor で [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) スキルを使い（[実例を見る](https://calvinhxx.github.io/Fluent-Qt/ja/#ai-build) · [導入と使い方](docs/ai/README.md)）、`python3 tools/onboarding/fluentqt`（[オンボーディングツール](tools/onboarding/README.md)）で環境確認や C++ / PySide6 スターターの生成を行えます。Gallery サンプルを調整する際は、Live Scene で保存済みの変更をプレビューしてからコンパイル済み C++ サンプルで確認してください（[仕組み](docs/development/gallery-preview-workflow.md)）。
 
 ## 🚀 クイックスタート
 
-C++ 統合には C++17、CMake 3.16+、Qt Widgets 5.15+ または 6.2+ が必要です。新規プロジェクトでは `FetchContent` の利用を推奨します。
+Fluent-Qt は **Python（PySide6）** と **C++17（CMake）** の両方からネイティブに利用できます。
+
+### Python (PySide6)
+
+Qt/PySide6 6.9.3 の wheel は CPython 3.11–3.13 に対応します。Linux ARM64 では CPython 3.12–3.13 と glibc 2.39 以降が必要です。
+
+```bash
+python -m pip install FluentQt
+```
+
+`main.py`：
+
+```python
+import sys
+import fluentqt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from fluentqt.basicinput import Button
+from fluentqt.windowing import Window
+
+fluentqt.prepare_high_dpi_application()
+app = QApplication(sys.argv)
+fluentqt.initialize_resources()
+app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+
+window = Window()
+window.resize(480, 320)
+content = QWidget()
+button = Button("Hello from FluentQt", content)
+button.setFluentStyle(Button.ButtonStyle.Accent)
+QVBoxLayout(content).addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
+window.setContentWidget(content)
+window.show()
+sys.exit(app.exec())
+```
+
+[Python ガイド](bindings/pyside6/README.md) · [Hello World](bindings/pyside6/examples/hello_world/main.py)
 
 ### C++ セットアップ
+
+C++ 統合には C++17、CMake 3.16+、Qt Widgets 5.15+ または 6.2+ が必要です。新規プロジェクトでは `FetchContent` の利用を推奨します。
 
 #### `FetchContent` による統合
 
@@ -142,7 +195,7 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 FluentQt がシステム検索パス外にある場合は、`-DCMAKE_PREFIX_PATH=/path/to/fluentqt` を指定して設定してください。
 
-### C++ 最小サンプル
+#### C++ 最小サンプル
 
 `main.cpp`:
 
@@ -182,26 +235,6 @@ int main(int argc, char* argv[])
 ```
 
 プロジェクト全体は [`examples/hello_world`](examples/hello_world/) を参照するか、IDE から `fluentqt_hello_world` ターゲットを直接実行してください。
-
-### Python (PySide6)
-
-PyPI から PySide6 バインディング（Shiboken6 経由）をインストールします。
-
-```bash
-python -m pip install FluentQt
-```
-
-サンプル、互換性情報、ソースビルド手順は [Python ガイド](bindings/pyside6/README.md)を参照してください。
-
-### Qt Designer
-
-Qt Creator（C++）と pyside6-designer（Python）で FluentQt ウィジェットやフォームテンプレートをドラッグ＆ドロップでき、`.ui` ファイルを共有できます。手順は [Qt Designer ガイド](tools/designer/README.md)を参照してください。
-
-<p>
-  <a href="tools/designer/README.md">
-    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="FluentQt ウィジェットボックス、フォームキャンバス、FluentButton プロパティエディタを表示する Qt Designer">
-  </a>
-</p>
 
 ## 🛠 ビルド
 
@@ -292,7 +325,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 | 目的 | エントリーポイント |
 |---|---|
 | コントロールと API の閲覧 | [ドキュメント・API](https://calvinhxx.github.io/Fluent-Qt/ja/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/ja/#gallery) |
-| アプリの構築 | [AI 支援開発](docs/ai/README.md) · [オンボーディングツール](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
+| アプリの構築 | [Qt Designer](tools/designer/README.md) · [AI 支援開発](docs/ai/README.md) · [オンボーディングツール](tools/onboarding/README.md) |
 | FluentQt への貢献 | [開発ガイド](docs/development/README.md) · [アーキテクチャ](docs/architecture/README.md) · [Fluent デザイン](docs/design-languages/README.md) |
 | パッケージングとリリース | [パッケージング](docs/development/packaging-workflow.md) · [リリース運用](docs/development/release-governance.md) · [リリースノート](docs/releases/README.md) |
 | 質問・バグ報告 | [コミュニティ](docs/community/README.md) · [サポート](SUPPORT.md) · [セキュリティ](SECURITY.md) |

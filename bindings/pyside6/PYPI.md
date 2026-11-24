@@ -8,14 +8,10 @@
 [Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [FluentQt PySide6 Hello World →](examples/hello_world/README.md)
 <!-- docs-nav:top:end -->
 
-FluentQt is the official PySide6 compatibility distribution for
-[Fluent-Qt](https://github.com/calvinhxx/Fluent-Qt), a cross-platform
-Fluent / WinUI-style C++ component library built on Qt Widgets. The widgets
-remain native C++ objects; Shiboken6 exposes the same implementation to Python
-instead of reimplementing the UI library.
-
-The C++ library remains the primary project. Python support is optional and
-targets Qt 6.
+[FluentQt](https://github.com/calvinhxx/Fluent-Qt) is an MIT-licensed Qt Widgets
+library for PySide6. Shiboken6 exposes its C++17 implementation to Python.
+The Gallery presents 99 entries covering inputs, navigation, charts, dialogs
+and components from the optional Particles, Spatial and QmlBridge modules.
 
 ## Install
 
@@ -24,7 +20,12 @@ python -m pip install FluentQt
 ```
 
 Published wheels install the matching `PySide6-Essentials` and `shiboken6`
-runtime automatically.
+runtime automatically. Install the standalone example application with:
+
+```bash
+python -m pip install FluentQt-Gallery
+python -m fluentqt_gallery
+```
 
 ## Minimal example
 
@@ -58,14 +59,26 @@ window.show()
 sys.exit(app.exec())
 ```
 
+## Explore and design visually
+
+- **WebAssembly Gallery**: Try all controls, themes, and 3D views in your
+  browser at [calvinhxx.github.io/Fluent-Qt/gallery/](https://calvinhxx.github.io/Fluent-Qt/gallery/).
+- **Property preview**: Adjust live Qt properties and copy generated PySide6
+  code in the [interactive playground](https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1).
+- **Page Studio**: Arrange controls visually in the browser and export PySide6
+  or `.ui` layouts from [Page Studio](https://calvinhxx.github.io/Fluent-Qt/studio/?lang=en).
+- **Qt Designer**: Drag widgets from the Widget Box or select a template in
+  New Form. Share the resulting `.ui` file with Qt Creator. See the
+  [Qt Designer guide](https://github.com/calvinhxx/Fluent-Qt/blob/main/tools/designer/README.md).
+
 ## Package contents
 
-- Native Qt Widgets with the Fluent design contract and Light/Dark themes.
+- Native controls with Light, Dark and High Contrast themes.
 - Qt properties, signals, enums, Python subclassing, and typed package stubs.
 - Explicit ownership contracts for hosted widgets, overlays, models, and
   native windows.
-- A single `_fluentqt` extension so themes, resources, and Qt object identity
-  stay process-wide.
+- A single `_fluentqt` `abi3` extension so themes, resources, and Qt object
+  identity stay process-wide.
 
 The example application is distributed separately as
 [`FluentQt-Gallery`](https://pypi.org/project/FluentQt-Gallery/), keeping demo
@@ -75,7 +88,7 @@ code and assets out of the reusable UI library wheel.
 
 Each supported platform and architecture has a CPython stable-ABI (`abi3`)
 wheel for the matched Qt, PySide6, and Shiboken6 6.9.3 runtimes. The wheels
-support CPython 3.11–3.13, except on Linux ARM64 where the minimum is 3.12.
+support CPython 3.11–3.13. On Linux ARM64 they require CPython 3.12–3.13 and glibc 2.39 or newer.
 
 | Platform | Architectures |
 | --- | --- |

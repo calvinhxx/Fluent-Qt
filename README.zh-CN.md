@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  面向 Qt Widgets 的跨平台 Fluent 风格 C++ UI 组件库。
+  面向 Qt Widgets 的跨平台原生 Fluent UI 组件库，支持 C++17 与 PySide6（MIT 开源）。
 </p>
 
 <p align="center">
@@ -20,15 +20,18 @@
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
+  <a href="bindings/pyside6/README.md"><img alt="PySide6" src="https://img.shields.io/badge/PySide6-6.2.4%2B-3776AB.svg"></a>
   <a href="https://pypi.org/project/FluentQt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/FluentQt?color=3776AB"></a>
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top"><img src="docs/assets/readme/hero.png" alt="Windows Mica 效果下开启 3D 模式的 Fluent-Qt Gallery Home 首页"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery"><img src="docs/assets/readme/hero.png" alt="Windows Mica 效果下开启 3D 模式的 Fluent-Qt Gallery Home 首页"></a>
 </p>
 
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery">实时体验 C++ Web Gallery</a></strong>
+  ·
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/studio/?lang=zh">Page Studio</a></strong>
   ·
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/checkbox/?playground=1">属性动态预览</a></strong>
   ·
@@ -41,9 +44,9 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#support">支持项目</a>
 </p>
 
-Fluent-Qt（FluentQt）为 Qt Widgets 提供一套 Fluent 风格控件，涵盖输入、导航、列表与树、数据表格、[图表](docs/architecture/charts.md)、对话框、浮层和窗口。基于 C++17 开发，可通过 CMake 接入现有 Qt 工程，并提供可选的 PySide6 绑定。
+Fluent-Qt（FluentQt）是采用 MIT 许可证的 Qt Widgets 组件库。C++17 和 PySide6 共用一套实现。Gallery 收录 99 项，包含 `DataGrid`、[图表](docs/architecture/charts.md)、对话框和窗口。
 
-支持 Windows、macOS、Linux 和 WebAssembly，内置浅色、深色和高对比度主题，动画支持减弱或关闭。按需启用扩展模块即可使用粒子背景（[Particles](docs/architecture/particles.md)）、3D 透视视图（[Spatial](docs/architecture/spatial-view.md)）或嵌入 QML 页面（[QmlBridge](docs/architecture/qml-bridge.md)）。
+支持 Windows、macOS、Linux 和 WebAssembly，内置浅色、深色和高对比度主题，动画支持减弱或关闭。提供网页端 **Page Studio** 与 **Qt Designer** 可视化设计（C++ 与 Python 共用 `.ui` 文件），并支持按需启用 CPU 粒子背景（[Particles](docs/architecture/particles.md)）、3D 透视视图（[Spatial](docs/architecture/spatial-view.md)）和嵌入 QML 页面（[QmlBridge](docs/architecture/qml-bridge.md)）。
 
 ## 🧩 模块概览
 
@@ -88,17 +91,67 @@ python -m pip install FluentQt-Gallery
 python -m fluentqt_gallery
 ```
 
+## 🎨 可视化设计
+
+- **Page Studio（网页端）**：在浏览器中使用 [Page Studio](https://calvinhxx.github.io/Fluent-Qt/studio/?lang=zh) 拖拽编排 Fluent-Qt 控件，支持从模板或 AI 辅助布局起步、实时预览交互，并导出 C++、PySide6 或 Qt Designer `.ui` 文件。
+
+### Qt Designer
+
+安装全部模块后，Qt Creator 和 `pyside6-designer` 的工具箱里有 95 项，另有 4 个模板从“新建表单”选择。仅安装核心模块时分别为 92 项和 3 个模板。见 [Designer 安装指南](tools/designer/README.md)。
+
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer 中的 FluentQt 控件箱、实时表单画布与 FluentButton 属性编辑器">
+  </a>
+</p>
+
 ## 🤖 AI 辅助开发
 
-在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill，可以快速创建桌面应用、给现有工程加上界面，或优化现有界面布局。[查看示例](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)
-
-调整 Gallery 示例时，可以先在 Live Scene 中保存即预览，再用编译后的 C++ 程序确认实际渲染效果。[工作原理](docs/development/gallery-preview-workflow.md)
+**AI Skill 与项目脚手架**：在 Codex、Claude Code 或 Cursor 中使用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill（[查看示例](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)），并可通过 `python3 tools/onboarding/fluentqt`（[环境检查与项目模板](tools/onboarding/README.md)）一键检测环境与生成 C++ / PySide6 起步工程。调整 Gallery 示例时，可先在 Live Scene 保存即预览再用编译后的 C++ 程序确认（[工作原理](docs/development/gallery-preview-workflow.md)）。
 
 ## 🚀 快速开始
 
-C++ 接入需要 C++17、CMake 3.16+ 和 Qt Widgets 5.15+ 或 6.2+。新项目推荐使用 `FetchContent`。
+Fluent-Qt 同时面向 **Python（PySide6）** 与 **C++17（CMake）** 原生提供同一套控件。
+
+### Python (PySide6)
+
+Qt/PySide6 6.9.3 预编译包支持 CPython 3.11–3.13。Linux ARM64 需要 CPython 3.12–3.13 和 glibc 2.39 或更高版本。
+
+```bash
+python -m pip install FluentQt
+```
+
+`main.py`：
+
+```python
+import sys
+import fluentqt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from fluentqt.basicinput import Button
+from fluentqt.windowing import Window
+
+fluentqt.prepare_high_dpi_application()
+app = QApplication(sys.argv)
+fluentqt.initialize_resources()
+app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+
+window = Window()
+window.resize(480, 320)
+content = QWidget()
+button = Button("Hello from FluentQt", content)
+button.setFluentStyle(Button.ButtonStyle.Accent)
+QVBoxLayout(content).addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
+window.setContentWidget(content)
+window.show()
+sys.exit(app.exec())
+```
+
+[Python 指南](bindings/pyside6/README.md) · [Hello World](bindings/pyside6/examples/hello_world/main.py)
 
 ### C++ 接入
+
+C++ 接入需要 C++17、CMake 3.16+ 和 Qt Widgets 5.15+ 或 6.2+。新项目推荐使用 `FetchContent`。
 
 #### `FetchContent` 集成
 
@@ -142,7 +195,7 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 如果 FluentQt 不在系统搜索路径中，配置时传入 `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`。
 
-### C++ 最小示例
+#### C++ 最小示例
 
 `main.cpp`：
 
@@ -182,26 +235,6 @@ int main(int argc, char* argv[])
 ```
 
 完整工程见 [`examples/hello_world`](examples/hello_world/)，IDE 中可直接运行 `fluentqt_hello_world` target。
-
-### Python (PySide6)
-
-通过 PyPI 安装 PySide6 绑定（基于 Shiboken6 封装原生 C++ 控件）：
-
-```bash
-python -m pip install FluentQt
-```
-
-安装方法、代码示例、兼容矩阵及源码编译说明见 [Python 指南](bindings/pyside6/README.md)。
-
-### Qt Designer
-
-支持在 Qt Creator（C++）和 pyside6-designer（Python）中拖拽控件与表单模板，两端共用 `.ui` 文件。配置与用法见 [Qt Designer 指南](tools/designer/README.md)。
-
-<p>
-  <a href="tools/designer/README.md">
-    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer 中的 FluentQt 控件箱、实时表单画布与 FluentButton 属性编辑器">
-  </a>
-</p>
 
 ## 🛠 构建
 
@@ -292,7 +325,7 @@ python3 tools/dev/fluent_qt_build.py build/fluentqt --target fluent_qt_source_pa
 | 目标 | 入口 |
 |---|---|
 | 查看控件与 API | [组件与 API 文档](https://calvinhxx.github.io/Fluent-Qt/zh-CN/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) |
-| 开发桌面应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
+| 开发桌面应用 | [Qt Designer](tools/designer/README.md) · [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) |
 | 参与项目开发 | [开发指南](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计规范](docs/design-languages/README.md) |
 | 打包与发布 | [打包流程](docs/development/packaging-workflow.md) · [发布规范](docs/development/release-governance.md) · [更新日志](docs/releases/README.md) |
 | 反馈问题或交流 | [社区入口](docs/community/README.md) · [支持说明](SUPPORT.md) · [安全报告](SECURITY.md) |

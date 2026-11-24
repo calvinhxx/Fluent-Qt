@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  A cross-platform Fluent-style C++ UI component library for Qt Widgets.
+  Cross-platform Fluent UI component library for Qt Widgets — native C++17 and PySide6, MIT-licensed.
 </p>
 
 <p align="center">
@@ -20,15 +20,18 @@
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
+  <a href="bindings/pyside6/README.md"><img alt="PySide6" src="https://img.shields.io/badge/PySide6-6.2.4%2B-3776AB.svg"></a>
   <a href="https://pypi.org/project/FluentQt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/FluentQt?color=3776AB"></a>
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery Home in 3D mode on Windows with Mica"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/#gallery"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery Home in 3D mode on Windows with Mica"></a>
 </p>
 
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/#gallery">Try the live C++ Web Gallery</a></strong>
+  ·
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/studio/?lang=en">Page Studio</a></strong>
   ·
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1">Property preview</a></strong>
   ·
@@ -41,9 +44,9 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/#support">Support the project</a>
 </p>
 
-Fluent-Qt (FluentQt) provides Fluent-style controls for Qt Widgets—inputs, navigation, collections, data grids, [charts](docs/architecture/charts.md), dialogs, popups, and windows. Written in C++17, it integrates into existing Qt projects via CMake and offers optional PySide6 bindings.
+Fluent-Qt (FluentQt) is an MIT-licensed Qt Widgets library. C++17 and PySide6 share the same implementation. The Gallery covers 99 entries, including `DataGrid`, [charts](docs/architecture/charts.md), dialogs and windows.
 
-Applications run on Windows, macOS, Linux, and WebAssembly with Light, Dark, and High Contrast themes plus configurable animation modes. Optional modules add particle backgrounds ([Particles](docs/architecture/particles.md)), 3D perspective views ([Spatial](docs/architecture/spatial-view.md)), and embedded QML pages ([QmlBridge](docs/architecture/qml-bridge.md)).
+Applications run on Windows, macOS, Linux, and WebAssembly with Light, Dark, and High Contrast themes plus configurable animation modes. Visual authoring works through **Page Studio** and **Qt Designer** (shared `.ui` files across C++ and Python), alongside optional modules for CPU particle backgrounds ([Particles](docs/architecture/particles.md)), 3D perspective views ([Spatial](docs/architecture/spatial-view.md)), and embedded QML pages ([QmlBridge](docs/architecture/qml-bridge.md)).
 
 ## 🧩 Library modules
 
@@ -88,17 +91,67 @@ python -m pip install FluentQt-Gallery
 python -m fluentqt_gallery
 ```
 
+## 🎨 Visual design
+
+- **Page Studio (Web)**: Arrange Fluent-Qt controls in the browser with [Page Studio](https://calvinhxx.github.io/Fluent-Qt/studio/?lang=en), start from templates or AI-assisted layouts, preview interactions live, and export C++, PySide6, or Qt Designer `.ui` files.
+
+### Qt Designer
+
+With all modules installed, Qt Creator and `pyside6-designer` share 95 Widget Box entries and four New Form templates. The core build includes 92 entries and three templates. [Designer setup](tools/designer/README.md).
+
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer showing the FluentQt Widget Box, Workspace Preferences form canvas, and FluentButton Property Editor">
+  </a>
+</p>
+
 ## 🤖 Build with AI
 
-Use the [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) skill in Codex, Claude Code, or Cursor to create a desktop app, add a GUI to an existing project, or refine an interface. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
-
-When tuning a Gallery sample, preview saved edits in Live Scene before verifying the compiled C++ sample. [How it works](docs/development/gallery-preview-workflow.md)
+**AI Skill & Onboarding CLI**: Use the [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) skill in Codex, Claude Code, or Cursor ([Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)), and run `python3 tools/onboarding/fluentqt` ([Onboarding tools](tools/onboarding/README.md)) to check environments and scaffold C++ or PySide6 apps. When tuning Gallery samples, preview saved edits in Live Scene before verifying the compiled C++ sample ([How it works](docs/development/gallery-preview-workflow.md)).
 
 ## 🚀 Quick Start
 
-The C++ integration requires C++17, CMake 3.16+, and Qt Widgets 5.15+ or 6.2+. Use `FetchContent` for new projects.
+Fluent-Qt runs natively in both **Python (PySide6)** and **C++17 (CMake)**.
+
+### Python (PySide6)
+
+The Qt/PySide6 6.9.3 wheels support CPython 3.11–3.13. Linux ARM64 requires CPython 3.12–3.13 and glibc 2.39+.
+
+```bash
+python -m pip install FluentQt
+```
+
+`main.py`:
+
+```python
+import sys
+import fluentqt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from fluentqt.basicinput import Button
+from fluentqt.windowing import Window
+
+fluentqt.prepare_high_dpi_application()
+app = QApplication(sys.argv)
+fluentqt.initialize_resources()
+app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+
+window = Window()
+window.resize(480, 320)
+content = QWidget()
+button = Button("Hello from FluentQt", content)
+button.setFluentStyle(Button.ButtonStyle.Accent)
+QVBoxLayout(content).addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
+window.setContentWidget(content)
+window.show()
+sys.exit(app.exec())
+```
+
+[Python guide](bindings/pyside6/README.md) · [Hello World](bindings/pyside6/examples/hello_world/main.py)
 
 ### C++ setup
+
+The C++ integration requires C++17, CMake 3.16+, and Qt Widgets 5.15+ or 6.2+. Use `FetchContent` for new projects.
 
 #### `FetchContent` integration
 
@@ -144,7 +197,7 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 If FluentQt is outside the system search path, configure with `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`.
 
-### C++ minimal example
+#### C++ minimal example
 
 `main.cpp`:
 
@@ -184,26 +237,6 @@ int main(int argc, char* argv[])
 ```
 
 See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
-
-### Python (PySide6)
-
-Install the PySide6 bindings from PyPI (via Shiboken6):
-
-```bash
-python -m pip install FluentQt
-```
-
-See the [Python guide](bindings/pyside6/README.md) for examples, compatibility, and source builds.
-
-### Qt Designer
-
-Drag and drop FluentQt widgets and form templates in Qt Creator (C++) or pyside6-designer (Python) with shared `.ui` files. See the [Qt Designer guide](tools/designer/README.md) for setup and usage.
-
-<p>
-  <a href="tools/designer/README.md">
-    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer showing the FluentQt Widget Box, Workspace Preferences form canvas, and FluentButton Property Editor">
-  </a>
-</p>
 
 ## 🛠 Build
 
@@ -298,7 +331,7 @@ Start with the [documentation map](docs/README.md), or jump straight to what you
 | Goal | Entry point |
 |---|---|
 | Browse controls & API | [Component docs & API](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/#gallery) |
-| Build an app | [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
+| Build an app | [Qt Designer](tools/designer/README.md) · [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) |
 | Contribute to FluentQt | [Development guides](docs/development/README.md) · [Architecture](docs/architecture/README.md) · [Fluent design](docs/design-languages/README.md) |
 | Package or release | [Packaging](docs/development/packaging-workflow.md) · [Release governance](docs/development/release-governance.md) · [Release notes](docs/releases/README.md) |
 | Get help or report bugs | [Community](docs/community/README.md) · [Support](SUPPORT.md) · [Security](SECURITY.md) |

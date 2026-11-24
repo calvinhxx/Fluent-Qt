@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  Eine plattformübergreifende C++-UI-Komponentenbibliothek im Fluent-Design für Qt Widgets.
+  Plattformübergreifende Fluent-UI-Komponentenbibliothek für Qt Widgets — natives C++17 und PySide6 unter MIT-Lizenz.
 </p>
 
 <p align="center">
@@ -20,15 +20,18 @@
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
+  <a href="bindings/pyside6/README.md"><img alt="PySide6" src="https://img.shields.io/badge/PySide6-6.2.4%2B-3776AB.svg"></a>
   <a href="https://pypi.org/project/FluentQt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/FluentQt?color=3776AB"></a>
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/de/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery Home im 3D-Modus unter Windows mit Mica"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/de/#gallery"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery Home im 3D-Modus unter Windows mit Mica"></a>
 </p>
 
 <p align="center">
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/de/#gallery">Live-C++-Web-Gallery testen</a></strong>
+  ·
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/studio/?lang=en">Page Studio</a></strong>
   ·
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/de/api/checkbox/?playground=1">Eigenschaftsvorschau</a></strong>
   ·
@@ -41,9 +44,9 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/de/#support">Projekt unterstützen</a>
 </p>
 
-Fluent-Qt (FluentQt) bietet Fluent-Steuerelemente für Qt Widgets — Eingaben, Navigation, Collections, Data Grids, [Diagramme](docs/architecture/charts.md), Dialoge, Popups und Fenster. Die Bibliothek ist in C++17 geschrieben, lässt sich per CMake in bestehende Qt-Projekte einbinden und bietet optionale PySide6-Bindings.
+Fluent-Qt (FluentQt) ist eine MIT-lizenzierte Bibliothek für Qt Widgets. C++17 und PySide6 nutzen dieselbe Implementierung. Die Gallery enthält 99 Einträge, darunter `DataGrid`, [Diagramme](docs/architecture/charts.md), Dialoge und Fenster.
 
-Anwendungen laufen unter Windows, macOS, Linux und WebAssembly mit den Themes Light, Dark und High Contrast sowie konfigurierbaren Animationsmodi. Optionale Module ergänzen Partikel-Hintergründe ([Particles](docs/architecture/particles.md)), 3D-Perspektivansichten ([Spatial](docs/architecture/spatial-view.md)) und eingebettete QML-Seiten ([QmlBridge](docs/architecture/qml-bridge.md)).
+Anwendungen laufen unter Windows, macOS, Linux und WebAssembly mit den Themes Light, Dark und High Contrast sowie konfigurierbaren Animationsmodi. Visuelles UI-Design läuft über **Page Studio** und **Qt Designer** (gemeinsame `.ui`-Dateien für C++ und Python), ergänzt durch optionale Module für CPU-Partikel-Hintergründe ([Particles](docs/architecture/particles.md)), 3D-Perspektivansichten ([Spatial](docs/architecture/spatial-view.md)) und eingebettete QML-Seiten ([QmlBridge](docs/architecture/qml-bridge.md)).
 
 ## 🧩 Bibliotheksmodule
 
@@ -88,17 +91,67 @@ python -m pip install FluentQt-Gallery
 python -m fluentqt_gallery
 ```
 
+## 🎨 Visuelles Design
+
+- **Page Studio (Web)**: Ordne Fluent-Qt-Steuerelemente im Browser mit [Page Studio](https://calvinhxx.github.io/Fluent-Qt/studio/?lang=en) per Drag-and-Drop an, starte aus Vorlagen oder KI-generierten Layouts, teste Interaktionen live und exportiere C++-, PySide6- oder Qt-Designer-`.ui`-Dateien.
+
+### Qt Designer
+
+Mit allen Modulen bieten Qt Creator und `pyside6-designer` 95 Einträge in der Widget-Box und vier Vorlagen für neue Formulare. Das Kernmodul bietet 92 Einträge und drei Vorlagen. [Designer einrichten](tools/designer/README.md).
+
+<p>
+  <a href="tools/designer/README.md">
+    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer mit FluentQt-Widget-Box, Formular-Editor und FluentButton-Eigenschaftseditor">
+  </a>
+</p>
+
 ## 🤖 Bauen mit KI
 
-Nutze den Skill [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code oder Cursor, um eine Desktop-App zu erstellen, eine bestehende Anwendung um eine GUI zu erweitern oder ein Interface zu verfeinern. [Beispiel](https://calvinhxx.github.io/Fluent-Qt/de/#ai-build) · [Installation & Nutzung](docs/ai/README.md)
-
-Wenn du ein Gallery-Beispiel anpasst, prüfe gespeicherte Änderungen zuerst in der Live Scene, bevor du das kompilierte C++-Beispiel verifizierst. [Funktionsweise](docs/development/gallery-preview-workflow.md)
+**KI-Skill & Onboarding-CLI**: Nutze den Skill [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code oder Cursor ([Beispiel](https://calvinhxx.github.io/Fluent-Qt/de/#ai-build) · [Installation & Nutzung](docs/ai/README.md)) und prüfe Umgebungen oder erstelle C++-/PySide6-Starter per `python3 tools/onboarding/fluentqt` ([Onboarding-Tools](tools/onboarding/README.md)). Wenn du ein Gallery-Beispiel anpasst, prüfe gespeicherte Änderungen zuerst in der Live Scene, bevor du das kompilierte C++-Beispiel verifizierst ([Funktionsweise](docs/development/gallery-preview-workflow.md)).
 
 ## 🚀 Schnelleinstieg
 
-Die C++-Integration erfordert C++17, CMake 3.16+ und Qt Widgets 5.15+ oder 6.2+. Verwende `FetchContent` für neue Projekte.
+Fluent-Qt läuft nativ sowohl unter **Python (PySide6)** als auch unter **C++17 (CMake)**.
+
+### Python (PySide6)
+
+Die Wheels für Qt/PySide6 6.9.3 unterstützen CPython 3.11–3.13. Linux ARM64 benötigt CPython 3.12–3.13 und glibc ab 2.39.
+
+```bash
+python -m pip install FluentQt
+```
+
+`main.py`:
+
+```python
+import sys
+import fluentqt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from fluentqt.basicinput import Button
+from fluentqt.windowing import Window
+
+fluentqt.prepare_high_dpi_application()
+app = QApplication(sys.argv)
+fluentqt.initialize_resources()
+app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+
+window = Window()
+window.resize(480, 320)
+content = QWidget()
+button = Button("Hello from FluentQt", content)
+button.setFluentStyle(Button.ButtonStyle.Accent)
+QVBoxLayout(content).addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
+window.setContentWidget(content)
+window.show()
+sys.exit(app.exec())
+```
+
+[Python-Guide](bindings/pyside6/README.md) · [Hello World](bindings/pyside6/examples/hello_world/main.py)
 
 ### C++-Einrichtung
+
+Die C++-Integration erfordert C++17, CMake 3.16+ und Qt Widgets 5.15+ oder 6.2+. Verwende `FetchContent` für neue Projekte.
 
 #### Integration mit `FetchContent`
 
@@ -142,7 +195,7 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 Liegt FluentQt außerhalb des System-Suchpfads, konfiguriere mit `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`.
 
-### Minimales C++-Beispiel
+#### Minimales C++-Beispiel
 
 `main.cpp`:
 
@@ -182,26 +235,6 @@ int main(int argc, char* argv[])
 ```
 
 Das vollständige Projekt findest du unter [`examples/hello_world`](examples/hello_world/), oder starte das Target `fluentqt_hello_world` direkt aus einer IDE.
-
-### Python (PySide6)
-
-Installiere die PySide6-Bindings über PyPI (via Shiboken6):
-
-```bash
-python -m pip install FluentQt
-```
-
-Beispiele, Kompatibilität und Source-Builds beschreibt der [Python-Guide](bindings/pyside6/README.md).
-
-### Qt Designer
-
-Ziehe FluentQt-Widgets und Formularvorlagen per Drag-and-Drop in Qt Creator (C++) oder pyside6-designer (Python) mit gemeinsamen `.ui`-Dateien. Einrichtung und Nutzung beschreibt der [Qt-Designer-Guide](tools/designer/README.md).
-
-<p>
-  <a href="tools/designer/README.md">
-    <img src="docs/assets/readme/qt-designer.webp" width="760" alt="Qt Designer mit FluentQt-Widget-Box, Formular-Editor und FluentButton-Eigenschaftseditor">
-  </a>
-</p>
 
 ## 🛠 Bauen
 
@@ -292,7 +325,7 @@ Starte mit der [Dokumentationsübersicht](docs/README.md) oder springe direkt zu
 | Ziel | Einstiegspunkt |
 |---|---|
 | Steuerelemente & API ansehen | [Komponenten-Doku & API](https://calvinhxx.github.io/Fluent-Qt/de/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/de/#gallery) |
-| Eine App bauen | [KI-gestützte Entwicklung](docs/ai/README.md) · [Onboarding-Tools](tools/onboarding/README.md) · [Qt Designer](tools/designer/README.md) |
+| Eine App bauen | [Qt Designer](tools/designer/README.md) · [KI-gestützte Entwicklung](docs/ai/README.md) · [Onboarding-Tools](tools/onboarding/README.md) |
 | Zu FluentQt beitragen | [Entwicklungsguides](docs/development/README.md) · [Architektur](docs/architecture/README.md) · [Fluent-Design](docs/design-languages/README.md) |
 | Paketieren oder releasen | [Packaging](docs/development/packaging-workflow.md) · [Release-Governance](docs/development/release-governance.md) · [Release-Notes](docs/releases/README.md) |
 | Hilfe oder Bugs melden | [Community](docs/community/README.md) · [Support](SUPPORT.md) · [Sicherheit](SECURITY.md) |
