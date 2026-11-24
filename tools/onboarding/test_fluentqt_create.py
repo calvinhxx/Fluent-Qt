@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).with_name("fluentqt_create.py")
@@ -151,6 +152,37 @@ class FluentQtCreateTest(unittest.TestCase):
                 )
                 expected_version = "1.8.5" if starter == "monitor" else "1.7.2"
                 self.assertIn(expected_version, dependency_file.read_text(encoding="utf-8"))
+
+    def test_publish_retries_a_short_windows_lock_and_preserves_existing_targets(self):
+        stage, destination = self.root / "staging", self.root / "project"
+        stage.mkdir()
+        (stage / "marker").write_text("generated", encoding="utf-8")
+        lock = PermissionError("reader holds the staging directory")
+        lock.winerror = 32
+        rename = Path.rename
+        attempts = iter((lock, None))
+
+        def briefly_locked(source, target):
+            error = next(attempts)
+            if error:
+                raise error
+            return rename(source, target)
+
+        with patch.object(Path, "rename", briefly_locked), patch.object(MODULE.time, "sleep") as wait:
+            MODULE._publish_project(stage, destination)
+        wait.assert_called_once()
+        self.assertEqual((destination / "marker").read_text(encoding="utf-8"), "generated")
+
+        stage.mkdir()
+        with self.assertRaisesRegex(MODULE.CreateError, "Target already exists"):
+            MODULE._publish_project(stage, destination)
+        self.assertTrue(stage.exists())
+        self.assertEqual((destination / "marker").read_text(encoding="utf-8"), "generated")
+
+        with patch.object(Path, "rename", side_effect=lock), patch.object(MODULE.time, "sleep") as wait:
+            with self.assertRaisesRegex(MODULE.CreateError, "Could not create"):
+                MODULE._publish_project(stage, self.root / "locked")
+        self.assertEqual(wait.call_count, 3)
 
     def test_existing_qt_preserves_original_minimum_versions(self):
         cpp_target, _ = self.create("cpp", "existing-qt")
