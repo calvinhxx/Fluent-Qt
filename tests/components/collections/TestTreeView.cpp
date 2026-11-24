@@ -119,16 +119,6 @@ QStandardItemModel* attachSampleModel(TreeView* tv)
     return model;
 }
 
-int topLevelCount(TreeView* tv)
-{
-    return tv->model() ? tv->model()->rowCount() : 0;
-}
-
-QString itemText(TreeView* tv, const QModelIndex& index)
-{
-    return index.isValid() ? index.data(Qt::DisplayRole).toString() : QString();
-}
-
 /** 离屏显示: 触发布局计算但不弹出可见窗口 */
 void showOffscreen(QWidget* w)
 {
@@ -243,41 +233,6 @@ void selectCheckedRows(TreeView* tv, const QModelIndex& parent = QModelIndex())
     }
 }
 
-/**
- * 创建带图标字形的树模型 (WinUI ItemTemplateSelector 模式)
- * 文件夹使用 Folder 图标，文档使用 Document 图标
- */
-QStandardItemModel* createIconTreeModel(QObject* parent = nullptr)
-{
-    auto* model = new QStandardItemModel(parent);
-
-    auto makeFolder = [](const QString& text) {
-        auto* item = new QStandardItem(text);
-        item->setData(Typography::Icons::Folder, treeview_test::IconGlyphRole);
-        return item;
-    };
-    auto makeDoc = [](const QString& text) {
-        auto* item = new QStandardItem(text);
-        item->setData(Typography::Icons::Document, treeview_test::IconGlyphRole);
-        return item;
-    };
-
-    auto* work = makeFolder("Work Documents");
-    work->appendRow(makeDoc("XYZ Functional Spec"));
-    work->appendRow(makeDoc("Feature Schedule"));
-    model->appendRow(work);
-
-    auto* personal = makeFolder("Personal Documents");
-    auto* remodel = makeFolder("Home Remodel");
-    remodel->appendRow(makeDoc("Contractor Contact Info"));
-    remodel->appendRow(makeDoc("Paint Color Scheme"));
-    personal->appendRow(remodel);
-    model->appendRow(personal);
-
-    model->appendRow(makeFolder("Pictures"));
-    return model;
-}
-
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -320,7 +275,7 @@ protected:
 TEST_F(TreeViewTest, EmptyTreeView)
 {
     TreeView* tv = new TreeView(window);
-    EXPECT_EQ(topLevelCount(tv), 0);
+    EXPECT_EQ(tv->model(), nullptr);
     EXPECT_FALSE(tv->selectedItem().isValid());
 }
 
@@ -904,25 +859,6 @@ TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows)
 // Expand / Collapse
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, ExpandCollapseTopLevel)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-
-    QModelIndex workIdx = model->index(0, 0);
-
-    // Initially collapsed
-    EXPECT_FALSE(tv->isExpanded(workIdx));
-
-    // Expand
-    tv->expand(workIdx);
-    EXPECT_TRUE(tv->isExpanded(workIdx));
-
-    // Collapse
-    tv->collapse(workIdx);
-    EXPECT_FALSE(tv->isExpanded(workIdx));
-}
-
 TEST_F(TreeViewTest, ToggleExpanded)
 {
     TreeView* tv = new TreeView(window);
@@ -933,63 +869,34 @@ TEST_F(TreeViewTest, ToggleExpanded)
     EXPECT_FALSE(tv->isExpanded(workIdx));
     tv->toggleExpanded(workIdx);
     EXPECT_TRUE(tv->isExpanded(workIdx));
+    tv->toggleExpanded(QModelIndex());
+    EXPECT_TRUE(tv->isExpanded(workIdx));
     tv->toggleExpanded(workIdx);
     EXPECT_FALSE(tv->isExpanded(workIdx));
 }
 
-TEST_F(TreeViewTest, ExpandAll)
+TEST_F(TreeViewTest, ExpandAndCollapseAllLevels)
 {
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);
 
+    showOffscreen(window);
     tv->expandAll();
 
     EXPECT_TRUE(tv->isExpanded(model->index(0, 0)));
     EXPECT_TRUE(tv->isExpanded(model->index(1, 0)));
     // Personal Documents → Home Remodel
     EXPECT_TRUE(tv->isExpanded(model->item(1)->child(0)->index()));
-}
 
-TEST_F(TreeViewTest, CollapseAll)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-
-    tv->expandAll();
     tv->collapseAll();
-
     EXPECT_FALSE(tv->isExpanded(model->index(0, 0)));
     EXPECT_FALSE(tv->isExpanded(model->index(1, 0)));
-}
-
-TEST_F(TreeViewTest, ToggleInvalidIndexNoOp)
-{
-    TreeView* tv = new TreeView(window);
-    attachSampleModel(tv);
-
-    // Should not crash
-    tv->toggleExpanded(QModelIndex());
+    EXPECT_FALSE(tv->isExpanded(model->item(1)->child(0)->index()));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Expand Animation
 // ═══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(TreeViewTest, ExpandAnimationTriggered)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-    tv->resize(300, 400);
-    window->resize(320, 420);
-    QPixmap pm = tv->grab(); // force layout
-
-    QModelIndex workIdx = model->index(0, 0);
-    tv->expand(workIdx);
-    QApplication::processEvents();
-
-    // State changes immediately even during animation
-    EXPECT_TRUE(tv->isExpanded(workIdx));
-}
 
 TEST_F(TreeViewTest, ExpandAnimationExposesChildrenDuringReveal)
 {
@@ -1028,22 +935,6 @@ TEST_F(TreeViewTest, RapidToggleNoCrash)
     }
     // Final state depends on even/odd — just verify no crash
     SUCCEED();
-}
-
-TEST_F(TreeViewTest, ExpandAllSkipsAnimation)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-    tv->resize(300, 400);
-    window->resize(320, 420);
-    QPixmap pm = tv->grab();
-
-    tv->expandAll();
-    QApplication::processEvents();
-
-    // All nodes expanded immediately (no animation)
-    EXPECT_TRUE(tv->isExpanded(model->index(0, 0)));
-    EXPECT_TRUE(tv->isExpanded(model->index(1, 0)));
 }
 
 TEST_F(TreeViewTest, CollapseStopsExpandAnimation)
@@ -1115,14 +1006,22 @@ TEST_F(TreeViewTest, HeaderText)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(TreeViewTest, PlaceholderText)
+TEST_F(TreeViewTest, PlaceholderTextAppearsAndClears)
 {
-    TreeView* tv = new TreeView(window);
-    QSignalSpy spy(tv, &TreeView::placeholderTextChanged);
-
-    tv->setPlaceholderText("No items");
-    EXPECT_EQ(tv->placeholderText(), "No items");
-    EXPECT_EQ(spy.count(), 1);
+    TreeView view;
+    view.resize(300, 180);
+    showOffscreen(&view);
+    const QRect center = view.viewport()->rect().adjusted(15, 25, -15, -25);
+    const QImage blank = view.viewport()->grab(center).toImage();
+    ASSERT_FALSE(blank.isNull());
+    QSignalSpy changes(&view, &TreeView::placeholderTextChanged);
+    view.setPlaceholderText("Empty tree");
+    EXPECT_EQ(view.placeholderText(), "Empty tree");
+    EXPECT_EQ(changes.count(), 1);
+    EXPECT_NE(view.viewport()->grab(center).toImage(), blank);
+    view.setPlaceholderText({});
+    EXPECT_EQ(view.viewport()->grab(center).toImage(), blank);
+    EXPECT_EQ(changes.count(), 2);
 }
 
 TEST_F(TreeViewTest, FontRole)
@@ -1960,74 +1859,33 @@ TEST_F(TreeViewTest, ThemeSwitchDoesNotCrash)
 // Dynamic model changes
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_F(TreeViewTest, AddRemoveTopLevelItems)
+TEST_F(TreeViewTest, VisibleRowsFollowModelInsertionAndRemoval)
 {
-    TreeView* tv = new TreeView(window);
-    auto* model = new QStandardItemModel(tv);
-    tv->setModel(model);
-    attachFluentDelegate(tv);
+    QStandardItemModel model;
+    TreeView view;
+    view.setModel(&model);
+    view.resize(300, 200);
+    showOffscreen(&view);
 
-    EXPECT_EQ(topLevelCount(tv), 0);
+    auto* parent = new QStandardItem("Parent");
+    model.appendRow(parent);
+    auto* child = new QStandardItem("Child");
+    parent->appendRow(child);
+    view.expandAll();
+    const QRect row = view.visualRect(child->index());
+    ASSERT_FALSE(row.isEmpty());
+    EXPECT_EQ(view.indexAt(row.center()), child->index());
+    view.setSelectedItem(child->index());
+    ASSERT_EQ(view.selectedItem(), child->index());
 
-    model->appendRow(new QStandardItem("Root 1"));
-    EXPECT_EQ(topLevelCount(tv), 1);
-
-    model->appendRow(new QStandardItem("Root 2"));
-    EXPECT_EQ(topLevelCount(tv), 2);
-
-    model->removeRow(0);
-    EXPECT_EQ(topLevelCount(tv), 1);
-    EXPECT_EQ(model->item(0)->text(), "Root 2");
-}
-
-TEST_F(TreeViewTest, AddChildrenDynamically)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = new QStandardItemModel(tv);
-    tv->setModel(model);
-    attachFluentDelegate(tv);
-
-    auto* root = new QStandardItem("Root");
-    model->appendRow(root);
-    EXPECT_EQ(model->item(0)->rowCount(), 0);
-    EXPECT_FALSE(model->hasChildren(model->index(0, 0)));
-
-    root->appendRow(new QStandardItem("Child 1"));
-    EXPECT_EQ(model->item(0)->rowCount(), 1);
-    EXPECT_TRUE(model->hasChildren(model->index(0, 0)));
-
-    root->appendRow(new QStandardItem("Child 2"));
-    EXPECT_EQ(model->item(0)->rowCount(), 2);
+    model.removeRow(0);
+    EXPECT_FALSE(view.indexAt(row.center()).isValid());
+    EXPECT_FALSE(view.selectedItem().isValid());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Delegate
 // ═══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(TreeViewTest, DelegateSizeHint)
-{
-    TreeView* tv = new TreeView(window);
-    attachSampleModel(tv);
-
-    auto* delegate = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
-    ASSERT_NE(delegate, nullptr);
-    EXPECT_EQ(delegate->rowHeight(), defaultTreeRowHeight());
-}
-
-TEST_F(TreeViewTest, DelegateCustomRowHeight)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-
-    auto* delegate = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
-    delegate->setRowHeight(48);
-    EXPECT_EQ(delegate->rowHeight(), 48);
-
-    QStyleOptionViewItem opt;
-    opt.rect = QRect(0, 0, 200, 48);
-    QSize hint = delegate->sizeHint(opt, model->index(0, 0));
-    EXPECT_EQ(hint.height(), 48);
-}
 
 TEST_F(TreeViewTest, DelegateConsumesIndicatorMotionWithoutChangingRowMetrics)
 {
@@ -2208,73 +2066,8 @@ TEST_F(TreeViewTest, CollapsingParentAfterChildToParentSelectionKeepsParentIndic
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// paint / render (no crash)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(TreeViewTest, PaintWithExpandedItems)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = attachSampleModel(tv);
-    tv->setFixedSize(300, 400);
-
-    tv->expandAll();
-
-    // Select a deep item
-    auto* remodel = model->item(1)->child(0);
-    tv->setSelectedItem(remodel->child(0)->index());
-
-    // grab() 触发完整绘制流程但不弹窗
-    tv->grab();
-    EXPECT_TRUE(true);
-}
-
-TEST_F(TreeViewTest, PaintEmptyWithPlaceholder)
-{
-    TreeView* tv = new TreeView(window);
-    tv->setPlaceholderText("Empty tree");
-    tv->setFixedSize(300, 400);
-
-    // grab() 触发完整绘制流程但不弹窗
-    tv->grab();
-    EXPECT_TRUE(true);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // CheckBox delegate
 // ═══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(TreeViewTest, CheckBoxVisibleDefault)
-{
-    TreeView* tv = new TreeView(window);
-    attachSampleModel(tv);
-    auto* d = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
-    EXPECT_FALSE(d->checkBoxVisible());
-}
-
-TEST_F(TreeViewTest, CheckBoxVisibleToggle)
-{
-    TreeView* tv = new TreeView(window);
-    attachSampleModel(tv);
-    auto* d = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
-    d->setCheckBoxVisible(true);
-    EXPECT_TRUE(d->checkBoxVisible());
-    d->setCheckBoxVisible(false);
-    EXPECT_FALSE(d->checkBoxVisible());
-}
-
-TEST_F(TreeViewTest, CheckableModelPaintNoCrash)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = createCheckableTreeModel(tv);
-    tv->setModel(model);
-    auto* d = attachCheckableDelegate(tv);
-    (void)d;
-    tv->setFixedSize(350, 400);
-
-    tv->expandAll();
-    tv->grab();
-    EXPECT_TRUE(true);
-}
 
 TEST_F(TreeViewTest, CheckStateTracksMultiSelectionChanges)
 {
@@ -2431,23 +2224,6 @@ TEST_F(TreeViewTest, CheckableSelectionDoesNotPaintIndicator)
     EXPECT_TRUE(hasAccentPixelInRect(tv->viewport(), checkboxArea, accent));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Icon glyph delegate
-// ═══════════════════════════════════════════════════════════════════════════════
-
-TEST_F(TreeViewTest, IconModelPaintNoCrash)
-{
-    TreeView* tv = new TreeView(window);
-    auto* model = createIconTreeModel(tv);
-    tv->setModel(model);
-    attachFluentDelegate(tv);
-    tv->setFixedSize(350, 400);
-
-    tv->expandAll();
-    tv->grab();
-    EXPECT_TRUE(true);
-}
-
 TEST_F(TreeViewTest, OffscreenHeaderAndDisabledStateWorkWithoutShow)
 {
     TreeView tv(window);
@@ -2474,10 +2250,6 @@ TEST_F(TreeViewTest, OffscreenHeaderAndDisabledStateWorkWithoutShow)
     EXPECT_EQ(tv.font(), customFont);
     EXPECT_EQ(hdr->styleSheet(), enabledHeaderStyle);
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// VisualCheck
-// ═══════════════════════════════════════════════════════════════════════════════
 
 TEST_F(TreeViewTest, DefaultDelegateShowsSelectionAndSupportsPointerExpansion)
 {

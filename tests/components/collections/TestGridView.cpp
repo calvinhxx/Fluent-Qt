@@ -174,15 +174,8 @@ TEST_F(GridViewTest, SingleSelection)
 
     gv->setSelectedIndex(-1);
     EXPECT_EQ(gv->selectedIndex(), -1);
-}
-
-TEST_F(GridViewTest, SelectedIndexOutOfRange)
-{
-    GridView* gv = new GridView(window);
-    attachStringListModel(gv, {"A", "B"});
     gv->setSelectedIndex(1);
-    EXPECT_EQ(gv->selectedIndex(), 1);
-
+    ASSERT_EQ(gv->selectedIndex(), 1);
     gv->setSelectedIndex(99);
     EXPECT_EQ(gv->selectedIndex(), -1);
 }
@@ -380,19 +373,6 @@ TEST_F(GridViewTest, BackgroundVisibleProperty)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(GridViewTest, SetHeaderText)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_TRUE(gv->headerText().isEmpty());
-    QSignalSpy spy(gv, &GridView::headerTextChanged);
-    gv->setHeaderText("My Grid");
-    EXPECT_EQ(gv->headerText(), "My Grid");
-    EXPECT_EQ(spy.count(), 1);
-
-    gv->setHeaderText("My Grid");
-    EXPECT_EQ(spy.count(), 1);
-}
-
 TEST_F(GridViewTest, SetPlaceholderText)
 {
     GridView* gv = new GridView(window);
@@ -406,40 +386,26 @@ TEST_F(GridViewTest, SetPlaceholderText)
     EXPECT_EQ(spy.count(), 1);
 }
 
-TEST_F(GridViewTest, HeaderVisibleWhenTextSet)
+TEST_F(GridViewTest, HeaderTextUpdatesLabelAndVisibility)
 {
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    GridView* gv = new GridView(window);
-    gv->setGeometry(10, 10, 400, 400);
-    gv->setHeaderText("Grid Header");
-    window->show();
-    QTest::qWait(50);
-    auto* headerLabel = gv->findChild<QLabel*>();
-    ASSERT_NE(headerLabel, nullptr);
-    EXPECT_TRUE(headerLabel->isVisible());
-    EXPECT_EQ(headerLabel->text(), "Grid Header");
-}
-
-TEST_F(GridViewTest, HeaderHiddenWhenTextEmpty)
-{
-    GridView* gv = new GridView(window);
-    gv->setHeaderText("Header");
-    gv->setHeaderText("");
-    auto* headerLabel = gv->findChild<QLabel*>();
-    ASSERT_NE(headerLabel, nullptr);
-    EXPECT_FALSE(headerLabel->isVisible());
-}
-
-TEST_F(GridViewTest, ItemClickedSignal)
-{
-    GridView* gv = new GridView(window);
-    attachStringListModel(gv, {"A", "B", "C"});
-    QSignalSpy spy(gv, SIGNAL(itemClicked(int)));
-
-    QModelIndex idx = gv->model()->index(0, 0);
-    emit gv->clicked(idx);
-    EXPECT_EQ(spy.count(), 1);
-    EXPECT_EQ(spy.at(0).at(0).toInt(), 0);
+    GridView view;
+    view.setAttribute(Qt::WA_DontShowOnScreen);
+    view.resize(400, 400);
+    view.show();
+    EXPECT_TRUE(view.headerText().isEmpty());
+    QSignalSpy changes(&view, &GridView::headerTextChanged);
+    view.setHeaderText("Grid Header");
+    auto* label = view.findChild<QLabel*>();
+    ASSERT_NE(label, nullptr);
+    EXPECT_TRUE(label->isVisible());
+    EXPECT_EQ(view.headerText(), "Grid Header");
+    EXPECT_EQ(label->text(), view.headerText());
+    EXPECT_EQ(changes.count(), 1);
+    view.setHeaderText("Grid Header");
+    EXPECT_EQ(changes.count(), 1);
+    view.setHeaderText({});
+    EXPECT_FALSE(label->isVisible());
+    EXPECT_EQ(changes.count(), 2);
 }
 
 TEST_F(GridViewTest, ReorderEnabledPointerClicksPreserveInheritedSignal)
@@ -521,16 +487,11 @@ TEST_F(GridViewTest, FluentScrollBarExists)
     EXPECT_NE(gv->verticalFluentScrollBar(), nullptr);
 }
 
-TEST_F(GridViewTest, ViewDoesNotProvideModelByDefault)
-{
-    GridView* gv = new GridView(window);
-    EXPECT_EQ(gv->model(), nullptr);
-}
-
 TEST_F(GridViewTest, SelectionQueriesAreSafeWithoutModel)
 {
     GridView* gv = new GridView(window);
 
+    EXPECT_EQ(gv->model(), nullptr);
     EXPECT_EQ(gv->selectedIndex(), -1);
     EXPECT_TRUE(gv->selectedRows().isEmpty());
     gv->setSelectedIndex(0);
@@ -563,27 +524,6 @@ TEST_F(GridViewTest, IconModeAndWrapping)
 
 // ── 列布局测试 ────────────────────────────────────────────────────────────────
 
-TEST_F(GridViewTest, ColumnsAutoFit)
-{
-    // 容器宽度 600，cellSize 112 + hSpacing 4 = 116 per col → 600/116 = 5 列
-    window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    GridView* gv = new GridView(window);
-    gv->setGeometry(0, 0, 600, 400);
-    attachStringListModel(gv, {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"});
-    window->show();
-    QTest::qWait(50);
-
-    // gridSize = cellSize + spacing
-    EXPECT_EQ(gv->gridSize(), QSize(116, 116));
-
-    // 容器宽 600 / gridSize.width 116 = 5 列（QListView IconMode 自动布局）
-    // 验证第一行第5个 item 的 visualRect 和第二行第1个 item 不在同一行
-    QRect r4 = gv->visualRect(gv->model()->index(4, 0)); // 5th item (col 5, row 1)
-    QRect r5 = gv->visualRect(gv->model()->index(5, 0)); // 6th item (col 1, row 2)
-    EXPECT_EQ(r4.top(), gv->visualRect(gv->model()->index(0, 0)).top());
-    EXPECT_GT(r5.top(), r4.top());
-}
-
 TEST_F(GridViewTest, ColumnsChangeOnResize)
 {
     // 调整容器宽度后列数应改变
@@ -597,7 +537,9 @@ TEST_F(GridViewTest, ColumnsChangeOnResize)
     // 600px → ~5 列：item 5 (index 4) 应在第一行
     QRect r4_wide = gv->visualRect(gv->model()->index(4, 0));
     QRect r0_wide = gv->visualRect(gv->model()->index(0, 0));
+    EXPECT_EQ(gv->gridSize(), QSize(116, 116));
     EXPECT_EQ(r4_wide.top(), r0_wide.top());
+    EXPECT_GT(gv->visualRect(gv->model()->index(5, 0)).top(), r0_wide.top());
 
     // 缩窄到 360px → ~3 列：item 4 (index 3) 应在第二行
     gv->setGeometry(0, 0, 360, 400);
