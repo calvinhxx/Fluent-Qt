@@ -47,7 +47,8 @@ missing.
 
 The Python profile checks the interpreter version and installed packages.
 Release wheels cover CPython 3.11–3.13 on supported platforms, with a 3.12
-minimum on Linux ARM64. CPython 3.10 is supported for source builds.
+minimum on Linux ARM64. With source-built FluentQt bindings, all three
+generated Python projects also install on CPython 3.10.
 
 ## Project creator
 

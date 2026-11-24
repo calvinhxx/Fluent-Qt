@@ -83,6 +83,10 @@ class FluentQtCreateTest(unittest.TestCase):
         for starter in ("existing-qt", "monitor", "workbench"):
             with self.subTest(starter=starter):
                 target, _ = self.create("pyside6", starter)
+                self.assertIn(
+                    'requires-python = ">=3.10,<3.14"',
+                    (target / "pyproject.toml").read_text(encoding="utf-8"),
+                )
                 self.assertTrue(compileall.compile_dir(target / "src", quiet=1))
                 environment = dict(os.environ)
                 environment["PYTHONPATH"] = str(target / "src")
