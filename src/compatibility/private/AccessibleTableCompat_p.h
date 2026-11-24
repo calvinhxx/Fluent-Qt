@@ -5,6 +5,24 @@
 
 namespace compatibility::detail {
 
+inline void resetAccessibleTableIfInactive(QObject* owner)
+{
+#if QT_CONFIG(accessibility)
+    // Active item views already dispatch ModelReset and invalidate the accessible cells.
+    // zh_CN: 无障碍桥启用时 Qt 已发送 ModelReset 并使旧单元格失效。
+    if (!owner || QAccessible::isActive())
+        return;
+    QAccessibleTableModelChangeEvent event(owner, QAccessibleTableModelChangeEvent::ModelReset);
+    if (auto* interface = QAccessible::queryAccessibleInterface(owner)) {
+        if (auto* table = interface->tableInterface())
+            table->modelChange(&event);
+    }
+    QAccessible::updateAccessibility(&event);
+#else
+    Q_UNUSED(owner);
+#endif
+}
+
 inline void retireAccessibleTableChild(QAccessibleInterface* child)
 {
 #if defined(Q_OS_WASM) && QT_CONFIG(accessibility)

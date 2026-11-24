@@ -262,6 +262,9 @@ DataGrid uses the same background for row headers, column headers, pinned header
 and the corner where the headers meet. The default follows the theme, including
 High Contrast. Customizing the color preserves the accessible column headers,
 sort controls, and the corner's select-all action when the application enables it.
+Replacing the model or sorting sends one model-reset notification for the logical
+table. Qt handles the notification when its accessibility bridge is active.
+With the bridge inactive, DataGrid still invalidates cached cell interfaces.
 DataGrid's pinned surface shares the logical table selection and model. DataGrid rows and
 MultiSelectComboBox triggers retain logical mouse focus but show the extra focus
 outline only for keyboard navigation. Row outlines close at the visible column

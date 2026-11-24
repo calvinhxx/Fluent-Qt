@@ -102,23 +102,6 @@ QList<int> visibleRows(const QTableView& view)
     return rows;
 }
 
-void notifyAccessibleModelReset(DataGrid* grid)
-{
-#if QT_CONFIG(accessibility)
-    if (!grid)
-        return;
-
-    QAccessibleTableModelChangeEvent event(grid, QAccessibleTableModelChangeEvent::ModelReset);
-    if (QAccessibleInterface* interface = QAccessible::queryAccessibleInterface(grid)) {
-        if (QAccessibleTableInterface* table = interface->tableInterface())
-            table->modelChange(&event);
-    }
-    QAccessible::updateAccessibility(&event);
-#else
-    Q_UNUSED(grid);
-#endif
-}
-
 } // namespace
 
 namespace detail {
@@ -765,7 +748,7 @@ void DataGrid::setModel(QAbstractItemModel* model)
         const QPointer<QAbstractItemModel> expectedModel(model);
         QTimer::singleShot(0, this, [this, expectedModel] {
             if (this->model() == expectedModel.data())
-                notifyAccessibleModelReset(this);
+                compatibility::detail::resetAccessibleTableIfInactive(this);
         });
     }
     connectModelSignals(model);
@@ -1136,7 +1119,7 @@ void DataGrid::connectModelSignals(QAbstractItemModel* model)
     m_modelConnections.append(connect(model, &QAbstractItemModel::layoutChanged, this, [this, refresh] {
         refresh();
         if (isVisible())
-            notifyAccessibleModelReset(this);
+            compatibility::detail::resetAccessibleTableIfInactive(this);
     }));
     m_modelConnections.append(connect(model, &QAbstractItemModel::rowsInserted, this, refresh));
     m_modelConnections.append(connect(model, &QAbstractItemModel::rowsRemoved, this, refresh));
