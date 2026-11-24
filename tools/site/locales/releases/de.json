@@ -1,4 +1,5 @@
 {
+"727953d3":"Die Vorlage `monitor` erzeugt eine Überwachungsanwendung für C++ oder PySide6 mit Latenzdiagramm und filterbarer Tabelle.",
 "6251624d":"`DataGrid` zeichnet Tabellenköpfe in Dialogen mit deckendem Hintergrund. Mit `setHeaderBackground()` lässt sich die Farbe ändern. Sortierung und fixierte Spalten bleiben erhalten.",
 "0b980ca9":"`NumberBox` kann eine Zahl verlangen und Minus und Plus auf gegenüberliegenden Seiten anzeigen. Nach dem Ziehen oder der Farbauswahl stellen Widgets den Mauszeiger der Anwendung wieder her.",
 "0ca130e3":"Die Desktop- und Python-Pakete der Gallery enthalten jetzt alle 99 Einträge, einschließlich `QmlView`.",

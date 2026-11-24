@@ -2,6 +2,34 @@
   "schema_version": 2,
   "versions": [
     {
+      "version": "1.12.3",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "8f2e2297a8185a33bbcdc2e573db39f1a6fd7d35ced2ccb52bd46b47699609fa",
+      "groups": [
+        {
+          "scope": "uilib",
+          "summary": {
+            "en": "`DataGrid` headers in dialogs have a solid background. Use `setHeaderBackground()` to change the color while keeping sorting and pinned columns.",
+            "zh": "弹窗中的 `DataGrid` 表头使用实色底层。可用 `setHeaderBackground()` 调整底色，保留排序和固定列。"
+          },
+          "changes": [
+            {
+              "en": "Generate a C++ or PySide6 monitoring app with the `monitor` starter. It includes a latency chart and a filterable table.",
+              "zh": "使用 `monitor` 模板可生成 C++ 或 PySide6 监控应用，内含延迟曲线和可筛选的表格。"
+            }
+          ],
+          "migrations": [],
+          "related": [
+            "data-grid"
+          ],
+          "headers": [
+            "src/components/collections/DataGrid.h"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.12.2",
       "status": "published",
       "published_at": "2026-11-23T17:03:42Z",
@@ -1626,8 +1654,12 @@
         },
         "changes": [],
         "migrations": [],
-        "related": ["data-grid"],
-        "headers": ["src/components/collections/DataGrid.h"]
+        "related": [
+          "data-grid"
+        ],
+        "headers": [
+          "src/components/collections/DataGrid.h"
+        ]
       }
     ]
   }
