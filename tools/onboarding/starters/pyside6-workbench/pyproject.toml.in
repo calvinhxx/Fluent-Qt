@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "@APP_ID@"
 version = "0.1.0"
-description = "Native FluentQt workbench for @APP_NAME@"
+description = "Native FluentQt desktop workbench"
 requires-python = ">=3.11,<3.14"
 dependencies = [
   "FluentQt>=1.7.2,<2",
