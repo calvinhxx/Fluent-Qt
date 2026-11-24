@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "@APP_ID@"
 version = "0.1.0"
 description = "Native FluentQt operations monitor"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.10,<3.14"
 dependencies = [
   "FluentQt>=1.8.5,<2",
   "PySide6>=6.2,<7"
