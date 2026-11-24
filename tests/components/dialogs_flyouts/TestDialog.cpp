@@ -228,6 +228,8 @@ TEST_F(DialogTest, Contract_NotifyNoOpsAndSmokeBundle)
     EXPECT_EQ(modalSpy.count(), 1);
     EXPECT_EQ(dimSpy.count(), 1);
     EXPECT_EQ(smokeSpy.count(), 1);
+    EXPECT_FALSE(dialog.isDragEnabled());
+    EXPECT_FALSE(dialog.isAnimationEnabled());
     EXPECT_EQ(dragSpy.count(), 1);
     EXPECT_EQ(animSpy.count(), 1);
 
@@ -279,14 +281,6 @@ TEST_F(DialogTest, Contract_ThemeChangeDoesNotMutateOpenState)
     QApplication::processEvents();
 }
 
-TEST_F(DialogTest, SmokeProperty)
-{
-    Dialog dialog(window);
-    EXPECT_FALSE(dialog.isSmokeEnabled());
-    dialog.setSmokeEnabled(true);
-    EXPECT_TRUE(dialog.isSmokeEnabled());
-}
-
 TEST_F(DialogTest, DialogSmokeUsesRoundedOverlayScrim)
 {
     OverlayScrim overlay(nullptr);
@@ -333,22 +327,6 @@ TEST_F(DialogTest, DialogSmokeMatchesSharedBackingScrimContract)
     overlay.render(&painter);
     painter.end();
     EXPECT_NEAR(image.pixelColor(image.rect().center()).alpha(), 100, 1);
-}
-
-TEST_F(DialogTest, DragProperty)
-{
-    Dialog dialog(window);
-    EXPECT_TRUE(dialog.isDragEnabled());
-    dialog.setDragEnabled(false);
-    EXPECT_FALSE(dialog.isDragEnabled());
-}
-
-TEST_F(DialogTest, AnimationProperty)
-{
-    Dialog dialog(window);
-    EXPECT_TRUE(dialog.isAnimationEnabled());
-    dialog.setAnimationEnabled(false);
-    EXPECT_FALSE(dialog.isAnimationEnabled());
 }
 
 TEST_F(DialogTest, MotionPolicyDisabledSettlesOpenAndCloseSynchronously)
@@ -661,20 +639,6 @@ TEST_F(DialogTest, ExecSmokeDialogDoesNotPromoteOwnerContentToNative)
         << "owner content widget was promoted to a native window by the dialog";
     EXPECT_EQ(content->windowHandle(), nullptr) << "owner content widget acquired its own native window handle";
     EXPECT_FALSE(inner->testAttribute(Qt::WA_NativeWindow));
-}
-
-TEST_F(DialogTest, ThemeSwitchNoCrash)
-{
-    Dialog dialog(window);
-    dialog.setAnimationEnabled(false);
-
-    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
-    dialog.onThemeUpdated();
-
-    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    dialog.onThemeUpdated();
-
-    SUCCEED();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
