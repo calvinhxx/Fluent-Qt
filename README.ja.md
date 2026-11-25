@@ -204,6 +204,8 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 FluentQt がシステム検索パス外にある場合は、`-DCMAKE_PREFIX_PATH=/path/to/fluentqt` を指定して設定してください。
 
+vcpkg で依存関係を管理する Qt 6 アプリケーションでは、[Fluent-Qt のオーバーレイポート](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg)を使って Widgets のコアライブラリをインストールできます。
+
 #### C++ 最小サンプル
 
 `main.cpp`:

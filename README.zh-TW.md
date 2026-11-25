@@ -204,6 +204,8 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 若 FluentQt 不在系統搜尋路徑中，請在設定時加上 `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`。
 
+使用 vcpkg 管理相依套件的 Qt 6 應用程式，可透過 [Fluent-Qt overlay port](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg) 安裝 Widgets 核心函式庫。
+
 #### C++ 最小範例
 
 `main.cpp`：

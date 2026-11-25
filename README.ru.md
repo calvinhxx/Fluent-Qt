@@ -204,6 +204,8 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 Если FluentQt находится вне системных путей поиска, передайте `-DCMAKE_PREFIX_PATH=/path/to/fluentqt` при конфигурации.
 
+Если вы управляете зависимостями приложения на Qt 6 с помощью vcpkg, установите основную библиотеку Widgets через [оверлейный порт Fluent-Qt](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg).
+
 #### Минимальный пример на C++
 
 `main.cpp`:
