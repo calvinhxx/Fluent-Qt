@@ -103,6 +103,18 @@ constexpr int TitleBarAppIconSize = 14;
 constexpr int TitleBarAvatarSize = 24;
 constexpr int TitleBarSearchWidth = 220;
 constexpr int TitleBarSearchHeight = 28;
+constexpr const char* CaptionButtonNames[] = {"fluentWindowMinimizeButton", "fluentWindowMaximizeButton",
+    "fluentWindowCloseButton"};
+
+QImage renderCaptionButton(Button& button)
+{
+    const qreal dpr = button.devicePixelRatioF();
+    QImage image(button.size() * dpr, QImage::Format_ARGB32_Premultiplied);
+    image.setDevicePixelRatio(dpr);
+    image.fill(Qt::transparent);
+    button.render(&image, QPoint(), QRegion(), QWidget::RenderFlags{});
+    return image;
+}
 
 #ifdef Q_OS_WIN
 class NativeEventTestWindow final : public Window {
@@ -613,23 +625,43 @@ TEST_F(WindowTest, TitleBarPublishesWindowActivationState)
     EXPECT_FALSE(activeSpy.takeFirst().at(0).toBool());
 }
 
-TEST_F(WindowTest, ClientCaptionForegroundTracksWindowActivation)
+TEST_F(WindowTest, CaptionActivationPreservesExplicitButtonOpacity)
 {
     Window window;
-    auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
-    if (!closeButton)
+    window.setCustomWindowChromeEnabled(true);
+    if (!window.findChild<QWidget*>(QStringLiteral("fluentWindowCaptionButtonHost")))
         GTEST_SKIP() << "The active platform uses native caption controls";
 
-    QEvent activateEvent(QEvent::WindowActivate);
-    QApplication::sendEvent(window.titleBar(), &activateEvent);
-    EXPECT_DOUBLE_EQ(closeButton->contentOpacity(), 1.0);
+    QEvent activate(QEvent::WindowActivate);
+    QEvent deactivate(QEvent::WindowDeactivate);
+    QEvent leave(QEvent::Leave);
+    for (const char* name : CaptionButtonNames) {
+        SCOPED_TRACE(name);
+        auto* button = window.findChild<Button*>(QString::fromLatin1(name));
+        ASSERT_NE(button, nullptr);
+        QApplication::sendEvent(button, &leave);
+        QImage transparent = renderCaptionButton(*button);
+        transparent.fill(Qt::transparent);
+        for (const qreal opacity : {0.0, 0.5}) {
+            for (const auto state : {Button::Rest, Button::Hover, Button::Pressed, Button::Disabled}) {
+                SCOPED_TRACE(::testing::Message() << "opacity=" << opacity << ", state=" << state);
+                QApplication::sendEvent(window.titleBar(), &activate);
+                button->setInteractionState(state);
+                const bool dimmed = state == Button::Rest || state == Button::Disabled;
+                button->setContentOpacity(dimmed ? opacity * 0.55 : opacity);
+                const QImage expected = renderCaptionButton(*button);
+                if (opacity == 0.0)
+                    EXPECT_EQ(expected, transparent);
 
-    QEvent deactivateEvent(QEvent::WindowDeactivate);
-    QApplication::sendEvent(window.titleBar(), &deactivateEvent);
-    EXPECT_DOUBLE_EQ(closeButton->contentOpacity(), 0.55);
-
-    QApplication::sendEvent(window.titleBar(), &activateEvent);
-    EXPECT_DOUBLE_EQ(closeButton->contentOpacity(), 1.0);
+                button->setContentOpacity(opacity);
+                QApplication::sendEvent(window.titleBar(), &deactivate);
+                EXPECT_DOUBLE_EQ(button->contentOpacity(), opacity);
+                EXPECT_EQ(renderCaptionButton(*button), expected);
+                QApplication::sendEvent(window.titleBar(), &activate);
+                EXPECT_DOUBLE_EQ(button->contentOpacity(), opacity);
+            }
+        }
+    }
 }
 
 TEST_F(WindowTest, TopLevelShowSmoke)
@@ -1352,33 +1384,60 @@ TEST_F(WindowTest, WindowsWinUiLayoutUsesSelfDrawnCaptionButtons)
 #endif
 }
 
-TEST_F(WindowTest, WindowsCloseCaptionButtonHoverUsesCriticalRed)
+TEST_F(WindowTest, CaptionButtonsKeepHoverAndPressFeedbackWhenInactive)
 {
-#ifdef Q_OS_WIN
     Window window;
-    window.resize(640, 420);
-    window.show();
-    QApplication::processEvents();
+    window.setCustomWindowChromeEnabled(true);
+    if (!window.findChild<QWidget*>(QStringLiteral("fluentWindowCaptionButtonHost")))
+        GTEST_SKIP() << "The active platform uses native caption controls";
 
-    auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
-    ASSERT_NE(closeButton, nullptr);
+    QEvent activate(QEvent::WindowActivate);
+    QEvent deactivate(QEvent::WindowDeactivate);
+    FLUENT_MAKE_ENTER_EVENT(enter, 4, 4);
+    QEvent leave(QEvent::Leave);
 
-    closeButton->setInteractionState(Button::Hover);
-    QApplication::processEvents();
+    for (const auto theme :
+        {fluent::FluentElement::Light, fluent::FluentElement::Dark, fluent::FluentElement::HighContrast}) {
+        SCOPED_TRACE(static_cast<int>(theme));
+        window.setProperty("fluentThemeOverride", static_cast<int>(theme));
+        window.onThemeUpdated();
+        for (const char* name : CaptionButtonNames) {
+            SCOPED_TRACE(name);
+            auto* button = window.findChild<Button*>(QString::fromLatin1(name));
+            ASSERT_NE(button, nullptr);
+            const bool close = button->objectName() == QStringLiteral("fluentWindowCloseButton");
+            const auto& colors = button->themeColorsRef();
+            const QPoint sample = QPoint(4, button->height() / 2) * button->devicePixelRatioF();
+            QApplication::sendEvent(window.titleBar(), &activate);
+            QApplication::sendEvent(button, &leave);
+            const QImage activeRest = renderCaptionButton(*button);
+            QApplication::sendEvent(button, &enter);
+            const QImage activeHover = renderCaptionButton(*button);
+            EXPECT_EQ(activeHover.pixelColor(sample).rgba(),
+                (close ? colors.systemCritical : colors.subtleSecondary).rgba());
+            button->setDown(true);
+            const QImage activePressed = renderCaptionButton(*button);
+            EXPECT_EQ(activePressed.pixelColor(sample).rgba(),
+                (close ? colors.systemCritical.darker(115) : colors.subtleTertiary).rgba());
 
-    const QImage image = closeButton->grab().toImage();
-    ASSERT_FALSE(image.isNull());
-    const QColor sample = image.pixelColor(qMin(4, image.width() - 1), image.height() / 2);
-
-    EXPECT_GT(sample.red(), 150);
-    EXPECT_LT(sample.green(), 80);
-    EXPECT_LT(sample.blue(), 80);
-    EXPECT_GT(sample.alpha(), 200);
-
-    window.close();
-#else
-    GTEST_SKIP() << "Windows close caption button hover is only checked on Windows";
-#endif
+            QApplication::sendEvent(window.titleBar(), &deactivate);
+            EXPECT_EQ(renderCaptionButton(*button), activePressed);
+            button->setDown(false);
+            EXPECT_EQ(renderCaptionButton(*button), activeHover);
+            button->setEnabled(false);
+            const QImage disabledHover = renderCaptionButton(*button);
+            EXPECT_EQ(disabledHover.pixelColor(sample).alpha(), 0);
+            QApplication::sendEvent(button, &leave);
+            EXPECT_EQ(renderCaptionButton(*button), disabledHover);
+            button->setEnabled(true);
+            const QImage inactiveRest = renderCaptionButton(*button);
+            EXPECT_NE(inactiveRest, activeRest);
+            QApplication::sendEvent(button, &enter);
+            EXPECT_EQ(renderCaptionButton(*button), activeHover);
+            QApplication::sendEvent(button, &leave);
+            EXPECT_EQ(renderCaptionButton(*button), inactiveRest);
+        }
+    }
 }
 
 TEST_F(WindowTest, PrepareForNativeRestoreClearsCaptionButtonPointerState)
@@ -1865,9 +1924,6 @@ TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner)
 
     auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
     ASSERT_NE(closeButton, nullptr);
-    // Test corner coverage independently of the compositor's activation-dependent fade.
-    // zh_CN: 以不透明表面检查圆角覆盖，避免合成器的窗口激活时序影响颜色断言。
-    closeButton->setContentOpacity(1.0);
     closeButton->setInteractionState(Button::Hover);
     QApplication::processEvents();
 

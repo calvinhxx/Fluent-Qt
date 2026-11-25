@@ -42,8 +42,44 @@ namespace {
 
 constexpr int CaptionButtonWidth = 46;
 constexpr int CaptionButtonIconSize = Typography::IconSize::Standard;
+constexpr qreal InactiveCaptionOpacity = 0.55;
 constexpr int ResizeBorderWidth = 8;
 constexpr int VisibleFrameResizeBorderWidth = ResizeBorderWidth;
+
+class CaptionButton final : public basicinput::Button {
+public:
+    using Button::Button;
+
+    void setWindowActive(bool active)
+    {
+        if (m_windowActive != active) {
+            m_windowActive = active;
+            update();
+        }
+    }
+
+protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        const auto state = interactionState();
+        const bool disabled = !isEnabled() || state == Disabled;
+        if (m_windowActive || (!disabled && (state == Hover || state == Pressed || underMouse() || isDown()))) {
+            Button::paintEvent(event);
+            return;
+        }
+
+        // Inactive resting and disabled captions show only their centered icon.
+        // zh_CN: 未激活窗口中，静止和禁用的标题栏按钮只绘制居中图标。
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+        painter.setOpacity(contentOpacity() * InactiveCaptionOpacity);
+        painter.setPen(disabled ? themeColorsRef().textDisabled : themeColorsRef().textPrimary);
+        paintStackedContent(painter, rect());
+    }
+
+private:
+    bool m_windowActive = true;
+};
 
 bool requiresAlphaSurface(const BackdropCapabilities& capabilities, int frameMargin)
 {
@@ -965,7 +1001,7 @@ void Window::setupCaptionButtons()
 
     auto createCaptionButton =
         [this](const QString& objectName, const QString& glyph, const QString& tooltip, const QString& accessibleName) {
-            auto* button = new fluent::basicinput::Button(m_captionButtonHost);
+            auto* button = new CaptionButton(m_captionButtonHost);
             button->setObjectName(objectName);
             fluent::status_info::ToolTip::attach(button, tooltip);
             button->setAccessibleName(accessibleName);
@@ -1036,14 +1072,9 @@ void Window::syncCaptionButtons()
 
 void Window::syncCaptionButtonActivation(bool active)
 {
-    // WinUI keeps caption-button geometry unchanged and softens only its foreground when the
-    // window loses activation. Retaining the full hit target also avoids native hit-test churn.
-    // zh_CN: WinUI 在窗口失活时保持标题按钮几何不变，仅弱化前景；完整命中区域也可避免原生命中测试抖动。
-    constexpr qreal InactiveCaptionOpacity = 0.55;
-    const qreal opacity = active ? 1.0 : InactiveCaptionOpacity;
     for (auto* button : {m_minimizeButton, m_maximizeButton, m_closeButton}) {
         if (button)
-            button->setContentOpacity(opacity);
+            static_cast<CaptionButton*>(button)->setWindowActive(active);
     }
 }
 
