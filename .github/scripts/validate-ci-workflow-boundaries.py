@@ -109,6 +109,8 @@ EXPECTED_JOBS = {
         "python_candidate",
         "publish",
         "publish_python",
+        "validate_vcpkg",
+        "submit_vcpkg",
     },
     "pages.yml": {"authorize", "wasm", "site", "deploy"},
 }
@@ -1089,6 +1091,8 @@ def canonical_job_level_errors(job: str, context: str) -> list[str]:
         return errors
     seen: set[str] = set()
     allowed = ALLOWED_JOB_LEVEL_KEYS | ({"container"} if context == "ci-wasm.yml browser" else set())
+    if context == "release.yml submit_vcpkg":
+        allowed = allowed | {"concurrency"}
     for line in job_level_lines(job):
         match = CANONICAL_JOB_LEVEL_ENTRY.fullmatch(line)
         if not match or match.group("name") not in allowed:

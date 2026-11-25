@@ -11,12 +11,20 @@ on:
       - 'ports/fluent-qt/**'
       - '.github/workflows/vcpkg-port.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      overlay_sha256:
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: vcpkg-port-${{ github.ref }}
+  group: vcpkg-port-${{ inputs.release_tag || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,6 +45,27 @@ jobs:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.release_tag || github.sha }}
+          persist-credentials: false
+
+      - name: Use the published vcpkg overlay
+        if: ${{ inputs.release_tag != '' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          OVERLAY_SHA256: ${{ inputs.overlay_sha256 }}
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP "overlay.zip"
+          gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY `
+            --pattern "fluent-qt-${env:RELEASE_TAG}-vcpkg.zip" --output $zip
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash -ne $env:OVERLAY_SHA256) {
+            throw "Downloaded vcpkg overlay differs from the packaged release asset"
+          }
+          Remove-Item ports/fluent-qt -Recurse -Force
+          Expand-Archive -Path $zip -DestinationPath ports
 
       - name: Install Linux build and display dependencies
         if: runner.os == 'Linux'

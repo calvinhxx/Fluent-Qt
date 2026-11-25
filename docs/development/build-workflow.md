@@ -202,8 +202,10 @@ The [fluent-qt overlay port](../../ports/fluent-qt) builds the static C++ Widget
 library against vcpkg's Qt 6. It tracks the release tag in the port manifest.
 Gallery, tests, PySide6 and optional FluentQt modules are excluded.
 
-1. Copy the entire `ports/fluent-qt/` directory to
-   `vcpkg-ports/fluent-qt/` in the consuming application.
+1. For a release with a `fluent-qt-vX.Y.Z-vcpkg.zip` asset, extract it into
+   `vcpkg-ports/` in the consuming application. This provides the exact port
+   for that release while the official registry PR is under review. For
+   v1.12.3, copy the checked-in `ports/fluent-qt/` to `vcpkg-ports/fluent-qt/`.
 2. Add `fluent-qt` to the application's `vcpkg.json`. For a new Widgets-only
    application, the following manifest lets the port select the Qt features it
    uses. Existing applications can keep their own Qt features.
