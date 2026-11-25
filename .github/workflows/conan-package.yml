@@ -32,8 +32,10 @@ jobs:
         include:
           - os: windows-2022
             qt_arch: win64_msvc2022_64
+            qt_archives: qtbase
           - os: ubuntu-24.04
             qt_arch: linux_gcc_64
+            qt_archives: qtbase icu
     env:
       QT_VERSION: '6.9.3'
     steps:
@@ -53,7 +55,7 @@ jobs:
         with:
           version: ${{ env.QT_VERSION }}
           arch: ${{ matrix.qt_arch }}
-          archives: qtbase
+          archives: ${{ matrix.qt_archives }}
           setup-python: false
           cache: true
 
