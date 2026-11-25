@@ -196,6 +196,52 @@ creates their targets under the module that they demonstrate. Target names,
 link dependencies, and executable paths are unchanged. IDEs may label source
 and generated files differently, but CMake owns the module hierarchy.
 
+## Install the Widgets library with vcpkg
+
+The [fluent-qt overlay port](../../ports/fluent-qt) builds the static C++ Widgets
+library against vcpkg's Qt 6. It tracks the release tag in the port manifest.
+Gallery, tests, PySide6 and optional FluentQt modules are excluded.
+
+1. Copy the entire `ports/fluent-qt/` directory to
+   `vcpkg-ports/fluent-qt/` in the consuming application.
+2. Add `fluent-qt` to the application's `vcpkg.json`. For a new Widgets-only
+   application, the following manifest lets the port select the Qt features it
+   uses. Existing applications can keep their own Qt features.
+
+   ```json
+   {
+     "dependencies": [
+       "fluent-qt",
+       { "name": "qtbase", "default-features": false }
+     ]
+   }
+   ```
+
+3. Add the overlay directory to the application's `vcpkg-configuration.json`.
+
+   ```json
+   { "overlay-ports": ["./vcpkg-ports"] }
+   ```
+
+4. Link the installed target after defining the application.
+
+   ```cmake
+   find_package(FluentQt CONFIG REQUIRED)
+   target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+   ```
+
+5. Configure a fresh build directory with the vcpkg toolchain and build.
+
+   ```sh
+   cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+   cmake --build build --config Release
+   ```
+
+The toolchain installs the manifest dependencies during configuration. Use the
+same triplet for the application and its dependencies. On macOS, Qt's source
+dependencies use `autoconf`, `autoconf-archive`, `automake`, `libtool` and
+`pkg-config` as host tools.
+
 ## Install the library or create a source package
 
 For a standalone library build, Qt is the only external dependency. From a

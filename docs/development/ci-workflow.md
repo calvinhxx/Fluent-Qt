@@ -67,6 +67,7 @@ review. Real desktop tests and host-bound pixel baselines remain separate.
 |---|---|---|
 | [ci.yml](../../.github/workflows/ci.yml) | Classify paths, choose modules, expose `CI Gate` and `Release ready` | Module outputs |
 | [ci-cpp.yml](../../.github/workflows/ci-cpp.yml) | Native Qt builds, CTest, CMake consumers, desktop packages | [C++ matrix](../../.github/ci-cpp-matrix.json) |
+| [vcpkg-port.yml](../../.github/workflows/vcpkg-port.yml) | Install the overlay with vcpkg's Qt and run the external consumer in Debug and Release | Windows x64 and Linux x64 |
 | [ci-python.yml](../../.github/workflows/ci-python.yml) | Bindings, compatibility, wheels, clean installs, manylinux audits | [Wheel matrix](../../bindings/pyside6/wheel-matrix.json) |
 | [ci-wasm.yml](../../.github/workflows/ci-wasm.yml) | Browser toolchain, Hello World, Gallery, smoke tests, Pages payload | Workflow toolchain and smoke configuration |
 | [ci-site.yml](../../.github/workflows/ci-site.yml) | Native component captures, bilingual documents, API reference, website artifact | Gallery catalog and installed headers |

@@ -1,0 +1,116 @@
+name: vcpkg port
+
+on:
+  push:
+    branches: [main, 'release/**', 'ci/vcpkg-*']
+    paths:
+      - 'ports/fluent-qt/**'
+      - '.github/workflows/vcpkg-port.yml'
+  pull_request:
+    paths:
+      - 'ports/fluent-qt/**'
+      - '.github/workflows/vcpkg-port.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vcpkg-port-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  consumer:
+    name: ${{ matrix.triplet }} · Debug and Release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            triplet: x64-windows
+          - os: ubuntu-24.04
+            triplet: x64-linux
+    env:
+      TRIPLET: ${{ matrix.triplet }}
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Install Linux build and display dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf-archive libtool pkg-config '^libxcb.*-dev' libx11-xcb-dev \
+            libglu1-mesa-dev libegl1-mesa-dev libxrender-dev libxi-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev xvfb xauth
+
+      - name: Prepare consumer manifest
+        shell: python
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          Path(os.environ["VCPKG_DEFAULT_BINARY_CACHE"]).mkdir(exist_ok=True)
+          app = Path(os.environ["RUNNER_TEMP"]) / "port-consumer"
+          app.mkdir()
+          manifest = {
+              "builtin-baseline": json.loads(Path("vcpkg.json").read_text())["builtin-baseline"],
+              "dependencies": ["fluent-qt", {"name": "qtbase", "default-features": False}],
+          }
+          (app / "vcpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .vcpkg-binary-cache
+          key: port-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'ports/fluent-qt/**') }}
+          restore-keys: port-${{ matrix.triplet }}-
+
+      - name: Install fluent-qt and Qt through vcpkg
+        shell: pwsh
+        run: |
+          Set-Location "$env:RUNNER_TEMP/port-consumer"
+          vcpkg install "--triplet=$env:TRIPLET" "--overlay-ports=$env:GITHUB_WORKSPACE/ports" --enforce-port-checks
+
+      - name: Configure the external consumer
+        shell: pwsh
+        run: |
+          $installed = "$env:RUNNER_TEMP/port-consumer/vcpkg_installed"
+          $build = "$env:RUNNER_TEMP/consumer-build"
+          $generator = if ($IsWindows) { @('-G', 'Visual Studio 17 2022', '-A', 'x64') } else { @('-G', 'Ninja Multi-Config') }
+          cmake -S .github/integration -B $build @generator `
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            "-DVCPKG_TARGET_TRIPLET=$env:TRIPLET" "-DVCPKG_INSTALLED_DIR=$installed" `
+            -DVCPKG_MANIFEST_MODE=OFF -DFLUENT_QT_INTEGRATION_MODE=INSTALLED
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          foreach ($package in 'FluentQt', 'Qt6', 'Qt6Widgets') {
+            $found = Select-String -Path "$build/CMakeCache.txt" -Pattern "^$($package)_DIR:PATH=(.+)$"
+            $expected = Resolve-Path "$installed/$env:TRIPLET/share/$package"
+            if (!$found -or (Resolve-Path $found.Matches[0].Groups[1].Value).Path -ne $expected.Path) {
+              throw "$package must resolve from the tested vcpkg installation ($expected)"
+            }
+          }
+
+      - name: Build and run Debug and Release
+        shell: pwsh
+        run: |
+          $build = "$env:RUNNER_TEMP/consumer-build"
+          $prefix = "$env:RUNNER_TEMP/port-consumer/vcpkg_installed/$env:TRIPLET"
+          $originalPath = $env:PATH
+          foreach ($config in 'Debug', 'Release') {
+            cmake --build $build --config $config --parallel 4
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            $app = "$build/$config/fluentqt_external_integration"
+            if ($IsWindows) {
+              $runtime = if ($config -eq 'Debug') { "$prefix/debug" } else { $prefix }
+              $env:PATH = "$runtime/bin;$originalPath"
+              $env:QT_PLUGIN_PATH = "$runtime/Qt6/plugins"
+              & "$app.exe" -platform windows
+            } else {
+              xvfb-run -a $app -platform xcb
+            }
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
