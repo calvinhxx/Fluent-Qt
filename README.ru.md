@@ -206,6 +206,8 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 Если вы управляете зависимостями приложения на Qt 6 с помощью vcpkg, установите основную библиотеку Widgets через [оверлейный порт Fluent-Qt](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg).
 
+С помощью Conan 2 можно [собрать основную библиотеку Widgets в локальном кеше](docs/development/build-workflow.md#build-the-widgets-library-with-conan-2).
+
 #### Минимальный пример на C++
 
 `main.cpp`:

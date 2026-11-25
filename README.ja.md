@@ -206,6 +206,8 @@ FluentQt がシステム検索パス外にある場合は、`-DCMAKE_PREFIX_PATH
 
 vcpkg で依存関係を管理する Qt 6 アプリケーションでは、[Fluent-Qt のオーバーレイポート](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg)を使って Widgets のコアライブラリをインストールできます。
 
+Conan 2 を使う場合は、[ローカルキャッシュに Widgets コアライブラリをビルド](docs/development/build-workflow.md#build-the-widgets-library-with-conan-2)できます。
+
 #### C++ 最小サンプル
 
 `main.cpp`:

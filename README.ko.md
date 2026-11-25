@@ -206,6 +206,8 @@ FluentQt가 시스템 검색 경로 밖에 있는 경우 `-DCMAKE_PREFIX_PATH=/p
 
 vcpkg로 의존성을 관리하는 Qt 6 애플리케이션에서는 [Fluent-Qt 오버레이 포트](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg)를 사용해 Widgets 핵심 라이브러리를 설치할 수 있습니다.
 
+Conan 2를 사용한다면 [로컬 캐시에 Widgets 핵심 라이브러리를 빌드](docs/development/build-workflow.md#build-the-widgets-library-with-conan-2)할 수 있습니다.
+
 #### C++ 최소 예제
 
 `main.cpp`:

@@ -244,6 +244,50 @@ same triplet for the application and its dependencies. On macOS, Qt's source
 dependencies use `autoconf`, `autoconf-archive`, `automake`, `libtool` and
 `pkg-config` as host tools.
 
+## Build the Widgets library with Conan 2
+
+The [Conan recipe](../../packaging/conan/conanfile.py) packages the static Qt 6
+Widgets library from a released Fluent-Qt source archive. To create
+`fluent-qt/1.12.3` in your local Conan cache, run the following from this
+checkout with Conan 2, CMake and a C++17 compiler. Run `conan profile detect`
+first if you have no default profile.
+
+```sh
+conan create packaging/conan --version=1.12.3 --build=missing
+```
+
+Conan resolves Qt through the host profile and may build it from source.
+To reuse an installed Qt SDK, include the matching compiler and architecture
+profile and declare the exact SDK version. For example, save this as
+`qt-sdk` for a native Qt 6.9.3 installation:
+
+```ini
+include(default)
+[platform_requires]
+qt/6.9.3
+```
+
+Point `CMAKE_PREFIX_PATH` at that SDK's installation prefix, then run
+`conan create packaging/conan --version=1.12.3 -pr:h ./qt-sdk -pr:b default --build=missing`.
+Both commands build and run the [consumer test](../../packaging/conan/test_package)
+on a native build.
+
+In the consuming application's `conanfile.txt`, use:
+
+```ini
+[requires]
+fluent-qt/1.12.3
+
+[generators]
+CMakeDeps
+CMakeToolchain
+```
+
+Run `conan install` with the same host profile and configure CMake with the
+generated toolchain. Link `FluentQt::FluentQt` after
+`find_package(FluentQt CONFIG REQUIRED)`. Each new cache needs the local
+creation step until the recipe is published on ConanCenter.
+
 ## Install the library or create a source package
 
 For a standalone library build, Qt is the only external dependency. From a

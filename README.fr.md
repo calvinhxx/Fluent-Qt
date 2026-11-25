@@ -206,6 +206,8 @@ Si FluentQt se trouve hors des chemins de recherche système, configurez avec `-
 
 Si vous gérez les dépendances de votre application Qt 6 avec vcpkg, vous pouvez installer la bibliothèque de base de Widgets à l’aide du [port overlay de Fluent-Qt](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg).
 
+Avec Conan 2, vous pouvez [compiler la bibliothèque de base de Widgets dans le cache local](docs/development/build-workflow.md#build-the-widgets-library-with-conan-2).
+
 #### Exemple minimal C++
 
 `main.cpp` :

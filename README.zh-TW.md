@@ -206,6 +206,8 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 使用 vcpkg 管理相依套件的 Qt 6 應用程式，可透過 [Fluent-Qt overlay port](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg) 安裝 Widgets 核心函式庫。
 
+使用 Conan 2 的專案可[在本機快取中建置 Widgets 核心函式庫](docs/development/build-workflow.md#build-the-widgets-library-with-conan-2)。
+
 #### C++ 最小範例
 
 `main.cpp`：
