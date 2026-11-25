@@ -376,6 +376,8 @@ jobs:
 
   publish:
     name: Publish GitHub Release
+    outputs:
+      vcpkg_sha256: ${{ steps.vcpkg.outputs.sha256 }}
     needs: [preflight, desktop_candidate, source-package, python_candidate]
     if: >-
       ${{
@@ -455,6 +457,18 @@ jobs:
         with:
           name: release-source
           path: release-dist
+
+      - name: Package stable vcpkg overlay
+        id: vcpkg
+        if: ${{ needs.preflight.outputs.draft == 'false' && needs.preflight.outputs.prerelease == 'false' }}
+        env:
+          RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+        run: |
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://github.com/$GITHUB_REPOSITORY/archive/$RELEASE_TAG.tar.gz" -o "$RUNNER_TEMP/vcpkg-source.tar.gz"
+          python3 scripts/release/package_vcpkg_overlay.py "$RELEASE_TAG" "$RUNNER_TEMP/vcpkg-source.tar.gz" \
+            "release-dist/fluent-qt-$RELEASE_TAG-vcpkg.zip"
+          echo "sha256=$(sha256sum "release-dist/fluent-qt-$RELEASE_TAG-vcpkg.zip" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Generate SHA256SUMS.txt
         shell: bash
@@ -669,3 +683,67 @@ jobs:
             echo ""
             echo "- TestPyPI and PyPI: ${{ steps.python_release.outputs.run_url }}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  validate_vcpkg:
+    name: Validate released vcpkg overlay
+    needs: [preflight, publish]
+    if: >-
+      ${{ !cancelled() && needs.publish.result == 'success' &&
+          needs.preflight.outputs.draft == 'false' && needs.preflight.outputs.prerelease == 'false' }}
+    uses: ./.github/workflows/vcpkg-port.yml
+    with:
+      release_tag: ${{ needs.preflight.outputs.tag }}
+      overlay_sha256: ${{ needs.publish.outputs.vcpkg_sha256 }}
+
+  submit_vcpkg:
+    name: Submit vcpkg port
+    needs: [preflight, publish, validate_vcpkg]
+    if: ${{ !cancelled() && github.repository == 'calvinhxx/Fluent-Qt' && needs.validate_vcpkg.result == 'success' }}
+    concurrency:
+      group: fluent-qt-vcpkg-registry
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ needs.preflight.outputs.tag }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.preflight.outputs.tag_sha }}
+          persist-credentials: false
+
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: microsoft/vcpkg
+          ref: master
+          path: registry
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Prepare registry and tested overlay
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OVERLAY_SHA256: ${{ needs.publish.outputs.vcpkg_sha256 }}
+        run: |
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "fluent-qt-$RELEASE_TAG-vcpkg.zip" --output "$RUNNER_TEMP/overlay.zip"
+          printf '%s  %s\n' "$OVERLAY_SHA256" "$RUNNER_TEMP/overlay.zip" | sha256sum --check --status
+          unzip -q "$RUNNER_TEMP/overlay.zip" -d "$RUNNER_TEMP/release-port"
+          cd registry
+          ./bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Open or update the official registry PR
+        env:
+          GH_TOKEN: ${{ secrets.VCPKG_PR_TOKEN }}
+        working-directory: registry
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::Set the Fluent-Qt Actions secret VCPKG_PR_TOKEN to submit to microsoft/vcpkg, then rerun this job."
+            exit 1
+          fi
+          read -r login id < <(gh api user --jq '[.login, .id] | @tsv')
+          git config user.name "$login"
+          git config user.email "$id+$login@users.noreply.github.com"
+          python3 ../scripts/release/submit_vcpkg_port.py "$RELEASE_TAG" "$RUNNER_TEMP/release-port/fluent-qt" | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash

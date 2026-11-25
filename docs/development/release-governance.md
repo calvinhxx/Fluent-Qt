@@ -386,7 +386,8 @@ Before creating a stable tag:
    package the source and Agent Skill, then publish the GitHub Release, one
    aggregate `SHA256SUMS.txt`, and the synchronized Python release.
 9. Require the linked Python run to verify TestPyPI, PyPI, attestations, and
-   clean installation of both distributions.
+   clean installation of both distributions. Check the vcpkg submission job
+   for its link to the official registry PR.
 10. Merge the tagged `main` commit back into `release/X.Y.x` before continuing
    patch development on that line.
 
@@ -401,8 +402,21 @@ PyPI → attestation and install verification. Release is not green until the
 linked Python workflow succeeds. Manual candidate and Python dispatches are
 recovery tools, not standard release steps.
 
-Later automation may perform these steps, but the rules above remain the
-contract that CI, changelog, and packaging workflows should enforce.
+Each public stable Release also includes `fluent-qt-vX.Y.Z-vcpkg.zip` in its
+assets and checksum list. Release renders this overlay from the tagged port
+recipe using the version and SHA512 of GitHub's tag archive. Windows and
+Linux install that asset and run the external Widgets consumer in Debug and
+Release. On success, Release submits the tested port to `microsoft/vcpkg`
+through `calvinhxx/vcpkg`. An existing Fluent-Qt update PR advances to the
+newer stable version while it awaits review. Each release keeps its own
+downloadable overlay. Registry availability follows the upstream merge.
+
+Set the repository Actions secret `VCPKG_PR_TOKEN` once using a contributor
+credential that can push to `calvinhxx/vcpkg` and open or edit its PRs in
+`microsoft/vcpkg` (for a classic GitHub PAT, use the `public_repo` scope).
+If the credential expires, replace it and rerun the failed submission job.
+Reruns recognize a matching open PR or published version and skip older
+releases when a newer version is pending or already registered.
 
 ## Release Package Sets
 
