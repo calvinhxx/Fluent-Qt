@@ -209,6 +209,8 @@ If FluentQt is outside the system search path, configure with `-DCMAKE_PREFIX_PA
 For Qt 6 applications using vcpkg, install the core Widgets library with the
 [Fluent-Qt overlay port](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg).
 
+Conan 2 users can [build the Widgets library in their local cache](docs/development/build-workflow.md#build-the-widgets-library-with-conan-2).
+
 #### C++ minimal example
 
 `main.cpp`:

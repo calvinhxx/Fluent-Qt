@@ -206,6 +206,8 @@ Liegt FluentQt außerhalb des System-Suchpfads, konfiguriere mit `-DCMAKE_PREFIX
 
 Wenn du die Abhängigkeiten deiner Qt-6-Anwendung mit vcpkg verwaltest, kannst du die Widgets-Kernbibliothek über den [Overlay-Port für Fluent-Qt](docs/development/build-workflow.md#install-the-widgets-library-with-vcpkg) installieren.
 
+Mit Conan 2 kannst du [die Widgets-Kernbibliothek im lokalen Cache bauen](docs/development/build-workflow.md#build-the-widgets-library-with-conan-2).
+
 #### Minimales C++-Beispiel
 
 `main.cpp`:
