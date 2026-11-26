@@ -4,8 +4,8 @@
 #include <QColor>
 #include <QRectF>
 
-#include "components/windowing/WindowBackdrop.h"
-#include "design/Material.h"
+#include "WindowBackdrop.h"
+#include "../../design/Material.h"
 
 class QPainter;
 

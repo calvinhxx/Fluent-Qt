@@ -1,14 +1,14 @@
 #ifndef FLUENT_MENU_H
 #define FLUENT_MENU_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QMenu>
 #include <QHash>
 #include <QPointer>
 #include <QWidgetAction>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Spacing.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../../design/Spacing.h"
 
 class QActionEvent;
 class QKeyEvent;

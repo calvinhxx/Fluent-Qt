@@ -4,9 +4,9 @@
 #include <QPointer>
 #include <QVariantMap>
 #include <QWidget>
-#include "components/collections/DataGrid.h"
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../collections/DataGrid.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QLayout;
 namespace fluent::collections {

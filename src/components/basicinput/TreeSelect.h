@@ -1,8 +1,8 @@
 #ifndef FLUENTQT_TREESELECT_H
 #define FLUENTQT_TREESELECT_H
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 #include <QAbstractItemModel>
 #include <QHash>
 #include <QPersistentModelIndex>

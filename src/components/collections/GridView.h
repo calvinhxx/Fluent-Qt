@@ -1,12 +1,12 @@
 #ifndef GRIDVIEW_H
 #define GRIDVIEW_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QListView>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/collections/SelectionMode.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "SelectionMode.h"
 
 class QLabel;
 class QMouseEvent;

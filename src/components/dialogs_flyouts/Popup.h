@@ -6,8 +6,8 @@
 #include <QPointer>
 #include <QList>
 #include <QFlags>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QGraphicsOpacityEffect;
 

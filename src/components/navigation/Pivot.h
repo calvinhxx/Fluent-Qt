@@ -1,16 +1,16 @@
 #ifndef PIVOT_H
 #define PIVOT_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QRect>
 #include <QString>
 #include <QVariant>
 #include <QVector>
 #include <QWidget>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Typography.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../../design/Typography.h"
 
 class QFocusEvent;
 class QColor;

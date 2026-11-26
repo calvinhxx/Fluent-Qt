@@ -1,11 +1,11 @@
 #ifndef TOGGLESWITCH_H
 #define TOGGLESWITCH_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QFont>
 #include <QWidget>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QPropertyAnimation;
 class QFocusEvent;

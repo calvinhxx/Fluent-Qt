@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <QSurface>
-#include "components/foundation/plugins/WidgetPlugin.h"
+#include "../foundation/plugins/WidgetPlugin.h"
 
 namespace fluent::particles {
 class ParticleBackdrop;

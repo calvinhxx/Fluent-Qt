@@ -1,10 +1,10 @@
 #ifndef RATINGCONTROL_H
 #define RATINGCONTROL_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QWidget>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QKeyEvent;
 class QFocusEvent;

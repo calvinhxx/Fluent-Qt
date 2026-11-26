@@ -1,13 +1,13 @@
 #ifndef FLUENTQT_FOUNDATION_H
 #define FLUENTQT_FOUNDATION_H
 
-#include <components/foundation/FontIcon.h>
-#include <components/foundation/FormController.h>
-#include <components/foundation/FluentElement.h>
-#include <components/foundation/MotionPolicy.h>
-#include <components/foundation/QMLPlus.h>
-#include <components/foundation/ThemeRegistry.h>
-#include <components/foundation/UserTheme.h>
-#include <components/foundation/WidgetOwnership.h>
+#include "components/foundation/FontIcon.h"
+#include "components/foundation/FormController.h"
+#include "components/foundation/FluentElement.h"
+#include "components/foundation/MotionPolicy.h"
+#include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
+#include "components/foundation/UserTheme.h"
+#include "components/foundation/WidgetOwnership.h"
 
 #endif // FLUENTQT_FOUNDATION_H

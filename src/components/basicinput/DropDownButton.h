@@ -4,8 +4,8 @@
 #include "Button.h"
 #include <QMenu>
 #include <QPointer>
-#include "design/Typography.h"
-#include "design/Spacing.h"
+#include "../../design/Typography.h"
+#include "../../design/Spacing.h"
 
 class QPropertyAnimation;
 class QKeyEvent;

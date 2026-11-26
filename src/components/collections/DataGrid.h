@@ -12,9 +12,9 @@
 #include <QTableView>
 #include <QVector>
 
-#include "components/collections/SelectionMode.h"
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "SelectionMode.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QAbstractButton;
 class QAbstractItemModel;

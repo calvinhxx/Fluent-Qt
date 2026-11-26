@@ -5,8 +5,8 @@
 #include <QPointer>
 #include <QString>
 
-#include "components/foundation/WidgetOwnership.h"
-#include "components/layout/Card.h"
+#include "../foundation/WidgetOwnership.h"
+#include "Card.h"
 
 class QResizeEvent;
 class QScrollArea;

@@ -3,7 +3,7 @@
 
 #include <QString>
 
-#include "components/basicinput/Button.h"
+#include "Button.h"
 
 namespace fluent::basicinput {
 

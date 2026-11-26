@@ -2,7 +2,7 @@
 #define FLUENTQT_COMPONENTS_COLLECTIONS_TIMELINE_H
 
 #include <memory>
-#include "components/collections/ListView.h"
+#include "ListView.h"
 
 namespace fluent::collections {
 class TimelineDelegate;

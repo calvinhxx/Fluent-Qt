@@ -5,8 +5,8 @@
 #include <QObject>
 #include <QString>
 
-#include "compatibility/FontCompat.h"
-#include "design/IconCatalog.h"
+#include "../compatibility/FontCompat.h"
+#include "IconCatalog.h"
 
 /**
  * @brief Defines Fluent typography presets, font metrics, and icon glyph tokens.

@@ -1,12 +1,12 @@
 #ifndef SLIDER_H
 #define SLIDER_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QSlider>
 #include <QPropertyAnimation>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Spacing.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../../design/Spacing.h"
 
 class QPainter;
 class QStyleOptionSlider;

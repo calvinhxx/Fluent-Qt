@@ -5,7 +5,7 @@
 #include <QJsonObject>
 #include <QString>
 
-#include "components/foundation/FluentElement.h"
+#include "FluentElement.h"
 
 namespace fluent {
 

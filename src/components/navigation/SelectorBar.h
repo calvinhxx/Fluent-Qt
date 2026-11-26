@@ -1,15 +1,15 @@
 #ifndef SELECTORBAR_H
 #define SELECTORBAR_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QRect>
 #include <QString>
 #include <QVariant>
 #include <QVector>
 #include <QWidget>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QFocusEvent;
 class QColor;

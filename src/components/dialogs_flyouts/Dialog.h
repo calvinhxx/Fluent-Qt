@@ -6,9 +6,9 @@
 #include <QPointer>
 #include <QPropertyAnimation>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Spacing.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../../design/Spacing.h"
 
 class QEvent;
 class QGraphicsOpacityEffect;

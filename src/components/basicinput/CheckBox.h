@@ -2,8 +2,8 @@
 #define CHECKBOX_H
 
 #include <QCheckBox>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QPropertyAnimation;
 class QFocusEvent;

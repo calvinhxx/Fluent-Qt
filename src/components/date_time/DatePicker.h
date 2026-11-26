@@ -7,7 +7,7 @@
 #include <Qt>
 #include <QVector>
 
-#include "components/basicinput/Button.h"
+#include "../basicinput/Button.h"
 
 namespace fluent::date_time {
 

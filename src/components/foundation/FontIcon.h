@@ -5,9 +5,9 @@
 #include <QString>
 #include <QWidget>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Typography.h"
+#include "FluentElement.h"
+#include "QMLPlus.h"
+#include "../../design/Typography.h"
 
 namespace fluent {
 

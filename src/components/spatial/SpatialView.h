@@ -6,9 +6,9 @@
 #include <QVector3D>
 #include <QWidget>
 #include <memory>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/foundation/WidgetOwnership.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../foundation/WidgetOwnership.h"
 #include "SpatialItem.h"
 
 namespace fluent::spatial {

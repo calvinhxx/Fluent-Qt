@@ -2,7 +2,7 @@
 #define FLUENTQT_QMLBRIDGE_QMLPLUGIN_H
 
 #include <memory>
-#include "components/foundation/plugins/WidgetPlugin.h"
+#include "../foundation/plugins/WidgetPlugin.h"
 
 namespace fluent::qmlbridge {
 class QmlView;

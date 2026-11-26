@@ -1,13 +1,13 @@
 #ifndef FLUENTQT_LAYOUT_H
 #define FLUENTQT_LAYOUT_H
 
-#include <components/layout/Accordion.h>
-#include <components/layout/Card.h>
-#include <components/layout/Divider.h>
-#include <components/layout/DataGridToolBar.h>
-#include <components/layout/Expander.h>
-#include <components/layout/Field.h>
-#include <components/layout/PropertyPanel.h>
-#include <components/layout/ListDetailView.h>
+#include "components/layout/Accordion.h"
+#include "components/layout/Card.h"
+#include "components/layout/Divider.h"
+#include "components/layout/DataGridToolBar.h"
+#include "components/layout/Expander.h"
+#include "components/layout/Field.h"
+#include "components/layout/PropertyPanel.h"
+#include "components/layout/ListDetailView.h"
 
 #endif // FLUENTQT_LAYOUT_H

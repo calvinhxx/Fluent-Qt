@@ -7,9 +7,9 @@
 #include <QRect>
 #include <QWidget>
 
-#include "compatibility/WindowChromeCompat.h"
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../../compatibility/WindowChromeCompat.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QMouseEvent;
 class QPaintEvent;

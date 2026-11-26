@@ -5,7 +5,7 @@
 #include <QPointer>
 #include <QSize>
 
-#include "components/dialogs_flyouts/Popup.h"
+#include "Popup.h"
 
 class QKeyEvent;
 class QPaintEvent;

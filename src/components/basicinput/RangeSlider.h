@@ -4,9 +4,9 @@
 #include <QSlider>
 #include <QWidget>
 
-#include "compatibility/InputEventCompat.h"
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../../compatibility/InputEventCompat.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QPainter;
 class QVariantAnimation;
