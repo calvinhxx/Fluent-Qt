@@ -10,7 +10,8 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 PORT = Path(__file__).resolve().parents[2] / "ports/fluent-qt"
 STABLE_TAG = re.compile(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
-SOURCE_HASH = re.compile(r"(?m)^([ \t]*SHA512[ \t]+)([0-9a-fA-F]{128})[ \t]*$")
+# A port may also pin checksums for downloaded backports.
+SOURCE_HASH = re.compile(r"(?m)^(vcpkg_from_github\([^)]*?^[ \t]*SHA512[ \t]+)([0-9a-fA-F]{128})[ \t]*$")
 
 
 def package(tag, tarball, output):

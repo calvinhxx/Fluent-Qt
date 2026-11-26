@@ -59,6 +59,21 @@ add_executable(fluentqt_external_integration
     CategoryHeaderProbe.cpp
     BackdropHeaderProbe.cpp
     OverlayWindowHeaderProbe.cpp)
+if(FLUENT_QT_INTEGRATION_MODE STREQUAL "INSTALLED")
+    # Compile one translation unit like a consumer that only adds the SDK include root.
+    # Linking FluentQt to this object target would also add include/FluentQt.
+    get_target_property(_sdk_include_dirs FluentQt::FluentQt INTERFACE_INCLUDE_DIRECTORIES)
+    find_path(_sdk_include_root FluentQt/FluentQt.h PATHS ${_sdk_include_dirs} NO_DEFAULT_PATH)
+    add_library(fluentqt_direct_include OBJECT DirectIncludeProbe.cpp)
+    target_include_directories(fluentqt_direct_include PRIVATE "${_sdk_include_root}")
+    target_compile_features(fluentqt_direct_include PRIVATE cxx_std_17)
+    if(TARGET Qt6::Widgets)
+        target_link_libraries(fluentqt_direct_include PRIVATE Qt6::Widgets)
+    else()
+        target_link_libraries(fluentqt_direct_include PRIVATE Qt5::Widgets)
+    endif()
+    target_sources(fluentqt_external_integration PRIVATE $<TARGET_OBJECTS:fluentqt_direct_include>)
+endif()
 set_target_properties(fluentqt_external_integration PROPERTIES
     AUTOMOC ON
     CXX_STANDARD 17
