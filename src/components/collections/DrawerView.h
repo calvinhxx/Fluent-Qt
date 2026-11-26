@@ -8,9 +8,9 @@
 #include <QRect>
 #include <QWidget>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/foundation/WidgetOwnership.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../foundation/WidgetOwnership.h"
 
 class QMouseEvent;
 class QPaintEvent;

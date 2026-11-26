@@ -4,7 +4,7 @@
 #include <QList>
 #include <QStringList>
 
-#include "components/dialogs_flyouts/Popup.h"
+#include "../dialogs_flyouts/Popup.h"
 
 class QAction;
 class QActionEvent;

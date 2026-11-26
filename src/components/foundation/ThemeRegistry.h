@@ -4,7 +4,7 @@
 #include <QString>
 #include <QtGlobal>
 
-#include "components/foundation/FluentElement.h"
+#include "FluentElement.h"
 
 namespace fluent {
 

@@ -5,8 +5,8 @@
 #include <QImage>
 #include <memory>
 #include "ChartModel.h"
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 namespace fluent::charts {
 class ChartViewPrivate;

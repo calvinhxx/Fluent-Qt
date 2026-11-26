@@ -1,7 +1,7 @@
 #ifndef FLUENTQT_COMPONENTS_TEXTFIELDS_CODEBLOCK_H
 #define FLUENTQT_COMPONENTS_TEXTFIELDS_CODEBLOCK_H
 
-#include "components/layout/Expander.h"
+#include "../layout/Expander.h"
 
 namespace fluent::basicinput {
 class Button;

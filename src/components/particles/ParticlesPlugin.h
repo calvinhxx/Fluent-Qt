@@ -2,7 +2,7 @@
 #define FLUENTQT_PARTICLES_PARTICLESPLUGIN_H
 
 #include <memory>
-#include "components/foundation/plugins/WidgetPlugin.h"
+#include "../foundation/plugins/WidgetPlugin.h"
 #include "ParticleBackdrop.h"
 
 namespace fluent::particles {

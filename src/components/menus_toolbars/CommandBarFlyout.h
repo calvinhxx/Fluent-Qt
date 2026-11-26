@@ -5,7 +5,7 @@
 #include <QMetaType>
 #include <QPoint>
 
-#include "components/dialogs_flyouts/Flyout.h"
+#include "../dialogs_flyouts/Flyout.h"
 
 class QAction;
 class QActionEvent;

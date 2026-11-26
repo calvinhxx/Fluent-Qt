@@ -1,17 +1,17 @@
 #ifndef FLOWVIEW_H
 #define FLOWVIEW_H
 
-#include "compatibility/InputEventCompat.h"
-#include "compatibility/WidgetCompat.h"
+#include "../../compatibility/InputEventCompat.h"
+#include "../../compatibility/WidgetCompat.h"
 #include <QAbstractItemView>
 #include <QHash>
 #include <QMargins>
 #include <QPixmap>
 #include <QVector>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/collections/SelectionMode.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "SelectionMode.h"
 
 class QLabel;
 class QMouseEvent;

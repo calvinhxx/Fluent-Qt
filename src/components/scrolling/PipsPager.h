@@ -1,13 +1,13 @@
 #ifndef PIPSPAGER_H
 #define PIPSPAGER_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QRect>
 #include <QSize>
 #include <QWidget>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QFocusEvent;
 class QKeyEvent;

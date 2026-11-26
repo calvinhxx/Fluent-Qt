@@ -1,7 +1,7 @@
 #ifndef TABVIEW_H
 #define TABVIEW_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QString>
 #include <QHash>
 #include <QPoint>
@@ -10,9 +10,9 @@
 #include <QVector>
 #include <QWidget>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Typography.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../../design/Typography.h"
 
 class QColor;
 class QEvent;

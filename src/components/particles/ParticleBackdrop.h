@@ -6,8 +6,8 @@
 #include <QWidget>
 #include <memory>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 namespace fluent::particles {
 

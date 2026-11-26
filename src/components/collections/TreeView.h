@@ -1,16 +1,16 @@
 #ifndef TREEVIEW_H
 #define TREEVIEW_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QTreeView>
 #include <QPersistentModelIndex>
 #include <QHash>
 #include <QRectF>
 #include <QStandardItemModel>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/collections/SelectionMode.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "SelectionMode.h"
 
 class QLabel;
 class QPaintEvent;

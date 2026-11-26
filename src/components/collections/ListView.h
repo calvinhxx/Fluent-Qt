@@ -1,7 +1,7 @@
 #ifndef LISTVIEW_H
 #define LISTVIEW_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QListView>
 #include <QHash>
 #include <QMetaObject>
@@ -9,9 +9,9 @@
 #include <QRectF>
 #include <functional>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/collections/SelectionMode.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "SelectionMode.h"
 
 class QLabel;
 class QItemSelection;

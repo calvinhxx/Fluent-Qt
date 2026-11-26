@@ -1,18 +1,18 @@
 #ifndef LINEEDIT_H
 #define LINEEDIT_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QLineEdit>
 #include <QMargins>
 #include <QPoint>
 #include <QRectF>
 #include <QString>
 #include <memory>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/foundation/WidgetOwnership.h"
-#include "design/Spacing.h"
-#include "design/Typography.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../foundation/WidgetOwnership.h"
+#include "../../design/Spacing.h"
+#include "../../design/Typography.h"
 
 class QPainter;
 class QPaintEvent;

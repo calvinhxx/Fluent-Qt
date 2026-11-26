@@ -1,7 +1,7 @@
 #ifndef SCROLLBAR_H
 #define SCROLLBAR_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QScrollBar>
 #include <QEvent>
 #include <QMouseEvent>
@@ -11,8 +11,8 @@
 #include <QPropertyAnimation>
 #include <QMargins>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 namespace fluent::scrolling {
 

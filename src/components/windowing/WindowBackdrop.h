@@ -2,7 +2,7 @@
 #define FLUENTWINDOWBACKDROP_H
 
 #include <QColor>
-#include "compatibility/WindowBackdropTypes.h"
+#include "../../compatibility/WindowBackdropTypes.h"
 
 class QWidget;
 

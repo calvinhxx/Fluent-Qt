@@ -8,9 +8,9 @@
 #include <QString>
 #include <QWidget>
 
-#include "design/Typography.h"
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../../design/Typography.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QResizeEvent;
 class QEvent;

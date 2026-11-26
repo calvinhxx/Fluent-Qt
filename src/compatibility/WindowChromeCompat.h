@@ -16,7 +16,7 @@
 #include <QWidget>
 #include <QtGlobal>
 
-#include "compatibility/WindowBackdropTypes.h"
+#include "WindowBackdropTypes.h"
 
 namespace compatibility {
 

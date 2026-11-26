@@ -2,7 +2,7 @@
 #define FLYOUT_H
 
 #include <QPointer>
-#include "components/dialogs_flyouts/Popup.h"
+#include "Popup.h"
 
 namespace fluent::dialogs_flyouts {
 

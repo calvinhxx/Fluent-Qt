@@ -1,7 +1,7 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QPushButton>
 #include <QIcon>
 #include <QEvent>
@@ -13,9 +13,9 @@
 #include <QPoint>
 #include <QMargins>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Typography.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../../design/Typography.h"
 
 namespace fluent::basicinput {
 

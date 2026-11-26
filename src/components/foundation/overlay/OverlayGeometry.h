@@ -13,7 +13,7 @@
 #include <QVariant>
 #include <QWidget>
 
-#include "design/Spacing.h"
+#include "../../../design/Spacing.h"
 
 namespace fluent::overlay {
 

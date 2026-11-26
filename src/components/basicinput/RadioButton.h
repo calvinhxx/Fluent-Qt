@@ -1,11 +1,11 @@
 #ifndef RADIOBUTTON_H
 #define RADIOBUTTON_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QRadioButton>
 #include <QFont>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 class QPropertyAnimation;
 class QFocusEvent;

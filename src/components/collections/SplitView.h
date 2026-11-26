@@ -1,14 +1,14 @@
 #ifndef SPLITVIEW_H
 #define SPLITVIEW_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QPointer>
 #include <QWidget>
 #include <QVector>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/foundation/WidgetOwnership.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../foundation/WidgetOwnership.h"
 
 class QMouseEvent;
 class QPaintEvent;

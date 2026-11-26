@@ -1,16 +1,16 @@
 #ifndef TEXTEDIT_H
 #define TEXTEDIT_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QMargins>
 #include <QRect>
 #include <QWidget>
 #include <QString>
 #include <QTextCursor>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "design/Spacing.h"
-#include "design/Typography.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../../design/Spacing.h"
+#include "../../design/Typography.h"
 
 class QTextEdit;
 class QPainter;

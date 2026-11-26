@@ -1,14 +1,14 @@
 #ifndef FLIPVIEW_H
 #define FLIPVIEW_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include <QElapsedTimer>
 #include <QMetaObject>
 #include <QPointer>
 #include <QWidget>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/foundation/WidgetOwnership.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../foundation/WidgetOwnership.h"
 
 class QPropertyAnimation;
 

@@ -7,7 +7,7 @@
 #include <QRect>
 #include <QWidget>
 
-#include "components/foundation/FluentElement.h"
+#include "../FluentElement.h"
 
 class QMouseEvent;
 class QPaintEvent;

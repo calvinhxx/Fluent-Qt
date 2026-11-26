@@ -3,8 +3,8 @@
 
 #include <QWidget>
 #include <QColor>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
 
 namespace fluent::textfields {
 class Label;

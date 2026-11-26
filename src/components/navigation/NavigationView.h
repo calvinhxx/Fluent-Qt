@@ -6,10 +6,10 @@
 #include <QRect>
 #include <QWidget>
 
-#include "design/Breakpoints.h"
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-#include "components/foundation/WidgetOwnership.h"
+#include "../../design/Breakpoints.h"
+#include "../foundation/FluentElement.h"
+#include "../foundation/QMLPlus.h"
+#include "../foundation/WidgetOwnership.h"
 
 class QPaintEvent;
 class QEvent;

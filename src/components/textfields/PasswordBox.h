@@ -1,7 +1,7 @@
 #ifndef PASSWORDBOX_H
 #define PASSWORDBOX_H
 
-#include "compatibility/InputEventCompat.h"
+#include "../../compatibility/InputEventCompat.h"
 #include "LineEdit.h"
 
 class QContextMenuEvent;
