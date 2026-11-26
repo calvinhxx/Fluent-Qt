@@ -418,6 +418,22 @@ If the credential expires, replace it and rerun the failed submission job.
 Reruns recognize a matching open PR or published version and skip older
 releases when a newer version is pending or already registered.
 
+### Upstream registry PR checklists
+
+When opening or updating a distribution PR, use the target registry's current
+PR template. If it provides a checklist, keep the wording, order, and nesting
+of every item in the applicable checklist. Fill in template placeholders and
+check only items verified for this submission. Leave other boxes unchecked.
+Put explanations, test results, and screenshots outside the checklist unless
+the template asks for them in a specific place.
+
+For vcpkg, choose the new-port checklist for a first submission and the
+port-update checklist for an existing port. The
+[submission script](../../scripts/release/submit_vcpkg_port.py) reads both from
+the upstream template. If the checklist changes during review, verify the new
+items before marking them complete. See the
+[vcpkg maintainer's feedback on the first submission](https://github.com/microsoft/vcpkg/pull/55305#issuecomment-7176990435).
+
 ## Release Package Sets
 
 - `standard` is the default stable release package set. It publishes the
