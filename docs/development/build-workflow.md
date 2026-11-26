@@ -307,6 +307,10 @@ package files. Consumers use `find_package(FluentQt CONFIG REQUIRED)` and link
 `FluentQt::FluentQt`. Point `CMAKE_PREFIX_PATH` at the install prefix when it is
 outside the system search path.
 
+For a manually configured build, add the SDK's `include` directory and use
+`#include <FluentQt/FluentQt.h>`. Configure Qt Widgets, the FluentQt library
+and its platform link dependencies in your build system.
+
 Create the reduced library source package for offline or source integration:
 
 ```bash

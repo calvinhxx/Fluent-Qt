@@ -49,6 +49,25 @@ def open_prs():
     return [json.loads(row) for row in rows.splitlines()]
 
 
+def pr_checklist(template, registered, previous_body):
+    kind = "PORT UPDATE" if registered else "NEW PORT"
+    heading = "### Port update checklist" if registered else "### New port checklist"
+    before, marker, _ = template.partition(f"END OF {kind} CHECKLIST")
+    section = before.rsplit("<!--", 1)[-1]
+    start = section.find("- [ ] ")
+    if not marker or start < 0:
+        raise ValueError(f"Cannot find the {kind.lower()} checklist in the upstream PR template")
+    checklist = section[start:].strip().replace("REPLACE_WITH_PORT_NAME", PORT.name)
+    previous = previous_body.partition(heading)[2].strip()
+    if previous:
+        lines = previous.splitlines()
+        count = len(checklist.splitlines())
+        # Keep checked boxes and supporting evidence when the upstream wording still matches.
+        if "\n".join(lines[:count]).replace("[x]", "[ ]") == checklist:
+            return f"{heading}\n\n{previous}"
+    return f"{heading}\n\n{checklist}"
+
+
 def submit(tag, overlay, dry_run):
     match = STABLE_TAG.fullmatch(tag)
     if not match:
@@ -118,6 +137,8 @@ def submit(tag, overlay, dry_run):
         run("git", "add", "--", BASELINE, VERSIONS)
         run("git", "commit", "-m", "Update version database")
         run(tool, "x-ci-verify-versions", root)
+    template = run("git", "show", f"{upstream_tip}:.github/pull_request_template.md")
+    checklist = pr_checklist(template, registered, pr["body"] if pr else "")
     if dry_run:
         print(f"Dry run for {tag}: {FORK}:{branch} -> {UPSTREAM}:master")
         return
@@ -131,8 +152,7 @@ def submit(tag, overlay, dry_run):
             "The version database was generated and verified with vcpkg.\n")
     if os.getenv("GITHUB_RUN_ID"):
         body += f"\n[Release checks](https://github.com/calvinhxx/Fluent-Qt/actions/runs/{os.environ['GITHUB_RUN_ID']})\n"
-    if pr and "### New port checklist" in pr["body"]:
-        body += "\n### New port checklist" + pr["body"].split("### New port checklist", 1)[1]
+    body += f"\n{checklist}\n"
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as message:
         message.write(body)
         message.flush()
