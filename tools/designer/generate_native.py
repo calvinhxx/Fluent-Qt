@@ -22,6 +22,7 @@ def main():
     header += ["#include " + path for path in sorted({w["header"] for w in widgets})]
     header.append('#include "DesignerSurfaces.h"')
     header.append('#include "DesignerFormData.h"')
+    header.append('#include "DesignerForms.h"')
     entries = []
     root = ET.Element("RCC")
     resources = ET.SubElement(root, "qresource", prefix="/fluentqt/designer/icons")
@@ -33,6 +34,8 @@ def main():
             params = "fluentqt_designer::Surface::" + widget["surface"] + ", parent"
         header.extend(["", f"class {name} : public {base} {{", "    Q_OBJECT", "public:",
                        f"    explicit {name}(QWidget* parent = nullptr) : {base}({params}) {{}}"])
+        if name == "FluentAccordion":
+            header.append("    Q_INVOKABLE void addFormSection(QWidget* page) { fluentqt_designer::insertFormSection(this, count(), page); }")
         if name in PAGE_METHODS:
             header.append(f"    Q_INVOKABLE void setFormPage(QWidget* page) {{ {PAGE_METHODS[name]}(page, fluent::WidgetOwnership::Owned); }}")
         prop = form_data_property(widget)

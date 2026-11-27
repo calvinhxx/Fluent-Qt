@@ -1,6 +1,7 @@
 #include "DesignerForms.h"
 
 #include <FluentQt/DialogsFlyouts.h>
+#include <FluentQt/Layout.h>
 #include <FluentQt/Windowing.h>
 #ifdef FLUENT_QT_HAS_SPATIAL
 #include <FluentQt/Spatial.h>
@@ -13,6 +14,41 @@ namespace fluentqt_designer {
 using fluent::dialogs_flyouts::ContentDialog;
 using fluent::dialogs_flyouts::Dialog;
 using fluent::windowing::Window;
+
+namespace {
+class WrappedPage final : public fluent::layout::Expander {
+public:
+    using Expander::Expander;
+};
+} // namespace
+
+void insertFormSection(fluent::layout::Accordion* host, int index, QWidget* page)
+{
+    if (!page)
+        return;
+    auto* section = qobject_cast<fluent::layout::Expander*>(page);
+    if (!section) {
+        section = new WrappedPage(host);
+        const auto text = page->property("text").toString().trimmed();
+        section->setHeaderText(text.isEmpty() ? page->objectName() : text);
+        section->setContentWidget(page, fluent::WidgetOwnership::Owned);
+    }
+    host->insertItem(index, section, fluent::WidgetOwnership::Owned);
+}
+
+QWidget* formSectionPage(fluent::layout::Accordion* host, int index)
+{
+    auto* section = host->itemAt(index);
+    return dynamic_cast<WrappedPage*>(section) ? section->contentWidget() : section;
+}
+
+void removeFormSection(fluent::layout::Accordion* host, int index)
+{
+    if (auto* wrapper = dynamic_cast<WrappedPage*>(host->takeItem(index))) {
+        wrapper->takeContentWidget();
+        delete wrapper;
+    }
+}
 
 #ifdef FLUENT_QT_HAS_SPATIAL
 fluent::spatial::SpatialItem* addSpatialForm(fluent::spatial::SpatialView* view, QWidget* body)

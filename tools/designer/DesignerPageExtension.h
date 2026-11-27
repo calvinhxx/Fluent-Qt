@@ -1,5 +1,7 @@
 #pragma once
 
+#include "DesignerForms.h"
+
 #include <QtDesigner/QDesignerContainerExtension>
 #include <QtDesigner/QDesignerFormEditorInterface>
 #include <QtDesigner/QExtensionFactory>
@@ -58,6 +60,30 @@ private:
     QWidget* m_host;
 };
 
+class AccordionExtension final : public QObject, public QDesignerContainerExtension {
+    Q_OBJECT
+    Q_INTERFACES(QDesignerContainerExtension)
+public:
+    AccordionExtension(fluent::layout::Accordion* host, QObject* parent) : QObject(parent), m_host(host) {}
+    QWidget* widget(int index) const override { return formSectionPage(m_host, index); }
+    int count() const override { return m_host->count(); }
+    int currentIndex() const override { return qMin(m_current, count() - 1); }
+    bool canAddWidget() const override { return true; }
+    bool canRemove(int index) const override { return index >= 0 && index < count(); }
+    void setCurrentIndex(int index) override
+    {
+        if (canRemove(index))
+            m_current = index;
+    }
+    void addWidget(QWidget* page) override { insertWidget(count(), page); }
+    void insertWidget(int index, QWidget* page) override { insertFormSection(m_host, index, page); }
+    void remove(int index) override { removeFormSection(m_host, index); }
+
+private:
+    fluent::layout::Accordion* m_host;
+    int m_current = 0;
+};
+
 class PageFactory final : public QExtensionFactory {
 public:
     using QExtensionFactory::QExtensionFactory;
@@ -65,6 +91,8 @@ public:
     {
         if (iid != Q_TYPEID(QDesignerContainerExtension))
             return nullptr;
+        if (auto* accordion = qobject_cast<fluent::layout::Accordion*>(object))
+            return new AccordionExtension(accordion, parent);
         if (qobject_cast<fluent::layout::Field*>(object) || qobject_cast<fluent::layout::Expander*>(object)
             || qobject_cast<fluent::scrolling::ScrollView*>(object))
             return new PageExtension(static_cast<QWidget*>(object), parent);

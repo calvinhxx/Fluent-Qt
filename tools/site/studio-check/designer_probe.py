@@ -33,6 +33,13 @@ def verify(form, root):
         for index, child in enumerate(node.get("children", [])):
             control = widget.findChild(QWidget, child["id"])
             assert control is not None, child["id"]
+            if kind == "Accordion":
+                section = widget.itemAt(index)
+                if child["type"] == "Expander":
+                    assert section == control
+                else:
+                    assert section.headerText() == child["props"]["text"] and section.isAncestorOf(control)
+                assert section.objectName() in serialized
             if kind == "Field":
                 assert widget.editor() == control, child["id"]
             if kind == "Expander":

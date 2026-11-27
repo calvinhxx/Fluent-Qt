@@ -2111,6 +2111,8 @@ bool GalleryStudioCanvas::patchNodeProperties(const QString& nodeId, const QJson
             if (!GalleryComponentPlayground::applyStudioProperties(found->type, target, widgetPatch))
                 return false;
             applyStudioExtendedIconProps(found->widget.data(), widgetPatch);
+            if (found->updateSectionTitle)
+                found->updateSectionTitle(widgetPatch);
             if (preserveComboIndex && combo->count() > 0 && prevComboIndex >= 0)
                 combo->setCurrentIndex(qBound(0, prevComboIndex, combo->count() - 1));
         }
@@ -2571,8 +2573,20 @@ QWidget* GalleryStudioCanvas::buildContainer(const QString& id,
                     accordion->addItem(exp, WidgetOwnership::Owned);
                 } else {
                     auto* wrapper = new Expander(accordion);
-                    wrapper->setHeaderText(
-                        childVal.toObject().value(QStringLiteral("id")).toString(QStringLiteral("Item")));
+                    auto& childEntry = built.last();
+                    childEntry.updateSectionTitle =
+                        [wrapper, type = childEntry.type, titles = QJsonObject{}](const QJsonObject& patch) mutable {
+                            QString heading;
+                            for (const auto* key : {"headerText", "title", "text"}) {
+                                const QString name = QString::fromLatin1(key);
+                                if (patch.contains(name))
+                                    titles.insert(name, patch.value(name).toString().trimmed());
+                                if (heading.isEmpty())
+                                    heading = titles.value(name).toString();
+                            }
+                            wrapper->setHeaderText(heading.isEmpty() ? type : heading);
+                        };
+                    childEntry.updateSectionTitle(childVal.toObject().value(QStringLiteral("props")).toObject());
                     wrapper->setAnimationEnabled(false);
                     wrapper->setContentWidget(child, WidgetOwnership::Owned);
                     accordion->addItem(wrapper, WidgetOwnership::Owned);

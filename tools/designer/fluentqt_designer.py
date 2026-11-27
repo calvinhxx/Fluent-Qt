@@ -21,6 +21,38 @@ def __getattr__(name):
         def __init__(self, parent=None):
             base.__init__(self, "", parent)
         attributes["__init__"] = __init__
+    if name == "FluentAccordion":
+        from PySide6.QtCore import Slot
+        from PySide6.QtWidgets import QWidget
+        from fluentqt.layout import Expander
+
+        class WrappedPage(Expander):
+            pass
+
+        def insertFormSection(self, index, page):
+            section = page
+            if not isinstance(page, Expander):
+                section = WrappedPage(self)
+                section.setHeaderText(str(page.property("text") or page.objectName()))
+                section.setOwnedContentWidget(page)
+            self.insertOwnedItem(index, section)
+
+        @Slot(QWidget)
+        def addFormSection(self, page):
+            self.insertFormSection(self.count(), page)
+
+        def formSectionPage(self, index):
+            section = self.itemAt(index)
+            return section.contentWidget() if isinstance(section, WrappedPage) else section
+
+        def removeFormSection(self, index):
+            section = self.takeItem(index)
+            if isinstance(section, WrappedPage):
+                section.takeContentWidget()
+                section.deleteLater()
+
+        attributes.update(insertFormSection=insertFormSection, addFormSection=addFormSection,
+                          formSectionPage=formSectionPage, removeFormSection=removeFormSection)
     if name in PAGE_METHODS:
         from PySide6.QtCore import Slot
         from PySide6.QtWidgets import QWidget
