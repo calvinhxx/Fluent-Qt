@@ -56,6 +56,7 @@ function setupDirectory() {
   });
   compact.addEventListener('change', layout);
   filter(); layout();
+  search.disabled = false;
   if (query.get('view') === 'headers' && !search.value) {
     groups.forEach(group => { group.open = group.hasAttribute('data-header-group'); });
     directory.open = true;

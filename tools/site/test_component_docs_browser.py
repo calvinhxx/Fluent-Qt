@@ -199,6 +199,7 @@ def main():
         offline = static.new_page()
         offline.goto(urljoin(args.url, "zh-CN/api/button/"))
         expect(offline.locator("h1")).to_have_text("Button 按钮")
+        expect(offline.locator("[data-directory-search]")).to_be_disabled()
         expect(offline.locator(".preview-panel img").first).to_be_visible()
         expect(offline.locator(".usage-example pre").first).to_be_visible()
         expect(offline.locator("[data-playground-toggle]")).to_be_hidden()
