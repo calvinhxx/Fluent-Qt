@@ -3799,6 +3799,118 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       wrap.appendChild(surface);
       return wrap;
     }
+    case 'FileDropZone': {
+      const dz = document.createElement('div');
+      dz.className = 'sch-dropzone';
+      if (p.enabled === false) dz.classList.add('is-disabled');
+      const iconWrap = document.createElement('div');
+      iconWrap.className = 'sch-dropzone-icon';
+      iconWrap.appendChild(createGlyphSvg('Upload', 18));
+      const title = textElement('div', p.title || 'Drop files here');
+      title.className = 'sch-dropzone-title';
+      const desc = textElement('div', p.description || 'PNG, SVG, or .ui design files');
+      desc.className = 'sch-dropzone-desc';
+      dz.append(iconWrap, title, desc);
+      if (p.browseButtonVisible !== false && p.browseText !== '') {
+        const browse = textElement('button', p.browseText || 'Browse files');
+        browse.type = 'button';
+        browse.className = 'sch-btn Accent sch-dropzone-btn';
+        browse.disabled = p.enabled === false;
+        if (interactive) {
+          browse.addEventListener('click', () => fireSchematicEvent(node.id, 'browseRequested', true));
+        }
+        dz.appendChild(browse);
+      }
+      if (p.hintText) {
+        const hint = textElement('div', p.hintText);
+        hint.className = 'sch-dropzone-hint';
+        dz.appendChild(hint);
+      }
+      wrap.appendChild(dz);
+      return wrap;
+    }
+    case 'SplashScreen': {
+      const sp = document.createElement('div');
+      sp.className = 'sch-splash';
+      sp.style.minHeight = `${Math.max(140, Number(p.minHeight ?? 190))}px`;
+      const title = textElement('div', p.title || 'Fluent-Qt');
+      title.className = 'sch-splash-title';
+      const sub = textElement('div', p.subtitle || 'Initializing UI workspace...');
+      sub.className = 'sch-splash-sub';
+      const barWrap = document.createElement('div');
+      barWrap.className = 'sch-splash-progress';
+      const pct = textElement('span', '68%');
+      pct.className = 'sch-splash-pct';
+      const bar = document.createElement('div');
+      bar.className = 'sch-progress';
+      const fill = document.createElement('span');
+      fill.style.width = '68%';
+      bar.appendChild(fill);
+      barWrap.append(pct, bar);
+      sp.append(title, sub, barWrap);
+      wrap.appendChild(sp);
+      return wrap;
+    }
+    case 'Transfer': {
+      const tr = document.createElement('div');
+      tr.className = 'sch-transfer';
+      tr.style.minHeight = `${Math.max(150, Number(p.minHeight ?? 200))}px`;
+      const allItems = Array.isArray(p.items) && p.items.length ? p.items : ['Alpha', 'Beta', 'Gamma', 'Delta'];
+      const leftItems = allItems.slice(1);
+      const rightItems = allItems.slice(0, 1);
+      const makePane = (header, items) => {
+        const pane = document.createElement('div');
+        pane.className = 'sch-transfer-pane';
+        const hd = textElement('div', `${header} (${items.length})`);
+        hd.className = 'sch-transfer-hd';
+        const list = document.createElement('div');
+        list.className = 'sch-transfer-list';
+        items.forEach((txt) => {
+          const row = textElement('div', String(txt));
+          row.className = 'sch-transfer-row';
+          list.appendChild(row);
+        });
+        pane.append(hd, list);
+        return pane;
+      };
+      const mid = document.createElement('div');
+      mid.className = 'sch-transfer-actions';
+      const toRight = textElement('span', '›');
+      toRight.className = 'sch-transfer-btn';
+      const toLeft = textElement('span', '‹');
+      toLeft.className = 'sch-transfer-btn';
+      mid.append(toRight, toLeft);
+      tr.append(makePane(p.sourceHeader || 'Available', leftItems), mid, makePane(p.targetHeader || 'Selected', rightItems));
+      wrap.appendChild(tr);
+      return wrap;
+    }
+    case 'ScrollBar': {
+      const vertical = p.orientation === 'Vertical';
+      const sb = document.createElement('div');
+      sb.className = `sch-scrollbar ${vertical ? 'is-vertical' : 'is-horizontal'}`;
+      const thumb = document.createElement('span');
+      thumb.className = 'sch-scrollbar-thumb';
+      sb.appendChild(thumb);
+      wrap.appendChild(sb);
+      return wrap;
+    }
+    case 'AnnotatedScrollBar': {
+      const box = document.createElement('div');
+      box.className = 'sch-annotated-sb';
+      const labels = document.createElement('div');
+      labels.className = 'sch-annotated-labels';
+      for (const stop of ['Top', 'Middle', 'End']) {
+        labels.appendChild(textElement('span', stop));
+      }
+      const track = document.createElement('div');
+      track.className = 'sch-scrollbar is-vertical';
+      const thumb = document.createElement('span');
+      thumb.className = 'sch-scrollbar-thumb';
+      track.appendChild(thumb);
+      box.append(labels, track);
+      wrap.appendChild(box);
+      return wrap;
+    }
     case 'QmlView': {
       wrap.classList.add('sch-qml');
       wrap.style.minHeight = `${p.minHeight ?? 160}px`;
@@ -3809,7 +3921,7 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'sch-btn Standard';
-      btn.textContent = p.text || p.title || node.type;
+      btn.textContent = p.text || p.title || `Open ${node.type}`;
       if (interactive) {
         btn.addEventListener('click', () => fireSchematicEvent(node.id, 'triggered', node.type));
       }
