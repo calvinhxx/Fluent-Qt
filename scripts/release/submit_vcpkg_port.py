@@ -20,7 +20,7 @@ BASELINE = Path("versions/baseline.json")
 
 
 def run(*args):
-    result = subprocess.run(args, stdout=subprocess.PIPE, text=True)
+    result = subprocess.run(args, stdout=subprocess.PIPE, encoding="utf-8")
     if result.returncode:
         print(result.stdout, file=sys.stderr)
         result.check_returncode()
@@ -33,8 +33,8 @@ def version(port):
 
 
 def same_archive(left, right):
-    left_hash = SOURCE_HASH.search((left / "portfile.cmake").read_text())
-    right_hash = SOURCE_HASH.search((right / "portfile.cmake").read_text())
+    left_hash = SOURCE_HASH.search((left / "portfile.cmake").read_text(encoding="utf-8"))
+    right_hash = SOURCE_HASH.search((right / "portfile.cmake").read_text(encoding="utf-8"))
     return left_hash and right_hash and left_hash[2].lower() == right_hash[2].lower()
 
 
@@ -153,10 +153,10 @@ def submit(tag, overlay, dry_run):
     if os.getenv("GITHUB_RUN_ID"):
         body += f"\n[Release checks](https://github.com/calvinhxx/Fluent-Qt/actions/runs/{os.environ['GITHUB_RUN_ID']})\n"
     body += f"\n{checklist}\n"
-    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as message:
-        message.write(body)
-        message.flush()
-        args = ("--repo", UPSTREAM, "--title", title, "--body-file", message.name)
+    with tempfile.TemporaryDirectory() as directory:
+        message = Path(directory) / "body.md"
+        message.write_bytes(body.encode("utf-8"))
+        args = ("--repo", UPSTREAM, "--title", title, "--body-file", str(message))
         if pr:
             print(run("gh", "pr", "edit", str(pr["number"]), *args))
             state = run("gh", "pr", "view", str(pr["number"]), "--repo", UPSTREAM,
