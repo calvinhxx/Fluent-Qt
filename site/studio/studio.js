@@ -2709,10 +2709,12 @@ let schematicMonth;
 function calendarPreview(props) {
   const today = new Date();
   const selected = typeof props.selectedDate === 'string'
-    ? new Date(props.selectedDate.slice(0, 10) + 'T12:00:00') : today;
-  const date = Number.isNaN(selected.getTime()) ? today : selected;
+    ? new Date(props.selectedDate.slice(0, 10) + 'T12:00:00') : null;
+  const hasSelection = selected !== null && !Number.isNaN(selected.getTime());
+  const date = hasSelection ? selected : today;
   const locale = document.documentElement.lang;
-  const key = [locale, date.toDateString(), today.toDateString(), props.firstDayOfWeek].join('|');
+  const todayKey = today.toDateString();
+  const key = [locale, date.getFullYear(), date.getMonth(), todayKey, props.firstDayOfWeek].join('|');
   if (schematicMonth?.key !== key) {
     const calendar = document.createElement('div');
     calendar.className = 'sch-calendar';
@@ -2728,20 +2730,27 @@ function calendarPreview(props) {
     for (let i = 0; i < 7; ++i) dow.appendChild(textElement('span', weekday.format(new Date(2023, 0, 1 + first + i))));
     const grid = document.createElement('div');
     grid.className = 'sch-calendar-grid';
-    const cursor = new Date(date.getFullYear(), date.getMonth(), 1, 12);
-    cursor.setDate(1 - (cursor.getDay() - first + 7) % 7);
+    const cursor = new Date(date);
+    cursor.setDate(1);
+    cursor.setHours(12, 0, 0, 0);
+    const firstDayIndex = (cursor.getDay() - first + 7) % 7;
+    cursor.setDate(1 - firstDayIndex);
     do {
       const cell = textElement('span', String(cursor.getDate()));
       cell.className = 'sch-calendar-day';
       cell.classList.toggle('is-out', cursor.getMonth() !== date.getMonth());
-      cell.classList.toggle('is-today', cursor.toDateString() === date.toDateString());
+      cell.classList.toggle('is-today', cursor.toDateString() === todayKey);
       grid.appendChild(cell);
       cursor.setDate(cursor.getDate() + 1);
     } while (cursor.getMonth() === date.getMonth() || cursor.getDay() !== first);
     calendar.append(hd, dow, grid);
-    schematicMonth = { key, calendar };
+    schematicMonth = { key, calendar, firstDayIndex };
   }
   const copy = schematicMonth.calendar.cloneNode(true);
+  if (hasSelection) {
+    const days = copy.querySelector('.sch-calendar-grid').children;
+    days[schematicMonth.firstDayIndex + date.getDate() - 1].classList.add('is-selected');
+  }
   copy.classList.toggle('is-disabled', props.enabled === false);
   return copy;
 }

@@ -2358,11 +2358,17 @@ body.is-studio-dragging .edit-overlay {
   border-radius: 999px;
 }
 .sch-calendar-day.is-out { color: var(--muted); opacity: 0.55; }
+.sch-calendar-day.is-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  color: var(--accent);
+}
 .sch-calendar-day.is-today {
   background: var(--accent);
   color: var(--accent-fg);
   font-weight: 600;
 }
+.sch-calendar-day.is-today.is-selected { box-shadow: inset 0 0 0 3px var(--surface-elevated); }
 .sch-temporal-input {
   max-width: 100%;
   min-height: 32px;
