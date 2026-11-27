@@ -72,7 +72,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            autoconf-archive libtool pkg-config '^libxcb.*-dev' libx11-xcb-dev \
+            autoconf autoconf-archive automake libtool pkg-config '^libxcb.*-dev' libx11-xcb-dev \
             libglu1-mesa-dev libegl1-mesa-dev libxrender-dev libxi-dev \
             libxkbcommon-dev libxkbcommon-x11-dev xvfb xauth
 
