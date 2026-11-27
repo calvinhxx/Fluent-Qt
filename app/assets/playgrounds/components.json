@@ -5314,8 +5314,10 @@
     "properties": [
       {
         "id": "date",
-        "property": "date",
-        "setter": "setDate",
+        "property": "selectedDate",
+        "setter": "setSelectedDate",
+        "nullable": true,
+        "emptyValue": true,
         "type": "date",
         "label": {
           "en": "Date",

@@ -1537,8 +1537,12 @@ export function mapInteractionEventToProps(node, eventName, value) {
   if (type === 'ColorPicker' && eventName === 'colorChanged') {
     return { color: String(value ?? '') };
   }
-  if (type === 'CalendarDatePicker' && eventName === 'dateChanged') {
-    return { date: String(value ?? '') };
+  if ((type === 'DatePicker' || type === 'CalendarDatePicker') && eventName === 'dateChanged') {
+    return { date: value ? String(value) : null };
+  }
+  if (type === 'TimePicker' && eventName === 'timeChanged') return { time: value ? String(value) : null };
+  if (type === 'DateTimeRangePicker' && ['startDateTimeChanged', 'endDateTimeChanged'].includes(eventName)) {
+    return { [eventName === 'startDateTimeChanged' ? 'startDateTime' : 'endDateTime']: value ? String(value) : null };
   }
   if (type === 'CalendarView' && eventName === 'selectedDateChanged') {
     return { selectedDate: String(value ?? '') };
@@ -1643,8 +1647,14 @@ function schemaValuesEqual(a, b) {
 
 function collectPendingSchemaFields(node, schema, emittedKeys) {
   const props = node?.props || {};
-  const schemaFields = schema?.properties;
-  if (!Array.isArray(schemaFields) || !schemaFields.length) return [];
+  // A page can be exported before the live inspector has supplied a schema.
+  const schemaFields = Array.isArray(schema?.properties) ? [...schema.properties] : [];
+  for (const id of Object.keys(props)) {
+    const field = playgroundFields[node.type]?.[id];
+    if (field && ['date', 'time', 'datetime'].includes(field.type) && !schemaFields.some(f => f.id === id)) {
+      schemaFields.push({ ...field, id });
+    }
+  }
   const pending = [];
   const handledAxisProps = new Set();
 
@@ -3299,6 +3309,24 @@ export function generateDesignerUi(doc) {
       if (cls.endsWith('Button') && (OVERLAY_TYPES.has(node.type) || node.type === 'SplashScreen')) {
         if (['text', 'enabled'].includes(key)) property(key, value, indent);
         else if (key === 'message' || (node.type === 'SplashScreen' && key === 'title')) property('surfaceText', value, indent);
+        continue;
+      }
+      const fieldType = playgroundFields[node.type]?.[key]?.type;
+      if (fieldType === 'date' || fieldType === 'time' || fieldType === 'datetime') {
+        if (!value) continue;
+        const [day, clock] = fieldType === 'time' ? ['', value] : value.split('T');
+        const parts = [];
+        if (day) {
+          const [year, month, date] = day.split('-').map(Number);
+          if (![year, month, date].every(Number.isInteger)) continue;
+          parts.push(`<year>${year}</year><month>${month}</month><day>${date}</day>`);
+        }
+        if (clock) {
+          const match = /^(\d{2}):(\d{2})(?::(\d{2}))?/.exec(clock);
+          if (!match) continue;
+          parts.push(`<hour>${Number(match[1])}</hour><minute>${Number(match[2])}</minute><second>${Number(match[3] || 0)}</second>`);
+        }
+        lines.push(`${indent}<property name="${playgroundFields[node.type][key].property || key}"><${fieldType}>${parts.join('')}</${fieldType}></property>`);
         continue;
       }
       property(aliases[key] || key, value, indent);

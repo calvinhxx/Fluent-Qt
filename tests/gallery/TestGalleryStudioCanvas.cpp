@@ -11,6 +11,8 @@
 #include "components/collections/GridView.h"
 #include "components/collections/SplitView.h"
 #include "components/collections/TreeView.h"
+#include "components/date_time/DatePicker.h"
+#include "components/date_time/TimePicker.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -1107,7 +1109,7 @@ TEST_F(GalleryStudioCanvasTest, ListDetailViewAutoHeightsWithoutOverlapAndNeverR
     FluentElement::setTheme(FluentElement::Light);
 }
 
-TEST_F(GalleryStudioCanvasTest, VerifiesPropertyPanelAndSplashInspect)
+TEST_F(GalleryStudioCanvasTest, VerifiesPickersPropertyPanelAndSplashInspect)
 {
     GalleryStudioCanvas canvas;
     canvas.resize(860, 720);
@@ -1119,6 +1121,8 @@ TEST_F(GalleryStudioCanvasTest, VerifiesPropertyPanelAndSplashInspect)
             node(QStringLiteral("root"), QStringLiteral("VBox"),
                 {{QStringLiteral("spacing"), 12}, {QStringLiteral("padding"), 16}},
                 {
+                    node(QStringLiteral("dp_1"), QStringLiteral("DatePicker")),
+                    node(QStringLiteral("tp_1"), QStringLiteral("TimePicker")),
                     node(QStringLiteral("pp_1"), QStringLiteral("PropertyPanel")),
                     node(QStringLiteral("splash_1"), QStringLiteral("SplashScreen"),
                         {{QStringLiteral("title"), QStringLiteral("Fluent-Qt")},
@@ -1127,9 +1131,31 @@ TEST_F(GalleryStudioCanvasTest, VerifiesPropertyPanelAndSplashInspect)
     };
 
     QString error;
+    QSignalSpy eventSpy(&canvas, &GalleryStudioCanvas::interactionEvent);
     ASSERT_TRUE(canvas.applyDocument(doc, &error)) << error.toStdString();
     QApplication::processEvents();
     QTest::qWait(30);
+
+    auto* datePicker = qobject_cast<fluent::date_time::DatePicker*>(canvas.widgetForNode(QStringLiteral("dp_1")));
+    auto* timePicker = qobject_cast<fluent::date_time::TimePicker*>(canvas.widgetForNode(QStringLiteral("tp_1")));
+    ASSERT_NE(datePicker, nullptr);
+    ASSERT_NE(timePicker, nullptr);
+    EXPECT_FALSE(datePicker->selectedDate().isValid());
+    EXPECT_FALSE(timePicker->selectedTime().isValid());
+
+    const QDate targetDate(2026, 12, 1);
+    const QTime targetTime(14, 45);
+    eventSpy.clear();
+    datePicker->setSelectedDate(targetDate);
+    timePicker->setSelectedTime(targetTime);
+    QApplication::processEvents();
+    ASSERT_EQ(eventSpy.count(), 2);
+    EXPECT_EQ(eventSpy.at(0),
+        (QList<QVariant>{QStringLiteral("dp_1"), QStringLiteral("dateChanged"),
+            QVariant::fromValue(QJsonValue(QStringLiteral("2026-12-01")))}));
+    EXPECT_EQ(eventSpy.at(1),
+        (QList<QVariant>{QStringLiteral("tp_1"), QStringLiteral("timeChanged"),
+            QVariant::fromValue(QJsonValue(QStringLiteral("14:45")))}));
 
     auto* propPanel = qobject_cast<fluent::layout::PropertyPanel*>(canvas.widgetForNode(QStringLiteral("pp_1")));
     ASSERT_NE(propPanel, nullptr);

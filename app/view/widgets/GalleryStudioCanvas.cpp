@@ -3589,10 +3589,20 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
     }
 
     // --- Date & time ---
-    if (type == QStringLiteral("DatePicker"))
-        return finish(new DatePicker(parentWidget));
-    if (type == QStringLiteral("TimePicker"))
-        return finish(new TimePicker(parentWidget));
+    if (type == QStringLiteral("DatePicker")) {
+        auto* picker = new DatePicker(parentWidget);
+        connect(picker, &DatePicker::selectedDateChanged, this, [this, id](const QDate& d) {
+            emit interactionEvent(id, QStringLiteral("dateChanged"), d.toString(Qt::ISODate));
+        });
+        return finish(picker);
+    }
+    if (type == QStringLiteral("TimePicker")) {
+        auto* picker = new TimePicker(parentWidget);
+        connect(picker, &TimePicker::selectedTimeChanged, this, [this, id](const QTime& t) {
+            emit interactionEvent(id, QStringLiteral("timeChanged"), t.toString(QStringLiteral("HH:mm")));
+        });
+        return finish(picker);
+    }
     if (type == QStringLiteral("CalendarDatePicker")) {
         auto* picker = new CalendarDatePicker(parentWidget);
         picker->setPlaceholderText(
@@ -3615,8 +3625,12 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
         auto* picker = new DateTimeRangePicker(parentWidget);
         picker->setTimeEnabled(props.value(QStringLiteral("timeEnabled")).toBool(true));
         picker->setPresetsVisible(props.value(QStringLiteral("presetsVisible")).toBool(true));
-        const QDateTime now = QDateTime::currentDateTime();
-        picker->setRange(now.addDays(-3), now);
+        connect(picker, &DateTimeRangePicker::startDateTimeChanged, this, [this, id](const QDateTime& value) {
+            emit interactionEvent(id, QStringLiteral("startDateTimeChanged"), value.toString(Qt::ISODate));
+        });
+        connect(picker, &DateTimeRangePicker::endDateTimeChanged, this, [this, id](const QDateTime& value) {
+            emit interactionEvent(id, QStringLiteral("endDateTimeChanged"), value.toString(Qt::ISODate));
+        });
         return finish(picker);
     }
 
