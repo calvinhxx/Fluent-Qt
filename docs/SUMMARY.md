@@ -10,6 +10,7 @@ standalone reading tasks.
 
 - [AI-assisted development](ai/README.md)
   - **Workflow**
+    - [Choosing and migrating to FluentQt](ai/choosing-fluentqt.md)
     - [FluentQt Onboarding Tools](../tools/onboarding/README.md)
     - [Add a FluentQt GUI to a project](ai/add-gui-to-project.md)
 - [Architecture](architecture/README.md)

@@ -12,7 +12,7 @@ FluentQt documentation is organized by task: use Gallery or the website's intera
 |---|---|---|
 | Try controls, tweak properties live, and copy code | [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/#gallery) | [Component documentation & Property preview](https://calvinhxx.github.io/Fluent-Qt/api/checkbox/?playground=1) |
 | Learn themes, layout, models and extension lifetimes | [FluentQt foundations](https://calvinhxx.github.io/Fluent-Qt/api/foundation/) | Use the document directory to open a guide or API reference |
-| Add FluentQt to a C++ or PySide6 application | [Project README](../README.md) | [Onboarding tools](../tools/onboarding/README.md) |
+| Add FluentQt to a C++ or PySide6 application | [Project README](../README.md) | [Choosing and migrating to FluentQt](ai/choosing-fluentqt.md) · [Onboarding tools](../tools/onboarding/README.md) |
 | Design forms visually in Qt Creator or PySide6 | [Qt Designer guide](../tools/designer/README.md) | Share `.ui` forms and templates across C++ and Python |
 | Add a GUI with a coding agent | [AI-assisted development](ai/README.md) | [Integration workflow](ai/add-gui-to-project.md) |
 | Add or change a component | [Development tree](development/README.md) | [Component API conventions](development/component-api-conventions.md) |
