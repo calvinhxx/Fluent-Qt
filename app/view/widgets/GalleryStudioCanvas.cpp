@@ -1617,6 +1617,10 @@ QObject* resolveInspectTarget(const QString& type, QWidget* widget)
     if (type == QStringLiteral("QmlView"))
         return widget->findChild<fluent::qmlbridge::QmlView*>();
 #endif
+    if (type == QStringLiteral("SplashScreen")) {
+        if (auto* splash = widget->findChild<fluent::status_info::SplashScreen*>())
+            return splash;
+    }
     Q_UNUSED(type);
     return widget;
 }
@@ -3210,6 +3214,8 @@ QWidget* GalleryStudioCanvas::buildControl(const QString& id,
         connect(panel, &PropertyPanel::valueEdited, this, [this, id](const QString& key, const QVariant& val) {
             emit interactionEvent(id, QStringLiteral("valueEdited"), QStringLiteral("%1=%2").arg(key, val.toString()));
         });
+        const int requestedMinH = qBound(180, props.value(QStringLiteral("minHeight")).toInt(224), 560);
+        panel->setMinimumHeight(qMax(requestedMinH, panel->sizeHint().height() + 28));
         return finish(panel);
     }
 

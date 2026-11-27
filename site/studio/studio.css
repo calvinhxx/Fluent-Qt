@@ -2346,6 +2346,143 @@ body.is-studio-dragging .edit-overlay {
   color: var(--accent-fg);
   font-weight: 600;
 }
+.sch-dropzone {
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 10px;
+  padding: 20px 16px;
+  background: color-mix(in srgb, var(--surface) 60%, var(--canvas));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.sch-dropzone.is-disabled { opacity: 0.55; }
+.sch-dropzone-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--active);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.sch-dropzone-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.sch-dropzone-desc, .sch-dropzone-hint { font-size: 12px; color: var(--muted); }
+.sch-dropzone-btn { margin-top: 2px; }
+.sch-splash {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 20px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface-elevated));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+}
+.sch-splash-title { font-size: 20px; font-weight: 700; color: var(--text); }
+.sch-splash-sub { font-size: 12.5px; color: var(--muted); }
+.sch-splash-progress {
+  width: min(320px, 100%);
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.sch-splash-pct { font-size: 11px; color: var(--muted); }
+.sch-transfer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.sch-transfer-pane {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-elevated);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sch-transfer-hd {
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 75%, var(--canvas));
+}
+.sch-transfer-list { padding: 4px; display: flex; flex-direction: column; gap: 2px; }
+.sch-transfer-row { padding: 5px 8px; border-radius: 5px; font-size: 12.5px; }
+.sch-transfer-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.sch-transfer-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-elevated);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 13px;
+}
+.sch-scrollbar {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  padding: 2px;
+  display: flex;
+}
+.sch-scrollbar.is-horizontal {
+  width: 100%;
+  height: 10px;
+  align-items: center;
+}
+.sch-scrollbar.is-horizontal .sch-scrollbar-thumb {
+  width: 42%;
+  height: 6px;
+  margin-left: 18%;
+  border-radius: 999px;
+  background: var(--muted);
+}
+.sch-scrollbar.is-vertical {
+  width: 10px;
+  height: 112px;
+  justify-content: center;
+}
+.sch-scrollbar.is-vertical .sch-scrollbar-thumb {
+  width: 6px;
+  height: 40%;
+  margin-top: 22%;
+  border-radius: 999px;
+  background: var(--muted);
+}
+.sch-annotated-sb {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-elevated);
+}
+.sch-annotated-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+  min-width: 44px;
+}
 .sch-link { background: transparent; border: 0; color: var(--accent); text-decoration: underline; padding: 4px 6px; text-align: left; }
 .sch-check-row { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
 .sch-badge {

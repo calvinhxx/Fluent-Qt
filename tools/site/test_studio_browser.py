@@ -1023,6 +1023,28 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     page.locator("#btn-dismiss-schematic-banner").click()
     page.wait_for_function("() => document.querySelector('#schematic-banner')?.hidden", timeout=5000)
 
+    # Exercise actual date inputs and verify richer schematic controls.
+    sch_upgrade_doc = {"schemaVersion": 1, "root": {"id": "root", "type": "VBox", "children": [
+        {"id": "fdz", "type": "FileDropZone"},
+        {"id": "spl", "type": "SplashScreen"},
+        {"id": "trf", "type": "Transfer"},
+        {"id": "sb", "type": "ScrollBar"},
+        {"id": "asb", "type": "AnnotatedScrollBar"},
+    ]}}
+    sch_token = base64.urlsafe_b64encode(json.dumps(sch_upgrade_doc).encode()).decode().rstrip("=")
+    page.goto(base_url + "studio/?lang=zh&renderer=schematic#state=v1." + sch_token, wait_until="domcontentloaded")
+    page.wait_for_selector('[data-sch-id="asb"] .sch-annotated-sb', timeout=10000)
+    for sel in (
+        '[data-sch-id="fdz"] .sch-dropzone',
+        '[data-sch-id="spl"] .sch-splash',
+        '[data-sch-id="trf"] .sch-transfer',
+        '[data-sch-id="sb"] .sch-scrollbar',
+        '[data-sch-id="asb"] .sch-annotated-sb',
+    ):
+        if page.locator(sel).count() != 1:
+            raise RuntimeError(f"Expected schematic selector {sel} to render")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    page.locator("#canvas-shell").screenshot(path=str(output_dir / "studio-schematic-upgraded-controls.png"))
 
 def verify_missing_wasm_fallback_banner(browser, base_url: str) -> None:
     """When WASM is unavailable without ?renderer=schematic, the banner surfaces the local serve.py hint."""

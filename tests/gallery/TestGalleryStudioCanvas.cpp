@@ -18,16 +18,19 @@
 #include "components/layout/Card.h"
 #include "components/layout/Field.h"
 #include "components/layout/ListDetailView.h"
+#include "components/layout/PropertyPanel.h"
 #include "components/menus_toolbars/CommandBar.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/scrolling/ImageViewer.h"
 #include "components/scrolling/ScrollView.h"
+#include "components/status_info/SplashScreen.h"
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/TextEdit.h"
 #include "design/Typography.h"
 
 #include <QAbstractButton>
+#include <QAccessible>
 #include <QAction>
 #include <QApplication>
 #include <QHeaderView>
@@ -891,6 +894,14 @@ TEST_F(GalleryStudioCanvasTest, AppliesDesignAccentIconsRichMediaAndCustomDataGr
     ASSERT_NE(overviewTab, nullptr);
     ASSERT_NE(photosTab, nullptr);
     EXPECT_TRUE(overviewTab->isChecked());
+    // The leading icon stays visible when a long navigation label is elided.
+    const QRect iconSlot(12, 8, 24, 20);
+    const QImage shortIcon = photosTab->grab(iconSlot).toImage();
+    const QString longLabel = QStringLiteral("System telemetry, diagnostics and deployment history across workspaces");
+    photosTab->setText(longLabel);
+    EXPECT_EQ(photosTab->grab(iconSlot).toImage(), shortIcon);
+    if (auto* accessible = QAccessible::queryAccessibleInterface(photosTab))
+        EXPECT_EQ(accessible->text(QAccessible::Name), longLabel);
     photosTab->click();
     QApplication::processEvents();
     EXPECT_EQ(nav->contentHost()->currentIndex(), 1);
@@ -1094,6 +1105,45 @@ TEST_F(GalleryStudioCanvasTest, ListDetailViewAutoHeightsWithoutOverlapAndNeverR
 
     fluent::ThemeRegistry::instance().resetToDefaults();
     FluentElement::setTheme(FluentElement::Light);
+}
+
+TEST_F(GalleryStudioCanvasTest, VerifiesPropertyPanelAndSplashInspect)
+{
+    GalleryStudioCanvas canvas;
+    canvas.resize(860, 720);
+    canvas.show();
+
+    const QJsonObject doc{
+        {QStringLiteral("schemaVersion"), 1},
+        {QStringLiteral("root"),
+            node(QStringLiteral("root"), QStringLiteral("VBox"),
+                {{QStringLiteral("spacing"), 12}, {QStringLiteral("padding"), 16}},
+                {
+                    node(QStringLiteral("pp_1"), QStringLiteral("PropertyPanel")),
+                    node(QStringLiteral("splash_1"), QStringLiteral("SplashScreen"),
+                        {{QStringLiteral("title"), QStringLiteral("Fluent-Qt")},
+                            {QStringLiteral("subtitle"), QStringLiteral("Initializing UI workspace...")}}),
+                })},
+    };
+
+    QString error;
+    ASSERT_TRUE(canvas.applyDocument(doc, &error)) << error.toStdString();
+    QApplication::processEvents();
+    QTest::qWait(30);
+
+    auto* propPanel = qobject_cast<fluent::layout::PropertyPanel*>(canvas.widgetForNode(QStringLiteral("pp_1")));
+    ASSERT_NE(propPanel, nullptr);
+    EXPECT_GE(propPanel->minimumHeight(), 224);
+    EXPECT_GE(propPanel->height(), propPanel->sizeHint().height());
+
+    QWidget* splashHost = canvas.widgetForNode(QStringLiteral("splash_1"));
+    ASSERT_NE(splashHost, nullptr);
+    auto* splashChild = splashHost->findChild<fluent::status_info::SplashScreen*>();
+    ASSERT_NE(splashChild, nullptr);
+    const QJsonObject splashInspect = canvas.inspectNode(QStringLiteral("splash_1"));
+    EXPECT_TRUE(splashInspect.value(QStringLiteral("supported")).toBool());
+    EXPECT_EQ(splashInspect.value(QStringLiteral("schema")).toObject().value(QStringLiteral("route")).toString(),
+        QStringLiteral("splash-screen"));
 }
 
 } // namespace
