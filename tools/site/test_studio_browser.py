@@ -1028,7 +1028,8 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
         {"id": "dp", "type": "DatePicker"},
         {"id": "tp", "type": "TimePicker"},
         {"id": "cdp", "type": "CalendarDatePicker", "props": {"date": "2031-03-14"}},
-        {"id": "cv", "type": "CalendarView"},
+        {"id": "cv", "type": "CalendarView", "props": {"selectedDate": "2031-03-14"}},
+        {"id": "cv_end", "type": "CalendarView", "props": {"selectedDate": "2031-03-21"}},
         {"id": "dtrp", "type": "DateTimeRangePicker", "props": {"startDateTime": "2031-03-10T08:00:00+08:00"}},
         {"id": "fdz", "type": "FileDropZone"},
         {"id": "spl", "type": "SplashScreen"},
@@ -1038,6 +1039,7 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
         {"id": "caption", "type": "Label", "props": {"text": "Original"}},
     ]}}
     sch_token = base64.urlsafe_b64encode(json.dumps(sch_upgrade_doc).encode()).decode().rstrip("=")
+    page.clock.set_fixed_time(page.evaluate("new Date(2031, 2, 7, 12).toISOString()"))
     page.goto(base_url + "studio/?lang=zh&renderer=schematic#state=v1." + sch_token, wait_until="domcontentloaded")
     page.wait_for_selector('[data-sch-id="asb"] .sch-annotated-sb', timeout=10000)
     page.locator("#mode-play").click()
@@ -1078,7 +1080,12 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
         if page.locator(sel).count() != 1:
             raise RuntimeError(f"Expected schematic selector {sel} to render")
     cal_days = page.locator('[data-sch-id="cv"] .sch-calendar-day').count()
-    assert cal_days in (28, 35, 42) and page.locator('.sch-calendar-dow span').count() == 7
+    assert cal_days in (28, 35, 42) and page.locator('[data-sch-id="cv"] .sch-calendar-dow span').count() == 7
+    for node_id, day in (("cv", "14"), ("cv_end", "21")):
+        calendar_grid = page.locator(f'[data-sch-id="{node_id}"] .sch-calendar-grid')
+        assert calendar_grid.locator(".is-today").all_text_contents() == ["7"]
+        selected = calendar_grid.locator(".is-selected")
+        assert selected.all_text_contents() == [day] and selected.evaluate("el => getComputedStyle(el).outlineStyle") == "solid"
     original = date.element_handle()
     page.locator("#mode-edit").click()
     page.locator("#tab-layers").click()
