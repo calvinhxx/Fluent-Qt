@@ -2,3 +2,7 @@ sources:
   "1.12.3":
     url: "https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.12.3/FluentQt-1.12.3-source.zip"
     sha256: "0562b5004e601b6bf222bd83fd28b807c6e961c1832ca6377b8e6e02e5bce81e"
+direct_include_backport:
+  "1.12.3":
+    url: "https://github.com/calvinhxx/Fluent-Qt/commit/7c1b0c1a551be25b6b40315c8b9cdd6fef2a104b.patch?full_index=1"
+    sha256: "ab3764bc26e08dbf1c97f3780eb237c4b27fc9531e835d98875dda1a7162409d"

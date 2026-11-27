@@ -4,7 +4,7 @@ from conan import ConanFile
 from conan.errors import ConanInvalidConfiguration
 from conan.tools.build import check_min_cppstd
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import copy, get, rmdir
+from conan.tools.files import copy, download, get, patch, rmdir
 
 
 class FluentQtConan(ConanFile):
@@ -34,7 +34,13 @@ class FluentQtConan(ConanFile):
         cmake_layout(self, src_folder="src")
 
     def source(self):
-        get(self, **self.conan_data["sources"][str(self.version)], strip_root=True)
+        version = str(self.version)
+        get(self, **self.conan_data["sources"][version], strip_root=True)
+        backport = self.conan_data.get("direct_include_backport", {}).get(version)
+        if backport:
+            patch_path = os.path.join(self.source_folder, "direct-include.patch")
+            download(self, filename=patch_path, **backport)
+            patch(self, patch_file=patch_path)
 
     def generate(self):
         CMakeDeps(self).generate()
