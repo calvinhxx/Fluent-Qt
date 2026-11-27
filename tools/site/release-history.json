@@ -3,8 +3,8 @@
   "versions": [
     {
       "version": "1.12.4",
-      "status": "candidate",
-      "published_at": null,
+      "status": "published",
+      "published_at": "2026-11-27T09:55:49Z",
       "source_sha256": "ec4124cceff518f153b3a5d344ac72e2a6e9de567e30b8536364a97c7cb7d33b",
       "groups": [
         {
@@ -1681,7 +1681,7 @@
     }
   ],
   "unreleased": {
-    "after": "1.12.3",
+    "after": "1.12.4",
     "groups": []
   }
 }

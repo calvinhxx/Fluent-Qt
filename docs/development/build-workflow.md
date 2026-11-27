@@ -252,15 +252,15 @@ requires the X11, XCB and xkbcommon development packages. The
 
 The [Conan recipe](../../packaging/conan/conanfile.py) packages the static Qt 6
 Widgets library from a released Fluent-Qt source archive. To create
-`fluent-qt/1.12.3` in your local Conan cache, run the following from this
+`fluent-qt/1.12.4` in your local Conan cache, run the following from this
 checkout with Conan 2, CMake and a C++17 compiler. Run `conan profile detect`
 first if you have no default profile.
-The 1.12.3 recipe includes the vcpkg port's public-header fix so an application
-can include `<FluentQt/FluentQt.h>` with just the SDK's `include` directory
-and the Qt headers on its include path.
+Applications can include `<FluentQt/FluentQt.h>` with the SDK's `include`
+directory and the Qt headers on the include path. The fix ships in the 1.12.4
+source archive. The recipe applies a backport when building 1.12.3.
 
 ```sh
-conan create packaging/conan --version=1.12.3 --build=missing
+conan create packaging/conan --version=1.12.4 --build=missing
 ```
 
 Conan resolves Qt through the host profile and may build it from source.
@@ -275,7 +275,7 @@ qt/6.9.3
 ```
 
 Point `CMAKE_PREFIX_PATH` at that SDK's installation prefix, then run
-`conan create packaging/conan --version=1.12.3 -pr:h ./qt-sdk -pr:b default --build=missing`.
+`conan create packaging/conan --version=1.12.4 -pr:h ./qt-sdk -pr:b default --build=missing`.
 Both commands build and run the [consumer test](../../packaging/conan/test_package)
 on a native build.
 
@@ -283,7 +283,7 @@ In the consuming application's `conanfile.txt`, use:
 
 ```ini
 [requires]
-fluent-qt/1.12.3
+fluent-qt/1.12.4
 
 [generators]
 CMakeDeps
