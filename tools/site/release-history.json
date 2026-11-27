@@ -2,6 +2,43 @@
   "schema_version": 2,
   "versions": [
     {
+      "version": "1.12.4",
+      "status": "candidate",
+      "published_at": null,
+      "source_sha256": "ec4124cceff518f153b3a5d344ac72e2a6e9de567e30b8536364a97c7cb7d33b",
+      "groups": [
+        {
+          "scope": "uilib",
+          "summary": {
+            "en": "Installed SDK headers resolve from the include root. The release includes a vcpkg overlay for the static Widgets library.",
+            "zh": "安装后的 SDK 可从 include 根目录引用公共头文件。发布附件提供静态 Widgets 库的 vcpkg overlay。"
+          },
+          "changes": [
+            {
+              "en": "Caption buttons retain hover and press feedback on inactive windows.",
+              "zh": "窗口未激活时，标题栏按钮也会响应悬停和按下。"
+            }
+          ],
+          "migrations": [],
+          "related": [
+            "window"
+          ],
+          "headers": []
+        },
+        {
+          "scope": "project",
+          "summary": {
+            "en": "Page Studio adds three industry templates and supports nine languages. C++, PySide6 and Designer exports preserve date and time selections, `DataGrid` rows and `Accordion` sections.",
+            "zh": "Page Studio 新增三种行业模板，界面支持九种语言。C++、PySide6 和 Designer 导出保留日期时间选择、`DataGrid` 数据行和 `Accordion` 分节。"
+          },
+          "changes": [],
+          "migrations": [],
+          "related": [],
+          "headers": []
+        }
+      ]
+    },
+    {
       "version": "1.12.3",
       "status": "published",
       "published_at": "2026-11-24T16:57:44Z",

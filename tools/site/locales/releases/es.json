@@ -1,4 +1,7 @@
 {
+"a8872962":"Las cabeceras públicas del SDK instalado se pueden incluir desde la raíz de include. La versión incluye un overlay de vcpkg para la biblioteca estática de Widgets.",
+"7fa542d9":"Los botones de la barra de título conservan la respuesta visual al pasar el puntero o pulsarlos en ventanas inactivas.",
+"cc56ac82":"Page Studio incorpora tres plantillas sectoriales y admite nueve idiomas. Las exportaciones a C++, PySide6 y Designer conservan la fecha y hora seleccionadas, las filas de `DataGrid` y las secciones de `Accordion`.",
 "727953d3":"La plantilla `monitor` genera una aplicación de monitorización en C++ o PySide6 con un gráfico de latencia y una tabla filtrable.",
 "6251624d":"Las cabeceras de `DataGrid` tienen un fondo opaco en los cuadros de diálogo. Usa `setHeaderBackground()` para cambiar el color y conservar la ordenación y las columnas fijadas.",
 "0b980ca9":"`NumberBox` puede exigir un valor y colocar los botones menos y más a cada lado. Al terminar de arrastrar o elegir un color, los controles restauran el cursor de la aplicación.",

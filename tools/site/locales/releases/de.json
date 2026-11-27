@@ -1,4 +1,7 @@
 {
+"a8872962":"Die öffentlichen Header des installierten SDK lassen sich vom Include-Stammverzeichnis aus einbinden. Die Veröffentlichung enthält ein vcpkg-Overlay für die statische Widgets-Bibliothek.",
+"7fa542d9":"Titelleistenschaltflächen zeigen auch in inaktiven Fenstern an, wenn sie überfahren oder gedrückt werden.",
+"cc56ac82":"Page Studio bietet drei neue Branchenvorlagen und unterstützt neun Sprachen. Beim Export für C++, PySide6 und Designer bleiben Datums- und Zeitauswahl, `DataGrid`-Zeilen und `Accordion`-Abschnitte erhalten.",
 "727953d3":"Die Vorlage `monitor` erzeugt eine Überwachungsanwendung für C++ oder PySide6 mit Latenzdiagramm und filterbarer Tabelle.",
 "6251624d":"`DataGrid` zeichnet Tabellenköpfe in Dialogen mit deckendem Hintergrund. Mit `setHeaderBackground()` lässt sich die Farbe ändern. Sortierung und fixierte Spalten bleiben erhalten.",
 "0b980ca9":"`NumberBox` kann eine Zahl verlangen und Minus und Plus auf gegenüberliegenden Seiten anzeigen. Nach dem Ziehen oder der Farbauswahl stellen Widgets den Mauszeiger der Anwendung wieder her.",

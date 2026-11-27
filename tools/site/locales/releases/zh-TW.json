@@ -1,4 +1,7 @@
 {
+"a8872962":"安裝後的 SDK 可從 include 根目錄引用公開標頭。發行附件提供靜態 Widgets 函式庫的 vcpkg overlay。",
+"7fa542d9":"視窗未啟用時，標題列按鈕也會回應游標停留和按下。",
+"cc56ac82":"Page Studio 新增三種產業範本，介面支援九種語言。C++、PySide6 和 Designer 匯出會保留日期時間選取值、`DataGrid` 資料列及 `Accordion` 區段。",
 "727953d3":"使用 `monitor` 範本可產生 C++ 或 PySide6 監控應用程式，內含延遲圖表與可篩選的表格。",
 "6251624d":"對話框中的 `DataGrid` 表頭採用實色背景。使用 `setHeaderBackground()` 可變更底色，保留排序和固定欄。",
 "0b980ca9":"`NumberBox` 可設為必填，也可在數值兩側顯示減號與加號。拖曳控制項或取色結束後，會還原應用程式設定的游標。",
