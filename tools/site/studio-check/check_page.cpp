@@ -64,6 +64,15 @@ int main(int argc, char** argv)
         }
     }
 
+    if (argc == 3 && QString::fromLatin1(argv[2]) == QStringLiteral("zoned-range")) {
+        auto* picker = page->findChild<fluent::date_time::DateTimeRangePicker*>();
+        if (!picker || picker->startDateTime().toString(Qt::ISODate) != QStringLiteral("2031-03-14T22:10:00+05:30")
+            || picker->endDateTime().toString(Qt::ISODate) != QStringLiteral("2031-03-15T10:20:00Z")) {
+            std::fprintf(stderr, "Exported range endpoints lost their UTC offsets.\n");
+            return 1;
+        }
+    }
+
     int widgetCount = 0;
     for (int i = 0; i < layout->count(); ++i) {
         if (layout->itemAt(i)->widget())

@@ -36,6 +36,17 @@ def main():
                        f"    explicit {name}(QWidget* parent = nullptr) : {base}({params}) {{}}"])
         if name == "FluentAccordion":
             header.append("    Q_INVOKABLE void addFormSection(QWidget* page) { fluentqt_designer::insertFormSection(this, count(), page); }")
+        if name == "FluentDateTimeRangePicker":
+            for endpoint in ("Start", "End"):
+                prop = f"{endpoint.lower()}DateTime"
+                header.extend([
+                    f"    Q_PROPERTY(QString form{endpoint}DateTime READ form{endpoint}DateTime WRITE setForm{endpoint}DateTime)",
+                    f"    QString form{endpoint}DateTime() const {{ return {prop}().toString(Qt::ISODate); }}",
+                    f"    void setForm{endpoint}DateTime(const QString& text) {{",
+                    "        const auto value = QDateTime::fromString(text, Qt::ISODate);",
+                    f"        if (text.isEmpty() || value.isValid()) set{endpoint}DateTime(value);",
+                    "    }",
+                ])
         if name in PAGE_METHODS:
             header.append(f"    Q_INVOKABLE void setFormPage(QWidget* page) {{ {PAGE_METHODS[name]}(page, fluent::WidgetOwnership::Owned); }}")
         prop = form_data_property(widget)

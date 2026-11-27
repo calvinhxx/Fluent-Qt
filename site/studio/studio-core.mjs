@@ -1481,6 +1481,10 @@ export function resetNodeProps(doc, nodeId, preserveKeys = []) {
   return { ok: true, document: next };
 }
 
+export function dateTimeOffsetSuffix(value) {
+  return value.match(/T.*?(Z|[+-]\d{2}(?::?\d{2})?)$/i)?.[1] || '';
+}
+
 export function mapInteractionEventToProps(node, eventName, value) {
   if (!node || !eventName) return null;
   const toBool = (v) => (typeof v === 'string' ? (v !== 'false' && v !== '0' && v !== '') : Boolean(v));
@@ -3355,6 +3359,13 @@ export function generateDesignerUi(doc) {
       const fieldType = playgroundFields[node.type]?.[key]?.type;
       if (fieldType === 'date' || fieldType === 'time' || fieldType === 'datetime') {
         if (!value) continue;
+        // Designer's native datetime element stores wall-clock fields only.
+        if (node.type === 'DateTimeRangePicker' && (key === 'startDateTime' || key === 'endDateTime')
+            && dateTimeOffsetSuffix(value)) {
+          const name = key === 'startDateTime' ? 'formStartDateTime' : 'formEndDateTime';
+          lines.push(`${indent}<property name="${name}" stdset="0"><string notr="true">${xmlEscape(value)}</string></property>`);
+          continue;
+        }
         const [day, clock] = fieldType === 'time' ? ['', value] : value.split('T');
         const parts = [];
         if (day) {

@@ -16,6 +16,11 @@ List, chart and DataGrid form properties store sample data with the form. A Data
 uses its own sample model for the column headers and rows until the application
 supplies its model. Exported pages inherit the host theme and accent.
 
+Studio stores range endpoints with an explicit UTC offset in the Designer
+properties `formStartDateTime` and `formEndDateTime`. These ISO 8601 strings
+preserve the UTC offset and the instant when a form is saved and reopened. Local
+endpoints use Qt Designer's regular date-time properties.
+
 Eleven entries have a `Button` suffix because the button supplies a trigger and anchor for a real FluentQt surface. Edit the button caption with `text`. In form preview, click it to try the component.
 
 | Widget Box entry | Designer properties |

@@ -38,4 +38,11 @@ exportPage('accordion-pickers', {
     { id: 'chosen_time', type: 'TimePicker', props: { time: '16:12' } },
   ] },
 });
+exportPage('zoned-range', {
+  root: { id: 'root', type: 'VBox', children: [
+    { id: 'range', type: 'DateTimeRangePicker', props: {
+      startDateTime: '2031-03-14T22:10:00+05:30', endDateTime: '2031-03-15T10:20:00Z',
+    } },
+  ] },
+});
 writeFileSync(join(directory, 'templates.json'), JSON.stringify(roots));

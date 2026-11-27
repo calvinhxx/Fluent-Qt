@@ -1031,6 +1031,8 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
         {"id": "cv", "type": "CalendarView", "props": {"selectedDate": "2031-03-14"}},
         {"id": "cv_end", "type": "CalendarView", "props": {"selectedDate": "2031-03-21"}},
         {"id": "dtrp", "type": "DateTimeRangePicker", "props": {"startDateTime": "2031-03-10T08:00:00+08:00"}},
+        {"id": "compact_range", "type": "DateTimeRangePicker",
+         "props": {"startDateTime": "2031-03-14T22:10:00+0530", "endDateTime": "2031-03-15T10:20:00-03"}},
         {"id": "fdz", "type": "FileDropZone"},
         {"id": "spl", "type": "SplashScreen"},
         {"id": "trf", "type": "Transfer"},
@@ -1051,6 +1053,9 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     calendar.press("Escape")
     assert calendar.input_value() == "2031-03-14"
     assert page.locator("#btn-undo").is_disabled()
+    compact_start, compact_end = page.locator('[data-sch-id="compact_range"] input').all()
+    assert compact_start.input_value() == "2031-03-14T22:10" and compact_end.input_value() == "2031-03-15T10:20"
+    compact_start.fill("2031-03-14T22:45")
     date.fill("2032-02-29")
     time.fill("16:12")
     calendar.fill("2031-04-05")
@@ -1065,6 +1070,7 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     assert values["cdp"]["date"] == "2031-04-05"
     assert values["dtrp"]["startDateTime"] == "2031-03-14T09:30+08:00"
     assert values["dtrp"]["endDateTime"] == "2031-03-18T11:15"
+    assert values["compact_range"]["startDateTime"] == "2031-03-14T22:45+0530"
     page.locator("#btn-close-drawer").click()
     for _ in range(3):
         page.locator("#btn-undo").click()
