@@ -10,10 +10,14 @@ import subprocess
 import sys
 import tempfile
 
+from PySide6.QtCore import QDate, QTime
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QWidget
 from fluentqt import initialize_resources
 from fluentqt.collections import DataGrid
+from fluentqt.layout import Accordion
+from fluentqt.date_time import DatePicker, TimePicker
+from fluentqt.textfields import Label
 from fluentqt.foundation import accent_color, set_accent_color
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -46,6 +50,16 @@ for name in names:
             model = widget.findChild(DataGrid).model()
             assert model is not None and (model.rowCount(), model.columnCount()) == (4, 4), name
             assert model.index(0, 0).data() == "plc-edge-01", name
+    if name == "accordion-pickers":
+        for widget in (form, page):
+            sections = widget.findChild(Accordion)
+            assert sections.count() == 2
+            assert [sections.itemAt(i).headerText() for i in range(2)] == ["Release Notes", "Details"]
+            assert sections.itemAt(0).findChild(Label).text() == "Release Notes"
+            empty_date, chosen_date = widget.findChildren(DatePicker)
+            empty_time, chosen_time = widget.findChildren(TimePicker)
+            assert not empty_date.selectedDate().isValid() and chosen_date.selectedDate() == QDate(2031, 3, 14)
+            assert not empty_time.selectedTime().isValid() and chosen_time.selectedTime() == QTime(16, 12)
     page.close()
     print("Python verified", name, flush=True)
 

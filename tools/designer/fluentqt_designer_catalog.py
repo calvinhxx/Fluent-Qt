@@ -42,11 +42,13 @@ def widget_xml(entry):
         prop = ET.SubElement(widget, "property", name=entry["property"])
         ET.SubElement(prop, "string").text = entry["value"]
     tooltips = PROPERTY_TOOLTIPS.get(entry["name"], {})
-    if entry["name"] in PAGE_METHODS or tooltips:
+    add_page = "addFormSection" if entry["name"] == "FluentAccordion" else (
+        "setFormPage" if entry["name"] in PAGE_METHODS else None)
+    if add_page or tooltips:
         custom = ET.SubElement(ET.SubElement(root, "customwidgets"), "customwidget")
         ET.SubElement(custom, "class").text = entry["name"]
-        if entry["name"] in PAGE_METHODS:
-            ET.SubElement(custom, "addpagemethod").text = "setFormPage"
+        if add_page:
+            ET.SubElement(custom, "addpagemethod").text = add_page
         if tooltips:
             specs = ET.SubElement(custom, "propertyspecifications")
             for prop_name, text in tooltips.items():

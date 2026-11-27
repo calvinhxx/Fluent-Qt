@@ -18,7 +18,7 @@ for resource in templates:
     if not QResource.registerResource(str(path)):
         raise RuntimeError(f"Could not load FluentQt Designer templates from {path}")
 for entry, widget in available_widgets():
-    if entry["name"] in PAGE_METHODS:
+    if entry["name"] in PAGE_METHODS or entry["name"] == "FluentAccordion":
         register_container(QPyDesignerCustomWidgetCollection, entry, widget)
         continue
     QPyDesignerCustomWidgetCollection.registerCustomWidget(

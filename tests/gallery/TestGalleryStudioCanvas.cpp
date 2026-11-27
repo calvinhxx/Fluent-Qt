@@ -17,7 +17,9 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/UserTheme.h"
+#include "components/layout/Accordion.h"
 #include "components/layout/Card.h"
+#include "components/layout/Expander.h"
 #include "components/layout/Field.h"
 #include "components/layout/ListDetailView.h"
 #include "components/layout/PropertyPanel.h"
@@ -1109,7 +1111,7 @@ TEST_F(GalleryStudioCanvasTest, ListDetailViewAutoHeightsWithoutOverlapAndNeverR
     FluentElement::setTheme(FluentElement::Light);
 }
 
-TEST_F(GalleryStudioCanvasTest, VerifiesPickersPropertyPanelAndSplashInspect)
+TEST_F(GalleryStudioCanvasTest, PolishesDatePickersAccordionPropertyPanelAndSplashInspect)
 {
     GalleryStudioCanvas canvas;
     canvas.resize(860, 720);
@@ -1124,6 +1126,12 @@ TEST_F(GalleryStudioCanvasTest, VerifiesPickersPropertyPanelAndSplashInspect)
                     node(QStringLiteral("dp_1"), QStringLiteral("DatePicker")),
                     node(QStringLiteral("tp_1"), QStringLiteral("TimePicker")),
                     node(QStringLiteral("pp_1"), QStringLiteral("PropertyPanel")),
+                    node(QStringLiteral("acc_1"), QStringLiteral("Accordion"), {},
+                        {
+                            node(QStringLiteral("raw_internal_id"), QStringLiteral("Label"),
+                                {{QStringLiteral("text"), QStringLiteral("Release Notes")}}),
+                            node(QStringLiteral("raw_fallback_id"), QStringLiteral("Label")),
+                        }),
                     node(QStringLiteral("splash_1"), QStringLiteral("SplashScreen"),
                         {{QStringLiteral("title"), QStringLiteral("Fluent-Qt")},
                             {QStringLiteral("subtitle"), QStringLiteral("Initializing UI workspace...")}}),
@@ -1161,6 +1169,21 @@ TEST_F(GalleryStudioCanvasTest, VerifiesPickersPropertyPanelAndSplashInspect)
     ASSERT_NE(propPanel, nullptr);
     EXPECT_GE(propPanel->minimumHeight(), 224);
     EXPECT_GE(propPanel->height(), propPanel->sizeHint().height());
+
+    auto* accordion = qobject_cast<fluent::layout::Accordion*>(canvas.widgetForNode(QStringLiteral("acc_1")));
+    ASSERT_NE(accordion, nullptr);
+    ASSERT_EQ(accordion->count(), 2);
+    EXPECT_EQ(accordion->itemAt(0)->headerText(), QStringLiteral("Release Notes"));
+    EXPECT_NE(accordion->itemAt(0)->headerText(), QStringLiteral("raw_internal_id"));
+    EXPECT_EQ(accordion->itemAt(1)->headerText(), QStringLiteral("Label"));
+    EXPECT_NE(accordion->itemAt(1)->headerText(), QStringLiteral("raw_fallback_id"));
+
+    accordion->itemAt(0)->setExpanded(true);
+    for (const QString& title : {QStringLiteral("New title"), QStringLiteral("Release Notes")}) {
+        ASSERT_TRUE(canvas.patchNodeProperties(QStringLiteral("raw_internal_id"), {{QStringLiteral("text"), title}}));
+        EXPECT_EQ(accordion->itemAt(0)->headerText(), title);
+        EXPECT_TRUE(accordion->itemAt(0)->isExpanded());
+    }
 
     QWidget* splashHost = canvas.widgetForNode(QStringLiteral("splash_1"));
     ASSERT_NE(splashHost, nullptr);

@@ -76,7 +76,7 @@ def palette(gallery):
             record["property"], record["value"] = DEFAULT_STRINGS[name]
         if name in {"HyperlinkButton", "SplitButton", "ToggleSplitButton"}:
             record["textConstructor"] = True
-        if name in {"Card", "Field", "Expander", "ScrollView"}:
+        if name in {"Card", "Field", "Expander", "ScrollView", "Accordion"}:
             record["container"] = True
         records.append((record, ROOT / item["gallery"]["control_image"]))
     return records

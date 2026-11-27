@@ -76,6 +76,22 @@ class DesignerForms(unittest.TestCase):
         self.assertEqual(external.rowCount(), 1)
         self.dispose(grid)
 
+    def test_accordion_keeps_designer_pages_when_removed(self):
+        from PySide6.QtWidgets import QLabel
+        host = self.widgets["FluentAccordion"]()
+        page = QLabel("Release notes")
+        explicit = self.widgets["FluentExpander"]()
+        host.addFormSection(explicit)
+        host.insertFormSection(0, page)
+        self.assertIs(host.formSectionPage(0), page)
+        self.assertEqual(host.itemAt(0).headerText(), "Release notes")
+        host.removeFormSection(0)
+        self.assertIs(host.formSectionPage(0), explicit)
+        self.assertTrue(shiboken6.isValid(page))
+        self.assertEqual(host.count(), 1)
+        self.dispose(host)
+        self.dispose(page)
+
     def test_overlay_anchors(self):
         for entry, widget_type in available_widgets():
             if "surface" not in entry:

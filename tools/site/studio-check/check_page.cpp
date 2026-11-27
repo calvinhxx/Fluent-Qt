@@ -1,4 +1,7 @@
 #include <FluentQt/Collections.h>
+#include <FluentQt/DateTime.h>
+#include <FluentQt/Layout.h>
+#include <FluentQt/TextFields.h>
 #include <FluentQt/FluentQt.h>
 #include <FluentQt/Foundation.h>
 #include <QApplication>
@@ -42,6 +45,21 @@ int main(int argc, char** argv)
             || model->headerData(3, Qt::Horizontal).toString() != QStringLiteral("Status")
             || model->index(0, 0).data().toString() != QStringLiteral("plc-edge-01")) {
             std::fprintf(stderr, "Exported device table does not match the sample.\n");
+            return 1;
+        }
+    }
+
+    if (argc == 3 && QString::fromLatin1(argv[2]) == QStringLiteral("accordion-pickers")) {
+        auto* accordion = page->findChild<fluent::layout::Accordion*>();
+        const auto dates = page->findChildren<fluent::date_time::DatePicker*>();
+        const auto times = page->findChildren<fluent::date_time::TimePicker*>();
+        if (!accordion || accordion->count() != 2
+            || accordion->itemAt(0)->headerText() != QStringLiteral("Release Notes")
+            || !accordion->itemAt(0)->findChild<fluent::textfields::Label*>()
+            || accordion->itemAt(1)->headerText() != QStringLiteral("Details") || dates.size() != 2 || times.size() != 2
+            || dates[0]->selectedDate().isValid() || times[0]->selectedTime().isValid()
+            || dates[1]->selectedDate() != QDate(2031, 3, 14) || times[1]->selectedTime() != QTime(16, 12)) {
+            std::fprintf(stderr, "Exported Accordion sections or picker selections differ from the document.\n");
             return 1;
         }
     }

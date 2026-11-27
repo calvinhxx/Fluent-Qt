@@ -106,6 +106,7 @@ private:
         QJsonObject anchorProps;
         int anchorIndex = 0;
         int anchorContainerPadding = 12;
+        std::function<void(const QJsonObject&)> updateSectionTitle;
     };
 
     QWidget* buildNode(const QJsonObject& nodeObj, QWidget* parentWidget, QVector<NodeEntry>& built);

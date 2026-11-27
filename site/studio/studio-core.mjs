@@ -1637,6 +1637,30 @@ function safeIdent(id, usedVars) {
   return name;
 }
 
+export function accordionSectionTitle(node) {
+  return [node.props?.headerText, node.props?.title, node.props?.text, node.type]
+    .find(value => typeof value === 'string' && value.trim())?.trim() || 'Section';
+}
+
+const implicitSection = Symbol('implicit Accordion section');
+
+// Runtime Accordion accepts Expander sections. Keep the authored child and its id inside the exported section.
+function documentForExport(doc) {
+  requireValidDocument(doc);
+  const ids = collectIds(doc.root);
+  function visit(node) {
+    if (!node.children?.length) return node;
+    const children = node.children.map(child => {
+      const content = visit(child);
+      if (node.type !== 'Accordion' || child.type === 'Expander') return content;
+      return { id: safeIdent(child.id + '_section', ids), type: 'Expander', [implicitSection]: true,
+        props: { headerText: accordionSectionTitle(child), expanded: false }, children: [content] };
+    });
+    return { ...node, children };
+  }
+  return { ...doc, root: visit(doc.root) };
+}
+
 function schemaValuesEqual(a, b) {
   if (a === b) return true;
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -1696,7 +1720,7 @@ const CHART_TYPES = new Set(['LineChart', 'AreaChart', 'BarChart', 'HorizontalBa
 const OVERLAY_TYPES = new Set(['Menu', 'CommandBarFlyout', 'CommandPalette', 'Toast', 'ToolTip', 'DrawerView', 'ContentDialog', 'Dialog', 'Flyout', 'Popup', 'TeachingTip', 'CoachMark']);
 
 export function generateCpp(doc, extraSchemas = {}) {
-  requireValidDocument(doc);
+  doc = documentForExport(doc);
   const headers = new Set(['<QWidget>', '<QVBoxLayout>']);
   const namespaces = new Set();
   const lines = [];
@@ -2036,6 +2060,13 @@ export function generateCpp(doc, extraSchemas = {}) {
       lines.push(`${v}->setHeaderText(${cppStr(p.headerText ?? 'Section')});`);
       lines.push(`${v}->setExpanded(${p.expanded !== false ? 'true' : 'false'});`);
       emitSchemaPropsCpp(v, node, new Set(['headerText', 'expanded']));
+      if (node[implicitSection]) {
+        const child = node.children[0];
+        const control = safeIdent(child.id, usedVars);
+        scanAndEmit(child, control, { parentArg: v });
+        lines.push(`${v}->setContentWidget(${control}, fluent::WidgetOwnership::Owned);`);
+        return v;
+      }
       lines.push(`auto* ${bodyVar} = new QWidget;`);
       lines.push(`auto* ${layVar} = new QVBoxLayout(${bodyVar});`);
       lines.push(`${layVar}->setContentsMargins(16, 12, 16, 14);`);
@@ -2516,7 +2547,7 @@ function pyStr(str) {
 }
 
 export function generatePython(doc, extraSchemas = {}) {
-  requireValidDocument(doc);
+  doc = documentForExport(doc);
   const fluentImports = new Map();
   const qtWidgets = new Set(['QWidget']);
   const qtCore = new Set();
@@ -2835,8 +2866,17 @@ export function generatePython(doc, extraSchemas = {}) {
       lines.push(`${v}.setHeaderText(${pyStr(p.headerText ?? 'Section')})`);
       lines.push(`${v}.setExpanded(${p.expanded !== false ? 'True' : 'False'})`);
       emitSchemaPropsPython(v, node, new Set(['headerText', 'expanded']));
+      if (node[implicitSection]) {
+        const child = node.children[0];
+        const control = safeIdent(child.id, usedVars);
+        emitNode(child, control, v);
+        lines.push(`${v}.setOwnedContentWidget(${control})`);
+        return v;
+      }
       lines.push(`${bodyVar} = QWidget()`);
       lines.push(`${layVar} = QVBoxLayout(${bodyVar})`);
+      lines.push(`${layVar}.setContentsMargins(16, 12, 16, 14)`);
+      lines.push(`${layVar}.setSpacing(10)`);
       for (const child of node.children || []) {
         const cv = safeIdent(child.id, usedVars);
         emitNode(child, cv, bodyVar);
@@ -3184,7 +3224,7 @@ function xmlProp(name, kind, value, indent) {
 }
 
 export function generateDesignerUi(doc) {
-  requireValidDocument(doc);
+  doc = documentForExport(doc);
   const customWidgets = new Map();
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -3196,7 +3236,7 @@ export function generateDesignerUi(doc) {
 
   const layoutTypes = ['VBox', 'HBox', 'Grid', 'AnchorBox'];
   const hostForms = ['Window', 'Dialog', 'ContentDialog', 'SpatialItem'];
-  const pageMethods = {Field: 'setFormPage', Expander: 'setFormPage', ScrollView: 'setFormPage'};
+  const pageMethods = {Accordion: 'addFormSection', Field: 'setFormPage', Expander: 'setFormPage', ScrollView: 'setFormPage'};
   const aliases = {minHeight: 'minimumHeight', typography: 'fluentTypography', colorRole: 'textColorRole'};
 
   function property(name, value, indent) {
@@ -3210,15 +3250,16 @@ export function generateDesignerUi(doc) {
     }
   }
 
-  function emitLayout(node, indent) {
+  function emitLayout(node, indent, margins) {
     const p = node.props || {};
     const anchored = node.type === 'AnchorBox';
     const grid = node.type === 'Grid';
     const cls = anchored || grid ? 'QGridLayout' : node.type === 'HBox' ? 'QHBoxLayout' : 'QVBoxLayout';
     lines.push(`${indent}<layout class="${cls}" name="layout_${node.id}">`);
     property('spacing', anchored ? 0 : p.spacing ?? 12, indent + ' ');
-    for (const side of ['left', 'top', 'right', 'bottom']) {
-      lines.push(xmlProp(side + 'Margin', 'number', anchored ? 0 : p.padding ?? 0, indent + ' '));
+    for (const [index, side] of ['left', 'top', 'right', 'bottom'].entries()) {
+      const fallback = node.type === 'VBox' ? 16 : 0;
+      lines.push(xmlProp(side + 'Margin', 'number', margins?.[index] ?? (anchored ? 0 : p.padding ?? fallback), indent + ' '));
     }
     const cols = Math.max(1, Math.min(4, p.columns ?? 2));
     (node.children || []).forEach((child, index) => {
@@ -3267,7 +3308,7 @@ export function generateDesignerUi(doc) {
     lines.push(`${indent}  </item></layout></item>`);
   }
 
-  function emitWidget(node, indent) {
+  function emitWidget(node, indent, margins) {
     const p = node.props || {};
     const isLayout = layoutTypes.includes(node.type), isHost = hostForms.includes(node.type);
     const cls = STUDIO_CATALOG[node.type].designerClass;
@@ -3332,9 +3373,11 @@ export function generateDesignerUi(doc) {
       property(aliases[key] || key, value, indent);
     }
     if (isLayout || node.type === 'Card' || isHost) {
-      emitLayout(node, indent + ' ');
+      emitLayout(node, indent + ' ', margins);
     } else if (pageMethod && node.children?.length) {
-      if (node.type === 'Field') emitWidget(node.children[0], indent + ' ');
+      if (node.type === 'Accordion') node.children.forEach(child => emitWidget(child, indent + ' '));
+      else if (node.type === 'Field' || node[implicitSection]) emitWidget(node.children[0], indent + ' ');
+      else if (node.type === 'Expander') emitWidget({ id: node.id + '_body', type: 'VBox', props: { spacing: 10 }, children: node.children }, indent + ' ', [16, 12, 16, 14]);
       else emitWidget({id: node.id + '_body', type: 'VBox', props: {padding: 0}, children: node.children}, indent + ' ');
     } else if (node.children?.length) {
       emitLayout(node, indent + ' ');

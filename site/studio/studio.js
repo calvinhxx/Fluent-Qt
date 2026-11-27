@@ -2,6 +2,7 @@ import { normalizeStudioLang } from './studio-locale.mjs';
 import { isSafeStudioSvg, isStudioPhotoUrl } from './studio-media.mjs';
 import {
   ANCHOR_CHILD_SCHEMA,
+  accordionSectionTitle,
   ANCHOR_PROP_KEYS,
   MAX_NODES,
   STUDIO_CATALOG,
@@ -3567,7 +3568,22 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       renderChildrenInto(wrap);
       return wrap;
     }
-    case 'Accordion':
+    case 'Accordion': {
+      wrap.classList.add('sch-vbox');
+      for (const child of node.children || []) {
+        if (child.type === 'Expander') {
+          wrap.appendChild(renderSchematicNode(child, { interactive }));
+          continue;
+        }
+        const section = document.createElement('details');
+        const header = textElement('summary', accordionSectionTitle(child));
+        header.className = 'sch-expander-hd';
+        section.className = 'sch-expander';
+        section.append(header, renderSchematicNode(child, { interactive }));
+        wrap.appendChild(section);
+      }
+      return wrap;
+    }
     case 'FlipView': {
       wrap.classList.add('sch-card');
       wrap.style.gap = '10px';

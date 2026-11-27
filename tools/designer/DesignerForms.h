@@ -1,6 +1,9 @@
 #pragma once
 
 class QWidget;
+namespace fluent::layout {
+class Accordion;
+}
 
 namespace fluent::spatial {
 class SpatialItem;
@@ -8,6 +11,11 @@ class SpatialView;
 } // namespace fluent::spatial
 
 namespace fluentqt_designer {
+
+// Designer page commands can also supply an ordinary QWidget. Preserve it across save and undo.
+void insertFormSection(fluent::layout::Accordion* host, int index, QWidget* page);
+QWidget* formSectionPage(fluent::layout::Accordion* host, int index);
+void removeFormSection(fluent::layout::Accordion* host, int index);
 
 // Pass a heap-allocated form body after setupUi(). On success the host owns it.
 // Ordinary forms return the body itself. Unknown or unavailable hosts return nullptr.

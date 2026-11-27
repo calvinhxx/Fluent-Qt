@@ -54,8 +54,34 @@ class PageExtension(QPyDesignerContainerExtension):
         pass
 
 
+class AccordionExtension(QPyDesignerContainerExtension):
+    def __init__(self, host, parent):
+        super().__init__(parent)
+        self.host = host
+        self.current = 0
+
+    def widget(self, index): return self.host.formSectionPage(index)
+    def count(self): return self.host.count()
+    def currentIndex(self): return min(self.current, self.count() - 1)
+    def canAddWidget(self): return True
+    def canRemove(self, index): return 0 <= index < self.count()
+
+    def setCurrentIndex(self, index):
+        if 0 <= index < self.count(): self.current = index
+
+    def addWidget(self, page): self.host.addFormSection(page)
+
+    def insertWidget(self, index, page):
+        self.host.insertFormSection(index, page)
+
+    def remove(self, index):
+        if self.canRemove(index): self.host.removeFormSection(index)
+
+
 class PageFactory(QExtensionFactory):
     def createExtension(self, obj, iid, parent):
+        if iid == "org.qt-project.Qt.Designer.Container" and obj.metaObject().className() == "FluentAccordion":
+            return AccordionExtension(obj, parent)
         if iid == "org.qt-project.Qt.Designer.Container" and obj.metaObject().className() in PAGE_METHODS:
             return PageExtension(obj, parent)
         return None

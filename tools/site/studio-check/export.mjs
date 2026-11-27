@@ -25,4 +25,17 @@ exportPage('aligned-row', {
     ],
   },
 });
+// A plain child is valid in Studio; native Accordion owns Expander sections.
+exportPage('accordion-pickers', {
+  root: { id: 'root', type: 'VBox', children: [
+    { id: 'sections', type: 'Accordion', children: [
+      { id: 'caption', type: 'Label', props: { text: 'Release Notes' } },
+      { id: 'caption_section', type: 'Expander', props: { headerText: 'Details', expanded: true },
+        children: [{ id: 'details', type: 'Label', props: { text: 'Version' } }] },
+    ] },
+    { id: 'empty_date', type: 'DatePicker' }, { id: 'empty_time', type: 'TimePicker' },
+    { id: 'chosen_date', type: 'DatePicker', props: { date: '2031-03-14' } },
+    { id: 'chosen_time', type: 'TimePicker', props: { time: '16:12' } },
+  ] },
+});
 writeFileSync(join(directory, 'templates.json'), JSON.stringify(roots));
