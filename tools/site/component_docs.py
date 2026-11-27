@@ -218,7 +218,7 @@ def component_directory(doc, documents, page, language):
     title = ui['contentsAndSearch']
     return f'''<details class="documentation-directory" open><summary>{escape(title)}</summary>
       <div class="directory-content">
-      <label class="directory-search"><span class="visually-hidden">{escape(search)}</span><input type="search" data-directory-search placeholder="{escape(search)}" autocomplete="off" aria-keyshortcuts="Control+K Meta+K"></label>
+      <label class="directory-search"><span class="visually-hidden">{escape(search)}</span><input type="search" data-directory-search disabled placeholder="{escape(search)}" autocomplete="off" aria-keyshortcuts="Control+K Meta+K"></label>
       <p class="directory-status" data-directory-status role="status" hidden data-results-template="{escape(ui["resultsTemplate"])}" data-empty-label="{escape(ui["noResults"])}"></p>
       <nav class="directory-groups" aria-label="{escape(title)}">{''.join(groups)}</nav></div></details>'''
 
