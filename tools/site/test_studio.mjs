@@ -60,7 +60,10 @@ test('catalog covers all 103 types across 13 official categories', () => {
 });
 
 test('all built-in templates validate cleanly', () => {
-  assert.deepEqual(Object.keys(STUDIO_TEMPLATES).sort(), ['account-form', 'analytics', 'blank', 'settings', 'starter']);
+  assert.deepEqual(
+    Object.keys(STUDIO_TEMPLATES).sort(),
+    ['account-form', 'ai-workbench', 'analytics', 'blank', 'device-monitor', 'serial-console', 'settings', 'starter'],
+  );
   for (const [id, tpl] of Object.entries(STUDIO_TEMPLATES)) {
     const res = validateDocument(tpl.document);
     assert.equal(res.ok, true, `Template ${id} invalid: ${res.error}`);
@@ -72,6 +75,41 @@ test('all built-in templates validate cleanly', () => {
   assert.equal(STUDIO_TEMPLATES.starter.document.root.children[0].id, 'button_1');
   assert.equal(STUDIO_TEMPLATES.starter.document.root.children[0].props.anchorPosition, 'Center');
   assert.equal(STUDIO_TEMPLATES.blank.document.root.type, 'AnchorBox');
+});
+
+test('industry presets validate, round-trip share tokens, and export C++, PySide6, and .ui cleanly', () => {
+  const expectedControls = {
+    'device-monitor': {
+      cpp: ['new LineChart(', 'new AreaChart(', 'new DataGrid(', 'new NumberBox(', 'new ToggleSwitch('],
+      py: ['LineChart(', 'AreaChart(', 'DataGrid(', 'NumberBox(', 'ToggleSwitch('],
+      ui: ['FluentLineChart', 'FluentAreaChart', 'FluentDataGrid', 'FluentNumberBox'],
+    },
+    'ai-workbench': {
+      cpp: ['new CodeBlock(', 'new ProgressRing(', 'new NumberBox(', 'new TextEdit('],
+      py: ['CodeBlock(', 'ProgressRing(', 'NumberBox(', 'TextEdit('],
+      ui: ['FluentCodeBlock', 'FluentProgressRing', 'FluentNumberBox', 'FluentTextEdit'],
+    },
+    'serial-console': {
+      cpp: ['new LineChart(', 'new ComboBox(', 'new ListView(', 'new LineEdit('],
+      py: ['LineChart(', 'ComboBox(', 'ListView(', 'LineEdit('],
+      ui: ['FluentLineChart', 'FluentComboBox', 'FluentListView', 'FluentLineEdit'],
+    },
+  };
+  for (const [id, checks] of Object.entries(expectedControls)) {
+    const doc = cloneDoc(STUDIO_TEMPLATES[id].document);
+    const token = encodeShareState(doc);
+    const decoded = decodeShareState(`#state=${token}`);
+    assert.equal(decoded.ok, true, id);
+    assert.deepEqual(decoded.document, doc);
+
+    const cpp = generateCpp(doc);
+    const py = generatePython(doc);
+    const ui = generateDesignerUi(doc);
+    assert.doesNotMatch(ui, /\[object Array\]/);
+    for (const token of checks.cpp) assert.ok(cpp.includes(token), `${id} C++ missing ${token}`);
+    for (const token of checks.py) assert.ok(py.includes(token), `${id} PySide6 missing ${token}`);
+    for (const token of checks.ui) assert.ok(ui.includes(token), `${id} .ui missing ${token}`);
+  }
 });
 
 test('insertNode respects Field 1-child limit, MAX_NODES, and MAX_DEPTH', () => {
