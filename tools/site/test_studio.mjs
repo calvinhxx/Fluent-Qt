@@ -1,7 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  ANCHOR_CHILD_SCHEMA,
   ANCHOR_PROP_KEYS,
   MAX_DEPTH,
   MAX_NODES,
@@ -1253,4 +1256,42 @@ test('gateway quota survives a new instance and keeps rolling windows across UTC
   now += 60_000;
   assert.equal(await admit('a'), 429);
   assert.equal(await admit('c'), 200);
+});
+
+test('generated Studio locale bundles cover all 7 extra languages cleanly', () => {
+  const extraLocales = ['zh-TW', 'ja', 'ko', 'de', 'ru', 'es', 'fr'];
+  const schemaLabels = new Set();
+  for (const field of ANCHOR_CHILD_SCHEMA) {
+    if (field.label?.en) schemaLabels.add(field.label.en);
+  }
+  for (const meta of Object.values(STUDIO_CATALOG)) {
+    for (const field of meta.propSchema || []) {
+      if (field.label?.en) schemaLabels.add(field.label.en);
+    }
+  }
+
+  for (const lang of extraLocales) {
+    const bundlePath = path.resolve(process.cwd(), 'site/studio/locales', `${lang}.json`);
+    assert.ok(fs.existsSync(bundlePath), `Missing generated Studio locale bundle: ${bundlePath}`);
+    const bundle = JSON.parse(fs.readFileSync(bundlePath, 'utf8'));
+
+    for (const cat of STUDIO_CATEGORIES) {
+      assert.equal(typeof bundle.categories?.[cat.id], 'string', `${lang} missing category ${cat.id}`);
+      assert.ok(bundle.categories[cat.id].trim().length > 0, `${lang} empty category ${cat.id}`);
+    }
+    for (const type of Object.keys(STUDIO_CATALOG)) {
+      assert.equal(typeof bundle.components?.[type], 'string', `${lang} missing component ${type}`);
+      assert.ok(bundle.components[type].trim().length > 0, `${lang} empty component ${type}`);
+    }
+    for (const tid of Object.keys(STUDIO_TEMPLATES)) {
+      assert.equal(typeof bundle.templates?.[tid]?.label, 'string', `${lang} missing template label ${tid}`);
+      assert.equal(typeof bundle.templates?.[tid]?.description, 'string', `${lang} missing template desc ${tid}`);
+      assert.ok(bundle.templates[tid].label.trim().length > 0);
+      assert.ok(bundle.templates[tid].description.trim().length > 0);
+    }
+    for (const label of schemaLabels) {
+      assert.equal(typeof bundle.strings?.[label], 'string', `${lang} missing prop label ${label}`);
+      assert.ok(bundle.strings[label].trim().length > 0, `${lang} empty prop label ${label}`);
+    }
+  }
 });

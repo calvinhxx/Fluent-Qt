@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from generate_playgrounds import descriptors
+from studio_i18n import validate_studio_locales
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -34,6 +35,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     path = ROOT / "site/studio/studio-metadata.mjs"
     content = generate()
+    validate_studio_locales()
     if args.check:
         if not path.exists() or path.read_text() != content:
             raise SystemExit("Refresh Studio metadata with tools/site/generate_studio_metadata.py")

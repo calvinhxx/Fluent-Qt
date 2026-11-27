@@ -21,27 +21,6 @@
         } catch (err) {
           document.documentElement.dataset.theme = 'light';
         }
-        try {
-          var params = new URLSearchParams(window.location.search);
-          var qLang = params.get('lang');
-          var lang = '';
-          if (qLang === 'en' || qLang === 'zh') {
-            lang = qLang;
-          } else if (document.referrer) {
-            var refUrl = new URL(document.referrer, window.location.href);
-            if (refUrl.origin === window.location.origin && !refUrl.pathname.includes('/studio/')) {
-              lang = /\/zh-(cn|tw)(\/|$)/i.test(refUrl.pathname) ? 'zh' : 'en';
-            }
-          }
-          if (!lang) {
-            lang = (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
-          }
-          document.documentElement.dataset.lang = lang;
-          document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
-        } catch (err) {
-          document.documentElement.dataset.lang = 'zh';
-          document.documentElement.lang = 'zh-CN';
-        }
       })();
     </script>
     <link rel="stylesheet" href="studio.css">

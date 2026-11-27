@@ -35,6 +35,7 @@ class SiteArtifactTest(unittest.TestCase):
             *(f"{loc.url_prefix}api/releases/index.html" for loc in LOCALES),
             *(f"{loc.url_prefix}api/roadmap/index.html" for loc in LOCALES),
             *(f"api/playground-i18n/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
+            *(f"studio/locales/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
             "studio/index.html",
             "studio/studio.js",
             "studio/studio-core.mjs",
@@ -42,6 +43,7 @@ class SiteArtifactTest(unittest.TestCase):
             "studio/studio-ai.mjs",
             "studio/studio-ai-prompt.mjs",
             "studio/studio-media.mjs",
+            "studio/studio-locale.mjs",
             "studio/studio-ai-sdk.mjs",
             "studio/studio.css",
             "assets/component-previews/manifest.json",
@@ -94,7 +96,7 @@ class SiteArtifactTest(unittest.TestCase):
     def test_staging_removes_retired_documents_and_previews(self):
         (self.site / "assets/app-icon.png").write_bytes(b"stale local duplicate")
         for name in ("api/retired/index.html", "zh-CN/api/retired/index.html", "ja/api/retired/index.html",
-                     "api/playground-i18n/stale.json",
+                     "api/playground-i18n/stale.json", "studio/locales/stale.json",
                      "assets/component-previews/retired/light.png", "gallery/local-only.wasm"):
             path = self.site / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -115,6 +117,8 @@ class SiteArtifactTest(unittest.TestCase):
         self.assertFalse((output / "ja/api/retired").exists())
         self.assertFalse((output / "api/playground-i18n/stale.json").exists())
         self.assertTrue((output / "api/playground-i18n/ja.json").exists())
+        self.assertFalse((output / "studio/locales/stale.json").exists())
+        self.assertTrue((output / "studio/locales/ja.json").exists())
         self.assertFalse((output / "assets/component-previews/retired").exists())
         self.assertFalse((output / "gallery").exists())
         self.assertTrue((output / ".nojekyll").exists())

@@ -955,6 +955,85 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     page.wait_for_function("() => document.querySelector('#tour-layer')?.hidden", timeout=5000)
     page.evaluate("() => localStorage.setItem('fluent-qt-theme', 'light')")
 
+    # Verify website 9-locale inheritance (ja and zh-TW, plus referrer fallback, localized controls, and home return link)
+    page.evaluate("() => localStorage.setItem('fluent-qt-studio-intro-v1', 'seen')")
+    page.goto(base_url + "ja/", wait_until="domcontentloaded")
+    page.wait_for_selector("html[data-i18n-ready]", timeout=10000)
+    ja_href = page.locator('[data-i18n="nav.studio"]').get_attribute("href")
+    if ja_href != "../studio/?lang=ja":
+        raise RuntimeError(f"Expected Japanese Studio link '../studio/?lang=ja', got {ja_href!r}")
+    page.goto(base_url + "studio/?lang=ja&renderer=schematic", wait_until="domcontentloaded")
+    page.wait_for_selector('html[data-i18n-ready="1"]', timeout=10000)
+    if page.evaluate("() => document.documentElement.lang") != "ja":
+        raise RuntimeError("Expected document.documentElement.lang === 'ja'")
+    if page.locator("#btn-code").inner_text().strip() != "コードを出力":
+        raise RuntimeError(f"Expected Japanese Export Code label, got {page.locator('#btn-code').inner_text()!r}")
+    if page.locator("#nav-home-link").get_attribute("href") != "../ja/":
+        raise RuntimeError(f"Expected #nav-home-link href '../ja/', got {page.locator('#nav-home-link').get_attribute('href')!r}")
+    for removed_sel in ("#btn-lang", "select"):
+        if page.locator(removed_sel).count() != 0:
+            raise RuntimeError(f"Expected zero {removed_sel} controls in localized Studio toolbar")
+    ensure_palette_category_open(page, "basic-input")
+    ja_cat = page.locator('.palette-cat[data-category-id="basic-input"] .palette-cat-label').inner_text().strip()
+    ja_btn = page.locator('.palette-item[data-type="Button"] .palette-item-name').inner_text().strip()
+    if ja_cat != "基本入力" or ja_btn != "ボタン Button":
+        raise RuntimeError(f"Unexpected Japanese palette localization: cat={ja_cat!r}, btn={ja_btn!r}")
+    page.locator("#btn-templates").click()
+    page.wait_for_selector("#templates-modal[open]", timeout=5000)
+    ja_tpl_title = page.locator('#templates-grid .template-card[data-template-id="device-monitor"] .template-card-title').inner_text().strip()
+    if ja_tpl_title != "機器テレメトリ監視パネル":
+        raise RuntimeError(f"Expected Japanese template title, got {ja_tpl_title!r}")
+    page.keyboard.press("Escape")
+    page.wait_for_function("() => !document.querySelector('#templates-modal').open", timeout=5000)
+
+    # Verify Traditional Chinese entry link & localization (zh-TW/)
+    page.goto(base_url + "zh-TW/", wait_until="domcontentloaded")
+    page.wait_for_selector("html[data-i18n-ready]", timeout=10000)
+    tw_href = page.locator('[data-i18n="nav.studio"]').get_attribute("href")
+    if tw_href != "../studio/?lang=zh-TW":
+        raise RuntimeError(f"Expected zh-TW Studio link '../studio/?lang=zh-TW', got {tw_href!r}")
+    page.goto(base_url + "studio/?lang=zh-TW&renderer=schematic", wait_until="domcontentloaded")
+    page.wait_for_selector('html[data-i18n-ready="1"]', timeout=10000)
+    if page.evaluate("() => document.documentElement.lang") != "zh-TW":
+        raise RuntimeError("Expected document.documentElement.lang === 'zh-TW'")
+    if page.locator("#nav-home-link").get_attribute("href") != "../zh-TW/":
+        raise RuntimeError(f"Expected #nav-home-link href '../zh-TW/', got {page.locator('#nav-home-link').get_attribute('href')!r}")
+    if page.locator("#btn-code").inner_text().strip() != "匯出程式碼":
+        raise RuntimeError(f"Expected zh-TW Export Code label, got {page.locator('#btn-code').inner_text()!r}")
+
+
+def verify_locale_startup(browser, base_url):
+    page = browser.new_page()
+    page.add_init_script("localStorage.setItem('fluent-qt-studio-intro-v1', 'seen')")
+    pending = []
+    pattern = "**/studio/locales/ja.json"
+    try:
+        page.route(pattern, lambda route: pending.append(route))
+        page.goto(base_url + "studio/?lang=ja&renderer=schematic", wait_until="commit")
+        page.wait_for_function("document.body?.inert")
+        assert page.locator("#outline-tree [data-node-id]").count() == 0
+        with page.expect_response(pattern):
+            # Fetch the real staged bundle and deliver it after the editor has begun booting.
+            route = pending[0]
+            route.fulfill(response=route.fetch())
+        page.wait_for_selector('html[lang="ja"][data-i18n-ready="1"]')
+        assert not page.locator("body").evaluate("(el) => el.inert")
+        page.locator("#tab-layers").click()
+        page.locator('#outline-tree [data-node-id="button_1"]').click()
+        page.locator("#tab-props").click()
+        editor = page.locator('input[data-prop-key="text"]')
+        editor.fill("入力中")
+        assert editor.evaluate("(el) => document.activeElement === el && el.value === '入力中'")
+
+        page.unroute(pattern)
+        page.route(pattern, lambda route: route.fulfill(status=404, body=""))
+        page.reload(wait_until="domcontentloaded")
+        page.wait_for_selector('html[lang="en"][data-i18n-ready="1"]')
+        assert page.locator("#btn-code").inner_text().strip() == "Export Code"
+        assert page.locator("#nav-home-link").get_attribute("href") == "../ja/"
+    finally:
+        page.close()
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -989,6 +1068,7 @@ def main() -> int:
             verify_loading_state(browser, url, args.output)
             run_wasm_checks(page, url, args.output)
         else:
+            verify_locale_startup(browser, url)
             verify_platform_shortcuts(browser, url)
             run_schematic_checks(page, url, args.output)
 

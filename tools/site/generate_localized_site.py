@@ -13,8 +13,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+from docs_i18n import EXTRA_LOCALE_KEYS
 from site_assets import source_path
 from site_locales import LOCALES, Locale, relative_locale_url
+from studio_i18n import studio_runtime_payload, validate_studio_locales
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -608,6 +610,7 @@ def main() -> int:
     version = project_version()
     validate_error_page()
     validate_legacy_gallery_redirect()
+    validate_studio_locales()
     outputs: list[tuple[Path, str]] = []
 
     for locale in LOCALES:
@@ -625,8 +628,25 @@ def main() -> int:
         (SITE_ROOT / "fuel" / tier / "index.html", render_support_redirect(tier))
         for tier in SUPPORT_TIERS
     )
+    outputs.extend(
+        (SITE_ROOT / "studio" / "locales" / f"{lang}.json", studio_runtime_payload(lang))
+        for lang in EXTRA_LOCALE_KEYS
+    )
 
+    studio_locales_dir = SITE_ROOT / "studio" / "locales"
+    expected_studio_files = {f"{lang}.json" for lang in EXTRA_LOCALE_KEYS}
+    stale_studio_files = (
+        [p for p in sorted(studio_locales_dir.glob("*.json")) if p.name not in expected_studio_files]
+        if studio_locales_dir.is_dir()
+        else []
+    )
     valid = all(write_or_check(path, content, arguments.check) for path, content in outputs)
+    for stale in stale_studio_files:
+        if arguments.check:
+            print(f"stale {stale.relative_to(ROOT)}", file=sys.stderr)
+            valid = False
+        else:
+            stale.unlink()
     if not valid:
         fail("localized site outputs are stale; run tools/site/generate_localized_site.py")
     return 0
