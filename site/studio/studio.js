@@ -2341,7 +2341,7 @@ function applyPropPatch(nodeId, patch, commitHistoryEntry) {
     state.inspectorController.sync(state.inspectorController.values, state.inspectorController.effective, null);
   }
   updateToolbarButtons();
-  renderSchematic();
+  renderSchematic(res.document, nodeId, curDoc);
   requestAnimationFrame(syncOverlay);
   renderCodeDrawer();
 
@@ -2513,12 +2513,27 @@ function renderAll() {
 }
 
 /* Schematic Preview Renderer (Active during drag ghost, boot & offline fallback) */
-function renderSchematic(doc = currentDoc()) {
-  els.schematicStage.innerHTML = '';
-  els.schematicStage.appendChild(renderSchematicNode(doc.root));
+let renderedSchematic = null;
+function renderSchematic(doc = currentDoc(), changedId = null, previous = null) {
+  if (state.wasmPainted || renderedSchematic === doc) return;
+  // Plain box/grid parents attach children directly. Other layouts also decorate or wrap them.
+  if (changedId && renderedSchematic === previous) {
+    const info = findParent(doc.root, changedId);
+    if (info?.parent && (info.parent.type === 'VBox' || info.parent.type === 'Grid')) {
+      const element = els.schematicStage.querySelector(`[data-sch-id="${CSS.escape(changedId)}"]`);
+      if (element?.parentElement?.dataset.schId === info.parent.id) {
+        element.replaceWith(renderSchematicNode(info.node));
+        renderedSchematic = doc;
+        return;
+      }
+    }
+  }
+  els.schematicStage.replaceChildren(renderSchematicNode(doc.root));
+  renderedSchematic = doc;
 }
 
 function fireSchematicEvent(nodeId, eventName, value = '') {
+  renderedSchematic = null;
   const shown = eventName === 'textChanged' && String(value).length > 36
     ? `${String(value).length} chars`
     : value;
@@ -4812,6 +4827,7 @@ function activateFallback(showRetry = true) {
   state.wasmReady = false;
   state.wasmPainted = false;
   state.wasmFallback = true;
+  renderSchematic();
   state.wasmShowRetry = Boolean(showRetry);
   els.canvasShell.classList.remove('is-wasm-loading', 'is-wasm-ready');
   els.canvasShell.classList.add('is-static-only');

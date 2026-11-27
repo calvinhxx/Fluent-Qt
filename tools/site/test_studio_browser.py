@@ -1035,6 +1035,7 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
         {"id": "trf", "type": "Transfer"},
         {"id": "sb", "type": "ScrollBar"},
         {"id": "asb", "type": "AnnotatedScrollBar"},
+        {"id": "caption", "type": "Label", "props": {"text": "Original"}},
     ]}}
     sch_token = base64.urlsafe_b64encode(json.dumps(sch_upgrade_doc).encode()).decode().rstrip("=")
     page.goto(base_url + "studio/?lang=zh&renderer=schematic#state=v1." + sch_token, wait_until="domcontentloaded")
@@ -1078,6 +1079,16 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
             raise RuntimeError(f"Expected schematic selector {sel} to render")
     cal_days = page.locator('[data-sch-id="cv"] .sch-calendar-day').count()
     assert cal_days in (28, 35, 42) and page.locator('.sch-calendar-dow span').count() == 7
+    original = date.element_handle()
+    page.locator("#mode-edit").click()
+    page.locator("#tab-layers").click()
+    page.locator('#outline-tree [data-node-id="caption"]').click()
+    page.locator("#tab-props").click()
+    editor = page.locator('input[data-prop-key="text"]')
+    editor.fill("Updated caption")
+    editor.press("Tab")
+    page.wait_for_function("document.querySelector('[data-sch-id=caption]').textContent.includes('Updated caption')")
+    assert original.evaluate("(element) => element.isConnected"), "Editing a sibling rebuilt the date input"
     output_dir.mkdir(parents=True, exist_ok=True)
     page.locator("#canvas-shell").screenshot(path=str(output_dir / "studio-schematic-upgraded-controls.png"))
 
@@ -1119,6 +1130,20 @@ def verify_wasm_picker_values(page, base_url: str, output_dir: Path) -> None:
         assert values[key] == expected, (node_id, values[key])
     page.locator("#mode-play").click()
     page.locator("#canvas-shell").screenshot(path=str(output_dir / "studio-wasm-pickers-and-navigation.png"))
+    hidden = page.locator('#schematic-stage [data-sch-id="time"] input').element_handle()
+    page.locator("#mode-edit").click()
+    page.locator("#tab-props").click()
+    editor = page.locator('#inspector-body input[data-prop-key="time"]')
+    editor.fill("18:24")
+    editor.press("Tab")
+    assert hidden.evaluate("(element) => element.isConnected && element.value.startsWith('16:12')")
+    frame = page.frame_locator("#wasm-stage").locator("body")
+    frame.evaluate("""() => parent.postMessage({source:'fluent-qt-gallery', state:'error',
+      session:new URL(location.href).searchParams.get('host-session')}, location.origin)""")
+    page.wait_for_selector('#canvas-shell.is-static-only')
+    assert page.locator('#schematic-stage [data-sch-id="time"] input').input_value().startswith("18:24")
+
+
 
 def verify_missing_wasm_fallback_banner(browser, base_url: str) -> None:
     """When WASM is unavailable without ?renderer=schematic, the banner surfaces the local serve.py hint."""
