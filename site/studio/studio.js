@@ -14,6 +14,7 @@ import {
   countNodes,
   createHistory,
   createNode,
+  dateTimeOffsetSuffix,
   decodeShareState,
   duplicateNode,
   findNode,
@@ -2772,7 +2773,7 @@ function renderSchematicNode(node, { interactive = true } = {}) {
     const raw = value || '';
     const rangeEndpoint = node.type === 'DateTimeRangePicker';
     // Browser datetime-local inputs have no zone field; keep a document's original offset on edits.
-    const zone = rangeEndpoint ? raw.match(/T.*?(Z|[+-]\d{2}:\d{2})$/)?.[1] || '' : '';
+    const zone = rangeEndpoint ? dateTimeOffsetSuffix(raw) : '';
     input.value = type === 'date' ? raw.slice(0, 10) : zone ? raw.slice(0, -zone.length) : raw;
     if (interactive) input.addEventListener('change', () => {
       if (!input.validity.valid) return;

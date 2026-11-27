@@ -21,6 +21,18 @@ def __getattr__(name):
         def __init__(self, parent=None):
             base.__init__(self, "", parent)
         attributes["__init__"] = __init__
+    if name == "FluentDateTimeRangePicker":
+        from PySide6.QtCore import Property, QDateTime, Qt
+
+        def iso_property(getter, setter):
+            def write(self, text):
+                value = QDateTime.fromString(text, Qt.DateFormat.ISODate)
+                if not text or value.isValid():
+                    setter(self, value)
+            return Property(str, lambda self: getter(self).toString(Qt.DateFormat.ISODate), write)
+
+        attributes["formStartDateTime"] = iso_property(base.startDateTime, base.setStartDateTime)
+        attributes["formEndDateTime"] = iso_property(base.endDateTime, base.setEndDateTime)
     if name == "FluentAccordion":
         from PySide6.QtCore import Slot
         from PySide6.QtWidgets import QWidget

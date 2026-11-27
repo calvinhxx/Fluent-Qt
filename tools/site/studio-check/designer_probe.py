@@ -5,7 +5,7 @@ from pathlib import Path
 import traceback
 from xml.etree import ElementTree as ET
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QDateTime, Qt, QTimer
 from PySide6.QtDesigner import QDesignerFormWindowInterface
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -51,9 +51,15 @@ def verify(form, root):
                 assert (center - widget.rect().center()).manhattanLength() <= 4, (child["id"], center, widget.rect())
             inspect(child, control)
         props = node.get("props", {})
+        if kind == "DateTimeRangePicker":
+            for prop, form_prop in (("startDateTime", "formStartDateTime"), ("endDateTime", "formEndDateTime")):
+                expected = QDateTime.fromString(props.get(prop, ""), Qt.DateFormat.ISODate)
+                if expected.isValid() and expected.timeSpec() != Qt.TimeSpec.LocalTime:
+                    iso = expected.toString(Qt.DateFormat.ISODate)
+                    assert getattr(widget, prop)().toString(Qt.DateFormat.ISODate) == iso
+                    stored = saved.find(f'.//widget[@name="{node["id"]}"]/property[@name="{form_prop}"]/string')
+                    assert stored is not None and stored.text == iso
         if kind == "DataGrid":
-            from PySide6.QtCore import Qt
-
             data = props.get("modelData") or [[item] for item in props.get("items", ["Row 1", "Row 2"])]
             headers = props.get("headers", [])
             model = widget.model()
@@ -94,6 +100,8 @@ def inspect_forms():
             form.core().formWindowManager().setActiveFormWindow(form)
             QApplication.processEvents()
             verify(form, templates[name])
+            if name == "zoned-range":
+                Path(os.environ["STUDIO_SAVED_RANGE_UI"]).write_text(form.contents(), encoding="utf-8")
             captures = os.environ.get("STUDIO_DESIGNER_CAPTURES")
             if captures:
                 target = Path(captures)
