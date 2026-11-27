@@ -863,6 +863,51 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     page.locator("#btn-undo").click()
     page.wait_for_selector('#schematic-stage > .sch-anchor-box [data-sch-id="button_1"]', timeout=5000)
 
+    # Verify Templates Picker modal: opens cleanly, lists all 8 presets, loads dark/light presets without outer theme leak, closes on Escape
+    page.locator("#tab-layers").click()
+    target = page.locator('#outline-tree [data-node-id="button_1"]')
+    target.click()
+    if not page.locator("#templates-modal").is_hidden():
+        raise RuntimeError("Expected #templates-modal to start hidden")
+    page.locator("#btn-templates").click()
+    page.wait_for_selector("#templates-modal[open]", timeout=5000)
+    cards = page.locator("#templates-grid").get_by_role("button")
+    assert cards.count() == 8
+    cards.last.focus()
+    page.keyboard.press("Tab")
+    assert page.locator("#btn-close-templates").evaluate("(el) => el === document.activeElement")
+    page.keyboard.press("Shift+Tab")
+    assert cards.last.evaluate("(el) => el === document.activeElement")
+    page.keyboard.press("Delete")
+    assert target.count() == 1
+    page.keyboard.press("Escape")
+    page.wait_for_function("() => document.activeElement.id === 'btn-templates'")
+    page.keyboard.press("Enter")
+    page.wait_for_selector("#templates-modal[open]")
+    if "模板" not in page.locator("#templates-modal-title").inner_text():
+        raise RuntimeError(f"Expected localized Templates modal title, got {page.locator('#templates-modal-title').inner_text()!r}")
+    if page.locator("#templates-grid .template-card").count() != 8:
+        raise RuntimeError(f"Expected 8 template cards, got {page.locator('#templates-grid .template-card').count()}")
+    page.locator('#templates-grid .template-card[data-template-id="device-monitor"]').click()
+    page.wait_for_function("() => !document.querySelector('#templates-modal').open", timeout=5000)
+    page.wait_for_function("() => document.querySelector('#canvas-shell')?.dataset.canvasTheme === 'dark'", timeout=5000)
+    if page.evaluate("() => document.documentElement.dataset.theme") != initial_outer_theme:
+        raise RuntimeError("Dark template preset leaked into outer website theme")
+    if page.locator("#outline-tree .tree-row").count() <= 2:
+        raise RuntimeError("Expected device-monitor template to populate outline rows")
+    page.locator("#btn-templates").click()
+    page.wait_for_selector("#templates-modal[open]", timeout=5000)
+    assert page.locator('#templates-grid [aria-current="true"]').get_attribute("data-template-id") == "device-monitor"
+    page.keyboard.press("Escape")
+    page.locator("#btn-undo").click()
+    page.locator("#btn-templates").click()
+    assert not page.locator('#templates-grid [data-template-id="device-monitor"][aria-current="true"]').count()
+    page.locator('#templates-grid .template-card[data-template-id="ai-workbench"]').click()
+    page.wait_for_function("() => document.querySelector('#canvas-shell')?.dataset.canvasTheme === 'dark'", timeout=5000)
+    page.locator("#btn-templates").click()
+    page.locator('#templates-grid .template-card[data-template-id="serial-console"]').click()
+    page.wait_for_function("() => document.querySelector('#canvas-shell')?.dataset.canvasTheme === 'light'", timeout=5000)
+
     # Verify direct First-Time 4-step Spotlight Tour (no redundant welcome card), persistence, and header replay
     page.evaluate("() => { localStorage.removeItem('fluent-qt-studio-intro-v1'); localStorage.setItem('fluent-qt-theme', 'light'); }")
     page.goto(base_url + "studio/?lang=zh&renderer=schematic", wait_until="domcontentloaded")

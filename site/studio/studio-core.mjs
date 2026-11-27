@@ -709,6 +709,7 @@ export const STUDIO_TEMPLATES = {
   starter: {
     id: 'starter',
     label: { zh: '自由画布', en: 'Free Canvas' },
+    description: { zh: '空白锚点画布与居中按钮，适合自由拖拽起点', en: 'Centered button on an AnchorBox canvas for freeform layout' },
     document: {
       schemaVersion: 1,
       root: {
@@ -734,9 +735,257 @@ export const STUDIO_TEMPLATES = {
       },
     },
   },
+  'device-monitor': {
+    id: 'device-monitor',
+    label: { zh: '工业上位机监控', en: 'Device Telemetry Monitor' },
+    description: { zh: '暗青监控台 · 网关状态、双波形图与 DataGrid 设备表', en: 'Dark cyan telemetry console with KPIs, dual charts, and DataGrid' },
+    document: {
+      schemaVersion: 1,
+      design: { theme: 'dark', accentColor: '#00B7C3' },
+      root: {
+        id: 'root',
+        type: 'VBox',
+        props: { spacing: 12, padding: 18 },
+        children: [
+          {
+            id: 'dm_hdr',
+            type: 'HBox',
+            props: { spacing: 12, padding: 0, align: 'Center' },
+            children: [
+              { id: 'dm_title', type: 'Label', props: { text: 'Industrial Device Telemetry', typography: 'Title', colorRole: 'Default', wordWrap: true } },
+              { id: 'dm_badge', type: 'InfoBadge', props: { value: 8, status: 'Success', displayMode: 'Value' } },
+              { id: 'dm_rack', type: 'ComboBox', props: { items: ['All Nodes', 'Rack A · Edge', 'Rack B · PLC'], currentIndex: 0, enabled: true } },
+              { id: 'dm_capture', type: 'Button', props: { text: 'Start Capture', fluentStyle: 'Accent', fluentSize: 'StandardSize', enabled: true } },
+            ],
+          },
+          { id: 'dm_info', type: 'InfoBar', props: { title: 'Gateway Online', message: '8 edge controllers streaming at 250 Hz · Zero packet loss', severity: 'Success', isClosable: false } },
+          {
+            id: 'dm_kpis',
+            type: 'Grid',
+            props: { columns: 3, spacing: 12, padding: 0 },
+            children: [
+              {
+                id: 'dm_kpi_bus',
+                type: 'Card',
+                props: { appearance: 'Layer', borderVisible: true, spacing: 8, padding: 14 },
+                children: [
+                  { id: 'dm_bus_lbl', type: 'Label', props: { text: 'Bus Utilization', typography: 'BodyStrong', colorRole: 'Secondary', wordWrap: true } },
+                  { id: 'dm_bus_bar', type: 'ProgressBar', props: { minimum: 0, maximum: 100, value: 62 } },
+                ],
+              },
+              {
+                id: 'dm_kpi_rate',
+                type: 'Card',
+                props: { appearance: 'Layer', borderVisible: true, spacing: 8, padding: 14 },
+                children: [
+                  { id: 'dm_rate_lbl', type: 'Label', props: { text: 'Sampling Rate (Hz)', typography: 'BodyStrong', colorRole: 'Secondary', wordWrap: true } },
+                  { id: 'dm_rate_num', type: 'NumberBox', props: { minimum: 10, maximum: 1000, value: 250, enabled: true } },
+                ],
+              },
+              {
+                id: 'dm_kpi_guard',
+                type: 'Card',
+                props: { appearance: 'Layer', borderVisible: true, spacing: 8, padding: 14 },
+                children: [
+                  { id: 'dm_guard_lbl', type: 'Label', props: { text: 'Auto-Threshold Guard', typography: 'BodyStrong', colorRole: 'Secondary', wordWrap: true } },
+                  { id: 'dm_guard_sw', type: 'ToggleSwitch', props: { isOn: true, onContent: 'Armed', offContent: 'Manual', enabled: true } },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'dm_charts',
+            type: 'Grid',
+            props: { columns: 2, spacing: 14, padding: 0 },
+            children: [
+              { id: 'dm_latency', type: 'LineChart', props: { title: 'Bus Latency (ms)', seriesName: 'P95', values: [14, 18, 16, 23, 19, 17, 21], minHeight: 200 } },
+              { id: 'dm_throughput', type: 'AreaChart', props: { title: 'Frame Throughput (k/s)', seriesName: 'RX', values: [42, 48, 51, 47, 56, 61, 59], minHeight: 200 } },
+            ],
+          },
+          {
+            id: 'dm_grid',
+            type: 'DataGrid',
+            props: {
+              headers: ['Device', 'Bus', 'Latency', 'Status'],
+              modelData: [
+                ['plc-edge-01', 'CAN-0', '14 ms', 'Online'],
+                ['daq-rack-04', 'RS485', '21 ms', 'Healthy'],
+                ['motor-ctl-09', 'EtherCAT', '18 ms', 'Healthy'],
+                ['sensor-hub-2', 'Modbus', '39 ms', 'Warning'],
+              ],
+              minHeight: 190,
+            },
+          },
+        ],
+      },
+    },
+  },
+  'ai-workbench': {
+    id: 'ai-workbench',
+    label: { zh: '本地 AI 工作台', en: 'Local AI Workbench' },
+    description: { zh: '暗紫模型台 · 参数调控、显存进度环、Prompt 与代码块', en: 'Dark violet LLM console with tuning controls, VRAM ring, and CodeBlock' },
+    document: {
+      schemaVersion: 1,
+      design: { theme: 'dark', accentColor: '#8764B8' },
+      root: {
+        id: 'root',
+        type: 'VBox',
+        props: { spacing: 12, padding: 18 },
+        children: [
+          {
+            id: 'aiw_hdr',
+            type: 'HBox',
+            props: { spacing: 12, padding: 0, align: 'Center' },
+            children: [
+              { id: 'aiw_avatar', type: 'Avatar', props: { name: 'Local LLM', avatarSize: 'Medium', presence: 'Available' } },
+              { id: 'aiw_title', type: 'Label', props: { text: 'Local Inference Studio', typography: 'Title', colorRole: 'Default', wordWrap: true } },
+              { id: 'aiw_model', type: 'ComboBox', props: { items: ['qwen2.5-coder:14b', 'deepseek-r1:14b', 'llama3.3:8b'], currentIndex: 0, enabled: true } },
+              { id: 'aiw_stream', type: 'ToggleSwitch', props: { isOn: true, onContent: 'Stream', offContent: 'Batch', enabled: true } },
+            ],
+          },
+          {
+            id: 'aiw_top',
+            type: 'Grid',
+            props: { columns: 2, spacing: 14, padding: 0 },
+            children: [
+              {
+                id: 'aiw_params',
+                type: 'Card',
+                props: { appearance: 'Layer', borderVisible: true, spacing: 10, padding: 14 },
+                children: [
+                  {
+                    id: 'aiw_fld_temp',
+                    type: 'Field',
+                    props: { labelText: 'Temperature', helperText: 'Sampling randomness (x0.01)', required: false, labelPosition: 'Top', validationState: 'None', validationMessage: '' },
+                    children: [{ id: 'aiw_temp', type: 'Slider', props: { minimum: 0, maximum: 100, value: 30, enabled: true } }],
+                  },
+                  {
+                    id: 'aiw_fld_tok',
+                    type: 'Field',
+                    props: { labelText: 'Max Tokens', helperText: 'Response length limit', required: false, labelPosition: 'Top', validationState: 'None', validationMessage: '' },
+                    children: [{ id: 'aiw_tokens', type: 'NumberBox', props: { minimum: 256, maximum: 8192, value: 2048, enabled: true } }],
+                  },
+                ],
+              },
+              {
+                id: 'aiw_vram',
+                type: 'Card',
+                props: { appearance: 'Layer', borderVisible: true, spacing: 10, padding: 14 },
+                children: [
+                  { id: 'aiw_vram_lbl', type: 'Label', props: { text: 'VRAM Budget · 9.2 / 12.0 GB', typography: 'BodyStrong', colorRole: 'Secondary', wordWrap: true } },
+                  { id: 'aiw_vram_ring', type: 'ProgressRing', props: { minimum: 0, maximum: 100, value: 74 } },
+                  { id: 'aiw_pin_chk', type: 'CheckBox', props: { text: 'Keep model pinned in GPU memory', checked: true, enabled: true } },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'aiw_code',
+            type: 'CodeBlock',
+            props: {
+              headerText: 'Generated C++17 Snippet',
+              language: 'cpp',
+              code: 'auto* chart = new fluent::charts::LineChart(parent);\nchart->setTitle(QStringLiteral("Latency (ms)"));',
+              expanded: true,
+            },
+          },
+          {
+            id: 'aiw_prompt_card',
+            type: 'Card',
+            props: { appearance: 'Layer', borderVisible: true, spacing: 10, padding: 14 },
+            children: [
+              { id: 'aiw_prompt', type: 'TextEdit', props: { plainText: '', placeholderText: 'Ask the local model to build or refactor a Fluent-Qt screen...', minVisibleLines: 3, enabled: true } },
+              {
+                id: 'aiw_actions',
+                type: 'HBox',
+                props: { spacing: 10, padding: 0, align: 'Start' },
+                children: [
+                  { id: 'aiw_run', type: 'Button', props: { text: 'Run Inference', fluentStyle: 'Accent', fluentSize: 'StandardSize', enabled: true } },
+                  { id: 'aiw_clear', type: 'Button', props: { text: 'Clear Session', fluentStyle: 'Standard', fluentSize: 'StandardSize', enabled: true } },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  'serial-console': {
+    id: 'serial-console',
+    label: { zh: '串口调试助手', en: 'Serial Instrument Console' },
+    description: { zh: '硬件连接工具栏、实时通道波形与收发帧日志', en: 'Serial port bar, live voltage waveform, and TX/RX frame log' },
+    document: {
+      schemaVersion: 1,
+      design: { theme: 'light', accentColor: '#0067C0' },
+      root: {
+        id: 'root',
+        type: 'VBox',
+        props: { spacing: 12, padding: 18 },
+        children: [
+          {
+            id: 'sc_bar',
+            type: 'HBox',
+            props: { spacing: 10, padding: 0, align: 'Center' },
+            children: [
+              { id: 'sc_port', type: 'ComboBox', props: { items: ['/dev/ttyUSB0', 'COM3', 'COM5'], currentIndex: 0, enabled: true } },
+              { id: 'sc_baud', type: 'ComboBox', props: { items: ['9600', '115200', '921600'], currentIndex: 1, enabled: true } },
+              { id: 'sc_hex', type: 'ToggleSwitch', props: { isOn: false, onContent: 'HEX', offContent: 'ASCII', enabled: true } },
+              { id: 'sc_connect', type: 'Button', props: { text: 'Connect Port', fluentStyle: 'Accent', fluentSize: 'StandardSize', enabled: true } },
+            ],
+          },
+          {
+            id: 'sc_main',
+            type: 'Grid',
+            props: { columns: 2, spacing: 14, padding: 0 },
+            children: [
+              { id: 'sc_wave', type: 'LineChart', props: { title: 'Channel A Voltage (mV)', seriesName: 'CH1', values: [3290, 3304, 3298, 3312, 3305, 3301, 3308], minHeight: 200 } },
+              {
+                id: 'sc_tx_card',
+                type: 'Card',
+                props: { appearance: 'Layer', borderVisible: true, spacing: 10, padding: 14 },
+                children: [
+                  {
+                    id: 'sc_fld_cmd',
+                    type: 'Field',
+                    props: { labelText: 'Command Frame', helperText: 'AT or Modbus RTU frame payload', required: false, labelPosition: 'Top', validationState: 'None', validationMessage: '' },
+                    children: [{ id: 'sc_cmd_edit', type: 'LineEdit', props: { text: 'AT+STAT?', placeholderText: 'Enter ASCII or HEX payload...', enabled: true } }],
+                  },
+                  { id: 'sc_crlf', type: 'CheckBox', props: { text: 'Append CR+LF', checked: true, enabled: true } },
+                  {
+                    id: 'sc_tx_btns',
+                    type: 'HBox',
+                    props: { spacing: 10, padding: 0, align: 'Start' },
+                    children: [
+                      { id: 'sc_send', type: 'Button', props: { text: 'Send Frame', fluentStyle: 'Accent', fluentSize: 'StandardSize', enabled: true } },
+                      { id: 'sc_clear', type: 'Button', props: { text: 'Clear Log', fluentStyle: 'Standard', fluentSize: 'StandardSize', enabled: true } },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'sc_log',
+            type: 'ListView',
+            props: {
+              items: [
+                '[14:02:01.104] TX > AT+STAT?',
+                '[14:02:01.119] RX < OK VDD=3.305V TEMP=34.2C',
+                '[14:02:02.104] TX > AT+READ=CH1',
+                '[14:02:02.121] RX < CH1=3308mV CRC=9F',
+              ],
+              minHeight: 156,
+            },
+          },
+          { id: 'sc_rx_bar', type: 'ProgressBar', props: { minimum: 0, maximum: 100, value: 28 } },
+        ],
+      },
+    },
+  },
   settings: {
     id: 'settings',
     label: { zh: '系统设置页', en: 'App Settings' },
+    description: { zh: '经典表单设置布局、双列控件网格与开关操作栏', en: 'Two-column settings grid, switches, expander, and action bar' },
     document: {
       schemaVersion: 1,
       root: {
@@ -807,6 +1056,7 @@ export const STUDIO_TEMPLATES = {
   'account-form': {
     id: 'account-form',
     label: { zh: '注册表单向导', en: 'Onboarding Form' },
+    description: { zh: '分步条引导、必填校验框与提交确认页', en: 'Multi-step onboarding form with Stepper and required fields' },
     document: {
       schemaVersion: 1,
       root: {
@@ -852,6 +1102,7 @@ export const STUDIO_TEMPLATES = {
   analytics: {
     id: 'analytics',
     label: { zh: '监控仪表盘', en: 'Analytics Dashboard' },
+    description: { zh: '通用运维指标卡片、折线/柱状图与状态列表', en: 'KPI metrics, line and bar charts, and runtime event list' },
     document: {
       schemaVersion: 1,
       root: {
@@ -911,6 +1162,7 @@ export const STUDIO_TEMPLATES = {
   blank: {
     id: 'blank',
     label: { zh: '空白画布', en: 'Blank Page' },
+    description: { zh: '空无一物的 AnchorBox 画布，从零搭建布局', en: 'Empty AnchorBox canvas ready to compose from scratch' },
     document: {
       schemaVersion: 1,
       root: {

@@ -43,6 +43,10 @@ const UI_STRINGS = {
   zh: {
     'toolbar.code': '导出代码',
     'toolbar.ai': 'AI 生成',
+    'toolbar.templates': '模板',
+    'templates.title': '场景预设模板',
+    'templates.subtitle': '选择一套页面原型直接编辑与试玩，一键导出 C++17、PySide6 或 Qt Designer .ui',
+    'templates.loadedToast': '已加载「{name}」· {undo} 可撤销',
     'ai.title': 'AI 新建页面',
     'ai.run': '生成界面',
     'ai.running': '生成中…',
@@ -193,6 +197,10 @@ const UI_STRINGS = {
   en: {
     'toolbar.code': 'Export Code',
     'toolbar.ai': 'AI Build',
+    'toolbar.templates': 'Templates',
+    'templates.title': 'Starter & Industry Presets',
+    'templates.subtitle': 'Load a runnable Fluent-Qt page preset to edit, play, or export as C++17, PySide6, or .ui',
+    'templates.loadedToast': 'Loaded "{name}" · {undo} to undo',
     'ai.title': 'AI New Page',
     'ai.run': 'Generate',
     'ai.running': 'Generating…',
@@ -395,6 +403,10 @@ const els = {
   btnAi: qs('#btn-ai'),
   aiModal: qs('#ai-modal'),
   btnCloseAi: qs('#btn-close-ai'),
+  btnTemplates: qs('#btn-templates'),
+  templatesModal: qs('#templates-modal'),
+  btnCloseTemplates: qs('#btn-close-templates'),
+  templatesGrid: qs('#templates-grid'),
   aiModeButtons: Array.from(document.querySelectorAll('.ai-mode-group [data-ai-mode]')),
   aiTargetPill: qs('#ai-target-pill'),
   aiStyleButtons: Array.from(document.querySelectorAll('#ai-style-row [data-ai-style]')),
@@ -452,7 +464,6 @@ const state = {
   inspectorController: null,
   nodeInspection: null,
   schemaCache: {},
-  templateId: decodedHashDoc ? '' : initialTemplate,
   history: createHistory(initialDoc),
   liveDraftDoc: null,
   selectedId: 'root',
@@ -486,6 +497,10 @@ const state = {
   aiStylePreset: 'auto',
   aiAbortController: null,
 };
+
+// History owns the snapshots. Undo/redo restores the matching preset without adding it to shared documents.
+const presetForSnapshot = new WeakMap();
+if (!decodedHashDoc) presetForSnapshot.set(state.history.current(), initialTemplate);
 
 function t(key) {
   const dict = UI_STRINGS[state.lang] || UI_STRINGS.zh;
@@ -2139,7 +2154,6 @@ function renderInspector() {
     btn.textContent = t(hasChildren ? 'clearCanvasBtn' : 'restoreSampleBtn');
     btn.addEventListener('click', () => {
       if (hasChildren) {
-        state.templateId = '';
         const fallbackProps = node.type === 'AnchorBox'
           ? { minHeight: 540, padding: 16 }
           : { spacing: 14, padding: 20 };
@@ -2158,8 +2172,7 @@ function renderInspector() {
           false,
         );
       } else {
-        state.templateId = 'starter';
-        commitDocument(cloneDoc(STUDIO_TEMPLATES.starter.document), 'root', true, false);
+        loadTemplate(STUDIO_TEMPLATES.starter);
       }
     });
     actions.appendChild(btn);
@@ -4918,6 +4931,7 @@ function openAiModal({ mode } = {}) {
   if (!els.aiModal) return;
   if (state.introCardVisible) dismissIntroCard({ remember: true });
   if (state.tourOpen) closeIntroTour();
+  if (els.templatesModal?.open) closeTemplatesModal();
   closeActiveComboMenu(false);
   const refineOk = canRefineSelectedNode();
   if (mode === 'refine' && refineOk) {
@@ -4953,6 +4967,73 @@ function closeAiModal() {
 function toggleAiModal() {
   if (state.aiOpen) closeAiModal();
   else openAiModal();
+}
+
+function loadTemplate(template) {
+  commitDocument(template.document, 'root', true, false);
+  presetForSnapshot.set(state.history.current(), template.id);
+}
+
+function renderTemplatesGrid() {
+  if (!els.templatesGrid) return;
+  els.templatesGrid.innerHTML = '';
+  for (const tpl of Object.values(STUDIO_TEMPLATES)) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'template-card';
+    card.dataset.templateId = tpl.id;
+    if (presetForSnapshot.get(state.history.current()) === tpl.id) card.setAttribute('aria-current', 'true');
+    const head = document.createElement('div');
+    head.className = 'template-card-head';
+    const title = document.createElement('strong');
+    title.className = 'template-card-title';
+    title.textContent = labelOf(tpl.label);
+    const badge = document.createElement('span');
+    badge.className = 'template-card-swatch';
+    const docTheme = tpl.document.design?.theme;
+    const accent = tpl.document?.design?.accentColor || '#0067C0';
+    if (docTheme) badge.dataset.themeMode = docTheme;
+    const dot = document.createElement('span');
+    dot.className = 'template-card-dot';
+    dot.style.background = accent;
+    const themeLabel = document.createElement('span');
+    themeLabel.textContent = docTheme ? t(`artboard.${docTheme}`) : t('followTheme');
+    badge.append(dot, themeLabel);
+    head.append(title, badge);
+
+    const desc = document.createElement('span');
+    desc.className = 'template-card-desc';
+    desc.textContent = labelOf(tpl.description || tpl.label);
+
+    card.append(head, desc);
+    card.addEventListener('click', () => {
+      if (state.mode === 'play') setMode('edit');
+      loadTemplate(tpl);
+      closeTemplatesModal();
+      const msg = t('templates.loadedToast').replace('{undo}', shortcuts.undo).replace('{name}', labelOf(tpl.label));
+      showToast(msg);
+      setEventPill(msg);
+    });
+    els.templatesGrid.appendChild(card);
+  }
+}
+
+function openTemplatesModal() {
+  if (!els.templatesModal) return;
+  if (state.tourOpen) closeIntroTour();
+  if (state.aiOpen) closeAiModal();
+  closeActiveComboMenu(false);
+  renderTemplatesGrid();
+  els.templatesModal.showModal();
+  els.btnTemplates?.setAttribute('aria-expanded', 'true');
+  els.templatesGrid.querySelector('button')?.focus();
+}
+
+function closeTemplatesModal() {
+  if (!els.templatesModal?.open) return;
+  els.templatesModal.close();
+  els.btnTemplates.setAttribute('aria-expanded', 'false');
+  els.btnTemplates.focus();
 }
 
 function formatAiSourceLabel(result) {
@@ -5049,6 +5130,30 @@ els.btnAi?.addEventListener('click', () => openAiModal());
 els.btnCloseAi?.addEventListener('click', closeAiModal);
 els.aiModal?.addEventListener('click', (e) => {
   if (e.target === els.aiModal) closeAiModal();
+});
+els.btnTemplates?.addEventListener('click', () => {
+  if (els.templatesModal?.open) closeTemplatesModal();
+  else openTemplatesModal();
+});
+els.btnCloseTemplates?.addEventListener('click', closeTemplatesModal);
+els.templatesModal?.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  closeTemplatesModal();
+});
+els.templatesModal?.addEventListener('keydown', (event) => {
+  if (event.key !== 'Tab') return;
+  const first = els.btnCloseTemplates;
+  const last = els.templatesGrid.lastElementChild;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last?.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+els.templatesModal?.addEventListener('click', (e) => {
+  if (e.target === els.templatesModal) closeTemplatesModal();
 });
 els.aiModeButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -5267,6 +5372,7 @@ function startIntroTour(stepIndex = 0) {
   dismissIntroCard({ remember: true });
   closeActiveComboMenu(false);
   if (state.aiOpen) closeAiModal();
+  if (els.templatesModal?.open) closeTemplatesModal();
   if (!els.tourLayer) return;
   state.tourOpen = true;
   state.tourStep = Math.max(0, Math.min(TOUR_STEPS.length - 1, Number(stepIndex) || 0));
@@ -5321,6 +5427,7 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (els.templatesModal?.open) return;
   if (state.tourOpen) {
     if (e.key === 'Escape') {
       e.preventDefault();
