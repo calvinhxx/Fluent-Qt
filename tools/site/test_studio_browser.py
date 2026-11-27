@@ -1148,6 +1148,7 @@ def verify_wasm_picker_values(page, base_url: str, output_dir: Path) -> None:
 def verify_missing_wasm_fallback_banner(browser, base_url: str) -> None:
     """When WASM is unavailable without ?renderer=schematic, the banner surfaces the local serve.py hint."""
     page = browser.new_page(viewport={"width": 1440, "height": 900})
+    page.route("**/gallery/fluent_qt_gallery.wasm", lambda route: route.fulfill(status=404, body=""))
     page.add_init_script("localStorage.setItem('fluent-qt-studio-intro-v1', 'seen');")
     page_errors: list[str] = []
     page.on("pageerror", lambda err: page_errors.append(f"pageerror: {err}"))
