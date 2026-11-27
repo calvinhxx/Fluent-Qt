@@ -1344,6 +1344,17 @@ export function createHistory(initialDocument, maxEntries = 60) {
   };
 }
 
+function hasRowStretch(node) {
+  return node.type === 'HBox' && ['Start', 'Center', 'End'].includes(node.props?.align);
+}
+
+function tableContents(props) {
+  const headers = Array.isArray(props.headers) ? props.headers.map(String) : [];
+  const items = Array.isArray(props.items) ? props.items : ['Row 1', 'Row 2'];
+  const rows = Array.isArray(props.modelData) && props.modelData.length ? props.modelData : items;
+  return { headers, rows: rows.map(row => (Array.isArray(row) ? row : [row]).map(cell => String(cell ?? ''))) };
+}
+
 function cppStr(str) {
   const escaped = String(str ?? '')
     .replace(/\\/g, '\\\\')
@@ -1563,7 +1574,7 @@ export function generateCpp(doc, extraSchemas = {}) {
           lines.push(`${layVar}->addWidget(${cv});`);
         }
       });
-      if (node.type === 'HBox' && ['Start', 'Center', 'End'].includes(p.align)) lines.push(`${layVar}->addStretch(1);`);
+      if (hasRowStretch(node)) lines.push(`${layVar}->addStretch(1);`);
       return v;
     }
 
@@ -1979,6 +1990,10 @@ export function generateCpp(doc, extraSchemas = {}) {
         break;
       case 'Label': {
         lines.push(`auto* ${v} = new Label(${cppStr(p.text ?? 'Label')}, ${parentArg});`);
+        if (typeof p.wordWrap === 'boolean') {
+          lines.push(`${v}->setWordWrap(${p.wordWrap});`);
+          emitted.add('wordWrap');
+        }
         const typo = p.fluentTypography || p.typography;
         if (typo && typo !== 'Body') {
           headers.add('<FluentQt/Design.h>');
@@ -2037,6 +2052,8 @@ export function generateCpp(doc, extraSchemas = {}) {
         lines.push(`${v}->setTitle(${cppStr(p.title ?? 'Status')});`);
         lines.push(`${v}->setMessage(${cppStr(p.message ?? '')});`);
         if (p.severity && p.severity !== 'Informational') lines.push(`${v}->setSeverity(InfoBar::${p.severity});`);
+        if (typeof p.isClosable === 'boolean') lines.push(`${v}->setIsClosable(${p.isClosable});`);
+        emitted.add('isClosable');
         lines.push(`${v}->setIsOpen(true);`);
         emitted.add('title');
         emitted.add('message');
@@ -2136,17 +2153,16 @@ export function generateCpp(doc, extraSchemas = {}) {
         const mv = `${v}Model`;
         lines.push(`auto* ${v} = new DataGrid(${parentArg});`);
         lines.push(`auto* ${mv} = new QStandardItemModel(${v});`);
-        if (Array.isArray(p.headers) && p.headers.length) {
-          lines.push(`${mv}->setHorizontalHeaderLabels({${p.headers.map(cppStr).join(', ')}});`);
+        if (p.minHeight !== undefined) lines.push(`${v}->setMinimumHeight(${p.minHeight});`);
+        emitted.add('minHeight');
+        const table = tableContents(p);
+        if (table.headers.length) {
+          lines.push(`${mv}->setHorizontalHeaderLabels({${table.headers.map(cppStr).join(', ')}});`);
         }
-        if (Array.isArray(p.modelData) && p.modelData.length) {
-          headers.add('<QList>');
-          for (const row of p.modelData) {
-            const cells = (Array.isArray(row) ? row : [row]).map(c => `new QStandardItem(${cppStr(c ?? '')})`).join(', ');
-            lines.push(`${mv}->appendRow(QList<QStandardItem*>{${cells}});`);
-          }
-        } else {
-          for (const item of p.items || ['Row 1', 'Row 2']) lines.push(`${mv}->appendRow(new QStandardItem(${cppStr(item)}));`);
+        headers.add('<QList>');
+        for (const row of table.rows) {
+          const cells = row.map(cell => `new QStandardItem(${cppStr(cell)})`).join(', ');
+          lines.push(`${mv}->appendRow(QList<QStandardItem*>{${cells}});`);
         }
         lines.push(`${v}->setModel(${mv});`);
         emitted.add('headers');
@@ -2216,11 +2232,6 @@ export function generateCpp(doc, extraSchemas = {}) {
     return v;
   }
 
-  if (doc.design?.accentColor && HEX_COLOR_RE.test(doc.design.accentColor)) {
-    headers.add('<FluentQt/Foundation.h>');
-    headers.add('<QColor>');
-    lines.push(`fluent::UserTheme::applyAccentOverride(QColor(${cppStr(doc.design.accentColor)}));`);
-  }
   const rootVar = scanAndEmit(doc.root, 'root', null);
   const sortedHeaders = [...headers].sort();
   const usingLines = [...namespaces].sort().map((ns) => `using namespace ${ns};`);
@@ -2387,6 +2398,7 @@ export function generatePython(doc, extraSchemas = {}) {
           lines.push(`${layVar}.addWidget(${cv})`);
         }
       });
+      if (hasRowStretch(node)) lines.push(`${layVar}.addStretch(1)`);
       return v;
     }
 
@@ -2685,6 +2697,10 @@ export function generatePython(doc, extraSchemas = {}) {
         break;
       case 'ToggleSwitch':
         lines.push(`${v} = ToggleSwitch(${parentArg})`);
+        if (p.onContent) lines.push(`${v}.setOnContent(${pyStr(p.onContent)})`);
+        if (p.offContent) lines.push(`${v}.setOffContent(${pyStr(p.offContent)})`);
+        pyEmitted.add('onContent');
+        pyEmitted.add('offContent');
         if (p.isOn) lines.push(`${v}.setIsOn(True)`);
         pyEmitted.add('isOn');
         break;
@@ -2709,6 +2725,10 @@ export function generatePython(doc, extraSchemas = {}) {
         break;
       case 'Label': {
         lines.push(`${v} = Label(${pyStr(p.text ?? 'Label')}${parentComma})`);
+        if (typeof p.wordWrap === 'boolean') {
+          lines.push(`${v}.setWordWrap(${p.wordWrap ? 'True' : 'False'})`);
+          pyEmitted.add('wordWrap');
+        }
         const typo = p.fluentTypography || p.typography;
         if (typo && typo !== 'Body') {
           needFluent('fluentqt.design', 'Typography');
@@ -2753,22 +2773,35 @@ export function generatePython(doc, extraSchemas = {}) {
         }
         break;
       }
+      case 'InfoBadge':
+      case 'CodeBlock':
+      case 'TextEdit': {
+        lines.push(`${v} = ${meta.pyClass}(${parentArg})`);
+        // These template fields map directly to Qt properties even without a live inspector schema.
+        for (const field of meta.propSchema) {
+          const value = p[field.key];
+          if (pyEmitted.has(field.key) || !['number', 'string', 'boolean'].includes(typeof value)) continue;
+          const literal = typeof value === 'boolean' ? (value ? 'True' : 'False') : JSON.stringify(value);
+          lines.push(`${v}.setProperty(${pyStr(field.key)}, ${literal})`);
+          pyEmitted.add(field.key);
+        }
+        break;
+      }
       case 'DataGrid': {
         qtGui.add('QStandardItemModel');
         qtGui.add('QStandardItem');
         const mv = `${v}_model`;
         lines.push(`${v} = DataGrid(${parentArg})`);
         lines.push(`${mv} = QStandardItemModel(${v})`);
-        if (Array.isArray(p.headers) && p.headers.length) {
-          lines.push(`${mv}.setHorizontalHeaderLabels([${p.headers.map(pyStr).join(', ')}])`);
+        if (p.minHeight !== undefined) lines.push(`${v}.setMinimumHeight(${p.minHeight})`);
+        pyEmitted.add('minHeight');
+        const table = tableContents(p);
+        if (table.headers.length) {
+          lines.push(`${mv}.setHorizontalHeaderLabels([${table.headers.map(pyStr).join(', ')}])`);
         }
-        if (Array.isArray(p.modelData) && p.modelData.length) {
-          for (const row of p.modelData) {
-            const cells = (Array.isArray(row) ? row : [row]).map(c => `QStandardItem(${pyStr(c ?? '')})`).join(', ');
-            lines.push(`${mv}.appendRow([${cells}])`);
-          }
-        } else {
-          for (const item of p.items || ['Row 1', 'Row 2']) lines.push(`${mv}.appendRow(QStandardItem(${pyStr(item)}))`);
+        for (const row of table.rows) {
+          const cells = row.map(cell => `QStandardItem(${pyStr(cell)})`).join(', ');
+          lines.push(`${mv}.appendRow([${cells}])`);
         }
         lines.push(`${v}.setModel(${mv})`);
         pyEmitted.add('headers');
@@ -2832,7 +2865,11 @@ export function generatePython(doc, extraSchemas = {}) {
         if (node.type === 'InfoBar') {
           lines.push(`${v}.setTitle(${pyStr(p.title ?? 'Status')})`);
           lines.push(`${v}.setMessage(${pyStr(p.message ?? '')})`);
+          if (p.severity) lines.push(`${v}.setSeverity(InfoBar.InfoBarSeverity.${p.severity})`);
+          if (typeof p.isClosable === 'boolean') lines.push(`${v}.setIsClosable(${p.isClosable ? 'True' : 'False'})`);
           lines.push(`${v}.setIsOpen(True)`);
+          pyEmitted.add('severity');
+          pyEmitted.add('isClosable');
           pyEmitted.add('title');
           pyEmitted.add('message');
         }
@@ -2854,11 +2891,6 @@ export function generatePython(doc, extraSchemas = {}) {
     return v;
   }
 
-  if (doc.design?.accentColor && HEX_COLOR_RE.test(doc.design.accentColor)) {
-    needFluent('fluentqt.foundation', 'set_accent_color');
-    qtGui.add('QColor');
-    lines.push(`set_accent_color(QColor(${pyStr(doc.design.accentColor)}))`);
-  }
   const rootVar = emitNode(doc.root, 'root', 'parent');
   const importLines = [];
   if (qtCore.size) importLines.push(`from PySide6.QtCore import ${[...qtCore].sort().join(', ')}`);
@@ -2937,6 +2969,12 @@ export function generateDesignerUi(doc) {
       emitWidget(child, indent + '  ');
       lines.push(`${indent} </item>`);
     });
+    if (hasRowStretch(node)) {
+      lines.push(`${indent} <item><spacer name="stretch_${node.id}">`,
+        xmlProp('orientation', 'enum', 'Qt::Horizontal', indent + '  '),
+        `${indent}  <property name="sizeHint"><size><width>0</width><height>0</height></size></property>`,
+        `${indent} </spacer></item>`);
+    }
     lines.push(`${indent}</layout>`);
   }
 
@@ -2993,12 +3031,16 @@ export function generateDesignerUi(doc) {
     if (node.type === 'ComboBox') {
       for (const item of p.items || []) lines.push(`${indent} <item>${xmlProp('text','string',item,'')}</item>`);
     }
+    if (node.type === 'DataGrid') {
+      const data = xmlEscape(JSON.stringify(tableContents(p)));
+      lines.push(`${indent}<property name="formTable" stdset="0"><string notr="true">${data}</string></property>`);
+    }
     if (CHART_TYPES.has(node.type)) property('formSeries', [p.seriesName || 'Series', ...(p.values || [])], indent);
     if (['ListView','Stepper','Breadcrumb','Pivot','SelectorBar'].includes(node.type) && p.items) {
       property('formItems', p.items, indent);
     }
     for (const [key, value] of Object.entries(p)) {
-      if (['seriesName', 'values', 'items'].includes(key)) continue;
+      if (['seriesName', 'values', 'items', 'headers', 'modelData'].includes(key)) continue;
       if (key.startsWith('anchor') || ['padding','align','spacing','columns'].includes(key)) continue;
       if (isLayout && key !== 'minHeight') continue;
       if (isHost && ['title','posX','posY','posZ','rotX','rotY','rotZ','scale'].includes(key)) continue;

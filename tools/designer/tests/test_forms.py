@@ -1,4 +1,5 @@
 """Exercise actual form loading for every widget supplied by the installed bindings."""
+import json
 import os
 from pathlib import Path
 import sys
@@ -9,6 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from PySide6.QtCore import QBuffer, QCoreApplication, QEvent, QIODevice
+from PySide6.QtGui import QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QApplication, QDialogButtonBox, QWidget
 import shiboken6
@@ -56,6 +58,23 @@ class DesignerForms(unittest.TestCase):
                     self.assertEqual(control.property(entry["property"]), entry["value"])
                 self.assertTrue((DIRECTORY / "icons" / (name + ".png")).is_file())
                 self.dispose(form)
+
+    def test_grid_sample_model_is_reused_and_leaves_application_data_alone(self):
+        grid = self.widgets["FluentDataGrid"]()
+        data = json.dumps({"headers": ["端口", "说明"], "rows": [["A", "a & b"], ["B"]]})
+        grid.setProperty("formTable", data)
+        sample = grid.model()
+        self.assertEqual(sample.index(0, 1).data(), "a & b")
+        external = QStandardItemModel(1, 1)
+        grid.setModel(external)
+        grid.setProperty("formTable", '{"rows":[1]}')
+        self.assertIs(grid.model(), external)
+        self.assertEqual(grid.property("formTable"), data)
+        grid.setProperty("formTable", "")
+        self.assertIs(grid.model(), sample)
+        self.assertEqual(sample.rowCount(), 0)
+        self.assertEqual(external.rowCount(), 1)
+        self.dispose(grid)
 
     def test_overlay_anchors(self):
         for entry, widget_type in available_widgets():

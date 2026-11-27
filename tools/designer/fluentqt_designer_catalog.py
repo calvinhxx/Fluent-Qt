@@ -12,6 +12,8 @@ PAGE_METHODS = {"FluentField": "setEditor", "FluentExpander": "setContentWidget"
 
 
 def form_data_property(entry):
+    if entry["name"] == "FluentDataGrid":
+        return "formTable"
     if entry["group"] == "Charts":
         return "formSeries"
     if entry["name"] in {"FluentStepper", "FluentBreadcrumb", "FluentPivot", "FluentSelectorBar", "FluentListView"}:

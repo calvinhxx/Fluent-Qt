@@ -30,7 +30,33 @@ def __getattr__(name):
             getattr(self, PAGE_METHODS[name].replace("set", "setOwned", 1))(page)
         attributes["setFormPage"] = setFormPage
     data_property = form_data_property(entry)
-    if data_property:
+    if data_property == "formTable":
+        import json
+        from PySide6.QtCore import Property
+        from PySide6.QtGui import QStandardItem, QStandardItemModel
+
+        def set_table(self, data):
+            try:
+                table = json.loads(data) if data else {"headers": [], "rows": []}
+            except ValueError:
+                return
+            if not isinstance(table, dict) or not isinstance(table.get("rows"), list):
+                return
+            headers, rows = table.get("headers"), table["rows"]
+            if not all(isinstance(row, list) and all(isinstance(cell, str) for cell in row)
+                       for row in (headers, *rows)):
+                return
+            if not hasattr(self, "_form_model"):
+                self._form_model = QStandardItemModel(self)
+            self._form_model.clear()
+            self._form_model.setHorizontalHeaderLabels(headers)
+            for row in rows:
+                self._form_model.appendRow([QStandardItem(cell) for cell in row])
+            self.setModel(self._form_model)
+            self._form_table = data
+
+        attributes[data_property] = Property(str, lambda self: getattr(self, "_form_table", ""), set_table)
+    elif data_property:
         from PySide6.QtCore import QPointF, Property, QStringListModel
 
         def get_data(self):
