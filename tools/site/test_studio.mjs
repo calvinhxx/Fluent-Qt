@@ -1307,6 +1307,10 @@ test('generated Studio locale bundles cover all 7 extra languages cleanly', () =
       assert.ok(bundle.templates[tid].label.trim().length > 0);
       assert.ok(bundle.templates[tid].description.trim().length > 0);
     }
+    for (const key of ['qtTag', 'qtTagHint', 'pluginTag', 'pluginTagHint', 'schematicBanner.text', 'schematicBanner.localHint', 'schematicBanner.dismiss']) {
+      assert.equal(typeof bundle.ui?.[key], 'string', `${lang} missing ui key ${key}`);
+      assert.ok(bundle.ui[key].trim().length > 0, `${lang} empty ui key ${key}`);
+    }
     for (const label of schemaLabels) {
       assert.equal(typeof bundle.strings?.[label], 'string', `${lang} missing prop label ${label}`);
       assert.ok(bundle.strings[label].trim().length > 0, `${lang} empty prop label ${label}`);

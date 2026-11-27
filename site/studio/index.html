@@ -102,6 +102,13 @@
           <nav id="node-crumb" class="node-crumb" aria-label="Selected hierarchy"></nav>
         </div>
 
+        <div id="schematic-banner" class="schematic-banner" role="status" hidden>
+          <span class="schematic-banner-badge" aria-hidden="true">i</span>
+          <span id="schematic-banner-text" class="schematic-banner-text"></span>
+          <code id="schematic-banner-cmd" class="schematic-banner-cmd" hidden>python3 tools/site/serve.py</code>
+          <button id="btn-dismiss-schematic-banner" type="button" class="schematic-banner-close" aria-label="Dismiss notice">✕</button>
+        </div>
+
         <div id="stage-scroll">
           <div id="stage-frame" style="--stage-width: 860px;">
             <div id="artboard-bar" class="artboard-bar" role="toolbar" aria-label="Artboard design tokens">

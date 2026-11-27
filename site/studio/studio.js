@@ -99,6 +99,10 @@ const UI_STRINGS = {
     searchPlaceholder: '搜索 103 个组件与布局…',
     anchorSectionTitle: '锚点定位 (AnchorLayout)',
     containerTag: '容器',
+    qtTag: 'Qt',
+    qtTagHint: '标准 Qt 布局容器（非 uilib 控件）',
+    pluginTag: '插件',
+    pluginTagHint: '可选扩展目标 {target}（非核心 uilib）',
     pageRoot: '页面',
     inspectorRootTip: '点击画布控件自由拖拽定位或修改属性，也可从左侧拖入新控件。',
     clearCanvasBtn: '清空画布',
@@ -106,6 +110,9 @@ const UI_STRINGS = {
     wasmLoading: 'WASM 加载中…',
     wasmReady: 'WASM 就绪',
     schematicMode: '示意图模式',
+    'schematicBanner.text': '当前处于 HTML/CSS 示意图预览，部分控件仅为结构近似，非真实 C++ uilib 渲染。',
+    'schematicBanner.localHint': '本地启用真实 WASM：',
+    'schematicBanner.dismiss': '关闭提示',
     'loader.title': '正在启动 C++ Qt 实时画布',
     'loader.fetching': '正在加载 WebAssembly 运行时…',
     'loader.mounting': '正在初始化控件树与排版…',
@@ -258,6 +265,10 @@ const UI_STRINGS = {
     searchPlaceholder: 'Search 103 widgets & layouts…',
     anchorSectionTitle: 'Anchor Placement (AnchorLayout)',
     containerTag: 'Container',
+    qtTag: 'Qt',
+    qtTagHint: 'Standard Qt layout container (not a uilib widget)',
+    pluginTag: 'Plugin',
+    pluginTagHint: 'Optional extension target {target} (outside core uilib)',
     pageRoot: 'Page',
     inspectorRootTip: 'Click or drag widgets freely on canvas to edit layout and properties, or drag controls from the left.',
     clearCanvasBtn: 'Clear Canvas',
@@ -265,6 +276,9 @@ const UI_STRINGS = {
     wasmLoading: 'Starting WASM…',
     wasmReady: 'C++ WASM Ready',
     schematicMode: 'Schematic Preview',
+    'schematicBanner.text': 'HTML/CSS schematic preview active — some controls are simplified approximations rather than live C++ uilib widgets.',
+    'schematicBanner.localHint': 'Run live WASM locally:',
+    'schematicBanner.dismiss': 'Dismiss notice',
     'loader.title': 'Starting C++ Qt Live Canvas',
     'loader.fetching': 'Loading WebAssembly runtime…',
     'loader.mounting': 'Initializing widget tree & layout…',
@@ -363,6 +377,10 @@ const els = {
   layersPane: qs('#layers-pane'),
   runtimeBadge: qs('#runtime-badge'),
   btnRetryWasm: qs('#btn-retry-wasm'),
+  schematicBanner: qs('#schematic-banner'),
+  schematicBannerText: qs('#schematic-banner-text'),
+  schematicBannerCmd: qs('#schematic-banner-cmd'),
+  btnDismissSchematicBanner: qs('#btn-dismiss-schematic-banner'),
   eventPill: qs('#event-pill'),
   nodeCrumb: qs('#node-crumb'),
   stageFrame: qs('#stage-frame'),
@@ -503,6 +521,8 @@ const state = {
   wasmReady: false,
   wasmPainted: false,
   wasmFallback: false,
+  wasmShowRetry: false,
+  schematicBannerDismissed: false,
   wasmRequestId: 0,
   wasmLayout: null,
   wasmTimeoutId: null,
@@ -895,6 +915,7 @@ function applyLanguage() {
   });
   els.paletteSearch.placeholder = t('searchPlaceholder');
   updateAiModalModeUi();
+  updateSchematicBanner();
   if (els.navHome) els.navHome.href = requestedLang === 'en' ? '../' : `../${requestedLang === 'zh' ? 'zh-CN' : requestedLang}/`;
   if (els.btnUndo) els.btnUndo.title = t('undoTitle');
   if (els.btnRedo) els.btnRedo.title = t('redoTitle');
@@ -1028,12 +1049,26 @@ function syncViewportTier(width = state.viewportWidth) {
   els.canvasShell.dataset.viewportTier = resolveViewportTier(width);
 }
 
+const QT_LAYOUT_TYPES = new Set(['VBox', 'HBox', 'Grid']);
+const PLUGIN_TARGET_BY_TYPE = {
+  ParticleBackdrop: 'FluentQt::Particles',
+  SpatialView: 'FluentQt::Spatial',
+  SpatialItem: 'FluentQt::Spatial',
+  QmlView: 'FluentQt::QmlBridge',
+};
+
 function createPaletteItemCard(meta) {
   const card = document.createElement('div');
   card.className = 'palette-item';
   card.dataset.type = meta.type;
   card.dataset.container = meta.container ? '1' : '0';
-  card.title = `${meta.type} · ${meta.cppClass}`;
+  const isQtLayout = QT_LAYOUT_TYPES.has(meta.type);
+  const pluginTarget = PLUGIN_TARGET_BY_TYPE[meta.type];
+  card.title = isQtLayout
+    ? `${meta.type} · ${meta.cppClass} (${t('qtTagHint')})`
+    : (pluginTarget
+      ? `${meta.type} · ${meta.cppClass} (${t('pluginTagHint').replace('{target}', pluginTarget)})`
+      : `${meta.type} · ${meta.cppClass}`);
 
   const info = document.createElement('div');
   info.className = 'palette-item-info';
@@ -1041,6 +1076,20 @@ function createPaletteItemCard(meta) {
   nameSpan.className = 'palette-item-name';
   nameSpan.textContent = componentLabel(meta);
   info.appendChild(nameSpan);
+
+  if (isQtLayout) {
+    const srcTag = document.createElement('span');
+    srcTag.className = 'palette-item-tag is-source-qt';
+    srcTag.textContent = t('qtTag');
+    srcTag.title = t('qtTagHint');
+    info.appendChild(srcTag);
+  } else if (pluginTarget) {
+    const srcTag = document.createElement('span');
+    srcTag.className = 'palette-item-tag is-source-plugin';
+    srcTag.textContent = t('pluginTag');
+    srcTag.title = t('pluginTagHint').replace('{target}', pluginTarget);
+    info.appendChild(srcTag);
+  }
 
   if (meta.container) {
     const tagSpan = document.createElement('span');
@@ -4494,16 +4543,39 @@ function syncPatchToWasm(nodeId, patch, doc = currentDoc(), { preview = false } 
   });
 }
 
+function updateSchematicBanner() {
+  if (!els.schematicBanner) return;
+  const show = Boolean(state.wasmFallback && !state.schematicBannerDismissed);
+  els.schematicBanner.hidden = !show;
+  if (!show) return;
+  const prefix = t('schematicBanner.text');
+  if (els.schematicBannerText) {
+    els.schematicBannerText.textContent = state.wasmShowRetry
+      ? `${prefix} ${t('schematicBanner.localHint')}`
+      : prefix;
+  }
+  if (els.schematicBannerCmd) {
+    els.schematicBannerCmd.hidden = !state.wasmShowRetry;
+  }
+  if (els.btnDismissSchematicBanner) {
+    const dismissLabel = t('schematicBanner.dismiss');
+    els.btnDismissSchematicBanner.title = dismissLabel;
+    els.btnDismissSchematicBanner.setAttribute('aria-label', dismissLabel);
+  }
+}
+
 function updateRuntimeBadge() {
   if (state.wasmReady && state.wasmPainted) {
+    state.wasmShowRetry = false;
     els.runtimeBadge.dataset.state = 'wasm';
     els.runtimeBadge.textContent = t('wasmReady');
     els.btnRetryWasm.hidden = true;
   } else if (state.wasmFallback) {
     els.runtimeBadge.dataset.state = 'schematic';
     els.runtimeBadge.textContent = t('schematicMode');
-    els.btnRetryWasm.hidden = false;
+    els.btnRetryWasm.hidden = !state.wasmShowRetry;
   } else {
+    state.wasmShowRetry = false;
     els.runtimeBadge.dataset.state = 'loading';
     els.runtimeBadge.textContent = t('wasmLoading');
     if (els.wasmLoaderStage) {
@@ -4511,6 +4583,7 @@ function updateRuntimeBadge() {
     }
     els.btnRetryWasm.hidden = true;
   }
+  updateSchematicBanner();
 }
 
 function revealWasmStage() {
@@ -4532,10 +4605,10 @@ function activateFallback(showRetry = true) {
   state.wasmReady = false;
   state.wasmPainted = false;
   state.wasmFallback = true;
+  state.wasmShowRetry = Boolean(showRetry);
   els.canvasShell.classList.remove('is-wasm-loading', 'is-wasm-ready');
   els.canvasShell.classList.add('is-static-only');
   updateRuntimeBadge();
-  els.btnRetryWasm.hidden = !showRetry;
   requestAnimationFrame(syncOverlay);
   maybeShowFirstVisitIntro();
 }
@@ -4822,7 +4895,14 @@ els.btnClearSearch?.addEventListener('click', () => {
   els.paletteSearch.focus();
   renderPalette();
 });
-els.btnRetryWasm.addEventListener('click', () => initWasmStage());
+els.btnRetryWasm.addEventListener('click', () => {
+  state.schematicBannerDismissed = false;
+  initWasmStage();
+});
+els.btnDismissSchematicBanner?.addEventListener('click', () => {
+  state.schematicBannerDismissed = true;
+  updateSchematicBanner();
+});
 
 els.btnCode.addEventListener('click', () => {
   if (state.introCardVisible) dismissIntroCard({ remember: true });
