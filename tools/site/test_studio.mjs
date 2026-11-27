@@ -957,10 +957,10 @@ test('studio-ai static system prompt maximizes cache hit rate, rescues stray bra
   assert.match(pyOut, /setImage\(\w+\.read\(\)\)/);
   assert.ok(cppOut.includes('viewBox=\\"0 0 120 80\\"'));
   assert.ok(pyOut.includes('viewBox=\\"0 0 120 80\\"'));
-  assert.match(cppOut, /fluent::UserTheme::applyAccentOverride\(QColor\(QStringLiteral\("#8764B8"\)\)\)/);
+  assert.doesNotMatch(cppOut, /applyAccentOverride/);
   assert.match(cppOut, /setIconGlyph\(Typography::Icons::Camera\)/);
   assert.match(cppOut, /setHorizontalHeaderLabels\(\{QStringLiteral\("Node"\), QStringLiteral\("Status"\)\}\)/);
-  assert.match(pyOut, /set_accent_color\(QColor\("#8764B8"\)\)/);
+  assert.doesNotMatch(pyOut, /set_accent_color/);
   assert.match(pyOut, /setIconGlyph\(Typography\.Icons\.Camera\)/);
   assert.match(pyOut, /setHorizontalHeaderLabels\(\["Node", "Status"\]\)/);
 

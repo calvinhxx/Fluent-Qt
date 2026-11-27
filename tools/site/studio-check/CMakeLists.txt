@@ -23,7 +23,7 @@ foreach(template IN LISTS templates)
     target_link_libraries(${target} PRIVATE studio_check_main)
     add_dependencies(studio_exports ${target})
     string(JSON child_count LENGTH "${documents}" "${name}" children)
-    add_test(NAME ${target} COMMAND ${target} ${child_count})
+    add_test(NAME ${target} COMMAND ${target} ${child_count} ${name})
     set_tests_properties(${target} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     if(name STREQUAL "aligned-row")
         # The stretch must not satisfy a document that expects one more child widget.

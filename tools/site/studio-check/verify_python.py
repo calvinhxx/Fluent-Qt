@@ -10,8 +10,11 @@ import subprocess
 import sys
 import tempfile
 
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QWidget
 from fluentqt import initialize_resources
+from fluentqt.collections import DataGrid
+from fluentqt.foundation import accent_color, set_accent_color
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("directory", type=Path)
@@ -24,16 +27,25 @@ initialize_resources()
 sys.path.insert(0, str(args.designer_tools.resolve()))
 from compile_ui import compile_form
 
+host = QWidget()
+host.show()
+host_accent = QColor("#AA3366")
+set_accent_color(host_accent)
 for name in names:
     generated = compile_form(directory / (name + ".ui"))
     namespace = {}
     exec(compile(generated, name + "_ui.py", "exec"), namespace)
     form = QWidget()
     namespace["Ui_StudioPage"]().setupUi(form)
-    page = runpy.run_path(str(directory / (name + ".py")))["create_studio_page"]()
+    page = runpy.run_path(str(directory / (name + ".py")))["create_studio_page"](host)
     page.show()
     app.processEvents()
-    assert page.isVisible(), name
+    assert page.isVisible() and accent_color() == host_accent, name
+    if name == "device-monitor":
+        for widget in (form, page):
+            model = widget.findChild(DataGrid).model()
+            assert model is not None and (model.rowCount(), model.columnCount()) == (4, 4), name
+            assert model.index(0, 0).data() == "plc-edge-01", name
     page.close()
     print("Python verified", name, flush=True)
 

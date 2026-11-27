@@ -44,6 +44,18 @@ def verify(form, root):
                 assert (center - widget.rect().center()).manhattanLength() <= 4, (child["id"], center, widget.rect())
             inspect(child, control)
         props = node.get("props", {})
+        if kind == "DataGrid":
+            from PySide6.QtCore import Qt
+
+            data = props.get("modelData") or [[item] for item in props.get("items", ["Row 1", "Row 2"])]
+            headers = props.get("headers", [])
+            model = widget.model()
+            assert model is not None and model.rowCount() == len(data), node["id"]
+            assert model.columnCount() == max([len(headers), *(len(row) for row in data)]), node["id"]
+            assert [model.headerData(i, Qt.Orientation.Horizontal) for i in range(len(headers))] == headers
+            for i, row in enumerate(data):
+                assert [model.index(i, j).data() for j in range(len(row))] == row, node["id"]
+            assert saved.find(f'.//widget[@name="{node["id"]}"]/property[@name="formTable"]') is not None
         if kind in ("LineChart", "BarChart", "ListView"):
             assert widget.model() and widget.model().rowCount() == len(props.get("values", props.get("items"))), node["id"]
         if kind in ("Breadcrumb", "Stepper"):

@@ -36,7 +36,13 @@ def main():
         if name in PAGE_METHODS:
             header.append(f"    Q_INVOKABLE void setFormPage(QWidget* page) {{ {PAGE_METHODS[name]}(page, fluent::WidgetOwnership::Owned); }}")
         prop = form_data_property(widget)
-        if prop:
+        if prop == "formTable":
+            header.extend(["    Q_PROPERTY(QString formTable READ formTable WRITE setFormTable)",
+                           "    QString formTable() const { return m_formTable; }",
+                           "    void setFormTable(const QString& data) {",
+                           "        if (fluentqt_designer::setFormTable(this, data)) m_formTable = data;",
+                           "    }", "private:", "    QString m_formTable;"])
+        elif prop:
             method = "set" + prop[0].upper() + prop[1:]
             apply = "setNavigationItems" if name in ("FluentStepper", "FluentSelectorBar", "FluentPivot") else method
             header.extend([f"    Q_PROPERTY(QStringList {prop} READ {prop} WRITE {method})",

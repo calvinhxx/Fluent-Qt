@@ -12,8 +12,9 @@ With all modules installed, the two designers cover the Gallery's 99 entries: 95
 
 The 84 embeddable controls use their normal form classes. Use `FluentCard` for child controls and layouts. Field accepts one editor, and Expander and ScrollView accept a content widget.
 Studio form exports use these slots and standard Qt grid and box layouts.
-List and chart form properties store sample data with the form, so the editor
-can display it before an application supplies its model.
+List, chart and DataGrid form properties store sample data with the form. A DataGrid
+uses its own sample model for the column headers and rows until the application
+supplies its model. Exported pages inherit the host theme and accent.
 
 Eleven entries have a `Button` suffix because the button supplies a trigger and anchor for a real FluentQt surface. Edit the button caption with `text`. In form preview, click it to try the component.
 
