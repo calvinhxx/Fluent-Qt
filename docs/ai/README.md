@@ -11,6 +11,7 @@ to create, integrate, redesign, or fix a C++ or PySide6 interface.
 
 | Task | Start here |
 |---|---|
+| Evaluate FluentQt or migrate an existing Qt Widgets / PySide6 app | [Choosing and migrating to FluentQt](choosing-fluentqt.md) |
 | Build a new app or add a GUI to an existing project | [Integration guide](add-gui-to-project.md), then the Skill's new-interface workflow |
 | Fix an existing application | The Skill's existing-interface workflow and the owning code/tests |
 | Generate a page layout in Page Studio | [Connect a Worker or use OpenAI directly](../../tools/site/studio-ai-worker/README.md#connect-to-page-studio) |

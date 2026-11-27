@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../../docs/README.md) › [AI-assisted development](../../docs/ai/README.md) › Workflow
 
-[Contents](../../docs/SUMMARY.md) · [AI-assisted development index](../../docs/ai/README.md) · [Add a FluentQt GUI to a project →](../../docs/ai/add-gui-to-project.md)
+[← Choosing and migrating to FluentQt](../../docs/ai/choosing-fluentqt.md) · [Contents](../../docs/SUMMARY.md) · [AI-assisted development index](../../docs/ai/README.md) · [Add a FluentQt GUI to a project →](../../docs/ai/add-gui-to-project.md)
 <!-- docs-nav:top:end -->
 
 ## Environment doctor
@@ -116,5 +116,5 @@ measure completion rate and time-to-first-window instead of estimating them.
 
 <!-- docs-nav:bottom:start -->
 ---
-[Contents](../../docs/SUMMARY.md) · [AI-assisted development index](../../docs/ai/README.md) · [Add a FluentQt GUI to a project →](../../docs/ai/add-gui-to-project.md)
+[← Choosing and migrating to FluentQt](../../docs/ai/choosing-fluentqt.md) · [Contents](../../docs/SUMMARY.md) · [AI-assisted development index](../../docs/ai/README.md) · [Add a FluentQt GUI to a project →](../../docs/ai/add-gui-to-project.md)
 <!-- docs-nav:bottom:end -->

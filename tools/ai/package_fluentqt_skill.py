@@ -142,6 +142,7 @@ def packaged_onboarding_readme(contents: str) -> str:
         "../../docs/README.md": "../../SKILL.md",
         "../../docs/ai/README.md": "../../SKILL.md",
         "../../docs/SUMMARY.md": "../../SKILL.md#choose-the-task",
+        "../../docs/ai/choosing-fluentqt.md": "../../SKILL.md#choose-the-task",
         "../../docs/ai/add-gui-to-project.md": (
             "../../references/project-architecture.md#choose-the-integration-boundary"
         ),

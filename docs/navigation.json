@@ -10,6 +10,7 @@
         {
           "title": "Workflow",
           "pages": [
+            "ai/choosing-fluentqt.md",
             "../tools/onboarding/README.md",
             "ai/add-gui-to-project.md"
           ]
