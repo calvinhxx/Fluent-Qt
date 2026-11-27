@@ -10,6 +10,16 @@ WIDGETS = json.loads((DIRECTORY / "widgets.json").read_text(encoding="utf-8"))
 PAGE_METHODS = {"FluentField": "setEditor", "FluentExpander": "setContentWidget",
                 "FluentScrollView": "setContentWidget"}
 
+PROPERTY_TOOLTIPS = {
+    "FluentTextEdit": {
+        "autoResizeEnabled": (
+            "By default, the editor adjusts its height to fit the text. "
+            "Uncheck to let the parent layout set its height.\n"
+            "默认按文本内容调整高度。要让编辑框随父布局拉伸，请取消勾选。"
+        ),
+    },
+}
+
 
 def form_data_property(entry):
     if entry["name"] == "FluentDataGrid":
@@ -31,8 +41,14 @@ def widget_xml(entry):
     if "property" in entry:
         prop = ET.SubElement(widget, "property", name=entry["property"])
         ET.SubElement(prop, "string").text = entry["value"]
-    if entry["name"] in PAGE_METHODS:
+    tooltips = PROPERTY_TOOLTIPS.get(entry["name"], {})
+    if entry["name"] in PAGE_METHODS or tooltips:
         custom = ET.SubElement(ET.SubElement(root, "customwidgets"), "customwidget")
         ET.SubElement(custom, "class").text = entry["name"]
-        ET.SubElement(custom, "addpagemethod").text = "setFormPage"
-    return ET.tostring(root, encoding="unicode")
+        if entry["name"] in PAGE_METHODS:
+            ET.SubElement(custom, "addpagemethod").text = "setFormPage"
+        if tooltips:
+            specs = ET.SubElement(custom, "propertyspecifications")
+            for prop_name, text in tooltips.items():
+                ET.SubElement(specs, "tooltip", name=prop_name).text = text
+    return ET.tostring(root, encoding="us-ascii").decode("ascii")
