@@ -67,6 +67,8 @@ if(FLUENT_QT_INTEGRATION_MODE STREQUAL "INSTALLED")
     add_library(fluentqt_direct_include OBJECT DirectIncludeProbe.cpp)
     target_include_directories(fluentqt_direct_include PRIVATE "${_sdk_include_root}")
     target_compile_features(fluentqt_direct_include PRIVATE cxx_std_17)
+    # This target reads the public UTF-8 headers without FluentQt's usage requirements.
+    target_compile_options(fluentqt_direct_include PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
     if(TARGET Qt6::Widgets)
         target_link_libraries(fluentqt_direct_include PRIVATE Qt6::Widgets)
     else()

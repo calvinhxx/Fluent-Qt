@@ -16,6 +16,8 @@ and execution character sets. This lets consumers read the public headers on
 Windows installations with a legacy system code page. A target that supplies
 its own character-set flags can set `QT_NO_UTF8_SOURCE` to `ON` and specify
 UTF-8 source decoding itself.
+When compiling installed headers directly with MSVC and the Qt 5 SDK, pass
+`/utf-8` to the compilation that includes them.
 
 ## First-use setup
 
@@ -253,6 +255,9 @@ Widgets library from a released Fluent-Qt source archive. To create
 `fluent-qt/1.12.3` in your local Conan cache, run the following from this
 checkout with Conan 2, CMake and a C++17 compiler. Run `conan profile detect`
 first if you have no default profile.
+The 1.12.3 recipe includes the vcpkg port's public-header fix so an application
+can include `<FluentQt/FluentQt.h>` with just the SDK's `include` directory
+and the Qt headers on its include path.
 
 ```sh
 conan create packaging/conan --version=1.12.3 --build=missing
