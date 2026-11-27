@@ -109,6 +109,14 @@ def run_wasm_checks(page, base_url: str, output_dir: Path) -> None:
         raise RuntimeError(f"Expected 13 category groups by default, got {page.locator('.palette-cat').count()}")
     if page.locator(".palette-cat[open]").count() != 1 or page.locator('.palette-cat[open][data-category-id="layout"]').count() != 1:
         raise RuntimeError("Expected only the first category ('layout') open by default")
+    if page.locator("#schematic-banner").is_visible():
+        raise RuntimeError("Expected #schematic-banner to remain hidden when WASM is ready")
+    if page.locator('.palette-item[data-type="VBox"] .palette-item-tag.is-source-qt').count() != 1:
+        raise RuntimeError("Expected Qt source badge on VBox palette item")
+    if page.locator('.palette-item[data-type="SpatialView"] .palette-item-tag.is-source-plugin').count() != 1:
+        raise RuntimeError("Expected Plugin source badge on SpatialView palette item")
+    if page.locator('.palette-item[data-type="Button"] .is-source-qt, .palette-item[data-type="Button"] .is-source-plugin').count() != 0:
+        raise RuntimeError("Core uilib Button must not carry Qt/Plugin source badge")
 
     def assert_button_centered(stage_label: str, timeout: int = 8000) -> None:
         try:
@@ -1001,6 +1009,39 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     if page.locator("#btn-code").inner_text().strip() != "匯出程式碼":
         raise RuntimeError(f"Expected zh-TW Export Code label, got {page.locator('#btn-code').inner_text()!r}")
 
+    # Verify palette source badges, dismissible schematic banner, and upgraded Fluent schematic controls
+    if page.locator('.palette-item[data-type="VBox"] .palette-item-tag.is-source-qt').count() != 1:
+        raise RuntimeError("Expected Qt source badge on VBox in schematic mode")
+    if page.locator('.palette-item[data-type="SpatialView"] .palette-item-tag.is-source-plugin').count() != 1:
+        raise RuntimeError("Expected Plugin source badge on SpatialView in schematic mode")
+    if page.locator('.palette-item[data-type="DatePicker"] .is-source-qt, .palette-item[data-type="DatePicker"] .is-source-plugin').count() != 0:
+        raise RuntimeError("Core uilib DatePicker must not carry Qt/Plugin source badge")
+
+    page.wait_for_selector("#schematic-banner:not([hidden])", timeout=5000)
+    if page.locator("#schematic-banner-cmd").is_visible():
+        raise RuntimeError("Expected local serve command hint hidden when ?renderer=schematic was explicitly requested")
+    page.locator("#btn-dismiss-schematic-banner").click()
+    page.wait_for_function("() => document.querySelector('#schematic-banner')?.hidden", timeout=5000)
+
+
+def verify_missing_wasm_fallback_banner(browser, base_url: str) -> None:
+    """When WASM is unavailable without ?renderer=schematic, the banner surfaces the local serve.py hint."""
+    page = browser.new_page(viewport={"width": 1440, "height": 900})
+    page.add_init_script("localStorage.setItem('fluent-qt-studio-intro-v1', 'seen');")
+    page_errors: list[str] = []
+    page.on("pageerror", lambda err: page_errors.append(f"pageerror: {err}"))
+    try:
+        page.goto(base_url + "studio/?lang=zh", wait_until="domcontentloaded")
+        page.wait_for_selector('#runtime-badge[data-state="schematic"]', timeout=10000)
+        page.wait_for_selector("#schematic-banner:not([hidden])", timeout=5000)
+        page.wait_for_selector("#schematic-banner-cmd:not([hidden])", timeout=5000)
+        if "serve.py" not in page.locator("#schematic-banner-cmd").inner_text():
+            raise RuntimeError("Expected #schematic-banner-cmd to mention serve.py")
+        if page_errors:
+            raise RuntimeError(f"Missing-WASM fallback page errors: {page_errors}")
+    finally:
+        page.close()
+
 
 def verify_locale_startup(browser, base_url):
     page = browser.new_page()
@@ -1070,6 +1111,7 @@ def main() -> int:
         else:
             verify_locale_startup(browser, url)
             verify_platform_shortcuts(browser, url)
+            verify_missing_wasm_fallback_banner(browser, url)
             run_schematic_checks(page, url, args.output)
 
         browser.close()
