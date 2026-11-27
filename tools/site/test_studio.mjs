@@ -815,7 +815,8 @@ test('studio-ai generateStudioPageWithAi stays honest without config, retries cu
   });
   assert.equal(limitRes.ok, false);
   assert.equal(limitRes.rateLimited, true);
-  assert.match(limitRes.error, /Daily free quota/);
+  assert.equal(limitRes.errorCode, 'quotaReached');
+  assert.match(limitRes.error, /今日免费额度/);
 });
 
 test('studio-ai routes OpenAI Responses, Chat Completions, keyless Ollama, and formats SDK API errors', async () => {
@@ -1184,11 +1185,16 @@ test('Worker iteration includes the current document and refinement changes only
   updated.root.children[0].props.text = 'Confirm';
   updated.root.children.pop();
   let userMessage;
+  let quotaCode = '';
   const fetchImpl = (_url, init) => worker.fetch(new Request('https://worker.example', {
     ...init, headers: { ...init.headers, Origin: 'https://studio.example' },
   }), {
     ALLOWED_ORIGINS: 'https://studio.example',
-    STUDIO_QUOTA: { idFromName: id => id, get: () => ({ fetch: () => new Response('') }) },
+    STUDIO_QUOTA: { idFromName: id => id, get: () => ({
+      fetch: () => quotaCode
+        ? new Response('Quota unavailable', { status: 429, headers: { 'X-Studio-Error': quotaCode } })
+        : new Response(''),
+    }) },
     AI: { run: async (_model, { messages }) => {
       userMessage = messages[1].content;
       return { response: JSON.stringify(updated) };
@@ -1196,6 +1202,17 @@ test('Worker iteration includes the current document and refinement changes only
   });
   const options = { currentDoc: original, prompt: 'Rename the button', lang: 'en',
     config: { provider: 'auto', workerUrl: 'https://worker.example' }, fetchImpl };
+  for (const lang of ['en', 'zh', 'ja', 'zh-TW', 'ko', 'de', 'ru', 'es', 'fr']) {
+    const result = await generateStudioPageWithAi({ ...options, lang });
+    assert.equal(result.ok, true);
+    assert.ok(userMessage.includes(`(lang=${lang})`));
+  }
+  for (quotaCode of ['quotaReached', 'quotaHourly', 'quotaMinute']) {
+    const result = await generateStudioPageWithAi({ ...options, lang: 'ja' });
+    assert.equal(result.rateLimited, true);
+    assert.equal(result.errorCode, quotaCode);
+  }
+  quotaCode = '';
   const iteration = await generateStudioPageWithAi({ ...options, mode: 'iterate' });
   assert.ok(iteration.ok, iteration.error);
   assert.match(userMessage, /Original heading/);
@@ -1242,19 +1259,20 @@ test('gateway quota survives a new instance and keeps rolling windows across UTC
   let now = Date.UTC(2026, 0, 1, 23, 59, 30);
   t.mock.method(Date, 'now', () => now);
   let quota = new StudioQuota({ storage }, limits);
-  const admit = async (ip) => (await quota.fetch(new Request('https://quota.internal/admit', {
-    method: 'POST', body: ip,
-  }))).status;
+  const admit = async (ip) => {
+    const response = await quota.fetch(new Request('https://quota.internal/admit', { method: 'POST', body: ip }));
+    return response.headers.get('X-Studio-Error') || response.status;
+  };
   assert.equal(await admit('a'), 200);
   assert.equal(await admit('b'), 200);
   quota = new StudioQuota({ storage }, limits);
-  assert.equal(await admit('c'), 429);
+  assert.equal(await admit('c'), 'quotaReached');
   now += 30_000;
-  assert.equal(await admit('a'), 429);
+  assert.equal(await admit('a'), 'quotaMinute');
   now += 30_000;
   assert.equal(await admit('a'), 200);
   now += 60_000;
-  assert.equal(await admit('a'), 429);
+  assert.equal(await admit('a'), 'quotaHourly');
   assert.equal(await admit('c'), 200);
 });
 

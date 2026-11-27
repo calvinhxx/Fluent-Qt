@@ -1,3 +1,4 @@
+import { normalizeStudioLang, quotaMessages } from '../../../site/studio/studio-locale.mjs';
 import { buildAiMessages } from '../../../site/studio/studio-ai-prompt.mjs';
 import { findParent, validateDocument } from '../../../site/studio/studio-core.mjs';
 
@@ -59,13 +60,14 @@ export class StudioQuota {
                count(*) FILTER (WHERE ip = ? AND stamp > ?) AS hourly,
                count(*) FILTER (WHERE ip = ? AND stamp > ?) AS minute
           FROM requests`, today, ip, hour, ip, now - 60_000);
-      if (counts.daily >= this.daily) return 'Daily free quota reached.';
-      if (counts.hourly >= this.hourly) return 'Hourly free quota reached for your IP.';
-      if (counts.minute >= this.minute) return 'Too many requests per minute.';
+      if (counts.daily >= this.daily) return 'quotaReached';
+      if (counts.hourly >= this.hourly) return 'quotaHourly';
+      if (counts.minute >= this.minute) return 'quotaMinute';
       sql.exec('INSERT INTO requests VALUES (?, ?)', now, ip);
       return '';
     });
-    return new Response(reason, { status: reason ? 429 : 200 });
+    if (!reason) return new Response(null);
+    return new Response(quotaMessages[reason].en, { status: 429, headers: { 'X-Studio-Error': reason } });
   }
 }
 
@@ -182,7 +184,7 @@ export default {
       return jsonResponse({ ok: false, error: 'Prompt must be 1 to 1200 characters.' }, 400, allowedOrigin);
     }
     const mode = body.mode === 'replace' ? 'create' : (body.mode ?? 'create');
-    const lang = body?.lang === 'en' ? 'en' : 'zh';
+    const lang = normalizeStudioLang(body.lang) || 'zh';
     const currentDoc = body?.currentDoc && typeof body.currentDoc === 'object' ? body.currentDoc : null;
     if (currentDoc && JSON.stringify(currentDoc).length > 40_000) {
       return jsonResponse({ ok: false, error: 'currentDoc exceeds 40 KB limit' }, 413, allowedOrigin);
@@ -200,7 +202,9 @@ export default {
       const quota = env.STUDIO_QUOTA.get(env.STUDIO_QUOTA.idFromName('global'));
       const result = await quota.fetch('https://quota.internal/admit', { method: 'POST', body: ip });
       if (!result.ok) {
-        return jsonResponse({ ok: false, error: await result.text() }, result.status, allowedOrigin);
+        const errorCode = result.headers.get('X-Studio-Error');
+        return jsonResponse({ ok: false, error: await result.text(), ...(errorCode && { errorCode }) },
+          result.status, allowedOrigin);
       }
     } catch {
       return jsonResponse({ ok: false, error: 'Free quota service unavailable.' }, 503, allowedOrigin);

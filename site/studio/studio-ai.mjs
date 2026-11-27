@@ -1,3 +1,4 @@
+import { quotaMessages } from './studio-locale.mjs';
 import { isSafeStudioSvg, isStudioPhotoUrl } from './studio-media.mjs';
 import { AI_STYLE_PRESETS, buildAiMessages, PROMPT_CACHE_KEY } from './studio-ai-prompt.mjs';
 export { AI_STYLE_PRESETS, buildAiMessages, buildCatalogSummary, PROMPT_CACHE_KEY } from './studio-ai-prompt.mjs';
@@ -774,13 +775,13 @@ export async function generateStudioPageWithAi({
 } = {}) {
   const cleanPrompt = String(prompt || '').trim();
   if (!cleanPrompt) {
-    return { ok: false, error: lang === 'zh' ? '请先输入你想生成的页面描述。' : 'Please enter a page description first.' };
+    return { ok: false, errorCode: 'emptyPrompt', error: lang === 'zh' ? '请先输入你想生成的页面描述。' : 'Please enter a page description first.' };
   }
 
   const canRefine = mode === 'refine' && currentDoc?.root && targetNodeId
     && targetNodeId !== currentDoc.root.id && Boolean(findNode(currentDoc.root, targetNodeId));
   if (mode === 'refine' && !canRefine) {
-    return { ok: false, error: lang === 'zh' ? '请先选中要调整的控件。' : 'Select a component to refine.' };
+    return { ok: false, errorCode: 'selectToRefine', error: lang === 'zh' ? '请先选中要调整的控件。' : 'Select a component to refine.' };
   }
   const effectiveMode = canRefine ? 'refine' : (mode === 'iterate' && currentDoc?.root ? 'iterate' : 'create');
   const presetObj = AI_STYLE_PRESETS[stylePreset] || AI_STYLE_PRESETS.auto;
@@ -806,14 +807,14 @@ export async function generateStudioPageWithAi({
     const apiKey = String(config.apiKey || '').trim();
     const origin = providerOrigin(baseUrl);
     if (!origin || !model) {
-      return { ok: false, needsConfig: true, error: lang === 'zh' ? '请填写 HTTPS 服务地址（本机可用 HTTP）与模型名称。' : 'Enter an HTTPS endpoint (HTTP for localhost) and model.' };
+      return { ok: false, needsConfig: true, errorCode: 'endpointAndModel', error: lang === 'zh' ? '请填写 HTTPS 服务地址（本机可用 HTTP）与模型名称。' : 'Enter an HTTPS endpoint (HTTP for localhost) and model.' };
     }
     const isLocalHost = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(origin).hostname);
     if (apiKey && config.keyOrigin !== undefined && config.keyOrigin !== origin) {
-      return { ok: false, needsConfig: true, error: lang === 'zh' ? '请为当前服务重新输入密钥。' : 'Enter a key for this endpoint.' };
+      return { ok: false, needsConfig: true, errorCode: 'reenterKey', error: lang === 'zh' ? '请为当前服务重新输入密钥。' : 'Enter a key for this endpoint.' };
     }
     if (!apiKey && !isLocalHost) {
-      return { ok: false, needsConfig: true, error: lang === 'zh' ? '请填写 API Key（本地 Ollama 可留空）。' : 'Please enter an API Key (optional for localhost Ollama).' };
+      return { ok: false, needsConfig: true, errorCode: 'apiKeyRequired', error: lang === 'zh' ? '请填写 API Key（本地 Ollama 可留空）。' : 'Please enter an API Key (optional for localhost Ollama).' };
     }
     if (typeof fetchImpl !== 'function') {
       return { ok: false, error: 'Fetch API unavailable.' };
@@ -850,6 +851,7 @@ export async function generateStudioPageWithAi({
             ok: false,
             truncated: true,
             usage: totalUsage,
+            errorCode: 'truncatedSkipped',
             error: lang === 'zh'
               ? '模型输出在 JSON 闭合前被截断（已跳过自动重试以避免重复扣费）。请简化描述或检查模型输出上限。'
               : 'Model output was truncated before closing JSON (skipped costly auto-retry). Try a shorter description or check the model output limit.',
@@ -879,6 +881,7 @@ export async function generateStudioPageWithAi({
               ok: false,
               truncated: true,
               usage: totalUsage,
+              errorCode: 'truncated',
               error: lang === 'zh'
                 ? '模型输出在 JSON 闭合前被截断。请简化描述或检查模型输出上限。'
                 : 'Model output was truncated before closing JSON. Try a shorter description or check the model output limit.',
@@ -890,7 +893,7 @@ export async function generateStudioPageWithAi({
       return { ...parsed, mode: effectiveMode, source: 'custom', model, usage: totalUsage };
     } catch (err) {
       if (err?.name === 'AbortError' && signal?.aborted) {
-        return { ok: false, canceled: true, error: lang === 'zh' ? '已取消生成' : 'Generation canceled' };
+        return { ok: false, canceled: true, errorCode: 'canceled', error: lang === 'zh' ? '已取消生成' : 'Generation canceled' };
       }
       return { ok: false, error: formatSdkError(err) };
     } finally {
@@ -903,6 +906,7 @@ export async function generateStudioPageWithAi({
     return {
       ok: false,
       needsConfig: true,
+      errorCode: 'configureProvider',
       error: lang === 'zh'
         ? '请先在下方「AI 配置」中填写自定义 API Key / Ollama 或免费 Worker 地址。'
         : 'Configure a custom API key / Ollama or free Worker URL in AI Config below.',
@@ -930,13 +934,17 @@ export async function generateStudioPageWithAi({
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
-      return {
-        ok: false,
-        rateLimited: res.status === 429,
-        error: data?.error || (res.status === 429
-          ? (lang === 'zh' ? '今日免费云端体验额度已用完，请切换「自定义 API」填写自己的 Key 或 Ollama。' : 'Free cloud quota reached; switch to Custom API to use your own key or Ollama.')
-          : `Worker HTTP ${res.status}`),
-      };
+      if (res.status === 429) {
+        // Older Workers only returned the English quota reason.
+        const code = Object.hasOwn(quotaMessages, data?.errorCode) ? data.errorCode
+          : Object.keys(quotaMessages).find(key => quotaMessages[key].en === data?.error)
+            || (!data?.error && 'quotaLimited');
+        if (code) {
+          return { ok: false, rateLimited: true, errorCode: code,
+            error: quotaMessages[code][lang] || quotaMessages[code].en };
+        }
+      }
+      return { ok: false, rateLimited: res.status === 429, error: data?.error || `Worker HTTP ${res.status}` };
     }
     const payload = data?.document ?? data?.content ?? data;
     const parsed = parseOutput(payload);
@@ -951,7 +959,7 @@ export async function generateStudioPageWithAi({
     };
   } catch (err) {
     if (err?.name === 'AbortError' && signal?.aborted) {
-      return { ok: false, canceled: true, error: lang === 'zh' ? '已取消生成' : 'Generation canceled' };
+      return { ok: false, canceled: true, errorCode: 'canceled', error: lang === 'zh' ? '已取消生成' : 'Generation canceled' };
     }
     return { ok: false, error: err?.message || String(err) };
   } finally {
