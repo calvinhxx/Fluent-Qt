@@ -2688,12 +2688,78 @@ function textElement(tag, value) {
   return element;
 }
 
+// Calendar cells have no per-node handlers. Reuse the month's markup across identical previews.
+let schematicMonth;
+function calendarPreview(props) {
+  const today = new Date();
+  const selected = typeof props.selectedDate === 'string'
+    ? new Date(props.selectedDate.slice(0, 10) + 'T12:00:00') : today;
+  const date = Number.isNaN(selected.getTime()) ? today : selected;
+  const locale = document.documentElement.lang;
+  const key = [locale, date.toDateString(), today.toDateString(), props.firstDayOfWeek].join('|');
+  if (schematicMonth?.key !== key) {
+    const calendar = document.createElement('div');
+    calendar.className = 'sch-calendar';
+    const hd = textElement('div', new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date));
+    hd.className = 'sch-calendar-hd';
+    const dow = document.createElement('div');
+    dow.className = 'sch-calendar-dow';
+    const weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const explicit = weekdays.indexOf(props.firstDayOfWeek);
+    const region = new Intl.Locale(locale);
+    const first = explicit >= 0 ? explicit : (region.getWeekInfo?.().firstDay ?? region.weekInfo?.firstDay ?? 7) % 7;
+    const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+    for (let i = 0; i < 7; ++i) dow.appendChild(textElement('span', weekday.format(new Date(2023, 0, 1 + first + i))));
+    const grid = document.createElement('div');
+    grid.className = 'sch-calendar-grid';
+    const cursor = new Date(date.getFullYear(), date.getMonth(), 1, 12);
+    cursor.setDate(1 - (cursor.getDay() - first + 7) % 7);
+    do {
+      const cell = textElement('span', String(cursor.getDate()));
+      cell.className = 'sch-calendar-day';
+      cell.classList.toggle('is-out', cursor.getMonth() !== date.getMonth());
+      cell.classList.toggle('is-today', cursor.toDateString() === date.toDateString());
+      grid.appendChild(cell);
+      cursor.setDate(cursor.getDate() + 1);
+    } while (cursor.getMonth() === date.getMonth() || cursor.getDay() !== first);
+    calendar.append(hd, dow, grid);
+    schematicMonth = { key, calendar };
+  }
+  const copy = schematicMonth.calendar.cloneNode(true);
+  copy.classList.toggle('is-disabled', props.enabled === false);
+  return copy;
+}
+
 function renderSchematicNode(node, { interactive = true } = {}) {
   const p = node.props || {};
   const wrap = document.createElement('div');
   wrap.className = 'sch-node';
   wrap.dataset.schId = node.id;
 
+  function temporalInput(type, value, event, label) {
+    const input = document.createElement('input');
+    input.type = type;
+    input.lang = document.documentElement.lang;
+    input.className = 'sch-temporal-input';
+    input.setAttribute('aria-label', label);
+    input.disabled = p.enabled === false;
+    if (type !== 'date') input.step = 'any';
+    const raw = value || '';
+    const rangeEndpoint = node.type === 'DateTimeRangePicker';
+    // Browser datetime-local inputs have no zone field; keep a document's original offset on edits.
+    const zone = rangeEndpoint ? raw.match(/T.*?(Z|[+-]\d{2}:\d{2})$/)?.[1] || '' : '';
+    input.value = type === 'date' ? raw.slice(0, 10) : zone ? raw.slice(0, -zone.length) : raw;
+    if (interactive) input.addEventListener('change', () => {
+      if (!input.validity.valid) return;
+      let selected = input.value;
+      if (selected && rangeEndpoint) {
+        if (type === 'date') selected += 'T00:00:00';
+        selected += zone;
+      }
+      fireSchematicEvent(node.id, event, selected);
+    });
+    return input;
+  }
   const renderChildrenInto = (containerEl) => {
     const children = node.children || [];
     if (!children.length) {
@@ -3013,21 +3079,7 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       return wrap;
     }
     case 'CalendarView': {
-      const cal = document.createElement('div');
-      cal.className = 'sch-calendar';
-      const hd = document.createElement('div');
-      hd.className = 'sch-calendar-hd';
-      hd.innerHTML = '<span>Nov 2026</span><span>‹ ›</span>';
-      const grid = document.createElement('div');
-      grid.className = 'sch-calendar-grid';
-      for (let d = 1; d <= 14; d++) {
-        const cell = document.createElement('span');
-        cell.className = `sch-calendar-day${d === 9 ? ' is-today' : ''}`;
-        cell.textContent = String(d);
-        grid.appendChild(cell);
-      }
-      cal.append(hd, grid);
-      wrap.appendChild(cal);
+      wrap.appendChild(calendarPreview(p));
       return wrap;
     }
     case 'RatingControl': {
@@ -3081,12 +3133,44 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       wrap.appendChild(lbl);
       return wrap;
     }
+    case 'DatePicker':
+    case 'TimePicker':
+    case 'CalendarDatePicker': {
+      const time = node.type === 'TimePicker';
+      const input = temporalInput(time ? 'time' : 'date', time ? p.time : p.date,
+        time ? 'timeChanged' : 'dateChanged', p.header || p.placeholderText || componentLabel(STUDIO_CATALOG[node.type]));
+      if (p.header) wrap.appendChild(textElement('span', p.header));
+      if (node.type === 'CalendarDatePicker' && p.placeholderText) {
+        const hint = textElement('span', p.placeholderText);
+        hint.className = 'sch-field-label';
+        hint.hidden = Boolean(input.value);
+        input.addEventListener('input', () => { hint.hidden = Boolean(input.value); });
+        wrap.appendChild(hint);
+      }
+      wrap.appendChild(input);
+      return wrap;
+    }
+    case 'DateTimeRangePicker': {
+      const range = document.createElement('div');
+      range.className = 'sch-date-range';
+      const withTime = p.timeEnabled !== false;
+      const inputType = withTime ? 'datetime-local' : 'date';
+      const start = temporalInput(inputType, p.startDateTime, 'startDateTimeChanged',
+        p.startLabelText || localizedText({en: 'Start', zh: '开始'}));
+      const end = temporalInput(inputType, p.endDateTime, 'endDateTimeChanged',
+        p.endLabelText || localizedText({en: 'End', zh: '结束'}));
+      const limits = () => { start.max = end.value; end.min = start.value; };
+      start.addEventListener('input', limits);
+      end.addEventListener('input', limits);
+      limits();
+      range.append(start, textElement('span', '–'), end);
+      wrap.appendChild(range);
+      return wrap;
+    }
     case 'LineEdit':
     case 'PasswordBox':
     case 'NumberBox':
-    case 'AutoSuggestBox':
-    case 'DatePicker':
-    case 'TimePicker': {
+    case 'AutoSuggestBox': {
       if (p.header) {
         const hd = document.createElement('div');
         hd.className = 'sch-field-label';
@@ -3104,10 +3188,6 @@ function renderSchematicNode(node, { interactive = true } = {}) {
         input.min = String(p.minimum ?? 0);
         input.max = String(p.maximum ?? 100);
         input.value = String(p.value ?? 1);
-      } else if (node.type === 'DatePicker') {
-        input.type = 'date';
-      } else if (node.type === 'TimePicker') {
-        input.type = 'time';
       } else {
         input.type = 'text';
         input.value = p.text || '';
@@ -3115,7 +3195,6 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       }
       input.addEventListener('change', () => {
         if (node.type === 'NumberBox') fireSchematicEvent(node.id, 'valueChanged', Number(input.value));
-        else if (node.type === 'DatePicker') fireSchematicEvent(node.id, 'dateChanged', input.value);
         else if (node.type === 'LineEdit' || node.type === 'AutoSuggestBox') fireSchematicEvent(node.id, 'textChanged', input.value);
         else fireSchematicEvent(node.id, 'changed', input.value);
       });

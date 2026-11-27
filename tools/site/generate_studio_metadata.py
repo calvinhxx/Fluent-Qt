@@ -19,6 +19,9 @@ def generate():
         fields[name] = {field["id"]: {key: field[key] for key in
                         ("type", "options", "nullable", "maximumLength", "maximumRows", "maximumItems")
                         if key in field} for field in spec["properties"]}
+        for field in spec["properties"]:
+            if field["type"] in ("date", "time", "datetime") and field.get("property", field["id"]) != field["id"]:
+                fields[name][field["id"]]["property"] = field["property"]
     scenes = {path.stem: "data:text/plain;charset=utf-8," + quote(path.read_text(), safe="")
               for path in (ROOT / "app/view/widgets/samples/qmlbridge").glob("*.qml")}
 

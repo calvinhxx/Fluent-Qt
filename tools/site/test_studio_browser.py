@@ -1025,6 +1025,11 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
 
     # Exercise actual date inputs and verify richer schematic controls.
     sch_upgrade_doc = {"schemaVersion": 1, "root": {"id": "root", "type": "VBox", "children": [
+        {"id": "dp", "type": "DatePicker"},
+        {"id": "tp", "type": "TimePicker"},
+        {"id": "cdp", "type": "CalendarDatePicker", "props": {"date": "2031-03-14"}},
+        {"id": "cv", "type": "CalendarView"},
+        {"id": "dtrp", "type": "DateTimeRangePicker", "props": {"startDateTime": "2031-03-10T08:00:00+08:00"}},
         {"id": "fdz", "type": "FileDropZone"},
         {"id": "spl", "type": "SplashScreen"},
         {"id": "trf", "type": "Transfer"},
@@ -1034,7 +1039,35 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     sch_token = base64.urlsafe_b64encode(json.dumps(sch_upgrade_doc).encode()).decode().rstrip("=")
     page.goto(base_url + "studio/?lang=zh&renderer=schematic#state=v1." + sch_token, wait_until="domcontentloaded")
     page.wait_for_selector('[data-sch-id="asb"] .sch-annotated-sb', timeout=10000)
+    page.locator("#mode-play").click()
+    date = page.locator('[data-sch-id="dp"] input[type=date]')
+    time = page.locator('[data-sch-id="tp"] input[type=time]')
+    calendar = page.locator('[data-sch-id="cdp"] input[type=date]')
+    assert not date.input_value() and not time.input_value()
+    calendar.click()
+    calendar.press("Escape")
+    assert calendar.input_value() == "2031-03-14"
+    assert page.locator("#btn-undo").is_disabled()
+    date.fill("2032-02-29")
+    time.fill("16:12")
+    calendar.fill("2031-04-05")
+    start, end = page.locator('[data-sch-id="dtrp"] input').all()
+    assert start.input_value() == "2031-03-10T08:00"
+    start.fill("2031-03-14T09:30")
+    end.fill("2031-03-18T11:15")
+    page.locator("#btn-code").click()
+    page.locator('[data-format="json"]').click()
+    values = {n["id"]: n.get("props", {}) for n in json.loads(page.locator("#code-output code").inner_text())["root"]["children"]}
+    assert values["dp"]["date"] == "2032-02-29" and values["tp"]["time"] == "16:12"
+    assert values["cdp"]["date"] == "2031-04-05"
+    assert values["dtrp"]["startDateTime"] == "2031-03-14T09:30+08:00"
+    assert values["dtrp"]["endDateTime"] == "2031-03-18T11:15"
+    page.locator("#btn-close-drawer").click()
+    for _ in range(3):
+        page.locator("#btn-undo").click()
+    assert calendar.input_value() == "2031-03-14"
     for sel in (
+        '[data-sch-id="cv"] .sch-calendar-dow',
         '[data-sch-id="fdz"] .sch-dropzone',
         '[data-sch-id="spl"] .sch-splash',
         '[data-sch-id="trf"] .sch-transfer',
@@ -1043,8 +1076,49 @@ def run_schematic_checks(page, base_url: str, output_dir: Path) -> None:
     ):
         if page.locator(sel).count() != 1:
             raise RuntimeError(f"Expected schematic selector {sel} to render")
+    cal_days = page.locator('[data-sch-id="cv"] .sch-calendar-day').count()
+    assert cal_days in (28, 35, 42) and page.locator('.sch-calendar-dow span').count() == 7
     output_dir.mkdir(parents=True, exist_ok=True)
     page.locator("#canvas-shell").screenshot(path=str(output_dir / "studio-schematic-upgraded-controls.png"))
+
+
+def verify_wasm_picker_values(page, base_url: str, output_dir: Path) -> None:
+    children = [
+        {"id": "empty_date", "type": "DatePicker"}, {"id": "empty_time", "type": "TimePicker"},
+        {"id": "date", "type": "DatePicker", "props": {"date": "2031-03-14"}},
+        {"id": "time", "type": "TimePicker", "props": {"time": "16:12"}},
+        {"id": "calendar", "type": "CalendarDatePicker", "props": {"date": "2031-03-14"}},
+        {"id": "range", "type": "DateTimeRangePicker",
+         "props": {"startDateTime": "2031-03-14T09:30", "endDateTime": "2031-03-18T11:15"}},
+        {"id": "sections", "type": "Accordion", "children": [
+            {"id": "notes", "type": "Label", "props": {"text": "Release Notes"}}]},
+        {"id": "rail", "type": "NavigationView", "props": {"items": [
+            "Home", "System telemetry, diagnostics and deployment history across workspaces"]}},
+    ]
+    doc = {"schemaVersion": 1, "root": {"id": "root", "type": "VBox", "children": children}}
+    token = base64.urlsafe_b64encode(json.dumps(doc).encode()).decode().rstrip("=")
+    page.goto(base_url + "studio/?lang=en#state=v1." + token, wait_until="domcontentloaded")
+    wait_wasm_settled(page)
+    page.evaluate("""() => {
+        window.pickerInspections = {};
+        window.addEventListener('message', ({data, source}) => {
+            if (source === document.querySelector('#wasm-stage').contentWindow && data?.state === 'studio-inspected')
+                window.pickerInspections[data.detail.nodeId] = data.detail.schema?.values;
+        });
+    }""")
+    page.locator("#tab-layers").click()
+    for node_id, key, expected in [
+        ("empty_date", "date", None), ("empty_time", "time", None),
+        ("calendar", "date", "2031-03-14"), ("date", "date", "2031-03-14"),
+        ("range", "startDateTime", "2031-03-14T09:30:00"), ("range", "endDateTime", "2031-03-18T11:15:00"),
+        ("time", "time", "16:12:00"),
+    ]:
+        page.locator(f'#outline-tree [data-node-id="{node_id}"]').click()
+        page.wait_for_function("id => Object.hasOwn(window.pickerInspections, id)", arg=node_id)
+        values = page.evaluate("id => window.pickerInspections[id]", node_id)
+        assert values[key] == expected, (node_id, values[key])
+    page.locator("#mode-play").click()
+    page.locator("#canvas-shell").screenshot(path=str(output_dir / "studio-wasm-pickers-and-navigation.png"))
 
 def verify_missing_wasm_fallback_banner(browser, base_url: str) -> None:
     """When WASM is unavailable without ?renderer=schematic, the banner surfaces the local serve.py hint."""
@@ -1130,6 +1204,7 @@ def main() -> int:
         if args.wasm:
             verify_loading_state(browser, url, args.output)
             run_wasm_checks(page, url, args.output)
+            verify_wasm_picker_values(page, url, args.output)
         else:
             verify_locale_startup(browser, url)
             verify_platform_shortcuts(browser, url)
