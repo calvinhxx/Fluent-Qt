@@ -123,6 +123,24 @@ class HomepageAssetTest(unittest.TestCase):
             for subpath in ('api/foundation/', 'api/button/', 'api/releases/', 'api/reference/motion-policy/'):
                 self.assertIn(f'{site.BASE_URL}{locale.url_prefix}{subpath}', locs)
 
+    def test_studio_urls_and_extra_locale_bundles_cover_all_nine_locales(self):
+        import studio_i18n
+
+        for locale in site.LOCALES:
+            with self.subTest(language=locale.key):
+                self.assertEqual(locale.studio_url, f'{locale.resource_prefix}studio/?lang={locale.key}')
+        studio_i18n.validate_studio_locales()
+        for lang in studio_i18n.EXTRA_LOCALE_KEYS:
+            with self.subTest(bundle=lang):
+                payload = json.loads(studio_i18n.studio_runtime_payload(lang))
+                self.assertEqual(
+                    set(payload),
+                    {'ui', 'categories', 'components', 'templates', 'options', 'strings', 'aiErrors'},
+                )
+                self.assertEqual(len(payload['categories']), 13)
+                self.assertEqual(len(payload['components']), 103)
+                self.assertEqual(len(payload['templates']), 8)
+
 
 if __name__ == '__main__':
     unittest.main()

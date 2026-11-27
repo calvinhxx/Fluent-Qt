@@ -42,8 +42,7 @@ class Locale:
 
     @property
     def studio_url(self) -> str:
-        lang = "zh" if self.key in ("zh", "zh-TW") else "en"
-        return f"{self.resource_prefix}studio/?lang={lang}"
+        return f"{self.resource_prefix}studio/?lang={self.key}"
 
     def canonical_url(self, base_url: str) -> str:
         return f"{base_url}{self.url_prefix}"

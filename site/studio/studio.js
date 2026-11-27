@@ -1,3 +1,4 @@
+import { normalizeStudioLang } from './studio-locale.mjs';
 import { isSafeStudioSvg, isStudioPhotoUrl } from './studio-media.mjs';
 import {
   ANCHOR_CHILD_SCHEMA,
@@ -65,7 +66,7 @@ const UI_STRINGS = {
     'ai.statusThinking': '模型正在构思桌面布局…',
     'ai.statusStreaming': '正在生成界面（已构思约 {widgets} 个组件）…',
     'ai.statusEmptyPrompt': '请先输入你想生成的页面描述。',
-    'ai.generatedToast': `已生成 {count} 个组件（{source}）· ${shortcuts.undo} 可撤销`,
+    'ai.generatedToast': '已生成 {count} 个组件（{source}）· {undo} 可撤销',
     'ai.modeCreate': '新建整页',
     'ai.modeIterate': '迭代当前页',
     'ai.modeRefine': '精修选中',
@@ -92,9 +93,9 @@ const UI_STRINGS = {
     'stage.retryWasm': '重试 WASM',
     'drawer.copy': '复制代码',
     'drawer.download': '下载文件',
-    undoTitle: `撤销 (${shortcuts.undo})`,
-    redoTitle: `重做 (${shortcuts.redo})`,
-    duplicateTitle: `复制选中节点 (${shortcuts.duplicate})`,
+    undoTitle: '撤销 ({undo})',
+    redoTitle: '重做 ({redo})',
+    duplicateTitle: '复制选中节点 ({duplicate})',
     searchPlaceholder: '搜索 103 个组件与布局…',
     anchorSectionTitle: '锚点定位 (AnchorLayout)',
     containerTag: '容器',
@@ -128,6 +129,11 @@ const UI_STRINGS = {
     notSet: '未设置',
     propertyCategories: '属性分类',
     checkableHint: '开启后变为开关按钮，通过下方“已选中”属性查看效果',
+    pageTemplate: '第 {page} 页',
+    aiTokens: '{in}入/{out}出',
+    aiCached: '{base} · 缓存 {rate}% · {tok}',
+    addWidget: '添加 {type}',
+    defaultGridHeaders: ['项目', '详情', '状态'],
     dragInto: '放入',
     dragMoveTo: '移动到',
     dragFreeAnchor: '自由定位',
@@ -136,19 +142,19 @@ const UI_STRINGS = {
     'intro.guideTitle': '使用引导',
     'intro.title': '欢迎使用 Fluent-Qt Studio',
     'intro.subtitle': '真实 C++ Qt Widgets 可视化工作台 · 拖拽组装、AI 生成、三端代码导出',
-    'intro.step1': `拖入 103 个真实 Qt 控件，或按 ${shortcuts.ai} 一句话生成整页`,
+    'intro.step1': '拖入 103 个真实 Qt 控件，或按 {ai} 一句话生成整页',
     'intro.step2': '画板独立切换明暗与主题色，切「试玩」直测真实交互',
     'intro.step3': '一键导出 C++17、PySide6 或共享 Qt Designer .ui',
     'intro.startTour': '开始 30 秒交互导览',
     'intro.tryAi': '✦ 试试 AI 生成',
     'intro.loadSample': '加载示例仪表盘',
-    'intro.sampleLoadedToast': `已加载监控仪表盘示例 · ${shortcuts.undo} 可返回初始画布`,
+    'intro.sampleLoadedToast': '已加载监控仪表盘示例 · {undo} 可返回初始画布',
     'tour.prev': '上一步',
     'tour.next': '下一步',
     'tour.done': '开始创作',
     'tour.step1Title': '103 个真实 C++ Fluent-Qt 控件',
     'tour.step1Desc': '从左侧分类搜索或直接拖拽任意布局、图表与控件到画布，所有渲染均由真实 Qt Widgets WebAssembly 驱动。',
-    'tour.step2Title': `一句话生成整页或局部精修 (${shortcuts.ai})`,
+    'tour.step2Title': '一句话生成整页或局部精修 ({ai})',
     'tour.step2Desc': '输入自然语言即可生成完整桌面布局，支持「新建整页」「迭代当前页」和选中控件后点 ✦ 局部精修。',
     'tour.step3Title': '独立画板调色与实时试玩',
     'tour.step3Desc': '在画板顶部零 Token 切换明暗与 6 组强调色（不影响外层网站主题），切到顶部「试玩」即可直接点击交互控件。',
@@ -219,7 +225,7 @@ const UI_STRINGS = {
     'ai.statusThinking': 'Thinking through desktop layout…',
     'ai.statusStreaming': 'Generating UI (~{widgets} widgets)…',
     'ai.statusEmptyPrompt': 'Enter a description of the page you want to create.',
-    'ai.generatedToast': `Generated {count} widgets ({source}) · ${shortcuts.undo} to undo`,
+    'ai.generatedToast': 'Generated {count} widgets ({source}) · {undo} to undo',
     'ai.modeCreate': 'New Page',
     'ai.modeIterate': 'Iterate Page',
     'ai.modeRefine': 'Refine Selected',
@@ -246,9 +252,9 @@ const UI_STRINGS = {
     'stage.retryWasm': 'Retry WASM',
     'drawer.copy': 'Copy',
     'drawer.download': 'Download',
-    undoTitle: `Undo (${shortcuts.undo})`,
-    redoTitle: `Redo (${shortcuts.redo})`,
-    duplicateTitle: `Duplicate selected node (${shortcuts.duplicate})`,
+    undoTitle: 'Undo ({undo})',
+    redoTitle: 'Redo ({redo})',
+    duplicateTitle: 'Duplicate selected node ({duplicate})',
     searchPlaceholder: 'Search 103 widgets & layouts…',
     anchorSectionTitle: 'Anchor Placement (AnchorLayout)',
     containerTag: 'Container',
@@ -282,6 +288,11 @@ const UI_STRINGS = {
     notSet: 'Not set',
     propertyCategories: 'Property categories',
     checkableHint: 'Enables toggle button behavior. Toggle "Checked" below to see the active state.',
+    pageTemplate: 'Page {page}',
+    aiTokens: '{in}in/{out}out',
+    aiCached: '{base} · {rate}% cached · {tok}',
+    addWidget: 'Add {type}',
+    defaultGridHeaders: ['Item', 'Details', 'Status'],
     dragInto: 'Drop into',
     dragMoveTo: 'Move to',
     dragFreeAnchor: 'Free anchor',
@@ -290,19 +301,19 @@ const UI_STRINGS = {
     'intro.guideTitle': 'Studio Guide',
     'intro.title': 'Welcome to Fluent-Qt Studio',
     'intro.subtitle': 'Real C++ Qt Widgets visual workbench · drag & drop, AI build, and 3-target code export',
-    'intro.step1': `Drag 103 real Qt widgets onto the stage, or press ${shortcuts.ai} to build with AI`,
+    'intro.step1': 'Drag 103 real Qt widgets onto the stage, or press {ai} to build with AI',
     'intro.step2': 'Switch isolated artboard themes & accents, or toggle Play for live interaction',
     'intro.step3': 'Export production C++17, PySide6, or shared Qt Designer .ui files',
     'intro.startTour': 'Start 30s Tour',
     'intro.tryAi': '✦ Try AI Build',
     'intro.loadSample': 'Load Sample Dashboard',
-    'intro.sampleLoadedToast': `Loaded Analytics Dashboard sample · ${shortcuts.undo} to undo`,
+    'intro.sampleLoadedToast': 'Loaded Analytics Dashboard sample · {undo} to undo',
     'tour.prev': 'Back',
     'tour.next': 'Next',
     'tour.done': 'Start Building',
     'tour.step1Title': '103 Real C++ Fluent-Qt Widgets',
     'tour.step1Desc': 'Search categories or drag any layout, chart, or widget onto the canvas — powered by real Qt Widgets in WebAssembly.',
-    'tour.step2Title': `Generate Pages or Refine Selection (${shortcuts.ai})`,
+    'tour.step2Title': 'Generate Pages or Refine Selection ({ai})',
     'tour.step2Desc': 'Describe any desktop UI to generate full layouts, iterate on the current page, or select a widget and click ✦ to refine just that part.',
     'tour.step3Title': 'Isolated Artboard & Live Play Mode',
     'tour.step3Desc': 'Switch artboard light/dark themes and 6 accent colors without changing the outer site theme, or toggle Play mode to interact live.',
@@ -322,6 +333,9 @@ const UI_STRINGS = {
       ElideLeft: 'Elide left', ElideRight: 'Elide right', ElideMiddle: 'Elide middle', ElideNone: 'No elide',
       VisibleOnPointerOver: 'On hover', FastTransformation: 'Fast', SmoothTransformation: 'Smooth',
       Raster: 'CPU raster', FlowingRibbons: 'Flowing ribbons', FloatingDots: 'Floating dots', Starfield: 'Starfield',
+      Stretch: 'Stretch', Start: 'Start', Center: 'Center', End: 'End',
+      TopLeft: 'Top left', TopCenter: 'Top center', TopRight: 'Top right', BottomLeft: 'Bottom left', BottomCenter: 'Bottom center', BottomRight: 'Bottom right',
+      TopBar: 'Top bar', BottomBar: 'Bottom bar', LeftDock: 'Left dock', RightDock: 'Right dock', Fill: 'Fill',
       Yes: 'Yes', No: 'No',
     },
   },
@@ -443,6 +457,19 @@ const els = {
 };
 
 const params = new URLSearchParams(window.location.search);
+const referrer = document.referrer ? new URL(document.referrer) : null;
+const siteReferrer = referrer?.origin === location.origin && !referrer.pathname.includes('/studio/');
+const refLocale = siteReferrer && referrer.pathname.split('/').map(normalizeStudioLang).find(Boolean);
+const requestedLang = normalizeStudioLang(params.get('lang'))
+  || (siteReferrer ? refLocale || 'en' : normalizeStudioLang(navigator.language)) || 'en';
+const wasmProbe = params.get('renderer') === 'schematic' ? null : probeWasm();
+let localeBundle = null;
+let displayLang = requestedLang;
+if (requestedLang !== 'en' && requestedLang !== 'zh') {
+  document.body.inert = true;
+  localeBundle = await loadLocaleBundle(requestedLang);
+  if (!localeBundle) displayLang = 'en';
+}
 const initialTemplate = Object.hasOwn(STUDIO_TEMPLATES, params.get('template'))
   ? params.get('template')
   : 'starter';
@@ -451,7 +478,8 @@ const decodedHashDoc = decodedHashResult?.ok ? decodedHashResult.document : null
 const initialDoc = decodedHashDoc || cloneDoc(STUDIO_TEMPLATES[initialTemplate].document);
 
 const state = {
-  lang: document.documentElement.dataset.lang === 'en' ? 'en' : 'zh',
+  lang: displayLang,
+  localeBundle,
   theme: document.documentElement.dataset.theme || 'light',
   canvasTheme: document.documentElement.dataset.theme || 'light',
   mode: 'edit',
@@ -502,15 +530,64 @@ const state = {
 const presetForSnapshot = new WeakMap();
 if (!decodedHashDoc) presetForSnapshot.set(state.history.current(), initialTemplate);
 
+async function loadLocaleBundle(lang) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch(`./locales/${lang}.json`, { signal: controller.signal });
+    if (response.ok) {
+      const bundle = await response.json();
+      if (bundle?.ui && bundle.components) return bundle;
+    }
+  } catch {
+    // Fall back to the built-in English UI when the bundle is unavailable.
+  } finally {
+    clearTimeout(timer);
+  }
+  return null;
+}
+
+function formatUiTemplate(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replaceAll('{ai}', shortcuts.ai)
+    .replaceAll('{undo}', shortcuts.undo)
+    .replaceAll('{redo}', shortcuts.redo)
+    .replaceAll('{duplicate}', shortcuts.duplicate);
+}
+
 function t(key) {
-  const dict = UI_STRINGS[state.lang] || UI_STRINGS.zh;
-  return dict[key] ?? key;
+  const bundleUi = state.localeBundle?.ui;
+  const dict = UI_STRINGS[state.lang] || UI_STRINGS.en;
+  const raw = bundleUi?.[key] ?? dict[key] ?? UI_STRINGS.en[key] ?? key;
+  return formatUiTemplate(raw);
 }
 
 function labelOf(obj) {
   if (!obj) return '';
-  if (typeof obj === 'string') return obj;
-  return obj[state.lang] || obj.en || obj.zh || '';
+  if (typeof obj === 'string') return state.localeBundle?.strings?.[obj] || obj;
+  if (obj[state.lang]) return obj[state.lang];
+  if (obj.en && state.localeBundle?.strings?.[obj.en]) return state.localeBundle.strings[obj.en];
+  return obj.en || obj.zh || '';
+}
+
+function categoryLabel(cat) {
+  return state.localeBundle?.categories?.[cat?.id] || labelOf(cat?.label);
+}
+
+function componentLabel(meta) {
+  if (!meta) return '';
+  return state.localeBundle?.components?.[meta.type] || labelOf(meta.label);
+}
+
+function templateLabel(tpl) {
+  if (!tpl) return '';
+  return state.localeBundle?.templates?.[tpl.id]?.label || labelOf(tpl.label);
+}
+
+function templateDescription(tpl) {
+  if (!tpl) return '';
+  return state.localeBundle?.templates?.[tpl.id]?.description || labelOf(tpl.description || tpl.label);
 }
 
 function currentDoc() {
@@ -530,7 +607,7 @@ function nodeHumanLabel(node) {
   if (!node) return '';
   if (node.id === 'root') return t('pageRoot');
   const meta = STUDIO_CATALOG[node.type];
-  return meta ? labelOf(meta.label) : node.type;
+  return meta ? componentLabel(meta) : node.type;
 }
 
 function nodeHintSnippet(node) {
@@ -811,14 +888,14 @@ function createFluentComboBox({
 
 function applyLanguage() {
   document.documentElement.dataset.lang = state.lang;
-  document.documentElement.lang = state.lang === 'en' ? 'en' : 'zh-CN';
+  document.documentElement.lang = state.lang === 'zh' ? 'zh-CN' : state.lang;
 
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
   els.paletteSearch.placeholder = t('searchPlaceholder');
   updateAiModalModeUi();
-  if (els.navHome) els.navHome.href = state.lang === 'zh' ? '../zh-CN/' : '../';
+  if (els.navHome) els.navHome.href = requestedLang === 'en' ? '../' : `../${requestedLang === 'zh' ? 'zh-CN' : requestedLang}/`;
   if (els.btnUndo) els.btnUndo.title = t('undoTitle');
   if (els.btnRedo) els.btnRedo.title = t('redoTitle');
   els.btnDuplicate.title = t('duplicateTitle');
@@ -831,12 +908,6 @@ function applyLanguage() {
     els.btnResetProps.title = t('resetProps');
     els.btnResetProps.setAttribute('aria-label', t('resetProps'));
   }
-  renderPalette();
-  renderBreadcrumbs();
-  renderOutline();
-  renderInspector();
-  updateRuntimeBadge();
-  if (state.tourOpen) renderTourStep();
 }
 
 function syncSelectionToWasm() {
@@ -968,7 +1039,7 @@ function createPaletteItemCard(meta) {
   info.className = 'palette-item-info';
   const nameSpan = document.createElement('span');
   nameSpan.className = 'palette-item-name';
-  nameSpan.textContent = labelOf(meta.label);
+  nameSpan.textContent = componentLabel(meta);
   info.appendChild(nameSpan);
 
   if (meta.container) {
@@ -982,8 +1053,9 @@ function createPaletteItemCard(meta) {
   addBtn.type = 'button';
   addBtn.className = 'palette-add-btn';
   addBtn.textContent = '+';
-  addBtn.title = `Add ${meta.type}`;
-  addBtn.setAttribute('aria-label', `Add ${meta.type}`);
+  const addLabel = t('addWidget').replace('{type}', meta.type);
+  addBtn.title = addLabel;
+  addBtn.setAttribute('aria-label', addLabel);
   addBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     quickInsertType(meta.type);
@@ -1027,6 +1099,7 @@ function renderPalette() {
         || meta.pyClass.toLowerCase().includes(query)
         || meta.label.zh.toLowerCase().includes(query)
         || meta.label.en.toLowerCase().includes(query)
+        || componentLabel(meta).toLowerCase().includes(query)
       );
     });
     if (!items.length) continue;
@@ -1057,7 +1130,7 @@ function renderPalette() {
     chev.innerHTML = '<path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M4.25 2.5L7.75 6l-3.5 3.5"/>';
     const titleSpan = document.createElement('span');
     titleSpan.className = 'palette-cat-label';
-    titleSpan.textContent = labelOf(cat.label);
+    titleSpan.textContent = categoryLabel(cat);
     lead.append(chev, titleSpan);
 
     const countSpan = document.createElement('span');
@@ -1282,24 +1355,30 @@ const STRUCTURAL_LAYOUT_KEYS = new Set(['spacing', 'padding', 'minHeight', 'colu
 
 function localizedText(value) {
   if (!value) return '';
-  if (typeof value === 'string') return value;
-  return value[state.lang] || value.en || value.zh || '';
+  if (typeof value === 'string') return state.localeBundle?.strings?.[value] || value;
+  if (value[state.lang]) return value[state.lang];
+  if (value.en && state.localeBundle?.strings?.[value.en]) return state.localeBundle.strings[value.en];
+  return value.en || value.zh || '';
 }
 
 function optionLabel(field, value) {
-  const dict = UI_STRINGS[state.lang] || UI_STRINGS.zh;
+  const dict = UI_STRINGS[state.lang] || UI_STRINGS.en;
   const raw = field?.optionLabels?.[value] ?? field?.valueLabels?.[String(value)];
   if (raw !== undefined) {
     const str = typeof raw === 'string' ? raw : localizedText(raw);
     if (str) return str;
   }
-  return dict.optionLabels?.[String(value)] || String(value ?? '');
+  const key = String(value ?? '');
+  return state.localeBundle?.options?.[key]
+    || dict.optionLabels?.[key]
+    || UI_STRINGS.en.optionLabels?.[key]
+    || key;
 }
 
 function choiceDisplayLabel(field, choice) {
   const raw = choice?.label;
   if (raw && typeof raw === 'object' && 'page' in raw) {
-    return state.lang === 'zh' ? `第 ${raw.page} 页` : `Page ${raw.page}`;
+    return t('pageTemplate').replace('{page}', String(raw.page));
   }
   if (raw && typeof raw === 'object') return localizedText(raw);
   return optionLabel(field, raw ?? choice?.value);
@@ -3488,9 +3567,9 @@ function renderSchematicNode(node, { interactive = true } = {}) {
       const rows = Array.isArray(p.modelData) && p.modelData.length > 0 ? p.modelData : defaultRows;
       const customHeaders = Array.isArray(p.headers) && p.headers.length > 0 ? p.headers.map((h) => String(h ?? '')) : null;
       const colCount = Math.max(1, customHeaders ? customHeaders.length : 0, ...rows.map((r) => (Array.isArray(r) ? r.length : 1)));
-      const defaultHeaders = state.lang === 'zh'
-        ? ['项目', '详情', '状态']
-        : ['Item', 'Details', 'Status'];
+      const defaultHeaders = state.localeBundle?.ui?.defaultGridHeaders
+        || UI_STRINGS[state.lang]?.defaultGridHeaders
+        || UI_STRINGS.en.defaultGridHeaders;
       const headerLabels = customHeaders || defaultHeaders;
       const thead = document.createElement('thead');
       const htr = document.createElement('tr');
@@ -4461,7 +4540,15 @@ function activateFallback(showRetry = true) {
   maybeShowFirstVisitIntro();
 }
 
-async function initWasmStage() {
+async function probeWasm() {
+  try {
+    return (await fetch('../gallery/fluent_qt_gallery.wasm', { method: 'HEAD' })).ok;
+  } catch {
+    return false;
+  }
+}
+
+async function initWasmStage(probe) {
   clearTimeout(state.wasmTimeoutId);
   clearTimeout(state.wasmRevealTimerId);
   state.wasmRevealTimerId = null;
@@ -4478,13 +4565,7 @@ async function initWasmStage() {
   els.canvasShell.classList.add('is-wasm-loading');
   updateRuntimeBadge();
 
-  try {
-    const probe = await fetch('../gallery/fluent_qt_gallery.wasm', { method: 'HEAD' });
-    if (!probe.ok) {
-      activateFallback(true);
-      return;
-    }
-  } catch (_) {
+  if (!await (probe ?? probeWasm())) {
     activateFallback(true);
     return;
   }
@@ -4987,7 +5068,7 @@ function renderTemplatesGrid() {
     head.className = 'template-card-head';
     const title = document.createElement('strong');
     title.className = 'template-card-title';
-    title.textContent = labelOf(tpl.label);
+    title.textContent = templateLabel(tpl);
     const badge = document.createElement('span');
     badge.className = 'template-card-swatch';
     const docTheme = tpl.document.design?.theme;
@@ -5003,14 +5084,14 @@ function renderTemplatesGrid() {
 
     const desc = document.createElement('span');
     desc.className = 'template-card-desc';
-    desc.textContent = labelOf(tpl.description || tpl.label);
+    desc.textContent = templateDescription(tpl);
 
     card.append(head, desc);
     card.addEventListener('click', () => {
       if (state.mode === 'play') setMode('edit');
       loadTemplate(tpl);
       closeTemplatesModal();
-      const msg = t('templates.loadedToast').replace('{undo}', shortcuts.undo).replace('{name}', labelOf(tpl.label));
+      const msg = t('templates.loadedToast').replace('{name}', templateLabel(tpl));
       showToast(msg);
       setEventPill(msg);
     });
@@ -5041,13 +5122,14 @@ function formatAiSourceLabel(result) {
   const u = result.usage;
   if (!u || !(u.inputTokens > 0)) return base;
   const fmtCount = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-  const tok = state.lang === 'zh'
-    ? `${fmtCount(u.inputTokens)}入/${fmtCount(u.outputTokens)}出`
-    : `${fmtCount(u.inputTokens)}in/${fmtCount(u.outputTokens)}out`;
+  const tok = t('aiTokens')
+    .replace('{in}', fmtCount(u.inputTokens))
+    .replace('{out}', fmtCount(u.outputTokens));
   if (u.cachedTokens > 0) {
-    return state.lang === 'zh'
-      ? `${base} · 缓存 ${u.cacheHitRate}% · ${tok}`
-      : `${base} · ${u.cacheHitRate}% cached · ${tok}`;
+    return t('aiCached')
+      .replace('{base}', base)
+      .replace('{rate}', String(u.cacheHitRate))
+      .replace('{tok}', tok);
   }
   return `${base} · ${tok}`;
 }
@@ -5427,7 +5509,7 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (els.templatesModal?.open) return;
+  if (els.templatesModal?.open || document.body.inert) return;
   if (state.tourOpen) {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -5541,6 +5623,8 @@ syncViewportTier(state.viewportWidth);
 setInspectorTab(state.inspectorTab);
 syncAiSettingsUi();
 applyLanguage();
-inheritTheme();
+renderPalette();
 renderAll();
-initWasmStage();
+document.documentElement.dataset.i18nReady = '1';
+document.body.inert = false;
+initWasmStage(wasmProbe);

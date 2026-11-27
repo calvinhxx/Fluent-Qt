@@ -77,6 +77,7 @@ def verify(folder: Path, commit: str) -> None:
         *(f"{loc.url_prefix}api/releases/index.html" for loc in LOCALES),
         *(f"{loc.url_prefix}api/roadmap/index.html" for loc in LOCALES),
         *(f"api/playground-i18n/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
+        *(f"studio/locales/{lang}.json" for lang in EXTRA_LOCALE_KEYS),
         "studio/index.html",
         "studio/studio.js",
         "studio/studio-core.mjs",
@@ -84,6 +85,7 @@ def verify(folder: Path, commit: str) -> None:
         "studio/studio-ai.mjs",
         "studio/studio-ai-prompt.mjs",
         "studio/studio-media.mjs",
+        "studio/studio-locale.mjs",
         "studio/studio-ai-sdk.mjs",
         "studio/studio.css",
         "assets/component-previews/manifest.json",
@@ -107,6 +109,7 @@ def stage(output: Path, commit: str, pages: set[str]) -> None:
     api_prefixes = tuple(f"{loc.url_prefix}api/" for loc in LOCALES)
     expected_images = {item["path"] for item in previews["images"]}
     expected_images.add("assets/component-previews/manifest.json")
+    expected_studio_locales = {f"studio/locales/{lang}.json" for lang in EXTRA_LOCALE_KEYS}
     with tempfile.TemporaryDirectory(prefix="site-stage-", dir=output.parent) as temporary:
         staged = Path(temporary) / "site"
         for path in source.rglob("*"):
@@ -121,6 +124,8 @@ def stage(output: Path, commit: str, pages: set[str]) -> None:
                 continue
             if ((relative.startswith(api_prefixes) and path.suffix == ".html")
                     or relative.startswith("api/playground-i18n/")) and relative not in pages:
+                continue
+            if relative.startswith("studio/locales/") and relative not in expected_studio_locales:
                 continue
             if relative.startswith("assets/component-previews/") and relative not in expected_images:
                 continue
