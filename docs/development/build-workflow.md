@@ -240,9 +240,11 @@ Gallery, tests, PySide6 and optional FluentQt modules are excluded.
    ```
 
 The toolchain installs the manifest dependencies during configuration. Use the
-same triplet for the application and its dependencies. On macOS, Qt's source
-dependencies use `autoconf`, `autoconf-archive`, `automake`, `libtool` and
-`pkg-config` as host tools.
+same triplet for the application and its dependencies. On Linux and macOS,
+Qt's source dependencies use `autoconf`, `autoconf-archive`, `automake`,
+`libtool` and `pkg-config` as host tools. On Linux the XCB backend also
+requires the X11, XCB and xkbcommon development packages. The
+[vcpkg port workflow](../../.github/workflows/vcpkg-port.yml) lists the Ubuntu packages.
 
 ## Build the Widgets library with Conan 2
 
