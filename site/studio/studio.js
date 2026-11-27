@@ -5193,7 +5193,10 @@ async function runAiGenerate(promptOverride = null) {
     });
     if (controller.signal.aborted || state.aiAbortController !== controller) return;
     if (!result.ok) {
-      setAiStatus(result.error || 'Failed to generate page.', result.needsConfig ? 'info' : 'error');
+      const errMsg = (result.errorCode && state.localeBundle?.aiErrors?.[result.errorCode])
+        || result.error
+        || 'Failed to generate page.';
+      setAiStatus(errMsg, result.needsConfig ? 'info' : 'error');
       if (result.needsConfig && els.aiSettingsDetails) {
         els.aiSettingsDetails.open = true;
       }
