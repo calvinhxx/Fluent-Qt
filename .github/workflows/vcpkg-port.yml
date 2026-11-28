@@ -6,10 +6,12 @@ on:
     paths:
       - 'ports/fluent-qt/**'
       - '.github/workflows/vcpkg-port.yml'
+      - 'scripts/release/vcpkg_port_cache.py'
   pull_request:
     paths:
       - 'ports/fluent-qt/**'
       - '.github/workflows/vcpkg-port.yml'
+      - 'scripts/release/vcpkg_port_cache.py'
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -41,12 +43,26 @@ jobs:
           - os: ubuntu-24.04
             triplet: x64-linux
     env:
+      CONSUMER_SOURCE: ${{ inputs.release_tag && '.released-consumer' || '.' }}
+      VCPKG_ROOT: ${{ github.workspace }}/.ci-vcpkg
       TRIPLET: ${{ matrix.triplet }}
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ inputs.release_tag || github.sha }}
+          persist-credentials: false
+
+      - name: Checkout the released consumer and dependency baseline
+        if: ${{ inputs.release_tag != '' }}
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: refs/tags/${{ inputs.release_tag }}
+          path: .released-consumer
+          sparse-checkout: |
+            /.github/integration/
+            /vcpkg.json
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Use the published vcpkg overlay
@@ -77,32 +93,70 @@ jobs:
             libxkbcommon-dev libxkbcommon-x11-dev xvfb xauth
 
       - name: Prepare consumer manifest
+        id: manifest
         shell: python
         run: |
           import json
           import os
           from pathlib import Path
+          import re
 
           Path(os.environ["VCPKG_DEFAULT_BINARY_CACHE"]).mkdir(exist_ok=True)
           app = Path(os.environ["RUNNER_TEMP"]) / "port-consumer"
           app.mkdir()
+          source_manifest = Path(os.environ["CONSUMER_SOURCE"]) / "vcpkg.json"
+          baseline = json.loads(source_manifest.read_text())["builtin-baseline"]
+          if not isinstance(baseline, str) or not re.fullmatch(r"[0-9a-f]{40}", baseline):
+              raise ValueError("Expected a pinned vcpkg baseline commit")
           manifest = {
-              "builtin-baseline": json.loads(Path("vcpkg.json").read_text())["builtin-baseline"],
+              "builtin-baseline": baseline,
               "dependencies": ["fluent-qt", {"name": "qtbase", "default-features": False}],
           }
           (app / "vcpkg.json").write_text(json.dumps(manifest), encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              print("baseline=" + baseline, file=output)
 
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - name: Checkout vcpkg at the port baseline
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          path: .vcpkg-binary-cache
-          key: port-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'ports/fluent-qt/**') }}
-          restore-keys: port-${{ matrix.triplet }}-
+          repository: microsoft/vcpkg
+          ref: ${{ steps.manifest.outputs.baseline }}
+          path: .ci-vcpkg
+          persist-credentials: false
+
+      - name: Bootstrap the pinned vcpkg tool
+        shell: pwsh
+        working-directory: .ci-vcpkg
+        run: |
+          if ($IsWindows) { ./bootstrap-vcpkg.bat -disableMetrics }
+          else { ./bootstrap-vcpkg.sh -disableMetrics }
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $env:VCPKG_ROOT >> $env:GITHUB_PATH
+
+      - name: Resolve dependency ABIs
+        id: deps
+        continue-on-error: true
+        shell: pwsh
+        working-directory: ${{ runner.temp }}/port-consumer
+        run: |
+          $plan = "$env:RUNNER_TEMP/port-packages.config"
+          vcpkg install "--triplet=$env:TRIPLET" "--overlay-ports=$env:GITHUB_WORKSPACE/ports" --enforce-port-checks --dry-run "--x-write-nuget-packages-config=$plan"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python "$env:GITHUB_WORKSPACE/scripts/release/vcpkg_port_cache.py" $plan
+
+      - name: Restore dependency binaries
+        id: restore
+        if: ${{ steps.deps.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.deps.outputs.archives }}
+          key: ${{ steps.deps.outputs.key }}
 
       - name: Install fluent-qt and Qt through vcpkg
         shell: pwsh
-        run: |
-          Set-Location "$env:RUNNER_TEMP/port-consumer"
-          vcpkg install "--triplet=$env:TRIPLET" "--overlay-ports=$env:GITHUB_WORKSPACE/ports" --enforce-port-checks
+        working-directory: ${{ runner.temp }}/port-consumer
+        run: vcpkg install "--triplet=$env:TRIPLET" "--overlay-ports=$env:GITHUB_WORKSPACE/ports" --enforce-port-checks
 
       - name: Configure the external consumer
         shell: pwsh
@@ -110,8 +164,8 @@ jobs:
           $installed = "$env:RUNNER_TEMP/port-consumer/vcpkg_installed"
           $build = "$env:RUNNER_TEMP/consumer-build"
           $generator = if ($IsWindows) { @('-G', 'Visual Studio 17 2022', '-A', 'x64') } else { @('-G', 'Ninja Multi-Config') }
-          cmake -S .github/integration -B $build @generator `
-            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+          cmake -S "$env:CONSUMER_SOURCE/.github/integration" -B $build @generator `
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
             "-DVCPKG_TARGET_TRIPLET=$env:TRIPLET" "-DVCPKG_INSTALLED_DIR=$installed" `
             -DVCPKG_MANIFEST_MODE=OFF -DFLUENT_QT_INTEGRATION_MODE=INSTALLED
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -143,3 +197,11 @@ jobs:
             }
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
           }
+
+      - name: Save reusable dependency binaries on main
+        if: ${{ github.ref == 'refs/heads/main' && steps.deps.outcome == 'success' && steps.restore.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.deps.outputs.archives }}
+          key: ${{ steps.deps.outputs.key }}

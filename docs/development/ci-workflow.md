@@ -77,6 +77,15 @@ review. Real desktop tests and host-bound pixel baselines remain separate.
 | [ci-wasm.yml](../../.github/workflows/ci-wasm.yml) | Browser toolchain, Hello World, Gallery, smoke tests, Pages payload | Workflow toolchain and smoke configuration |
 | [ci-site.yml](../../.github/workflows/ci-site.yml) | Native component captures, bilingual documents, API reference, website artifact | Gallery catalog and installed headers |
 
+The port consumer bootstraps vcpkg at the manifest baseline and asks it for the
+resolved dependency ABIs on the current runner. The cache contains only those
+archives. A new FluentQt version rebuilds the port and can reuse Qt when its ABI
+matches. Registry runs use the tagged consumer and baseline. They save dependencies
+on `main` so later releases and PRs can reuse them. Cache planning and transport
+failures fall back to a normal consumer build. To prewarm a cold cache, dispatch
+`vcpkg port` on `main`. Check vcpkg's restored package count in the install
+log to measure reuse.
+
 Compiler, SDK, package-manager, and platform steps belong in the owning module,
 not the orchestrator. The Wasm module explicitly fetches and verifies the
 pinned Qt accessibility sources before offline CMake configuration; its cache
