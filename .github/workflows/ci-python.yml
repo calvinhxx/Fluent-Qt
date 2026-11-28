@@ -74,7 +74,7 @@ jobs:
           esac
 
           release_matrix="$(
-            python3 .github/scripts/select-pyside-release-matrix.py
+            python3 .github/scripts/select-pyside-release-matrix.py --catalog bindings/pyside6/wheel-matrix.json
           )"
 
           echo "mode=$VALIDATION_MODE" >> "$GITHUB_OUTPUT"
@@ -120,8 +120,6 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
-          cache: pip
-          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install matching PySide6 and Shiboken6
         shell: bash
@@ -205,8 +203,6 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.10"
-          cache: pip
-          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install matching PySide6 and Shiboken6
         shell: bash
@@ -538,8 +534,6 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.10"
-          cache: pip
-          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt 6.2.4 SDK
         uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
@@ -918,8 +912,6 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
-          cache: pip
-          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       # The stable-ABI wheel builds once with CPython 3.11; these interpreters
       # only install and smoke-test it, so they leave PATH unchanged.
@@ -1276,8 +1268,6 @@ jobs:
         with:
           python-version: ${{ matrix.python_version }}
           architecture: ${{ matrix.python_arch }}
-          cache: pip
-          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       # The oldest supported CPython builds the stable-ABI wheel. Newer test
       # interpreters only install and smoke-test it, so PATH stays unchanged.

@@ -84,7 +84,8 @@ matches. Registry runs use the tagged consumer and baseline. They save dependenc
 on `main` so later releases and PRs can reuse them. Cache planning and transport
 failures fall back to a normal consumer build. To prewarm a cold cache, dispatch
 `vcpkg port` on `main`. Check vcpkg's restored package count in the install
-log to measure reuse.
+log to measure reuse. The Python jobs download wheels without persisting a
+second copy of their pip downloads in the repository Actions cache.
 
 Compiler, SDK, package-manager, and platform steps belong in the owning module,
 not the orchestrator. The Wasm module explicitly fetches and verifies the
