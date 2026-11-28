@@ -156,15 +156,15 @@ def submit(tag, overlay, dry_run):
     with tempfile.TemporaryDirectory() as directory:
         message = Path(directory) / "body.md"
         message.write_bytes(body.encode("utf-8"))
-        args = ("--repo", UPSTREAM, "--title", title, "--body-file", str(message))
+        endpoint = f"repos/{UPSTREAM}/pulls"
         if pr:
-            print(run("gh", "pr", "edit", str(pr["number"]), *args))
-            state = run("gh", "pr", "view", str(pr["number"]), "--repo", UPSTREAM,
-                        "--json", "state", "--jq", ".state")
-            if state != "OPEN":
-                raise RuntimeError(f"{pr['url']} closed during submission. Rerun the job against the current registry.")
+            request = ("--method", "PATCH", f"{endpoint}/{pr['number']}")
         else:
-            print(run("gh", "pr", "create", "--base", "master", "--head", f"calvinhxx:{branch}", *args))
+            request = ("--method", "POST", endpoint, "-f", "base=master", "-f", f"head=calvinhxx:{branch}")
+        response = json.loads(run("gh", "api", *request, "-f", f"title={title}", "-F", f"body=@{message}"))
+        if response["state"] != "open":
+            raise RuntimeError(f"{response['html_url']} closed during submission. Rerun against the current registry.")
+        print(response["html_url"])
 
 
 if __name__ == "__main__":
