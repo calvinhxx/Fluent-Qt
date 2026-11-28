@@ -28,6 +28,8 @@ DOCUMENTATION_ROOT_FILES = {
 }
 
 DESIGNER_CATALOG = "docs/ai/generated/fluentqt-ai-catalog.json"
+STARTER_MANIFEST = "tools/onboarding/starters/manifest.json"
+PACKAGE_RECIPE_PREFIXES = ("ports/fluent-qt/", "packaging/conan/")
 
 NON_DOCUMENTATION_PATHS = {
     DESIGNER_CATALOG,
@@ -83,7 +85,7 @@ PYSIDE_ONBOARDING_FILES = {
     "tools/onboarding/fluentqt",
     "tools/onboarding/fluentqt_create.py",
     "tools/onboarding/fluentqt_trial.py",
-    "tools/onboarding/starters/manifest.json",
+    STARTER_MANIFEST,
     "tools/onboarding/test_fluentqt_create.py",
     "tools/onboarding/test_fluentqt_trial.py",
 }
@@ -204,6 +206,7 @@ CPP_COMPONENT_PATH_PREFIXES = (
 )
 
 CPP_TEST_IRRELEVANT_PREFIXES = (
+    *PACKAGE_RECIPE_PREFIXES,
     ".agents/",
     ".github/ISSUE_TEMPLATE/",
     "bindings/",
@@ -394,7 +397,10 @@ def classify_changes(paths: list[str]) -> ChangeClassification:
     if not normalized:
         raise ValueError("No changed files were provided")
 
-    build_paths = [path for path in normalized if not is_documentation_path(path)]
+    build_paths = [
+        path for path in normalized
+        if not is_documentation_path(path) and not path.startswith(PACKAGE_RECIPE_PREFIXES)
+    ]
     return ChangeClassification(
         should_build=bool(build_paths),
         should_build_pyside=any(affects_pyside(path) for path in build_paths),
@@ -502,6 +508,29 @@ def push_changed_paths(
     return tuple(path for path in diff.stdout.split("\0") if path) or None
 
 
+def only_starter_tag_changed(before: str, after: str, cwd: Path | None) -> bool:
+    """Only narrow coverage when both committed manifests prove a release-tag-only edit."""
+    manifests = []
+    tags = []
+    for revision in (before, after):
+        blob = subprocess.run(["git", "show", f"{revision}:{STARTER_MANIFEST}"],
+                              cwd=cwd, capture_output=True)
+        if blob.returncode:
+            return False
+        try:
+            data = json.loads(blob.stdout)
+        except (UnicodeDecodeError, ValueError):
+            return False
+        if not isinstance(data, dict) or not isinstance(data.get("templates"), dict):
+            return False
+        tag = data.pop("cpp_ci_tag", None)
+        if not isinstance(tag, str) or not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
+            return False
+        tags.append(tag)
+        manifests.append(json.dumps(data, sort_keys=True))
+    return tags[0] != tags[1] and manifests[0] == manifests[1]
+
+
 def classify_push_event(
     event: object, cwd: Path | None = None
 ) -> tuple[ChangeClassification, CppTestSelection] | None:
@@ -515,6 +544,10 @@ def classify_push_event(
     paths = push_changed_paths(event, cwd)
     if paths is None:
         return None
+    if STARTER_MANIFEST in paths and only_starter_tag_changed(event["before"], event["after"], cwd):
+        paths = tuple(path for path in paths if path != STARTER_MANIFEST)
+        if not paths:
+            return ChangeClassification(False, False, True), CppTestSelection("none")
     return (
         replace(classify_changes(list(paths)), should_build_wasm=True),
         select_cpp_tests(list(paths)),

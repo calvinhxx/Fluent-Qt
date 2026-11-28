@@ -27,7 +27,7 @@ belong to [release governance](release-governance.md).
 [ci.yml](../../.github/workflows/ci.yml) and
 [classify_ci_changes.py](../../.github/scripts/classify_ci_changes.py) define
 the current triggers and path rules. The classifier must keep build lanes
-enabled when it cannot prove a change is documentation-only. The stable
+enabled for unknown inputs. The vcpkg and Conan recipes have dedicated consumer jobs on PRs and on `main`. The stable
 `CI Gate` check still runs when native builds are skipped.
 
 Release pull requests run the full tier before promotion. The representative
@@ -55,7 +55,10 @@ Gallery from one run, so these pushes always keep the WebAssembly lane. A new
 branch, rewritten history, an identical tree, or an unavailable previous tip
 runs the complete matrix. Classification does not re-check a failed earlier
 `main` run; the weekly schedule and the next release candidate still run the
-full matrix.
+full matrix. When only the starter manifest's `cpp_ci_tag` changes, CI compares
+both committed JSON documents before skipping native builds. Changes to the
+templates or an unreadable manifest still select native validation. Starter
+generation tests run in the source-contract job in both cases.
 
 `ci_fast` and `ci_full` are curated CTest subsets. `local_full` is the exhaustive
 non-manual host set; a full CI run is not an exhaustive local or native visual

@@ -2,7 +2,7 @@ name: Conan package
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main]
     paths:
       - 'packaging/conan/**'
       - '.github/workflows/conan-package.yml'

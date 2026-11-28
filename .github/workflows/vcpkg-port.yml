@@ -2,7 +2,7 @@ name: vcpkg port
 
 on:
   push:
-    branches: [main, 'release/**', 'ci/vcpkg-*']
+    branches: [main, 'ci/vcpkg-*']
     paths:
       - 'ports/fluent-qt/**'
       - '.github/workflows/vcpkg-port.yml'

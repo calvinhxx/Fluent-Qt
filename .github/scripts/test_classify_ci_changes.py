@@ -2,6 +2,7 @@
 
 import ast
 import importlib.util
+import json
 import re
 import subprocess
 import sys
@@ -765,6 +766,31 @@ class ClassifyPushEventTest(unittest.TestCase):
         result, cpp_tests = self.classify({"before": self.before, "after": after})
         self.assertEqual(result, MODULE.ChangeClassification(False, False, True))
         self.assertEqual(cpp_tests, MODULE.CppTestSelection("none"))
+
+    def test_post_release_push_keeps_pages_and_leaves_recipes_to_their_consumers(self):
+        path = MODULE.STARTER_MANIFEST
+        original = {"cpp_ci_tag": "v1.12.3", "schema_version": 1, "templates": {"cpp": {}}}
+        self.write(path, json.dumps(original))
+        before = self.commit("old release")
+        self.write(path, json.dumps(dict(original, cpp_ci_tag="v1.12.4")))
+        self.write("tools/site/release-history.json", '{"published": true}')
+        self.write("packaging/conan/conandata.yml", "sources: {}")
+        after = self.commit("record release")
+        result, tests = self.classify({"before": before, "after": after})
+        self.assertEqual(result, MODULE.ChangeClassification(False, False, True))
+        self.assertEqual(tests.scope, "none")
+
+        for other in (dict(original, templates={"python": {}}), dict(original, cpp_ci_tag="typo")):
+            self.write(path, json.dumps(other))
+            result, _ = self.classify({"before": before, "after": self.commit("change starter")})
+            self.assertTrue(result.should_build and result.should_build_pyside)
+
+    def test_port_changes_still_select_any_accompanying_product_changes(self):
+        port = "ports/fluent-qt/portfile.cmake"
+        self.assertEqual(MODULE.classify_changes([port]), MODULE.ChangeClassification(False, False, False))
+        paths = [port, "src/components/basicinput/Button.cpp"]
+        self.assertEqual(MODULE.classify_changes(paths), MODULE.ChangeClassification(True, True, True))
+        self.assertEqual(MODULE.select_cpp_tests(paths).groups, ("basicinput",))
 
     def test_product_push_selects_native_lanes_and_owned_tests(self):
         self.write("src/components/basicinput/Button.cpp", "// changed\n")
