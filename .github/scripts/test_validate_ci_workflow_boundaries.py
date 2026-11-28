@@ -74,6 +74,12 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
             MODULE.validate_cpp_execution_contract(self.workflow), []
         )
 
+    def test_registry_submission_requires_the_overlay_consumer(self):
+        errors = self.workflow_errors_with_replacement(
+            "vcpkg-registry.yml", "    needs: [resolve, validate_vcpkg]", "    needs: resolve"
+        )
+        self.assertIn("vcpkg registry submission must follow successful published-overlay validation", errors)
+
     def test_cmake_settings_cannot_share_a_quoted_argument(self):
         for quote in ('"', "'"):
             with self.subTest(quote=quote):

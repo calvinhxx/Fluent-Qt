@@ -1,0 +1,108 @@
+name: vcpkg registry
+run-name: vcpkg registry ${{ inputs.release_tag }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published stable tag (vX.Y.Z).
+        type: string
+        required: true
+      overlay_sha256:
+        description: SHA-256 of the overlay in the release checksum list.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Verify public release overlay
+    runs-on: ubuntu-latest
+    outputs:
+      sha256: ${{ steps.asset.outputs.sha256 }}
+    steps:
+      - name: Resolve the public stable asset
+        id: asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          EXPECTED_SHA256: ${{ inputs.overlay_sha256 }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != refs/heads/main || ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Run registry validation from main for a stable vX.Y.Z tag."
+            exit 1
+          fi
+          digest="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" |
+            jq -er --arg tag "$RELEASE_TAG" '
+              select(.tag_name == $tag and .draft == false and .prerelease == false) |
+              .assets[] | select(.name == ("fluent-qt-" + $tag + "-vcpkg.zip") and .state == "uploaded") | .digest')"
+          if [[ ! "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ || "$digest" != "sha256:$EXPECTED_SHA256" ]]; then
+            echo "::error::The public overlay differs from the published SHA-256."
+            exit 1
+          fi
+          echo "sha256=${digest#sha256:}" >> "$GITHUB_OUTPUT"
+
+  validate_vcpkg:
+    name: Validate released vcpkg overlay
+    needs: resolve
+    uses: ./.github/workflows/vcpkg-port.yml
+    with:
+      release_tag: ${{ inputs.release_tag }}
+      overlay_sha256: ${{ needs.resolve.outputs.sha256 }}
+
+  submit_vcpkg:
+    name: Submit vcpkg port
+    needs: [resolve, validate_vcpkg]
+    if: ${{ github.repository == 'calvinhxx/Fluent-Qt' }}
+    concurrency:
+      group: fluent-qt-vcpkg-registry
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: microsoft/vcpkg
+          ref: master
+          path: registry
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Prepare registry and tested overlay
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OVERLAY_SHA256: ${{ needs.resolve.outputs.sha256 }}
+        run: |
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "fluent-qt-$RELEASE_TAG-vcpkg.zip" --output "$RUNNER_TEMP/overlay.zip"
+          printf '%s  %s\n' "$OVERLAY_SHA256" "$RUNNER_TEMP/overlay.zip" | sha256sum --check --status
+          unzip -q "$RUNNER_TEMP/overlay.zip" -d "$RUNNER_TEMP/release-port"
+          cd registry
+          ./bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Open or update the official registry PR
+        env:
+          GH_TOKEN: ${{ secrets.VCPKG_PR_TOKEN }}
+        working-directory: registry
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::Set the Fluent-Qt Actions secret VCPKG_PR_TOKEN to submit to microsoft/vcpkg, then rerun this job."
+            exit 1
+          fi
+          read -r login id < <(gh api user --jq '[.login, .id] | @tsv')
+          git config user.name "$login"
+          git config user.email "$id+$login@users.noreply.github.com"
+          python3 ../scripts/release/submit_vcpkg_port.py "$RELEASE_TAG" "$RUNNER_TEMP/release-port/fluent-qt" | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash

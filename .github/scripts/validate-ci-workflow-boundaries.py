@@ -110,9 +110,9 @@ EXPECTED_JOBS = {
         "python_candidate",
         "publish",
         "publish_python",
-        "validate_vcpkg",
-        "submit_vcpkg",
+        "queue_vcpkg",
     },
+    "vcpkg-registry.yml": {"resolve", "validate_vcpkg", "submit_vcpkg"},
     "pages.yml": {"authorize", "wasm", "site", "deploy"},
 }
 UNCONDITIONAL_JOBS = {
@@ -1092,7 +1092,7 @@ def canonical_job_level_errors(job: str, context: str) -> list[str]:
         return errors
     seen: set[str] = set()
     allowed = ALLOWED_JOB_LEVEL_KEYS | ({"container"} if context == "ci-wasm.yml browser" else set())
-    if context == "release.yml submit_vcpkg":
+    if context == "vcpkg-registry.yml submit_vcpkg":
         allowed = allowed | {"concurrency"}
     for line in job_level_lines(job):
         match = CANONICAL_JOB_LEVEL_ENTRY.fullmatch(line)
@@ -1887,6 +1887,14 @@ def validate_boundaries() -> list[str]:
     release = contents["release.yml"]
     pages = contents["pages.yml"]
     errors.extend(release_input_boundary_errors(release))
+    registry = contents["vcpkg-registry.yml"]
+    consumer = job_section(registry, "validate_vcpkg")
+    submission = job_section(registry, "submit_vcpkg")
+    if ("    needs: resolve" not in job_level_lines(consumer)
+            or "    uses: ./.github/workflows/vcpkg-port.yml" not in job_level_lines(consumer)
+            or "    needs: [resolve, validate_vcpkg]" not in job_level_lines(submission)
+            or job_level_controls(submission) != ["if: ${{ github.repository == 'calvinhxx/Fluent-Qt' }}"]):
+        errors.append("vcpkg registry submission must follow successful published-overlay validation")
     errors.extend(wasm_supply_chain_errors(wasm))
     errors.extend(pages_deployment_boundary_errors(pages))
     errors.extend(site_generation_errors(contents["ci-site.yml"]))
