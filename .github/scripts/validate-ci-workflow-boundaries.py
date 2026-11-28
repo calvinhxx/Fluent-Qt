@@ -75,6 +75,7 @@ EXPECTED_JOBS = {
         "wasm",
         "site",
         "pages",
+        "contracts",
         "ci-gate",
         "release-ready",
     },
@@ -1635,14 +1636,16 @@ def validate_pr_change_classification_contract(orchestrator: str) -> list[str]:
 def validate_ci_source_contracts_contract(orchestrator: str) -> list[str]:
     """Keep isolated font checks and the existing source preflight unconditional."""
     active = "\n".join(uncommented_workflow_lines(orchestrator)) + "\n"
-    plan = job_section(active, "plan")
-    prepare = named_step_section(plan, "Generate documentation inputs")
+    contracts = job_section(active, "contracts")
+    if job_level_controls(contracts):
+        return ["ci.yml source contracts must run unconditionally"]
+    prepare = named_step_section(contracts, "Generate documentation inputs")
     if uncommented_workflow_lines(prepare) != [
         "      - name: Generate documentation inputs",
         "        run: python3 -m venv .venv-format && .venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8 && python3 tools/site/build_site.py --prepare",
-    ] or plan.find(prepare) > plan.find("      - name: Validate CI orchestration contracts"):
+    ] or contracts.find(prepare) > contracts.find("      - name: Validate CI orchestration contracts"):
         return ["ci.yml must generate catalog inputs before source validation"]
-    step = named_step_section(job_section(active, "plan"), "Validate CI orchestration contracts")
+    step = named_step_section(contracts, "Validate CI orchestration contracts")
     lines = uncommented_workflow_lines(step)
     expected_prefix = [
         "      - name: Validate CI orchestration contracts",
@@ -1682,7 +1685,7 @@ def validate_ci_gate_execution_contract(orchestrator: str) -> list[str]:
         errors.append("ci.yml CI Gate must wait for website generation and the runtime modules")
     site = job_section(active, "site")
     if uncommented_workflow_lines(site) != [
-        "  site:", "    name: Website validation", "    needs: plan",
+        "  site:", "    name: Website validation", "    needs: [plan, contracts]",
         "    uses: ./.github/workflows/ci-site.yml",
     ]:
         errors.append("ci.yml website generation must run after planning without a conditional skip")

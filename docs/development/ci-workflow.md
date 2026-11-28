@@ -86,12 +86,12 @@ Modules upload artifacts into the caller's run. The
 main CI; its manual entry prepares both the website and Gallery for recovery.
 
 The required website job runs the build, asset, hero-particle and Spatial
-showcase tests on pull requests and `main`. Both the planning and website
+showcase tests on pull requests and `main`. Both the source-contract and website
 jobs install the pinned source formatter before preparing the
 playground factories and descriptors, so clean runners do not depend on a
 developer's local formatter environment. The Gallery language gate validates
 localized category labels as well as property and preset labels.
-The planning job
+The source-contract job
 regenerates the AI catalog and `site/api/catalog.json` from current source before
 running their consistency checks. The website module repeats this preparation
 before discovering preview recipes, then generates the
@@ -279,9 +279,9 @@ stubs and complete Gallery catalog, then load the bundled Basic.qml scene. These
 and input review.
 
 Run the [local integration preflight](testing-workflow.md#local-integration-preflight)
-before pushing. Its Qt-free source/packaging gates are also the first checks in
-the CI planning job, so inventory mistakes fail before allocating native
-runners. The shared preflight starts with the Qt-free compatibility boundary
+before pushing. CI runs its Qt-free source and packaging checks in parallel with platform
+validation. Website generation depends on these checks, so failure blocks
+Pages, `CI Gate` and release readiness. The shared preflight starts with the Qt-free compatibility boundary
 checker and its regressions; do not move that gate behind a native/PySide build
 or a platform-specific module condition. For a runtime failure, reproduce the failing test with the same
 Qt/PySide line and rerun that job before requesting another full matrix. A
@@ -290,7 +290,7 @@ Keep full validation on the final release commit.
 
 ## Repository size and font inputs
 
-The planning job checks tracked file content with
+The source-contract job checks tracked file content with
 `python3 tools/dev/fluent_qt_repository_size.py`. The budget in
 `tools/dev/repository-size-budget.json` covers the total and reviewed large
 runtime files. The check also rejects any tracked file that matches

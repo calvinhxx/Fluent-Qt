@@ -155,8 +155,8 @@ Run the read-only, standard-library checker before building or committing:
 python3 tools/quality/check_compatibility_boundaries.py --project-root . --self-test
 ```
 
-The same command runs first in local integration/release preflight, and through
-the existing source-contract entry point in CI planning. Quick preflight also
+The same command runs first in local integration/release preflight and in the
+CI source-contract job. Quick preflight also
 runs it for C++ sources/headers and Python library/Gallery sources. It scans
 new files as well as tracked files and requires neither Qt nor PySide6.
 

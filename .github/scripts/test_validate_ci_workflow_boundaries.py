@@ -2003,9 +2003,9 @@ class CiSourceContractsTest(unittest.TestCase):
                             "true || " + command, command + " || true", "exit 0\n          " + command):
             with self.subTest(replacement=replacement):
                 self.assertTrue(MODULE.validate_ci_source_contracts_contract(workflow.replace(command, replacement, 1)))
-        step = MODULE.named_step_section(MODULE.job_section(workflow, "plan"), "Validate CI orchestration contracts")
+        step = MODULE.named_step_section(MODULE.job_section(workflow, "contracts"), "Validate CI orchestration contracts")
         for control in ("if: ${{ false }}", "continue-on-error: true"):
-            for position in ("        shell: bash\n", "          python3 tools/onboarding/test_fluentqt_doctor.py"):
+            for position in ("        shell: bash\n", "          python3 -m unittest discover -s tools/onboarding"):
                 with self.subTest(control=control, position=position):
                     self.assertIn(position, step)
                     mutated = step.replace(position, "        " + control + "\n" + position, 1)

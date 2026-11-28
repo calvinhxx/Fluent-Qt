@@ -369,7 +369,7 @@ registrations; a missing method fails the runner. Directly running
 Use the `pyside_native` label for the separate Gallery desktop checks. Those
 checks require a native Qt platform and are not included by `-L '^pyside$'`.
 
-The same source/packaging checks run in CI's planning job and the release
+The same source/packaging checks run in CI's source-contract job and the release
 preflight. They require no Qt installation. This command does not verify
 runtime ownership or compatibility; the generated-wrapper verifier's unit
 tests are distinct from checking an actual generated binding.

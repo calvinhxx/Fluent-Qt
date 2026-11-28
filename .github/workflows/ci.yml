@@ -49,30 +49,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - name: Generate documentation inputs
-        run: python3 -m venv .venv-format && .venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8 && python3 tools/site/build_site.py --prepare
-      - name: Cache verified font source inputs
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: build/font-sources
-          key: fluentqt-font-sources-v1-${{ hashFiles('tools/fonts/source-assets.json') }}
-      - name: Validate CI orchestration contracts
-        shell: bash
-        run: |
-          python3 .github/scripts/check-ci-source-contracts.py
-          python3 tools/dev/fluent_qt_repository_size.py
-          python3 .github/scripts/test_check_release_branch_freshness.py
-          python3 .github/scripts/test_validate_ci_workflow_boundaries.py
-          python3 .github/scripts/validate-gallery-boundary.py
-          python3 .github/scripts/test_validate_gallery_boundary.py
-          python3 -m unittest discover -s scripts/release -p 'test_*.py'
-          python3 tools/docs/validate_documentation.py --project-root . --self-test
-          python3 tools/site/generate_api_reference.py --check
-          python3 tools/ai/validate_ai_assets.py --project-root .
-          python3 tools/onboarding/test_fluentqt_doctor.py
-          python3 tools/onboarding/test_fluentqt_create.py
-          python3 tools/onboarding/test_fluentqt_trial.py
-          python3 -m unittest discover -s tools/dev -p 'test_fluent_qt_*.py'
       - name: Require a current main base for release pull requests
         if: >-
           ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'release/') }}
@@ -129,7 +105,6 @@ jobs:
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "python_release_bundle=$python_release_bundle" >> "$GITHUB_OUTPUT"
           echo "release_candidate_expected=$release_candidate_expected" >> "$GITHUB_OUTPUT"
-          echo "Selected $mode validation (Python release bundle: $python_release_bundle; release candidate expected: $release_candidate_expected)."
       - name: Classify changes
         id: changes
         env:
@@ -204,6 +179,34 @@ jobs:
           printf '%s\n' "$classification" >> "$GITHUB_OUTPUT"
           echo "CI selection: native=$should_build, PySide6=$should_build_pyside, WebAssembly=$should_build_wasm, C++ tests=$cpp_test_scope."
 
+  contracts:
+    name: Source and CI contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Generate documentation inputs
+        run: python3 -m venv .venv-format && .venv-format/bin/python -m pip install --disable-pip-version-check clang-format==22.1.8 && python3 tools/site/build_site.py --prepare
+      - name: Cache verified font source inputs
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: build/font-sources
+          key: fluentqt-font-sources-v1-${{ hashFiles('tools/fonts/source-assets.json') }}
+      - name: Validate CI orchestration contracts
+        shell: bash
+        run: |
+          python3 .github/scripts/check-ci-source-contracts.py
+          python3 tools/dev/fluent_qt_repository_size.py
+          python3 .github/scripts/test_check_release_branch_freshness.py
+          python3 .github/scripts/test_validate_ci_workflow_boundaries.py
+          python3 .github/scripts/validate-gallery-boundary.py
+          python3 .github/scripts/test_validate_gallery_boundary.py
+          python3 -m unittest discover -s scripts/release -p 'test_*.py'
+          python3 tools/docs/validate_documentation.py --project-root . --self-test
+          python3 tools/site/generate_api_reference.py --check
+          python3 tools/ai/validate_ai_assets.py --project-root .
+          python3 -m unittest discover -s tools/onboarding -p 'test_fluentqt_*.py'
+          python3 -m unittest discover -s tools/dev -p 'test_fluent_qt_*.py'
+
   cpp:
     name: C++ validation
     needs: plan
@@ -239,7 +242,7 @@ jobs:
 
   site:
     name: Website validation
-    needs: plan
+    needs: [plan, contracts]
     uses: ./.github/workflows/ci-site.yml
 
   pages:

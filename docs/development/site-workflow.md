@@ -470,7 +470,7 @@ static localized text and attributes, invalid JSON-LD or sitemap XML, canonical
 URLs, reciprocal `hreflang` links, the URL-owned 404 language contract, the
 legacy Gallery redirect, and the current CMake project version in structured
 data.
-The pull-request planning job regenerates and checks the AI and API catalogs. The
+The source-contract job regenerates and checks the AI and API catalogs. The
 [website CI module](ci-workflow.md) generates the homepage, documents and
 previews on every pull request and on `main`, then uploads a verified artifact.
 Packaging reuses the file list from the document generator to exclude retired routes.
